@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>mfja_3rd_floor_gz</name>
+  <version>1.0.0</version>
+  <description>Simulation worlds for MFJA 3rd floor.</description>
+  <maintainer email="olivier.stasse@laas.fr">Olivier Stasse</maintainer>
+  <license>Apache License 2.0</license>
+  <author email="olivier.stasse@laas.fr">Olivier Stasse</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>ament_cmake_auto</build_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
