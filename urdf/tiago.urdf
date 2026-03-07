@@ -1,0 +1,383 @@
+<?xml version="1.0"?>
+<robot name="tiago">
+  <material name="tiago_white">
+    <color rgba="0.85 0.85 0.85 1.0"/>
+  </material>
+  <material name="tiago_dark">
+    <color rgba="0.25 0.25 0.25 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.22" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.20" length="0.20"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.22" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.22" length="0.20"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="base_footprint"/>
+
+  <link name="left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="caster_front_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.03"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.03"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="caster_rear_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.03"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.03"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="torso_fixed_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_fix.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_fix.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="torso_lift_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_lift_with_arm.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_lift_with_arm.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_1_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_1.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_1.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_2_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_2.stl"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_2.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_3_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_3.stl"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_3.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_4_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_4.stl"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_4.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_5_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_5-wrist-2010.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_5-wrist-2010.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_6_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_7_link">
+    <visual>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.04"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.04"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="arm_tool_link">
+    <visual>
+      <origin xyz="0.001 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.005" length="0.005"/>
+      </geometry>
+      <material name="tiago_dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0.001 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.005" length="0.005"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="head_1_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_1.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_1.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="head_2_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_2.stl"/>
+      </geometry>
+      <material name="tiago_white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_2.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="base_footprint"/>
+  </joint>
+
+  <joint name="left_wheel_joint" type="continuous">
+    <origin xyz="0 0.23 0.10" rpy="-1.57079632679 0 0"/>
+    <parent link="base_link"/>
+    <child link="left_wheel_link"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <joint name="right_wheel_joint" type="continuous">
+    <origin xyz="0 -0.23 0.10" rpy="-1.57079632679 0 0"/>
+    <parent link="base_link"/>
+    <child link="right_wheel_link"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <joint name="caster_front_joint" type="fixed">
+    <origin xyz="0.18 0 0.03" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="caster_front_link"/>
+  </joint>
+
+  <joint name="caster_rear_joint" type="fixed">
+    <origin xyz="-0.18 0 0.03" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="caster_rear_link"/>
+  </joint>
+
+  <joint name="base_to_torso_fixed" type="fixed">
+    <origin xyz="-0.062 0 0.193" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="torso_fixed_link"/>
+  </joint>
+
+  <joint name="torso_lift_joint" type="prismatic">
+    <origin xyz="0 0 0.597" rpy="0 0 0"/>
+    <parent link="torso_fixed_link"/>
+    <child link="torso_lift_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="0.35" effort="2000.0" velocity="0.07"/>
+  </joint>
+
+  <joint name="arm_1_joint" type="revolute">
+    <origin xyz="0.15505 0.014 -0.151" rpy="0 0 -1.57079632679"/>
+    <parent link="torso_lift_link"/>
+    <child link="arm_1_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="2.74889357189" effort="43.0" velocity="1.95"/>
+  </joint>
+
+  <joint name="arm_2_joint" type="revolute">
+    <origin xyz="0.125 0.0195 -0.031" rpy="1.57079632679 0 0"/>
+    <parent link="arm_1_link"/>
+    <child link="arm_2_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57079632679" upper="1.09083078250" effort="43.0" velocity="1.95"/>
+  </joint>
+
+  <joint name="arm_3_joint" type="revolute">
+    <origin xyz="0.0895 0 -0.0015" rpy="-1.57079632679 0 1.57079632679"/>
+    <parent link="arm_2_link"/>
+    <child link="arm_3_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.53429173529" upper="1.57079632679" effort="26.0" velocity="2.35"/>
+  </joint>
+
+  <joint name="arm_4_joint" type="revolute">
+    <origin xyz="-0.02 -0.027 -0.222" rpy="-1.57079632679 -1.57079632679 0"/>
+    <parent link="arm_3_link"/>
+    <child link="arm_4_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.39269908170" upper="2.35619449019" effort="26.0" velocity="2.35"/>
+  </joint>
+
+  <joint name="arm_5_joint" type="revolute">
+    <origin xyz="-0.162 0.02 0.027" rpy="1.57079632679 -1.57079632679 -1.57079632679"/>
+    <parent link="arm_4_link"/>
+    <child link="arm_5_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.09439510239" upper="2.09439510239" effort="3.0" velocity="1.95"/>
+  </joint>
+
+  <joint name="arm_6_joint" type="revolute">
+    <origin xyz="0 0 0.15" rpy="0 -1.57079632679 -1.57079632679"/>
+    <parent link="arm_5_link"/>
+    <child link="arm_6_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.41371669412" upper="1.41371669412" effort="6.6" velocity="1.76"/>
+  </joint>
+
+  <joint name="arm_7_joint" type="revolute">
+    <origin xyz="0 0 0" rpy="1.57079632679 0 1.57079632679"/>
+    <parent link="arm_6_link"/>
+    <child link="arm_7_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.09439510239" upper="2.09439510239" effort="6.6" velocity="1.76"/>
+  </joint>
+
+  <joint name="arm_tool_joint" type="fixed">
+    <origin xyz="0 0 0.046" rpy="1.57079632679 -1.57079632679 3.14159265359"/>
+    <parent link="arm_7_link"/>
+    <child link="arm_tool_link"/>
+  </joint>
+
+  <joint name="head_1_joint" type="revolute">
+    <origin xyz="0.182 0 0" rpy="0 0 0"/>
+    <parent link="torso_lift_link"/>
+    <child link="head_1_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.30899693899" upper="1.30899693899" effort="5.197" velocity="3.0"/>
+  </joint>
+
+  <joint name="head_2_joint" type="revolute">
+    <origin xyz="0.005 0 0.098" rpy="1.57079632679 0 0"/>
+    <parent link="head_1_link"/>
+    <child link="head_2_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.04719755120" upper="0.78539816340" effort="2.77" velocity="3.0"/>
+  </joint>
+</robot>

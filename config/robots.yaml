@@ -1,0 +1,36 @@
+robots:
+  - name: kuka1
+    model: kuka_kr6r900sixx
+    x_pose: -12.0
+    y_pose: -4.5
+    z_pose: 0.0
+    yaw: 1.57
+    enabled: true
+  - name: staubli1
+    model: staubli_tx2_60l
+    x_pose: -16.0
+    y_pose: -4.5
+    z_pose: 0.0
+    yaw: 1.57
+    enabled: true
+  - name: yaskawa_hc10_1
+    model: yaskawa_hc10
+    x_pose: -12
+    y_pose: -1.5
+    z_pose: 0.0
+    yaw: 1.57
+    enabled: true
+  - name: yaskawa_hc10dt_1
+    model: yaskawa_hc10dt
+    x_pose: -16
+    y_pose: -1.5
+    z_pose: 0.0
+    yaw: 1.57
+    enabled: true
+  - name: tiago1
+    model: tiago
+    x_pose: -6.4
+    y_pose: -4.5
+    z_pose: 0.0
+    yaw: 1.57
+    enabled: true

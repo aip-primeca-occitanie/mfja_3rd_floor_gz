@@ -1,0 +1,167 @@
+<?xml version="1.0"?>
+<robot name="yaskawa_hc10dt">
+  <material name="yaskawa_blue">
+    <color rgba="0.10 0.22 0.62 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/visual/base_link.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/collision/base_link.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_1_s">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/visual/link_1_s.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/collision/link_1_s.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_2_l">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/visual/link_2_l.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/collision/link_2_l.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_3_u">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/visual/link_3_u.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/collision/link_3_u.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_4_r">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/visual/link_4_r.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/collision/link_4_r.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_5_b">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/visual/link_5_b.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10/collision/link_5_b.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_6_t">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10dt/visual/link_6_t.dae"/>
+      </geometry>
+      <material name="yaskawa_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/yaskawa_hc10dt/meshes/hc10dt/collision/link_6_t.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="tool0"/>
+  <link name="base"/>
+
+  <joint name="joint_1_s" type="revolute">
+    <origin xyz="0 0 0.275" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="link_1_s"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265359" upper="3.14159265359" effort="368.48" velocity="2.26892802759"/>
+  </joint>
+
+  <joint name="joint_2_l" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="link_1_s"/>
+    <child link="link_2_l"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159265359" upper="3.14159265359" effort="368.48" velocity="2.26892802759"/>
+  </joint>
+
+  <joint name="joint_3_u" type="revolute">
+    <origin xyz="0 0 0.700" rpy="0 0 0"/>
+    <parent link="link_2_l"/>
+    <child link="link_3_u"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-0.08726646260" upper="6.19591884458" effort="141.12" velocity="3.14159265359"/>
+  </joint>
+
+  <joint name="joint_4_r" type="revolute">
+    <origin xyz="0 0 -0.500" rpy="0 0 0"/>
+    <parent link="link_3_u"/>
+    <child link="link_4_r"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265359" upper="3.14159265359" effort="39.20" velocity="3.14159265359"/>
+  </joint>
+
+  <joint name="joint_5_b" type="revolute">
+    <origin xyz="0 0.162 0" rpy="0 0 0"/>
+    <parent link="link_4_r"/>
+    <child link="link_5_b"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-3.14159265359" upper="3.14159265359" effort="31.36" velocity="4.36332312999"/>
+  </joint>
+
+  <joint name="joint_6_t" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="link_5_b"/>
+    <child link="link_6_t"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159265359" upper="3.14159265359" effort="31.36" velocity="4.36332312999"/>
+  </joint>
+
+  <joint name="joint_6_t-tool0" type="fixed">
+    <origin xyz="0 0 -0.170" rpy="3.14159265359 0 0"/>
+    <parent link="link_6_t"/>
+    <child link="tool0"/>
+  </joint>
+
+  <joint name="base_link-base" type="fixed">
+    <origin xyz="0 0 0.275" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="base"/>
+  </joint>
+</robot>
