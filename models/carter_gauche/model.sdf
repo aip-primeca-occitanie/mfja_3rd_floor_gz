@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="carter_gauche">
+    <static>true</static>
+    <link name="carter_gauche_link">
+      <visual name="carter_gauche_visual">
+        <geometry>
+          <mesh>
+            <uri>model://carter_gauche/meshes/carter_gauche.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.03 0.03 0.03 1</ambient>
+          <diffuse>0.03 0.03 0.03 1</diffuse>
+          <specular>0.02 0.02 0.02 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

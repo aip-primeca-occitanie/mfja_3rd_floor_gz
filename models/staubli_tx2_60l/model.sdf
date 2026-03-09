@@ -265,12 +265,12 @@
         <limit>
           <lower>-3.14159265359</lower>
           <upper>3.14159265359</upper>
-          <effort>126.0</effort>
+          <effort>220.0</effort>
           <velocity>7.59218224618</velocity>
         </limit>
         <dynamics>
-          <damping>1.4</damping>
-          <friction>0.25</friction>
+          <damping>0.7</damping>
+          <friction>0.08</friction>
         </dynamics>
       </axis>
     </joint>
@@ -284,12 +284,12 @@
         <limit>
           <lower>-2.22529479629</lower>
           <upper>2.22529479629</upper>
-          <effort>47.0</effort>
+          <effort>140.0</effort>
           <velocity>6.71951762018</velocity>
         </limit>
         <dynamics>
-          <damping>1.2</damping>
-          <friction>0.2</friction>
+          <damping>0.7</damping>
+          <friction>0.08</friction>
         </dynamics>
       </axis>
     </joint>
@@ -303,12 +303,12 @@
         <limit>
           <lower>-2.66162710929</lower>
           <upper>2.66162710929</upper>
-          <effort>32.0</effort>
+          <effort>90.0</effort>
           <velocity>8.72664625997</velocity>
         </limit>
         <dynamics>
-          <damping>1.0</damping>
-          <friction>0.15</friction>
+          <damping>0.6</damping>
+          <friction>0.06</friction>
         </dynamics>
       </axis>
     </joint>
@@ -404,33 +404,33 @@
       name="gz::sim::systems::JointTrajectoryController">
       <joint_name>joint_1</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>80.0</position_p_gain>
-      <position_i_gain>0.08</position_i_gain>
-      <position_d_gain>12.0</position_d_gain>
-      <position_i_min>-1.0</position_i_min>
-      <position_i_max>1.0</position_i_max>
-      <position_cmd_min>-160.0</position_cmd_min>
-      <position_cmd_max>160.0</position_cmd_max>
+      <position_p_gain>170.0</position_p_gain>
+      <position_i_gain>0.12</position_i_gain>
+      <position_d_gain>24.0</position_d_gain>
+      <position_i_min>-2.0</position_i_min>
+      <position_i_max>2.0</position_i_max>
+      <position_cmd_min>-320.0</position_cmd_min>
+      <position_cmd_max>320.0</position_cmd_max>
 
       <joint_name>joint_2</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>70.0</position_p_gain>
-      <position_i_gain>0.08</position_i_gain>
-      <position_d_gain>11.0</position_d_gain>
-      <position_i_min>-1.0</position_i_min>
-      <position_i_max>1.0</position_i_max>
-      <position_cmd_min>-140.0</position_cmd_min>
-      <position_cmd_max>140.0</position_cmd_max>
+      <position_p_gain>190.0</position_p_gain>
+      <position_i_gain>0.12</position_i_gain>
+      <position_d_gain>28.0</position_d_gain>
+      <position_i_min>-2.0</position_i_min>
+      <position_i_max>2.0</position_i_max>
+      <position_cmd_min>-340.0</position_cmd_min>
+      <position_cmd_max>340.0</position_cmd_max>
 
       <joint_name>joint_3</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>65.0</position_p_gain>
-      <position_i_gain>0.06</position_i_gain>
-      <position_d_gain>10.0</position_d_gain>
-      <position_i_min>-1.0</position_i_min>
-      <position_i_max>1.0</position_i_max>
-      <position_cmd_min>-130.0</position_cmd_min>
-      <position_cmd_max>130.0</position_cmd_max>
+      <position_p_gain>120.0</position_p_gain>
+      <position_i_gain>0.08</position_i_gain>
+      <position_d_gain>18.0</position_d_gain>
+      <position_i_min>-1.5</position_i_min>
+      <position_i_max>1.5</position_i_max>
+      <position_cmd_min>-220.0</position_cmd_min>
+      <position_cmd_max>220.0</position_cmd_max>
 
       <joint_name>joint_4</joint_name>
       <initial_position>0.0</initial_position>

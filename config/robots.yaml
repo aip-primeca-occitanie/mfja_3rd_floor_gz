@@ -1,7 +1,7 @@
 robots:
   - name: kuka1
     model: kuka_kr6r900sixx
-    x_pose: -12.0
+    x_pose: -11.2
     y_pose: -4.5
     z_pose: 1.0
     yaw: 1.57
@@ -15,7 +15,7 @@ robots:
     enabled: true
   - name: yaskawa_hc10_1
     model: yaskawa_hc10
-    x_pose: -12
+    x_pose: -11
     y_pose: -1.5
     z_pose: 0.62
     yaw: 1.57

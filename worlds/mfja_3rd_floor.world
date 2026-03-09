@@ -55,25 +55,74 @@
     <include>
       <uri>model://kuka_table</uri>
       <name>kuka_table_1</name>
-      <pose>-12.0 -4.5 0.5 -1.57 0 1.57</pose>
+      <pose>-11.173 -4.5 0.5 -1.57 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://staubli_table</uri>
       <name>staubli_table_1</name>
-      <pose>-16.0 -4.5 0.5 -1.57 0 1.57</pose>
+      <pose>-15.744 -4.5 0.5 -1.57 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://table_yaskawa</uri>
       <name>yaskawa_table_1</name>
-      <pose>-12.0 -1.5 0.5 0 0 1.57</pose>
+      <pose>-11.207 -1.47 0.5 0 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://table_yaskawa</uri>
       <name>yaskawa_table_2</name>
-      <pose>-16.0 -1.5 0.5 0 0 1.57</pose>
+      <pose>-15.754 -1.47 0.5 0 0 1.57</pose>
     </include>
+
+    <include>
+      <uri>model://carter_droit</uri>
+      <name>carter_droit_1</name>
+      <pose>-15.88 -2.88 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://carter_gauche</uri>
+      <name>carter_gauche_1</name>
+      <pose>-11.153 -2.88 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://montratec_rails_droit</uri>
+      <name>montratec_rails_droit_1</name>
+      <pose>-11.25 -3.18 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://montratec_rails_left</uri>
+      <name>montratec_rails_left_1</name>
+      <pose>-15.77 -3.18 0.6 0 -1.57 3.14</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_1_droit</uri>
+      <name>shuttle_1_droit_1</name>
+      <pose>-15.75 -2.63 1.185 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shutle_2_droit</uri>
+      <name>shutle_2_droit_1</name>
+      <pose>-15.75 -3.75 1.185 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_1_left</uri>
+      <name>shuttle_1_left_1</name>
+      <pose>-10.7 -2.63 1.18 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_2_left</uri>
+      <name>shuttle_2_left_1</name>
+      <pose>-10.7 -3.75 1.18 0 0 -1.57</pose>
+    </include>
+
   </world>
 </sdf>
