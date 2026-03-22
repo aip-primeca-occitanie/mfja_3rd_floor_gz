@@ -51,5 +51,228 @@
       </include>
       <pose>0 0 0 0 0 -1.56</pose>
     </model>
+
+    <include>
+      <uri>model://kuka_table</uri>
+      <name>kuka_table_1</name>
+      <pose>-11.173 -6.0 0.5 -1.57 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://staubli_table</uri>
+      <name>staubli_table_1</name>
+      <pose>-15.744 -6.0 0.5 -1.57 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://table_yaskawa</uri>
+      <name>yaskawa_table_1</name>
+      <pose>-11.207 -2.97 0.5 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://table_yaskawa</uri>
+      <name>yaskawa_table_2</name>
+      <pose>-15.754 -2.97 0.5 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://carter_droit</uri>
+      <name>carter_droit_1</name>
+      <pose>-15.88 -4.38 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://carter_gauche</uri>
+      <name>carter_gauche_1</name>
+      <pose>-11.153 -4.38 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://montratec_rails_droit</uri>
+      <name>montratec_rails_droit_1</name>
+      <pose>-11.25 -4.68 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://montratec_rails_left</uri>
+      <name>montratec_rails_left_1</name>
+      <pose>-15.77 -4.68 0.6 0 -1.57 3.14</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_1_droit</uri>
+      <name>shuttle_1_droit_1</name>
+      <pose>-15.75 -4.13 1.185 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shutle_2_droit</uri>
+      <name>shutle_2_droit_1</name>
+      <pose>-15.75 -5.25 1.185 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_1_left</uri>
+      <name>shuttle_1_left_1</name>
+      <pose>-10.7 -4.13 1.18 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_2_left</uri>
+      <name>shuttle_2_left_1</name>
+      <pose>-10.7 -5.25 1.18 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_1</name>
+      <pose>-17.0 0.57 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_2</name>
+      <pose>-15.5 0.57 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_3</name>
+      <pose>-14.0 0.57 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_4</name>
+      <pose>-12.5 0.57 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_5</name>
+      <pose>-11.0 0.57 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_1</name>
+      <pose>-10.8 -0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_2</name>
+      <pose>-10.8 0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_3</name>
+      <pose>-10.8 0.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_4</name>
+      <pose>-10.8 1.6 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_5</name>
+      <pose>-12.3 -0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_6</name>
+      <pose>-12.3 0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_7</name>
+      <pose>-12.3 0.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_8</name>
+      <pose>-12.3 1.6 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_9</name>
+      <pose>-13.8 -0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_10</name>
+      <pose>-13.8 0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_11</name>
+      <pose>-13.8 0.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_12</name>
+      <pose>-13.8 1.6 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_13</name>
+      <pose>-15.3 -0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_14</name>
+      <pose>-15.3 0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_15</name>
+      <pose>-15.3 0.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_16</name>
+      <pose>-15.3 1.6 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_17</name>
+      <pose>-16.8 -0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_18</name>
+      <pose>-16.8 0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_19</name>
+      <pose>-16.8 0.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_20</name>
+      <pose>-16.8 1.6 0.0 0 0 0</pose>
+    </include>
+
   </world>
 </sdf>

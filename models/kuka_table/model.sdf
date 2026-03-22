@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="kuka_table">
+    <static>true</static>
+    <link name="kuka_table_link">
+      <visual name="kuka_table_visual">
+        <geometry>
+          <mesh>
+            <uri>model://kuka_table/meshes/kuka_table.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="kuka_table_collision">
+        <geometry>
+          <mesh>
+            <uri>model://kuka_table/meshes/kuka_table.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

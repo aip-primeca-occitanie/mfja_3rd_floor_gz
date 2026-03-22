@@ -14,4 +14,9 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE config launch models worlds)
+install(PROGRAMS
+  scripts/multi_robot_sync_demo.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+ament_auto_package(INSTALL_TO_SHARE config launch models urdf worlds)
