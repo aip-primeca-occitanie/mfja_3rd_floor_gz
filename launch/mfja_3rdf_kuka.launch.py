@@ -20,11 +20,113 @@ from launch_ros.actions import Node
 MOBILE_MODELS = {'tiago'}
 
 
-def _load_robots(config_path):
+def _parse_selected_robots(raw_value):
+    selected = (raw_value or '').strip()
+    if not selected:
+        return None
+    if selected.lower() == 'all':
+        return 'all'
+    return [token.strip() for token in selected.split(',') if token.strip()]
+
+
+def _robot_shortcuts(robot, index):
+    name = str(robot.get('name', '')).strip()
+    model = str(robot.get('model', '')).strip().lower()
+    shortcuts = {str(index), name.lower(), model}
+
+    if name:
+        base_name = name.lower().rstrip('0123456789').rstrip('_')
+        if base_name:
+            shortcuts.add(base_name)
+
+    if model.startswith('kuka_'):
+        shortcuts.add('kuka')
+    elif model.startswith('staubli_'):
+        shortcuts.add('staubli')
+    elif model == 'yaskawa_hc10':
+        shortcuts.add('hc10')
+    elif model == 'yaskawa_hc10dt':
+        shortcuts.add('hc10dt')
+    elif model == 'tiago':
+        shortcuts.add('tiago')
+
+    return shortcuts
+
+
+def _resolve_selected_robots(all_robots, selected_tokens, config_path):
+    exact_name_map = {}
+    selector_map = {}
+
+    for index, robot in enumerate(all_robots, start=1):
+        name = str(robot.get('name', '')).strip()
+        if not name:
+            raise RuntimeError(
+                f'Robot entry #{index} in "{config_path}" is missing the "name" field.'
+            )
+
+        exact_name_map[name.lower()] = robot
+        for shortcut in _robot_shortcuts(robot, index):
+            selector_map.setdefault(shortcut, []).append(robot)
+
+    resolved = []
+    seen = set()
+    missing = []
+    ambiguous = []
+
+    for token in selected_tokens:
+        normalized = token.lower()
+        candidates = []
+
+        if normalized in exact_name_map:
+            candidates = [exact_name_map[normalized]]
+        else:
+            candidates = selector_map.get(normalized, [])
+
+        if not candidates:
+            missing.append(token)
+            continue
+        if len(candidates) > 1:
+            ambiguous.append(
+                f'{token} -> {", ".join(str(robot["name"]) for robot in candidates)}'
+            )
+            continue
+
+        robot_name = str(candidates[0]['name'])
+        if robot_name not in seen:
+            seen.add(robot_name)
+            resolved.append(candidates[0])
+
+    if missing or ambiguous:
+        available = ', '.join(
+            f'{index}={robot["name"]}'
+            for index, robot in enumerate(all_robots, start=1)
+        ) or '(none)'
+        shortcut_help = 'kuka, staubli, hc10, hc10dt, tiago'
+        errors = []
+        if missing:
+            errors.append('Unknown selection(s): ' + ', '.join(missing))
+        if ambiguous:
+            errors.append('Ambiguous selection(s): ' + '; '.join(ambiguous))
+        errors.append(f'Available robots in "{config_path}": {available}')
+        errors.append(f'Useful shortcuts: {shortcut_help}, or use "all"')
+        raise RuntimeError('. '.join(errors))
+
+    return resolved
+
+
+def _load_robots(config_path, selected_names=None):
     with open(config_path, 'r', encoding='utf-8') as stream:
         config = yaml.safe_load(stream) or {}
 
-    robots = [r for r in config.get('robots', []) if r.get('enabled', True)]
+    all_robots = config.get('robots', [])
+
+    if selected_names == 'all':
+        robots = list(all_robots)
+    elif selected_names:
+        robots = _resolve_selected_robots(all_robots, selected_names, config_path)
+    else:
+        robots = [r for r in all_robots if r.get('enabled', True)]
+
     if not robots:
         raise RuntimeError(
             f'No enabled robots in "{config_path}". '
@@ -154,11 +256,14 @@ def _launch_setup(context, *args, **kwargs):
         LaunchConfiguration('use_sim_time').perform(context).lower() == 'true')
     enable_gui = LaunchConfiguration('gui').perform(context).lower() == 'true'
     robot_config = LaunchConfiguration('robot_config').perform(context)
+    selected_robots = _parse_selected_robots(
+        LaunchConfiguration('robots').perform(context)
+    )
 
     if not os.path.isabs(robot_config):
         robot_config = os.path.join(pkg_path, robot_config)
 
-    robots = _load_robots(robot_config)
+    robots = _load_robots(robot_config, selected_robots)
     model_path = os.path.join(pkg_path, 'models')
     resource_path = model_path
 
@@ -295,6 +400,16 @@ def generate_launch_description():
             'robot_config',
             default_value='config/robots.yaml',
             description='Absolute path or package-relative path to robot spawn YAML.',
+        ),
+        DeclareLaunchArgument(
+            'robots',
+            default_value='',
+            description=(
+                'Comma-separated robot selection list. Supports full names '
+                '("kuka1,tiago1"), short aliases ("kuka,tiago"), numeric '
+                'indices by YAML order ("1,5"), or "all". Leave empty to use '
+                'enabled flags from the YAML.'
+            ),
         ),
         DeclareLaunchArgument(
             'use_sim_time',

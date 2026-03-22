@@ -81,7 +81,8 @@ def _parse_goal_overrides(goal_entries: List[str]) -> Dict[str, List[float]]:
 
 def _build_robot_targets(enabled_robots, goal_overrides: Dict[str, List[float]]):
     targets = []
-    enabled_names = {str(robot['name']) for robot in enabled_robots}
+    enabled_by_name = {str(robot['name']): robot for robot in enabled_robots}
+    enabled_names = set(enabled_by_name)
 
     for robot_name in goal_overrides:
         if robot_name not in enabled_names:
@@ -89,7 +90,12 @@ def _build_robot_targets(enabled_robots, goal_overrides: Dict[str, List[float]])
                 f'Goal override provided for "{robot_name}", but it is not enabled in robots.yaml.'
             )
 
-    for robot in enabled_robots:
+    if goal_overrides:
+        robots_to_command = [enabled_by_name[robot_name] for robot_name in goal_overrides]
+    else:
+        robots_to_command = enabled_robots
+
+    for robot in robots_to_command:
         robot_name = str(robot['name'])
         model_name = str(robot.get('model', ''))
         preset = MODEL_PRESETS.get(model_name)
@@ -255,7 +261,11 @@ class MultiRobotSyncDemo(Node):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Publish synchronized trajectories to all enabled robots from config/robots.yaml.'
+        description=(
+            'Publish synchronized trajectories to enabled robots from config/robots.yaml. '
+            'If --goal is omitted, all enabled robots with presets receive their default targets. '
+            'If one or more --goal arguments are provided, only those named robots are commanded.'
+        )
     )
     parser.add_argument(
         '--robot-config',
@@ -272,7 +282,10 @@ def main():
         '--goal',
         action='append',
         default=[],
-        help='Override one robot goal from the command line. Format: robot_name=v1,v2,v3',
+        help=(
+            'Command one robot from the command line. Format: robot_name=v1,v2,v3. '
+            'When one or more --goal arguments are present, only the listed robots move.'
+        ),
     )
     parser.add_argument(
         '--list-joints',
