@@ -49,7 +49,7 @@
       <include>
         <uri>model://mfja_3rd_floor</uri>
       </include>
-      <pose>0 0 0 0 0 -1.56</pose>
+      <pose>0 0 0 0 0 -1.57</pose>
     </model>
 
     <include>
@@ -127,29 +127,29 @@
     <include>
       <uri>model://lab_table</uri>
       <name>lab_table_1</name>
-      <pose>-17.0 0.57 0.0 0 0 -1.57</pose>
+      <pose>-17.0 0.87 0.0 0 0 -1.57</pose>
     </include>
 
     <include>
       <uri>model://lab_table</uri>
       <name>lab_table_2</name>
-      <pose>-15.5 0.57 0.0 0 0 -1.57</pose>
+      <pose>-15.5 0.87 0.0 0 0 -1.57</pose>
     </include>
 
     <include>
       <uri>model://lab_table</uri>
       <name>lab_table_3</name>
-      <pose>-14.0 0.57 0.0 0 0 -1.57</pose>
+      <pose>-14.0 0.87 0.0 0 0 -1.57</pose>
     </include>
 
     <include>
       <uri>model://lab_table</uri>
       <name>lab_table_4</name>
-      <pose>-12.5 0.57 0.0 0 0 -1.57</pose>
+      <pose>-12.5 0.87 0.0 0 0 -1.57</pose>
     </include>
 
     <include>
-      <uri>model://lab_table</uri>
+      <uri>model://lab_table_240cm</uri>
       <name>lab_table_5</name>
       <pose>-11.0 0.57 0.0 0 0 -1.57</pose>
     </include>
@@ -157,19 +157,19 @@
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_1</name>
-      <pose>-10.8 -0.5 0.0 0 0 0</pose>
+      <pose>-10.8 -0.15 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_2</name>
-      <pose>-10.8 0.2 0.0 0 0 0</pose>
+      <pose>-10.8 0.4 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_3</name>
-      <pose>-10.8 0.9 0.0 0 0 0</pose>
+      <pose>-10.8 1.0 0.0 0 0 0</pose>
     </include>
 
     <include>
@@ -181,97 +181,177 @@
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_5</name>
-      <pose>-12.3 -0.5 0.0 0 0 0</pose>
+      <pose>-12.3 -0.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_6</name>
-      <pose>-12.3 0.2 0.0 0 0 0</pose>
+      <pose>-12.3 0.5 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_7</name>
-      <pose>-12.3 0.9 0.0 0 0 0</pose>
+      <pose>-12.3 1.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_8</name>
-      <pose>-12.3 1.6 0.0 0 0 0</pose>
+      <pose>-12.3 1.9 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_9</name>
-      <pose>-13.8 -0.5 0.0 0 0 0</pose>
+      <pose>-13.8 -0.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_10</name>
-      <pose>-13.8 0.2 0.0 0 0 0</pose>
+      <pose>-13.8 0.5 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_11</name>
-      <pose>-13.8 0.9 0.0 0 0 0</pose>
+      <pose>-13.8 1.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_12</name>
-      <pose>-13.8 1.6 0.0 0 0 0</pose>
+      <pose>-13.8 1.9 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_13</name>
-      <pose>-15.3 -0.5 0.0 0 0 0</pose>
+      <pose>-15.3 -0.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_14</name>
-      <pose>-15.3 0.2 0.0 0 0 0</pose>
+      <pose>-15.3 0.5 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_15</name>
-      <pose>-15.3 0.9 0.0 0 0 0</pose>
+      <pose>-15.3 1.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_16</name>
-      <pose>-15.3 1.6 0.0 0 0 0</pose>
+      <pose>-15.3 1.9 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_17</name>
-      <pose>-16.8 -0.5 0.0 0 0 0</pose>
+      <pose>-16.8 -0.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_18</name>
-      <pose>-16.8 0.2 0.0 0 0 0</pose>
+      <pose>-16.8 0.5 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_19</name>
-      <pose>-16.8 0.9 0.0 0 0 0</pose>
+      <pose>-16.8 1.2 0.0 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://lab_chair</uri>
       <name>lab_chair_20</name>
-      <pose>-16.8 1.6 0.0 0 0 0</pose>
+      <pose>-16.8 1.9 0.0 0 0 0</pose>
+    </include>
+
+    <!-- Salle 314 furniture -->
+    <include>
+      <uri>model://room314_closet1</uri>
+      <name>room314_closet1_1</name>
+      <pose>-0.250000 -0.807000 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_charging_ergotron</uri>
+      <name>room314_charging_ergotron_1</name>
+      <pose>-3.7 -3.3 0.0 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_1</name>
+      <pose>-2.0 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_2</name>
+      <pose>-2.81 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_3</name>
+      <pose>-4.5 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_4</name>
+      <pose>-5.3 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_5</name>
+      <pose>-1.0 -3.4 0.0 0 0 0.0</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_6</name>
+      <pose>-1.0 -4.2 0.0 0 0 0.0</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_tiagobox</uri>
+      <name>room314_tiagobox_1</name>
+      <pose>-0.3 -1.66 0.0 0 0 -1.57</pose>
+    </include>
+
+    <!-- Room 115 furniture -->
+    <include>
+      <uri>model://room115_closet115</uri>
+      <name>room115_closet115_1</name>
+      <pose>-7.75 -3.45 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_closet1</uri>
+      <name>room115_closet1_1</name>
+      <pose>-7.8 -2.34 0.0 0 0 0.0</pose>
+    </include>
+
+    <include>
+      <uri>model://room115_table2000</uri>
+      <name>room115_table2000_1</name>
+      <pose>-7.85 -5.8 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room115_tool_set</uri>
+      <name>room115_tool_set_1</name>
+      <pose>-7.75 -4.43 0.0 0 0 -1.57</pose>
     </include>
 
   </world>

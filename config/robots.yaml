@@ -30,7 +30,8 @@ robots:
   - name: tiago1
     model: tiago
     x_pose: -6.4
-    y_pose: -6.0
+    y_pose: -3.0
     z_pose: 0.0
     yaw: 1.57
     enabled: true
+

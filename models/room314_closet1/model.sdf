@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="room314_closet1">
+    <static>true</static>
+    <link name="room314_closet1_link">
+      <visual name="room314_closet1_visual">
+        <pose>-0.25 -0.5 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room314_closet1/meshes/CLOSET1.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.10 0.22 0.70 1.0</ambient>
+          <diffuse>0.10 0.22 0.70 1.0</diffuse>
+          <specular>0.18 0.18 0.18 1.0</specular>
+          <emissive>0.0 0.0 0.0 0.0</emissive>
+        </material>
+      </visual>
+      <collision name="room314_closet1_collision">
+        <pose>-0.25 -0.5 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room314_closet1/meshes/CLOSET1.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>
