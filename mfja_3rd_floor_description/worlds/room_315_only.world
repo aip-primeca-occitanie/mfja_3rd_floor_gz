@@ -1,0 +1,129 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="room_315_only">
+    <physics name="5ms" type="ignored">
+      <max_step_size>0.005</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin
+        filename="gz-sim-physics-system"
+        name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+        filename="gz-sim-user-commands-system"
+        name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+        filename="gz-sim-scene-broadcaster-system"
+        name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+        filename="gz-sim-sensors-system"
+        name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin
+        filename="gz-sim-imu-system"
+        name="gz::sim::systems::Imu">
+    </plugin>
+    <gravity>0.0 0.0 -9.8</gravity>
+
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>false</shadows>
+      <grid>false</grid>
+      <origin_visual>false</origin_visual>
+    </scene>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://room_315</uri>
+      <name>room_315_1</name>
+      <pose>0.0 0.0 0 0 0 -1.57</pose>
+    </include>
+
+    <!-- Robot support tables -->
+    <include>
+      <uri>model://kuka_table</uri>
+      <name>room315_kuka_table_1</name>
+      <pose>-11.173 -6.0 0.5 -1.57 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://staubli_table</uri>
+      <name>room315_staubli_table_1</name>
+      <pose>-15.744 -6.0 0.5 -1.57 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://table_yaskawa</uri>
+      <name>room315_yaskawa_table_1</name>
+      <pose>-11.207 -2.97 0.5 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://table_yaskawa</uri>
+      <name>room315_yaskawa_table_2</name>
+      <pose>-15.754 -2.97 0.5 0 0 1.57</pose>
+    </include>
+
+    <!-- Room 315 industrial fixtures -->
+    <include>
+      <uri>model://carter_droit</uri>
+      <name>room315_carter_droit_1</name>
+      <pose>-15.88 -4.38 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://carter_gauche</uri>
+      <name>room315_carter_gauche_1</name>
+      <pose>-11.153 -4.38 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://montratec_rails_droit</uri>
+      <name>room315_montratec_rails_droit_1</name>
+      <pose>-11.25 -4.68 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://montratec_rails_left</uri>
+      <name>room315_montratec_rails_left_1</name>
+      <pose>-15.77 -4.68 0.6 0 -1.57 3.14</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_1_droit</uri>
+      <name>room315_shuttle_1_droit_1</name>
+      <pose>-15.75 -4.13 1.185 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shutle_2_droit</uri>
+      <name>room315_shutle_2_droit_1</name>
+      <pose>-15.75 -5.25 1.185 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_1_left</uri>
+      <name>room315_shuttle_1_left_1</name>
+      <pose>-10.7 -4.13 1.18 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://shuttle_2_left</uri>
+      <name>room315_shuttle_2_left_1</name>
+      <pose>-10.7 -5.25 1.18 0 0 -1.57</pose>
+    </include>
+
+  </world>
+</sdf>

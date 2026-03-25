@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="room_315">
+    <static>true</static>
+    <link name="room_315_link">
+      <visual name="room_315_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room_315/meshes/315_room.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.72 0.72 0.74 1.0</ambient>
+          <diffuse>0.72 0.72 0.74 1.0</diffuse>
+          <specular>0.08 0.08 0.08 1.0</specular>
+          <emissive>0.0 0.0 0.0 0.0</emissive>
+        </material>
+      </visual>
+      <collision name="room_315_collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room_315/meshes/315_room.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

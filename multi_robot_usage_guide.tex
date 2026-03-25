@@ -1,0 +1,847 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{upquote}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{needspace}
+
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{coderule}{RGB}{220,220,220}
+\definecolor{codecomment}{RGB}{90,90,90}
+
+\lstdefinestyle{reportcode}{
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{coderule},
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  upquote=true,
+  tabsize=2,
+  captionpos=b,
+  xleftmargin=0.5em,
+  xrightmargin=0.5em,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=8pt
+}
+
+\newcommand{\codenext}[1]{\par\Needspace{#1\baselineskip}}
+
+\setlist[itemize]{leftmargin=1.2cm}
+\setlist[enumerate]{leftmargin=1.2cm}
+\setstretch{1.0}
+
+\title{MFJA 3rd Floor Gazebo Harmonic\\Final Multi-Robot and Meta-Repository Integration Report}
+\author{Technical Project Report}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\clearpage
+
+\chapter{Introduction}
+This report documents the final engineering work carried out on the meta-repository \texttt{mfja\_3rd\_floor\_gz}. The objective was not only to turn the existing MFJA third-floor Gazebo Harmonic map into a reusable multi-robot simulation workspace, but also to reorganize the codebase into several ROS~2 packages inside the same Git repository. The final workspace supports five independently controllable robots:
+\begin{itemize}
+\item \texttt{kuka1}: KUKA KR6 R900 sixx;
+\item \texttt{staubli1}: St\"aubli TX2-60L;
+\item \texttt{yaskawa\_hc10\_1}: Yaskawa HC10;
+\item \texttt{yaskawa\_hc10dt\_1}: Yaskawa HC10DT;
+\item \texttt{tiago1}: TIAGo mobile manipulator.
+\end{itemize}
+
+The work did not stop at inserting robot geometry into the scene. Each robot had to be spawnable from a shared launch pipeline, placed reproducibly inside the world, connected to ROS~2 with its own namespace, and controllable without topic collisions. In addition, the map was enriched with static industrial station assets such as robot tables, covers, rails, shuttle parts, and dedicated room assets.
+
+This report explains the final solution only. It focuses on the changes that remained in the accepted configuration, the important code fragments that make the system work, and the development path that led from a single-robot KUKA setup to a five-robot mixed environment containing both industrial manipulators and one mobile manipulator. It also explains the later meta-repository refactor that separated shared assets, shared control logic, full-floor bringup, and room-315-only bringup into different ROS~2 packages while preserving the overall functionality.
+
+\chapter{Final Result and Scope}
+\section{Delivered final system}
+The final project delivers a configuration-driven simulation architecture with the following properties:
+\begin{itemize}
+\item four ROS~2 packages inside one Git repository instead of one monolithic package;
+\item two YAML registries for robot identity, model selection, pose, and activation: one for the full floor and one for room~315 only;
+\item one shared multi-robot launch file that reads the registry and spawns enabled robots;
+\item one full-floor bringup package and one room-315-only bringup package;
+\item one launch-time robot-selection argument that can override the YAML activation set from the command line using full names, short aliases, or numeric shortcuts;
+\item one ROS--Gazebo bridge configuration generated per robot at runtime;
+\item one \texttt{robot\_state\_publisher} per robot;
+\item articulated SDF models for KUKA, St\"aubli, Yaskawa HC10, Yaskawa HC10DT, and TIAGo;
+\item TIAGo support as both a manipulator and a mobile base;
+\item one synchronized multi-robot command-line tool for coordinated motion scenarios;
+\item a full third-floor world plus a dedicated room-315-only world;
+\item a world file extended with station tables and industrial support parts.
+\end{itemize}
+
+\section{Why this structure was necessary}
+At the beginning, the requirement was only to add a KUKA robot. Very quickly, the real requirement became broader:
+\begin{itemize}
+\item more robots would be added later;
+\item every robot had to remain independently controllable;
+\item placements had to stay reproducible;
+\item the system had to scale without rewriting the launch logic each time.
+\end{itemize}
+
+Because of that, a hard-coded single-robot launch solution would have been the wrong architecture. The final implementation therefore separates responsibilities clearly:
+\begin{itemize}
+\item \texttt{mfja\_3rd\_floor\_description} stores shared Gazebo models, meshes, URDF files, and world files;
+\item \texttt{mfja\_robot\_control\_config/config/robots.yaml} and \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml} decide \emph{which} robots exist and where;
+\item \texttt{mfja\_robot\_control\_config/launch/multi\_robot\_sim.launch.py} decides \emph{how} robots are spawned and bridged, and can override the selected robot set from the command line;
+\item \texttt{mfja\_3rd\_floor\_bringup} exposes the full-floor entry points;
+\item \texttt{mfja\_room\_315\_bringup} exposes the isolated room-315-only entry point;
+\item \texttt{mfja\_robot\_control\_config/scripts/multi\_robot\_sync\_demo.py} coordinates simultaneous motion commands.
+\end{itemize}
+
+\section{Meta-repository package split}
+The final repository is no longer one large ROS~2 package. Instead, it is organized as four packages in the same Git repository:
+\begin{itemize}
+\item \texttt{mfja\_3rd\_floor\_description}: shared meshes, Gazebo models, URDF files, and world files;
+\item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, shared configuration, and synchronized command tools;
+\item \texttt{mfja\_3rd\_floor\_bringup}: launch entry points for the complete third-floor simulation;
+\item \texttt{mfja\_room\_315\_bringup}: launch entry point for the room-315-only simulation.
+\end{itemize}
+
+This split matters technically because it reduces future merge conflicts. A developer adjusting shared environment assets can work mainly in \texttt{mfja\_3rd\_floor\_description}. A developer changing robot-selection logic or synchronized control behavior can work in \texttt{mfja\_robot\_control\_config}. Another developer working only on room~315 can concentrate on \texttt{mfja\_room\_315\_bringup} without modifying the full-floor bringup package.
+
+\section{Full-floor and room-315-only modes}
+The final repository now supports two independent run modes:
+\begin{itemize}
+\item \textbf{Full third floor}: launched from \texttt{mfja\_3rd\_floor\_bringup/full\_floor.launch.py};
+\item \textbf{Room 315 only}: launched from \texttt{mfja\_room\_315\_bringup/room\_315\_only.launch.py}.
+\end{itemize}
+
+The full-floor mode uses the complete MFJA third-floor world and the main robot registry in \texttt{mfja\_robot\_control\_config/config/robots.yaml}. The room-315-only mode uses the dedicated room~315 world and the separate registry in \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. This second mode keeps the scene cleaner for robot and control experiments while still reusing the same shared robot models and the same generic spawn logic.
+
+\section{Final robot registries}
+The final robot lists are stored in two YAML files:
+\begin{itemize}
+\item \texttt{mfja\_robot\_control\_config/config/robots.yaml} for the complete third-floor mode;
+\item \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml} for the isolated room-315-only mode.
+\end{itemize}
+
+The first file became the operational entry point for the complete laboratory layout. The second file preserves the same structure but allows room~315 experiments to evolve independently without changing the full-floor deployment.
+
+\codenext{22}
+\lstinputlisting[
+  style=reportcode,
+  firstline=1,
+  lastline=36,
+  caption={Main full-floor robot registry in \texttt{mfja\_robot\_control\_config/config/robots.yaml}.},
+  label={lst:robots_yaml}
+]{mfja_robot_control_config/config/robots.yaml}
+
+These YAML files are among the most important outcomes of the project because they converted robot deployment into data rather than hard-coded Python statements. A user can now change the active layout of the full floor or of room~315 by editing YAML fields instead of modifying the launch implementation itself.
+
+\chapter{Step-by-Step Development Path}
+\section{Step 1: Converting the KUKA robot into a usable Gazebo model}
+The first working milestone was the KUKA KR6 R900 sixx. The task was not solved by importing a mesh alone. A complete articulated model was needed, including:
+\begin{itemize}
+\item links with visual and collision geometry;
+\item inertial properties for simulation stability;
+\item six revolute joints with limits and damping;
+\item a joint-state publisher plugin;
+\item a joint-trajectory controller plugin.
+\end{itemize}
+
+One of the critical corrections was the use of explicit poses relative to joints. This is the change that eliminated the broken-arm behavior and missing or separated links that appeared in earlier attempts. The following excerpt shows the final link definitions for the first moving segments:
+
+\codenext{14}
+\lstinputlisting[
+  style=reportcode,
+  firstline=40,
+  lastline=58,
+  caption={KUKA links attached with explicit poses relative to their joints.},
+  label={lst:kuka_links}
+]{mfja_3rd_floor_description/models/kuka_kr6r900sixx/model.sdf}
+
+The joint chain then defines the actual kinematic behavior. The final implementation uses explicit parent-child relations, fixed placement offsets, motion limits, damping, and friction:
+
+\codenext{14}
+\lstinputlisting[
+  style=reportcode,
+  firstline=259,
+  lastline=276,
+  caption={KUKA revolute joint chain used in the final model.},
+  label={lst:kuka_joints}
+]{mfja_3rd_floor_description/models/kuka_kr6r900sixx/model.sdf}
+
+The KUKA phase established the core pattern later reused by the other industrial arms: SDF for simulation, URDF for TF publication, plugin-based control inside Gazebo, and ROS topic access through bridging.
+
+\section{Step 2: Generalizing from one robot to a reusable launch architecture}
+After KUKA worked by itself, the next engineering problem was scalability. Adding every new robot by writing another dedicated spawn node would have created a fragile and repetitive launch file. The solution was to convert the launch process into a generic pipeline driven by the YAML registry.
+
+The first part of that pipeline validates the enabled robots from YAML and resolves their SDF and URDF assets from a consistent package structure. This was a decisive design improvement. It enforced one package convention for all robots:
+\begin{itemize}
+\item \texttt{mfja\_3rd\_floor\_description/models/<model\_name>/model.sdf}
+\item \texttt{mfja\_3rd\_floor\_description/urdf/<model\_name>.urdf}
+\end{itemize}
+
+As a result, later robot additions did not require changing the launch structure. They only required adding correct model assets and one new YAML entry.
+
+\section{Step 3: Building per-robot ROS--Gazebo bridges}
+Independent control depends on namespaced topics. Without that, all robots would try to share the same command and feedback channels. The function below generates one bridge configuration per robot:
+
+\codenext{20}
+\lstinputlisting[
+  style=reportcode,
+  language=Python,
+  firstline=141,
+  lastline=189,
+  caption={Generation of robot-specific ROS--Gazebo bridge topics.},
+  label={lst:launch_bridge_yaml}
+]{mfja_robot_control_config/launch/multi_robot_sim.launch.py}
+
+This excerpt is important for three reasons:
+\begin{enumerate}
+\item it maps each robot's \texttt{/joint\_trajectory} command into its own Gazebo transport topic;
+\item it maps each robot's \texttt{/joint\_states} feedback into its own ROS topic;
+\item it conditionally adds mobile-base topics when the model belongs to the \texttt{MOBILE\_MODELS} set.
+\end{enumerate}
+
+That logic is the main reason why the final workspace can support several robots at once without topic collisions.
+
+\section{Step 4: Spawning robots automatically from the registry}
+Once the registry and bridging mechanisms existed, the launch file could iterate over the list of enabled robots and create the required runtime actions automatically. The following excerpt is the central deployment loop of the final project:
+
+\codenext{20}
+\lstinputlisting[
+  style=reportcode,
+  language=Python,
+  firstline=328,
+  lastline=384,
+  caption={Per-robot spawn logic, state publisher creation, and bridge launch.},
+  label={lst:launch_spawn_loop}
+]{mfja_robot_control_config/launch/multi_robot_sim.launch.py}
+
+This loop is where the project stopped being ``a KUKA integration'' and became ``a multi-robot framework.'' Each enabled entry in the YAML file now produces:
+\begin{itemize}
+\item one entity spawn action;
+\item one \texttt{robot\_state\_publisher};
+\item one bridge instance;
+\item one namespaced ROS interface.
+\end{itemize}
+
+\section{Step 5: Adding the St\"aubli TX2-60L}
+After the launch was generalized, the St\"aubli TX2-60L became the first proof that the architecture was reusable. The robot was integrated as its own articulated SDF model and URDF pair, then activated through the YAML registry.
+
+The benefit of this step is architectural rather than merely visual. The robot was added without restructuring the launch file, which confirmed that the generic spawn system was valid. In practice, the St\"aubli model follows the same final pattern established by KUKA: articulated links, explicit joints, collision meshes, inertials, a joint-state publisher, and a joint-trajectory controller.
+
+\section{Step 6: Adding Yaskawa HC10 and HC10DT as distinct robots}
+The Yaskawa phase tested whether two similar robots from the same family could coexist without being confused. The HC10 and HC10DT have similar structure, but the final solution needed to keep their resources genuinely separate.
+
+The difference appears clearly near the wrist-end resources of the DT model. The HC10 uses the standard HC10 wrist resources:
+\begin{itemize}
+\item \texttt{model://yaskawa\_hc10/meshes/hc10/visual/link\_6\_t.dae}
+\item \texttt{model://yaskawa\_hc10/meshes/hc10/collision/link\_6\_t.stl}
+\end{itemize}
+
+The HC10DT uses its own DT-specific wrist resources:
+\begin{itemize}
+\item \texttt{model://yaskawa\_hc10dt/meshes/hc10dt/visual/link\_6\_t.dae}
+\item \texttt{model://yaskawa\_hc10dt/meshes/hc10dt/collision/link\_6\_t.stl}
+\end{itemize}
+
+This distinction is important because it proves that the final configuration does not simply duplicate one Yaskawa robot under two names. The DT variant remains a genuinely separate model in the final workspace.
+
+\section{Step 7: Adding TIAGo first as a manipulator}
+TIAGo required a different approach because it is not a fixed-base industrial arm. It combines a mobile platform, a prismatic torso, a seven-joint arm, and a head. The first integration target was the manipulator part: torso, arm, and head had to respond to the same \texttt{/joint\_trajectory} interface used by the industrial robots.
+
+The torso and arm part of the TIAGo model is built around a prismatic \texttt{torso\_lift\_joint} followed by the articulated arm chain beginning with \texttt{arm\_1\_joint}. In the final file, these joints are defined in \texttt{mfja\_3rd\_floor\_description/models/tiago/model.sdf} with explicit poses, limits, and damping values. This step made TIAGo compatible with the rest of the control framework. Even before base mobility was added, the robot could already publish joint states and accept trajectory commands in its namespace.
+
+\section{Step 8: Upgrading TIAGo to a real mobile manipulator}
+The next critical improvement was to make TIAGo move through the map, not only move its arm. This required two coordinated changes:
+\begin{itemize}
+\item the SDF model had to include a differential-drive plugin;
+\item the launch file had to bridge the mobile topics in addition to the arm topics.
+\end{itemize}
+
+The mobile plugin block is shown below:
+
+\codenext{20}
+\lstinputlisting[
+  style=reportcode,
+  firstline=833,
+  lastline=869,
+  caption={TIAGo mobility, joint-state publication, and joint-trajectory control plugins.},
+  label={lst:tiago_plugins}
+]{mfja_3rd_floor_description/models/tiago/model.sdf}
+
+The launch file complements this with one more important helper:
+
+\codenext{16}
+\lstinputlisting[
+  style=reportcode,
+  language=Python,
+  firstline=199,
+  lastline=221,
+  caption={Runtime rewriting of TIAGo mobile topic names per robot instance.},
+  label={lst:launch_mobile_materialize}
+]{mfja_robot_control_config/launch/multi_robot_sim.launch.py}
+
+This pair of changes is what made \texttt{tiago1} a true mobile manipulator. The arm still uses \texttt{/tiago1/joint\_trajectory}, while the base is driven through \texttt{/tiago1/cmd\_vel} and publishes \texttt{/tiago1/odom} and \texttt{/tiago1/tf}.
+
+\section{Step 9: Enriching the world with industrial station assets}
+After the robot integrations were stable, the map was extended with the station tables and industrial support parts that correspond to the robot positions. These additions belong in the world file because they are static environment elements rather than articulated robots.
+
+The corresponding static placements were added directly to \texttt{mfja\_3rd\_floor\_description/worlds/mfja\_3rd\_floor.world}. The final world now includes the KUKA table, the St\"aubli table, two Yaskawa tables, the left and right carters, both Montratec rails, and four shuttle elements. This work improved the final simulation in three ways:
+\begin{itemize}
+\item the robot stations became physically meaningful rather than floating over an empty floor;
+\item robot \texttt{z\_pose} values could be aligned with actual support tables;
+\item the world became closer to a realistic lab cell instead of a simple model demo.
+\end{itemize}
+
+\section{Step 10: Adding dedicated room assets and a room-315-only mode}
+Once the complete third-floor simulation was stable, a second execution mode became necessary: a lighter environment dedicated to robot and control experiments in room~315. This requirement could not be satisfied cleanly by overloading the full-floor world with many runtime conditionals. The final solution was therefore to add:
+\begin{itemize}
+\item a dedicated room mesh based on \texttt{315\_room.stl};
+\item a separate world file \texttt{mfja\_3rd\_floor\_description/worlds/room\_315\_only.world};
+\item a separate bringup package \texttt{mfja\_room\_315\_bringup};
+\item a separate robot registry \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}.
+\end{itemize}
+
+This new mode reuses the same shared robot models, URDF files, and generic spawn logic, but it replaces the full-floor world with a dedicated room~315 scene. The accepted final room-315-only scene keeps the room mesh itself, the four robot support tables, and the main industrial fixtures such as the carters, rails, and shuttles, while leaving out general lab furniture and room-314 assets. This makes the room-only mode lighter and cleaner while preserving the robot infrastructure needed for experiments.
+
+\section{Step 11: Refactoring the repository into four ROS~2 packages}
+The final structural step was the meta-repository refactor. Earlier stages still lived in one large package. That was workable for one developer, but it would create unnecessary Git conflicts once environment assets, launch logic, room~315 bringup, and robot-control configuration started evolving in parallel.
+
+The repository was therefore split into four packages with clear responsibilities:
+\begin{itemize}
+\item \texttt{mfja\_3rd\_floor\_description}: shared meshes, models, URDF files, and world files;
+\item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, and synchronized command tools;
+\item \texttt{mfja\_3rd\_floor\_bringup}: the full-floor launch entry points;
+\item \texttt{mfja\_room\_315\_bringup}: the room-315-only launch entry point.
+\end{itemize}
+
+This change preserved the working behavior but improved long-term maintainability. Environment work can now evolve in the description package, runtime control logic can evolve in the configuration package, and the two bringup packages can change independently according to whether a developer is working on the complete floor or only on room~315.
+
+\section{Step 12: Freezing the final scope}
+Experimental SCARA work was explored during development, but it was removed from the accepted final configuration. That cleanup matters in the report because it clarifies the scope actually delivered. The final system is therefore limited intentionally to:
+\begin{itemize}
+\item KUKA KR6;
+\item St\"aubli TX2-60L;
+\item Yaskawa HC10;
+\item Yaskawa HC10DT;
+\item TIAGo;
+\item the station furniture and industrial static assets that remain in the world.
+\end{itemize}
+
+\chapter{Important Final Code and Why It Matters}
+\section{Code block 1: The configuration file}
+Listing~\ref{lst:robots_yaml} is small, but it is central to the project. The same field structure is also reused in \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. Each field directly affects runtime behavior:
+\begin{itemize}
+\item \texttt{name} becomes both the ROS namespace and the Gazebo entity name;
+\item \texttt{model} selects the SDF folder and matching URDF;
+\item \texttt{x\_pose}, \texttt{y\_pose}, \texttt{z\_pose}, and \texttt{yaw} define reproducible placement;
+\item \texttt{enabled} decides whether the robot participates in the launch.
+\end{itemize}
+
+This file is the reason the final setup is manageable. It allows placements and robot activation to change without editing the launch implementation.
+
+\section{Code block 2: Bridge generation}
+Listing~\ref{lst:launch_bridge_yaml} is the main control-isolation mechanism. It converts a generic concept, ``this robot has trajectory and joint-state topics,'' into robot-specific names:
+\begin{itemize}
+\item \texttt{/kuka1/joint\_trajectory}
+\item \texttt{/staubli1/joint\_trajectory}
+\item \texttt{/yaskawa\_hc10\_1/joint\_trajectory}
+\item \texttt{/yaskawa\_hc10dt\_1/joint\_trajectory}
+\item \texttt{/tiago1/joint\_trajectory}
+\end{itemize}
+
+Without this logic, multiple robots could not be controlled independently from the same ROS~2 environment.
+
+\section{Code block 3: Spawn loop and state publishers}
+Listing~\ref{lst:launch_spawn_loop} contains the actual deployment algorithm. The launch file:
+\begin{enumerate}
+\item loads the world;
+\item sets Gazebo model and resource paths;
+\item iterates over enabled robots;
+\item resolves model assets;
+\item creates a bridge file;
+\item spawns the model;
+\item starts one \texttt{robot\_state\_publisher};
+\item starts one bridge instance.
+\end{enumerate}
+
+This is the core of the final architecture because it removed the need for robot-specific launch duplication.
+
+\section{Code block 4: KUKA articulation}
+The KUKA excerpts in Listings~\ref{lst:kuka_links} and~\ref{lst:kuka_joints} explain why the final KUKA model works correctly. The final implementation uses:
+\begin{itemize}
+\item child links placed relative to joints;
+\item explicit parent-child joint relations;
+\item axis definitions consistent with the robot chain;
+\item realistic limits, damping, and friction.
+\end{itemize}
+
+The same model file also contains the joint-state publisher and joint-trajectory controller plugins. These complete the robot by turning the articulated geometry into a controllable Gazebo entity.
+
+\section{Code block 5: TIAGo mobility support}
+TIAGo needed a separate treatment because it mixes two control modes:
+\begin{itemize}
+\item trajectory control for torso, arm, and head;
+\item velocity control for the mobile base.
+\end{itemize}
+
+The plugin excerpt in Listing~\ref{lst:tiago_plugins} plus the topic-rewriting function in Listing~\ref{lst:launch_mobile_materialize} are the two code blocks that enable this mixed behavior. Together they explain why the TIAGo arm can move independently while the base also responds to \texttt{cmd\_vel}.
+
+\section{Code block 6: Static world composition}
+The world file belongs to the static-scene layer of the architecture. It contains the objects that shape the robot workstations:
+\begin{itemize}
+\item KUKA table;
+\item St\"aubli table;
+\item two Yaskawa tables;
+\item left and right carters;
+\item right and left Montratec rails;
+\item four shuttle elements.
+\end{itemize}
+
+Those placements matter because the final robot poses in the robot YAML files were chosen relative to these station assets. In the full-floor mode, this relationship is defined against \texttt{mfja\_3rd\_floor\_description/worlds/mfja\_3rd\_floor.world}. In the room-315-only mode, the dedicated world keeps only the room~315 mesh, the robot support tables, and the industrial fixtures needed for experiments.
+
+\section{Code block 7: Launch-time robot selection and synchronized demos}
+The final workspace also gained two practical operational improvements after the original five-robot integration was stable.
+
+First, the launch file now accepts a \texttt{robots} argument. This allows an operator to type, for example, \texttt{robots:=kuka,tiago} or \texttt{robots:=1,5} and spawn only the requested instances, even if more robots are enabled in the YAML file. This is useful during testing because it avoids repeated editing of \texttt{mfja\_robot\_control\_config/config/robots.yaml} for short experiments and makes quick selection much easier from the command line.
+
+Second, the script \texttt{mfja\_robot\_control\_config/scripts/multi\_robot\_sync\_demo.py} provides one coordinated ROS~2 process that can publish trajectories to several robots from one node. This is a better workflow than launching many independent \texttt{ros2 topic pub} commands from separate shells, because all commands are emitted from one process after subscriber readiness has been verified. The tool can also be pointed to either robot YAML file through \texttt{--robot-config}, which means the same synchronized-control process works in both the full-floor and room-315-only modes.
+
+\chapter{How Independent Control Works}
+\section{Namespacing strategy}
+Independent control is based on a simple rule: every robot is identified by a unique name, and that same name is used as its ROS namespace and Gazebo model name. For example:
+\begin{itemize}
+\item \texttt{kuka1}
+\item \texttt{staubli1}
+\item \texttt{yaskawa\_hc10\_1}
+\item \texttt{yaskawa\_hc10dt\_1}
+\item \texttt{tiago1}
+\end{itemize}
+
+This leads directly to separate control topics. A trajectory sent to \texttt{/kuka1/joint\_trajectory} does not affect any other robot because the bridge maps it only to \texttt{/model/kuka1/joint\_trajectory}. The same is true for St\"aubli, both Yaskawa robots, and TIAGo.
+
+\section{Why one state publisher per robot was necessary}
+TF publication also had to stay isolated. The final launch therefore starts one \texttt{robot\_state\_publisher} instance per robot. This prevents the frame trees from collapsing into one ambiguous set of joints and links. In the fixed-base industrial arms, a \texttt{frame\_prefix} is used so that the TF tree remains clearly tied to the robot instance. For TIAGo, the mobile model path is treated specially because its base-related topics and frames are already managed in a different way.
+
+\section{Why TIAGo needed extra logic}
+The industrial arms share a common control style: joint trajectories only. TIAGo does not. It contains:
+\begin{itemize}
+\item wheel joints and a differential-drive controller;
+\item a prismatic torso;
+\item a seven-joint arm;
+\item a pan/tilt head.
+\end{itemize}
+
+The final architecture remained generic, but not blindly generic. The \texttt{MOBILE\_MODELS} set marks which model requires additional bridging and topic rewriting. This is a practical engineering choice: the system remains extensible while still recognizing that not all robots are controlled in the same way.
+
+\chapter{Validation and User Operation Guide}
+\section{What was validated in the final system}
+The final result was validated operationally through repeated checks:
+\begin{itemize}
+\item each robot could spawn using the final YAML registry;
+\item each industrial arm reacted to a namespaced \texttt{/joint\_trajectory} command;
+\item TIAGo reacted both to \texttt{/tiago1/joint\_trajectory} and \texttt{/tiago1/cmd\_vel};
+\item the world loaded the static station assets without breaking robot placement;
+\item duplicate robot control did not occur because topic names were isolated.
+\end{itemize}
+
+\section{How to run the program}
+The recommended workflow uses two terminals. Terminal 1 starts the simulation. Terminal 2 is used for checking topics and sending commands. The same ROS environment must be sourced in every terminal before running any command.
+
+\subsection*{Terminal 1: build and launch the full floor}
+Use the following commands exactly:
+
+\codenext{10}
+\begin{lstlisting}[style=reportcode,caption={Final launch procedure.},label={lst:final_launch}]
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+unset ROS_DOMAIN_ID
+colcon build --packages-select mfja_3rd_floor_description mfja_robot_control_config mfja_3rd_floor_bringup mfja_room_315_bringup --symlink-install
+source install/setup.bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robot_config:=config/robots.yaml
+\end{lstlisting}
+
+When this command finishes starting, Gazebo should contain the enabled robots from \texttt{mfja\_robot\_control\_config/config/robots.yaml}. In the current final configuration these are \texttt{kuka1}, \texttt{staubli1}, \texttt{yaskawa\_hc10\_1}, \texttt{yaskawa\_hc10dt\_1}, and \texttt{tiago1}.
+
+\subsection*{Alternative launch: room 315 only}
+The room-315-only mode is launched from a different bringup package and uses a separate robot registry:
+
+\codenext{10}
+\begin{lstlisting}[style=reportcode,caption={Launching the room-315-only mode.},label={lst:room315_launch}]
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+unset ROS_DOMAIN_ID
+source install/setup.bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robot_config:=config/robots_room_315_only.yaml
+\end{lstlisting}
+
+This mode loads \texttt{mfja\_3rd\_floor\_description/worlds/room\_315\_only.world} and the dedicated robot registry \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. It is intended for lighter, cleaner robot experiments than the full third-floor world. In its final accepted form it keeps only room~315, the four robot support tables, and the main industrial fixtures such as the carters, rails, and shuttles.
+
+\subsection*{Optional launch-time robot selection}
+When only a subset of robots is needed for a quick experiment, the launch file can now override the YAML activation set directly from the command line:
+
+\codenext{12}
+\begin{lstlisting}[style=reportcode,caption={Spawning only selected robots from the command line.},label={lst:launch_robot_subset}]
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=kuka,tiago
+
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=1,5
+\end{lstlisting}
+
+This argument now accepts three convenient forms:
+\begin{itemize}
+\item full robot names such as \texttt{kuka1,tiago1};
+\item short aliases such as \texttt{kuka,staubli,hc10,hc10dt,tiago};
+\item numeric indices by YAML order such as \texttt{1,5}.
+\end{itemize}
+
+In the current registry order, the shortcuts are:
+\begin{itemize}
+\item \texttt{1} or \texttt{kuka} $\rightarrow$ \texttt{kuka1};
+\item \texttt{2} or \texttt{staubli} $\rightarrow$ \texttt{staubli1};
+\item \texttt{3} or \texttt{hc10} $\rightarrow$ \texttt{yaskawa\_hc10\_1};
+\item \texttt{4} or \texttt{hc10dt} $\rightarrow$ \texttt{yaskawa\_hc10dt\_1};
+\item \texttt{5} or \texttt{tiago} $\rightarrow$ \texttt{tiago1}.
+\end{itemize}
+
+If the argument is omitted, the launch file falls back to the \texttt{enabled} flags in YAML. If the operator uses \texttt{robots:=all}, every robot listed in the YAML registry is spawned, even if some entries are currently disabled there.
+
+\subsection*{Terminal 2: source the workspace for control}
+Open a second terminal and source the environment again:
+
+\codenext{8}
+\begin{lstlisting}[style=reportcode,caption={Second terminal preparation.},label={lst:second_terminal}]
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+unset ROS_DOMAIN_ID
+source install/setup.bash
+\end{lstlisting}
+
+\section{How to verify that the system is ready}
+Before sending motion commands, it is good practice to verify that the robots and their topics are available. The following checks are sufficient:
+
+\codenext{14}
+\begin{lstlisting}[style=reportcode,caption={Basic runtime checks before sending commands.}]
+ros2 topic list | rg '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1)/'
+
+ros2 topic info /kuka1/joint_trajectory
+ros2 topic info /staubli1/joint_trajectory
+ros2 topic info /yaskawa_hc10_1/joint_trajectory
+ros2 topic info /yaskawa_hc10dt_1/joint_trajectory
+ros2 topic info /tiago1/joint_trajectory
+ros2 topic info /tiago1/cmd_vel
+\end{lstlisting}
+
+If a topic shows at least one subscription on the command side, the bridge and controller path are active. If a command waits forever for a subscriber, the robot was either not spawned, not enabled in the YAML file, or the launch is not fully ready yet.
+
+\section{How to inspect the synchronized multi-robot tool}
+The final repository now includes \texttt{mfja\_robot\_control\_config/scripts/multi\_robot\_sync\_demo.py}, which can publish coordinated commands to all enabled robots from one ROS~2 process. Before using custom goals, it is useful to print the expected joint names and default target vectors:
+
+\codenext{8}
+\begin{lstlisting}[style=reportcode,caption={Listing the joint order expected by the synchronized demo tool.},label={lst:list_joints}]
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
+\end{lstlisting}
+
+This command prints each enabled robot name, its model type, the exact joint order expected by the tool, and the current default position vector built into the script. If the room-315-only mode is active, the same inspection can be run against the room~315 registry:
+
+\codenext{7}
+\begin{lstlisting}[style=reportcode,caption={Listing joint order against the room-315-only robot registry.}]
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --robot-config config/robots_room_315_only.yaml \
+  --list-joints
+\end{lstlisting}
+
+\section{How to choose between one-by-one control and synchronized control}
+There are now two different command styles in the final repository, and they should not be mixed conceptually:
+\begin{itemize}
+\item \textbf{One-by-one control}: send one command directly to one robot topic. This is the best method for debugging, for checking one controller, or for moving only one robot while leaving all others untouched.
+\item \textbf{Synchronized control}: use \texttt{multi\_robot\_sync\_demo.py}. This is the best method when two, three, or more robots must begin one operation together from one ROS~2 node.
+\end{itemize}
+
+The practical difference is important. A direct \texttt{ros2 topic pub --once} command addresses only the topic written in that command. By contrast, the synchronized tool loads the enabled robots from the selected robot YAML file and publishes one trajectory to each enabled robot that has a known preset. Therefore, if only two or three robots should move together while the others must remain completely inactive, the recommended workflow is:
+\begin{enumerate}
+\item if no \texttt{--goal} arguments are provided, the tool commands all enabled robots that have built-in presets;
+\item if one or more \texttt{--goal} arguments are provided, only the robots explicitly named by those arguments are commanded;
+\item the \texttt{robots:=...} launch argument is still useful when the operator wants to reduce scene clutter or spawn only a temporary subset in Gazebo.
+\end{enumerate}
+
+This distinction prevents a common misunderstanding: the synchronized tool now uses two modes. With no \texttt{--goal} arguments, it runs the full built-in synchronized demo for all enabled robots. With one or more \texttt{--goal} arguments, it publishes only to the robots listed on the command line.
+
+\section{How to control the industrial robots}
+The fixed-base industrial robots all use the same control method: publish one \texttt{trajectory\_msgs/msg/JointTrajectory} message to the robot-specific \texttt{/joint\_trajectory} topic. The message must use the correct joint names and straight ASCII quotes. Typographic quotes copied from formatted text must not be used.
+
+\subsection*{KUKA KR6}
+KUKA uses the joints \texttt{joint\_a1} to \texttt{joint\_a6}.
+
+\codenext{10}
+\begin{lstlisting}[style=reportcode,caption={Example command for KUKA.}]
+ros2 topic pub --once /kuka1/joint_trajectory \
+trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], \
+points: [{positions: [0.0,-0.8,1.2,0.0,0.6,0.0], \
+time_from_start: {sec: 3, nanosec: 0}}]}"
+\end{lstlisting}
+
+\subsection*{St\"aubli TX2-60L}
+St\"aubli uses the joints \texttt{joint\_1} to \texttt{joint\_6}.
+
+\codenext{10}
+\begin{lstlisting}[style=reportcode,caption={Example command for St\"aubli.}]
+ros2 topic pub --once /staubli1/joint_trajectory \
+trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], \
+points: [{positions: [0.0,0.3,-0.5,0.0,0.6,0.0], \
+time_from_start: {sec: 3, nanosec: 0}}]}"
+\end{lstlisting}
+
+\subsection*{Yaskawa HC10}
+The Yaskawa HC10 uses the joints \texttt{joint\_1\_s}, \texttt{joint\_2\_l}, \texttt{joint\_3\_u}, \texttt{joint\_4\_r}, \texttt{joint\_5\_b}, and \texttt{joint\_6\_t}.
+
+\codenext{10}
+\begin{lstlisting}[style=reportcode,caption={Example command for Yaskawa HC10.}]
+ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory \
+trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], \
+points: [{positions: [0.0,-0.6,0.8,0.0,0.5,0.0], \
+time_from_start: {sec: 3, nanosec: 0}}]}"
+\end{lstlisting}
+
+\subsection*{Yaskawa HC10DT}
+The HC10DT uses the same joint names as the HC10, but it remains a separate robot because it has its own model and namespace.
+
+\codenext{10}
+\begin{lstlisting}[style=reportcode,caption={Example command for Yaskawa HC10DT.}]
+ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory \
+trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], \
+points: [{positions: [0.0,-0.5,0.7,0.0,0.4,0.0], \
+time_from_start: {sec: 3, nanosec: 0}}]}"
+\end{lstlisting}
+
+\section{How to control TIAGo}
+TIAGo must be treated as two subsystems:
+\begin{itemize}
+\item the torso, arm, and head use \texttt{/tiago1/joint\_trajectory};
+\item the mobile base uses \texttt{/tiago1/cmd\_vel}.
+\end{itemize}
+
+\subsection*{TIAGo arm, torso, and head}
+The joint names are \texttt{torso\_lift\_joint}, \texttt{arm\_1\_joint} to \texttt{arm\_7\_joint}, and \texttt{head\_1\_joint}, \texttt{head\_2\_joint}.
+
+\codenext{12}
+\begin{lstlisting}[style=reportcode,caption={Example command for the TIAGo manipulator chain.}]
+ros2 topic pub --once /tiago1/joint_trajectory \
+trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint', \
+'arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], \
+points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], \
+time_from_start: {sec: 4, nanosec: 0}}]}"
+\end{lstlisting}
+
+\subsection*{TIAGo mobile base}
+The mobile base must receive velocity commands continuously while it is moving. A single \texttt{--once} command is usually too short to produce visible motion. For that reason, the correct operational command uses \texttt{-r 20} or another non-zero publish rate:
+
+\codenext{8}
+\begin{lstlisting}[style=reportcode,caption={Example command for TIAGo base motion.}]
+ros2 topic pub -r 20 /tiago1/cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.25, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.35}}"
+\end{lstlisting}
+
+\subsection*{Stopping TIAGo}
+To stop TIAGo safely, either interrupt the continuous publisher with \texttt{Ctrl+C} or publish a zero-velocity command:
+
+\codenext{8}
+\begin{lstlisting}[style=reportcode,caption={Stopping the TIAGo base.}]
+ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+\end{lstlisting}
+
+\subsection*{Monitoring TIAGo odometry}
+The base state can be monitored using:
+
+\codenext{6}
+\begin{lstlisting}[style=reportcode,caption={Reading TIAGo odometry.}]
+ros2 topic echo /tiago1/odom
+\end{lstlisting}
+
+\section{How to move one robot at a time}
+If the objective is to move one robot while all other robots remain untouched, the correct method is to publish directly to that robot namespace. The procedure is simple:
+\begin{enumerate}
+\item identify the robot name;
+\item identify the correct joint order;
+\item publish one \texttt{JointTrajectory} message to that robot only.
+\end{enumerate}
+
+For example, to move only KUKA, use only \texttt{/kuka1/joint\_trajectory}. To move only St\"aubli, use only \texttt{/staubli1/joint\_trajectory}. The commands shown earlier in this chapter are therefore not just examples of syntax; they are also the correct operational method for isolated robot control.
+
+The same logic applies to TIAGo:
+\begin{itemize}
+\item if only the manipulator should move, publish only to \texttt{/tiago1/joint\_trajectory};
+\item if only the mobile base should move, publish only to \texttt{/tiago1/cmd\_vel}.
+\end{itemize}
+
+\section{How to command several robots together from one node}
+Independent single-robot commands remain useful for debugging, but they are not the best solution when several robots must move together in one operation. If five separate shell commands are launched with \texttt{\&}, they start only approximately at the same time. The final package therefore includes a synchronized coordinator script.
+
+\subsection*{Recommended procedure for two or three robots moving together}
+If the goal is to move only two robots together, or only three robots together, the synchronized tool can now target that subset directly. In other words, if the operator provides \texttt{--goal} only for \texttt{kuka1} and \texttt{staubli1}, then only those two robots move, even if more robots are currently spawned in Gazebo.
+
+\codenext{12}
+\begin{lstlisting}[style=reportcode,caption={Synchronized motion for two robots only.},label={lst:sync_two_robots}]
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --trajectory-duration 4.0
+\end{lstlisting}
+
+The exact same principle extends to three robots:
+
+\codenext{13}
+\begin{lstlisting}[style=reportcode,caption={Synchronized motion for three robots only.},label={lst:sync_three_robots}]
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --goal yaskawa_hc10_1=0.0,-0.7,0.9,0.0,0.4,0.0 \
+  --trajectory-duration 4.0
+\end{lstlisting}
+
+Using \texttt{robots:=...} during launch is still a good workflow when the operator wants a smaller scene for testing, but it is no longer mandatory just to restrict synchronized motion to two or three robots.
+
+\subsection*{Approximate simultaneous control from the shell}
+It is still possible to send several \texttt{ros2 topic pub --once} commands from the shell using multiple terminals or shell background operators. However, this only gives approximate simultaneity because each shell process starts at a slightly different time. That method is acceptable for quick visual tests, but it is not the recommended final workflow for coordinated multi-robot operation.
+
+\subsection*{Synchronized example with default built-in goals}
+The following command publishes one coordinated trajectory set to every enabled robot in the YAML file:
+
+\codenext{8}
+\begin{lstlisting}[style=reportcode,caption={Coordinated multi-robot motion using the built-in default goals.},label={lst:sync_defaults}]
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py
+\end{lstlisting}
+
+\subsection*{Synchronized example with custom goals from the command line}
+The same tool can now override the target vector of each robot directly from the command line using repeated \texttt{--goal} arguments:
+
+\codenext{14}
+\begin{lstlisting}[style=reportcode,caption={Coordinated motion with custom target vectors for all robots.},label={lst:sync_custom_goals}]
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --goal yaskawa_hc10_1=0.0,-0.7,0.9,0.0,0.4,0.0 \
+  --goal yaskawa_hc10dt_1=0.0,-0.4,0.6,0.0,0.3,0.0 \
+  --goal tiago1=0.10,0.2,-0.4,-0.3,0.9,0.1,-0.1,0.0,0.1,-0.1 \
+  --trajectory-duration 4.0
+\end{lstlisting}
+
+The values after each \texttt{--goal} argument must match the joint order printed by Listing~\ref{lst:list_joints}. If the number of values does not match the number of joints expected for that robot, the tool exits with a clear error message instead of publishing a malformed command.
+
+\subsection*{Returning all robots to the script defaults}
+The same utility can also be used to return all robots to the current default demonstration posture by explicitly restating the built-in vectors:
+
+\codenext{14}
+\begin{lstlisting}[style=reportcode,caption={Returning the full cell to the synchronized default posture.},label={lst:sync_return_defaults}]
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=0.8,-1.0,1.2,0.0,0.4,0.0 \
+  --goal staubli1=0.0,0.3,-0.5,0.0,0.6,0.0 \
+  --goal yaskawa_hc10_1=0.0,-0.6,0.8,0.0,0.5,0.0 \
+  --goal yaskawa_hc10dt_1=0.0,-0.5,0.7,0.0,0.4,0.0 \
+  --goal tiago1=0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2 \
+  --trajectory-duration 4.0
+\end{lstlisting}
+
+\subsection*{Adding TIAGo base motion to the synchronized scenario}
+The synchronized tool can also command TIAGo base motion while the manipulator trajectories are being published:
+
+\codenext{16}
+\begin{lstlisting}[style=reportcode,caption={Coordinated arm trajectories with TIAGo base motion.},label={lst:sync_tiago_base}]
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --goal yaskawa_hc10_1=0.0,-0.7,0.9,0.0,0.4,0.0 \
+  --goal yaskawa_hc10dt_1=0.0,-0.4,0.6,0.0,0.3,0.0 \
+  --goal tiago1=0.10,0.2,-0.4,-0.3,0.9,0.1,-0.1,0.0,0.1,-0.1 \
+  --trajectory-duration 4.0 \
+  --tiago-base-linear 0.20 \
+  --tiago-base-angular 0.25 \
+  --tiago-base-duration 4.0
+\end{lstlisting}
+
+This does not create hard real-time synchronization in the strict control-theory sense, but it is operationally superior to launching many independent CLI publishers because all commands are emitted from one ROS node after subscriber readiness has been checked.
+
+\section{How to change robot positions and active robots}
+The placement and activation of robots is controlled from the robot YAML files:
+\begin{itemize}
+\item \texttt{mfja\_robot\_control\_config/config/robots.yaml} for the complete third-floor simulation;
+\item \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml} for the dedicated room-315-only mode.
+\end{itemize}
+
+Each entry contains:
+\begin{itemize}
+\item \texttt{name}: robot namespace and Gazebo entity name;
+\item \texttt{model}: which SDF and URDF pair to load;
+\item \texttt{x\_pose}, \texttt{y\_pose}, \texttt{z\_pose}: Cartesian placement in the world;
+\item \texttt{yaw}: heading angle around the vertical axis;
+\item \texttt{enabled}: whether that robot is spawned.
+\end{itemize}
+
+A typical modification workflow is:
+\begin{enumerate}
+\item choose the correct YAML file for the mode you are using;
+\item edit \texttt{mfja\_robot\_control\_config/config/robots.yaml} or \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml};
+\item save the new \texttt{x\_pose}, \texttt{y\_pose}, \texttt{z\_pose}, \texttt{yaw}, or \texttt{enabled} values;
+\item stop the current launch;
+\item launch the simulation again.
+\end{enumerate}
+
+If only the YAML file changed, no package rebuild is normally required because the launch command already points to the configuration file directly. Rebuild is required only when Python launch code, SDF files, or URDF files are modified.
+
+If the operator does not want to edit YAML at all for a quick test, the new \texttt{robots} launch argument can temporarily override the selection from the command line, for example \texttt{robots:=kuka,tiago} or \texttt{robots:=1,5}.
+
+\section{Typical issues and final operational notes}
+Several issues appeared during development. The final code contains the fixes that solved them, and these notes help during operation:
+\begin{itemize}
+\item \textbf{Missing or visually separated links}: fixed in the final models by using explicit child-link placement relative to joints and by correcting resource paths.
+\item \textbf{Robot duplication or wrong spawning behavior}: avoided by unique robot names and the launch partition handling.
+\item \textbf{Robots at wrong height}: corrected through \texttt{z\_pose} in the robot YAML files and by adding the corresponding station tables in the world.
+\item \textbf{Need to test only one or two robots quickly}: use the launch argument \texttt{robots:=kuka,tiago} or \texttt{robots:=1,5} instead of rewriting the YAML activation flags.
+\item \textbf{TIAGo arm moves but base does not}: the base requires the \texttt{cmd\_vel} publisher to run continuously for a short time; a one-shot message is often not enough.
+\item \textbf{Need coordinated motion across several robots}: use \texttt{multi\_robot\_sync\_demo.py} rather than launching many separate \texttt{ros2 topic pub} commands from different shells.
+\item \textbf{Command copied with wrong quotes}: always use plain ASCII quotes exactly as written in the code blocks of this report.
+\item \textbf{New packages not found after the refactor}: remove stale build and install products from the old single-package layout, rebuild the four new packages, and source \texttt{install/setup.bash} again before launching.
+\end{itemize}
+
+\chapter{Conclusion}
+The final project evolved from a narrow task, adding one KUKA robot, into a reusable multi-robot simulation framework for Gazebo Harmonic. The most important result is not any single model file by itself. The most important result is the architecture that now connects configuration, spawning, bridging, TF publication, and world composition into one coherent system.
+
+The KUKA integration established the articulation and controller pattern. The YAML-driven launch architecture made future additions scalable. The St\"aubli and Yaskawa integrations demonstrated that the framework was reusable across industrial robot families. TIAGo then proved that the same shared control layer could also support a mobile manipulator through a carefully extended bridge and plugin strategy. The later room-315-only mode demonstrated that the same robot infrastructure could be reused in a lighter experimental scene. Finally, the meta-repository refactor separated shared assets, shared control logic, full-floor bringup, and room-specific bringup into distinct ROS~2 packages while preserving the original functionality.
+
+In summary, the final solution is technically significant for three reasons:
+\begin{itemize}
+\item it is configuration-driven rather than hard-coded;
+\item it guarantees independent robot control through namespaced interfaces;
+\item it combines several robot classes, multiple environment modes, and static industrial assets in one reproducible Gazebo Harmonic repository.
+\end{itemize}
+
+\end{document}

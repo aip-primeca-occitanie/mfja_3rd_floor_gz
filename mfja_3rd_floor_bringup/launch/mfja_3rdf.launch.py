@@ -22,26 +22,17 @@ from launch.actions import (
     DeclareLaunchArgument,
     SetEnvironmentVariable,
     IncludeLaunchDescription,
-    ExecuteProcess,
     OpaqueFunction
 )
-from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration
 
 
 def start_gzserver(context, *args, **kwargs):
-    pkg_path = get_package_share_directory('mfja_3rd_floor_gz')
+    description_pkg_path = get_package_share_directory('mfja_3rd_floor_description')
 
     world_name = LaunchConfiguration('world_name').perform(context)
-    world = os.path.join(pkg_path, 'worlds', world_name + '.world')
-
-    params_file = PathJoinSubstitution(
-        substitutions=[pkg_path, 'config', 'gazebo_params.yaml'])
-
-    # Command to start the gazebo server.
-    gazebo_server_cmd_line = [
-        'gz', 'sim', world, '-r' , '-s']
+    world = os.path.join(description_pkg_path, 'worlds', world_name + '.world')
 
     start_gazebo_server_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -64,18 +55,11 @@ def start_gzserver(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    model_path = ''
-    resource_path = ''
-
-    # Add br2_gazebo_worlds path
-    pkg_path = get_package_share_directory('mfja_3rd_floor_gz')
-    model_path += os.path.join(pkg_path, 'models')
-    resource_path += pkg_path + model_path
+    description_pkg_path = get_package_share_directory('mfja_3rd_floor_description')
+    model_path = os.path.join(description_pkg_path, 'models')
 
     if 'GZ_SIM_MODEL_PATH' in environ:
-        model_path += pathsep+environ['GZ_SIM_MODEL_PATH']
-    if 'GZ_SIM_RESOURCE_PATH' in environ:
-        resource_path += pathsep+environ['GZ_SIM_RESOURCE_PATH']
+        model_path += pathsep + environ['GZ_SIM_MODEL_PATH']
 
     declare_world_name = DeclareLaunchArgument(
         'world_name', default_value='',

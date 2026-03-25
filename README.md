@@ -1,107 +1,391 @@
-Gazebo simulation for the 3rd floor of the Maison de la Formation Jacqueline Auriol (MFJA)
-================================================================================================
+Gazebo simulation meta-repository for the 3rd floor of the Maison de la Formation Jacqueline Auriol (MFJA)
+===========================================================================================================
 
-## Introduction
+## Overview
 
-This repository provides the Gazebo Harmonic world, robot models, launch files, and control utilities used to simulate the third floor of the Maison de la Formation Jacqueline Auriol (MFJA).
+This repository has been refactored from a single large ROS 2 package into a meta-repository with five ROS 2 packages inside the same Git repository.
 
-The current workspace supports:
+The goal of the refactor is to separate:
 
-- the MFJA third-floor map using the updated `mfja_3rd_floor_v4.stl` mesh;
-- multi-robot spawning from one YAML configuration file;
-- independent control of KUKA, Staubli, Yaskawa HC10, Yaskawa HC10DT, and TIAGo;
-- synchronized motion commands for several robots from one ROS 2 node;
-- static environment assets such as robot tables, carters, rails, shuttles, and lab furniture.
+- shared environment and robot description assets;
+- shared robot runtime and control configuration;
+- full third-floor bringup;
+- room-315-only bringup.
 
-## Install
+An additional umbrella package named `mfja_3rd_floor_gz` is also provided inside the repository so the package layout includes one subdirectory with the same name as the Git repository itself. This package mainly exists for compatibility and convenience, while the functional responsibilities stay split across the dedicated packages below.
+
+The repository root is no longer a ROS 2 package by itself. The ROS 2 packages are the subdirectories listed below.
+
+## Packages
+
+### `mfja_3rd_floor_gz`
+
+Umbrella and compatibility package:
+
+- gives the repository a subpackage with the same name as the parent Git directory;
+- forwards launch entry points to the dedicated bringup packages;
+- keeps simple compatibility commands available.
+
+Main content:
+
+- `mfja_3rd_floor_gz/launch/full_floor.launch.py`
+- `mfja_3rd_floor_gz/launch/room_315_only.launch.py`
+- `mfja_3rd_floor_gz/launch/mfja_3rdf.launch.py`
+- `mfja_3rd_floor_gz/launch/mfja_3rdf_kuka.launch.py`
+
+### `mfja_3rd_floor_description`
+
+Shared simulation assets:
+
+- Gazebo models;
+- meshes and STL files;
+- URDF files;
+- world files;
+- room models such as room 315;
+- shared static content reused by different simulation modes.
+
+Main content:
+
+- `mfja_3rd_floor_description/models/`
+- `mfja_3rd_floor_description/urdf/`
+- `mfja_3rd_floor_description/worlds/`
+
+### `mfja_robot_control_config`
+
+Shared runtime and control layer:
+
+- robot YAML spawn configuration files;
+- shared multi-robot launch logic;
+- shared Gazebo-related config files;
+- synchronized multi-robot control utility.
+
+Main content:
+
+- `mfja_robot_control_config/config/`
+- `mfja_robot_control_config/launch/multi_robot_sim.launch.py`
+- `mfja_robot_control_config/scripts/multi_robot_sync_demo.py`
+
+### `mfja_3rd_floor_bringup`
+
+Bringup package for the complete third-floor simulation.
+
+Main content:
+
+- `mfja_3rd_floor_bringup/launch/full_floor.launch.py`
+- `mfja_3rd_floor_bringup/launch/mfja_3rdf.launch.py`
+- `mfja_3rd_floor_bringup/launch/mfja_3rdf_kuka.launch.py`
+
+### `mfja_room_315_bringup`
+
+Bringup package for the isolated room-315-only simulation.
+
+Main content:
+
+- `mfja_room_315_bringup/launch/room_315_only.launch.py`
+
+## Build
 
 ```bash
-mkdir -p ~/mfja_ws/src
-cd ~/mfja_ws/src
+mkdir -p ~/ALI_ros2_ws/src
+cd ~/ALI_ros2_ws/src
 git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
-cd ..
+cd ~/ALI_ros2_ws
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
 ```
 
-## Repository structure
+## If You Are Updating From The Old Single-Package Layout
 
-- `config/robots.yaml`: robot registry, poses, model selection, and activation flags
-- `launch/mfja_3rdf.launch.py`: launch the MFJA world without robots
-- `launch/mfja_3rdf_kuka.launch.py`: launch the world and spawn robots from YAML
-- `models/`: Gazebo models for robots and static scene assets
-- `scripts/multi_robot_sync_demo.py`: synchronized multi-robot command-line tool
-- `worlds/mfja_3rd_floor.world`: static scene composition
+If your workspace was built before the refactor, your `build/`, `install/`, or `log/` directories may still contain artifacts from the old single-package layout.
 
-## Simulation
-
-### Walls only
+The safest update procedure is to rebuild from a clean workspace state:
 
 ```bash
-cd ~/mfja_ws
+cd ~/ALI_ros2_ws
+rm -rf build install log
 source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
 source install/setup.bash
-ros2 launch mfja_3rd_floor_gz mfja_3rdf.launch.py world_name:=mfja_3rd_floor
 ```
 
-### Full multi-robot simulation
+This is recommended because the new meta-repository now legitimately contains a package named `mfja_3rd_floor_gz`, so removing only `build/mfja_3rd_floor_gz` and `install/mfja_3rd_floor_gz` is no longer a reliable way to distinguish old artifacts from the new umbrella package.
 
-Launch the MFJA world with robots spawned from `config/robots.yaml`:
+You can check that the new packages are visible with:
 
 ```bash
-cd ~/mfja_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+ros2 pkg list | grep mfja
+```
+
+Expected packages:
+
+- `mfja_3rd_floor_gz`
+- `mfja_3rd_floor_description`
+- `mfja_robot_control_config`
+- `mfja_3rd_floor_bringup`
+- `mfja_room_315_bringup`
+
+## Run Modes
+
+### Full third floor
+
+Preferred entry point:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
+```
+
+Umbrella-package compatibility entry point:
+
+```bash
+ros2 launch mfja_3rd_floor_gz full_floor.launch.py
+```
+
+This mode loads:
+
+- the complete MFJA third-floor world;
+- all shared environment assets referenced by the full world;
+- robots defined in `mfja_robot_control_config/config/robots.yaml`.
+
+Optional robot selection override:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=kuka,tiago
+```
+
+Dedicated compatibility entry point inside the full-floor bringup package:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup mfja_3rdf_kuka.launch.py
+```
+
+Legacy-style compatibility through the umbrella package:
+
+```bash
 ros2 launch mfja_3rd_floor_gz mfja_3rdf_kuka.launch.py
 ```
 
-By default, the launch file spawns all robots with `enabled: true` in `config/robots.yaml`.
+Walls or world-only mode:
 
-## Robot registry
+```bash
+ros2 launch mfja_3rd_floor_bringup mfja_3rdf.launch.py world_name:=mfja_3rd_floor
+```
 
-The robot list is defined in `config/robots.yaml`.
+Equivalent umbrella-package command:
 
-Supported `model` values are:
+```bash
+ros2 launch mfja_3rd_floor_gz mfja_3rdf.launch.py world_name:=mfja_3rd_floor
+```
 
-- `kuka_kr6r900sixx`
-- `staubli_tx2_60l`
-- `yaskawa_hc10`
-- `yaskawa_hc10dt`
-- `tiago`
+### Room 315 only
 
-Each robot entry defines:
+Preferred entry point:
 
-- `name`: ROS namespace and Gazebo entity name
-- `model`: SDF and URDF pair to load
-- `x_pose`, `y_pose`, `z_pose`: spawn position
-- `yaw`: heading angle
-- `enabled`: whether the robot is spawned by default
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py
+```
 
-## Selecting robots from the command line
+Umbrella-package compatibility entry point:
 
-The launch file accepts a `robots:=...` argument to override the YAML activation set without editing the file.
+```bash
+ros2 launch mfja_3rd_floor_gz room_315_only.launch.py
+```
 
-It supports:
+This mode loads:
 
-- full names, for example `kuka1,tiago1`
-- short aliases, for example `kuka,tiago`
-- numeric shortcuts by YAML order, for example `1,5`
-- `all`
+- the dedicated room 315 world;
+- the dedicated room 315 mesh and shared models referenced by that world;
+- robots defined in `mfja_robot_control_config/config/robots_room_315_only.yaml`.
+
+It is intended to stay lighter and easier to tune for robot and control experiments than the full-floor simulation.
+
+Optional robot selection override:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=staubli
+```
+
+More examples:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=1,5
+```
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=all
+```
+
+## Step-by-Step Usage
+
+The following workflow is the recommended way to run the project from a clean terminal session.
+
+### 1. Open Terminal 1 and build the workspace
+
+```bash
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+If the repository was recently refactored and your workspace still contains old artifacts, use the clean rebuild procedure shown earlier in this README before continuing.
+
+### 2. Choose one simulation mode
+
+#### Option A: run the full third floor
+
+Preferred command:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
+```
+
+Equivalent umbrella-package command:
+
+```bash
+ros2 launch mfja_3rd_floor_gz full_floor.launch.py
+```
+
+#### Option B: run room 315 only
+
+Preferred command:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py
+```
+
+Equivalent umbrella-package command:
+
+```bash
+ros2 launch mfja_3rd_floor_gz room_315_only.launch.py
+```
+
+### 3. Optional: start only selected robots
+
+You can add `robots:=...` to either launch mode.
 
 Examples:
 
 ```bash
-ros2 launch mfja_3rd_floor_gz mfja_3rdf_kuka.launch.py robots:=kuka,tiago
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=kuka,tiago
 ```
 
 ```bash
-ros2 launch mfja_3rd_floor_gz mfja_3rdf_kuka.launch.py robots:=1,5
+ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=staubli
 ```
 
 ```bash
-ros2 launch mfja_3rd_floor_gz mfja_3rdf_kuka.launch.py robots:=all
+ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=1,5
 ```
+
+### 4. Open Terminal 2 for commands and checks
+
+```bash
+cd ~/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+```
+
+### 5. Verify that the robots are ready
+
+List MFJA-related packages:
+
+```bash
+ros2 pkg list | grep mfja
+```
+
+List the main robot topics:
+
+```bash
+ros2 topic list | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1)/'
+```
+
+Check one command topic:
+
+```bash
+ros2 topic info /kuka1/joint_trajectory
+```
+
+### 6. Move one robot only
+
+Example: move only `kuka1`
+
+```bash
+ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.0,-0.8,1.2,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+```
+
+Example: move only `staubli1`
+
+```bash
+ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.0,0.3,-0.5,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+```
+
+### 7. Move several robots together from one command
+
+First, inspect the expected joint order:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
+```
+
+Then command a subset directly:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --trajectory-duration 4.0
+```
+
+The synchronized tool behavior is:
+
+- if no `--goal` is given, it commands all enabled robots that have built-in presets;
+- if one or more `--goal` arguments are given, it commands only the listed robots.
+
+### 8. Use the synchronized tool with the room-315-only robot YAML
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --robot-config config/robots_room_315_only.yaml \
+  --list-joints
+```
+
+### 9. Control TIAGo base motion
+
+Move the TIAGo base continuously:
+
+```bash
+ros2 topic pub -r 20 /tiago1/cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.25, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.35}}"
+```
+
+Stop TIAGo:
+
+```bash
+ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+```
+
+### 10. Stop the simulation
+
+In the terminal where Gazebo is running, press:
+
+```bash
+Ctrl+C
+```
+
+Then relaunch with another mode or another robot selection if needed.
+
+## Robot Selection
+
+The shared multi-robot launch logic supports:
+
+- full robot names, for example `kuka1,tiago1`;
+- short aliases, for example `kuka,tiago`;
+- numeric selection by YAML order, for example `1,5`;
+- `all`.
 
 Current shortcuts:
 
@@ -111,156 +395,54 @@ Current shortcuts:
 - `4` or `hc10dt` -> `yaskawa_hc10dt_1`
 - `5` or `tiago` -> `tiago1`
 
-## ROS topics
+If `robots:=...` is omitted, the enabled robots from the selected YAML file are used.
 
-Each robot has its own namespace.
+## Shared Robot Control Utility
 
-For all articulated robots:
+The synchronized command-line control utility is installed from `mfja_robot_control_config`.
 
-- `/<name>/joint_trajectory`
-- `/<name>/joint_states`
-- `/<name>/joint_trajectory_progress`
-
-For TIAGo:
-
-- `/<name>/cmd_vel`
-- `/<name>/odom`
-- `/<name>/tf`
-
-## Single-robot control
-
-### KUKA
+Show expected joints:
 
 ```bash
-ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory "{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.0,-0.8,1.2,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
 ```
 
-### Staubli
+Command specific robots:
 
 ```bash
-ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory "{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.0,0.3,-0.5,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
-```
-
-### Yaskawa HC10
-
-```bash
-ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/JointTrajectory "{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.0,-0.6,0.8,0.0,0.5,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
-```
-
-### Yaskawa HC10DT
-
-```bash
-ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/JointTrajectory "{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.0,-0.5,0.7,0.0,0.4,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
-```
-
-### TIAGo arm
-
-```bash
-ros2 topic pub --once /tiago1/joint_trajectory trajectory_msgs/msg/JointTrajectory "{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint','arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], time_from_start: {sec: 4, nanosec: 0}}]}"
-```
-
-### TIAGo base
-
-Move:
-
-```bash
-ros2 topic pub -r 20 /tiago1/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.25, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.35}}"
-```
-
-Stop:
-
-```bash
-ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
-```
-
-Read odometry:
-
-```bash
-ros2 topic echo /tiago1/odom
-```
-
-## Synchronized multi-robot control
-
-The repository includes `scripts/multi_robot_sync_demo.py` for coordinated motion from one ROS 2 node.
-
-### Show expected joint order
-
-```bash
-cd ~/mfja_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run mfja_3rd_floor_gz multi_robot_sync_demo.py --list-joints
-```
-
-### Default synchronized demo
-
-If no `--goal` arguments are given, the tool commands all enabled robots with built-in default targets:
-
-```bash
-ros2 run mfja_3rd_floor_gz multi_robot_sync_demo.py
-```
-
-### Command only selected robots
-
-If one or more `--goal` arguments are given, only the listed robots move.
-
-Example with two robots:
-
-```bash
-ros2 run mfja_3rd_floor_gz multi_robot_sync_demo.py \
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
   --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
   --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
   --trajectory-duration 4.0
 ```
 
-Example with three robots:
+Use the room-315-specific robot YAML explicitly:
 
 ```bash
-ros2 run mfja_3rd_floor_gz multi_robot_sync_demo.py \
-  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
-  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
-  --goal yaskawa_hc10_1=0.0,-0.7,0.9,0.0,0.4,0.0 \
-  --trajectory-duration 4.0
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --robot-config config/robots_room_315_only.yaml \
+  --list-joints
 ```
 
-Example with TIAGo base motion:
+## Recommended Usage
+
+For new work, the recommended launch commands are:
 
 ```bash
-ros2 run mfja_3rd_floor_gz multi_robot_sync_demo.py \
-  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
-  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
-  --goal tiago1=0.10,0.2,-0.4,-0.3,0.9,0.1,-0.1,0.0,0.1,-0.1 \
-  --trajectory-duration 4.0 \
-  --tiago-base-linear 0.20 \
-  --tiago-base-angular 0.25 \
-  --tiago-base-duration 4.0
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
+ros2 launch mfja_room_315_bringup room_315_only.launch.py
 ```
 
-## Static scene assets
+The umbrella package remains available for convenience and compatibility:
 
-The world now includes:
+```bash
+ros2 launch mfja_3rd_floor_gz full_floor.launch.py
+ros2 launch mfja_3rd_floor_gz room_315_only.launch.py
+```
 
-- MFJA third-floor map from `mfja_3rd_floor_v4.stl`
-- KUKA, Staubli, and Yaskawa support tables
-- carters
-- Montratec rails
-- shuttle elements
-- additional lab tables and chairs
+## Design Notes
 
-Static scene placement is defined in `worlds/mfja_3rd_floor.world`.
-
-## Updating positions
-
-To move robots:
-
-- edit `config/robots.yaml`
-- update `x_pose`, `y_pose`, `z_pose`, and `yaw`
-- relaunch the simulation
-
-To move static scene assets:
-
-- edit `worlds/mfja_3rd_floor.world`
-- update the `<pose>` of the corresponding `<include>`
-- relaunch the simulation
-
-If only `robots.yaml` or `mfja_3rd_floor.world` changes, a rebuild is usually not required.
+- Shared robot models, URDF files, worlds, and meshes are stored only once in `mfja_3rd_floor_description`.
+- Full-floor and room-315-only modes reuse the same shared multi-robot launch logic from `mfja_robot_control_config`.
+- This separation reduces future Git conflicts between work on the full third-floor setup and work focused only on room 315.
+- The repository remains a single Git repository, but it is now organized as multiple ROS 2 packages with clearer responsibilities.
