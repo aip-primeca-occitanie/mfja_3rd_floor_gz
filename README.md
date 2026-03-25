@@ -350,15 +350,7 @@ The synchronized tool behavior is:
 - if no `--goal` is given, it commands all enabled robots that have built-in presets;
 - if one or more `--goal` arguments are given, it commands only the listed robots.
 
-### 8. Use the synchronized tool with the room-315-only robot YAML
-
-```bash
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
-  --robot-config config/robots_room_315_only.yaml \
-  --list-joints
-```
-
-### 9. Control TIAGo base motion
+### 8. Control TIAGo base motion
 
 Move the TIAGo base continuously:
 
@@ -374,7 +366,7 @@ ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
 "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
 ```
 
-### 10. Stop the simulation
+### 9. Stop the simulation
 
 In the terminal where Gazebo is running, press:
 
@@ -420,14 +412,6 @@ ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
   --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
   --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
   --trajectory-duration 4.0
-```
-
-Use the room-315-specific robot YAML explicitly:
-
-```bash
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
-  --robot-config config/robots_room_315_only.yaml \
-  --list-joints
 ```
 
 ## Recommended Usage
