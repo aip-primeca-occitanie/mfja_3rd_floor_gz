@@ -8,10 +8,15 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    pkg_path = get_package_share_directory('mfja_3rd_floor_gz')
-    base_launch = os.path.join(pkg_path, 'launch', 'mfja_3rdf_kuka.launch.py')
+    control_pkg_path = get_package_share_directory('mfja_robot_control_config')
+    base_launch = os.path.join(control_pkg_path, 'launch', 'multi_robot_sim.launch.py')
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'world_name',
+            default_value='room_315_only',
+            description='World file name from mfja_3rd_floor_description/worlds.',
+        ),
         DeclareLaunchArgument(
             'robots',
             default_value='',
@@ -22,12 +27,12 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'robot_config',
-            default_value='config/robots.yaml',
-            description='Robot spawn YAML for the full-floor mode.',
+            default_value='config/robots_room_315_only.yaml',
+            description='Robot spawn YAML relative to mfja_robot_control_config.',
         ),
         DeclareLaunchArgument(
             'gz_partition',
-            default_value=f'mfja_3rd_floor_gz_{os.getpid()}',
+            default_value=f'room_315_only_{os.getpid()}',
             description='Gazebo transport partition used to isolate this launch instance.',
         ),
         DeclareLaunchArgument(
@@ -45,7 +50,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),
             launch_arguments={
-                'world_name': 'mfja_3rd_floor',
+                'world_name': LaunchConfiguration('world_name'),
                 'robot_config': LaunchConfiguration('robot_config'),
                 'robots': LaunchConfiguration('robots'),
                 'gz_partition': LaunchConfiguration('gz_partition'),

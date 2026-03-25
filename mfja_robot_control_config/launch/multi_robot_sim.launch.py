@@ -18,6 +18,8 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 MOBILE_MODELS = {'tiago'}
+DESCRIPTION_PACKAGE = 'mfja_3rd_floor_description'
+CONTROL_CONFIG_PACKAGE = 'mfja_robot_control_config'
 
 
 def _parse_selected_robots(raw_value):
@@ -228,9 +230,9 @@ def _get_world_entity_name(world_path):
     return world_element.attrib.get('name', 'default')
 
 
-def _resolve_robot_assets(pkg_path, model_name):
-    model_sdf = os.path.join(pkg_path, 'models', model_name, 'model.sdf')
-    urdf_path = os.path.join(pkg_path, 'urdf', f'{model_name}.urdf')
+def _resolve_robot_assets(description_pkg_path, model_name):
+    model_sdf = os.path.join(description_pkg_path, 'models', model_name, 'model.sdf')
+    urdf_path = os.path.join(description_pkg_path, 'urdf', f'{model_name}.urdf')
 
     if not os.path.exists(model_sdf):
         raise RuntimeError(
@@ -247,9 +249,10 @@ def _resolve_robot_assets(pkg_path, model_name):
 
 
 def _launch_setup(context, *args, **kwargs):
-    pkg_path = get_package_share_directory('mfja_3rd_floor_gz')
+    description_pkg_path = get_package_share_directory(DESCRIPTION_PACKAGE)
+    control_pkg_path = get_package_share_directory(CONTROL_CONFIG_PACKAGE)
     world_file_name = LaunchConfiguration('world_name').perform(context)
-    world = os.path.join(pkg_path, 'worlds', world_file_name + '.world')
+    world = os.path.join(description_pkg_path, 'worlds', world_file_name + '.world')
     world_entity_name = _get_world_entity_name(world)
     gz_partition = LaunchConfiguration('gz_partition').perform(context).strip()
     use_sim_time = (
@@ -261,10 +264,10 @@ def _launch_setup(context, *args, **kwargs):
     )
 
     if not os.path.isabs(robot_config):
-        robot_config = os.path.join(pkg_path, robot_config)
+        robot_config = os.path.join(control_pkg_path, robot_config)
 
     robots = _load_robots(robot_config, selected_robots)
-    model_path = os.path.join(pkg_path, 'models')
+    model_path = os.path.join(description_pkg_path, 'models')
     resource_path = model_path
 
     if 'GZ_SIM_MODEL_PATH' in environ:
@@ -329,7 +332,7 @@ def _launch_setup(context, *args, **kwargs):
         y_pose = float(robot.get('y_pose', 0.0))
         z_pose = float(robot.get('z_pose', 0.0))
         yaw = float(robot.get('yaw', 0.0))
-        model_sdf, urdf_path = _resolve_robot_assets(pkg_path, model_name)
+        model_sdf, urdf_path = _resolve_robot_assets(description_pkg_path, model_name)
         spawn_sdf = model_sdf
         frame_prefix = '' if model_name in MOBILE_MODELS else f'{robot_name}/'
 
@@ -389,17 +392,17 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'world_name',
             default_value='mfja_3rd_floor',
-            description='World file name from mfja_3rd_floor_gz/worlds (without extension).',
+            description='World file name from mfja_3rd_floor_description/worlds (without extension).',
         ),
         DeclareLaunchArgument(
             'gz_partition',
-            default_value=f'mfja_3rd_floor_gz_{os.getpid()}',
+            default_value=f'mfja_multi_robot_sim_{os.getpid()}',
             description='Gazebo transport partition used to isolate this launch instance.',
         ),
         DeclareLaunchArgument(
             'robot_config',
             default_value='config/robots.yaml',
-            description='Absolute path or package-relative path to robot spawn YAML.',
+            description='Absolute path or path relative to mfja_robot_control_config.',
         ),
         DeclareLaunchArgument(
             'robots',

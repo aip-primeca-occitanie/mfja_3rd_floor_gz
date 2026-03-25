@@ -51,7 +51,7 @@ MODEL_PRESETS: Dict[str, Dict[str, List[float]]] = {
 def _resolve_robot_config(path_hint: str) -> str:
     if os.path.isabs(path_hint):
         return path_hint
-    pkg_path = get_package_share_directory('mfja_3rd_floor_gz')
+    pkg_path = get_package_share_directory('mfja_robot_control_config')
     return os.path.join(pkg_path, path_hint)
 
 
