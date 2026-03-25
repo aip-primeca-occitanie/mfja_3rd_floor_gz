@@ -1,1 +1,16 @@
 *~
+__pycache__/
+*.pyc
+build/
+install/
+log/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+=1
+Modélisation salle 314/
+Modélisation salle 315-20260305/
