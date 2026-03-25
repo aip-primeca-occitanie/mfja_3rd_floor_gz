@@ -85,11 +85,14 @@ Main content:
 
 ## Build
 
+The examples below use a project-specific workspace variable to keep the setup easy to copy and unlikely to conflict with an existing generic workspace:
+
 ```bash
-mkdir -p ~/ALI_ros2_ws/src
-cd ~/ALI_ros2_ws/src
+export MFJA_WS=~/mfja_3rd_floor_ws
+mkdir -p "$MFJA_WS/src"
+cd "$MFJA_WS/src"
 git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
-cd ~/ALI_ros2_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
@@ -102,7 +105,8 @@ If your workspace was built before the refactor, your `build/`, `install/`, or `
 The safest update procedure is to rebuild from a clean workspace state:
 
 ```bash
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 rm -rf build install log
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
@@ -222,7 +226,8 @@ The following workflow is the recommended way to run the project from a clean te
 ### 1. Open Terminal 1 and build the workspace
 
 ```bash
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
@@ -281,7 +286,8 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=1,5
 ### 4. Open Terminal 2 for commands and checks
 
 ```bash
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
