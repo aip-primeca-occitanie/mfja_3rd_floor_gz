@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="cell_static_gauche_final">
+    <static>true</static>
+    <link name="cell_static_gauche_final_link">
+      <visual name="cell_static_gauche_final_visual">
+        <geometry>
+          <mesh>
+            <uri>model://cell_static_gauche_final/meshes/cell_static_gauche_final.STL</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.84 0.85 0.88 1</ambient>
+          <diffuse>0.84 0.85 0.88 1</diffuse>
+          <specular>0.95 0.95 0.98 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+      </visual>
+      <collision name="cell_static_gauche_final_collision">
+        <geometry>
+          <mesh>
+            <uri>model://cell_static_gauche_final/meshes/cell_static_gauche_final.STL</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

@@ -79,7 +79,7 @@
     <include>
       <uri>model://carter_droit</uri>
       <name>carter_droit_1</name>
-      <pose>-15.88 -4.38 1.64 0 -1.57 -1.57</pose>
+      <pose>-15.88 -4.38 1.4 0 -1.57 -1.57</pose>
     </include>
 
     <include>
@@ -89,39 +89,15 @@
     </include>
 
     <include>
-      <uri>model://montratec_rails_droit</uri>
-      <name>montratec_rails_droit_1</name>
-      <pose>-11.25 -4.68 0.0 0 0 0</pose>
+      <uri>model://cell_static_droit_final</uri>
+      <name>cell_static_droit_final_1</name>
+      <pose>-13.0 -5.81 0.0 0 0 0</pose>
     </include>
 
     <include>
-      <uri>model://montratec_rails_left</uri>
-      <name>montratec_rails_left_1</name>
-      <pose>-15.77 -4.68 0.6 0 -1.57 3.14</pose>
-    </include>
-
-    <include>
-      <uri>model://shuttle_1_droit</uri>
-      <name>shuttle_1_droit_1</name>
-      <pose>-15.75 -4.13 1.185 0 0 -1.57</pose>
-    </include>
-
-    <include>
-      <uri>model://shutle_2_droit</uri>
-      <name>shutle_2_droit_1</name>
-      <pose>-15.75 -5.25 1.185 0 0 -1.57</pose>
-    </include>
-
-    <include>
-      <uri>model://shuttle_1_left</uri>
-      <name>shuttle_1_left_1</name>
-      <pose>-10.7 -4.13 1.18 0 0 -1.57</pose>
-    </include>
-
-    <include>
-      <uri>model://shuttle_2_left</uri>
-      <name>shuttle_2_left_1</name>
-      <pose>-10.7 -5.25 1.18 0 0 -1.57</pose>
+      <uri>model://cell_static_gauche_final</uri>
+      <name>cell_static_gauche_final_1</name>
+      <pose>-16.9 -5.81 0.0 0.0 0.0 0.0</pose>
     </include>
 
     <include>
