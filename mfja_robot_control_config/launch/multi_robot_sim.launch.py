@@ -28,6 +28,8 @@ def _parse_selected_robots(raw_value):
         return None
     if selected.lower() == 'all':
         return 'all'
+    if selected.lower() == 'none':
+        return 'none'
     return [token.strip() for token in selected.split(',') if token.strip()]
 
 
@@ -110,7 +112,7 @@ def _resolve_selected_robots(all_robots, selected_tokens, config_path):
         if ambiguous:
             errors.append('Ambiguous selection(s): ' + '; '.join(ambiguous))
         errors.append(f'Available robots in "{config_path}": {available}')
-        errors.append(f'Useful shortcuts: {shortcut_help}, or use "all"')
+        errors.append(f'Useful shortcuts: {shortcut_help}, or use "all" or "none"')
         raise RuntimeError('. '.join(errors))
 
     return resolved
@@ -124,12 +126,14 @@ def _load_robots(config_path, selected_names=None):
 
     if selected_names == 'all':
         robots = list(all_robots)
+    elif selected_names == 'none':
+        robots = []
     elif selected_names:
         robots = _resolve_selected_robots(all_robots, selected_names, config_path)
     else:
         robots = [r for r in all_robots if r.get('enabled', True)]
 
-    if not robots:
+    if not robots and selected_names != 'none':
         raise RuntimeError(
             f'No enabled robots in "{config_path}". '
             'Set at least one robot with enabled: true.'
@@ -410,8 +414,8 @@ def generate_launch_description():
             description=(
                 'Comma-separated robot selection list. Supports full names '
                 '("kuka1,tiago1"), short aliases ("kuka,tiago"), numeric '
-                'indices by YAML order ("1,5"), or "all". Leave empty to use '
-                'enabled flags from the YAML.'
+                'indices by YAML order ("1,5"), "all", or "none". Leave empty '
+                'to use enabled flags from the YAML.'
             ),
         ),
         DeclareLaunchArgument(

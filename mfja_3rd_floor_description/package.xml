@@ -4,8 +4,11 @@
   <version>1.0.0</version>
   <description>Shared robot and environment description assets for the MFJA third-floor simulation.</description>
   <maintainer email="olivier.stasse@laas.fr">Olivier Stasse</maintainer>
+  <maintainer email="ali.ibrahim@etud.univ-evry.fr">Ali IBRAHIM</maintainer>
   <license>Apache License 2.0</license>
+  <license>BSD</license>
   <author email="olivier.stasse@laas.fr">Olivier Stasse</author>
+  <author email="ali.ibrahim@etud.univ-evry.fr">Ali IBRAHIM</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

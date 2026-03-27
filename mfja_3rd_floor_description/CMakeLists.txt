@@ -10,4 +10,9 @@ install(
   PATTERN "*.pyc" EXCLUDE
 )
 
+install(
+  FILES THIRD_PARTY.md
+  DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()

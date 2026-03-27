@@ -4,8 +4,10 @@
   <version>1.0.0</version>
   <description>Umbrella and compatibility package for the MFJA 3rd floor Gazebo meta-repository.</description>
   <maintainer email="olivier.stasse@laas.fr">Olivier Stasse</maintainer>
+  <maintainer email="ali.ibrahim@etud.univ-evry.fr">Ali IBRAHIM</maintainer>
   <license>Apache License 2.0</license>
   <author email="olivier.stasse@laas.fr">Olivier Stasse</author>
+  <author email="ali.ibrahim@etud.univ-evry.fr">Ali IBRAHIM</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

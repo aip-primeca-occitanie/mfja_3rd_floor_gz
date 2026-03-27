@@ -22,7 +22,7 @@ def generate_launch_description():
             default_value='',
             description=(
                 'Comma-separated robot selection list. Supports full names, '
-                'short aliases, numeric indices, or "all".'
+                'short aliases, numeric indices, "all", or "none".'
             ),
         ),
         DeclareLaunchArgument(
