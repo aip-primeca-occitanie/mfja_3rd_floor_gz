@@ -30,8 +30,6 @@ Main content:
 
 - `mfja_3rd_floor_gz/launch/full_floor.launch.py`
 - `mfja_3rd_floor_gz/launch/room_315_only.launch.py`
-- `mfja_3rd_floor_gz/launch/mfja_3rdf.launch.py`
-- `mfja_3rd_floor_gz/launch/mfja_3rdf_kuka.launch.py`
 
 ### `mfja_3rd_floor_description`
 
@@ -72,8 +70,6 @@ Bringup package for the complete third-floor simulation.
 Main content:
 
 - `mfja_3rd_floor_bringup/launch/full_floor.launch.py`
-- `mfja_3rd_floor_bringup/launch/mfja_3rdf.launch.py`
-- `mfja_3rd_floor_bringup/launch/mfja_3rdf_kuka.launch.py`
 
 ### `mfja_room_315_bringup`
 
@@ -157,28 +153,16 @@ Optional robot selection override:
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=kuka,tiago
 ```
 
-Dedicated compatibility entry point inside the full-floor bringup package:
+World-only mode through the unified entry point:
 
 ```bash
-ros2 launch mfja_3rd_floor_bringup mfja_3rdf_kuka.launch.py
-```
-
-Legacy-style compatibility through the umbrella package:
-
-```bash
-ros2 launch mfja_3rd_floor_gz mfja_3rdf_kuka.launch.py
-```
-
-Walls or world-only mode:
-
-```bash
-ros2 launch mfja_3rd_floor_bringup mfja_3rdf.launch.py world_name:=mfja_3rd_floor
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=none
 ```
 
 Equivalent umbrella-package command:
 
 ```bash
-ros2 launch mfja_3rd_floor_gz mfja_3rdf.launch.py world_name:=mfja_3rd_floor
+ros2 launch mfja_3rd_floor_gz full_floor.launch.py robots:=none
 ```
 
 ### Room 315 only

@@ -76,10 +76,11 @@ This report explains the final solution only. It focuses on the changes that rem
 \section{Delivered final system}
 The final project delivers a configuration-driven simulation architecture with the following properties:
 \begin{itemize}
-\item four ROS~2 packages inside one Git repository instead of one monolithic package;
+\item five ROS~2 packages inside one Git repository instead of one monolithic package;
 \item two YAML registries for robot identity, model selection, pose, and activation: one for the full floor and one for room~315 only;
 \item one shared multi-robot launch file that reads the registry and spawns enabled robots;
 \item one full-floor bringup package and one room-315-only bringup package;
+\item one umbrella compatibility package that keeps simple launch commands available under the historical project name;
 \item one launch-time robot-selection argument that can override the YAML activation set from the command line using full names, short aliases, or numeric shortcuts;
 \item one ROS--Gazebo bridge configuration generated per robot at runtime;
 \item one \texttt{robot\_state\_publisher} per robot;
@@ -110,8 +111,9 @@ Because of that, a hard-coded single-robot launch solution would have been the w
 \end{itemize}
 
 \section{Meta-repository package split}
-The final repository is no longer one large ROS~2 package. Instead, it is organized as four packages in the same Git repository:
+The final repository is no longer one large ROS~2 package. Instead, it is organized as five packages in the same Git repository:
 \begin{itemize}
+\item \texttt{mfja\_3rd\_floor\_gz}: umbrella and compatibility package that forwards common launch entry points while preserving a subpackage with the same name as the parent Git repository;
 \item \texttt{mfja\_3rd\_floor\_description}: shared meshes, Gazebo models, URDF files, and world files;
 \item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, shared configuration, and synchronized command tools;
 \item \texttt{mfja\_3rd\_floor\_bringup}: launch entry points for the complete third-floor simulation;
@@ -318,11 +320,12 @@ Once the complete third-floor simulation was stable, a second execution mode bec
 
 This new mode reuses the same shared robot models, URDF files, and generic spawn logic, but it replaces the full-floor world with a dedicated room~315 scene. The accepted final room-315-only scene keeps the room mesh itself, the four robot support tables, and the main industrial fixtures such as the carters, rails, and shuttles, while leaving out general lab furniture and room-314 assets. This makes the room-only mode lighter and cleaner while preserving the robot infrastructure needed for experiments.
 
-\section{Step 11: Refactoring the repository into four ROS~2 packages}
+\section{Step 11: Refactoring the repository into five ROS~2 packages}
 The final structural step was the meta-repository refactor. Earlier stages still lived in one large package. That was workable for one developer, but it would create unnecessary Git conflicts once environment assets, launch logic, room~315 bringup, and robot-control configuration started evolving in parallel.
 
-The repository was therefore split into four packages with clear responsibilities:
+The repository was therefore split into five packages with clear responsibilities:
 \begin{itemize}
+\item \texttt{mfja\_3rd\_floor\_gz}: umbrella and compatibility package that preserves simple launch commands under the historical project name;
 \item \texttt{mfja\_3rd\_floor\_description}: shared meshes, models, URDF files, and world files;
 \item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, and synchronized command tools;
 \item \texttt{mfja\_3rd\_floor\_bringup}: the full-floor launch entry points;
@@ -419,7 +422,7 @@ The final workspace also gained two practical operational improvements after the
 
 First, the launch file now accepts a \texttt{robots} argument. This allows an operator to type, for example, \texttt{robots:=kuka,tiago} or \texttt{robots:=1,5} and spawn only the requested instances, even if more robots are enabled in the YAML file. This is useful during testing because it avoids repeated editing of \texttt{mfja\_robot\_control\_config/config/robots.yaml} for short experiments and makes quick selection much easier from the command line.
 
-Second, the script \texttt{mfja\_robot\_control\_config/scripts/multi\_robot\_sync\_demo.py} provides one coordinated ROS~2 process that can publish trajectories to several robots from one node. This is a better workflow than launching many independent \texttt{ros2 topic pub} commands from separate shells, because all commands are emitted from one process after subscriber readiness has been verified. The tool can also be pointed to either robot YAML file through \texttt{--robot-config}, which means the same synchronized-control process works in both the full-floor and room-315-only modes.
+Second, the script \texttt{mfja\_robot\_control\_config/scripts/multi\_robot\_sync\_demo.py} provides one coordinated ROS~2 process that can publish trajectories to several robots from one node. This is a better workflow than launching many independent \texttt{ros2 topic pub} commands from separate shells, because all commands are emitted from one process after subscriber readiness has been verified. In normal operation, the operator first launches the desired simulation mode in Terminal~1 and then uses the synchronized tool in Terminal~2 only for the robots that should actually move.
 
 \chapter{How Independent Control Works}
 \section{Namespacing strategy}
@@ -467,31 +470,31 @@ Use the following commands exactly:
 
 \codenext{10}
 \begin{lstlisting}[style=reportcode,caption={Final launch procedure.},label={lst:final_launch}]
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-unset ROS_DOMAIN_ID
-colcon build --packages-select mfja_3rd_floor_description mfja_robot_control_config mfja_3rd_floor_bringup mfja_room_315_bringup --symlink-install
+colcon build --symlink-install
 source install/setup.bash
-ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
-  robot_config:=config/robots.yaml
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
 \end{lstlisting}
 
 When this command finishes starting, Gazebo should contain the enabled robots from \texttt{mfja\_robot\_control\_config/config/robots.yaml}. In the current final configuration these are \texttt{kuka1}, \texttt{staubli1}, \texttt{yaskawa\_hc10\_1}, \texttt{yaskawa\_hc10dt\_1}, and \texttt{tiago1}.
+For compatibility, the same mode also remains available through \texttt{ros2 launch mfja\_3rd\_floor\_gz full\_floor.launch.py}.
 
 \subsection*{Alternative launch: room 315 only}
 The room-315-only mode is launched from a different bringup package and uses a separate robot registry:
 
 \codenext{10}
 \begin{lstlisting}[style=reportcode,caption={Launching the room-315-only mode.},label={lst:room315_launch}]
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-unset ROS_DOMAIN_ID
 source install/setup.bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
-  robot_config:=config/robots_room_315_only.yaml
+ros2 launch mfja_room_315_bringup room_315_only.launch.py
 \end{lstlisting}
 
 This mode loads \texttt{mfja\_3rd\_floor\_description/worlds/room\_315\_only.world} and the dedicated robot registry \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. It is intended for lighter, cleaner robot experiments than the full third-floor world. In its final accepted form it keeps only room~315, the four robot support tables, and the main industrial fixtures such as the carters, rails, and shuttles.
+For compatibility, the same launch remains available through \texttt{ros2 launch mfja\_3rd\_floor\_gz room\_315\_only.launch.py}.
 
 \subsection*{Optional launch-time robot selection}
 When only a subset of robots is needed for a quick experiment, the launch file can now override the YAML activation set directly from the command line:
@@ -528,9 +531,9 @@ Open a second terminal and source the environment again:
 
 \codenext{8}
 \begin{lstlisting}[style=reportcode,caption={Second terminal preparation.},label={lst:second_terminal}]
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-unset ROS_DOMAIN_ID
 source install/setup.bash
 \end{lstlisting}
 
@@ -556,20 +559,14 @@ The final repository now includes \texttt{mfja\_robot\_control\_config/scripts/m
 
 \codenext{8}
 \begin{lstlisting}[style=reportcode,caption={Listing the joint order expected by the synchronized demo tool.},label={lst:list_joints}]
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
 \end{lstlisting}
 
-This command prints each enabled robot name, its model type, the exact joint order expected by the tool, and the current default position vector built into the script. If the room-315-only mode is active, the same inspection can be run against the room~315 registry:
-
-\codenext{7}
-\begin{lstlisting}[style=reportcode,caption={Listing joint order against the room-315-only robot registry.}]
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
-  --robot-config config/robots_room_315_only.yaml \
-  --list-joints
-\end{lstlisting}
+This command prints each enabled robot name, its model type, the exact joint order expected by the tool, and the current default position vector built into the script. In normal use there is no need to pass an additional robot-registry argument here: the standard workflow is simply to launch the desired simulation mode first and then inspect or command the robots from Terminal~2.
 
 \section{How to choose between one-by-one control and synchronized control}
 There are now two different command styles in the final repository, and they should not be mixed conceptually:
@@ -578,7 +575,7 @@ There are now two different command styles in the final repository, and they sho
 \item \textbf{Synchronized control}: use \texttt{multi\_robot\_sync\_demo.py}. This is the best method when two, three, or more robots must begin one operation together from one ROS~2 node.
 \end{itemize}
 
-The practical difference is important. A direct \texttt{ros2 topic pub --once} command addresses only the topic written in that command. By contrast, the synchronized tool loads the enabled robots from the selected robot YAML file and publishes one trajectory to each enabled robot that has a known preset. Therefore, if only two or three robots should move together while the others must remain completely inactive, the recommended workflow is:
+The practical difference is important. A direct \texttt{ros2 topic pub --once} command addresses only the topic written in that command. By contrast, the synchronized tool can either run its built-in full demo posture set or publish only to the robots explicitly named by \texttt{--goal}. Therefore, if only two or three robots should move together while the others must remain completely inactive, the recommended workflow is:
 \begin{enumerate}
 \item if no \texttt{--goal} arguments are provided, the tool commands all enabled robots that have built-in presets;
 \item if one or more \texttt{--goal} arguments are provided, only the robots explicitly named by those arguments are commanded;
@@ -735,7 +732,8 @@ The following command publishes one coordinated trajectory set to every enabled 
 
 \codenext{8}
 \begin{lstlisting}[style=reportcode,caption={Coordinated multi-robot motion using the built-in default goals.},label={lst:sync_defaults}]
-cd ~/ALI_ros2_ws
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ros2 run mfja_robot_control_config multi_robot_sync_demo.py
