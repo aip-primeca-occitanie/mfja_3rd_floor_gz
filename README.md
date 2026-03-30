@@ -40,11 +40,13 @@ Shared simulation assets:
 - URDF files;
 - world files;
 - room models such as room 315;
+- the rotating rail-switch blade model;
 - shared static content reused by different simulation modes.
 
 Main content:
 
 - `mfja_3rd_floor_description/models/`
+- `mfja_3rd_floor_description/models/rail_switch_3pos_left/`
 - `mfja_3rd_floor_description/urdf/`
 - `mfja_3rd_floor_description/worlds/`
 
@@ -55,13 +57,15 @@ Shared runtime and control layer:
 - robot YAML spawn configuration files;
 - shared multi-robot launch logic;
 - shared Gazebo-related config files;
-- synchronized multi-robot control utility.
+- synchronized multi-robot control utility;
+- three-position rail-switch control utility.
 
 Main content:
 
 - `mfja_robot_control_config/config/`
 - `mfja_robot_control_config/launch/multi_robot_sim.launch.py`
 - `mfja_robot_control_config/scripts/multi_robot_sync_demo.py`
+- `mfja_robot_control_config/scripts/three_position_switch_demo.py`
 
 ### `mfja_3rd_floor_bringup`
 
@@ -205,9 +209,9 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=all
 
 ## Step-by-Step Usage
 
-The following workflow is the recommended way to run the project from a clean terminal session.
+The following workflow is the recommended way to use the current repository, including the new rotating rail switch and the robot command tools.
 
-### 1. Open Terminal 1 and build the workspace
+### Terminal 1: build and launch the simulation
 
 ```bash
 export MFJA_WS=~/mfja_3rd_floor_ws
@@ -215,68 +219,71 @@ cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
+export GZ_PARTITION=rail_switch_demo
 ```
 
-If the repository was recently refactored and your workspace still contains old artifacts, use the clean rebuild procedure shown earlier in this README before continuing.
-
-### 2. Choose one simulation mode
-
-#### Option A: run the full third floor
-
-Preferred command:
+Run the complete third floor with all robots:
 
 ```bash
-ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=all gz_partition:=rail_switch_demo
 ```
 
 Equivalent umbrella-package command:
 
 ```bash
-ros2 launch mfja_3rd_floor_gz full_floor.launch.py
+ros2 launch mfja_3rd_floor_gz full_floor.launch.py robots:=all gz_partition:=rail_switch_demo
 ```
 
-#### Option B: run room 315 only
-
-Preferred command:
+Run room 315 only with all robots:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py
+ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=all gz_partition:=rail_switch_demo
 ```
 
 Equivalent umbrella-package command:
 
 ```bash
-ros2 launch mfja_3rd_floor_gz room_315_only.launch.py
+ros2 launch mfja_3rd_floor_gz room_315_only.launch.py robots:=all gz_partition:=rail_switch_demo
 ```
 
-### 3. Optional: start only selected robots
-
-You can add `robots:=...` to either launch mode.
-
-Examples:
+If you want only some robots, replace `robots:=all` with one of the following:
 
 ```bash
-ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=kuka,tiago
+robots:=kuka1
+robots:=staubli1
+robots:=yaskawa_hc10_1
+robots:=yaskawa_hc10dt_1
+robots:=tiago1
+robots:=kuka,tiago
+robots:=1,5
+robots:=none
 ```
 
-```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=staubli
-```
+### Terminal 2: source the workspace for robot commands
 
-```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=1,5
-```
-
-### 4. Open Terminal 2 for commands and checks
+Open a second terminal and prepare it for robot commands:
 
 ```bash
 export MFJA_WS=~/mfja_3rd_floor_ws
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
+export GZ_PARTITION=rail_switch_demo
 ```
 
-### 5. Verify that the robots are ready
+### Terminal 3: optional switch commands
+
+If you want to move the rotating rail switch independently from the robot commands, open a third terminal:
+
+```bash
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+export GZ_PARTITION=rail_switch_demo
+```
+
+### Quick checks before commanding anything
 
 List MFJA-related packages:
 
@@ -296,47 +303,48 @@ Check one command topic:
 ros2 topic info /kuka1/joint_trajectory
 ```
 
-### 6. Move one robot only
+## Ready-to-Use Robot Command Examples
 
-Example: move only `kuka1`
+The examples below are intended to be executed from Terminal 2 after the simulation is already running.
+
+### KUKA KR6 R900 sixx
 
 ```bash
 ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.0,-0.8,1.2,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+"{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.6,-1.0,1.1,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
 ```
 
-Example: move only `staubli1`
+### Staeubli TX2-60L
 
 ```bash
 ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.0,0.3,-0.5,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+"{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.1,0.4,-0.6,0.0,0.5,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
 ```
 
-### 7. Move several robots together from one command
-
-First, inspect the expected joint order:
+### Yaskawa HC10
 
 ```bash
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
+ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.2,-0.7,0.9,0.0,0.4,0.2], time_from_start: {sec: 3, nanosec: 0}}]}"
 ```
 
-Then command a subset directly:
+### Yaskawa HC10DT
 
 ```bash
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
-  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
-  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
-  --trajectory-duration 4.0
+ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [-0.2,-0.5,0.8,0.0,0.5,-0.2], time_from_start: {sec: 3, nanosec: 0}}]}"
 ```
 
-The synchronized tool behavior is:
+### TIAGo arm and head
 
-- if no `--goal` is given, it commands all enabled robots that have built-in presets;
-- if one or more `--goal` arguments are given, it commands only the listed robots.
+```bash
+ros2 topic pub --once /tiago1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint','arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], time_from_start: {sec: 4, nanosec: 0}}]}"
+```
 
-### 8. Control TIAGo base motion
+### TIAGo base motion
 
-Move the TIAGo base continuously:
+Move TIAGo forward while rotating:
 
 ```bash
 ros2 topic pub -r 20 /tiago1/cmd_vel geometry_msgs/msg/Twist \
@@ -350,9 +358,76 @@ ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
 "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
 ```
 
-### 9. Stop the simulation
+## Ready-to-Use Rail Switch Commands
 
-In the terminal where Gazebo is running, press:
+The rotating rail switch is controlled with the dedicated tool below. These commands are intended to be executed from Terminal 3.
+
+For the full-floor world:
+
+```bash
+ros2 run mfja_robot_control_config three_position_switch_demo.py 0 --world default --partition rail_switch_demo --pos -16.73 -4.42 0.73
+ros2 run mfja_robot_control_config three_position_switch_demo.py 1 --world default --partition rail_switch_demo --pos -16.73 -4.42 0.73
+ros2 run mfja_robot_control_config three_position_switch_demo.py 2 --world default --partition rail_switch_demo --pos -16.73 -4.42 0.73
+```
+
+For the room-315-only world:
+
+```bash
+ros2 run mfja_robot_control_config three_position_switch_demo.py 0 --world room_315_only --partition rail_switch_demo --pos -16.73 -4.42 0.73
+ros2 run mfja_robot_control_config three_position_switch_demo.py 1 --world room_315_only --partition rail_switch_demo --pos -16.73 -4.42 0.73
+ros2 run mfja_robot_control_config three_position_switch_demo.py 2 --world room_315_only --partition rail_switch_demo --pos -16.73 -4.42 0.73
+```
+
+Current calibrated switch positions:
+
+- `0 -> 2.6 rad`
+- `1 -> -1.59 rad`
+- `2 -> 0.50666 rad`
+
+## Multi-Robot Synchronized Motion Examples
+
+First, inspect the expected joint order:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
+```
+
+Run the default preset motion for all enabled robots that have presets:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py
+```
+
+Command a subset directly:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --trajectory-duration 4.0
+```
+
+Command all five robots explicitly:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=0.8,-1.0,1.2,0.0,0.4,0.0 \
+  --goal staubli1=0.0,0.3,-0.5,0.0,0.6,0.0 \
+  --goal yaskawa_hc10_1=0.0,-0.6,0.8,0.0,0.5,0.0 \
+  --goal yaskawa_hc10dt_1=0.0,-0.5,0.7,0.0,0.4,0.0 \
+  --goal tiago1=0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2 \
+  --trajectory-duration 4.0
+```
+
+The synchronized tool behavior is:
+
+- if no `--goal` is given, it commands all enabled robots that have built-in presets;
+- if one or more `--goal` arguments are given, it commands only the listed robots;
+- if `--tiago-base-duration` is positive, it can also move the TIAGo base during the synchronized demo.
+
+## Stopping the Simulation
+
+In Terminal 1, press:
 
 ```bash
 Ctrl+C
@@ -378,25 +453,6 @@ Current shortcuts:
 - `5` or `tiago` -> `tiago1`
 
 If `robots:=...` is omitted, the enabled robots from the selected YAML file are used.
-
-## Shared Robot Control Utility
-
-The synchronized command-line control utility is installed from `mfja_robot_control_config`.
-
-Show expected joints:
-
-```bash
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
-```
-
-Command specific robots:
-
-```bash
-ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
-  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
-  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
-  --trajectory-duration 4.0
-```
 
 ## Recommended Usage
 

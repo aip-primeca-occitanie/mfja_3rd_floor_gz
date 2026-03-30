@@ -101,5 +101,11 @@
       <pose>-16.9 -5.81 0.0 0.0 0.0 0.0</pose>
     </include>
 
+    <include>
+      <uri>model://rail_switch_3pos_left</uri>
+      <name>rail_switch_3pos_left</name>
+      <pose>-16.73 -4.42 0.73 0.0 0.0 -1.59</pose>
+    </include>
+
   </world>
 </sdf>

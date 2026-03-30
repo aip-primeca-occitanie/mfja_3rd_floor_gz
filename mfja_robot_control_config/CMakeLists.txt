@@ -11,7 +11,9 @@ install(
 )
 
 install(
-  PROGRAMS scripts/multi_robot_sync_demo.py
+  PROGRAMS
+    scripts/multi_robot_sync_demo.py
+    scripts/three_position_switch_demo.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
