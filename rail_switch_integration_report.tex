@@ -47,7 +47,7 @@
 \setlist[enumerate]{leftmargin=1.2cm}
 \setstretch{1.0}
 
-\title{Technical Report\\Integration of a Three-Position Rotating Rail Switch\\in the MFJA Third-Floor Gazebo Harmonic Workspace}
+\title{Technical Report\\Integration of the MFJA Conveyor Switch Network\\in the Third-Floor Gazebo Harmonic Workspace}
 \author{MFJA Project Report}
 \date{\today}
 
@@ -57,36 +57,44 @@
 \clearpage
 
 \section{Introduction}
-This report explains in detail the engineering work carried out to add a new moving rail-switch element to the MFJA third-floor Gazebo Harmonic simulation. The final objective was not just to display a new mesh inside the environment. The real requirement was to integrate a rotating switch blade into the simulation in a way that is understandable, maintainable, reproducible, and easy to operate during demonstrations and experiments.
+This report explains the final engineering work carried out to integrate the MFJA conveyor switch network into the third-floor Gazebo Harmonic simulation. The accepted solution is no longer a standalone demo for one moving blade. The final requirement became a synchronized conveyor layout controller that can switch the room-315 rail system between two operational loop modes during simulation.
 
-The added component is a three-position rotating switch located in the room-315 industrial cell. In practice, the moving element is the switch blade, while the left static cell remains a separate fixed model already present in the environment. The switch blade must be able to change between three calibrated orientations. At the end of the implementation, the selected orientations are:
+The final conveyor layout contains two independent rail networks, \texttt{droit} and \texttt{gauche}. Across these two networks, the world now contains:
 \begin{itemize}
-\item position \texttt{0} mapped to yaw angle \texttt{2.6} rad;
-\item position \texttt{1} mapped to yaw angle \texttt{-1.59} rad;
-\item position \texttt{2} mapped to yaw angle \texttt{0.50666} rad.
+\item eight moving switch blades:
+\texttt{A1\_droit\_switch}, \texttt{A2\_droit\_switch}, \texttt{A3\_droit\_switch}, \texttt{A4\_droit\_switch},
+\texttt{A1\_gauche\_switch}, \texttt{A2\_gauche\_switch}, \texttt{A3\_gauche\_switch}, \texttt{A4\_gauche\_switch};
+\item four fixed switch visuals used to complete the scene layout.
 \end{itemize}
 
-The final implementation deliberately uses a kinematic pose update strategy rather than a continuous physics-based joint controller. This choice is important. The requirement for the switch was to jump to one of three known states and remain there. It was not necessary to simulate the detailed dynamics of a mechanical actuator. During development, a purely physical solution proved harder to stabilize and more sensitive to pivot placement, inertia, damping, and collision behavior. For this reason, the final design directly sets the model pose in Gazebo using the \path{/world/<world_name>/set_pose} service.
+The moving blades do not expose arbitrary manual angles to the operator. Instead, they are commanded together through two high-level conveyor modes:
+\begin{itemize}
+\item \texttt{PETIT\_BOUCLE}
+\item \texttt{GRAND\_BOUCLE}
+\end{itemize}
+
+The final implementation deliberately uses a kinematic pose update strategy rather than a continuous physics-based joint controller. This choice is important. The requirement is to move all eight blades to one calibrated layout and keep them there deterministically. It is not necessary to simulate detailed mechanical actuator dynamics. For this reason, the final design pauses the world briefly, updates every managed blade pose through the \path{/world/<world_name>/set_pose} service, and then resumes the world so that the visible change appears synchronized.
 
 This report describes:
 \begin{itemize}
 \item why the final design is kinematic instead of fully physical;
 \item which files were added or modified;
-\item where the moving part is defined as a Gazebo model;
-\item where the switch is inserted into the world files;
-\item which script is responsible for changing its orientation;
+\item where the moving blade model is defined in Gazebo;
+\item where the conveyor switch network is inserted into the world files;
+\item which script is responsible for changing the synchronized loop layout;
 \item how the motion command works internally;
 \item what practical details must be understood to maintain or extend the feature.
 \end{itemize}
 
 \section{Problem Statement and Design Objectives}
 \subsection{Functional requirement}
-The switch had to behave as a moving rail element inside the existing MFJA environment. More specifically, the implementation had to satisfy the following functional needs:
+The conveyor switches had to behave as moving rail elements inside the existing MFJA environment. More specifically, the implementation had to satisfy the following functional needs:
 \begin{itemize}
-\item integrate a moving switch blade mesh into the room-315 simulation;
-\item place the switch correctly inside both the full-floor world and the room-315-only world;
-\item allow the operator to command exactly three discrete switch states;
-\item preserve the correct pivot behavior, meaning the model should rotate around its intended local origin;
+\item integrate the moving switch blade mesh into the room-315 conveyor simulation;
+\item place the same conveyor switch network correctly inside both the full-floor world and the room-315-only world;
+\item allow the operator to switch the whole network between exactly two validated loop layouts;
+\item preserve the correct pivot behavior for every moving blade, meaning the model should rotate around its intended local origin;
+\item make the eight moving blades change layout together rather than one after another;
 \item keep the workflow simple for ROS~2 Jazzy and Gazebo Harmonic users.
 \end{itemize}
 
@@ -95,19 +103,19 @@ An early idea was to build the switch with a revolute joint and a physics contro
 \begin{itemize}
 \item if the mesh pivot was not perfectly aligned, the blade rotated around a visually incorrect point;
 \item if the mass, inertia, collision settings, or damping were not tuned carefully, the blade could oscillate, overshoot, or keep moving;
-\item if the command interface used a physics controller topic, integration with ROS and Gazebo partitions became more fragile for a simple three-state component;
-\item the system requirement was discrete switching, not realistic actuation dynamics.
+\item if the command interface used a physics controller topic, integration with ROS and Gazebo partitions became more fragile for a synchronized multi-switch component;
+\item the system requirement was discrete layout switching, not realistic actuation dynamics.
 \end{itemize}
 
-For these reasons, the final design favors a simpler and more robust behavior: the model is treated as a kinematic entity and its pose is updated directly to one of the calibrated states. This provides the exact user-facing behavior the project needed: a switch that goes immediately to the requested orientation and stays there.
+For these reasons, the final design favors a simpler and more robust behavior: each moving blade is treated as a kinematic entity and its pose is updated directly to one of the calibrated loop-layout states. This provides the exact user-facing behavior the project needed: a conveyor network that goes immediately to the requested configuration and stays there.
 
 \subsection{Final design principles}
 The final solution follows four engineering principles:
 \begin{enumerate}
 \item \textbf{Keep the model origin meaningful.} The SolidWorks-exported STL is assumed to have the correct pivot and axis frame.
-\item \textbf{Keep the world responsible for placement.} The global position of the switch belongs in the world files, not inside local mesh offsets.
-\item \textbf{Keep the motion logic outside the model.} The movement command is handled by a dedicated Python tool that sends Gazebo pose requests.
-\item \textbf{Keep the control states explicit.} The three allowed states are hard-coded as calibrated angles to avoid ambiguity.
+\item \textbf{Keep the world responsible for placement.} The global position of every switch belongs in the world files, not inside local mesh offsets.
+\item \textbf{Keep the motion logic outside the model.} The movement command is handled by a dedicated Python node that sends Gazebo pose requests.
+\item \textbf{Keep the control states explicit.} The allowed conveyor layouts are hard-coded as calibrated yaw tables to avoid ambiguity.
 \end{enumerate}
 
 \section{Files and Their Roles}
@@ -119,30 +127,30 @@ The switch integration is distributed across a small number of focused files. Th
 \toprule
 \textbf{File} & \textbf{Responsibility} \\
 \midrule
-\path{mfja_3rd_floor_description/models/rail_switch_3pos_left/model.config} & Declares the Gazebo model metadata and identifies the switch blade model. \\
-\path{mfja_3rd_floor_description/models/rail_switch_3pos_left/model.sdf} & Defines the Gazebo representation of the moving blade, including its mesh, scale, and visual material. \\
-\path{mfja_3rd_floor_description/models/rail_switch_3pos_left/meshes/aiguillage3.stl} & Stores the moving geometry exported from SolidWorks with the intended pivot and axes. \\
-\path{mfja_3rd_floor_description/worlds/mfja_3rd_floor.world} & Places the moving switch inside the full third-floor world. \\
-\path{mfja_3rd_floor_description/worlds/room_315_only.world} & Places the same switch inside the room-315-only world. \\
-\path{mfja_robot_control_config/scripts/three_position_switch_demo.py} & Sends the discrete orientation command to Gazebo using the set-pose service. \\
+\path{mfja_3rd_floor_description/models/rail_switch_3pos_droit/model.config} & Declares the Gazebo model metadata for the moving switch blade. \\
+\path{mfja_3rd_floor_description/models/rail_switch_3pos_droit/model.sdf} & Defines the Gazebo representation of the moving blade, including its mesh, scale, and visual material. \\
+\path{mfja_3rd_floor_description/models/rail_switch_3pos_droit/meshes/aiguillage3.stl} & Stores the moving geometry exported from SolidWorks with the intended pivot and axes. \\
+\path{mfja_3rd_floor_description/worlds/mfja_3rd_floor.world} & Places the four fixed switch visuals and eight moving conveyor switches inside the full third-floor world. \\
+\path{mfja_3rd_floor_description/worlds/room_315_only.world} & Places the same conveyor switch layout inside the room-315-only world. \\
+\path{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py} & Receives high-level loop-mode commands and applies the matching switch poses in either supported world. \\
 \path{mfja_robot_control_config/CMakeLists.txt} & Installs the control script as a runnable ROS~2 utility. \\
 \bottomrule
 \end{tabularx}
 }
 
-This organization is one of the most important things to understand. The moving blade is not controlled by embedding a behavior plugin inside the model. Instead, the project separates \emph{description} from \emph{command}. The SDF file describes what the blade looks like, while the Python script is responsible for changing its state.
+This organization is one of the most important things to understand. The moving blade is not controlled by embedding a behavior plugin inside the model. Instead, the project separates \emph{description} from \emph{command}. The SDF file describes what the blade looks like, while the Python controller is responsible for changing its state.
 
 \section{Gazebo Model of the Moving Blade}
 \subsection{Model intent}
-The final Gazebo model is intentionally minimal. It contains only the rotating blade, not the static rail base. The static base is already represented by a separate model in the world. This decision avoids duplicating geometry and keeps the moving object conceptually clear.
+The final Gazebo model is intentionally minimal. It contains only the rotating blade, not the static rail base. The static bases and fixed switch visuals are already represented by separate models in the world. This decision avoids duplicating geometry and keeps the moving object conceptually clear.
 
-The corresponding model metadata is defined in \texttt{model.config}. It identifies the model under the name \texttt{rail\_switch\_3pos\_left} and describes it as a three-position rotating rail switch that uses \texttt{aiguillage3.stl} as the moving element.
+The corresponding model metadata is defined in \texttt{model.config}. It identifies the model under the name \texttt{rail\_switch\_3pos\_droit} and describes it as the rotating rail-switch element that uses \texttt{aiguillage3.stl} as the moving geometry.
 
 \lstinputlisting[
   style=reportcode,
-  caption={Gazebo model metadata for the three-position switch blade.},
+  caption={Gazebo model metadata for the moving switch blade.},
   label={lst:modelconfig}
-]{mfja_3rd_floor_description/models/rail_switch_3pos_left/model.config}
+]{mfja_3rd_floor_description/models/rail_switch_3pos_droit/model.config}
 
 \subsection{Model structure in SDF}
 The actual Gazebo model is defined in the SDF file shown below.
@@ -151,7 +159,7 @@ The actual Gazebo model is defined in the SDF file shown below.
   style=reportcode,
   caption={Final SDF model used for the moving switch blade.},
   label={lst:modelsdf}
-]{mfja_3rd_floor_description/models/rail_switch_3pos_left/model.sdf}
+]{mfja_3rd_floor_description/models/rail_switch_3pos_droit/model.sdf}
 
 \subsection{Key decisions in the SDF file}
 Several implementation choices in this file are especially important:
@@ -168,34 +176,33 @@ This last point deserves emphasis. If the STL had a wrong pivot, the implementat
 
 \section{World Integration and Placement}
 \subsection{Placement in the full-floor world}
-The full-floor world includes the left static cell and then the moving blade model. The following snippet shows the insertion of the switch into the main world file.
+The full-floor world now includes the complete conveyor switch layout used in room~315: four fixed switch visuals and eight moving blades. The following snippet shows the insertion of this network into the main world file.
 
 \lstinputlisting[
   style=reportcode,
-  firstline=97,
-  lastline=107,
-  caption={Switch insertion in the full-floor Gazebo world.},
+  firstline=103,
+  lastline=174,
+  caption={Conveyor switch network insertion in the full-floor Gazebo world.},
   label={lst:fullworld}
 ]{mfja_3rd_floor_description/worlds/mfja_3rd_floor.world}
 
-The calibrated pose used for the moving switch is:
+The important design detail is not one specific absolute pose anymore, but the way the data is organized:
 \begin{itemize}
-\item \texttt{x = -16.73}
-\item \texttt{y = -4.42}
-\item \texttt{z = 0.73}
-\item initial \texttt{yaw = -1.59}
+\item the world file remains the source of truth for \texttt{x}, \texttt{y}, \texttt{z}, roll, and pitch for every managed switch;
+\item the controller reads these values from the world file;
+\item only the yaw angle changes when the operator requests \texttt{PETIT\_BOUCLE} or \texttt{GRAND\_BOUCLE}.
 \end{itemize}
 
-In the final design, this global pose is the correct place to adjust the switch location in the environment. If the blade must be moved slightly within the room, the world pose should be updated. The model SDF should generally remain unchanged as long as the exported mesh pivot is valid.
+In the final design, the world file is the correct place to adjust conveyor switch locations in the environment. If a blade must be moved slightly within the room, the world pose should be updated. The model SDF should generally remain unchanged as long as the exported mesh pivot is valid.
 
 \subsection{Placement in the room-315-only world}
-The same concept is reused in the room-315-only world. This is useful because the project supports both a full-floor mode and a focused local test mode. The switch appears in the same calibrated place relative to the room-315 geometry.
+The same concept is reused in the room-315-only world. This is useful because the project supports both a full-floor mode and a focused local test mode. The room-only world now contains the same four fixed visuals and the same eight moving blades as the full-floor world.
 
 \lstinputlisting[
   style=reportcode,
-  firstline=98,
-  lastline=108,
-  caption={Switch insertion in the room-315-only Gazebo world.},
+  firstline=104,
+  lastline=175,
+  caption={Conveyor switch network insertion in the room-315-only Gazebo world.},
   label={lst:roomworld}
 ]{mfja_3rd_floor_description/worlds/room_315_only.world}
 
@@ -203,54 +210,67 @@ The same concept is reused in the room-315-only world. This is useful because th
 One of the most important lessons from this work is that local offsets inside the model and global placement in the world must not be mixed carelessly. The final arrangement is easier to reason about because:
 \begin{itemize}
 \item \texttt{model.sdf} answers the question: ``What is this moving object?''
-\item the world file answers the question: ``Where is this object in the environment?''
-\item the control script answers the question: ``Which calibrated orientation should this object take now?''
+\item the world file answers the question: ``Where are these switch elements in the environment?''
+\item the control script answers the question: ``Which calibrated conveyor layout should the moving blades take now?''
 \end{itemize}
 
 Keeping these responsibilities separate makes debugging much easier.
 
 \section{Motion Control Logic}
 \subsection{Overview}
-The runtime motion logic is implemented in the script \texttt{three\_position\_switch\_demo.py}. This script is the main control entry point for the switch. It is not just a demo in the informal sense. In the final design, it is the utility that encodes the three allowed switch states and sends the corresponding pose command to Gazebo.
+The runtime motion logic is implemented in the script \texttt{conveyor\_loop\_mode\_controller.py}. This controller is the main entry point for the conveyor switch network in both supported worlds. It listens to a high-level ROS~2 topic, maps the requested mode to the corresponding calibrated yaw values for all moving blades, and then applies the update through Gazebo services.
 
 \lstinputlisting[
   style=reportcode,
   language=Python,
-  caption={Python control utility for the three-position switch.},
+  caption={Python loop-mode controller for the conveyor switch network.},
   label={lst:threeswitch}
-]{mfja_robot_control_config/scripts/three_position_switch_demo.py}
+]{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py}
 
 \subsection{How the script works}
-The script performs the following steps:
+The controller performs the following steps:
 \begin{enumerate}
-\item parse the requested switch position from the command line;
-\item map the symbolic position number (\texttt{0}, \texttt{1}, or \texttt{2}) to a calibrated yaw angle;
-\item convert that yaw value into a quaternion because Gazebo pose requests use quaternion orientation;
-\item combine the chosen orientation with the calibrated world position of the switch pivot;
-\item call \texttt{gz service} on \path{/world/<world_name>/set_pose};
-\item retry a few times if the service call times out.
+\item load the managed switch poses from the active world file;
+\item subscribe to the ROS~2 command topic that requests a loop layout;
+\item map the symbolic mode (\texttt{PETIT\_BOUCLE} or \texttt{GRAND\_BOUCLE}) to calibrated yaw targets for the eight moving blades;
+\item pause the Gazebo world;
+\item send the per-switch \path{/world/<world_name>/set_pose} requests in parallel;
+\item resume the Gazebo world and publish the applied state on a status topic.
 \end{enumerate}
 
-\subsection{Discrete switch states}
-The final angle mapping stored in the script is:
+\subsection{Supported loop modes}
+The controller currently supports two high-level conveyor layouts:
 \begin{itemize}
-\item \texttt{position 0 -> 2.6 rad}
-\item \texttt{position 1 -> -1.59 rad}
-\item \texttt{position 2 -> 0.50666 rad}
+\item \texttt{PETIT\_BOUCLE}
+\item \texttt{GRAND\_BOUCLE}
 \end{itemize}
 
-This mapping is intentionally explicit. The operator is not asked to send arbitrary angles. This protects the system from inconsistent use and matches the physical interpretation of a real three-position switch.
+This mapping is intentionally explicit. The operator is not asked to send arbitrary angles per blade. This protects the system from inconsistent use and matches the operational intent of switching the conveyor network as one coherent layout.
+
+\subsection{ROS topics}
+The operator-facing interface is intentionally small:
+\begin{itemize}
+\item command topic: \path{/mfja/conveyor/loop_mode_cmd}
+\item status topic: \path{/mfja/conveyor/loop_mode}
+\end{itemize}
+
+The controller also accepts simple aliases such as \texttt{grand}, \texttt{grand\_boucle}, \texttt{petit}, and \texttt{petit\_boucle}. Internally, these are normalized to the two canonical states listed above.
 
 \subsection{Quaternion conversion}
-Although the switch is conceptually driven by a yaw angle, Gazebo requires the orientation to be sent as a quaternion. The helper function \texttt{quaternion\_from\_yaw()} converts a scalar yaw angle into the \texttt{z,w} quaternion pair used for a planar rotation around the vertical axis. This keeps the actual command interface compatible with Gazebo while preserving a human-readable notion of switch states.
+Although each blade is conceptually driven by a yaw angle, Gazebo requires the orientation to be sent as a quaternion. The helper function inside the controller converts the target yaw value into the quaternion sent to Gazebo for every updated blade.
 
 \subsection{Set-pose service request}
-The command is sent through:
+The blade updates are sent through:
 \begin{center}
 \path{/world/<world_name>/set_pose}
 \end{center}
 
-This is a core design decision. Instead of asking Gazebo to solve a moving joint over time, the code simply requests the final state directly. For a three-position industrial switch, this is often preferable during simulation development because it is deterministic, immediate, and easy to reproduce.
+The controller also pauses and resumes the world through:
+\begin{center}
+\path{/world/<world_name>/control}
+\end{center}
+
+This is a core design decision. Instead of asking Gazebo to solve moving joints over time, the code simply requests the final state directly. For a synchronized industrial switch network, this is often preferable during simulation development because it is deterministic, immediate, and easy to reproduce.
 
 \subsection{Retries and partitions}
 The script also includes two practical reliability features:
@@ -272,7 +292,7 @@ The control utility becomes runnable through ROS~2 because it is installed by \p
 
 This file matters for practical reasons:
 \begin{itemize}
-\item without this installation rule, the package executable \path{three_position_switch_demo.py} could not be launched with \texttt{ros2 run};
+\item without this installation rule, the package executable \path{conveyor_loop_mode_controller.py} could not be launched with \texttt{ros2 run};
 \item it keeps the runtime interface consistent with the rest of the workspace tools;
 \item it makes the switch control part of the package's deployable API.
 \end{itemize}
@@ -294,7 +314,7 @@ source install/setup.bash
 \end{lstlisting}
 
 \subsection{Launching the full-floor world}
-The switch is available in the main full-floor simulation:
+The conveyor switch network is available in the main full-floor simulation:
 
 \begin{lstlisting}[style=reportcode,caption={Example launch command for the full-floor world.}]
 export GZ_PARTITION=rail_switch_demo
@@ -303,21 +323,17 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   gz_partition:=rail_switch_demo
 \end{lstlisting}
 
-\subsection{Switching to one of the three states}
-The operator can then request one of the three calibrated positions:
+\subsection{Switching between conveyor loop modes}
+The operator can then request one of the supported conveyor layouts:
 
-\begin{lstlisting}[style=reportcode,caption={Example commands for the three discrete switch positions.}]
-ros2 run mfja_robot_control_config three_position_switch_demo.py 0 \
-  --partition rail_switch_demo \
-  --pos -16.73 -4.42 0.73
+\begin{lstlisting}[style=reportcode,caption={Example commands for synchronized conveyor loop-mode switching.}]
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String \
+  "{data: GRAND_BOUCLE}"
 
-ros2 run mfja_robot_control_config three_position_switch_demo.py 1 \
-  --partition rail_switch_demo \
-  --pos -16.73 -4.42 0.73
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String \
+  "{data: PETIT_BOUCLE}"
 
-ros2 run mfja_robot_control_config three_position_switch_demo.py 2 \
-  --partition rail_switch_demo \
-  --pos -16.73 -4.42 0.73
+ros2 topic echo /mfja/conveyor/loop_mode
 \end{lstlisting}
 
 \subsection{Room-315-only mode}
@@ -330,10 +346,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   gz_partition:=rail_switch_demo
 \end{lstlisting}
 
-In that case, the script should be called with:
-\begin{center}
-\texttt{--world room\_315\_only}
-\end{center}
+No separate low-level script invocation is required. The room-315-only launch starts the same controller automatically, and the same \path{/mfja/conveyor/loop_mode_cmd} topic interface is used.
 
 \section{Important Things to Know}
 \subsection{The STL pivot is critical}
@@ -343,48 +356,50 @@ The most important modeling fact is that Gazebo rotates a model around its origi
 If the switch placement seems wrong in the room, the first place to check is the world pose. Reintroducing local offsets into \texttt{model.sdf} should be avoided unless the mesh itself is later changed again and requires compensation.
 
 \subsection{The final system is intentionally kinematic}
-The switch does not currently use a revolute joint, a PID controller, or a ROS-to-Gazebo command bridge. That is not a limitation of the current code; it is a deliberate simplification chosen to make a three-state device reliable.
+The conveyor switches do not currently use revolute joints, PID controllers, or a ROS-to-Gazebo command bridge. That is not a limitation of the current code; it is a deliberate simplification chosen to make the synchronized two-layout device reliable.
 
 \subsection{Global position and local model structure are different concepts}
-The values \texttt{x y z} passed through \texttt{--pos} or defined in the world file represent the switch pivot in world coordinates. They are not mesh-internal offsets. This distinction is central to understanding the whole design.
+The values defined in the world file represent the switch pivots in world coordinates. They are not mesh-internal offsets. The controller intentionally preserves these world coordinates and changes only yaw. This distinction is central to understanding the whole design.
 
 \subsection{Gazebo partitions must match}
 If a command appears not to work, one of the first things to verify is that the terminal sending the command uses the same \texttt{GZ\_PARTITION} as the running simulation. A mismatch can make the control command appear to fail even if the script is correct.
+
+\subsection{Static switch visuals are not commanded}
+The four fixed switch visuals are part of the scene composition only. They are not included in the controller's managed switch list, and they do not change when the operator publishes a new loop mode. Only the eight moving blades are updated.
 
 \subsection{Old helper scripts are not part of the final runtime}
 The workspace may still contain helper utilities such as \texttt{shift\_stl\_origin.py}. Such scripts are useful during mesh preparation, but they are not part of the final runtime motion pipeline. The runtime behavior depends mainly on:
 \begin{itemize}
 \item the corrected STL file;
-\item the world pose entries;
-\item the \texttt{three\_position\_switch\_demo.py} control script.
+\item the world pose entries in the active world file;
+\item the \texttt{conveyor\_loop\_mode\_controller.py} node.
 \end{itemize}
 
 \subsection{The final runtime path is short and understandable}
 This is the simplest way to mentally model the final implementation:
 \begin{enumerate}
 \item Gazebo loads the blade mesh from \texttt{model.sdf}.
-\item The world file places the blade at the calibrated switch pivot location.
-\item The Python control script sends one of three allowed orientations.
-\item Gazebo updates the blade pose immediately.
+\item The world file places the four fixed visuals and eight moving blades at their calibrated locations.
+\item The Python control node receives \texttt{PETIT\_BOUCLE} or \texttt{GRAND\_BOUCLE}.
+\item Gazebo updates the eight moving blade poses together.
 \end{enumerate}
 
 \section{Future Improvements}
 Although the current solution is appropriate for the project requirements, several future improvements are possible:
 \begin{itemize}
-\item add a small ROS~2 node wrapper around the script so other nodes can request switch states programmatically;
-\item define semantic command names such as \texttt{left}, \texttt{center}, and \texttt{right} instead of numeric identifiers;
-\item log the currently requested switch state to a ROS topic for monitoring or user interfaces;
-\item create a dedicated launch file that opens a minimal world containing only the switch and its local environment for faster testing;
+\item expose a launch argument to choose the startup conveyor mode automatically;
+\item publish richer diagnostics, for example the active world name and per-switch yaw targets;
+\item add a dedicated minimal test launch focused only on the room-315 conveyor system for faster visual checks;
 \item if a more physical behavior is ever required, introduce a new model variant that uses a true revolute joint while keeping the current kinematic version for demonstrations.
 \end{itemize}
 
 \section{Conclusion}
-The moving rail-switch element added to the MFJA third-floor project is more than a visual asset. It is now a properly integrated simulation feature with a clear architecture:
+The conveyor switch network added to the MFJA third-floor project is more than a visual asset. It is now a properly integrated simulation feature with a clear architecture:
 \begin{itemize}
 \item the mesh geometry lives in the description package;
-\item the model is defined cleanly in Gazebo as a dedicated blade model;
-\item the world files place it consistently in both simulation modes;
-\item the Python tool controls its three discrete states in a practical and deterministic way.
+\item the moving blade is defined cleanly in Gazebo as a dedicated reusable model;
+\item the world files place the same fixed and moving switch layout consistently in both simulation modes;
+\item the Python node controls the two validated conveyor loop layouts in a practical and deterministic way.
 \end{itemize}
 
 The most important outcome of this work is conceptual clarity. The final solution works because it separates concerns:
@@ -392,9 +407,9 @@ The most important outcome of this work is conceptual clarity. The final solutio
 \item geometry belongs to the mesh;
 \item appearance belongs to the SDF model;
 \item placement belongs to the world file;
-\item state changes belong to the control script.
+\item synchronized state changes belong to the control node.
 \end{itemize}
 
-This separation makes the system easier to debug, explain, extend, and demonstrate. It also means the moving switch can now be treated as a reusable simulation component rather than a one-off mesh experiment.
+This separation makes the system easier to debug, explain, extend, and demonstrate. It also means the room-315 conveyor switches can now be treated as a reusable simulation subsystem rather than a one-off mesh experiment.
 
 \end{document}

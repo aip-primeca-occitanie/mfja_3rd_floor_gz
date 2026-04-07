@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <sdf version="1.9">
-  <model name="rail_switch_3pos_left">
+  <model name="rail_switch_3pos_droit">
     <!--
       This model is intentionally kinematic-only.
       The model origin is the desired switch pivot in world coordinates.
@@ -25,7 +25,7 @@
       <visual name="blade_visual">
         <geometry>
           <mesh>
-            <uri>model://rail_switch_3pos_left/meshes/aiguillage3.stl</uri>
+            <uri>model://rail_switch_3pos_droit/meshes/aiguillage3.stl</uri>
             <scale>39.37 39.37 39.37</scale>
           </mesh>
         </geometry>

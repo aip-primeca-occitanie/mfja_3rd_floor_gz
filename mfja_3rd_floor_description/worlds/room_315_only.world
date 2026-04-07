@@ -55,56 +55,124 @@
     <include>
       <uri>model://kuka_table</uri>
       <name>room315_kuka_table_1</name>
-      <pose>-11.173 -6.0 0.5 -1.57 0 1.57</pose>
+      <pose>-10.6096 -6.0 0.5 -1.57 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://staubli_table</uri>
       <name>room315_staubli_table_1</name>
-      <pose>-15.744 -6.0 0.5 -1.57 0 1.57</pose>
+      <pose>-14.9062 -6.0 0.5 -1.57 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://table_yaskawa</uri>
       <name>room315_yaskawa_table_1</name>
-      <pose>-11.207 -2.97 0.5 0 0 1.57</pose>
+      <pose>-10.6436 -2.97 0.5 0 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://table_yaskawa</uri>
       <name>room315_yaskawa_table_2</name>
-      <pose>-15.754 -2.97 0.5 0 0 1.57</pose>
+      <pose>-14.9162 -2.97 0.5 0 0 1.57</pose>
     </include>
 
     <!-- Room 315 industrial fixtures -->
     <include>
       <uri>model://carter_droit</uri>
       <name>room315_carter_droit_1</name>
-      <pose>-15.88 -4.38 1.4 0 -1.57 -1.57</pose>
+      <pose>-15.0422 -4.38 1.4 0 -1.57 -1.57</pose>
     </include>
 
     <include>
       <uri>model://carter_gauche</uri>
       <name>room315_carter_gauche_1</name>
-      <pose>-11.153 -4.38 1.64 0 -1.57 -1.57</pose>
-    </include>
-
-    <include>
-      <uri>model://cell_static_droit_final</uri>
-      <name>room315_cell_static_droit_final_1</name>
-      <pose>-13.0 -5.81 0.0 0 0 0</pose>
+      <pose>-10.5896 -4.38 1.64 0 -1.57 -1.57</pose>
     </include>
 
     <include>
       <uri>model://cell_static_gauche_final</uri>
       <name>room315_cell_static_gauche_final_1</name>
-      <pose>-16.9 -5.81 0.0 0.0 0.0 0.0</pose>
+      <pose>-12.4366 -5.81 0.0 0 0 0</pose>
     </include>
 
     <include>
-      <uri>model://rail_switch_3pos_left</uri>
-      <name>rail_switch_3pos_left</name>
-      <pose>-16.73 -4.42 0.73 0.0 0.0 -1.59</pose>
+      <uri>model://cell_static_droit_final</uri>
+      <name>room315_cell_static_droit_final_1</name>
+      <pose>-15.9170 -5.81 0.0 0.0 0.0 0.0</pose>
+    </include>
+
+    <!-- Placeholder static switch instances using the cell_static-colored switch model. -->
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_droit_switch_1</name>
+      <pose>-13.715 -4.515 0.726 0 0 1.02</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_droit_switch_2</name>
+      <pose>-13.72 -4.89 0.726 0 0 -0.02</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_gauche_switch_1</name>
+      <pose>-11.848 -4.515 0.726 0 0 3.13319</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_gauche_switch_2</name>
+      <pose>-11.849 -4.885 0.726 0 0 -2.13</pose>
+    </include>
+
+    <!-- Placeholder switch instances for the two MFJA rail networks. -->
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A1_droit_switch</name>
+      <pose>-15.747 -4.98 0.726 0 0 0.50666</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A2_droit_switch</name>
+      <pose>-14.285 -5.075 0.726 0 0 3.13</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A3_droit_switch</name>
+      <pose>-14.282 -4.329 0.726 0 0 -2.1</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A4_droit_switch</name>
+      <pose>-15.747 -4.42 0.726 0 0 0.50666</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A1_gauche_switch</name>
+      <pose>-9.822 -4.982 0.726 0 0 -2.63653</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A2_gauche_switch</name>
+      <pose>-11.288 -5.071 0.726 0 0 1.04</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A3_gauche_switch</name>
+      <pose>-11.285 -4.329 0.726 0 0 -0.025</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A4_gauche_switch</name>
+      <pose>-9.822 -4.42 0.726 0 0 -2.63653</pose>
     </include>
 
   </world>

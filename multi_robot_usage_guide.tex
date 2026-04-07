@@ -68,7 +68,7 @@ This report documents the final engineering work carried out on the meta-reposit
 \item \texttt{tiago1}: TIAGo mobile manipulator.
 \end{itemize}
 
-The work did not stop at inserting robot geometry into the scene. Each robot had to be spawnable from a shared launch pipeline, placed reproducibly inside the world, connected to ROS~2 with its own namespace, and controllable without topic collisions. In addition, the map was enriched with static industrial station assets such as robot tables, covers, rails, shuttle parts, and dedicated room assets.
+The work did not stop at inserting robot geometry into the scene. Each robot had to be spawnable from a shared launch pipeline, placed reproducibly inside the world, connected to ROS~2 with its own namespace, and controllable without topic collisions. In addition, the map was enriched with static industrial station assets such as robot tables, covers, rails, shuttle parts, dedicated room assets, and the room-315 conveyor switch network.
 
 This report explains the final solution only. It focuses on the changes that remained in the accepted configuration, the important code fragments that make the system work, and the development path that led from a single-robot KUKA setup to a five-robot mixed environment containing both industrial manipulators and one mobile manipulator. It also explains the later meta-repository refactor that separated shared assets, shared control logic, full-floor bringup, and room-315-only bringup into different ROS~2 packages while preserving the overall functionality.
 
@@ -87,8 +87,10 @@ The final project delivers a configuration-driven simulation architecture with t
 \item articulated SDF models for KUKA, St\"aubli, Yaskawa HC10, Yaskawa HC10DT, and TIAGo;
 \item TIAGo support as both a manipulator and a mobile base;
 \item one synchronized multi-robot command-line tool for coordinated motion scenarios;
+\item one synchronized conveyor loop-mode controller shared by the full-floor and room-315-only worlds;
 \item a full third-floor world plus a dedicated room-315-only world;
-\item a world file extended with station tables and industrial support parts.
+\item a room-315 conveyor layout with eight moving switch blades and four fixed switch visuals present in both worlds;
+\item world files extended with station tables, industrial support parts, and the conveyor switch network.
 \end{itemize}
 
 \section{Why this structure was necessary}
@@ -115,7 +117,7 @@ The final repository is no longer one large ROS~2 package. Instead, it is organi
 \begin{itemize}
 \item \texttt{mfja\_3rd\_floor\_gz}: umbrella and compatibility package that forwards common launch entry points while preserving a subpackage with the same name as the parent Git repository;
 \item \texttt{mfja\_3rd\_floor\_description}: shared meshes, Gazebo models, URDF files, and world files;
-\item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, shared configuration, and synchronized command tools;
+\item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, shared configuration, synchronized command tools, and the conveyor loop-mode controller;
 \item \texttt{mfja\_3rd\_floor\_bringup}: launch entry points for the complete third-floor simulation;
 \item \texttt{mfja\_room\_315\_bringup}: launch entry point for the room-315-only simulation.
 \end{itemize}
@@ -129,7 +131,7 @@ The final repository now supports two independent run modes:
 \item \textbf{Room 315 only}: launched from \texttt{mfja\_room\_315\_bringup/room\_315\_only.launch.py}.
 \end{itemize}
 
-The full-floor mode uses the complete MFJA third-floor world and the main robot registry in \texttt{mfja\_robot\_control\_config/config/robots.yaml}. The room-315-only mode uses the dedicated room~315 world and the separate registry in \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. This second mode keeps the scene cleaner for robot and control experiments while still reusing the same shared robot models and the same generic spawn logic.
+The full-floor mode uses the complete MFJA third-floor world and the main robot registry in \texttt{mfja\_robot\_control\_config/config/robots.yaml}. The room-315-only mode uses the dedicated room~315 world and the separate registry in \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. This second mode keeps the scene cleaner for robot and control experiments while still reusing the same shared robot models, the same generic spawn logic, and the same conveyor loop-mode controller interface on \path{/mfja/conveyor/loop_mode_cmd}.
 
 \section{Final robot registries}
 The final robot lists are stored in two YAML files:
@@ -302,7 +304,7 @@ This pair of changes is what made \texttt{tiago1} a true mobile manipulator. The
 \section{Step 9: Enriching the world with industrial station assets}
 After the robot integrations were stable, the map was extended with the station tables and industrial support parts that correspond to the robot positions. These additions belong in the world file because they are static environment elements rather than articulated robots.
 
-The corresponding static placements were added directly to \texttt{mfja\_3rd\_floor\_description/worlds/mfja\_3rd\_floor.world}. The final world now includes the KUKA table, the St\"aubli table, two Yaskawa tables, the left and right carters, both Montratec rails, and four shuttle elements. This work improved the final simulation in three ways:
+The corresponding placements were added directly to \texttt{mfja\_3rd\_floor\_description/worlds/mfja\_3rd\_floor.world}. The final world now includes the KUKA table, the St\"aubli table, two Yaskawa tables, the left and right carters, both Montratec rails, four shuttle elements, and the room-315 conveyor switch network. This work improved the final simulation in three ways:
 \begin{itemize}
 \item the robot stations became physically meaningful rather than floating over an empty floor;
 \item robot \texttt{z\_pose} values could be aligned with actual support tables;
@@ -318,7 +320,7 @@ Once the complete third-floor simulation was stable, a second execution mode bec
 \item a separate robot registry \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}.
 \end{itemize}
 
-This new mode reuses the same shared robot models, URDF files, and generic spawn logic, but it replaces the full-floor world with a dedicated room~315 scene. The accepted final room-315-only scene keeps the room mesh itself, the four robot support tables, and the main industrial fixtures such as the carters, rails, and shuttles, while leaving out general lab furniture and room-314 assets. This makes the room-only mode lighter and cleaner while preserving the robot infrastructure needed for experiments.
+This new mode reuses the same shared robot models, URDF files, and generic spawn logic, but it replaces the full-floor world with a dedicated room~315 scene. The accepted final room-315-only scene keeps the room mesh itself, the four robot support tables, the main industrial fixtures such as the carters, rails, and shuttles, and the same conveyor switch network used in the full-floor world, while leaving out general lab furniture and room-314 assets. This makes the room-only mode lighter and cleaner while preserving the robot and conveyor infrastructure needed for experiments.
 
 \section{Step 11: Refactoring the repository into five ROS~2 packages}
 The final structural step was the meta-repository refactor. Earlier stages still lived in one large package. That was workable for one developer, but it would create unnecessary Git conflicts once environment assets, launch logic, room~315 bringup, and robot-control configuration started evolving in parallel.
@@ -327,7 +329,7 @@ The repository was therefore split into five packages with clear responsibilitie
 \begin{itemize}
 \item \texttt{mfja\_3rd\_floor\_gz}: umbrella and compatibility package that preserves simple launch commands under the historical project name;
 \item \texttt{mfja\_3rd\_floor\_description}: shared meshes, models, URDF files, and world files;
-\item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, and synchronized command tools;
+\item \texttt{mfja\_robot\_control\_config}: shared launch logic, robot YAML files, synchronized command tools, and the conveyor loop-mode controller;
 \item \texttt{mfja\_3rd\_floor\_bringup}: the full-floor launch entry points;
 \item \texttt{mfja\_room\_315\_bringup}: the room-315-only launch entry point.
 \end{itemize}
@@ -342,7 +344,8 @@ Experimental SCARA work was explored during development, but it was removed from
 \item Yaskawa HC10;
 \item Yaskawa HC10DT;
 \item TIAGo;
-\item the station furniture and industrial static assets that remain in the world.
+\item the station furniture and industrial assets that remain in the world;
+\item the room-315 conveyor network with eight moving switch blades and four fixed switch visuals.
 \end{itemize}
 
 \chapter{Important Final Code and Why It Matters}
@@ -412,10 +415,11 @@ The world file belongs to the static-scene layer of the architecture. It contain
 \item two Yaskawa tables;
 \item left and right carters;
 \item right and left Montratec rails;
-\item four shuttle elements.
+\item four shuttle elements;
+\item the room-315 conveyor switch network, including four fixed switch visuals and eight moving blades.
 \end{itemize}
 
-Those placements matter because the final robot poses in the robot YAML files were chosen relative to these station assets. In the full-floor mode, this relationship is defined against \texttt{mfja\_3rd\_floor\_description/worlds/mfja\_3rd\_floor.world}. In the room-315-only mode, the dedicated world keeps only the room~315 mesh, the robot support tables, and the industrial fixtures needed for experiments.
+Those placements matter because the final robot poses in the robot YAML files were chosen relative to these station assets. In the full-floor mode, this relationship is defined against \texttt{mfja\_3rd\_floor\_description/worlds/mfja\_3rd\_floor.world}. In the room-315-only mode, the dedicated world keeps the same room~315 conveyor switch network together with the room mesh, the robot support tables, and the industrial fixtures needed for experiments.
 
 \section{Code block 7: Launch-time robot selection and synchronized demos}
 The final workspace also gained two practical operational improvements after the original five-robot integration was stable.
@@ -423,6 +427,8 @@ The final workspace also gained two practical operational improvements after the
 First, the launch file now accepts a \texttt{robots} argument. This allows an operator to type, for example, \texttt{robots:=kuka,tiago} or \texttt{robots:=1,5} and spawn only the requested instances, even if more robots are enabled in the YAML file. This is useful during testing because it avoids repeated editing of \texttt{mfja\_robot\_control\_config/config/robots.yaml} for short experiments and makes quick selection much easier from the command line.
 
 Second, the script \texttt{mfja\_robot\_control\_config/scripts/multi\_robot\_sync\_demo.py} provides one coordinated ROS~2 process that can publish trajectories to several robots from one node. This is a better workflow than launching many independent \texttt{ros2 topic pub} commands from separate shells, because all commands are emitted from one process after subscriber readiness has been verified. In normal operation, the operator first launches the desired simulation mode in Terminal~1 and then uses the synchronized tool in Terminal~2 only for the robots that should actually move.
+
+In addition, the script \texttt{mfja\_robot\_control\_config/scripts/conveyor\_loop\_mode\_controller.py} now manages the room-315 conveyor switch network in both worlds. It exposes a high-level topic interface, \path{/mfja/conveyor/loop_mode_cmd}, that switches all eight moving blades together between \texttt{PETIT\_BOUCLE} and \texttt{GRAND\_BOUCLE}.
 
 \chapter{How Independent Control Works}
 \section{Namespacing strategy}
@@ -459,11 +465,12 @@ The final result was validated operationally through repeated checks:
 \item each industrial arm reacted to a namespaced \texttt{/joint\_trajectory} command;
 \item TIAGo reacted both to \texttt{/tiago1/joint\_trajectory} and \texttt{/tiago1/cmd\_vel};
 \item the world loaded the static station assets without breaking robot placement;
+\item the conveyor loop-mode controller switched all eight moving conveyor blades together in both supported worlds;
 \item duplicate robot control did not occur because topic names were isolated.
 \end{itemize}
 
 \section{How to run the program}
-The recommended workflow uses two terminals. Terminal 1 starts the simulation. Terminal 2 is used for checking topics and sending commands. The same ROS environment must be sourced in every terminal before running any command.
+The recommended workflow uses two terminals for robot work and an optional third terminal for conveyor commands. Terminal 1 starts the simulation. Terminal 2 is used for checking topics and sending robot commands. Terminal 3 can be used to send conveyor loop-mode commands independently. The same ROS environment must be sourced in every terminal before running any command.
 
 \subsection*{Terminal 1: build and launch the full floor}
 Use the following commands exactly:
@@ -478,7 +485,7 @@ source install/setup.bash
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
 \end{lstlisting}
 
-When this command finishes starting, Gazebo should contain the enabled robots from \texttt{mfja\_robot\_control\_config/config/robots.yaml}. In the current final configuration these are \texttt{kuka1}, \texttt{staubli1}, \texttt{yaskawa\_hc10\_1}, \texttt{yaskawa\_hc10dt\_1}, and \texttt{tiago1}.
+When this command finishes starting, Gazebo should contain the enabled robots from \texttt{mfja\_robot\_control\_config/config/robots.yaml}. In the current final configuration these are \texttt{kuka1}, \texttt{staubli1}, \texttt{yaskawa\_hc10\_1}, \texttt{yaskawa\_hc10dt\_1}, and \texttt{tiago1}. The same launch also starts the room-315 conveyor loop-mode controller for the switch network embedded in the full-floor world.
 For compatibility, the same mode also remains available through \texttt{ros2 launch mfja\_3rd\_floor\_gz full\_floor.launch.py}.
 
 \subsection*{Alternative launch: room 315 only}
@@ -493,8 +500,24 @@ source install/setup.bash
 ros2 launch mfja_room_315_bringup room_315_only.launch.py
 \end{lstlisting}
 
-This mode loads \texttt{mfja\_3rd\_floor\_description/worlds/room\_315\_only.world} and the dedicated robot registry \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. It is intended for lighter, cleaner robot experiments than the full third-floor world. In its final accepted form it keeps only room~315, the four robot support tables, and the main industrial fixtures such as the carters, rails, and shuttles.
+This mode loads \texttt{mfja\_3rd\_floor\_description/worlds/room\_315\_only.world} and the dedicated robot registry \texttt{mfja\_robot\_control\_config/config/robots\_room\_315\_only.yaml}. It is intended for lighter, cleaner robot experiments than the full third-floor world. In its final accepted form it keeps only room~315, the four robot support tables, the main industrial fixtures such as the carters, rails, and shuttles, and the same room-315 conveyor switch network used in the full-floor world.
 For compatibility, the same launch remains available through \texttt{ros2 launch mfja\_3rd\_floor\_gz room\_315\_only.launch.py}.
+
+\subsection*{Optional Terminal 3: conveyor loop-mode commands}
+The same conveyor command interface is available in both the full-floor and room-315-only modes:
+
+\codenext{9}
+\begin{lstlisting}[style=reportcode,caption={Switching the room-315 conveyor network.},label={lst:conveyor_loop_mode}]
+export MFJA_WS=~/mfja_3rd_floor_ws
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String "{data: GRAND_BOUCLE}"
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String "{data: PETIT_BOUCLE}"
+ros2 topic echo /mfja/conveyor/loop_mode
+\end{lstlisting}
+
+These commands drive the eight moving conveyor blades together. The four fixed switch visuals remain unchanged.
 
 \subsection*{Optional launch-time robot selection}
 When only a subset of robots is needed for a quick experiment, the launch file can now override the YAML activation set directly from the command line:
@@ -826,6 +849,8 @@ Several issues appeared during development. The final code contains the fixes th
 \item \textbf{Need to test only one or two robots quickly}: use the launch argument \texttt{robots:=kuka,tiago} or \texttt{robots:=1,5} instead of rewriting the YAML activation flags.
 \item \textbf{TIAGo arm moves but base does not}: the base requires the \texttt{cmd\_vel} publisher to run continuously for a short time; a one-shot message is often not enough.
 \item \textbf{Need coordinated motion across several robots}: use \texttt{multi\_robot\_sync\_demo.py} rather than launching many separate \texttt{ros2 topic pub} commands from different shells.
+\item \textbf{Need to switch the conveyor layout}: use \path{/mfja/conveyor/loop_mode_cmd} with \texttt{PETIT\_BOUCLE} or \texttt{GRAND\_BOUCLE}; both worlds start the same controller automatically.
+\item \textbf{Conveyor command appears to do nothing}: verify that the command terminal uses the same Gazebo partition and sourced workspace as the running simulation.
 \item \textbf{Command copied with wrong quotes}: always use plain ASCII quotes exactly as written in the code blocks of this report.
 \item \textbf{New packages not found after the refactor}: remove stale build and install products from the old single-package layout, rebuild the four new packages, and source \texttt{install/setup.bash} again before launching.
 \end{itemize}
@@ -833,13 +858,13 @@ Several issues appeared during development. The final code contains the fixes th
 \chapter{Conclusion}
 The final project evolved from a narrow task, adding one KUKA robot, into a reusable multi-robot simulation framework for Gazebo Harmonic. The most important result is not any single model file by itself. The most important result is the architecture that now connects configuration, spawning, bridging, TF publication, and world composition into one coherent system.
 
-The KUKA integration established the articulation and controller pattern. The YAML-driven launch architecture made future additions scalable. The St\"aubli and Yaskawa integrations demonstrated that the framework was reusable across industrial robot families. TIAGo then proved that the same shared control layer could also support a mobile manipulator through a carefully extended bridge and plugin strategy. The later room-315-only mode demonstrated that the same robot infrastructure could be reused in a lighter experimental scene. Finally, the meta-repository refactor separated shared assets, shared control logic, full-floor bringup, and room-specific bringup into distinct ROS~2 packages while preserving the original functionality.
+The KUKA integration established the articulation and controller pattern. The YAML-driven launch architecture made future additions scalable. The St\"aubli and Yaskawa integrations demonstrated that the framework was reusable across industrial robot families. TIAGo then proved that the same shared control layer could also support a mobile manipulator through a carefully extended bridge and plugin strategy. The later room-315-only mode demonstrated that the same robot infrastructure could be reused in a lighter experimental scene. The final conveyor loop-mode controller then extended the shared control layer beyond robots by giving both worlds the same synchronized interface for the room-315 switch network. Finally, the meta-repository refactor separated shared assets, shared control logic, full-floor bringup, and room-specific bringup into distinct ROS~2 packages while preserving the original functionality.
 
 In summary, the final solution is technically significant for three reasons:
 \begin{itemize}
 \item it is configuration-driven rather than hard-coded;
 \item it guarantees independent robot control through namespaced interfaces;
-\item it combines several robot classes, multiple environment modes, and static industrial assets in one reproducible Gazebo Harmonic repository.
+\item it combines several robot classes, multiple environment modes, static industrial assets, and a synchronized conveyor switch network in one reproducible Gazebo Harmonic repository.
 \end{itemize}
 
 \end{document}

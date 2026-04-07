@@ -300,6 +300,17 @@ def _launch_setup(context, *args, **kwargs):
                 'on_exit_shutdown': 'true',
             }.items(),
         ),
+        Node(
+            package=CONTROL_CONFIG_PACKAGE,
+            executable='conveyor_loop_mode_controller.py',
+            name='conveyor_loop_mode_controller',
+            output='screen',
+            arguments=[
+                '--world', world_entity_name,
+                '--world-file', world,
+                '--partition', gz_partition,
+            ],
+        ),
     ]
 
     if enable_gui:

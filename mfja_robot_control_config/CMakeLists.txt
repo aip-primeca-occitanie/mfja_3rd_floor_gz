@@ -12,8 +12,8 @@ install(
 
 install(
   PROGRAMS
+    scripts/conveyor_loop_mode_controller.py
     scripts/multi_robot_sync_demo.py
-    scripts/three_position_switch_demo.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

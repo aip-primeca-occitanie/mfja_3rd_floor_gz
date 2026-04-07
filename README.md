@@ -40,13 +40,13 @@ Shared simulation assets:
 - URDF files;
 - world files;
 - room models such as room 315;
-- the rotating rail-switch blade model;
+- moving and fixed conveyor-switch models for the MFJA rail networks;
 - shared static content reused by different simulation modes.
 
 Main content:
 
 - `mfja_3rd_floor_description/models/`
-- `mfja_3rd_floor_description/models/rail_switch_3pos_left/`
+- `mfja_3rd_floor_description/models/rail_switch_3pos_droit/`
 - `mfja_3rd_floor_description/urdf/`
 - `mfja_3rd_floor_description/worlds/`
 
@@ -58,14 +58,14 @@ Shared runtime and control layer:
 - shared multi-robot launch logic;
 - shared Gazebo-related config files;
 - synchronized multi-robot control utility;
-- three-position rail-switch control utility.
+- conveyor loop-mode controller shared by the full-floor and room-315-only worlds.
 
 Main content:
 
 - `mfja_robot_control_config/config/`
 - `mfja_robot_control_config/launch/multi_robot_sim.launch.py`
+- `mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py`
 - `mfja_robot_control_config/scripts/multi_robot_sync_demo.py`
-- `mfja_robot_control_config/scripts/three_position_switch_demo.py`
 
 ### `mfja_3rd_floor_bringup`
 
@@ -209,7 +209,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py robots:=all
 
 ## Step-by-Step Usage
 
-The following workflow is the recommended way to use the current repository, including the new rotating rail switch and the robot command tools.
+The following workflow is the recommended way to use the current repository, including the updated MFJA conveyor switch system and the robot command tools.
 
 ### Terminal 1: build and launch the simulation
 
@@ -271,16 +271,23 @@ source install/setup.bash
 export GZ_PARTITION=rail_switch_demo
 ```
 
-### Terminal 3: optional switch commands
+### Terminal 3: conveyor switch commands
 
-If you want to move the rotating rail switch independently from the robot commands, open a third terminal:
+If you want to command the MFJA conveyor switches independently from the robot commands, open a third terminal:
 
 ```bash
 export MFJA_WS=~/mfja_3rd_floor_ws
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-export GZ_PARTITION=rail_switch_demo
+```
+
+For both the full-floor world and the room-315-only world, the recommended interface is the high-level loop-mode topic:
+
+```bash
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String "{data: GRAND_BOUCLE}"
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String "{data: PETIT_BOUCLE}"
+ros2 topic echo /mfja/conveyor/loop_mode
 ```
 
 ### Quick checks before commanding anything
@@ -358,31 +365,38 @@ ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
 "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
 ```
 
-## Ready-to-Use Rail Switch Commands
+## Ready-to-Use Conveyor Switch Commands
 
-The rotating rail switch is controlled with the dedicated tool below. These commands are intended to be executed from Terminal 3.
+Both the full-floor world and the room-315-only world now contain two independent MFJA rail networks with eight moving switch blades:
 
-For the full-floor world:
+- `A1_droit_switch`, `A2_droit_switch`, `A3_droit_switch`, `A4_droit_switch`
+- `A1_gauche_switch`, `A2_gauche_switch`, `A3_gauche_switch`, `A4_gauche_switch`
+
+Both worlds also contain four fixed switch visuals used for scene layout. The recommended operator interface is the high-level loop-mode controller below.
+
+### Synchronized loop switching in both worlds
+
+The `full_floor` and `room_315_only` launches both start a loop-mode controller node that listens on:
+
+- command topic: `/mfja/conveyor/loop_mode_cmd`
+- state topic: `/mfja/conveyor/loop_mode`
+
+Use one high-level command to switch all eight moving conveyor switches together between the two supported conveyor layouts:
 
 ```bash
-ros2 run mfja_robot_control_config three_position_switch_demo.py 0 --world default --partition rail_switch_demo --pos -16.73 -4.42 0.73
-ros2 run mfja_robot_control_config three_position_switch_demo.py 1 --world default --partition rail_switch_demo --pos -16.73 -4.42 0.73
-ros2 run mfja_robot_control_config three_position_switch_demo.py 2 --world default --partition rail_switch_demo --pos -16.73 -4.42 0.73
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String "{data: GRAND_BOUCLE}"
+ros2 topic pub --once /mfja/conveyor/loop_mode_cmd std_msgs/msg/String "{data: PETIT_BOUCLE}"
 ```
 
-For the room-315-only world:
+Accepted command aliases include `grand`, `grand_boucle`, `petit`, and `petit_boucle`.
+
+To monitor the currently applied mode:
 
 ```bash
-ros2 run mfja_robot_control_config three_position_switch_demo.py 0 --world room_315_only --partition rail_switch_demo --pos -16.73 -4.42 0.73
-ros2 run mfja_robot_control_config three_position_switch_demo.py 1 --world room_315_only --partition rail_switch_demo --pos -16.73 -4.42 0.73
-ros2 run mfja_robot_control_config three_position_switch_demo.py 2 --world room_315_only --partition rail_switch_demo --pos -16.73 -4.42 0.73
+ros2 topic echo /mfja/conveyor/loop_mode
 ```
 
-Current calibrated switch positions:
-
-- `0 -> 2.6 rad`
-- `1 -> -1.59 rad`
-- `2 -> 0.50666 rad`
+The same loop-mode controller interface is available in both the full-floor world and the room-315-only world, because both now contain the same 8-switch conveyor layout.
 
 ## Multi-Robot Synchronized Motion Examples
 
