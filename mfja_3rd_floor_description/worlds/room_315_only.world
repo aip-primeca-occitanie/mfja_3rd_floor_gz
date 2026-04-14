@@ -91,14 +91,27 @@
 
     <include>
       <uri>model://cell_static_gauche_final</uri>
-      <name>room315_cell_static_gauche_final_1</name>
-      <pose>-12.4366 -5.81 0.0 0 0 0</pose>
+      <name>cell_static_gauche_final_1</name>
+      <pose>-9.65 -3.6 0.0 0 0 3.14</pose>
     </include>
 
     <include>
       <uri>model://cell_static_droit_final</uri>
       <name>room315_cell_static_droit_final_1</name>
       <pose>-15.9170 -5.81 0.0 0.0 0.0 0.0</pose>
+    </include>
+
+    <!-- Cell path rails. Adjust the pose values here: x y z roll pitch yaw. -->
+    <include>
+      <uri>model://cell_path_left</uri>
+      <name>room315_cell_path_left_1</name>
+      <pose>-11.865 -5.56 0.733 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://cell_path_right</uri>
+      <name>room315_cell_path_right_1</name>
+      <pose>-13.705 -3.843 0.733 0 0 3.14</pose>
     </include>
 
     <!-- Placeholder static switch instances using the cell_static-colored switch model. -->
