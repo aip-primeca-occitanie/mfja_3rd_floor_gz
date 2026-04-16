@@ -1,0 +1,429 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <physics name="5ms" type="ignored">
+      <max_step_size>0.005</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin
+        filename="gz-sim-physics-system"
+        name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+        filename="gz-sim-user-commands-system"
+        name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+        filename="gz-sim-scene-broadcaster-system"
+        name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+        filename="gz-sim-sensors-system"
+        name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin
+        filename="gz-sim-imu-system"
+        name="gz::sim::systems::Imu">
+    </plugin>
+    <gravity>0.0 0.0 -9.8</gravity>
+    
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>false</shadows>
+      <grid>false</grid>
+      <origin_visual>false</origin_visual>
+    </scene>
+
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <!-- A ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <model name='mfja_3rd_floor_walls'>
+      <include>
+        <uri>model://mfja_3rd_floor</uri>
+      </include>
+      <pose>0 0 0 0 0 -1.57</pose>
+    </model>
+
+    <include>
+      <uri>model://kuka_table</uri>
+      <name>kuka_table_1</name>
+      <pose>-10.6096 -6.0 0.5 -1.57 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://staubli_table</uri>
+      <name>staubli_table_1</name>
+      <pose>-14.9062 -6.0 0.5 -1.57 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://table_yaskawa</uri>
+      <name>yaskawa_table_1</name>
+      <pose>-10.6436 -2.97 0.5 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://table_yaskawa</uri>
+      <name>yaskawa_table_2</name>
+      <pose>-14.9162 -2.97 0.5 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://carter_droit</uri>
+      <name>carter_droit_1</name>
+      <pose>-15.0422 -4.38 1.4 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://carter_gauche</uri>
+      <name>carter_gauche_1</name>
+      <pose>-10.5896 -4.38 1.64 0 -1.57 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://cell_static_gauche_final</uri>
+      <name>cell_static_gauche_final_1</name>
+      <pose>-9.65 -3.6 0.0 0 0 3.14</pose>
+    </include>
+
+    <include>
+      <uri>model://cell_static_droit_final</uri>
+      <name>room315_cell_static_droit_final_1</name>
+      <pose>-15.9170 -5.81 0.0 0.0 0.0 0.0</pose>
+    </include>
+
+    <!-- Cell path rails. Adjust the pose values here: x y z roll pitch yaw. -->
+    <include>
+      <uri>model://cell_path_left</uri>
+      <name>room315_cell_path_left_1</name>
+      <pose>-11.865 -5.56 0.733 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://cell_path_right</uri>
+      <name>room315_cell_path_right_1</name>
+      <pose>-13.705 -3.843 0.733 0 0 3.14</pose>
+    </include>
+
+    <!-- Room 315 shuttle. Adjust the pose values here: x y z roll pitch yaw. -->
+    <include>
+      <uri>model://room315_shuttle</uri>
+      <name>room315_shuttle_1</name>
+      <pose>-15.0 -5.08 0.75 0 0 0</pose>
+    </include>
+
+    <!-- Placeholder static switch instances using the cell_static-colored switch model. -->
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_droit_switch_1</name>
+      <pose>-13.715 -4.515 0.726 0 0 1.02</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_droit_switch_2</name>
+      <pose>-13.72 -4.89 0.726 0 0 -0.02</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_gauche_switch_1</name>
+      <pose>-11.848 -4.515 0.726 0 0 3.13319</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit_static_black</uri>
+      <name>static_gauche_switch_2</name>
+      <pose>-11.849 -4.885 0.726 0 0 -2.13</pose>
+    </include>
+
+    <!-- Placeholder switch instances for the two MFJA rail networks. -->
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A1_droit_switch</name>
+      <pose>-15.747 -4.98 0.726 0 0 0.50666</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A2_droit_switch</name>
+      <pose>-14.285 -5.075 0.726 0 0 3.13</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A3_droit_switch</name>
+      <pose>-14.282 -4.329 0.726 0 0 -2.1</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A4_droit_switch</name>
+      <pose>-15.747 -4.42 0.726 0 0 0.50666</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A1_gauche_switch</name>
+      <pose>-9.822 -4.982 0.726 0 0 -2.63653</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A2_gauche_switch</name>
+      <pose>-11.288 -5.071 0.726 0 0 1.04</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A3_gauche_switch</name>
+      <pose>-11.285 -4.329 0.726 0 0 -0.025</pose>
+    </include>
+
+    <include>
+      <uri>model://rail_switch_3pos_droit</uri>
+      <name>A4_gauche_switch</name>
+      <pose>-9.822 -4.42 0.726 0 0 -2.63653</pose>
+    </include>
+
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_1</name>
+      <pose>-17.0 0.87 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_2</name>
+      <pose>-15.5 0.87 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_3</name>
+      <pose>-14.0 0.87 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table</uri>
+      <name>lab_table_4</name>
+      <pose>-12.5 0.87 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_table_240cm</uri>
+      <name>lab_table_5</name>
+      <pose>-11.0 0.57 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_1</name>
+      <pose>-10.8 -0.15 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_2</name>
+      <pose>-10.8 0.4 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_3</name>
+      <pose>-10.8 1.0 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_4</name>
+      <pose>-10.8 1.6 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_5</name>
+      <pose>-12.3 -0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_6</name>
+      <pose>-12.3 0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_7</name>
+      <pose>-12.3 1.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_8</name>
+      <pose>-12.3 1.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_9</name>
+      <pose>-13.8 -0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_10</name>
+      <pose>-13.8 0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_11</name>
+      <pose>-13.8 1.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_12</name>
+      <pose>-13.8 1.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_13</name>
+      <pose>-15.3 -0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_14</name>
+      <pose>-15.3 0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_15</name>
+      <pose>-15.3 1.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_16</name>
+      <pose>-15.3 1.9 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_17</name>
+      <pose>-16.8 -0.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_18</name>
+      <pose>-16.8 0.5 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_19</name>
+      <pose>-16.8 1.2 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://lab_chair</uri>
+      <name>lab_chair_20</name>
+      <pose>-16.8 1.9 0.0 0 0 0</pose>
+    </include>
+
+    <!-- Salle 314 furniture -->
+    <include>
+      <uri>model://room314_closet1</uri>
+      <name>room314_closet1_1</name>
+      <pose>-0.250000 -0.807000 0.0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_charging_ergotron</uri>
+      <name>room314_charging_ergotron_1</name>
+      <pose>-3.7 -3.3 0.0 0 0 1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_1</name>
+      <pose>-2.0 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_2</name>
+      <pose>-2.81 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_3</name>
+      <pose>-4.5 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_4</name>
+      <pose>-5.3 -6.5 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_5</name>
+      <pose>-1.0 -3.4 0.0 0 0 0.0</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_table_180cm</uri>
+      <name>room314_table_180cm_6</name>
+      <pose>-1.0 -4.2 0.0 0 0 0.0</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_tiagobox</uri>
+      <name>room314_tiagobox_1</name>
+      <pose>-0.3 -1.66 0.0 0 0 -1.57</pose>
+    </include>
+
+    <!-- Room 115 furniture -->
+    <include>
+      <uri>model://room115_closet115</uri>
+      <name>room115_closet115_1</name>
+      <pose>-7.75 -3.45 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room314_closet1</uri>
+      <name>room115_closet1_1</name>
+      <pose>-7.8 -2.34 0.0 0 0 0.0</pose>
+    </include>
+
+    <include>
+      <uri>model://room115_table2000</uri>
+      <name>room115_table2000_1</name>
+      <pose>-7.85 -5.8 0.0 0 0 -1.57</pose>
+    </include>
+
+    <include>
+      <uri>model://room115_tool_set</uri>
+      <name>room115_tool_set_1</name>
+      <pose>-7.75 -4.43 0.0 0 0 -1.57</pose>
+    </include>
+
+  </world>
+</sdf>

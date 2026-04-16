@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="staubli_table">
+    <static>true</static>
+    <link name="staubli_table_link">
+      <visual name="staubli_table_visual">
+        <geometry>
+          <mesh>
+            <uri>model://staubli_table/meshes/staubli_table.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="staubli_table_collision">
+        <geometry>
+          <mesh>
+            <uri>model://staubli_table/meshes/staubli_table.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

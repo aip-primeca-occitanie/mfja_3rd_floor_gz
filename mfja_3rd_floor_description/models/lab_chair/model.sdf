@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="lab_chair">
+    <static>true</static>
+    <link name="lab_chair_link">
+      <visual name="lab_chair_visual">
+        <pose>-0.26923 0.23 -0.00002 1.5708 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://lab_chair/meshes/CHAIR.STL</uri>
+            <scale>0.002 0.002 0.002</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.16 0.18 0.22 1.0</ambient>
+          <diffuse>0.16 0.18 0.22 1.0</diffuse>
+          <specular>0.08 0.08 0.08 1.0</specular>
+          <emissive>0.0 0.0 0.0 0.0</emissive>
+        </material>
+      </visual>
+      <collision name="lab_chair_collision">
+        <pose>-0.26923 0.23 -0.00002 1.5708 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://lab_chair/meshes/CHAIR.STL</uri>
+            <scale>0.002 0.002 0.002</scale>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

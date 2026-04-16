@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="rail_switch_3pos_droit">
+    <static>true</static>
+    <!--
+      This model is intentionally kinematic-only.
+      The model origin is the desired switch pivot in world coordinates.
+      We instantaneously change the whole model pose with /world/<name>/set_pose.
+      The SolidWorks-exported mesh has the correct pivot / axes, so no local
+      pose offset is needed here. Only a uniform mesh scale is applied.
+    -->
+    <link name="blade_link">
+      <kinematic>true</kinematic>
+      <gravity>false</gravity>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="blade_visual">
+        <geometry>
+          <mesh>
+            <uri>model://rail_switch_3pos_droit/meshes/aiguillage3.stl</uri>
+            <scale>39.37 39.37 39.37</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1.0 0.05 0.05 1</ambient>
+          <diffuse>1.0 0.05 0.05 1</diffuse>
+          <specular>0.45 0.12 0.12 1</specular>
+          <emissive>0.08 0.0 0.0 1</emissive>
+        </material>
+      </visual>
+      <collision name="blade_collision">
+        <geometry>
+          <mesh>
+            <uri>model://rail_switch_3pos_droit/meshes/aiguillage3.stl</uri>
+            <scale>39.37 39.37 39.37</scale>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.35</mu>
+              <mu2>0.35</mu2>
+            </ode>
+            <bullet>
+              <friction>0.35</friction>
+              <friction2>0.35</friction2>
+              <rolling_friction>0.005</rolling_friction>
+            </bullet>
+          </friction>
+          <contact>
+            <ode>
+              <kp>2000000</kp>
+              <kd>50</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+            <bullet>
+              <kp>2000000</kp>
+              <kd>50</kd>
+            </bullet>
+          </contact>
+        </surface>
+      </collision>
+    </link>
+  </model>
+</sdf>

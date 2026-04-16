@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="shuttle_1_droit">
+    <static>true</static>
+    <link name="shuttle_1_droit_link">
+      <visual name="shuttle_1_droit_visual">
+        <geometry>
+          <mesh>
+            <uri>model://shuttle_1_droit/meshes/shuttle_1_droit.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.95 0.45 0.10 1</ambient>
+          <diffuse>0.95 0.45 0.10 1</diffuse>
+          <specular>0.20 0.20 0.20 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+      </visual>
+      <collision name="shuttle_1_droit_collision">
+        <geometry>
+          <mesh>
+            <uri>model://shuttle_1_droit/meshes/shuttle_1_droit.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

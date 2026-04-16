@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="room314_tiagobox">
+    <static>true</static>
+    <link name="room314_tiagobox_link">
+      <visual name="room314_tiagobox_visual">
+        <pose>-0.345 -0.305 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room314_tiagobox/meshes/tiagobox.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.08 0.08 0.08 1.0</ambient>
+          <diffuse>0.08 0.08 0.08 1.0</diffuse>
+          <specular>0.06 0.06 0.06 1.0</specular>
+          <emissive>0.0 0.0 0.0 0.0</emissive>
+        </material>
+      </visual>
+      <collision name="room314_tiagobox_collision">
+        <pose>-0.345 -0.305 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room314_tiagobox/meshes/tiagobox.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

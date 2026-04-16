@@ -1,0 +1,423 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="yaskawa_hc10">
+    <self_collide>false</self_collide>
+    <allow_auto_disable>false</allow_auto_disable>
+
+    <link name="base_link">
+      <inertial>
+        <pose>0 0 0.10 0 0 0</pose>
+        <mass>24.0</mass>
+        <inertia>
+          <ixx>0.35</ixx>
+          <iyy>0.35</iyy>
+          <izz>0.30</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="base_link_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/base_link.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="base_link_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/base_link.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="link_1_s">
+      <pose relative_to="joint_1_s">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>8.5</mass>
+        <inertia>
+          <ixx>0.07</ixx>
+          <iyy>0.07</iyy>
+          <izz>0.05</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="link_1_s_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/link_1_s.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="link_1_s_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/link_1_s.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="link_2_l">
+      <pose relative_to="joint_2_l">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>7.0</mass>
+        <inertia>
+          <ixx>0.06</ixx>
+          <iyy>0.06</iyy>
+          <izz>0.05</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="link_2_l_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/link_2_l.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="link_2_l_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/link_2_l.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="link_3_u">
+      <pose relative_to="joint_3_u">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>6.0</mass>
+        <inertia>
+          <ixx>0.05</ixx>
+          <iyy>0.05</iyy>
+          <izz>0.04</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="link_3_u_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/link_3_u.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="link_3_u_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/link_3_u.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="link_4_r">
+      <pose relative_to="joint_4_r">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>3.5</mass>
+        <inertia>
+          <ixx>0.03</ixx>
+          <iyy>0.03</iyy>
+          <izz>0.02</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="link_4_r_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/link_4_r.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="link_4_r_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/link_4_r.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="link_5_b">
+      <pose relative_to="joint_5_b">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>2.5</mass>
+        <inertia>
+          <ixx>0.02</ixx>
+          <iyy>0.02</iyy>
+          <izz>0.015</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="link_5_b_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/link_5_b.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="link_5_b_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/link_5_b.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="link_6_t">
+      <pose relative_to="joint_6_t">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>1.2</mass>
+        <inertia>
+          <ixx>0.008</ixx>
+          <iyy>0.008</iyy>
+          <izz>0.006</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="link_6_t_visual">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/visual/link_6_t.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="link_6_t_collision">
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10/meshes/hc10/collision/link_6_t.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="tool0">
+      <pose relative_to="joint_6_t-tool0">0 0 0 0 0 0</pose>
+    </link>
+    <link name="base">
+      <pose relative_to="base_link-base">0 0 0 0 0 0</pose>
+    </link>
+
+    <joint name="world_joint" type="fixed">
+      <parent>world</parent>
+      <child>base_link</child>
+    </joint>
+
+    <joint name="joint_1_s" type="revolute">
+      <parent>base_link</parent>
+      <child>link_1_s</child>
+      <pose relative_to="base_link">0 0 0.275 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-3.14159265359</lower>
+          <upper>3.14159265359</upper>
+          <effort>700.0</effort>
+          <velocity>2.26892802759</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.7</damping>
+          <friction>0.05</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="joint_2_l" type="revolute">
+      <parent>link_1_s</parent>
+      <child>link_2_l</child>
+      <pose relative_to="link_1_s">0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-3.14159265359</lower>
+          <upper>3.14159265359</upper>
+          <effort>700.0</effort>
+          <velocity>2.26892802759</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.7</damping>
+          <friction>0.05</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="joint_3_u" type="revolute">
+      <parent>link_2_l</parent>
+      <child>link_3_u</child>
+      <pose relative_to="link_2_l">0 0 0.700 0 0 0</pose>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-0.08726646260</lower>
+          <upper>6.19591884458</upper>
+          <effort>260.0</effort>
+          <velocity>3.14159265359</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.6</damping>
+          <friction>0.05</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="joint_4_r" type="revolute">
+      <parent>link_3_u</parent>
+      <child>link_4_r</child>
+      <pose relative_to="link_3_u">0 0 -0.500 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-3.14159265359</lower>
+          <upper>3.14159265359</upper>
+          <effort>39.20</effort>
+          <velocity>3.14159265359</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.9</damping>
+          <friction>0.10</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="joint_5_b" type="revolute">
+      <parent>link_4_r</parent>
+      <child>link_5_b</child>
+      <pose relative_to="link_4_r">0 0.162 0 0 0 0</pose>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-3.14159265359</lower>
+          <upper>3.14159265359</upper>
+          <effort>31.36</effort>
+          <velocity>4.36332312999</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.7</damping>
+          <friction>0.08</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="joint_6_t" type="revolute">
+      <parent>link_5_b</parent>
+      <child>link_6_t</child>
+      <pose relative_to="link_5_b">0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-3.14159265359</lower>
+          <upper>3.14159265359</upper>
+          <effort>31.36</effort>
+          <velocity>4.36332312999</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.6</damping>
+          <friction>0.06</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="joint_6_t-tool0" type="fixed">
+      <parent>link_6_t</parent>
+      <child>tool0</child>
+      <pose relative_to="link_6_t">0 0 -0.130 3.14159265359 0 0</pose>
+    </joint>
+
+    <joint name="base_link-base" type="fixed">
+      <parent>base_link</parent>
+      <child>base</child>
+      <pose relative_to="base_link">0 0 0.275 0 0 0</pose>
+    </joint>
+
+    <plugin
+      filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+      <joint_name>joint_1_s</joint_name>
+      <joint_name>joint_2_l</joint_name>
+      <joint_name>joint_3_u</joint_name>
+      <joint_name>joint_4_r</joint_name>
+      <joint_name>joint_5_b</joint_name>
+      <joint_name>joint_6_t</joint_name>
+    </plugin>
+
+    <plugin
+      filename="gz-sim-joint-trajectory-controller-system"
+      name="gz::sim::systems::JointTrajectoryController">
+      <joint_name>joint_1_s</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>170.0</position_p_gain>
+      <position_i_gain>0.10</position_i_gain>
+      <position_d_gain>25.0</position_d_gain>
+      <position_i_min>-2.0</position_i_min>
+      <position_i_max>2.0</position_i_max>
+      <position_cmd_min>-340.0</position_cmd_min>
+      <position_cmd_max>340.0</position_cmd_max>
+
+      <joint_name>joint_2_l</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>170.0</position_p_gain>
+      <position_i_gain>0.10</position_i_gain>
+      <position_d_gain>25.0</position_d_gain>
+      <position_i_min>-2.0</position_i_min>
+      <position_i_max>2.0</position_i_max>
+      <position_cmd_min>-340.0</position_cmd_min>
+      <position_cmd_max>340.0</position_cmd_max>
+
+      <joint_name>joint_3_u</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>120.0</position_p_gain>
+      <position_i_gain>0.08</position_i_gain>
+      <position_d_gain>18.0</position_d_gain>
+      <position_i_min>-1.5</position_i_min>
+      <position_i_max>1.5</position_i_max>
+      <position_cmd_min>-220.0</position_cmd_min>
+      <position_cmd_max>220.0</position_cmd_max>
+
+      <joint_name>joint_4_r</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>40.0</position_p_gain>
+      <position_i_gain>0.04</position_i_gain>
+      <position_d_gain>6.0</position_d_gain>
+      <position_i_min>-0.8</position_i_min>
+      <position_i_max>0.8</position_i_max>
+      <position_cmd_min>-90.0</position_cmd_min>
+      <position_cmd_max>90.0</position_cmd_max>
+
+      <joint_name>joint_5_b</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>30.0</position_p_gain>
+      <position_i_gain>0.03</position_i_gain>
+      <position_d_gain>5.0</position_d_gain>
+      <position_i_min>-0.6</position_i_min>
+      <position_i_max>0.6</position_i_max>
+      <position_cmd_min>-70.0</position_cmd_min>
+      <position_cmd_max>70.0</position_cmd_max>
+
+      <joint_name>joint_6_t</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>25.0</position_p_gain>
+      <position_i_gain>0.03</position_i_gain>
+      <position_d_gain>4.0</position_d_gain>
+      <position_i_min>-0.5</position_i_min>
+      <position_i_max>0.5</position_i_max>
+      <position_cmd_min>-60.0</position_cmd_min>
+      <position_cmd_max>60.0</position_cmd_max>
+    </plugin>
+  </model>
+</sdf>

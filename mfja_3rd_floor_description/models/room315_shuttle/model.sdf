@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="room315_shuttle">
+    <static>false</static>
+    <link name="room315_shuttle_link">
+      <pose>0.171583 0.100000 0.078500 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>5.0</mass>
+        <inertia>
+          <ixx>0.02695</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.05935</iyy>
+          <iyz>0</iyz>
+          <izz>0.06575</izz>
+        </inertia>
+      </inertial>
+      <linear_damping>0.2</linear_damping>
+      <angular_damping>0.2</angular_damping>
+      <visual name="room315_shuttle_visual">
+        <pose>-0.171583 -0.100000 -0.078500 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room315_shuttle/meshes/shuttle.STL</uri>
+            <convex>true</convex>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.95 0.45 0.10 1</ambient>
+          <diffuse>0.95 0.45 0.10 1</diffuse>
+          <specular>0.20 0.20 0.20 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+      </visual>
+      <collision name="room315_shuttle_collision">
+        <pose>-0.171583 -0.100000 -0.078500 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://room315_shuttle/meshes/shuttle.STL</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.45</mu>
+              <mu2>0.45</mu2>
+            </ode>
+            <bullet>
+              <friction>0.45</friction>
+              <friction2>0.45</friction2>
+              <rolling_friction>0.02</rolling_friction>
+            </bullet>
+          </friction>
+          <contact>
+            <ode>
+              <kp>2000000</kp>
+              <kd>50</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+            <bullet>
+              <kp>2000000</kp>
+              <kd>50</kd>
+            </bullet>
+          </contact>
+        </surface>
+      </collision>
+    </link>
+    <plugin
+        filename="gz-sim-pose-publisher-system"
+        name="gz::sim::systems::PosePublisher">
+      <publish_model_pose>true</publish_model_pose>
+      <publish_link_pose>true</publish_link_pose>
+      <publish_collision_pose>false</publish_collision_pose>
+      <publish_visual_pose>false</publish_visual_pose>
+      <publish_nested_model_pose>false</publish_nested_model_pose>
+      <update_frequency>30</update_frequency>
+    </plugin>
+  </model>
+</sdf>

@@ -1,0 +1,177 @@
+<?xml version="1.0"?>
+<robot name="kuka_kr6r900sixx">
+  <material name="kuka_orange">
+    <color rgba="0.93 0.45 0.1 1.0"/>
+  </material>
+  <material name="kuka_dark">
+    <color rgba="0.18 0.18 0.18 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/base_link.stl"/>
+      </geometry>
+      <material name="kuka_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/base_link.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_1">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_1.stl"/>
+      </geometry>
+      <material name="kuka_orange"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_1.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_2">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_2.stl"/>
+      </geometry>
+      <material name="kuka_orange"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_2.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_3">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_3.stl"/>
+      </geometry>
+      <material name="kuka_orange"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_3.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_4">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_4.stl"/>
+      </geometry>
+      <material name="kuka_orange"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_4.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_5">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_5.stl"/>
+      </geometry>
+      <material name="kuka_orange"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_5.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="link_6">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_6.stl"/>
+      </geometry>
+      <material name="kuka_dark"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_6.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="flange"/>
+  <link name="base"/>
+  <link name="tool0"/>
+
+  <joint name="joint_a1" type="revolute">
+    <origin xyz="0 0 0.400" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="link_1"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="-2.96706" upper="2.96706" effort="400" velocity="6.28319"/>
+  </joint>
+
+  <joint name="joint_a2" type="revolute">
+    <origin xyz="0.025 0 0" rpy="0 0 0"/>
+    <parent link="link_1"/>
+    <child link="link_2"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.31613" upper="0.7854" effort="400" velocity="5.23599"/>
+  </joint>
+
+  <joint name="joint_a3" type="revolute">
+    <origin xyz="0.455 0 0" rpy="0 0 0"/>
+    <parent link="link_2"/>
+    <child link="link_3"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.0944" upper="2.72271" effort="300" velocity="6.28319"/>
+  </joint>
+
+  <joint name="joint_a4" type="revolute">
+    <origin xyz="0 0 0.035" rpy="0 0 0"/>
+    <parent link="link_3"/>
+    <child link="link_4"/>
+    <axis xyz="-1 0 0"/>
+    <limit lower="-3.22886" upper="3.22886" effort="300" velocity="6.6497"/>
+  </joint>
+
+  <joint name="joint_a5" type="revolute">
+    <origin xyz="0.420 0 0" rpy="0 0 0"/>
+    <parent link="link_4"/>
+    <child link="link_5"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.0944" upper="2.0944" effort="250" velocity="6.77188"/>
+  </joint>
+
+  <joint name="joint_a6" type="revolute">
+    <origin xyz="0.080 0 0" rpy="0 0 0"/>
+    <parent link="link_5"/>
+    <child link="link_6"/>
+    <axis xyz="-1 0 0"/>
+    <limit lower="-6.10865" upper="6.10865" effort="200" velocity="10.73377"/>
+  </joint>
+
+  <joint name="joint_a6_flange" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="link_6"/>
+    <child link="flange"/>
+  </joint>
+
+  <joint name="base_link_base" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="base"/>
+  </joint>
+
+  <joint name="flange_tool0" type="fixed">
+    <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+    <parent link="flange"/>
+    <child link="tool0"/>
+  </joint>
+</robot>
