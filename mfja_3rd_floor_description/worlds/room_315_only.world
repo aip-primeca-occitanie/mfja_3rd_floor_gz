@@ -118,7 +118,7 @@
     <include>
       <uri>model://room315_shuttle</uri>
       <name>room315_shuttle_1</name>
-      <pose>-15.745195 -4.477523 0.789346 0 0 -1.898662</pose>
+      <pose>-15.855195431322 -4.525523413467 0.839346 0 0 -2.043462003462</pose>
     </include>
 
     <!-- Placeholder static switch instances using the cell_static-colored switch model. -->

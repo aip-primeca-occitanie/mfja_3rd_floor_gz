@@ -27,27 +27,27 @@ segments:
     normalized_point_count: 13
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.535653747625
-    - -4.253212984657
-    - 0.789346
+    - -12.411620846209
+    - -4.210146413924
+    - 0.839346
     end_point:
-    - -12.535653747625
-    - -4.472587268359
-    - 0.789346
-    approx_length: 0.2290224737343916
+    - -12.411068709521
+    - -4.377968538178
+    - 0.839346
+    approx_length: 0.18384933203748624
     bbox:
-      min_x: -12.564947872224
-      max_x: -12.535653747625
-      min_y: -4.472587268359
-      max_y: -4.253212984657
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -12.445032914697
+      max_x: -12.411068709521
+      min_y: -4.377968538178
+      max_y: -4.210146413924
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 8.27062830460823
+    max_heading_jump_deg: 12.396306102744362
     sharp_turn_indices: []
     warning_flags: []
   A1S:
@@ -57,27 +57,27 @@ segments:
     normalized_point_count: 8
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.535653747625
-    - -4.253212984657
-    - 0.789346
+    - -12.411620846209
+    - -4.210146413924
+    - 0.839346
     end_point:
-    - -12.726712544435
-    - -4.364141741144
-    - 0.789346
-    approx_length: 0.23120460684124958
+    - -12.631058574891
+    - -4.294901107892
+    - 0.839346
+    approx_length: 0.24201714669472282
     bbox:
-      min_x: -12.726712544435
-      max_x: -12.535653747625
-      min_y: -4.364141741144
-      max_y: -4.253212984657
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -12.631058574891
+      max_x: -12.411620846209
+      min_y: -4.294901107892
+      max_y: -4.210146413924
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 10.908424850429826
+    max_heading_jump_deg: 8.637719036401204
     sharp_turn_indices: []
     warning_flags: []
   A2G:
@@ -87,27 +87,27 @@ segments:
     normalized_point_count: 10
     consecutive_duplicates_removed: 0
     start_point:
-    - -14.06612772623
-    - -4.583300376059
-    - 0.789346
+    - -14.170829572493
+    - -4.461813691179
+    - 0.839346
     end_point:
-    - -14.17640235614
-    - -4.391411739602
-    - 0.789346
-    approx_length: 0.23121206891836762
+    - -14.298127955012
+    - -4.314956886276
+    - 0.839346
+    approx_length: 0.20564283045680168
     bbox:
-      min_x: -14.17640235614
-      max_x: -14.06612772623
-      min_y: -4.583300376059
-      max_y: -4.391411739602
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.298127955012
+      max_x: -14.170829572493
+      min_y: -4.461813691179
+      max_y: -4.314956886276
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.8393460000000001
     extra_header_fields: []
-    max_heading_jump_deg: 12.162217981908316
+    max_heading_jump_deg: 13.441741097830215
     sharp_turn_indices: []
     warning_flags: []
   A2S:
@@ -117,27 +117,27 @@ segments:
     normalized_point_count: 11
     consecutive_duplicates_removed: 0
     start_point:
-    - -13.95498279862
-    - -4.394846898661
-    - 0.789346
+    - -14.043487622669
+    - -4.317707880582
+    - 0.839346
     end_point:
-    - -14.17640235614
-    - -4.391411739602
-    - 0.789346
-    approx_length: 0.2319211800913243
+    - -14.298127955012
+    - -4.314956886276
+    - 0.839346
+    approx_length: 0.2601121413996901
     bbox:
-      min_x: -14.17640235614
-      max_x: -13.95498279862
-      min_y: -4.42302981408
-      max_y: -4.391411739602
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.298127955012
+      max_x: -14.043487622669
+      min_y: -4.339209607003
+      max_y: -4.314956886276
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 8.544842826176053
+    max_heading_jump_deg: 5.690981788125728
     sharp_turn_indices: []
     warning_flags: []
   A3G:
@@ -147,27 +147,27 @@ segments:
     normalized_point_count: 13
     consecutive_duplicates_removed: 0
     start_point:
-    - -14.173498386817
-    - -3.773045485755
-    - 0.789346
+    - -14.296344748695
+    - -3.841906069184
+    - 0.839346
     end_point:
-    - -14.063233008482
-    - -3.582796722829
-    - 0.789346
-    approx_length: 0.2300766174144533
+    - -14.170018795842
+    - -3.6964263697
+    - 0.839346
+    approx_length: 0.20445854643969713
     bbox:
-      min_x: -14.173498386817
-      max_x: -14.063233008482
-      min_y: -3.773045485755
-      max_y: -3.582796722829
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.296344748695
+      max_x: -14.170018795842
+      min_y: -3.841906069184
+      max_y: -3.6964263697
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 7.831094883097167
+    max_heading_jump_deg: 11.094269912626574
     sharp_turn_indices: []
     warning_flags: []
   A3S:
@@ -177,27 +177,27 @@ segments:
     normalized_point_count: 10
     consecutive_duplicates_removed: 0
     start_point:
-    - -14.173498386817
-    - -3.773045485755
-    - 0.789346
+    - -14.296344748695
+    - -3.841906069184
+    - 0.839346
     end_point:
-    - -13.952718810736
-    - -3.771319109967
-    - 0.789346
-    approx_length: 0.23112896909128888
+    - -14.042453383596
+    - -3.840708114815
+    - 0.839346
+    approx_length: 0.2592815247685303
     bbox:
-      min_x: -14.173498386817
-      max_x: -13.952718810736
-      min_y: -3.773045485755
-      max_y: -3.74273005247
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.296344748695
+      max_x: -14.042453383596
+      min_y: -3.841906069184
+      max_y: -3.818782736907
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.8393460000000001
     extra_header_fields: []
-    max_heading_jump_deg: 8.745113302651292
+    max_heading_jump_deg: 5.960814517322767
     sharp_turn_indices: []
     warning_flags: []
   A4G:
@@ -207,27 +207,27 @@ segments:
     normalized_point_count: 13
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.539374059861
-    - -3.690222582912
-    - 0.789346
+    - -12.417316165756
+    - -3.779454642551
+    - 0.839346
     end_point:
-    - -12.537466567062
-    - -3.913101672134
-    - 0.789346
-    approx_length: 0.23303563119574933
+    - -12.41456159814
+    - -3.949959016123
+    - 0.839346
+    approx_length: 0.18735489270450525
     bbox:
-      min_x: -12.56867249934
-      max_x: -12.537466567062
-      min_y: -3.913101672134
-      max_y: -3.690222582912
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -12.450712738511
+      max_x: -12.41456159814
+      min_y: -3.949959016123
+      max_y: -3.779454642551
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 8.588243194822535
+    max_heading_jump_deg: 12.836465282429192
     sharp_turn_indices: []
     warning_flags: []
   A4S:
@@ -237,27 +237,27 @@ segments:
     normalized_point_count: 6
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.728619971722
-    - -3.802007025019
-    - 0.789346
+    - -12.634666929685
+    - -3.864864946894
+    - 0.839346
     end_point:
-    - -12.537466567062
-    - -3.913101672134
-    - 0.789346
-    approx_length: 0.2311866308460345
+    - -12.41456159814
+    - -3.949959016123
+    - 0.839346
+    approx_length: 0.24259217530428956
     bbox:
-      min_x: -12.728619971722
-      max_x: -12.537466567062
-      min_y: -3.913101672134
-      max_y: -3.802007025019
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -12.634666929685
+      max_x: -12.41456159814
+      min_y: -3.949959016123
+      max_y: -3.864864946894
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 13.797184495260758
+    max_heading_jump_deg: 11.652932181174394
     sharp_turn_indices: []
     warning_flags: []
   A12E:
@@ -267,27 +267,27 @@ segments:
     normalized_point_count: 34
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.535653747625
-    - -4.472587268359
-    - 0.789346
+    - -12.411068709521
+    - -4.377968538178
+    - 0.839346
     end_point:
-    - -14.06612772623
-    - -4.583300376059
-    - 0.789346
-    approx_length: 2.1582054979743264
+    - -14.170829572493
+    - -4.461813691179
+    - 0.839346
+    approx_length: 2.22588231067807
     bbox:
-      min_x: -14.06612772623
-      max_x: -12.50625640572
-      min_y: -4.921396930188
-      max_y: -4.472587268359
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.170829572493
+      max_x: -12.376680285129
+      min_y: -4.721181326156
+      max_y: -4.377968538178
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 15.199810101832488
+    max_heading_jump_deg: 17.33867298692419
     sharp_turn_indices: []
     warning_flags: []
   A12I:
@@ -297,27 +297,27 @@ segments:
     normalized_point_count: 20
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.725662942266
-    - -4.363108955675
-    - 0.789346
+    - -12.629854135598
+    - -4.294111606719
+    - 0.839346
     end_point:
-    - -13.95498279862
-    - -4.394846898661
-    - 0.789346
-    approx_length: 1.2351847760584376
+    - -14.043487622669
+    - -4.317707880582
+    - 0.839346
+    approx_length: 1.416694825557735
     bbox:
-      min_x: -13.95498279862
-      max_x: -12.725662942266
-      min_y: -4.394846898661
-      max_y: -4.363108955675
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.043487622669
+      max_x: -12.629854135598
+      min_y: -4.317707880582
+      max_y: -4.293488810304
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.8393460000000001
     extra_header_fields: []
-    max_heading_jump_deg: 13.164501537533774
+    max_heading_jump_deg: 9.623404966743806
     sharp_turn_indices: []
     warning_flags: []
   A14:
@@ -327,27 +327,27 @@ segments:
     normalized_point_count: 10
     consecutive_duplicates_removed: 0
     start_point:
-    - -12.537466567062
-    - -3.913101672134
-    - 0.789346
+    - -12.41456159814
+    - -3.949959016123
+    - 0.839346
     end_point:
-    - -12.535653747625
-    - -4.253212984657
-    - 0.789346
-    approx_length: 0.35004261953193844
+    - -12.411620846209
+    - -4.210146413924
+    - 0.839346
+    approx_length: 0.2766020947482855
     bbox:
-      min_x: -12.537466567062
-      max_x: -12.507788845142
-      min_y: -4.253212984657
-      max_y: -3.913101672134
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -12.41456159814
+      max_x: -12.379847188848
+      min_y: -4.210146413924
+      max_y: -3.949959016123
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.8393460000000001
     extra_header_fields: []
-    max_heading_jump_deg: 13.14431677644177
+    max_heading_jump_deg: 18.97899882973766
     sharp_turn_indices: []
     warning_flags: []
   A23:
@@ -357,27 +357,27 @@ segments:
     normalized_point_count: 39
     consecutive_duplicates_removed: 0
     start_point:
-    - -14.17640235614
-    - -4.391411739602
-    - 0.789346
+    - -14.298127955012
+    - -4.314956886276
+    - 0.839346
     end_point:
-    - -14.173498386817
-    - -3.773045485755
-    - 0.789346
-    approx_length: 1.2736445709066817
+    - -14.296344748695
+    - -3.841906069184
+    - 0.839346
+    approx_length: 1.2877738985438538
     bbox:
-      min_x: -14.623881246038
-      max_x: -14.173498386817
-      min_y: -4.391411739602
-      max_y: -3.773045485755
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.813519494779
+      max_x: -14.296344748695
+      min_y: -4.314956886276
+      max_y: -3.841906069184
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.8393459999999999
     extra_header_fields: []
-    max_heading_jump_deg: 16.726371205807126
+    max_heading_jump_deg: 19.980727915872027
     sharp_turn_indices: []
     warning_flags: []
   A34E:
@@ -387,27 +387,27 @@ segments:
     normalized_point_count: 69
     consecutive_duplicates_removed: 0
     start_point:
-    - -14.063233008482
-    - -3.582796722829
-    - 0.789346
+    - -14.170018795842
+    - -3.6964263697
+    - 0.839346
     end_point:
-    - -12.539374059861
-    - -3.690222582912
-    - 0.789346
-    approx_length: 2.160110124140574
+    - -12.417316165756
+    - -3.779454642551
+    - 0.839346
+    approx_length: 2.2270073324363837
     bbox:
-      min_x: -14.063816573652
-      max_x: -12.50625640572
-      min_y: -3.690222582912
-      max_y: -3.242843948588
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.170851622132
+      max_x: -12.379601494625
+      min_y: -3.779454642551
+      max_y: -3.436691655062
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.839346
     extra_header_fields: []
-    max_heading_jump_deg: 21.10206998269097
+    max_heading_jump_deg: 20.115713881877756
     sharp_turn_indices: []
     warning_flags: []
   A34I:
@@ -417,26 +417,26 @@ segments:
     normalized_point_count: 20
     consecutive_duplicates_removed: 0
     start_point:
-    - -13.952718810736
-    - -3.771319109967
-    - 0.789346
+    - -14.042453383596
+    - -3.840708114815
+    - 0.839346
     end_point:
-    - -12.728619971722
-    - -3.802007025019
-    - 0.789346
-    approx_length: 1.2290076134070411
+    - -12.634666929685
+    - -3.864864946894
+    - 0.839346
+    approx_length: 1.410343804603103
     bbox:
-      min_x: -13.952718810736
-      max_x: -12.728619971722
-      min_y: -3.802169062474
-      max_y: -3.771319109967
-      min_z: 0.789346
-      max_z: 0.789346
+      min_x: -14.042453383596
+      max_x: -12.634666929685
+      min_y: -3.864864946894
+      max_y: -3.840708114815
+      min_z: 0.839346
+      max_z: 0.839346
     z_stats:
-      min: 0.789346
-      max: 0.789346
-      mean: 0.789346
+      min: 0.839346
+      max: 0.839346
+      mean: 0.8393460000000001
     extra_header_fields: []
-    max_heading_jump_deg: 11.894153695389852
+    max_heading_jump_deg: 8.106940951254835
     sharp_turn_indices: []
     warning_flags: []

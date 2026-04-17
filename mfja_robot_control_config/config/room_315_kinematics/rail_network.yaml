@@ -1,203 +1,244 @@
 schema_version: 2
 network_id: room_315_directed_one_way
-description: >
-  Explicit directed rail topology for the room 315 shuttle network.
-  Every segment is traversed forward-only, from CSV index 0 to the last row.
+description: 'Explicit directed rail topology for the room 315 shuttle network. Every
+  segment is traversed forward-only, from CSV index 0 to the last row.
 
+  '
 source_csv_dir: CSV
 normalized_csv_dir: mfja_robot_control_config/config/room_315_kinematics/normalized_segments
 snap_tolerance_m: 0.05
-
 motion_policy:
   segment_direction: forward_only
   traversal_rule: from_csv_index_0_to_last
   reverse_traversal_allowed: false
   on_missing_successor: FALLING
   topology_source_of_truth: explicit_nodes_and_routing_tables
-
 switch_state_space:
-  values: [G, S]
-  note: >
-    Switch states match the segment suffixes. G selects the G branch,
-    and S selects the S branch. A later command layer may expose
-    LEFT/RIGHT aliases if desired.
+  values:
+  - G
+  - S
+  note: 'Switch states match the segment suffixes. G selects the G branch, and S selects
+    the S branch. A later command layer may expose LEFT/RIGHT aliases if desired.
 
+    '
 nodes:
   A1_C:
-    xyz: [-12.535653747625, -4.253212984657, 0.789346]
+    xyz:
+    - -12.411620846209
+    - -4.210146413924
+    - 0.839346
     attached_segment_ends:
-      - {segment: A14, side: end}
-      - {segment: A1G, side: start}
-      - {segment: A1S, side: start}
-
+    - segment: A14
+      side: end
+    - segment: A1G
+      side: start
+    - segment: A1S
+      side: start
   A1_G:
-    xyz: [-12.535653747625, -4.472587268359, 0.789346]
+    xyz:
+    - -12.411068709521
+    - -4.377968538178
+    - 0.839346
     attached_segment_ends:
-      - {segment: A1G, side: end}
-      - {segment: A12E, side: start}
-
+    - segment: A1G
+      side: end
+    - segment: A12E
+      side: start
   A1_S:
-    xyz: [-12.726187743351, -4.363625348410, 0.789346]
+    xyz:
+    - -12.630456355245
+    - -4.294506357306
+    - 0.839346
     attached_segment_ends:
-      - {segment: A1S, side: end}
-      - {segment: A12I, side: start}
-
+    - segment: A1S
+      side: end
+    - segment: A12I
+      side: start
   A2_C:
-    xyz: [-14.176402356140, -4.391411739602, 0.789346]
+    xyz:
+    - -14.298127955012
+    - -4.314956886276
+    - 0.839346
     attached_segment_ends:
-      - {segment: A2G, side: end}
-      - {segment: A2S, side: end}
-      - {segment: A23, side: start}
-
+    - segment: A2G
+      side: end
+    - segment: A2S
+      side: end
+    - segment: A23
+      side: start
   A2_G:
-    xyz: [-14.066127726230, -4.583300376059, 0.789346]
+    xyz:
+    - -14.170829572493
+    - -4.461813691179
+    - 0.839346
     attached_segment_ends:
-      - {segment: A12E, side: end}
-      - {segment: A2G, side: start}
-
+    - segment: A12E
+      side: end
+    - segment: A2G
+      side: start
   A2_S:
-    xyz: [-13.954982798620, -4.394846898661, 0.789346]
+    xyz:
+    - -14.043487622669
+    - -4.317707880582
+    - 0.839346
     attached_segment_ends:
-      - {segment: A12I, side: end}
-      - {segment: A2S, side: start}
-
+    - segment: A12I
+      side: end
+    - segment: A2S
+      side: start
   A3_C:
-    xyz: [-14.173498386817, -3.773045485755, 0.789346]
+    xyz:
+    - -14.296344748695
+    - -3.841906069184
+    - 0.839346
     attached_segment_ends:
-      - {segment: A23, side: end}
-      - {segment: A3G, side: start}
-      - {segment: A3S, side: start}
-
+    - segment: A23
+      side: end
+    - segment: A3G
+      side: start
+    - segment: A3S
+      side: start
   A3_G:
-    xyz: [-14.063233008482, -3.582796722829, 0.789346]
+    xyz:
+    - -14.170018795842
+    - -3.6964263697
+    - 0.839346
     attached_segment_ends:
-      - {segment: A3G, side: end}
-      - {segment: A34E, side: start}
-
+    - segment: A3G
+      side: end
+    - segment: A34E
+      side: start
   A3_S:
-    xyz: [-13.952718810736, -3.771319109967, 0.789346]
+    xyz:
+    - -14.042453383596
+    - -3.840708114815
+    - 0.839346
     attached_segment_ends:
-      - {segment: A3S, side: end}
-      - {segment: A34I, side: start}
-
+    - segment: A3S
+      side: end
+    - segment: A34I
+      side: start
   A4_C:
-    xyz: [-12.537466567062, -3.913101672134, 0.789346]
+    xyz:
+    - -12.41456159814
+    - -3.949959016123
+    - 0.839346
     attached_segment_ends:
-      - {segment: A4G, side: end}
-      - {segment: A4S, side: end}
-      - {segment: A14, side: start}
-
+    - segment: A4G
+      side: end
+    - segment: A4S
+      side: end
+    - segment: A14
+      side: start
   A4_G:
-    xyz: [-12.539374059861, -3.690222582912, 0.789346]
+    xyz:
+    - -12.417316165756
+    - -3.779454642551
+    - 0.839346
     attached_segment_ends:
-      - {segment: A34E, side: end}
-      - {segment: A4G, side: start}
-
+    - segment: A34E
+      side: end
+    - segment: A4G
+      side: start
   A4_S:
-    xyz: [-12.728619971722, -3.802007025019, 0.789346]
+    xyz:
+    - -12.634666929685
+    - -3.864864946894
+    - 0.839346
     attached_segment_ends:
-      - {segment: A34I, side: end}
-      - {segment: A4S, side: start}
-
+    - segment: A34I
+      side: end
+    - segment: A4S
+      side: start
 segments:
   A1G:
     csv: CSV/A1G.csv
     start_node: A1_C
     end_node: A1_G
     direction: forward
-
   A1S:
     csv: CSV/A1S.csv
     start_node: A1_C
     end_node: A1_S
     direction: forward
-
   A2G:
     csv: CSV/A2G.csv
     start_node: A2_G
     end_node: A2_C
     direction: forward
-
   A2S:
     csv: CSV/A2S.csv
     start_node: A2_S
     end_node: A2_C
     direction: forward
-
   A3G:
     csv: CSV/A3G.csv
     start_node: A3_C
     end_node: A3_G
     direction: forward
-
   A3S:
     csv: CSV/A3S.csv
     start_node: A3_C
     end_node: A3_S
     direction: forward
-
   A4G:
     csv: CSV/A4G.csv
     start_node: A4_G
     end_node: A4_C
     direction: forward
-
   A4S:
     csv: CSV/A4S.csv
     start_node: A4_S
     end_node: A4_C
     direction: forward
-
   A12E:
     csv: CSV/A12E.csv
     start_node: A1_G
     end_node: A2_G
     direction: forward
-
   A12I:
     csv: CSV/A12I.csv
     start_node: A1_S
     end_node: A2_S
     direction: forward
-
   A14:
     csv: CSV/A14.csv
     start_node: A4_C
     end_node: A1_C
     direction: forward
-
   A23:
     csv: CSV/A23.csv
     start_node: A2_C
     end_node: A3_C
     direction: forward
-
   A34E:
     csv: CSV/A34E.csv
     start_node: A3_G
     end_node: A4_G
     direction: forward
-
   A34I:
     csv: CSV/A34I.csv
     start_node: A3_S
     end_node: A4_S
     direction: forward
-
 switches:
   A1:
     kind: diverging
     controlled_node: A1_C
-    states: [G, S]
-    incoming_segments: [A14]
+    states:
+    - G
+    - S
+    incoming_segments:
+    - A14
     outgoing_by_state:
       G: A1G
       S: A1S
-
   A2:
     kind: converging_gate
     controlled_node: A2_C
-    states: [G, S]
+    states:
+    - G
+    - S
     incoming_path_by_state:
       G:
         incoming_segment: A12E
@@ -205,21 +246,25 @@ switches:
       S:
         incoming_segment: A12I
         connector_segment: A2S
-    outgoing_segments: [A23]
-
+    outgoing_segments:
+    - A23
   A3:
     kind: diverging
     controlled_node: A3_C
-    states: [G, S]
-    incoming_segments: [A23]
+    states:
+    - G
+    - S
+    incoming_segments:
+    - A23
     outgoing_by_state:
       G: A3G
       S: A3S
-
   A4:
     kind: converging_gate
     controlled_node: A4_C
-    states: [G, S]
+    states:
+    - G
+    - S
     incoming_path_by_state:
       G:
         incoming_segment: A34E
@@ -227,8 +272,8 @@ switches:
       S:
         incoming_segment: A34I
         connector_segment: A4S
-    outgoing_segments: [A14]
-
+    outgoing_segments:
+    - A14
 fixed_transitions:
   A1G: A12E
   A1S: A12I
@@ -238,7 +283,6 @@ fixed_transitions:
   A3S: A34I
   A4G: A14
   A4S: A14
-
 routing_table:
   A14:
     type: switch_select
@@ -247,15 +291,12 @@ routing_table:
       G: A1G
       S: A1S
     on_unknown_state: FALLING
-
   A1G:
     type: fixed
     next_segment: A12E
-
   A1S:
     type: fixed
     next_segment: A12I
-
   A12E:
     type: switch_guard
     switch: A2
@@ -263,7 +304,6 @@ routing_table:
       G: A2G
       S: FALLING
     on_unknown_state: FALLING
-
   A12I:
     type: switch_guard
     switch: A2
@@ -271,15 +311,12 @@ routing_table:
       G: FALLING
       S: A2S
     on_unknown_state: FALLING
-
   A2G:
     type: fixed
     next_segment: A23
-
   A2S:
     type: fixed
     next_segment: A23
-
   A23:
     type: switch_select
     switch: A3
@@ -287,15 +324,12 @@ routing_table:
       G: A3G
       S: A3S
     on_unknown_state: FALLING
-
   A3G:
     type: fixed
     next_segment: A34E
-
   A3S:
     type: fixed
     next_segment: A34I
-
   A34E:
     type: switch_guard
     switch: A4
@@ -303,7 +337,6 @@ routing_table:
       G: A4G
       S: FALLING
     on_unknown_state: FALLING
-
   A34I:
     type: switch_guard
     switch: A4
@@ -311,13 +344,10 @@ routing_table:
       G: FALLING
       S: A4S
     on_unknown_state: FALLING
-
   A4G:
     type: fixed
     next_segment: A14
-
   A4S:
     type: fixed
     next_segment: A14
-
 blocks: {}

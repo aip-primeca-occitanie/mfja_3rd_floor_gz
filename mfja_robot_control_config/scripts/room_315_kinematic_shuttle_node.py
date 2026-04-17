@@ -12,6 +12,7 @@ from geometry_msgs.msg import PoseStamped
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from ros_gz_interfaces.msg import Entity
 from ros_gz_interfaces.srv import SetEntityPose
 from std_msgs.msg import String
@@ -65,6 +66,8 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('switch_command_topic', '/room_315/switch_states')
         self.declare_parameter('pose_offset_command_topic', '/room_315/shuttle/pose_offset_cmd')
         self.declare_parameter('visual_switch_command_topic', '/mfja/conveyor/switch_cmd')
+        self.declare_parameter('visual_switch_state_topic', '/mfja/conveyor/switch_states')
+        self.declare_parameter('sync_from_visual_switch_states', True)
         self.declare_parameter('frame_id', 'world')
         self.declare_parameter('enable_gazebo_set_pose', False)
         self.declare_parameter('gazebo_set_pose_service', '/world/room_315_only/set_pose')
@@ -82,8 +85,8 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('pose_transform_yaw_offset', 0.0)
         self.declare_parameter('pose_scale_x', 1.0)
         self.declare_parameter('pose_scale_y', 1.0)
-        self.declare_parameter('pose_scale_origin_x', -15.745195431322447)
-        self.declare_parameter('pose_scale_origin_y', -4.477523413467089)
+        self.declare_parameter('pose_scale_origin_x', -15.855195431322)
+        self.declare_parameter('pose_scale_origin_y', -4.525523413467)
         self.declare_parameter('pose_offset_x', 0.0)
         self.declare_parameter('pose_offset_y', 0.0)
         self.declare_parameter('pose_offset_z', 0.0)
@@ -101,6 +104,12 @@ class Room315KinematicShuttleNode(Node):
         )
         visual_switch_command_topic = str(
             self.get_parameter('visual_switch_command_topic').value
+        )
+        visual_switch_state_topic = str(
+            self.get_parameter('visual_switch_state_topic').value
+        )
+        self.sync_from_visual_switch_states = bool(
+            self.get_parameter('sync_from_visual_switch_states').value
         )
         self.frame_id = str(self.get_parameter('frame_id').value)
         self.enable_gazebo_set_pose = bool(self.get_parameter('enable_gazebo_set_pose').value)
@@ -159,6 +168,17 @@ class Room315KinematicShuttleNode(Node):
             self._on_switch_command,
             10,
         )
+        self.visual_switch_state_subscription = None
+        if self.sync_from_visual_switch_states:
+            visual_state_qos = QoSProfile(depth=1)
+            visual_state_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+            visual_state_qos.reliability = ReliabilityPolicy.RELIABLE
+            self.visual_switch_state_subscription = self.create_subscription(
+                String,
+                visual_switch_state_topic,
+                self._on_visual_switch_state,
+                visual_state_qos,
+            )
         self.pose_offset_subscription = self.create_subscription(
             String,
             pose_offset_command_topic,
@@ -182,7 +202,8 @@ class Room315KinematicShuttleNode(Node):
             f'network={network_path}, pose_topic={pose_topic}, '
             f'switch_topic={switch_command_topic}, '
             f'offset_topic={pose_offset_command_topic}, '
-            f'visual_switch_topic={visual_switch_command_topic}'
+            f'visual_switch_topic={visual_switch_command_topic}, '
+            f'visual_switch_state_topic={visual_switch_state_topic}'
         )
 
     def _on_pose_offset_command(self, message: String) -> None:
@@ -307,6 +328,72 @@ class Room315KinematicShuttleNode(Node):
             visual_message.data = visual_command
             self.visual_switch_publisher.publish(visual_message)
             self.get_logger().info(f'Published visual switch command: {visual_command}')
+
+    def _on_visual_switch_state(self, message: String) -> None:
+        updates = self._parse_visual_switch_state_summary(message.data)
+        if not updates:
+            return
+
+        changed = {
+            switch_name: state
+            for switch_name, state in updates.items()
+            if self.switch_states.get(switch_name) != state
+        }
+        self.switch_states.update(updates)
+        if changed:
+            self.get_logger().info(
+                f'Synced route switch states from visual controller: {self.switch_states}'
+            )
+
+    def _parse_visual_switch_state_summary(self, raw_summary: str) -> Dict[str, str]:
+        candidates: Dict[str, Dict[str, str]] = {}
+        for token in re.split(r'[,\n;]+', raw_summary):
+            token = token.strip()
+            if not token or '=' not in token:
+                continue
+
+            raw_name, raw_state = token.split('=', 1)
+            station, side = self._station_from_visual_switch_name(raw_name.strip())
+            if station is None:
+                continue
+
+            try:
+                state = self._normalize_commanded_switch_state(raw_state)
+            except ValueError:
+                continue
+
+            candidates.setdefault(station, {})[side] = state
+
+        updates: Dict[str, str] = {}
+        for station, states_by_side in candidates.items():
+            # The calibrated shuttle path currently follows the droit/right rail set.
+            if 'right' in states_by_side:
+                updates[station] = states_by_side['right']
+            elif 'station' in states_by_side:
+                updates[station] = states_by_side['station']
+            elif 'left' in states_by_side:
+                updates[station] = states_by_side['left']
+        return updates
+
+    @staticmethod
+    def _station_from_visual_switch_name(raw_name: str) -> tuple[str | None, str]:
+        name = raw_name.strip().upper()
+        if name in {'ALL', 'RIGHT', 'LEFT'}:
+            return None, 'group'
+
+        station_match = re.match(r'^(A[1-4])$', name)
+        if station_match:
+            return station_match.group(1), 'station'
+
+        short_match = re.match(r'^(A[1-4])([RL])$', name)
+        if short_match:
+            return short_match.group(1), 'right' if short_match.group(2) == 'R' else 'left'
+
+        gazebo_match = re.match(r'^(A[1-4])_(DROIT|GAUCHE)_SWITCH$', name)
+        if gazebo_match:
+            return gazebo_match.group(1), 'right' if gazebo_match.group(2) == 'DROIT' else 'left'
+
+        return None, 'unknown'
 
     def _parse_switch_command(self, raw_command: str) -> tuple[Dict[str, str], str]:
         stripped = raw_command.strip()
