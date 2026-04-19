@@ -165,6 +165,213 @@ For the full floor, expected services:
 If you see `/world/default/set_pose` while running the full floor, Gazebo is
 using an old world name. Stop Gazebo, rebuild if needed, and restart the launch.
 
+## Robot Spawning and Control
+
+The same launch files can run the world with or without industrial robots. For
+shuttle-only testing, use `robots:=none`. For robot experiments, use `robots:=all`
+or select only the robots you need.
+
+Full floor with all configured robots:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=all \
+  start_paused:=false \
+  gui:=true
+```
+
+Room 315 only with all configured robots:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=all \
+  start_paused:=false \
+  gui:=true
+```
+
+Robot selection supports full names, short aliases, numeric YAML order, `all`,
+and `none`.
+
+Common selectors:
+
+```text
+robots:=kuka1
+robots:=staubli1
+robots:=yaskawa_hc10_1
+robots:=yaskawa_hc10dt_1
+robots:=tiago1
+robots:=kuka,tiago
+robots:=1,5
+robots:=all
+robots:=none
+```
+
+Current shortcut mapping:
+
+| Selector | Robot |
+| --- | --- |
+| `1`, `kuka` | `kuka1` |
+| `2`, `staubli` | `staubli1` |
+| `3`, `hc10` | `yaskawa_hc10_1` |
+| `4`, `hc10dt` | `yaskawa_hc10dt_1` |
+| `5`, `tiago` | `tiago1` |
+
+The full-floor launch uses:
+
+```text
+mfja_robot_control_config/config/robots.yaml
+```
+
+The room-only launch uses:
+
+```text
+mfja_robot_control_config/config/robots_room_315_only.yaml
+```
+
+### Robot Topic Checks
+
+After launching the simulation with robots enabled, open a new terminal:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+```
+
+List the main robot topics:
+
+```bash
+ros2 topic list | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1)/'
+```
+
+Check a command topic:
+
+```bash
+ros2 topic info /kuka1/joint_trajectory
+```
+
+Most fixed-base robots are controlled through:
+
+```text
+/<robot_name>/joint_trajectory
+```
+
+TIAGo additionally exposes a mobile-base command topic:
+
+```text
+/tiago1/cmd_vel
+```
+
+### KUKA KR6 R900 Sixx
+
+```bash
+ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.6,-1.0,1.1,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+```
+
+### Staeubli TX2-60L
+
+```bash
+ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.1,0.4,-0.6,0.0,0.5,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+```
+
+### Yaskawa HC10
+
+```bash
+ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.2,-0.7,0.9,0.0,0.4,0.2], time_from_start: {sec: 3, nanosec: 0}}]}"
+```
+
+### Yaskawa HC10DT
+
+```bash
+ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [-0.2,-0.5,0.8,0.0,0.5,-0.2], time_from_start: {sec: 3, nanosec: 0}}]}"
+```
+
+### TIAGo Arm and Head
+
+```bash
+ros2 topic pub --once /tiago1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
+"{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint','arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], time_from_start: {sec: 4, nanosec: 0}}]}"
+```
+
+### TIAGo Base Motion
+
+Move TIAGo forward while rotating:
+
+```bash
+ros2 topic pub -r 20 /tiago1/cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.25, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.35}}"
+```
+
+Stop TIAGo:
+
+```bash
+ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+```
+
+### Multi-Robot Synchronized Motion
+
+Inspect the expected joint order for enabled robots:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py --list-joints
+```
+
+Run the default preset motion for all enabled robots with built-in presets:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py
+```
+
+Command a subset directly:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=1.2,-1.2,1.4,0.0,0.3,0.0 \
+  --goal staubli1=0.1,0.4,-0.6,0.0,0.5,0.0 \
+  --trajectory-duration 4.0
+```
+
+Command all five robots explicitly:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal kuka1=0.8,-1.0,1.2,0.0,0.4,0.0 \
+  --goal staubli1=0.0,0.3,-0.5,0.0,0.6,0.0 \
+  --goal yaskawa_hc10_1=0.0,-0.6,0.8,0.0,0.5,0.0 \
+  --goal yaskawa_hc10dt_1=0.0,-0.5,0.7,0.0,0.4,0.0 \
+  --goal tiago1=0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2 \
+  --trajectory-duration 4.0
+```
+
+The synchronized tool behavior is:
+
+- If no `--goal` is provided, it commands all enabled robots that have built-in presets.
+- If one or more `--goal` arguments are provided, it commands only the listed robots.
+- If `--tiago-base-duration` is positive, it can also publish TIAGo base `cmd_vel` during the synchronized demo.
+
+Example with TIAGo base motion:
+
+```bash
+ros2 run mfja_robot_control_config multi_robot_sync_demo.py \
+  --goal tiago1=0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2 \
+  --tiago-base-linear 0.15 \
+  --tiago-base-angular 0.20 \
+  --tiago-base-duration 3.0
+```
+
 ## Allowed Shuttle Start Slots
 
 Only these four start slots are allowed:
