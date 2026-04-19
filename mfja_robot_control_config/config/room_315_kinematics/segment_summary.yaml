@@ -1,6 +1,6 @@
 phase: 1
 description: CSV preprocessing and normalization for room 315 shuttle segments
-input_dir: /home/tiago/ALI_ros2_ws/src/mfja_3rd_floor_gz/CSV
+input_dir: /home/tiago/ALI_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments
 output_dir: /home/tiago/ALI_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/normalized_segments
 input_stage: raw
 duplicate_tolerance: 1.0e-06
@@ -21,7 +21,7 @@ segment_order:
 - A34I
 segments:
   A1G:
-    source_csv: CSV/A1G.csv
+    source_csv: raw_segments/A1G.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A1G.csv
     raw_point_count: 13
     normalized_point_count: 13
@@ -51,7 +51,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A1S:
-    source_csv: CSV/A1S.csv
+    source_csv: raw_segments/A1S.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A1S.csv
     raw_point_count: 8
     normalized_point_count: 8
@@ -81,7 +81,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A2G:
-    source_csv: CSV/A2G.csv
+    source_csv: raw_segments/A2G.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A2G.csv
     raw_point_count: 10
     normalized_point_count: 10
@@ -111,7 +111,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A2S:
-    source_csv: CSV/A2S.csv
+    source_csv: raw_segments/A2S.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A2S.csv
     raw_point_count: 11
     normalized_point_count: 11
@@ -141,7 +141,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A3G:
-    source_csv: CSV/A3G.csv
+    source_csv: raw_segments/A3G.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A3G.csv
     raw_point_count: 13
     normalized_point_count: 13
@@ -171,7 +171,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A3S:
-    source_csv: CSV/A3S.csv
+    source_csv: raw_segments/A3S.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A3S.csv
     raw_point_count: 10
     normalized_point_count: 10
@@ -201,7 +201,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A4G:
-    source_csv: CSV/A4G.csv
+    source_csv: raw_segments/A4G.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A4G.csv
     raw_point_count: 13
     normalized_point_count: 13
@@ -231,7 +231,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A4S:
-    source_csv: CSV/A4S.csv
+    source_csv: raw_segments/A4S.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A4S.csv
     raw_point_count: 6
     normalized_point_count: 6
@@ -261,7 +261,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A12E:
-    source_csv: CSV/A12E.csv
+    source_csv: raw_segments/A12E.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A12E.csv
     raw_point_count: 34
     normalized_point_count: 34
@@ -291,7 +291,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A12I:
-    source_csv: CSV/A12I.csv
+    source_csv: raw_segments/A12I.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A12I.csv
     raw_point_count: 20
     normalized_point_count: 20
@@ -321,7 +321,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A14:
-    source_csv: CSV/A14.csv
+    source_csv: raw_segments/A14.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A14.csv
     raw_point_count: 10
     normalized_point_count: 10
@@ -351,7 +351,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A23:
-    source_csv: CSV/A23.csv
+    source_csv: raw_segments/A23.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A23.csv
     raw_point_count: 39
     normalized_point_count: 39
@@ -381,7 +381,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A34E:
-    source_csv: CSV/A34E.csv
+    source_csv: raw_segments/A34E.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A34E.csv
     raw_point_count: 69
     normalized_point_count: 69
@@ -411,7 +411,7 @@ segments:
     sharp_turn_indices: []
     warning_flags: []
   A34I:
-    source_csv: CSV/A34I.csv
+    source_csv: raw_segments/A34I.csv
     normalized_csv: mfja_robot_control_config/config/room_315_kinematics/normalized_segments/A34I.csv
     raw_point_count: 20
     normalized_point_count: 20

@@ -1,1 +1,12 @@
 *~
+build/
+install/
+log/
+.codex/
+.codex
+__pycache__/
+*.pyc
+*.aux
+*.log
+*.out
+*.toc

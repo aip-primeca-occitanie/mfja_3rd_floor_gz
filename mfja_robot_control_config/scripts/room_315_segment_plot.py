@@ -35,7 +35,13 @@ def _repo_root() -> Path:
 
 
 def _default_raw_dir() -> Path:
-    return _repo_root() / 'CSV'
+    return (
+        _repo_root()
+        / 'mfja_robot_control_config'
+        / 'config'
+        / 'room_315_kinematics'
+        / 'raw_segments'
+    )
 
 
 def _default_normalized_dir() -> Path:

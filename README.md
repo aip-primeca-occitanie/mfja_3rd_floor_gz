@@ -14,12 +14,17 @@ multi-shuttle operation, runtime spawning, and simple collision avoidance.
 
 ## Repository Layout
 
+This git repository is intentionally organized as a **meta-repository**. The
+repository root is not a ROS 2 package. Do not add root-level `package.xml`,
+`CMakeLists.txt`, `launch/`, `config/`, `models/`, `worlds/`, or `CSV/`
+directories. Package-specific files must live inside the package that owns them.
+
 - `mfja_3rd_floor_description/`: models, meshes, worlds, and URDF/SDF assets.
 - `mfja_robot_control_config/`: launch base, bridge config, shuttle/switch scripts, and Room 315 kinematic config.
 - `mfja_room_315_bringup/`: launch entry point for Room 315 only.
 - `mfja_3rd_floor_bringup/`: launch entry point for the full floor.
 - `mfja_3rd_floor_gz/`: compatibility package that forwards to the bringup packages.
-- `CSV/`: source rail segment CSV files for the Room 315 kinematic rail network.
+- `mfja_robot_control_config/config/room_315_kinematics/raw_segments/`: source rail segment CSV files for the Room 315 kinematic rail network.
 
 The detailed Room 315 kinematic artifacts are also documented here:
 
@@ -624,6 +629,7 @@ ros2 run mfja_robot_control_config room_315_segment_plot.py
 
 Generated outputs:
 
+- `mfja_robot_control_config/config/room_315_kinematics/raw_segments/`
 - `mfja_robot_control_config/config/room_315_kinematics/segment_summary.yaml`
 - `mfja_robot_control_config/config/room_315_kinematics/validation_report.yaml`
 - `mfja_robot_control_config/config/room_315_kinematics/debug_plots/network_validation.png`

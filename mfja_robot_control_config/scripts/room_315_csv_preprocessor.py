@@ -53,7 +53,13 @@ def _repo_root() -> Path:
 
 
 def _default_input_dir() -> Path:
-    return _repo_root() / 'CSV'
+    return (
+        _repo_root()
+        / 'mfja_robot_control_config'
+        / 'config'
+        / 'room_315_kinematics'
+        / 'raw_segments'
+    )
 
 
 def _default_output_dir() -> Path:
@@ -255,7 +261,7 @@ def _segment_summary(
     if extra_header_fields:
         warning_flags.append('extra_header_fields')
     return {
-        'source_csv': str(Path('CSV') / f'{name}.csv'),
+        'source_csv': str(Path('raw_segments') / f'{name}.csv'),
         'normalized_csv': str(output_csv_path),
         'raw_point_count': raw_count,
         'normalized_point_count': normalized_count,
