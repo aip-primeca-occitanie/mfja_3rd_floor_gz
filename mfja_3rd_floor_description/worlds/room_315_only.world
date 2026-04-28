@@ -80,13 +80,13 @@
     <include>
       <uri>model://carter_droit</uri>
       <name>room315_carter_droit_1</name>
-      <pose>-15.0422 -4.38 1.4 0 -1.57 -1.57</pose>
+      <pose>-14.39 -2.33 0 0 0 1.57</pose>
     </include>
 
     <include>
       <uri>model://carter_gauche</uri>
       <name>room315_carter_gauche_1</name>
-      <pose>-10.5896 -4.38 1.64 0 -1.57 -1.57</pose>
+      <pose>-13.34 -2.33 0 0 0 1.57</pose>
     </include>
 
     <include>
@@ -170,49 +170,49 @@
     <!-- Placeholder switch instances for the two MFJA rail networks. -->
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A1_droit_switch</name>
+      <name>A3_droit_switch</name>
       <pose>-15.747 -4.98 0.726 0 0 0.50666</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A2_droit_switch</name>
+      <name>A4_droit_switch</name>
       <pose>-14.285 -5.075 0.726 0 0 3.13</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A3_droit_switch</name>
+      <name>A1_droit_switch</name>
       <pose>-14.282 -4.329 0.726 0 0 -2.1</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A4_droit_switch</name>
+      <name>A2_droit_switch</name>
       <pose>-15.747 -4.42 0.726 0 0 0.50666</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A1_gauche_switch</name>
+      <name>A4_gauche_switch</name>
       <pose>-9.822 -4.982 0.726 0 0 -2.63653</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A2_gauche_switch</name>
+      <name>A3_gauche_switch</name>
       <pose>-11.288 -5.071 0.726 0 0 1.04</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A3_gauche_switch</name>
+      <name>A2_gauche_switch</name>
       <pose>-11.285 -4.329 0.726 0 0 -0.025</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
-      <name>A4_gauche_switch</name>
+      <name>A1_gauche_switch</name>
       <pose>-9.822 -4.42 0.726 0 0 -2.63653</pose>
     </include>
 

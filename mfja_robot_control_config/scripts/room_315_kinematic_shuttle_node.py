@@ -95,6 +95,67 @@ ALLOWED_START_POSES = {
 }
 
 
+VISUAL_SWITCH_SELECTOR_MAP = {
+    'A1R': ('A3', 'right'),
+    'A2R': ('A4', 'right'),
+    'A3R': ('A1', 'right'),
+    'A4R': ('A2', 'right'),
+    'A1L': ('A4', 'left'),
+    'A2L': ('A3', 'left'),
+    'A3L': ('A2', 'left'),
+    'A4L': ('A1', 'left'),
+    'A1_DROIT_SWITCH': ('A3', 'right'),
+    'A2_DROIT_SWITCH': ('A4', 'right'),
+    'A3_DROIT_SWITCH': ('A1', 'right'),
+    'A4_DROIT_SWITCH': ('A2', 'right'),
+    'A1_GAUCHE_SWITCH': ('A4', 'left'),
+    'A2_GAUCHE_SWITCH': ('A3', 'left'),
+    'A3_GAUCHE_SWITCH': ('A2', 'left'),
+    'A4_GAUCHE_SWITCH': ('A1', 'left'),
+}
+RIGHT_VISUAL_SWITCH_SELECTOR_MAP = {
+    selector_name: station
+    for selector_name, (station, side) in VISUAL_SWITCH_SELECTOR_MAP.items()
+    if side == 'right'
+}
+LEFT_VISUAL_SWITCH_SELECTORS = {
+    selector_name
+    for selector_name, (_station, side) in VISUAL_SWITCH_SELECTOR_MAP.items()
+    if side == 'left'
+}
+
+LOGICAL_SWITCH_SELECTOR_MAP = {
+    'A1': 'A3',
+    'A2': 'A4',
+    'A3': 'A1',
+    'A4': 'A2',
+}
+PUBLIC_SWITCH_ORDER = ('A1', 'A2', 'A3', 'A4')
+INTERNAL_TO_PUBLIC_SWITCH_MAP = {
+    internal_name: public_name
+    for public_name, internal_name in LOGICAL_SWITCH_SELECTOR_MAP.items()
+}
+
+
+def _public_switch_name(name: str) -> str:
+    normalized_name = str(name).strip().upper()
+    return INTERNAL_TO_PUBLIC_SWITCH_MAP.get(normalized_name, normalized_name)
+
+
+def _public_switch_states(switch_states: Dict[str, str]) -> Dict[str, str]:
+    ordered: Dict[str, str] = {}
+    for switch_name in PUBLIC_SWITCH_ORDER:
+        internal_name = LOGICAL_SWITCH_SELECTOR_MAP[switch_name]
+        if internal_name in switch_states:
+            ordered[switch_name] = switch_states[internal_name]
+
+    for internal_name, state in switch_states.items():
+        public_name = _public_switch_name(internal_name)
+        if public_name not in ordered:
+            ordered[public_name] = state
+    return ordered
+
+
 @dataclass(frozen=True)
 class StopPoint:
     segment: str
@@ -453,8 +514,11 @@ class Room315KinematicShuttleNode(Node):
         configs: Dict[str, StopperConfig] = {}
         raw_configs = self.network.config.get('stoppers', {}) or {}
         for raw_name, raw_config in raw_configs.items():
-            name = str(raw_name).strip().upper()
-            before_switch = str(raw_config.get('before_switch', name)).strip().upper()
+            internal_name = str(raw_name).strip().upper()
+            name = _public_switch_name(internal_name)
+            before_switch = _public_switch_name(
+                str(raw_config.get('before_switch', internal_name)).strip().upper()
+            )
             default_state = self._normalize_stopper_state(
                 str(raw_config.get('default_state', '0'))
             )
@@ -1156,7 +1220,9 @@ class Room315KinematicShuttleNode(Node):
 
         if updates:
             self.switch_states.update(updates)
-            self.get_logger().info(f'Updated route switch states: {self.switch_states}')
+            self.get_logger().info(
+                f'Updated route switch states: {_public_switch_states(self.switch_states)}'
+            )
 
         if self.publish_visual_switch_commands and visual_command:
             visual_message = String()
@@ -1177,7 +1243,8 @@ class Room315KinematicShuttleNode(Node):
         self.switch_states.update(updates)
         if changed:
             self.get_logger().info(
-                f'Synced route switch states from visual controller: {self.switch_states}'
+                'Synced route switch states from visual controller: '
+                f'{_public_switch_states(self.switch_states)}'
             )
 
     def _parse_visual_switch_state_summary(self, raw_summary: str) -> Dict[str, str]:
@@ -1218,15 +1285,15 @@ class Room315KinematicShuttleNode(Node):
 
         station_match = re.match(r'^(A[1-4])$', name)
         if station_match:
-            return station_match.group(1), 'station'
+            station = station_match.group(1)
+            return LOGICAL_SWITCH_SELECTOR_MAP.get(station, station), 'station'
 
-        short_match = re.match(r'^(A[1-4])([RL])$', name)
-        if short_match:
-            return short_match.group(1), 'right' if short_match.group(2) == 'R' else 'left'
+        mapped_selector = RIGHT_VISUAL_SWITCH_SELECTOR_MAP.get(name)
+        if mapped_selector is not None:
+            return mapped_selector, 'right'
 
-        gazebo_match = re.match(r'^(A[1-4])_(DROIT|GAUCHE)_SWITCH$', name)
-        if gazebo_match:
-            return gazebo_match.group(1), 'right' if gazebo_match.group(2) == 'DROIT' else 'left'
+        if name in LEFT_VISUAL_SWITCH_SELECTORS:
+            return None, 'left'
 
         return None, 'unknown'
 
@@ -1281,12 +1348,22 @@ class Room315KinematicShuttleNode(Node):
         return self.network.normalized_switch_state(state)
 
     def _logic_targets_for_selector(self, selector_name: str) -> list[str]:
-        if selector_name in {'ALL', 'RIGHT', 'LEFT'}:
+        if selector_name in {'ALL', 'RIGHT'}:
             return sorted(self.network.switches)
+        if selector_name == 'LEFT':
+            return []
 
-        station_match = re.match(r'^(A[1-4])([RL])?$', selector_name)
+        station_match = re.match(r'^(A[1-4])$', selector_name)
         if station_match:
-            return [station_match.group(1)]
+            station = station_match.group(1)
+            return [LOGICAL_SWITCH_SELECTOR_MAP.get(station, station)]
+
+        mapped_selector = RIGHT_VISUAL_SWITCH_SELECTOR_MAP.get(selector_name)
+        if mapped_selector is not None:
+            return [mapped_selector]
+
+        if selector_name in LEFT_VISUAL_SWITCH_SELECTORS:
+            return []
 
         return []
 
@@ -1294,8 +1371,11 @@ class Room315KinematicShuttleNode(Node):
         if selector_name in {'ALL', 'RIGHT', 'LEFT'}:
             return selector_name
 
-        station_match = re.match(r'^(A[1-4])([RL])?$', selector_name)
+        station_match = re.match(r'^(A[1-4])$', selector_name)
         if station_match:
+            return selector_name
+
+        if selector_name in VISUAL_SWITCH_SELECTOR_MAP:
             return selector_name
 
         return None
@@ -1743,7 +1823,7 @@ class Room315KinematicShuttleNode(Node):
                     'distance_m': self.shuttle_collision_distance_m,
                 },
                 'shuttles': shuttles_payload,
-                'switch_states': self.switch_states,
+                'switch_states': _public_switch_states(self.switch_states),
                 'stopper_states': self.stopper_states,
                 'sensor_events': self._sensor_events(),
             },

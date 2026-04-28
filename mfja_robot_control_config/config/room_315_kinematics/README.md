@@ -164,8 +164,9 @@ Stoppers are independent from switches. Each stopper has a binary state:
 - `0`: open/released.
 - `1`: stop/closed.
 
-The current stopper set is `A1`, `A2`, `A3`, and `A4`, one logical stopper
-before each switch station. The approach sensor topic is:
+The public stopper set is `A1`, `A2`, `A3`, and `A4`. These labels now follow
+the real switch labels, while the routing stays remapped internally so the
+motion does not change. The approach sensor topic is:
 
 ```text
 /room_315/sensors/switch_approach
@@ -187,17 +188,17 @@ Example:
 {
   "sensors": [
     {
-      "before_switch": "A3",
+      "before_switch": "A1",
       "distance_m": 0.247,
       "entity_name": "room315_shuttle_4",
       "segment": "A23",
-      "stopper": "A3"
+      "stopper": "A1"
     }
   ]
 }
 ```
 
-This means `room315_shuttle_4` is approaching the A3 stopper on segment `A23`,
+This means `room315_shuttle_4` is approaching the A1 stopper on segment `A23`,
 and the distance to the stop point is about `0.247 m`.
 
 Example:

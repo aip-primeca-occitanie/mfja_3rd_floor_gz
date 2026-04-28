@@ -26,30 +26,107 @@ class SwitchPose:
     yaw: float
 
 
+SWITCH_DEFINITIONS = (
+    {
+        'entity_name': 'A1_droit_switch',
+        'summary_label': 'A1R',
+        'logical_station': 'A1',
+        'side_fr': 'droit',
+        'side_en': 'right',
+        'side_short': 'r',
+        'petit_yaw': 2.08919,
+        'grand_yaw': -2.1,
+    },
+    {
+        'entity_name': 'A2_droit_switch',
+        'summary_label': 'A2R',
+        'logical_station': 'A2',
+        'side_fr': 'droit',
+        'side_en': 'right',
+        'side_short': 'r',
+        'petit_yaw': 2.60106,
+        'grand_yaw': 0.50666,
+    },
+    {
+        'entity_name': 'A3_droit_switch',
+        'summary_label': 'A3R',
+        'logical_station': 'A3',
+        'side_fr': 'droit',
+        'side_en': 'right',
+        'side_short': 'r',
+        'petit_yaw': -1.5877,
+        'grand_yaw': 0.50666,
+    },
+    {
+        'entity_name': 'A4_droit_switch',
+        'summary_label': 'A4R',
+        'logical_station': 'A4',
+        'side_fr': 'droit',
+        'side_en': 'right',
+        'side_short': 'r',
+        'petit_yaw': -1.0587,
+        'grand_yaw': 3.13,
+    },
+    {
+        'entity_name': 'A1_gauche_switch',
+        'summary_label': 'A1L',
+        'logical_station': 'A1',
+        'side_fr': 'gauche',
+        'side_en': 'left',
+        'side_short': 'l',
+        'petit_yaw': 1.55349,
+        'grand_yaw': -2.63653,
+    },
+    {
+        'entity_name': 'A2_gauche_switch',
+        'summary_label': 'A2L',
+        'logical_station': 'A2',
+        'side_fr': 'gauche',
+        'side_en': 'left',
+        'side_short': 'l',
+        'petit_yaw': 2.08919,
+        'grand_yaw': -0.025,
+    },
+    {
+        'entity_name': 'A3_gauche_switch',
+        'summary_label': 'A3L',
+        'logical_station': 'A3',
+        'side_fr': 'gauche',
+        'side_en': 'left',
+        'side_short': 'l',
+        'petit_yaw': -1.0587,
+        'grand_yaw': 1.04,
+    },
+    {
+        'entity_name': 'A4_gauche_switch',
+        'summary_label': 'A4L',
+        'logical_station': 'A4',
+        'side_fr': 'gauche',
+        'side_en': 'left',
+        'side_short': 'l',
+        'petit_yaw': -0.540815,
+        'grand_yaw': -2.63653,
+    },
+)
+
 MODE_YAWS: Dict[str, Dict[str, float]] = {
     'petit_boucle': {
-        'A1_droit_switch': -1.5877,
-        'A2_droit_switch': -1.0587,
-        'A3_droit_switch': 2.08919,
-        'A4_droit_switch': 2.60106,
-        'A1_gauche_switch': -0.540815,
-        'A2_gauche_switch': -1.0587,
-        'A3_gauche_switch': 2.08919,
-        'A4_gauche_switch': 1.55349,
+        definition['entity_name']: definition['petit_yaw']
+        for definition in SWITCH_DEFINITIONS
     },
     'grand_boucle': {
-        'A1_droit_switch': 0.50666,
-        'A2_droit_switch': 3.13,
-        'A3_droit_switch': -2.1,
-        'A4_droit_switch': 0.50666,
-        'A1_gauche_switch': -2.63653,
-        'A2_gauche_switch': 1.04,
-        'A3_gauche_switch': -0.025,
-        'A4_gauche_switch': -2.63653,
+        definition['entity_name']: definition['grand_yaw']
+        for definition in SWITCH_DEFINITIONS
     },
 }
 
-SWITCH_ORDER = tuple(MODE_YAWS['grand_boucle'].keys())
+SWITCH_ORDER = tuple(
+    definition['entity_name'] for definition in SWITCH_DEFINITIONS
+)
+ENTITY_TO_SUMMARY_LABEL = {
+    definition['entity_name']: definition['summary_label']
+    for definition in SWITCH_DEFINITIONS
+}
 
 MODE_ALIASES = {
     'grand_boucle': 'grand_boucle',
@@ -78,18 +155,16 @@ def _build_switch_selector_aliases() -> Dict[str, Tuple[str, ...]]:
     left_switches = []
     station_switches: Dict[str, List[str]] = {}
 
-    pattern = re.compile(r'^(a\d+)_(droit|gauche)_switch$', re.IGNORECASE)
-    for switch_name in SWITCH_ORDER:
-        match = pattern.match(switch_name)
-        if match is None:
-            continue
-
-        station = match.group(1).lower()
-        side_fr = match.group(2).lower()
-        side_en = 'right' if side_fr == 'droit' else 'left'
-        side_short = 'r' if side_fr == 'droit' else 'l'
+    for definition in SWITCH_DEFINITIONS:
+        switch_name = definition['entity_name']
+        summary_label = definition['summary_label']
+        station = summary_label[:-1].lower()
+        side_fr = definition['side_fr']
+        side_en = definition['side_en']
+        side_short = definition['side_short']
         normalized_aliases = {
             _normalize_token(switch_name),
+            _normalize_token(summary_label),
             _normalize_token(f'{station}_{side_fr}'),
             _normalize_token(f'{station}_{side_en}'),
             _normalize_token(f'{station}{side_short}'),
@@ -102,7 +177,9 @@ def _build_switch_selector_aliases() -> Dict[str, Tuple[str, ...]]:
             right_switches.append(switch_name)
         else:
             left_switches.append(switch_name)
-        station_switches.setdefault(station, []).append(switch_name)
+        station_switches.setdefault(definition['logical_station'].lower(), []).append(
+            switch_name
+        )
 
     aliases['all'] = tuple(SWITCH_ORDER)
     aliases['right'] = tuple(right_switches)
@@ -250,7 +327,7 @@ def _format_switch_states(
     switch_names: List[str],
 ) -> str:
     return ', '.join(
-        f'{switch_name}='
+        f'{ENTITY_TO_SUMMARY_LABEL.get(switch_name, switch_name)}='
         f'{_canonical_mode_label(switch_states.get(switch_name)) if switch_states.get(switch_name) is not None else "UNKNOWN"}'
         for switch_name in switch_names
     )

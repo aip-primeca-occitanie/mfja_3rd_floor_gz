@@ -567,15 +567,16 @@ Stopper logic is independent from switch logic. A stopper is a binary primitive:
 - `0`, `OPEN`, `RELEASE`, `OFF`: the stopper is open and shuttles may pass.
 - `1`, `STOP`, `CLOSED`, `ON`: the stopper stops a shuttle before the switch.
 
-The current network defines four logical stoppers before the four switch
-stations:
+The public stopper labels now follow the real switch labels used in the cell,
+while the internal routing stays remapped under the hood so the motion does not
+change:
 
 | Stopper | Before switch | Stop segments |
 | --- | --- | --- |
-| `A1` | `A1` | `A14` |
-| `A2` | `A2` | `A12E`, `A12I` |
-| `A3` | `A3` | `A23` |
-| `A4` | `A4` | `A34E`, `A34I` |
+| `A1` | `A1` | `A23` |
+| `A2` | `A2` | `A34E`, `A34I` |
+| `A3` | `A3` | `A14` |
+| `A4` | `A4` | `A12E`, `A12I` |
 
 Stopper commands use:
 
@@ -624,12 +625,12 @@ Example single-shuttle event:
 {
   "sensors": [
     {
-      "before_switch": "A3",
+      "before_switch": "A1",
       "distance_m": 0.247,
       "entity_name": "room315_shuttle_4",
       "segment": "A23",
-      "sensor": "A3_APPROACH",
-      "stopper": "A3",
+      "sensor": "A1_APPROACH",
+      "stopper": "A1",
       "stopper_state": "0",
       "workflow": "sensor -> stop shuttle -> move switch -> unstop shuttle"
     }
@@ -643,8 +644,8 @@ Example single-shuttle event:
 }
 ```
 
-This means `room315_shuttle_4` is on segment `A23`, approaching switch `A3`,
-and is about `0.247 m` before the A3 stop point. If the printed distance keeps
+This means `room315_shuttle_4` is on segment `A23`, approaching switch `A1`,
+and is about `0.247 m` before the A1 stop point. If the printed distance keeps
 decreasing, the shuttle is moving toward that stopper.
 
 Example with two simultaneous sensor events:
@@ -653,18 +654,18 @@ Example with two simultaneous sensor events:
 {
   "sensors": [
     {
-      "before_switch": "A1",
+      "before_switch": "A3",
       "distance_m": 0.18,
       "entity_name": "room315_shuttle_2",
       "segment": "A14",
-      "stopper": "A1"
+      "stopper": "A3"
     },
     {
-      "before_switch": "A3",
+      "before_switch": "A1",
       "distance_m": 0.24,
       "entity_name": "room315_shuttle_4",
       "segment": "A23",
-      "stopper": "A3"
+      "stopper": "A1"
     }
   ]
 }
@@ -725,9 +726,16 @@ Supported states:
 
 Switch selectors:
 
-- Logical: `A1`, `A2`, `A3`, `A4`
+- Public station labels: `A1`, `A2`, `A3`, `A4`
 - Visual right/left aliases: `A1R`, `A1L`, `A2R`, `A2L`, `A3R`, `A3L`, `A4R`, `A4L`
 - Groups: `ALL`, `RIGHT`, `LEFT`
+
+All public switch labels now follow the real switch stickers. The routing layer
+is remapped internally so the shuttle keeps the same motion as before:
+
+- Right rail: `A1R -> former A3`, `A2R -> former A4`, `A3R -> former A1`, `A4R -> former A2`
+- Left rail: `A1L -> former A4`, `A2L -> former A3`, `A3L -> former A2`, `A4L -> former A1`
+- Public route/stopper labels: `A1 -> former A3`, `A2 -> former A4`, `A3 -> former A1`, `A4 -> former A2`
 
 Set all switches to the big loop:
 
@@ -762,6 +770,10 @@ ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1R=S
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1L=G'}"
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1L=S'}"
 ```
+
+`A?R` updates the routed line and Gazebo together. `A?L` only moves the left
+visual switch in Gazebo, because the current shuttle routing still follows the
+right rail set.
 
 Send multiple updates in one command:
 
