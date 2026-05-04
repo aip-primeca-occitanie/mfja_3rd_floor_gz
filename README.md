@@ -123,7 +123,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   gui:=true
 ```
 
-Terminal 2 - start one kinematic shuttle:
+Terminal 2 - start one right-rail kinematic shuttle directly:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws
@@ -131,6 +131,7 @@ source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args \
+  -p rail_side:=right \
   -p gazebo_world_name:=room_315_only \
   -p start_slot:=2 \
   -p path_backend:=cubic_hermite \
@@ -140,7 +141,73 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
   -p gazebo_set_pose_rate_hz:=10.0
 ```
 
-## Quick Check of Recent Additions
+Terminal 2 - start one left-rail kinematic shuttle directly:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args \
+  -p rail_side:=left \
+  -p gazebo_world_name:=room_315_only \
+  -p start_slot:=1 \
+  -p path_backend:=cubic_hermite \
+  -p enable_gazebo_set_pose:=true \
+  -p enable_gazebo_spawn:=true \
+  -p speed:=0.2 \
+  -p gazebo_set_pose_rate_hz:=10.0
+```
+
+Terminal 2 - start the ready-made dual launch:
+
+Right only:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py \
+  gazebo_world_name:=room_315_only \
+  enable_right:=true \
+  enable_left:=false \
+  right_start_slot:=2 \
+  speed:=0.2
+```
+
+Left only:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py \
+  gazebo_world_name:=room_315_only \
+  enable_right:=false \
+  enable_left:=true \
+  left_start_slot:=1 \
+  speed:=0.2
+```
+
+Both rails together:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py \
+  gazebo_world_name:=room_315_only \
+  enable_right:=true \
+  enable_left:=true \
+  right_start_slot:=2 \
+  left_start_slot:=1 \
+  speed:=0.2
+```
+
+## Right and Left Rail Quick Commands
 
 Open one extra terminal for commands:
 
@@ -150,41 +217,64 @@ source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
 
-Use `/room_315/switch_states` with `EXTERIOR` / `INTERIOR` or the short `E` / `I`
-forms:
+Both shuttles start hidden by default. Send `ON` to deploy the selected shuttle
+and start its motion.
+
+Default first entity names:
+
+- Right rail: `room315_shuttle_1`
+- Left rail: `room315_left_shuttle_1`
+
+Main per-rail topics:
+
+| Purpose | Right rail | Left rail |
+| --- | --- | --- |
+| Shuttle state | `/room_315/shuttle/state` | `/room_315_left/shuttle/state` |
+| Shuttle control | `/room_315/shuttle/control_cmd` | `/room_315_left/shuttle/control_cmd` |
+| Add shuttle | `/room_315/shuttle/add_cmd` | `/room_315_left/shuttle/add_cmd` |
+| Switch commands | `/room_315/switch_states` | `/room_315_left/switch_states` |
+| Stopper commands | `/room_315/stopper_states` | `/room_315_left/stopper_states` |
+| Position sensors | `/room_315/sensors/position` | `/room_315_left/sensors/position` |
+| Approach sensors | `/room_315/sensors/switch_approach` | `/room_315_left/sensors/switch_approach` |
+
+Right rail basic commands:
 
 ```bash
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=E A4=I'}"
-```
-
-Start slots are numbered as follows:
-
-- `slot 1`: upper indexing pair, left physical position.
-- `slot 2`: upper indexing pair, right physical position.
-- `slot 3`: lower indexing pair, right physical position.
-- `slot 4`: lower indexing pair, left physical position.
-
-Reset a shuttle after a bad switch configuration sent it to `FALLING`:
-
-```bash
+ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_1=ON'}"
+ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_1=OFF'}"
 ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_1=RESET'}"
-```
-
-Remove a shuttle completely from Gazebo, then add it back on a corrected slot:
-
-```bash
 ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_1=REMOVE'}"
-ros2 topic pub --once /room_315/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_shuttle_1 slot=1 speed=0.2'}"
+ros2 topic pub --once /room_315/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_shuttle_1 slot=2 speed=0.2'}"
+ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
+ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
+ros2 topic echo /room_315/shuttle/state
+ros2 topic echo /room_315/sensors/position
+ros2 topic echo /room_315/sensors/switch_approach
 ```
 
-Watch the right-rail position detectors:
+Left rail basic commands:
 
 ```bash
-ros2 topic echo /room_315/sensors/position
+ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=ON'}"
+ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=OFF'}"
+ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=RESET'}"
+ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=REMOVE'}"
+ros2 topic pub --once /room_315_left/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_left_shuttle_1 slot=1 speed=0.2'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
+ros2 topic echo /room_315_left/shuttle/state
+ros2 topic echo /room_315_left/sensors/position
+ros2 topic echo /room_315_left/sensors/switch_approach
 ```
 
-The published detector names belong to the right-rail set and are available on
-`/room_315/sensors/position`.
+Common slot notes:
+
+- Right rail uses its own `slot 1..4` set from `rail_network.yaml`.
+- Left rail uses its own `slot 1..4` set from `rail_network_left.yaml`.
+- If a shuttle enters `FALLING`, use `RESET` on that rail's `control_cmd` topic.
+
+Unless a later example explicitly uses `/room_315_left/...`, the remaining
+legacy examples in this README refer to the right rail.
 
 ## Full Floor
 
@@ -582,6 +672,9 @@ or removed from Gazebo through:
 /room_315/shuttle/control_cmd
 ```
 
+For the left rail, use the same commands on `/room_315_left/shuttle/control_cmd`
+with entity names such as `room315_left_shuttle_1`.
+
 Disabling a shuttle keeps the model in place and stops its kinematic motion.
 Enabling it again lets it continue from its current segment and arc-length
 position. `RESET` re-snaps the shuttle to its configured start slot without
@@ -842,10 +935,11 @@ You usually do not need to pass these parameters, but they can be overridden:
 
 ## Switch Control
 
-Send switch commands to:
+Each rail has its own switch-command topic:
 
 ```text
 /room_315/switch_states
+/room_315_left/switch_states
 ```
 
 Supported states:
@@ -856,28 +950,33 @@ Supported states:
 Switch selectors:
 
 - Public station labels: `A1`, `A2`, `A3`, `A4`
-- Visual right/left selectors: `A1R`, `A1L`, `A2R`, `A2L`, `A3R`, `A3L`, `A4R`, `A4L`
+- Visual selectors: `A1R`, `A1L`, `A2R`, `A2L`, `A3R`, `A3L`, `A4R`, `A4L`
 - Groups: `ALL`, `RIGHT`, `LEFT`
 
-Public switch labels are `A1`, `A2`, `A3`, and `A4`.
+Public switch labels are `A1`, `A2`, `A3`, and `A4`. For normal operation,
+prefer the public labels on the rail-specific topic.
 
 Set all switches to the exterior branch:
 
 ```bash
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
 ```
 
 Set all switches to the interior branch:
 
 ```bash
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
 ```
 
-Switch one station:
+Switch one station on either rail:
 
 ```bash
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR'}"
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR'}"
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A2=EXTERIOR'}"
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A2=INTERIOR'}"
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A3=EXTERIOR'}"
@@ -886,27 +985,25 @@ ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A4=EX
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A4=INTERIOR'}"
 ```
 
-Use right/left visual selectors:
+Use explicit visual selectors only when you intentionally want the right/left
+selector form on the matching rail topic:
 
 ```bash
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1R=EXTERIOR'}"
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1R=INTERIOR'}"
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1L=EXTERIOR'}"
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1L=INTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1L=EXTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1L=INTERIOR'}"
 ```
-
-`A?R` updates the routed line and Gazebo together. `A?L` only moves the left
-visual switch in Gazebo, because the current shuttle routing still follows the
-right rail set.
 
 Send multiple updates in one command:
 
 ```bash
 ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR A2=EXTERIOR A3=INTERIOR A4=EXTERIOR'}"
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1R=INTERIOR A2R=INTERIOR A3R=EXTERIOR A4R=EXTERIOR'}"
+ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR A2=EXTERIOR A3=INTERIOR A4=EXTERIOR'}"
 ```
 
-Always prefer `/room_315/switch_states`. It updates the route logic and also
+Always prefer the rail-specific `/room_315/switch_states` or
+`/room_315_left/switch_states` topic. It updates the route logic and also
 publishes visual switch commands to Gazebo.
 
 The node also listens to:
@@ -1021,9 +1118,9 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 | `start_slot` | `2` | Start slot for a single shuttle. |
 | `start_slots` | empty | Comma-separated start slots for multiple shuttles, for example `1,2,3,4`. |
 | `shuttle_count` | `1` | Initial shuttle count. |
-| `gazebo_entity_name` | `room315_shuttle_1` | Gazebo entity name for a single shuttle. |
+| `gazebo_entity_name` | `room315_shuttle_1` | Gazebo entity name for a single shuttle on the right rail. The left rail default is `room315_left_shuttle_1`. |
 | `gazebo_entity_names` | empty | Comma-separated names for multiple shuttles. |
-| `preloaded_shuttle_count` | `4` | Number of shuttle models already present in the world. |
+| `preloaded_shuttle_count` | `4` | Number of shuttle models already present in the world on the right rail. The left rail currently preloads `1`. |
 | `reject_occupied_start_slots` | `true` | Reject runtime add commands when the requested start slot is occupied. |
 | `start_slot_occupancy_radius_m` | `0.33` | Radius used to decide if a start slot is occupied. |
 | `speed` | `0.25` | Shuttle speed in m/s. |
@@ -1033,14 +1130,14 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 | `arc_length_samples_per_edge` | `16` | Sub-samples per CSV edge used to parameterize the continuous path by arc length. |
 | `enable_collision_avoidance` | `true` | Stop before center-distance collision. |
 | `shuttle_collision_distance_m` | `0.33` | Minimum allowed center distance between shuttles. |
-| `switch_command_topic` | `/room_315/switch_states` | Route and visual switch command topic. |
-| `stopper_command_topic` | `/room_315/stopper_states` | Independent binary stopper command topic. |
-| `sensor_state_topic` | `/room_315/sensors/switch_approach` | Sensor-style approach event topic for switch workflow testing. |
-| `position_sensor_state_topic` | `/room_315/sensors/position` | Virtual position-detector topic for `DZI*R` and `DA*R` events on the right rail. |
-| `add_shuttle_command_topic` | `/room_315/shuttle/add_cmd` | Runtime shuttle add command topic. |
-| `shuttle_control_command_topic` | `/room_315/shuttle/control_cmd` | Per-shuttle ON/OFF/RESET/REMOVE control topic. |
-| `state_topic` | `/room_315/shuttle/state` | Combined shuttle state topic. |
-| `pose_offset_command_topic` | `/room_315/shuttle/pose_offset_cmd` | Runtime pose calibration topic. |
+| `switch_command_topic` | `/room_315/switch_states` | Route and visual switch command topic for the right rail. The left rail default is `/room_315_left/switch_states`. |
+| `stopper_command_topic` | `/room_315/stopper_states` | Independent binary stopper command topic for the right rail. The left rail default is `/room_315_left/stopper_states`. |
+| `sensor_state_topic` | `/room_315/sensors/switch_approach` | Approach-event topic for the right rail. The left rail default is `/room_315_left/sensors/switch_approach`. |
+| `position_sensor_state_topic` | `/room_315/sensors/position` | Position-detector topic for `DZI*R` and `DA*R` on the right rail. The left rail default is `/room_315_left/sensors/position` for `DZI*L` and `DA*L`. |
+| `add_shuttle_command_topic` | `/room_315/shuttle/add_cmd` | Runtime shuttle add command topic for the right rail. The left rail default is `/room_315_left/shuttle/add_cmd`. |
+| `shuttle_control_command_topic` | `/room_315/shuttle/control_cmd` | Per-shuttle ON/OFF/RESET/REMOVE control topic for the right rail. The left rail default is `/room_315_left/shuttle/control_cmd`. |
+| `state_topic` | `/room_315/shuttle/state` | Combined shuttle state topic for the right rail. The left rail default is `/room_315_left/shuttle/state`. |
+| `pose_offset_command_topic` | `/room_315/shuttle/pose_offset_cmd` | Runtime pose calibration topic for the right rail. The left rail default is `/room_315_left/shuttle/pose_offset_cmd`. |
 | `publish_visual_switch_commands` | `true` | Also move the visible Gazebo switch models. |
 | `sync_from_visual_switch_states` | `true` | Sync route logic from the latest visual switch state. |
 
