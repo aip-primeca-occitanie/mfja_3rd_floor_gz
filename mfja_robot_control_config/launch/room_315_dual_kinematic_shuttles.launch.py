@@ -21,7 +21,7 @@ def generate_launch_description():
     right_node = Node(
         package='mfja_robot_control_config',
         executable='room_315_kinematic_shuttle_node.py',
-        namespace='room_315',
+        namespace='room_315_right',
         name='room_315_kinematic_shuttle',
         output='screen',
         condition=IfCondition(LaunchConfiguration('enable_right')),

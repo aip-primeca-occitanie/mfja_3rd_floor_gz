@@ -100,16 +100,16 @@ ALLOWED_START_POSES = {
 }
 
 RIGHT_TOPIC_DEFAULTS = {
-    'pose_topic': '/room_315/shuttle/pose_cmd',
-    'pose_topic_prefix': '/room_315/shuttles',
-    'state_topic': '/room_315/shuttle/state',
-    'add_shuttle_command_topic': '/room_315/shuttle/add_cmd',
-    'shuttle_control_command_topic': '/room_315/shuttle/control_cmd',
-    'switch_command_topic': '/room_315/switch_states',
-    'stopper_command_topic': '/room_315/stopper_states',
-    'sensor_state_topic': '/room_315/sensors/switch_approach',
-    'position_sensor_state_topic': '/room_315/sensors/position',
-    'pose_offset_command_topic': '/room_315/shuttle/pose_offset_cmd',
+    'pose_topic': '/room_315_right/shuttle/pose_cmd',
+    'pose_topic_prefix': '/room_315_right/shuttles',
+    'state_topic': '/room_315_right/shuttle/state',
+    'add_shuttle_command_topic': '/room_315_right/shuttle/add_cmd',
+    'shuttle_control_command_topic': '/room_315_right/shuttle/control_cmd',
+    'switch_command_topic': '/room_315_right/switch_states',
+    'stopper_command_topic': '/room_315_right/stopper_states',
+    'sensor_state_topic': '/room_315_right/sensors/switch_approach',
+    'position_sensor_state_topic': '/room_315_right/sensors/position',
+    'pose_offset_command_topic': '/room_315_right/shuttle/pose_offset_cmd',
 }
 
 LEFT_TOPIC_DEFAULTS = {
@@ -127,8 +127,8 @@ LEFT_TOPIC_DEFAULTS = {
 
 RIGHT_ENTITY_DEFAULTS = {
     'preloaded_shuttle_count': 4,
-    'gazebo_entity_name': 'room315_shuttle_1',
-    'entity_name_prefix': 'room315_shuttle_',
+    'gazebo_entity_name': 'room315_right_shuttle_1',
+    'entity_name_prefix': 'room315_right_shuttle_',
 }
 
 LEFT_ENTITY_DEFAULTS = {
@@ -366,16 +366,16 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('enable_collision_avoidance', True)
         self.declare_parameter('shuttle_collision_distance_m', 0.33)
         self.declare_parameter('collision_search_iterations', 12)
-        self.declare_parameter('pose_topic', '/room_315/shuttle/pose_cmd')
-        self.declare_parameter('pose_topic_prefix', '/room_315/shuttles')
-        self.declare_parameter('state_topic', '/room_315/shuttle/state')
-        self.declare_parameter('add_shuttle_command_topic', '/room_315/shuttle/add_cmd')
-        self.declare_parameter('shuttle_control_command_topic', '/room_315/shuttle/control_cmd')
-        self.declare_parameter('switch_command_topic', '/room_315/switch_states')
-        self.declare_parameter('stopper_command_topic', '/room_315/stopper_states')
-        self.declare_parameter('sensor_state_topic', '/room_315/sensors/switch_approach')
-        self.declare_parameter('position_sensor_state_topic', '/room_315/sensors/position')
-        self.declare_parameter('pose_offset_command_topic', '/room_315/shuttle/pose_offset_cmd')
+        self.declare_parameter('pose_topic', '/room_315_right/shuttle/pose_cmd')
+        self.declare_parameter('pose_topic_prefix', '/room_315_right/shuttles')
+        self.declare_parameter('state_topic', '/room_315_right/shuttle/state')
+        self.declare_parameter('add_shuttle_command_topic', '/room_315_right/shuttle/add_cmd')
+        self.declare_parameter('shuttle_control_command_topic', '/room_315_right/shuttle/control_cmd')
+        self.declare_parameter('switch_command_topic', '/room_315_right/switch_states')
+        self.declare_parameter('stopper_command_topic', '/room_315_right/stopper_states')
+        self.declare_parameter('sensor_state_topic', '/room_315_right/sensors/switch_approach')
+        self.declare_parameter('position_sensor_state_topic', '/room_315_right/sensors/position')
+        self.declare_parameter('pose_offset_command_topic', '/room_315_right/shuttle/pose_offset_cmd')
         self.declare_parameter('visual_switch_command_topic', '/mfja/conveyor/switch_cmd')
         self.declare_parameter('visual_switch_state_topic', '/mfja/conveyor/switch_states')
         self.declare_parameter('sync_from_visual_switch_states', True)
@@ -391,9 +391,9 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('preloaded_shuttle_count', 4)
         self.declare_parameter('reject_occupied_start_slots', True)
         self.declare_parameter('start_slot_occupancy_radius_m', 0.33)
-        self.declare_parameter('gazebo_entity_name', 'room315_shuttle_1')
+        self.declare_parameter('gazebo_entity_name', 'room315_right_shuttle_1')
         self.declare_parameter('gazebo_entity_names', '')
-        self.declare_parameter('entity_name_prefix', 'room315_shuttle_')
+        self.declare_parameter('entity_name_prefix', 'room315_right_shuttle_')
         self.declare_parameter('gazebo_set_pose_rate_hz', 10.0)
         self.declare_parameter('publish_visual_switch_commands', True)
         self.declare_parameter('enable_gazebo_pose_transform', True)

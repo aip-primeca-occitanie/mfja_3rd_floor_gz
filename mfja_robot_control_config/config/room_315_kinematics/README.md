@@ -147,26 +147,26 @@ The current runtime additions can be validated with four quick checks:
 1. Switch commands:
 
 ```bash
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=E A4=I'}"
+ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=E A4=I'}"
 ```
 
 2. Reset after `FALLING` without restarting Gazebo:
 
 ```bash
-ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_1=RESET'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_1=RESET'}"
 ```
 
 3. Remove and re-add a shuttle:
 
 ```bash
-ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_1=REMOVE'}"
-ros2 topic pub --once /room_315/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_shuttle_1 slot=1'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_1=REMOVE'}"
+ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_right_shuttle_1 slot=1'}"
 ```
 
 4. Watch the new right-rail detector stream:
 
 ```bash
-ros2 topic echo /room_315/sensors/position
+ros2 topic echo /room_315_right/sensors/position
 ```
 
 Start slots are numbered as follows:
@@ -178,14 +178,14 @@ Start slots are numbered as follows:
 
 ## Switch Commands
 
-Switch states are controlled through `/room_315/switch_states`. Use
+Switch states are controlled through `/room_315_right/switch_states`. Use
 `EXTERIOR` / `INTERIOR` or the short `E` / `I` forms. Visual switch selectors
 stay `A1R` / `A1L` through `A4R` / `A4L`.
 
 Example:
 
 ```bash
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=EXTERIOR A4=INTERIOR'}"
+ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=EXTERIOR A4=INTERIOR'}"
 ```
 
 The node also republishes visual switch commands on
@@ -202,7 +202,7 @@ Stoppers are independent from switches. Each stopper has a binary state:
 The public stopper set is `A1`, `A2`, `A3`, and `A4`. The approach sensor topic is:
 
 ```text
-/room_315/sensors/switch_approach
+/room_315_right/sensors/switch_approach
 ```
 
 The manual teaching workflow is:
@@ -223,7 +223,7 @@ Example:
     {
       "before_switch": "A1",
       "distance_m": 0.247,
-      "entity_name": "room315_shuttle_4",
+      "entity_name": "room315_right_shuttle_4",
       "segment": "A14",
       "stopper": "A1"
     }
@@ -231,22 +231,22 @@ Example:
 }
 ```
 
-This means `room315_shuttle_4` is approaching the A1 stopper on segment `A14`,
+This means `room315_right_shuttle_4` is approaching the A1 stopper on segment `A14`,
 and the distance to the stop point is about `0.247 m`.
 
 Example:
 
 ```bash
-ros2 topic echo /room_315/sensors/switch_approach
-ros2 topic pub --once /room_315/stopper_states std_msgs/msg/String "{data: 'A1=1'}"
-ros2 topic pub --once /room_315/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR'}"
-ros2 topic pub --once /room_315/stopper_states std_msgs/msg/String "{data: 'A1=0'}"
+ros2 topic echo /room_315_right/sensors/switch_approach
+ros2 topic pub --once /room_315_right/stopper_states std_msgs/msg/String "{data: 'A1=1'}"
+ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR'}"
+ros2 topic pub --once /room_315_right/stopper_states std_msgs/msg/String "{data: 'A1=0'}"
 ```
 
 The same network file also defines virtual shuttle position detectors on:
 
 ```text
-/room_315/sensors/position
+/room_315_right/sensors/position
 ```
 
 The public detector set is:
@@ -276,7 +276,7 @@ slot 4: -15.24 -5.54 0.84 0 0 0
 ```
 
 Multiple shuttles can be started with `shuttle_count` and `start_slots`, or
-added while the node is running through `/room_315/shuttle/add_cmd`.
+added while the node is running through `/room_315_right/shuttle/add_cmd`.
 
 Runtime add commands are rejected when the selected start slot is occupied.
 
@@ -285,16 +285,16 @@ Runtime add commands are rejected when the selected start slot is occupied.
 Per-shuttle motion control is available through:
 
 ```text
-/room_315/shuttle/control_cmd
+/room_315_right/shuttle/control_cmd
 ```
 
 Examples:
 
 ```bash
-ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_2=OFF'}"
-ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_2=ON'}"
-ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_2=RESET'}"
-ros2 topic pub --once /room_315/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_shuttle_2=REMOVE'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=OFF'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=ON'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=RESET'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=REMOVE'}"
 ```
 
 ## Collision Avoidance
