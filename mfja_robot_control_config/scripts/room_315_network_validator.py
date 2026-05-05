@@ -62,7 +62,7 @@ def _default_network_path() -> Path:
         / 'mfja_robot_control_config'
         / 'config'
         / 'room_315_kinematics'
-        / 'rail_network.yaml'
+        / 'rail_network_right.yaml'
     )
 
 
@@ -472,7 +472,7 @@ def parse_args() -> argparse.Namespace:
         '--network',
         type=Path,
         default=_default_network_path(),
-        help='rail_network.yaml path.',
+        help='rail_network_right.yaml path.',
     )
     parser.add_argument(
         '--report',

@@ -29,7 +29,7 @@ def _default_network_path() -> Path:
         / 'mfja_robot_control_config'
         / 'config'
         / 'room_315_kinematics'
-        / 'rail_network.yaml'
+        / 'rail_network_right.yaml'
     )
 
 

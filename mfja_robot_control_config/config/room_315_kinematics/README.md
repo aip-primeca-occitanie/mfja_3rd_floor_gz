@@ -15,8 +15,11 @@ switch states, and controlling the robots.
 - `raw_segments/`: source CSV files for the directed rail segments.
 - `normalized_segments/`: preprocessed CSV files with duplicate points removed,
   arc length, tangent, and yaw columns.
-- `rail_network.yaml`: explicit graph topology, nodes, segments, switches,
-  independent stoppers, fixed transitions, start slots, and block placeholders.
+- `rail_network_right.yaml`: explicit graph topology for the right rail: nodes,
+  segments, switches, independent stoppers, fixed transitions, start slots, and
+  block placeholders.
+- `rail_network_left.yaml`: explicit graph topology for the left rail with its
+  own slots, sensors, switch labeling, and stopper layout.
 - `segment_summary.yaml`: preprocessing summary generated from the raw CSVs.
 - `validation_report.yaml`: validation results for lengths, snap distances,
   endpoint gaps, and tangent mismatches.
@@ -28,7 +31,7 @@ switch states, and controlling the robots.
 
 Every rail segment is one-way only. Motion always follows the CSV order from
 `index=0` to the last row in that file. The geometry is used for pose
-interpolation only. Routing is decided by `rail_network.yaml`, not by exact
+interpolation only. Routing is decided by `rail_network_right.yaml`, not by exact
 endpoint equality.
 
 If a shuttle reaches the end of a segment and the graph has no valid successor
@@ -266,7 +269,7 @@ Practical use:
 
 ## Start Slots
 
-The four allowed start slots are defined in `rail_network.yaml`:
+The four allowed start slots are defined in `rail_network_right.yaml`:
 
 ```text
 slot 1: -15.43 -3.86 0.84 0 0 3.14

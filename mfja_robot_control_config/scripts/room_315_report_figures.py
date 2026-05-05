@@ -65,6 +65,15 @@ class PoseTransform:
         )
 
 
+@dataclass(frozen=True)
+class DeferredAnnotation:
+    anchor_x: float
+    anchor_y: float
+    text: str
+    base_offset: tuple[float, float]
+    kwargs: dict
+
+
 RIGHT_POSE_TRANSFORM = PoseTransform()
 LEFT_POSE_TRANSFORM = PoseTransform(
     a=-0.8938584503560025,
@@ -148,7 +157,12 @@ RIGHT_DISPLAY_SLOT_LABELS = {
     '3': '1',
     '4': '2',
 }
-LEFT_DISPLAY_SLOT_LABELS = {}
+LEFT_DISPLAY_SLOT_LABELS = {
+    '1': '3',
+    '2': '4',
+    '3': '1',
+    '4': '2',
+}
 
 LEFT_PUBLIC_SEGMENT_NAME_MAP = {
     'A1G': 'A3G',
@@ -283,7 +297,7 @@ def _default_network_path() -> Path:
         / 'mfja_robot_control_config'
         / 'config'
         / 'room_315_kinematics'
-        / 'rail_network.yaml'
+        / 'rail_network_right.yaml'
     )
 
 
@@ -310,7 +324,12 @@ def _segment_color(segment_name: str) -> str:
 
 
 def _display_slot_label(slot_name: str) -> str:
-    return DISPLAY_SLOT_LABELS.get(slot_name, slot_name)
+    display_slot_labels = (
+        LEFT_DISPLAY_SLOT_LABELS
+        if ACTIVE_RAIL_SIDE == 'left'
+        else RIGHT_DISPLAY_SLOT_LABELS
+    )
+    return display_slot_labels.get(slot_name, slot_name)
 
 
 def _display_dzi_label(slot_name: str) -> str:
@@ -318,7 +337,12 @@ def _display_dzi_label(slot_name: str) -> str:
 
 
 def _display_switch_label(switch_name: str) -> str:
-    return DISPLAY_SWITCH_LABELS.get(switch_name, switch_name)
+    display_switch_labels = (
+        LEFT_DISPLAY_SWITCH_LABELS
+        if ACTIVE_RAIL_SIDE == 'left'
+        else RIGHT_DISPLAY_SWITCH_LABELS
+    )
+    return display_switch_labels.get(switch_name, switch_name)
 
 
 def _display_sensor_label(sensor_name: str) -> str:
@@ -330,7 +354,12 @@ def _display_sensor_label(sensor_name: str) -> str:
 
 
 def _display_segment_label(segment_name: str) -> str:
-    explicit_label = DISPLAY_SEGMENT_LABELS.get(segment_name)
+    display_segment_labels = (
+        LEFT_DISPLAY_SEGMENT_LABELS
+        if ACTIVE_RAIL_SIDE == 'left'
+        else RIGHT_DISPLAY_SEGMENT_LABELS
+    )
+    explicit_label = display_segment_labels.get(segment_name)
     if explicit_label is not None:
         return explicit_label
     if ACTIVE_RAIL_SIDE == 'right':
@@ -572,6 +601,143 @@ def _default_stopper_label_offset(
     return dx, dy
 
 
+def _nearest_display_switch_label(
+    x: float,
+    y: float,
+    switch_positions: list[tuple[float, float, str]],
+) -> str:
+    return min(
+        switch_positions,
+        key=lambda item: (item[0] - x) ** 2 + (item[1] - y) ** 2,
+    )[2]
+
+
+def _annotation_candidate_offsets(
+    base_dx: float,
+    base_dy: float,
+) -> list[tuple[float, float]]:
+    sign_x = 1.0 if base_dx >= 0.0 else -1.0
+    sign_y = 1.0 if base_dy >= 0.0 else -1.0
+    mag_x = max(abs(base_dx), 0.14)
+    mag_y = max(abs(base_dy), 0.12)
+    candidates = [
+        (base_dx, base_dy),
+        (1.15 * base_dx, 1.15 * base_dy),
+        (1.30 * base_dx, 1.10 * base_dy),
+        (1.10 * base_dx, 1.30 * base_dy),
+        (sign_x * (mag_x + 0.10), sign_y * (mag_y + 0.06)),
+        (sign_x * (mag_x + 0.18), sign_y * (mag_y + 0.12)),
+        (sign_x * (mag_x + 0.26), sign_y * (mag_y + 0.18)),
+        (sign_x * (mag_x + 0.12), -sign_y * (mag_y + 0.06)),
+        (-sign_x * (mag_x + 0.12), sign_y * (mag_y + 0.06)),
+        (sign_x * (mag_x + 0.22), 0.0),
+        (0.0, sign_y * (mag_y + 0.20)),
+        (-sign_x * (mag_x + 0.20), 0.0),
+        (0.0, -sign_y * (mag_y + 0.20)),
+    ]
+
+    deduplicated: list[tuple[float, float]] = []
+    seen: set[tuple[int, int]] = set()
+    for dx, dy in candidates:
+        key = (round(dx * 1000.0), round(dy * 1000.0))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduplicated.append((dx, dy))
+    return deduplicated
+
+
+def _bbox_overlap_area(bbox_a, bbox_b) -> float:
+    overlap_x = max(0.0, min(bbox_a.x1, bbox_b.x1) - max(bbox_a.x0, bbox_b.x0))
+    overlap_y = max(0.0, min(bbox_a.y1, bbox_b.y1) - max(bbox_a.y0, bbox_b.y0))
+    return overlap_x * overlap_y
+
+
+def _bbox_outside_penalty(bbox, usable_bbox) -> float:
+    return (
+        max(0.0, usable_bbox.x0 - bbox.x0)
+        + max(0.0, bbox.x1 - usable_bbox.x1)
+        + max(0.0, usable_bbox.y0 - bbox.y0)
+        + max(0.0, bbox.y1 - usable_bbox.y1)
+    )
+
+
+def _place_deferred_annotations(
+    axis,
+    deferred_annotations: list[DeferredAnnotation],
+) -> None:
+    if not deferred_annotations:
+        return
+
+    figure = axis.figure
+    figure.canvas.draw()
+    renderer = figure.canvas.get_renderer()
+    usable_bbox = axis.get_window_extent(renderer).padded(-14.0)
+    occupied_bboxes = [
+        text.get_window_extent(renderer).expanded(1.04, 1.12)
+        for text in axis.texts
+        if text.get_visible() and text.get_text()
+    ]
+
+    sorted_annotations = sorted(
+        deferred_annotations,
+        key=lambda item: (-len(item.text), item.anchor_y, item.anchor_x),
+    )
+
+    for item in sorted_annotations:
+        annotation = axis.annotate(
+            item.text,
+            xy=(item.anchor_x, item.anchor_y),
+            xytext=(
+                item.anchor_x + item.base_offset[0],
+                item.anchor_y + item.base_offset[1],
+            ),
+            **item.kwargs,
+        )
+
+        best_cost = None
+        best_offset = item.base_offset
+        best_bbox = None
+        anchor_px = axis.transData.transform((item.anchor_x, item.anchor_y))
+
+        for dx, dy in _annotation_candidate_offsets(*item.base_offset):
+            annotation.set_position((item.anchor_x + dx, item.anchor_y + dy))
+            figure.canvas.draw()
+            bbox = annotation.get_window_extent(renderer).expanded(1.04, 1.12)
+            overlap_penalty = sum(
+                _bbox_overlap_area(bbox, occupied_bbox)
+                for occupied_bbox in occupied_bboxes
+            )
+            outside_penalty = _bbox_outside_penalty(bbox, usable_bbox)
+            center_px = (
+                0.5 * (bbox.x0 + bbox.x1),
+                0.5 * (bbox.y0 + bbox.y1),
+            )
+            distance_penalty = math.dist(anchor_px, center_px)
+            candidate_cost = (
+                outside_penalty > 0.0 or overlap_penalty > 0.0,
+                round(outside_penalty + overlap_penalty, 3),
+                round(distance_penalty, 3),
+            )
+            if best_cost is None or candidate_cost < best_cost:
+                best_cost = candidate_cost
+                best_offset = (dx, dy)
+                best_bbox = bbox
+            if candidate_cost[0] is False:
+                break
+
+        annotation.set_position(
+            (
+                item.anchor_x + best_offset[0],
+                item.anchor_y + best_offset[1],
+            )
+        )
+        figure.canvas.draw()
+        occupied_bboxes.append(
+            (best_bbox or annotation.get_window_extent(renderer)).expanded(1.04, 1.12)
+        )
+
+
 def _style_axis(
     axis,
     bounds: tuple[float, float, float, float],
@@ -778,6 +944,8 @@ def _plot_sensor_panel(
     transform: PoseTransform,
     bounds: tuple[float, float, float, float],
 ) -> None:
+    deferred_annotations: list[DeferredAnnotation] = []
+    switch_positions: list[tuple[float, float, str]] = []
     for segment_name in network_config['segments']:
         hermite_xy = _sample_segment_xy(hermite_network, segment_name, transform, 0.01)
         axis.plot(
@@ -793,6 +961,8 @@ def _plot_sensor_panel(
         if not node_name.endswith('_C'):
             continue
         x, y, _z = transform.point(*raw_node['xyz'])
+        display_switch = _display_switch_label(node_name.split('_')[0])
+        switch_positions.append((x, y, display_switch))
         axis.add_patch(
             Circle(
                 (x, y),
@@ -807,7 +977,7 @@ def _plot_sensor_panel(
             axis,
             x,
             y + 0.01,
-            _display_switch_label(node_name.split('_')[0]),
+            display_switch,
             fontsize=13,
             weight='bold',
             color='#35512f',
@@ -900,33 +1070,51 @@ def _plot_sensor_panel(
             sensor_name,
             _default_sensor_label_offset(sensor_x, sensor_y, bounds, kind, branch),
         )
-        label = _display_sensor_label(sensor_name)
+        nearest_display_switch = _nearest_display_switch_label(
+            sensor_x,
+            sensor_y,
+            switch_positions,
+        )
+        match = re.fullmatch(r'(DA)([1-4])(.*)', sensor_name)
+        label = (
+            f"{match.group(1)}{nearest_display_switch[1:]}{match.group(3)}"
+            if match
+            else _display_sensor_label(sensor_name)
+        )
         if 'P' in aliases:
-            label = f'{_display_sensor_label(sensor_name)}\n(alias {aliases[-1]})'
-        axis.annotate(
-            label,
-            xy=(sensor_x, sensor_y),
-            xytext=(sensor_x + offset_x, sensor_y + offset_y),
-            fontsize=8.5,
-            weight='bold',
-            color=color,
-            ha='center',
-            va='center',
-            bbox={
-                'boxstyle': 'round,pad=0.18',
-                'fc': 'white',
-                'ec': color,
-                'alpha': 0.92,
-                'lw': 0.8,
-            },
-            arrowprops={
-                'arrowstyle': '-',
-                'color': color,
-                'lw': 1.0,
-                'alpha': 0.9,
-                'connectionstyle': SENSOR_CONNECTION_STYLES.get(sensor_name, 'arc3,rad=0.0'),
-            },
-            zorder=7,
+            label = f'{label}\n(alias {aliases[-1]})'
+        deferred_annotations.append(
+            DeferredAnnotation(
+                anchor_x=sensor_x,
+                anchor_y=sensor_y,
+                text=label,
+                base_offset=(offset_x, offset_y),
+                kwargs={
+                    'fontsize': 8.5,
+                    'weight': 'bold',
+                    'color': color,
+                    'ha': 'center',
+                    'va': 'center',
+                    'bbox': {
+                        'boxstyle': 'round,pad=0.18',
+                        'fc': 'white',
+                        'ec': color,
+                        'alpha': 0.92,
+                        'lw': 0.8,
+                    },
+                    'arrowprops': {
+                        'arrowstyle': '-',
+                        'color': color,
+                        'lw': 1.0,
+                        'alpha': 0.9,
+                        'connectionstyle': SENSOR_CONNECTION_STYLES.get(
+                            sensor_name,
+                            'arc3,rad=0.0',
+                        ),
+                    },
+                    'zorder': 7,
+                },
+            )
         )
 
     for stopper_point in _stopper_points(
@@ -951,41 +1139,50 @@ def _plot_sensor_panel(
             (stopper_point['stopper'], stopper_point['segment']),
             _default_stopper_label_offset(x, y, bounds),
         )
-        display_stopper = _display_stopper_label(
-            stopper_point['stopper'],
-            stopper_point['segment'],
-        )
+        nearest_display_switch = _nearest_display_switch_label(x, y, switch_positions)
+        display_segment = _display_segment_label(stopper_point['segment'])
+        display_stopper = nearest_display_switch
+        if display_segment.endswith('E'):
+            display_stopper = f'{display_stopper}E'
+        elif display_segment.endswith('I'):
+            display_stopper = f'{display_stopper}I'
         stopper_label = f'STP {display_stopper}'
 
-        axis.annotate(
-            stopper_label,
-            xy=(x, y),
-            xytext=(x + dx, y + dy),
-            fontsize=7.6,
-            color=STOPPER_COLOR,
-            weight='bold',
-            ha='center',
-            va='center',
-            bbox={
-                'boxstyle': 'round,pad=0.12',
-                'fc': 'white',
-                'ec': STOPPER_COLOR,
-                'alpha': 0.90,
-                'lw': 0.7,
-            },
-            arrowprops={
-                'arrowstyle': '-',
-                'color': STOPPER_COLOR,
-                'lw': 0.85,
-                'alpha': 0.85,
-                'connectionstyle': STOPPER_CONNECTION_STYLES.get(
-                    (stopper_point['stopper'], stopper_point['segment']),
-                    'arc3,rad=0.0',
-                ),
-            },
-            zorder=7,
+        deferred_annotations.append(
+            DeferredAnnotation(
+                anchor_x=x,
+                anchor_y=y,
+                text=stopper_label,
+                base_offset=(dx, dy),
+                kwargs={
+                    'fontsize': 7.6,
+                    'color': STOPPER_COLOR,
+                    'weight': 'bold',
+                    'ha': 'center',
+                    'va': 'center',
+                    'bbox': {
+                        'boxstyle': 'round,pad=0.12',
+                        'fc': 'white',
+                        'ec': STOPPER_COLOR,
+                        'alpha': 0.90,
+                        'lw': 0.7,
+                    },
+                    'arrowprops': {
+                        'arrowstyle': '-',
+                        'color': STOPPER_COLOR,
+                        'lw': 0.85,
+                        'alpha': 0.85,
+                        'connectionstyle': STOPPER_CONNECTION_STYLES.get(
+                            (stopper_point['stopper'], stopper_point['segment']),
+                            'arc3,rad=0.0',
+                        ),
+                    },
+                    'zorder': 7,
+                },
+            )
         )
 
+    _place_deferred_annotations(axis, deferred_annotations)
     _style_axis(axis, bounds, padding_bottom=0.40, mirror_x=REPORT_MIRROR_X)
     axis.set_title(ACTIVE_SENSOR_PANEL_TITLE, fontsize=14, weight='bold')
 
@@ -1040,7 +1237,7 @@ def parse_args() -> argparse.Namespace:
         '--network',
         type=Path,
         default=_default_network_path(),
-        help='Path to rail_network.yaml.',
+        help='Path to rail_network_right.yaml.',
     )
     parser.add_argument(
         '--rail-side',

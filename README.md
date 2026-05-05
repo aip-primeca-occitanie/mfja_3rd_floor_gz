@@ -269,7 +269,7 @@ ros2 topic echo /room_315_left/sensors/switch_approach
 
 Common slot notes:
 
-- Right rail uses its own `slot 1..4` set from `rail_network.yaml`.
+- Right rail uses its own `slot 1..4` set from `rail_network_right.yaml`.
 - Left rail uses its own `slot 1..4` set from `rail_network_left.yaml`.
 - If a shuttle enters `FALLING`, use `RESET` on that rail's `control_cmd` topic.
 
@@ -1074,7 +1074,7 @@ ros2 topic list | grep room_315
 
 ## CSV Preprocessing and Validation
 
-Run these after changing CSV geometry or `rail_network.yaml`:
+Run these after changing CSV geometry or `rail_network_right.yaml`:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws

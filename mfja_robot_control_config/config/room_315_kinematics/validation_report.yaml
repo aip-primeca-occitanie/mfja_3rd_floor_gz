@@ -1,5 +1,5 @@
 phase: 3
-network_yaml: /home/tiago/ALI_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network.yaml
+network_yaml: /home/tiago/ALI_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml
 snap_tolerance_m: 0.05
 duplicate_tolerance_m: 1.0e-06
 tangent_warning_threshold_deg: 25.0
@@ -8,82 +8,62 @@ segment_count: 14
 switch_count: 4
 segment_lengths:
   A12E:
-    length_m: 2.22588231067807
-    point_count: 34
-    consecutive_duplicates_removed: 0
-  A12I:
-    length_m: 1.4166948255577352
-    point_count: 20
-    consecutive_duplicates_removed: 0
-  A14:
-    length_m: 0.2766020947482855
-    point_count: 10
-    consecutive_duplicates_removed: 0
-  A1G:
-    length_m: 0.18384933203748624
-    point_count: 13
-    consecutive_duplicates_removed: 0
-  A1S:
-    length_m: 0.24201714669472285
-    point_count: 8
-    consecutive_duplicates_removed: 0
-  A23:
-    length_m: 1.2877738985438538
-    point_count: 39
-    consecutive_duplicates_removed: 0
-  A2G:
-    length_m: 0.20564283045680168
-    point_count: 10
-    consecutive_duplicates_removed: 0
-  A2S:
-    length_m: 0.2601121413996901
-    point_count: 11
-    consecutive_duplicates_removed: 0
-  A34E:
     length_m: 2.2270073324363824
     point_count: 69
     consecutive_duplicates_removed: 0
-  A34I:
+  A12I:
     length_m: 1.4103438046031025
     point_count: 20
     consecutive_duplicates_removed: 0
-  A3G:
+  A14:
+    length_m: 1.2877738985438538
+    point_count: 39
+    consecutive_duplicates_removed: 0
+  A1G:
     length_m: 0.20445854643969716
     point_count: 13
     consecutive_duplicates_removed: 0
-  A3S:
+  A1S:
     length_m: 0.2592815247685303
     point_count: 10
     consecutive_duplicates_removed: 0
-  A4G:
+  A23:
+    length_m: 0.2766020947482855
+    point_count: 10
+    consecutive_duplicates_removed: 0
+  A2G:
     length_m: 0.18735489270450523
     point_count: 13
     consecutive_duplicates_removed: 0
-  A4S:
+  A2S:
     length_m: 0.24259217530428953
     point_count: 6
     consecutive_duplicates_removed: 0
+  A34E:
+    length_m: 2.22588231067807
+    point_count: 34
+    consecutive_duplicates_removed: 0
+  A34I:
+    length_m: 1.4166948255577352
+    point_count: 20
+    consecutive_duplicates_removed: 0
+  A3G:
+    length_m: 0.18384933203748624
+    point_count: 13
+    consecutive_duplicates_removed: 0
+  A3S:
+    length_m: 0.24201714669472285
+    point_count: 8
+    consecutive_duplicates_removed: 0
+  A4G:
+    length_m: 0.20564283045680168
+    point_count: 10
+    consecutive_duplicates_removed: 0
+  A4S:
+    length_m: 0.2601121413996901
+    point_count: 11
+    consecutive_duplicates_removed: 0
 endpoint_to_anchor_distances:
-  A1G:
-    start_node: A1_C
-    start_distance_m: 0.0
-    end_node: A1_G
-    end_distance_m: 0.0
-  A1S:
-    start_node: A1_C
-    start_distance_m: 0.0
-    end_node: A1_S
-    end_distance_m: 0.0007200670296404123
-  A2G:
-    start_node: A2_G
-    start_distance_m: 0.0
-    end_node: A2_C
-    end_distance_m: 0.0
-  A2S:
-    start_node: A2_S
-    start_distance_m: 0.0
-    end_node: A2_C
-    end_distance_m: 0.0
   A3G:
     start_node: A3_C
     start_distance_m: 0.0
@@ -93,7 +73,7 @@ endpoint_to_anchor_distances:
     start_node: A3_C
     start_distance_m: 0.0
     end_node: A3_S
-    end_distance_m: 0.0
+    end_distance_m: 0.0007200670296404123
   A4G:
     start_node: A4_G
     start_distance_m: 0.0
@@ -104,25 +84,25 @@ endpoint_to_anchor_distances:
     start_distance_m: 0.0
     end_node: A4_C
     end_distance_m: 0.0
-  A12E:
-    start_node: A1_G
+  A1G:
+    start_node: A1_C
     start_distance_m: 0.0
-    end_node: A2_G
+    end_node: A1_G
     end_distance_m: 0.0
-  A12I:
-    start_node: A1_S
-    start_distance_m: 0.0007200670310250874
-    end_node: A2_S
-    end_distance_m: 0.0
-  A14:
-    start_node: A4_C
+  A1S:
+    start_node: A1_C
     start_distance_m: 0.0
-    end_node: A1_C
+    end_node: A1_S
     end_distance_m: 0.0
-  A23:
-    start_node: A2_C
+  A2G:
+    start_node: A2_G
     start_distance_m: 0.0
-    end_node: A3_C
+    end_node: A2_C
+    end_distance_m: 0.0
+  A2S:
+    start_node: A2_S
+    start_distance_m: 0.0
+    end_node: A2_C
     end_distance_m: 0.0
   A34E:
     start_node: A3_G
@@ -131,117 +111,137 @@ endpoint_to_anchor_distances:
     end_distance_m: 0.0
   A34I:
     start_node: A3_S
-    start_distance_m: 0.0
+    start_distance_m: 0.0007200670310250874
     end_node: A4_S
     end_distance_m: 0.0
+  A23:
+    start_node: A2_C
+    start_distance_m: 0.0
+    end_node: A3_C
+    end_distance_m: 0.0
+  A14:
+    start_node: A4_C
+    start_distance_m: 0.0
+    end_node: A1_C
+    end_distance_m: 0.0
+  A12E:
+    start_node: A1_G
+    start_distance_m: 0.0
+    end_node: A2_G
+    end_distance_m: 0.0
+  A12I:
+    start_node: A1_S
+    start_distance_m: 0.0
+    end_node: A2_S
+    end_distance_m: 0.0
 transition_diagnostics:
-- from_segment: A14
-  to_segment: A1G
-  rule: switch_select
-  switch: A1
-  state: G
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 1.861144800672215
-- from_segment: A14
-  to_segment: A1S
-  rule: switch_select
-  switch: A1
-  state: S
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 8.216423319921665
-- from_segment: A1G
-  to_segment: A12E
-  rule: fixed
-  switch: null
-  state: null
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 1.5679007158269864
-- from_segment: A1S
-  to_segment: A12I
-  rule: fixed
-  switch: null
-  state: null
-  endpoint_gap_m: 0.0014401340606654998
-  tangent_mismatch_deg: 0.20652097163135197
-- from_segment: A12E
-  to_segment: A2G
-  rule: switch_guard
-  switch: A2
-  state: G
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 7.361127219755128
-- from_segment: A12I
-  to_segment: A2S
-  rule: switch_guard
-  switch: A2
-  state: S
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 1.5962963436625064
-- from_segment: A2G
-  to_segment: A23
-  rule: fixed
-  switch: null
-  state: null
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 6.212759186843236
-- from_segment: A2S
-  to_segment: A23
-  rule: fixed
-  switch: null
-  state: null
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 1.4181153729661726
 - from_segment: A23
   to_segment: A3G
   rule: switch_select
   switch: A3
   state: G
   endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 6.068449378063808
+  tangent_mismatch_deg: 1.861144800672215
 - from_segment: A23
   to_segment: A3S
   rule: switch_select
   switch: A3
   state: S
   endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 1.8502266723586844
+  tangent_mismatch_deg: 8.216423319921665
 - from_segment: A3G
   to_segment: A34E
   rule: fixed
   switch: null
   state: null
   endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 9.96771075094207
+  tangent_mismatch_deg: 1.5679007158269864
 - from_segment: A3S
   to_segment: A34I
   rule: fixed
   switch: null
   state: null
-  endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 2.195303874973139
+  endpoint_gap_m: 0.0014401340606654998
+  tangent_mismatch_deg: 0.20652097163135197
 - from_segment: A34E
   to_segment: A4G
   rule: switch_guard
   switch: A4
   state: G
   endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 17.055957377561622
+  tangent_mismatch_deg: 7.361127219755128
 - from_segment: A34I
   to_segment: A4S
   rule: switch_guard
   switch: A4
   state: S
   endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 3.9997418623838636
+  tangent_mismatch_deg: 1.5962963436625064
 - from_segment: A4G
   to_segment: A14
   rule: fixed
   switch: null
   state: null
   endpoint_gap_m: 0.0
-  tangent_mismatch_deg: 0.8401746198431718
+  tangent_mismatch_deg: 6.212759186843236
 - from_segment: A4S
   to_segment: A14
+  rule: fixed
+  switch: null
+  state: null
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 1.4181153729661726
+- from_segment: A14
+  to_segment: A1G
+  rule: switch_select
+  switch: A1
+  state: G
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 6.068449378063808
+- from_segment: A14
+  to_segment: A1S
+  rule: switch_select
+  switch: A1
+  state: S
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 1.8502266723586844
+- from_segment: A1G
+  to_segment: A12E
+  rule: fixed
+  switch: null
+  state: null
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 9.96771075094207
+- from_segment: A1S
+  to_segment: A12I
+  rule: fixed
+  switch: null
+  state: null
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 2.195303874973139
+- from_segment: A12E
+  to_segment: A2G
+  rule: switch_guard
+  switch: A2
+  state: G
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 17.055957377561622
+- from_segment: A12I
+  to_segment: A2S
+  rule: switch_guard
+  switch: A2
+  state: S
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 3.9997418623838636
+- from_segment: A2G
+  to_segment: A23
+  rule: fixed
+  switch: null
+  state: null
+  endpoint_gap_m: 0.0
+  tangent_mismatch_deg: 0.8401746198431718
+- from_segment: A2S
+  to_segment: A23
   rule: fixed
   switch: null
   state: null

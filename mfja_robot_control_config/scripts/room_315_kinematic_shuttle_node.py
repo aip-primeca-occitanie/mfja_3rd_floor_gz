@@ -41,7 +41,7 @@ def _default_network_path() -> Path:
             Path(get_package_share_directory('mfja_robot_control_config'))
             / 'config'
             / 'room_315_kinematics'
-            / 'rail_network.yaml'
+            / 'rail_network_right.yaml'
         )
     except Exception:
         return (
@@ -49,7 +49,7 @@ def _default_network_path() -> Path:
             / 'mfja_robot_control_config'
             / 'config'
             / 'room_315_kinematics'
-            / 'rail_network.yaml'
+            / 'rail_network_right.yaml'
         )
 
 
@@ -944,7 +944,7 @@ class Room315KinematicShuttleNode(Node):
             allowed[slot] = AllowedStartPose(*[float(value) for value in pose_values])
 
         if not allowed:
-            raise ValueError('rail_network.yaml start_slots must not be empty.')
+            raise ValueError('rail_network_right.yaml start_slots must not be empty.')
         return allowed
 
     def _load_stopper_configs(self) -> Dict[str, StopperConfig]:
