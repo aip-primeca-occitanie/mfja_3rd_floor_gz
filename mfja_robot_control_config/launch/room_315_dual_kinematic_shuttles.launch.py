@@ -9,6 +9,7 @@ def generate_launch_description():
     common_parameters = {
         'path_backend': LaunchConfiguration('path_backend'),
         'speed': LaunchConfiguration('speed'),
+        'start_enabled': LaunchConfiguration('start_enabled'),
         'gazebo_world_name': LaunchConfiguration('gazebo_world_name'),
         'enable_gazebo_set_pose': True,
         'enable_gazebo_spawn': True,
@@ -71,6 +72,12 @@ def generate_launch_description():
             'speed',
             default_value='0.2',
             description='Common shuttle speed for both rails in meters per second.',
+        ),
+        DeclareLaunchArgument(
+            'start_enabled',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Start shuttles already deployed and moving without waiting for ON.',
         ),
         DeclareLaunchArgument(
             'right_start_slot',

@@ -355,7 +355,7 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('path_backend', CUBIC_HERMITE_PATH_BACKEND)
         self.declare_parameter('arc_length_samples_per_edge', 16)
         self.declare_parameter('shuttle_count', 1)
-        self.declare_parameter('start_enabled', False)
+        self.declare_parameter('start_enabled', True)
         self.declare_parameter('start_slot', 2)
         self.declare_parameter('start_slots', '')
         self.declare_parameter('start_snap_tolerance_m', 0.25)

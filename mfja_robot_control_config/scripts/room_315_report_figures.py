@@ -65,7 +65,24 @@ class PoseTransform:
         )
 
 
-SENSOR_LABEL_OFFSETS = {
+RIGHT_POSE_TRANSFORM = PoseTransform()
+LEFT_POSE_TRANSFORM = PoseTransform(
+    a=-0.8938584503560025,
+    b=0.005001975618640809,
+    tx=-22.47198317328330,
+    c=0.001348127530438647,
+    d=1.255463611604302,
+    ty=0.4431777232193935,
+    scale_x=0.98,
+    scale_y=1.041,
+    origin_x=-10.6365565,
+    origin_y=-4.6995835,
+    offset_x=0.14,
+    offset_y=0.0,
+    z_offset=0.0,
+)
+
+RIGHT_SENSOR_LABEL_OFFSETS = {
     'DA1R': (-0.30, -0.10),
     'DA1GR': (-0.26, -0.12),
     'DA1SR': (-0.13, -0.18),
@@ -80,12 +97,12 @@ SENSOR_LABEL_OFFSETS = {
     'DA4SR': (-0.05, -0.11),
 }
 
-SENSOR_CONNECTION_STYLES = {
+RIGHT_SENSOR_CONNECTION_STYLES = {
     'DA3R': 'arc3,rad=-0.18',
     'DA3SR': 'arc3,rad=0.18',
 }
 
-STOPPER_LABEL_OFFSETS = {
+RIGHT_STOPPER_LABEL_OFFSETS = {
     ('A1', 'A14'): (-0.18, -0.10),
     ('A2', 'A12E'): (0.10, -0.12),
     ('A2', 'A12I'): (0.18, -0.10),
@@ -94,27 +111,166 @@ STOPPER_LABEL_OFFSETS = {
     ('A4', 'A34I'): (-0.16, 0.12),
 }
 
-STOPPER_CONNECTION_STYLES = {
+RIGHT_STOPPER_CONNECTION_STYLES = {
     ('A3', 'A23'): 'arc3,rad=-0.22',
 }
 
-SLOT_LABEL_OFFSETS = {
+RIGHT_SLOT_LABEL_OFFSETS = {
     '1': (-0.08, 0.12),
     '2': (0.07, 0.12),
     '3': (0.10, -0.12),
     '4': (-0.08, -0.12),
 }
 
-REPORT_MIRROR_X = True
+LEFT_SLOT_LABEL_OFFSETS = {
+    '1': (-0.10, 0.12),
+    '2': (0.10, 0.12),
+    '3': (-0.10, -0.12),
+    '4': (0.10, -0.12),
+}
 
-DISPLAY_SWITCH_LABELS = {}
+RIGHT_DISPLAY_SWITCH_LABELS = {
+    'A1': 'A4',
+    'A2': 'A3',
+    'A3': 'A2',
+    'A4': 'A1',
+}
+LEFT_DISPLAY_SWITCH_LABELS = {
+    'A1': 'A3',
+    'A2': 'A4',
+    'A3': 'A1',
+    'A4': 'A2',
+}
 
-DISPLAY_SLOT_LABELS = {
+RIGHT_DISPLAY_SLOT_LABELS = {
     '1': '3',
     '2': '4',
     '3': '1',
     '4': '2',
 }
+LEFT_DISPLAY_SLOT_LABELS = {}
+
+LEFT_PUBLIC_SEGMENT_NAME_MAP = {
+    'A1G': 'A3G',
+    'A1S': 'A3S',
+    'A2G': 'A4G',
+    'A2S': 'A4S',
+    'A3G': 'A1G',
+    'A3S': 'A1S',
+    'A4G': 'A2G',
+    'A4S': 'A2S',
+    'A12E': 'A34E',
+    'A12I': 'A34I',
+    'A14': 'A23',
+    'A23': 'A14',
+    'A34E': 'A12E',
+    'A34I': 'A12I',
+}
+
+RIGHT_DISPLAY_SEGMENT_LABELS = {
+    'A1G': 'A4G',
+    'A1S': 'A4S',
+    'A2G': 'A3G',
+    'A2S': 'A3S',
+    'A3G': 'A2G',
+    'A3S': 'A2S',
+    'A4G': 'A1G',
+    'A4S': 'A1S',
+    'A12E': 'A34E',
+    'A12I': 'A34I',
+    'A34E': 'A12E',
+    'A34I': 'A12I',
+}
+LEFT_DISPLAY_SEGMENT_LABELS = LEFT_PUBLIC_SEGMENT_NAME_MAP
+
+SENSOR_LABEL_OFFSETS = RIGHT_SENSOR_LABEL_OFFSETS
+SENSOR_CONNECTION_STYLES = RIGHT_SENSOR_CONNECTION_STYLES
+STOPPER_LABEL_OFFSETS = RIGHT_STOPPER_LABEL_OFFSETS
+STOPPER_CONNECTION_STYLES = RIGHT_STOPPER_CONNECTION_STYLES
+SLOT_LABEL_OFFSETS = RIGHT_SLOT_LABEL_OFFSETS
+DISPLAY_SWITCH_LABELS = RIGHT_DISPLAY_SWITCH_LABELS
+DISPLAY_SLOT_LABELS = RIGHT_DISPLAY_SLOT_LABELS
+DISPLAY_SEGMENT_LABELS = RIGHT_DISPLAY_SEGMENT_LABELS
+REPORT_MIRROR_X = True
+ACTIVE_RAIL_SIDE = 'right'
+ACTIVE_RAIL_LABEL = 'right'
+ACTIVE_SENSOR_SUFFIX = 'R'
+ACTIVE_SUMMARY_STEM = 'room_315_report_summary'
+ACTIVE_SENSOR_STEM = 'room_315_report_sensor_layout'
+ACTIVE_SUMMARY_TITLE = (
+    'Room 315 right-rail report figure: geometry, Hermite interpolation, and sensors'
+)
+ACTIVE_SENSOR_TITLE = 'Room 315 right-rail sensor and stopper layout'
+ACTIVE_GEOMETRY_PANEL_TITLE = 'A. Raw CSV points and cubic Hermite path'
+ACTIVE_SENSOR_PANEL_TITLE = 'B. Sensors, stoppers, and operational points'
+ACTIVE_SLOT_LEGEND_LABEL = 'Configured start slots'
+
+
+def _configure_report_style(rail_side: str) -> PoseTransform:
+    global SENSOR_LABEL_OFFSETS
+    global SENSOR_CONNECTION_STYLES
+    global STOPPER_LABEL_OFFSETS
+    global STOPPER_CONNECTION_STYLES
+    global SLOT_LABEL_OFFSETS
+    global DISPLAY_SWITCH_LABELS
+    global DISPLAY_SLOT_LABELS
+    global DISPLAY_SEGMENT_LABELS
+    global REPORT_MIRROR_X
+    global ACTIVE_RAIL_SIDE
+    global ACTIVE_RAIL_LABEL
+    global ACTIVE_SENSOR_SUFFIX
+    global ACTIVE_SUMMARY_STEM
+    global ACTIVE_SENSOR_STEM
+    global ACTIVE_SUMMARY_TITLE
+    global ACTIVE_SENSOR_TITLE
+    global ACTIVE_GEOMETRY_PANEL_TITLE
+    global ACTIVE_SENSOR_PANEL_TITLE
+    global ACTIVE_SLOT_LEGEND_LABEL
+
+    normalized_side = rail_side.strip().lower()
+    ACTIVE_RAIL_SIDE = normalized_side
+    ACTIVE_SLOT_LEGEND_LABEL = 'Configured start slots'
+    ACTIVE_GEOMETRY_PANEL_TITLE = 'A. Raw CSV points and cubic Hermite path'
+    ACTIVE_SENSOR_PANEL_TITLE = 'B. Sensors, stoppers, and operational points'
+
+    if normalized_side == 'left':
+        SENSOR_LABEL_OFFSETS = {}
+        SENSOR_CONNECTION_STYLES = {}
+        STOPPER_LABEL_OFFSETS = {}
+        STOPPER_CONNECTION_STYLES = {}
+        SLOT_LABEL_OFFSETS = LEFT_SLOT_LABEL_OFFSETS
+        DISPLAY_SWITCH_LABELS = LEFT_DISPLAY_SWITCH_LABELS
+        DISPLAY_SLOT_LABELS = LEFT_DISPLAY_SLOT_LABELS
+        DISPLAY_SEGMENT_LABELS = LEFT_DISPLAY_SEGMENT_LABELS
+        REPORT_MIRROR_X = False
+        ACTIVE_RAIL_LABEL = 'left'
+        ACTIVE_SENSOR_SUFFIX = 'L'
+        ACTIVE_SUMMARY_STEM = 'room_315_left_report_summary'
+        ACTIVE_SENSOR_STEM = 'room_315_left_report_sensor_layout'
+        ACTIVE_SUMMARY_TITLE = (
+            'Room 315 left-rail report figure: geometry, Hermite interpolation, and sensors'
+        )
+        ACTIVE_SENSOR_TITLE = 'Room 315 left-rail sensor and stopper layout'
+        return LEFT_POSE_TRANSFORM
+
+    SENSOR_LABEL_OFFSETS = RIGHT_SENSOR_LABEL_OFFSETS
+    SENSOR_CONNECTION_STYLES = RIGHT_SENSOR_CONNECTION_STYLES
+    STOPPER_LABEL_OFFSETS = RIGHT_STOPPER_LABEL_OFFSETS
+    STOPPER_CONNECTION_STYLES = RIGHT_STOPPER_CONNECTION_STYLES
+    SLOT_LABEL_OFFSETS = RIGHT_SLOT_LABEL_OFFSETS
+    DISPLAY_SWITCH_LABELS = RIGHT_DISPLAY_SWITCH_LABELS
+    DISPLAY_SLOT_LABELS = RIGHT_DISPLAY_SLOT_LABELS
+    DISPLAY_SEGMENT_LABELS = RIGHT_DISPLAY_SEGMENT_LABELS
+    REPORT_MIRROR_X = True
+    ACTIVE_RAIL_LABEL = 'right'
+    ACTIVE_SENSOR_SUFFIX = 'R'
+    ACTIVE_SUMMARY_STEM = 'room_315_report_summary'
+    ACTIVE_SENSOR_STEM = 'room_315_report_sensor_layout'
+    ACTIVE_SUMMARY_TITLE = (
+        'Room 315 right-rail report figure: geometry, Hermite interpolation, and sensors'
+    )
+    ACTIVE_SENSOR_TITLE = 'Room 315 right-rail sensor and stopper layout'
+    return RIGHT_POSE_TRANSFORM
 
 
 def _repo_root() -> Path:
@@ -129,6 +285,10 @@ def _default_network_path() -> Path:
         / 'room_315_kinematics'
         / 'rail_network.yaml'
     )
+
+
+def _default_left_network_path() -> Path:
+    return _default_network_path().with_name('rail_network_left.yaml')
 
 
 def _default_output_dir() -> Path:
@@ -153,6 +313,10 @@ def _display_slot_label(slot_name: str) -> str:
     return DISPLAY_SLOT_LABELS.get(slot_name, slot_name)
 
 
+def _display_dzi_label(slot_name: str) -> str:
+    return f'DZI{_display_slot_label(slot_name)}{ACTIVE_SENSOR_SUFFIX}'
+
+
 def _display_switch_label(switch_name: str) -> str:
     return DISPLAY_SWITCH_LABELS.get(switch_name, switch_name)
 
@@ -165,27 +329,37 @@ def _display_sensor_label(sensor_name: str) -> str:
     return f"{prefix}{_display_switch_label(f'A{index}')[1:]}{suffix}"
 
 
-def _display_stopper_label(stopper_name: str) -> str:
-    return stopper_name
-
-
-DISPLAY_STOPPER_LABELS = {
-    ('A1', 'A14'): 'A1',
-    ('A2', 'A12E'): 'A2E',
-    ('A2', 'A12I'): 'A2I',
-    ('A3', 'A23'): 'A3',
-    ('A4', 'A34E'): 'A4E',
-    ('A4', 'A34I'): 'A4I',
-}
-
-
 def _display_segment_label(segment_name: str) -> str:
+    explicit_label = DISPLAY_SEGMENT_LABELS.get(segment_name)
+    if explicit_label is not None:
+        return explicit_label
+    if ACTIVE_RAIL_SIDE == 'right':
+        return segment_name
     match = re.fullmatch(r'A([1-4]+)(.*)', segment_name)
     if not match:
         return segment_name
     digits, suffix = match.groups()
     mapped_digits = ''.join(_display_switch_label(f'A{digit}')[1:] for digit in digits)
     return f'A{mapped_digits}{suffix}'
+
+
+def _display_stopper_label(stopper_name: str, segment_name: str) -> str:
+    display_switch = _display_switch_label(stopper_name)
+    display_segment = _display_segment_label(segment_name)
+    if display_segment.endswith('E'):
+        return f'{display_switch}E'
+    if display_segment.endswith('I'):
+        return f'{display_switch}I'
+    return display_switch
+
+
+def _infer_rail_side(network_path: Path, requested_side: str) -> str:
+    normalized = requested_side.strip().lower()
+    if normalized in {'right', 'left'}:
+        return normalized
+    if 'left' in network_path.stem.lower():
+        return 'left'
+    return 'right'
 
 
 def _sample_segment_xy(
@@ -365,6 +539,39 @@ def _text_with_halo(axis, x: float, y: float, text: str, **kwargs) -> None:
     )
 
 
+def _default_sensor_label_offset(
+    sensor_x: float,
+    sensor_y: float,
+    bounds: tuple[float, float, float, float],
+    kind: str,
+    branch: str,
+) -> tuple[float, float]:
+    min_x, max_x, min_y, max_y = bounds
+    center_x = 0.5 * (min_x + max_x)
+    center_y = 0.5 * (min_y + max_y)
+    dx = 0.24 if sensor_x >= center_x else -0.24
+    if kind == 'switch_main':
+        dy = 0.14 if sensor_y >= center_y else -0.14
+    elif branch == 'G':
+        dy = 0.18 if sensor_y >= center_y else -0.18
+    else:
+        dy = -0.18 if sensor_y >= center_y else 0.18
+    return dx, dy
+
+
+def _default_stopper_label_offset(
+    x: float,
+    y: float,
+    bounds: tuple[float, float, float, float],
+) -> tuple[float, float]:
+    min_x, max_x, min_y, max_y = bounds
+    center_x = 0.5 * (min_x + max_x)
+    center_y = 0.5 * (min_y + max_y)
+    dx = 0.16 if x >= center_x else -0.16
+    dy = 0.12 if y >= center_y else -0.12
+    return dx, dy
+
+
 def _style_axis(
     axis,
     bounds: tuple[float, float, float, float],
@@ -537,7 +744,7 @@ def _plot_geometry_panel(
         reverse=REPORT_MIRROR_X,
     )
     _style_axis(axis, bounds, mirror_x=REPORT_MIRROR_X)
-    axis.set_title('A. Raw CSV points and cubic Hermite path', fontsize=14, weight='bold')
+    axis.set_title(ACTIVE_GEOMETRY_PANEL_TITLE, fontsize=14, weight='bold')
 
     legend_handles = [
         Line2D([0], [0], color=TRUNK_COLOR, lw=3, label='Shared trunk'),
@@ -552,7 +759,7 @@ def _plot_geometry_panel(
             markersize=5,
             label='Measured CSV points',
         ),
-        Line2D([0], [0], color='#2f4f9f', lw=2, label='Start slots'),
+        Line2D([0], [0], color='#2f4f9f', lw=2, label=ACTIVE_SLOT_LEGEND_LABEL),
     ]
     axis.legend(
         handles=legend_handles,
@@ -662,7 +869,7 @@ def _plot_sensor_panel(
                 axis,
                 slot_x + dx,
                 slot_y + dy,
-                f'slot {display_slot}\nDZI{display_slot}R',
+                f'slot {display_slot}\n{_display_dzi_label(slot)}',
                 fontsize=9,
                 weight='bold',
                 color=DZI_COLOR,
@@ -689,7 +896,10 @@ def _plot_sensor_panel(
             linewidths=0.9,
             zorder=5,
         )
-        offset_x, offset_y = SENSOR_LABEL_OFFSETS[sensor_name]
+        offset_x, offset_y = SENSOR_LABEL_OFFSETS.get(
+            sensor_name,
+            _default_sensor_label_offset(sensor_x, sensor_y, bounds, kind, branch),
+        )
         label = _display_sensor_label(sensor_name)
         if 'P' in aliases:
             label = f'{_display_sensor_label(sensor_name)}\n(alias {aliases[-1]})'
@@ -737,10 +947,14 @@ def _plot_sensor_panel(
             linewidths=0.9,
             zorder=5,
         )
-        dx, dy = STOPPER_LABEL_OFFSETS[(stopper_point['stopper'], stopper_point['segment'])]
-        display_stopper = DISPLAY_STOPPER_LABELS[
-            (stopper_point['stopper'], stopper_point['segment'])
-        ]
+        dx, dy = STOPPER_LABEL_OFFSETS.get(
+            (stopper_point['stopper'], stopper_point['segment']),
+            _default_stopper_label_offset(x, y, bounds),
+        )
+        display_stopper = _display_stopper_label(
+            stopper_point['stopper'],
+            stopper_point['segment'],
+        )
         stopper_label = f'STP {display_stopper}'
 
         axis.annotate(
@@ -773,15 +987,15 @@ def _plot_sensor_panel(
         )
 
     _style_axis(axis, bounds, padding_bottom=0.40, mirror_x=REPORT_MIRROR_X)
-    axis.set_title('B. Sensors, stoppers, and operational points', fontsize=14, weight='bold')
+    axis.set_title(ACTIVE_SENSOR_PANEL_TITLE, fontsize=14, weight='bold')
 
     legend_handles = [
-        Line2D([0], [0], marker='s', color='none', markerfacecolor=DZI_COLOR, markersize=8, label='DZI*R indexing sensor'),
-        Line2D([0], [0], marker='o', color='none', markerfacecolor=DA_MAIN_COLOR, markersize=8, label='DA*R main detector'),
-        Line2D([0], [0], marker='o', color='none', markerfacecolor=EXTERIOR_COLOR, markersize=8, label='DA*GR exterior branch'),
-        Line2D([0], [0], marker='o', color='none', markerfacecolor=INTERIOR_COLOR, markersize=8, label='DA*SR interior branch'),
+        Line2D([0], [0], marker='s', color='none', markerfacecolor=DZI_COLOR, markersize=8, label=f'DZI*{ACTIVE_SENSOR_SUFFIX} indexing sensor'),
+        Line2D([0], [0], marker='o', color='none', markerfacecolor=DA_MAIN_COLOR, markersize=8, label=f'DA*{ACTIVE_SENSOR_SUFFIX} main detector'),
+        Line2D([0], [0], marker='o', color='none', markerfacecolor=EXTERIOR_COLOR, markersize=8, label=f'DA*G{ACTIVE_SENSOR_SUFFIX} exterior branch'),
+        Line2D([0], [0], marker='o', color='none', markerfacecolor=INTERIOR_COLOR, markersize=8, label=f'DA*S{ACTIVE_SENSOR_SUFFIX} interior branch'),
         Line2D([0], [0], marker='D', color='none', markerfacecolor=STOPPER_COLOR, markersize=7, label='Stopper stop point'),
-        Line2D([0], [0], color='#2f4f9f', lw=2, label='Corrected start-slot numbering'),
+        Line2D([0], [0], color='#2f4f9f', lw=2, label=ACTIVE_SLOT_LEGEND_LABEL),
     ]
     axis.legend(
         handles=legend_handles,
@@ -829,6 +1043,12 @@ def parse_args() -> argparse.Namespace:
         help='Path to rail_network.yaml.',
     )
     parser.add_argument(
+        '--rail-side',
+        choices=['auto', 'right', 'left'],
+        default='auto',
+        help='Which rail naming and calibration preset to use.',
+    )
+    parser.add_argument(
         '--output-dir',
         type=Path,
         default=_default_output_dir(),
@@ -839,8 +1059,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    rail_side = _infer_rail_side(args.network, args.rail_side)
     network_config = _load_network_config(args.network)
-    transform = PoseTransform()
+    transform = _configure_report_style(rail_side)
     polyline_network = RailNetwork.from_yaml(
         args.network,
         path_backend=POLYLINE_PATH_BACKEND,
@@ -874,11 +1095,11 @@ def main() -> int:
         bounds,
     )
     summary_figure.suptitle(
-        'Room 315 shuttle report figure: geometry, Hermite interpolation, and right-rail sensors',
+        ACTIVE_SUMMARY_TITLE,
         fontsize=16,
         weight='bold',
     )
-    _save_figure(summary_figure, args.output_dir, 'room_315_report_summary')
+    _save_figure(summary_figure, args.output_dir, ACTIVE_SUMMARY_STEM)
     plt.close(summary_figure)
 
     sensor_figure, sensor_axis = plt.subplots(
@@ -895,14 +1116,14 @@ def main() -> int:
         bounds,
     )
     sensor_axis.set_title(
-        'Room 315 right-rail sensor and stopper layout',
+        ACTIVE_SENSOR_TITLE,
         fontsize=16,
         weight='bold',
     )
-    _save_figure(sensor_figure, args.output_dir, 'room_315_report_sensor_layout')
+    _save_figure(sensor_figure, args.output_dir, ACTIVE_SENSOR_STEM)
     plt.close(sensor_figure)
 
-    print(f'Wrote report figures to: {args.output_dir}')
+    print(f'Wrote {ACTIVE_RAIL_LABEL}-rail report figures to: {args.output_dir}')
     return 0
 
 
