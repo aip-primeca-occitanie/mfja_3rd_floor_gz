@@ -947,14 +947,13 @@ Supported states:
 - `EXTERIOR` or `E`
 - `INTERIOR` or `I`
 
-Switch selectors:
+Switch selectors for normal operation:
 
 - Public station labels: `A1`, `A2`, `A3`, `A4`
-- Visual selectors: `A1R`, `A1L`, `A2R`, `A2L`, `A3R`, `A3L`, `A4R`, `A4L`
-- Groups: `ALL`, `RIGHT`, `LEFT`
+- Group selector: `ALL`
 
-Public switch labels are `A1`, `A2`, `A3`, and `A4`. For normal operation,
-prefer the public labels on the rail-specific topic.
+The rail-specific topic determines whether the command applies to the right or
+left rail, so prefer the public labels `A1`, `A2`, `A3`, and `A4`.
 
 Set all switches to the exterior branch:
 
@@ -983,16 +982,6 @@ ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 
 ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A3=INTERIOR'}"
 ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A4=EXTERIOR'}"
 ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A4=INTERIOR'}"
-```
-
-Use explicit visual selectors only when you intentionally want the right/left
-selector form on the matching rail topic:
-
-```bash
-ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1R=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1R=INTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1L=EXTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_states std_msgs/msg/String "{data: 'A1L=INTERIOR'}"
 ```
 
 Send multiple updates in one command:

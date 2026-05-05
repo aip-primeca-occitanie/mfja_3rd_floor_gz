@@ -181,9 +181,9 @@ Start slots are numbered as follows:
 
 ## Switch Commands
 
-Switch states are controlled through `/room_315_right/switch_states`. Use
-`EXTERIOR` / `INTERIOR` or the short `E` / `I` forms. Visual switch selectors
-stay `A1R` / `A1L` through `A4R` / `A4L`.
+Switch states are controlled through the rail-specific switch topic, for example
+`/room_315_right/switch_states`. Use public station labels `A1` through `A4`
+with `EXTERIOR` / `INTERIOR` or the short `E` / `I` forms.
 
 Example:
 
