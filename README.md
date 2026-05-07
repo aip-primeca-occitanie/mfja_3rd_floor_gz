@@ -23,6 +23,7 @@ repository root is not a ROS 2 package. Do not add root-level `package.xml`,
 directories. Package-specific files must live inside the package that owns them.
 
 - `mfja_3rd_floor_description/`: models, meshes, worlds, and URDF/SDF assets.
+- `mfja_rail_interfaces/`: typed ROS 2 message interfaces for Room 315 rail commands, states, and sensors.
 - `mfja_robot_control_config/`: launch base, bridge config, shuttle/switch scripts, and Room 315 kinematic config.
 - `mfja_room_315_bringup/`: launch entry point for Room 315 only.
 - `mfja_3rd_floor_bringup/`: launch entry point for the full floor.
@@ -46,12 +47,14 @@ cd /home/tiago/ALI_ros2_ws
 source /opt/ros/jazzy/setup.bash
 
 colcon build --base-paths \
+  src/mfja_3rd_floor_gz/mfja_rail_interfaces \
   src/mfja_3rd_floor_gz/mfja_robot_control_config \
   src/mfja_3rd_floor_gz/mfja_3rd_floor_description \
   src/mfja_3rd_floor_gz/mfja_room_315_bringup \
   src/mfja_3rd_floor_gz/mfja_3rd_floor_bringup \
   src/mfja_3rd_floor_gz/mfja_3rd_floor_gz \
   --packages-select \
+  mfja_rail_interfaces \
   mfja_robot_control_config \
   mfja_3rd_floor_description \
   mfja_room_315_bringup \
@@ -110,7 +113,14 @@ Generated outputs:
 
 ## Room 315 Only
 
-Terminal 1 - start Gazebo:
+This launch starts Gazebo and, by default, also starts the Room 315 right and
+left rail nodes. That means the YAML devices, visual markers, typed
+command/state topics, and `/room_315/rails/{right,left}/...` namespaces are
+available from the same launch. Initial shuttle count defaults to `0`, so no
+shuttle moves until you add one or request startup shuttles with launch
+arguments.
+
+Terminal 1 - start Room 315 with the rail stack:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws
@@ -120,10 +130,50 @@ source install/setup.bash
 ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
-  gui:=true
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true
 ```
 
-Terminal 2 - start one right-rail kinematic shuttle directly:
+Start Room 315 with one right shuttle and one left shuttle visible but waiting
+for your `ON` command:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_shuttles_start_deployed:=true \
+  room315_shuttles_start_enabled:=false
+```
+
+Start Room 315 with one right shuttle and one left shuttle moving immediately:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_shuttles_start_enabled:=true
+```
+
+To start Gazebo without the rail shuttle nodes:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=false
+```
+
+Optional advanced mode - start one right-rail kinematic shuttle directly after
+launching Gazebo with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws
@@ -141,7 +191,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
   -p gazebo_set_pose_rate_hz:=10.0
 ```
 
-Terminal 2 - start one left-rail kinematic shuttle directly:
+Optional advanced mode - start one left-rail kinematic shuttle directly:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws
@@ -159,7 +209,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
   -p gazebo_set_pose_rate_hz:=10.0
 ```
 
-Terminal 2 - start the ready-made dual launch:
+Optional advanced mode - start the ready-made dual launch separately:
 
 Right only:
 
@@ -217,64 +267,109 @@ source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
 
-Both shuttles start hidden by default. Send `ON` to deploy the selected shuttle
-and start its motion.
+In the integrated room-only and full-floor launches, the rail nodes start by
+default but `room315_right_shuttle_count:=0` and
+`room315_left_shuttle_count:=0`, so no shuttle is created at startup. Add a
+shuttle on `/room_315/rails/{right,left}/shuttles/add_command` to create and
+start one while Gazebo is already running. If you start initial shuttles with a
+nonzero count, use `room315_shuttles_start_enabled:=false` to make them wait for
+`ON`, or `room315_shuttles_start_enabled:=true` to make them move immediately.
 
 Default first entity names:
 
 - Right rail: `room315_right_shuttle_1`
 - Left rail: `room315_left_shuttle_1`
 
-Main per-rail topics:
+Main per-rail topics use `mfja_rail_interfaces` messages and the Phase 5 rail
+subsystem namespace:
 
-| Purpose | Right rail | Left rail |
+| Purpose | Right rail | Message |
 | --- | --- | --- |
-| Shuttle state | `/room_315_right/shuttle/state` | `/room_315_left/shuttle/state` |
-| Shuttle control | `/room_315_right/shuttle/control_cmd` | `/room_315_left/shuttle/control_cmd` |
-| Add shuttle | `/room_315_right/shuttle/add_cmd` | `/room_315_left/shuttle/add_cmd` |
-| Switch commands | `/room_315_right/switch_cmd` | `/room_315_left/switch_cmd` |
-| Stopper commands | `/room_315_right/stopper_cmd` | `/room_315_left/stopper_cmd` |
-| Position sensors | `/room_315_right/sensors/position` | `/room_315_left/sensors/position` |
-| Approach sensors | `/room_315_right/sensors/switch_approach` | `/room_315_left/sensors/switch_approach` |
+| Shuttle state | `/room_315/rails/right/shuttles/state` | `mfja_rail_interfaces/msg/ShuttleState` |
+| Shuttle control | `/room_315/rails/right/shuttles/command` | `mfja_rail_interfaces/msg/ShuttleCommand` |
+| Add shuttle | `/room_315/rails/right/shuttles/add_command` | `mfja_rail_interfaces/msg/ShuttleCommand` |
+| Switch commands | `/room_315/rails/right/switches/command` | `mfja_rail_interfaces/msg/SwitchCommand` |
+| Switch state | `/room_315/rails/right/switches/state` | `mfja_rail_interfaces/msg/SwitchState` |
+| Stopper commands | `/room_315/rails/right/stoppers/command` | `mfja_rail_interfaces/msg/StopperCommand` |
+| Stopper state | `/room_315/rails/right/stoppers/state` | `mfja_rail_interfaces/msg/StopperState` |
+| Position sensors | `/room_315/rails/right/sensors/position_feedback` | `mfja_rail_interfaces/msg/SensorFeedback` |
+| Approach sensors | `/room_315/rails/right/sensors/feedback` | `mfja_rail_interfaces/msg/SensorFeedback` |
+
+Use the same names under `/room_315/rails/left/...` for the left rail.
 
 Right rail basic commands:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_1=ON'}"
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_1=OFF'}"
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_1=RESET'}"
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_1=REMOVE'}"
-ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_right_shuttle_1 slot=2 speed=0.2'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
-ros2 topic echo /room_315_right/shuttle/state
-ros2 topic echo /room_315_right/sensors/position
-ros2 topic echo /room_315_right/sensors/switch_approach
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'ON'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'RESET'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_5', command: 'ADD', start_slot: '2', speed: 0.2}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
+ros2 topic echo /room_315/rails/right/shuttles/state mfja_rail_interfaces/msg/ShuttleState
+ros2 topic echo /room_315/rails/right/sensors/position_feedback mfja_rail_interfaces/msg/SensorFeedback
+ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
 Left rail basic commands:
 
 ```bash
-ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=ON'}"
-ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=OFF'}"
-ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=RESET'}"
-ros2 topic pub --once /room_315_left/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_left_shuttle_1=REMOVE'}"
-ros2 topic pub --once /room_315_left/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_left_shuttle_1 slot=1 speed=0.2'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
-ros2 topic echo /room_315_left/shuttle/state
-ros2 topic echo /room_315_left/sensors/position
-ros2 topic echo /room_315_left/sensors/switch_approach
+ros2 topic pub --once /room_315/rails/left/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_left_shuttle_1', command: 'ON'}"
+ros2 topic pub --once /room_315/rails/left/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_left_shuttle_2', command: 'ADD', start_slot: '1', speed: 0.2}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
+ros2 topic echo /room_315/rails/left/shuttles/state mfja_rail_interfaces/msg/ShuttleState
+ros2 topic echo /room_315/rails/left/sensors/position_feedback mfja_rail_interfaces/msg/SensorFeedback
+ros2 topic echo /room_315/rails/left/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
 Common slot notes:
 
 - Right rail uses its own `slot 1..4` set from `rail_network_right.yaml`.
 - Left rail uses its own `slot 1..4` set from `rail_network_left.yaml`.
-- If a shuttle enters `FALLING`, use `RESET` on that rail's `control_cmd` topic.
+- If a shuttle enters `FALLING`, use `RESET` on that rail's `shuttles/command` topic.
 
-Unless a later example explicitly uses `/room_315_left/...`, the remaining
+Unless a later example explicitly uses `/room_315/rails/left/...`, the remaining
 legacy examples in this README refer to the right rail.
+
+## Room 315 Typed Interfaces
+
+Phase 4 adds the `mfja_rail_interfaces` package and migrates the Room 315
+rail/shuttle topics away from raw `std_msgs/msg/String` payloads. Phase 5 moves
+the canonical topics under `/room_315/rails/{right,left}/...`.
+
+Messages:
+
+- `NamedState`: `name`, `state`.
+- `SwitchCommand` / `SwitchState`: arrays of `NamedState` switches.
+- `StopperCommand` / `StopperState`: arrays of `NamedState` stoppers.
+- `ShuttleCommand`: `name`, `command`, optional `start_slot`, optional `speed`.
+- `ShuttleState`: one shuttle pose/state sample.
+- `SensorFeedback`: array of `SensorReading` entries for variable sensor counts.
+
+Typed examples:
+
+```bash
+ros2 interface show mfja_rail_interfaces/msg/SwitchCommand
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+ros2 topic echo /room_315/rails/right/switches/state mfja_rail_interfaces/msg/SwitchState
+
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
+ros2 topic echo /room_315/rails/right/stoppers/state mfja_rail_interfaces/msg/StopperState
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'ON'}"
+ros2 topic echo /room_315/rails/right/shuttles/state mfja_rail_interfaces/msg/ShuttleState
+
+ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
+ros2 topic echo /room_315/rails/right/sensors/position_feedback mfja_rail_interfaces/msg/SensorFeedback
+```
+
+Deprecated aliases are kept for migration. Old typed Phase 4 topics such as
+`/room_315_right/switch_cmd`, `/room_315_right/switch_state`,
+`/room_315_right/shuttle/control_cmd`, and `/room_315_right/shuttle/state`
+still work. The older `std_msgs/msg/String` command aliases also remain:
+`/room_315_right/switch_states`, `/room_315_right/stopper_states`,
+`/room_315_right/shuttle/control_cmd_string`, and
+`/room_315_right/shuttle/add_cmd_string`. JSON state mirrors remain on the old
+`*_json` topics such as `/room_315_right/shuttle/state_json`.
 
 ## Full Floor
 
@@ -291,7 +386,7 @@ That is why the shuttle node must use:
 -p gazebo_world_name:=mfja_3rd_floor
 ```
 
-Terminal 1 - start the full floor:
+Terminal 1 - start the full floor with the Room 315 rail stack:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws
@@ -301,10 +396,25 @@ source install/setup.bash
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=none \
   start_paused:=false \
-  gui:=true
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true
 ```
 
-Terminal 2 - start one kinematic shuttle on the full floor:
+The same startup shuttle controls work on the full floor:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_shuttles_start_enabled:=false
+```
+
+Optional advanced mode - start one kinematic shuttle on the full floor after
+launching with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
 cd /home/tiago/ALI_ros2_ws
@@ -634,25 +744,25 @@ shuttles can be added later after a start slot becomes free.
 After Gazebo and the shuttle node are running, publish to:
 
 ```text
-/room_315_right/shuttle/add_cmd
+/room_315/rails/right/shuttles/add_command
 ```
 
 Add a shuttle at slot 3:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: 'slot=3'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{command: 'ADD', start_slot: '3'}"
 ```
 
 Add a shuttle with a specific entity name and speed:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_right_shuttle_5 slot=3 speed=0.2'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_5', command: 'ADD', start_slot: '3', speed: 0.2}"
 ```
 
 Short form:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: '4'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{command: 'ADD', start_slot: '4'}"
 ```
 
 Notes:
@@ -669,10 +779,10 @@ Each shuttle can be independently enabled, disabled, reset to its start slot,
 or removed from Gazebo through:
 
 ```text
-/room_315_right/shuttle/control_cmd
+/room_315/rails/right/shuttles/command
 ```
 
-For the left rail, use the same commands on `/room_315_left/shuttle/control_cmd`
+For the left rail, use the same commands on `/room_315/rails/left/shuttles/command`
 with entity names such as `room315_left_shuttle_1`.
 
 Disabling a shuttle keeps the model in place and stops its kinematic motion.
@@ -684,46 +794,46 @@ unregisters it from the node.
 Turn one shuttle off:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=OFF'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_2', command: 'OFF'}"
 ```
 
 Turn it back on:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=ON'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_2', command: 'ON'}"
 ```
 
 Reset a shuttle after it entered `FALLING`:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=RESET'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_2', command: 'RESET'}"
 ```
 
 Remove a shuttle completely from the simulation:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'room315_right_shuttle_2=REMOVE'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_2', command: 'REMOVE'}"
 ```
 
 Add the same shuttle back after removal:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_right_shuttle_2 slot=2'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_2', command: 'ADD', start_slot: '2'}"
 ```
 
 Control all shuttles at once:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'ALL=OFF'}"
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'ALL=ON'}"
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: 'ALL=RESET'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'ALL', command: 'OFF'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'ALL', command: 'ON'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'ALL', command: 'RESET'}"
 ```
 
-JSON form:
+Deprecated String form:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: '{\"entity\":\"room315_right_shuttle_3\",\"enabled\":\"OFF\"}'}"
-ros2 topic pub --once /room_315_right/shuttle/control_cmd std_msgs/msg/String "{data: '{\"entity\":\"room315_right_shuttle_3\",\"action\":\"RESET\"}'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd_string std_msgs/msg/String "{data: '{\"entity\":\"room315_right_shuttle_3\",\"enabled\":\"OFF\"}'}"
+ros2 topic pub --once /room_315_right/shuttle/control_cmd_string std_msgs/msg/String "{data: '{\"entity\":\"room315_right_shuttle_3\",\"action\":\"RESET\"}'}"
 ```
 
 ## Stopper Control and Sensor Workflow
@@ -745,43 +855,44 @@ Public stopper labels:
 Stopper commands use:
 
 ```text
-/room_315_right/stopper_cmd
+/room_315/rails/right/stoppers/command
 ```
 
 Close one stopper:
 
 ```bash
-ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'A1=1'}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
 ```
 
 Open one stopper:
 
 ```bash
-ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'A1=0'}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '0'}]}"
 ```
 
 Close or open all stoppers:
 
 ```bash
-ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'ALL=1'}"
-ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'ALL=0'}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'ALL', state: '1'}]}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'ALL', state: '0'}]}"
 ```
 
 The educational sensor workflow is exposed on:
 
 ```text
-/room_315_right/sensors/switch_approach
+/room_315/rails/right/sensors/feedback
 ```
 
 Echo the sensor events:
 
 ```bash
-ros2 topic echo /room_315_right/sensors/switch_approach
+ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
-Each message is JSON text. The `sensors` field is a list because multiple
-shuttles can trigger approach sensors at the same time. To know which shuttle an
-event belongs to, read the `entity_name` field in that event.
+Each message contains `SensorReading[] readings` because multiple shuttles can
+trigger approach sensors at the same time. To know which shuttle an event
+belongs to, read the `shuttle_name` field in that reading. A deprecated JSON
+mirror remains available on `/room_315_right/sensors/switch_approach_json`.
 
 Example single-shuttle event:
 
@@ -848,16 +959,16 @@ The intended manual workflow is:
 Example sequence:
 
 ```bash
-ros2 topic echo /room_315_right/sensors/switch_approach
-ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'A1=1'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=INTERIOR'}"
-ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'A1=0'}"
+ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '0'}]}"
 ```
 
 Virtual position detectors are published separately on:
 
 ```text
-/room_315_right/sensors/position
+/room_315/rails/right/sensors/position_feedback
 ```
 
 These detector names follow the same public `A1` to `A4` structure already used
@@ -875,15 +986,15 @@ for switches and stoppers:
 Echo the position detectors:
 
 ```bash
-ros2 topic echo /room_315_right/sensors/position
+ros2 topic echo /room_315/rails/right/sensors/position_feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
 Typical manual checks:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/add_cmd std_msgs/msg/String "{data: 'entity=room315_right_shuttle_1 slot=1 speed=0.05'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'ADD', start_slot: '1', speed: 0.05}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
 ```
 
 Expected detector families:
@@ -938,8 +1049,8 @@ You usually do not need to pass these parameters, but they can be overridden:
 Each rail has its own switch-command topic:
 
 ```text
-/room_315_right/switch_cmd
-/room_315_left/switch_cmd
+/room_315/rails/right/switches/command
+/room_315/rails/left/switches/command
 ```
 
 Supported states:
@@ -958,41 +1069,35 @@ left rail, so prefer the public labels `A1`, `A2`, `A3`, and `A4`.
 Set all switches to the exterior branch:
 
 ```bash
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'ALL=EXTERIOR'}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
 ```
 
 Set all switches to the interior branch:
 
 ```bash
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'ALL=INTERIOR'}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
 ```
 
 Switch one station on either rail:
 
 ```bash
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=INTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'A1=EXTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'A1=INTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A2=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A2=INTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A3=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A3=INTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A4=EXTERIOR'}"
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A4=INTERIOR'}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
 ```
 
 Send multiple updates in one command:
 
 ```bash
-ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=INTERIOR A2=EXTERIOR A3=INTERIOR A4=EXTERIOR'}"
-ros2 topic pub --once /room_315_left/switch_cmd std_msgs/msg/String "{data: 'A1=INTERIOR A2=EXTERIOR A3=INTERIOR A4=EXTERIOR'}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'EXTERIOR'}, {name: 'A3', state: 'INTERIOR'}, {name: 'A4', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'EXTERIOR'}, {name: 'A3', state: 'INTERIOR'}, {name: 'A4', state: 'EXTERIOR'}]}"
 ```
 
-Prefer the rail-specific command topics `/room_315_right/switch_cmd` or
-`/room_315_left/switch_cmd`. The legacy `/room_315_right/switch_states` and
+Prefer the rail-specific command topics `/room_315/rails/right/switches/command` or
+`/room_315/rails/left/switches/command`. The legacy `/room_315_right/switch_states` and
 `/room_315_left/switch_states` topics are still accepted as deprecated command
 aliases. Route logic and Gazebo switch visuals update only when the delayed
 actual switch state is applied.
@@ -1012,17 +1117,17 @@ The current CSV files are already calibrated, so offset and scale should normall
 be `1.0` and `0.0`. For runtime testing, publish to:
 
 ```text
-/room_315_right/shuttle/pose_offset_cmd
+/room_315/rails/right/shuttles/pose_offset_command
 ```
 
 Examples:
 
 ```bash
-ros2 topic pub --once /room_315_right/shuttle/pose_offset_cmd std_msgs/msg/String "{data: 'dx=0.01'}"
-ros2 topic pub --once /room_315_right/shuttle/pose_offset_cmd std_msgs/msg/String "{data: 'dy=-0.02'}"
-ros2 topic pub --once /room_315_right/shuttle/pose_offset_cmd std_msgs/msg/String "{data: 'x=0.0 y=0.0 z=0.0'}"
-ros2 topic pub --once /room_315_right/shuttle/pose_offset_cmd std_msgs/msg/String "{data: 'sx=1.0 sy=1.0'}"
-ros2 topic pub --once /room_315_right/shuttle/pose_offset_cmd std_msgs/msg/String "{data: 'reset'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/pose_offset_command std_msgs/msg/String "{data: 'dx=0.01'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/pose_offset_command std_msgs/msg/String "{data: 'dy=-0.02'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/pose_offset_command std_msgs/msg/String "{data: 'x=0.0 y=0.0 z=0.0'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/pose_offset_command std_msgs/msg/String "{data: 'sx=1.0 sy=1.0'}"
+ros2 topic pub --once /room_315/rails/right/shuttles/pose_offset_command std_msgs/msg/String "{data: 'reset'}"
 ```
 
 ## State and Debug Topics
@@ -1030,25 +1135,25 @@ ros2 topic pub --once /room_315_right/shuttle/pose_offset_cmd std_msgs/msg/Strin
 State topic:
 
 ```bash
-ros2 topic echo /room_315_right/shuttle/state --once
+ros2 topic echo /room_315/rails/right/shuttles/state --once
 ```
 
 Approach sensor events:
 
 ```bash
-ros2 topic echo /room_315_right/sensors/switch_approach --once
+ros2 topic echo /room_315/rails/right/sensors/feedback --once
 ```
 
 First shuttle pose:
 
 ```bash
-ros2 topic echo /room_315_right/shuttle/pose_cmd --once
+ros2 topic echo /room_315/rails/right/shuttles/pose_cmd --once
 ```
 
 Specific shuttle pose:
 
 ```bash
-ros2 topic echo /room_315_right/shuttles/room315_right_shuttle_3/pose_cmd --once
+ros2 topic echo /room_315/rails/right/shuttles/room315_right_shuttle_3/pose_cmd --once
 ```
 
 Visual switch state:
@@ -1108,7 +1213,9 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 | `enable_gazebo_spawn` | `true` | Allows runtime spawning of shuttles beyond the preloaded models. |
 | `start_slot` | `2` | Start slot for a single shuttle. |
 | `start_slots` | empty | Comma-separated start slots for multiple shuttles, for example `1,2,3,4`. |
-| `shuttle_count` | `1` | Initial shuttle count. |
+| `shuttle_count` | `1` | Initial shuttle count for the node. The integrated room/full-floor launches pass `0` by default. |
+| `start_deployed` | `true` | If `true`, initial shuttles appear on their slots even when they are waiting. |
+| `start_enabled` | `false` | If `true`, initial shuttles start moving immediately. If `false`, they wait for an `ON` command. |
 | `gazebo_entity_name` | `room315_right_shuttle_1` | Gazebo entity name for a single shuttle on the right rail. The left rail default is `room315_left_shuttle_1`. |
 | `gazebo_entity_names` | empty | Comma-separated names for multiple shuttles. |
 | `preloaded_shuttle_count` | `4` | Number of shuttle models already present in the world on the right rail. The left rail currently preloads `1`. |
@@ -1121,18 +1228,26 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 | `arc_length_samples_per_edge` | `16` | Sub-samples per CSV edge used to parameterize the continuous path by arc length. |
 | `enable_collision_avoidance` | `true` | Stop before center-distance collision. |
 | `shuttle_collision_distance_m` | `0.33` | Minimum allowed center distance between shuttles. |
-| `switch_command_topic` | `/room_315_right/switch_cmd` | Switch command topic for the right rail. The left rail default is `/room_315_left/switch_cmd`. |
-| `switch_state_topic` | `/room_315_right/switch_state` | Actual delayed switch state topic for the right rail. The left rail default is `/room_315_left/switch_state`. |
-| `deprecated_switch_command_topic` | `/room_315_right/switch_states` | Deprecated switch command alias for backward compatibility. |
-| `stopper_command_topic` | `/room_315_right/stopper_cmd` | Independent binary stopper command topic for the right rail. The left rail default is `/room_315_left/stopper_cmd`. |
-| `stopper_state_topic` | `/room_315_right/stopper_state` | Actual delayed stopper state topic for the right rail. The left rail default is `/room_315_left/stopper_state`. |
-| `deprecated_stopper_command_topic` | `/room_315_right/stopper_states` | Deprecated stopper command alias for backward compatibility. |
-| `sensor_state_topic` | `/room_315_right/sensors/switch_approach` | Approach-event topic for the right rail. The left rail default is `/room_315_left/sensors/switch_approach`. |
-| `position_sensor_state_topic` | `/room_315_right/sensors/position` | Position-detector topic for `DZI*R` and `DA*R` on the right rail. The left rail default is `/room_315_left/sensors/position` for `DZI*L` and `DA*L`. |
-| `add_shuttle_command_topic` | `/room_315_right/shuttle/add_cmd` | Runtime shuttle add command topic for the right rail. The left rail default is `/room_315_left/shuttle/add_cmd`. |
-| `shuttle_control_command_topic` | `/room_315_right/shuttle/control_cmd` | Per-shuttle ON/OFF/RESET/REMOVE control topic for the right rail. The left rail default is `/room_315_left/shuttle/control_cmd`. |
-| `state_topic` | `/room_315_right/shuttle/state` | Combined shuttle state topic for the right rail. The left rail default is `/room_315_left/shuttle/state`. |
-| `pose_offset_command_topic` | `/room_315_right/shuttle/pose_offset_cmd` | Runtime pose calibration topic for the right rail. The left rail default is `/room_315_left/shuttle/pose_offset_cmd`. |
+| `switch_command_topic` | `/room_315/rails/right/switches/command` | Switch command topic for the right rail. The left rail default is `/room_315/rails/left/switches/command`. |
+| `switch_state_topic` | `/room_315/rails/right/switches/state` | Actual delayed switch state topic for the right rail. The left rail default is `/room_315/rails/left/switches/state`. |
+| `deprecated_switch_command_topic` | `/room_315_right/switch_states` | Deprecated String switch command alias for backward compatibility. |
+| `deprecated_switch_typed_command_topic` | `/room_315_right/switch_cmd` | Deprecated typed switch command alias from Phase 4. |
+| `deprecated_switch_state_topic` | `/room_315_right/switch_state` | Deprecated typed switch state alias from Phase 4. |
+| `stopper_command_topic` | `/room_315/rails/right/stoppers/command` | Independent binary stopper command topic for the right rail. The left rail default is `/room_315/rails/left/stoppers/command`. |
+| `stopper_state_topic` | `/room_315/rails/right/stoppers/state` | Actual delayed stopper state topic for the right rail. The left rail default is `/room_315/rails/left/stoppers/state`. |
+| `deprecated_stopper_command_topic` | `/room_315_right/stopper_states` | Deprecated String stopper command alias for backward compatibility. |
+| `deprecated_stopper_typed_command_topic` | `/room_315_right/stopper_cmd` | Deprecated typed stopper command alias from Phase 4. |
+| `deprecated_stopper_state_topic` | `/room_315_right/stopper_state` | Deprecated typed stopper state alias from Phase 4. |
+| `sensor_state_topic` | `/room_315/rails/right/sensors/feedback` | Approach-event topic for the right rail. The left rail default is `/room_315/rails/left/sensors/feedback`. |
+| `position_sensor_state_topic` | `/room_315/rails/right/sensors/position_feedback` | Position-detector topic for `DZI*R` and `DA*R` on the right rail. The left rail default is `/room_315/rails/left/sensors/position_feedback` for `DZI*L` and `DA*L`. |
+| `add_shuttle_command_topic` | `/room_315/rails/right/shuttles/add_command` | Runtime shuttle add command topic for the right rail. The left rail default is `/room_315/rails/left/shuttles/add_command`. |
+| `deprecated_add_shuttle_typed_command_topic` | `/room_315_right/shuttle/add_cmd` | Deprecated typed add-shuttle command alias from Phase 4. |
+| `shuttle_control_command_topic` | `/room_315/rails/right/shuttles/command` | Per-shuttle ON/OFF/RESET/REMOVE control topic for the right rail. The left rail default is `/room_315/rails/left/shuttles/command`. |
+| `deprecated_shuttle_control_typed_command_topic` | `/room_315_right/shuttle/control_cmd` | Deprecated typed shuttle command alias from Phase 4. |
+| `state_topic` | `/room_315/rails/right/shuttles/state` | Combined shuttle state topic for the right rail. The left rail default is `/room_315/rails/left/shuttles/state`. |
+| `deprecated_shuttle_state_topic` | `/room_315_right/shuttle/state` | Deprecated typed shuttle state alias from Phase 4. |
+| `pose_offset_command_topic` | `/room_315/rails/right/shuttles/pose_offset_command` | Runtime pose calibration topic for the right rail. The left rail default is `/room_315/rails/left/shuttles/pose_offset_command`. |
+| `deprecated_pose_offset_command_topic` | `/room_315_right/shuttle/pose_offset_cmd` | Deprecated pose calibration command alias from earlier phases. |
 | `switch_motion_delay_s` | `0.3` | Delay before requested switch state becomes actual and the visible Gazebo switch model moves. |
 | `stopper_motion_delay_s` | `0.1` | Delay before requested stopper state becomes actual. |
 | `publish_visual_switch_commands` | `true` | Move the visible Gazebo switch models when delayed actual switch states are applied. |
@@ -1148,7 +1263,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 - If an add command is rejected, check whether another shuttle is still inside `start_slot_occupancy_radius_m` of that slot.
 - If the rail path was edited, run `room_315_csv_preprocessor.py`, `room_315_network_validator.py`, and `room_315_continuous_path_validator.py` before testing in Gazebo.
 - If you need to compare the continuous path against the measured CSV path, rerun the shuttle node with `-p path_backend:=polyline`.
-- If a shuttle stops with `stopped_by` set to a stopper name, open that stopper with `/room_315_right/stopper_cmd`.
+- If a shuttle stops with `stopped_by` set to a stopper name, open that stopper with `/room_315/rails/right/stoppers/command`.
 - If a shuttle stops in `WAITING`, it is likely blocked by another shuttle within `shuttle_collision_distance_m`.
-- If a shuttle enters `FALLING`, the graph has no valid successor for the current switch configuration. Reset it with `/room_315_right/shuttle/control_cmd`, for example `room315_right_shuttle_2=RESET`.
-- If a switch moves visually but the shuttle route does not change, send commands to `/room_315_right/switch_cmd`, not directly to `/mfja/conveyor/switch_cmd`.
+- If a shuttle enters `FALLING`, the graph has no valid successor for the current switch configuration. Reset it with `/room_315/rails/right/shuttles/command`, for example `room315_right_shuttle_2=RESET`.
+- If a switch moves visually but the shuttle route does not change, send commands to `/room_315/rails/right/switches/command`, not directly to `/mfja/conveyor/switch_cmd`.
