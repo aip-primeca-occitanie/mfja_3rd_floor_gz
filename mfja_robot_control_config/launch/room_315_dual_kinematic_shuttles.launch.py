@@ -16,6 +16,8 @@ def generate_launch_description():
         'enable_gazebo_delete': True,
         'sync_from_visual_switch_states': True,
         'publish_visual_switch_commands': True,
+        'switch_motion_delay_s': LaunchConfiguration('switch_motion_delay_s'),
+        'stopper_motion_delay_s': LaunchConfiguration('stopper_motion_delay_s'),
         'use_sim_time': LaunchConfiguration('use_sim_time'),
     }
 
@@ -78,6 +80,16 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description='Start shuttles already deployed and moving without waiting for ON.',
+        ),
+        DeclareLaunchArgument(
+            'switch_motion_delay_s',
+            default_value='0.3',
+            description='Delay between a switch command and actual switch state.',
+        ),
+        DeclareLaunchArgument(
+            'stopper_motion_delay_s',
+            default_value='0.1',
+            description='Delay between a stopper command and actual stopper state.',
         ),
         DeclareLaunchArgument(
             'right_start_slot',

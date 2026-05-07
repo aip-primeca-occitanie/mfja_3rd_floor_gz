@@ -113,10 +113,15 @@ RIGHT_TOPIC_DEFAULTS = {
     'pose_topic': '/room_315_right/shuttle/pose_cmd',
     'pose_topic_prefix': '/room_315_right/shuttles',
     'state_topic': '/room_315_right/shuttle/state',
+    'shuttle_state_topic': '/room_315_right/shuttle/state',
     'add_shuttle_command_topic': '/room_315_right/shuttle/add_cmd',
     'shuttle_control_command_topic': '/room_315_right/shuttle/control_cmd',
-    'switch_command_topic': '/room_315_right/switch_states',
-    'stopper_command_topic': '/room_315_right/stopper_states',
+    'switch_command_topic': '/room_315_right/switch_cmd',
+    'switch_state_topic': '/room_315_right/switch_state',
+    'deprecated_switch_command_topic': '/room_315_right/switch_states',
+    'stopper_command_topic': '/room_315_right/stopper_cmd',
+    'stopper_state_topic': '/room_315_right/stopper_state',
+    'deprecated_stopper_command_topic': '/room_315_right/stopper_states',
     'sensor_state_topic': '/room_315_right/sensors/switch_approach',
     'position_sensor_state_topic': '/room_315_right/sensors/position',
     'pose_offset_command_topic': '/room_315_right/shuttle/pose_offset_cmd',
@@ -126,10 +131,15 @@ LEFT_TOPIC_DEFAULTS = {
     'pose_topic': '/room_315_left/shuttle/pose_cmd',
     'pose_topic_prefix': '/room_315_left/shuttles',
     'state_topic': '/room_315_left/shuttle/state',
+    'shuttle_state_topic': '/room_315_left/shuttle/state',
     'add_shuttle_command_topic': '/room_315_left/shuttle/add_cmd',
     'shuttle_control_command_topic': '/room_315_left/shuttle/control_cmd',
-    'switch_command_topic': '/room_315_left/switch_states',
-    'stopper_command_topic': '/room_315_left/stopper_states',
+    'switch_command_topic': '/room_315_left/switch_cmd',
+    'switch_state_topic': '/room_315_left/switch_state',
+    'deprecated_switch_command_topic': '/room_315_left/switch_states',
+    'stopper_command_topic': '/room_315_left/stopper_cmd',
+    'stopper_state_topic': '/room_315_left/stopper_state',
+    'deprecated_stopper_command_topic': '/room_315_left/stopper_states',
     'sensor_state_topic': '/room_315_left/sensors/switch_approach',
     'position_sensor_state_topic': '/room_315_left/sensors/position',
     'pose_offset_command_topic': '/room_315_left/shuttle/pose_offset_cmd',
@@ -654,6 +664,13 @@ class DeviceMarker:
     next_spawn_attempt_time: float = 0.0
 
 
+@dataclass
+class PendingDiscreteStateUpdate:
+    target_state: str
+    apply_at_s: float
+    source: str
+
+
 class Room315KinematicShuttleNode(Node):
     def __init__(self) -> None:
         super().__init__('room_315_kinematic_shuttle')
@@ -678,10 +695,21 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('pose_topic', '/room_315_right/shuttle/pose_cmd')
         self.declare_parameter('pose_topic_prefix', '/room_315_right/shuttles')
         self.declare_parameter('state_topic', '/room_315_right/shuttle/state')
+        self.declare_parameter('shuttle_state_topic', '/room_315_right/shuttle/state')
         self.declare_parameter('add_shuttle_command_topic', '/room_315_right/shuttle/add_cmd')
         self.declare_parameter('shuttle_control_command_topic', '/room_315_right/shuttle/control_cmd')
-        self.declare_parameter('switch_command_topic', '/room_315_right/switch_states')
-        self.declare_parameter('stopper_command_topic', '/room_315_right/stopper_states')
+        self.declare_parameter('switch_command_topic', '/room_315_right/switch_cmd')
+        self.declare_parameter('switch_state_topic', '/room_315_right/switch_state')
+        self.declare_parameter(
+            'deprecated_switch_command_topic',
+            '/room_315_right/switch_states',
+        )
+        self.declare_parameter('stopper_command_topic', '/room_315_right/stopper_cmd')
+        self.declare_parameter('stopper_state_topic', '/room_315_right/stopper_state')
+        self.declare_parameter(
+            'deprecated_stopper_command_topic',
+            '/room_315_right/stopper_states',
+        )
         self.declare_parameter('sensor_state_topic', '/room_315_right/sensors/switch_approach')
         self.declare_parameter('position_sensor_state_topic', '/room_315_right/sensors/position')
         self.declare_parameter('pose_offset_command_topic', '/room_315_right/shuttle/pose_offset_cmd')
@@ -711,6 +739,8 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('entity_name_prefix', 'room315_right_shuttle_')
         self.declare_parameter('gazebo_set_pose_rate_hz', 10.0)
         self.declare_parameter('publish_visual_switch_commands', True)
+        self.declare_parameter('switch_motion_delay_s', 0.3)
+        self.declare_parameter('stopper_motion_delay_s', 0.1)
         self.declare_parameter('enable_gazebo_pose_transform', True)
         self.declare_parameter('pose_transform_a', -0.893249246800)
         self.declare_parameter('pose_transform_b', 0.005839516878)
@@ -784,12 +814,25 @@ class Room315KinematicShuttleNode(Node):
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         ).rstrip('/')
-        state_topic = self._side_default_string(
-            str(self.get_parameter('state_topic').value),
+        legacy_state_topic_raw = str(self.get_parameter('state_topic').value)
+        shuttle_state_topic_raw = str(self.get_parameter('shuttle_state_topic').value)
+        shuttle_state_topic = self._side_default_string(
+            shuttle_state_topic_raw,
+            'shuttle_state_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        )
+        legacy_state_topic = self._side_default_string(
+            legacy_state_topic_raw,
             'state_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
+        if (
+            shuttle_state_topic_raw == RIGHT_TOPIC_DEFAULTS['shuttle_state_topic']
+            and legacy_state_topic_raw != RIGHT_TOPIC_DEFAULTS['state_topic']
+        ):
+            shuttle_state_topic = legacy_state_topic
         add_shuttle_command_topic = self._side_default_string(
             str(self.get_parameter('add_shuttle_command_topic').value),
             'add_shuttle_command_topic',
@@ -808,12 +851,36 @@ class Room315KinematicShuttleNode(Node):
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
+        switch_state_topic = self._side_default_string(
+            str(self.get_parameter('switch_state_topic').value),
+            'switch_state_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        )
+        deprecated_switch_command_topic = self._side_default_string(
+            str(self.get_parameter('deprecated_switch_command_topic').value),
+            'deprecated_switch_command_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        ).strip()
         stopper_command_topic = self._side_default_string(
             str(self.get_parameter('stopper_command_topic').value),
             'stopper_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
+        stopper_state_topic = self._side_default_string(
+            str(self.get_parameter('stopper_state_topic').value),
+            'stopper_state_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        )
+        deprecated_stopper_command_topic = self._side_default_string(
+            str(self.get_parameter('deprecated_stopper_command_topic').value),
+            'deprecated_stopper_command_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        ).strip()
         sensor_state_topic = self._side_default_string(
             str(self.get_parameter('sensor_state_topic').value),
             'sensor_state_topic',
@@ -831,6 +898,21 @@ class Room315KinematicShuttleNode(Node):
             'pose_offset_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
+        )
+        self._ensure_command_state_topics_are_distinct(
+            'switch',
+            switch_command_topic,
+            switch_state_topic,
+        )
+        self._ensure_command_state_topics_are_distinct(
+            'stopper',
+            stopper_command_topic,
+            stopper_state_topic,
+        )
+        self._ensure_command_state_topics_are_distinct(
+            'shuttle',
+            shuttle_control_command_topic,
+            shuttle_state_topic,
         )
         visual_switch_command_topic = str(
             self.get_parameter('visual_switch_command_topic').value
@@ -919,6 +1001,14 @@ class Room315KinematicShuttleNode(Node):
         self.gazebo_set_pose_period = 1.0 / max(gazebo_set_pose_rate_hz, 1.0)
         self.publish_visual_switch_commands = bool(
             self.get_parameter('publish_visual_switch_commands').value
+        )
+        self.switch_motion_delay_s = max(
+            0.0,
+            float(self.get_parameter('switch_motion_delay_s').value),
+        )
+        self.stopper_motion_delay_s = max(
+            0.0,
+            float(self.get_parameter('stopper_motion_delay_s').value),
         )
         self.enable_gazebo_pose_transform = bool(
             self.get_parameter('enable_gazebo_pose_transform').value
@@ -1106,6 +1196,17 @@ class Room315KinematicShuttleNode(Node):
             name: config.default_state
             for name, config in self.stopper_configs.items()
         }
+        self.shuttle_state_topic = shuttle_state_topic
+        self.switch_command_topic = switch_command_topic
+        self.switch_state_topic = switch_state_topic
+        self.deprecated_switch_command_topic = deprecated_switch_command_topic
+        self.stopper_command_topic = stopper_command_topic
+        self.stopper_state_topic = stopper_state_topic
+        self.deprecated_stopper_command_topic = deprecated_stopper_command_topic
+        self.pending_switch_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
+        self.pending_stopper_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
+        self.deprecated_switch_command_warning_logged = False
+        self.deprecated_stopper_command_warning_logged = False
         shuttle_specs = self._resolve_shuttle_specs(
             shuttle_count=shuttle_count,
             raw_start_slot=start_slot,
@@ -1126,7 +1227,17 @@ class Room315KinematicShuttleNode(Node):
                 )
             )
 
-        self.state_publisher = self.create_publisher(String, state_topic, 10)
+        self.state_publisher = self.create_publisher(String, shuttle_state_topic, 10)
+        self.switch_state_publisher = self.create_publisher(
+            String,
+            switch_state_topic,
+            10,
+        )
+        self.stopper_state_publisher = self.create_publisher(
+            String,
+            stopper_state_topic,
+            10,
+        )
         self.sensor_state_publisher = self.create_publisher(String, sensor_state_topic, 10)
         self.position_sensor_state_publisher = self.create_publisher(
             String,
@@ -1144,12 +1255,52 @@ class Room315KinematicShuttleNode(Node):
             self._on_switch_command,
             10,
         )
+        self.deprecated_switch_subscription = None
+        if (
+            deprecated_switch_command_topic
+            and deprecated_switch_command_topic != switch_command_topic
+        ):
+            if deprecated_switch_command_topic == switch_state_topic:
+                self.get_logger().warn(
+                    f'Deprecated switch command alias {deprecated_switch_command_topic} '
+                    'matches the switch state topic, so the alias subscription is disabled.'
+                )
+            else:
+                self.deprecated_switch_subscription = self.create_subscription(
+                    String,
+                    deprecated_switch_command_topic,
+                    lambda message: self._on_switch_command(
+                        message,
+                        deprecated_topic=True,
+                    ),
+                    10,
+                )
         self.stopper_subscription = self.create_subscription(
             String,
             stopper_command_topic,
             self._on_stopper_command,
             10,
         )
+        self.deprecated_stopper_subscription = None
+        if (
+            deprecated_stopper_command_topic
+            and deprecated_stopper_command_topic != stopper_command_topic
+        ):
+            if deprecated_stopper_command_topic == stopper_state_topic:
+                self.get_logger().warn(
+                    f'Deprecated stopper command alias {deprecated_stopper_command_topic} '
+                    'matches the stopper state topic, so the alias subscription is disabled.'
+                )
+            else:
+                self.deprecated_stopper_subscription = self.create_subscription(
+                    String,
+                    deprecated_stopper_command_topic,
+                    lambda message: self._on_stopper_command(
+                        message,
+                        deprecated_topic=True,
+                    ),
+                    10,
+                )
         self.add_shuttle_subscription = self.create_subscription(
             String,
             add_shuttle_command_topic,
@@ -1207,19 +1358,36 @@ class Room315KinematicShuttleNode(Node):
             f'gazebo_world={self.gazebo_world_name}, '
             f'add_shuttle_topic={add_shuttle_command_topic}, '
             f'shuttle_control_topic={shuttle_control_command_topic}, '
-            f'switch_topic={switch_command_topic}, '
-            f'stopper_topic={stopper_command_topic}, '
+            f'shuttle_state_topic={shuttle_state_topic}, '
+            f'switch_command_topic={switch_command_topic}, '
+            f'switch_state_topic={switch_state_topic}, '
+            f'stopper_command_topic={stopper_command_topic}, '
+            f'stopper_state_topic={stopper_state_topic}, '
             f'sensor_topic={sensor_state_topic}, '
             f'position_sensor_topic={position_sensor_state_topic}, '
             f'offset_topic={pose_offset_command_topic}, '
             f'visual_switch_topic={visual_switch_command_topic}, '
             f'visual_switch_state_topic={visual_switch_state_topic}, '
+            f'switch_motion_delay_s={self.switch_motion_delay_s:.3f}, '
+            f'stopper_motion_delay_s={self.stopper_motion_delay_s:.3f}, '
             f'entity_prefix={self.entity_name_prefix}, '
             f'spawn_service={gazebo_spawn_service}, '
             f'delete_service={gazebo_delete_service}, '
             f'device_markers={len(self.device_markers)}, '
             f'shuttles={self._shuttle_summary()}'
         )
+        if self.deprecated_switch_subscription is not None:
+            self.get_logger().warn(
+                f'Deprecated switch command alias {deprecated_switch_command_topic} '
+                f'is still accepted; use {switch_command_topic} for commands and '
+                f'{switch_state_topic} for actual state.'
+            )
+        if self.deprecated_stopper_subscription is not None:
+            self.get_logger().warn(
+                f'Deprecated stopper command alias {deprecated_stopper_command_topic} '
+                f'is still accepted; use {stopper_command_topic} for commands and '
+                f'{stopper_state_topic} for actual state.'
+            )
 
     @staticmethod
     def _split_list_parameter(raw_value: str) -> list[str]:
@@ -1247,6 +1415,18 @@ class Room315KinematicShuttleNode(Node):
         if prefix:
             return prefix
         raise ValueError('entity_name_prefix must not be empty.')
+
+    @staticmethod
+    def _ensure_command_state_topics_are_distinct(
+        device_name: str,
+        command_topic: str,
+        state_topic: str,
+    ) -> None:
+        if command_topic == state_topic:
+            raise ValueError(
+                f'{device_name} command topic and state topic must be different '
+                f'in Phase 3, got {command_topic!r}.'
+            )
 
     def _side_default_path(self, configured_path: Path) -> Path:
         if self.rail_side != 'left':
@@ -2477,15 +2657,143 @@ class Room315KinematicShuttleNode(Node):
             'pose_offset_z': next_z,
         }
 
-    def _on_stopper_command(self, message: String) -> None:
+    def _on_stopper_command(
+        self,
+        message: String,
+        *,
+        deprecated_topic: bool = False,
+    ) -> None:
+        if deprecated_topic:
+            self._warn_deprecated_stopper_command_topic_once()
+
         try:
             updates = self._parse_stopper_command(message.data)
         except (ValueError, json.JSONDecodeError) as error:
             self.get_logger().error(str(error))
             return
 
-        self.stopper_states.update(updates)
-        self.get_logger().info(f'Updated stopper states: {self.stopper_states}')
+        self._schedule_stopper_state_updates(
+            updates,
+            source='deprecated command' if deprecated_topic else 'command',
+        )
+        self._publish_stopper_state()
+
+    def _warn_deprecated_switch_command_topic_once(self) -> None:
+        if self.deprecated_switch_command_warning_logged:
+            return
+        self.deprecated_switch_command_warning_logged = True
+        self.get_logger().warn(
+            f'Received switch command on deprecated mixed topic '
+            f'{self.deprecated_switch_command_topic}; use '
+            f'{self.switch_command_topic} for commands and '
+            f'{self.switch_state_topic} for actual switch state.'
+        )
+
+    def _warn_deprecated_stopper_command_topic_once(self) -> None:
+        if self.deprecated_stopper_command_warning_logged:
+            return
+        self.deprecated_stopper_command_warning_logged = True
+        self.get_logger().warn(
+            f'Received stopper command on deprecated mixed topic '
+            f'{self.deprecated_stopper_command_topic}; use '
+            f'{self.stopper_command_topic} for commands and '
+            f'{self.stopper_state_topic} for actual stopper state.'
+        )
+
+    def _schedule_switch_state_updates(
+        self,
+        updates: Dict[str, str],
+        *,
+        source: str,
+    ) -> Dict[str, str]:
+        return self._schedule_discrete_state_updates(
+            actual_states=self.switch_states,
+            pending_updates=self.pending_switch_state_updates,
+            updates=updates,
+            delay_s=self.switch_motion_delay_s,
+            label='switch',
+            source=source,
+        )
+
+    def _schedule_stopper_state_updates(
+        self,
+        updates: Dict[str, str],
+        *,
+        source: str,
+    ) -> Dict[str, str]:
+        return self._schedule_discrete_state_updates(
+            actual_states=self.stopper_states,
+            pending_updates=self.pending_stopper_state_updates,
+            updates=updates,
+            delay_s=self.stopper_motion_delay_s,
+            label='stopper',
+            source=source,
+        )
+
+    def _schedule_discrete_state_updates(
+        self,
+        *,
+        actual_states: Dict[str, str],
+        pending_updates: Dict[str, PendingDiscreteStateUpdate],
+        updates: Dict[str, str],
+        delay_s: float,
+        label: str,
+        source: str,
+    ) -> Dict[str, str]:
+        if not updates:
+            return {}
+
+        now_s = self._state_update_time_s()
+        apply_at_s = now_s + max(0.0, delay_s)
+        immediate_updates: Dict[str, str] = {}
+        scheduled_updates: Dict[str, str] = {}
+        cancelled_updates: Dict[str, str] = {}
+
+        for name, target_state in updates.items():
+            current_state = actual_states.get(name)
+            pending_update = pending_updates.get(name)
+            if delay_s <= 0.0:
+                pending_updates.pop(name, None)
+                if current_state != target_state:
+                    immediate_updates[name] = target_state
+                continue
+
+            if current_state == target_state:
+                if pending_update is not None:
+                    pending_updates.pop(name, None)
+                    cancelled_updates[name] = target_state
+                continue
+
+            if pending_update is not None and pending_update.target_state == target_state:
+                continue
+
+            pending_updates[name] = PendingDiscreteStateUpdate(
+                target_state=target_state,
+                apply_at_s=apply_at_s,
+                source=source,
+            )
+            scheduled_updates[name] = target_state
+
+        if immediate_updates:
+            actual_states.update(immediate_updates)
+            self.get_logger().info(
+                f'Applied {label} state updates immediately from {source}: '
+                f'{self._public_switch_state_map(immediate_updates)}'
+            )
+
+        if scheduled_updates:
+            self.get_logger().info(
+                f'Scheduled {label} state updates from {source} after '
+                f'{delay_s:.3f}s: {self._public_switch_state_map(scheduled_updates)}'
+            )
+
+        if cancelled_updates:
+            self.get_logger().info(
+                f'Cancelled pending {label} state updates because the requested '
+                f'state is already actual: {self._public_switch_state_map(cancelled_updates)}'
+            )
+
+        return immediate_updates
 
     def _parse_stopper_command(self, raw_command: str) -> Dict[str, str]:
         assignments = self._parse_assignments(raw_command, 'Stopper')
@@ -2785,40 +3093,58 @@ class Room315KinematicShuttleNode(Node):
             assignments.append((key, value))
         return assignments
 
-    def _on_switch_command(self, message: String) -> None:
+    def _on_switch_command(
+        self,
+        message: String,
+        *,
+        deprecated_topic: bool = False,
+    ) -> None:
+        if deprecated_topic:
+            self._warn_deprecated_switch_command_topic_once()
+
         try:
-            updates, visual_command = self._parse_switch_command(message.data)
-        except ValueError as error:
+            updates, _visual_command = self._parse_switch_command(message.data)
+        except (ValueError, json.JSONDecodeError) as error:
             self.get_logger().error(str(error))
             return
 
         if updates:
-            self.switch_states.update(updates)
-            self.get_logger().info(
-                f'Updated route switch states: {self._public_switch_state_map(self.switch_states)}'
+            immediate_updates = self._schedule_switch_state_updates(
+                updates,
+                source='deprecated command' if deprecated_topic else 'command',
             )
-
-        if self.publish_visual_switch_commands and visual_command:
-            visual_message = String()
-            visual_message.data = visual_command
-            self.visual_switch_publisher.publish(visual_message)
-            self.get_logger().info(f'Published visual switch command: {visual_command}')
+            if immediate_updates:
+                self._publish_visual_switch_actual_updates(
+                    immediate_updates,
+                    source='command',
+                )
+            self._publish_switch_state()
 
     def _on_visual_switch_state(self, message: String) -> None:
         updates = self._parse_visual_switch_state_summary(message.data)
         if not updates:
             return
 
-        changed = {
-            switch_name: state
-            for switch_name, state in updates.items()
-            if self.switch_states.get(switch_name) != state
-        }
-        self.switch_states.update(updates)
+        changed = {}
+        for switch_name, state in updates.items():
+            pending_update = self.pending_switch_state_updates.get(switch_name)
+            if (
+                self.switch_states.get(switch_name) != state
+                and (
+                    pending_update is None
+                    or pending_update.target_state != state
+                )
+            ):
+                changed[switch_name] = state
         if changed:
+            self._schedule_switch_state_updates(
+                changed,
+                source='visual state sync',
+            )
+            self._publish_switch_state()
             self.get_logger().info(
-                'Synced route switch states from visual controller: '
-                f'{_ordered_switch_states(self.switch_states)}'
+                'Received visual switch state sync request: '
+                f'{_ordered_switch_states(changed)}'
             )
 
     def _parse_visual_switch_state_summary(self, raw_summary: str) -> Dict[str, str]:
@@ -2961,6 +3287,135 @@ class Room315KinematicShuttleNode(Node):
     def _visual_mode_for_state(state: str) -> str:
         return 'GRAND_BOUCLE' if state == 'G' else 'PETIT_BOUCLE'
 
+    def _apply_due_pending_state_updates(self) -> None:
+        due_switch_updates = self._pop_due_discrete_state_updates(
+            self.pending_switch_state_updates
+        )
+        switch_updates = {
+            name: pending_update.target_state
+            for name, pending_update in due_switch_updates.items()
+        }
+        if switch_updates:
+            self.switch_states.update(switch_updates)
+            visual_updates = {
+                name: pending_update.target_state
+                for name, pending_update in due_switch_updates.items()
+                if pending_update.source != 'visual state sync'
+            }
+            self._publish_visual_switch_actual_updates(
+                visual_updates,
+                source='motion delay',
+            )
+            self.get_logger().info(
+                'Applied actual switch states after motion delay: '
+                f'{self._public_switch_state_map(self.switch_states)}'
+            )
+
+        due_stopper_updates = self._pop_due_discrete_state_updates(
+            self.pending_stopper_state_updates
+        )
+        stopper_updates = {
+            name: pending_update.target_state
+            for name, pending_update in due_stopper_updates.items()
+        }
+        if stopper_updates:
+            self.stopper_states.update(stopper_updates)
+            self.get_logger().info(
+                'Applied actual stopper states after motion delay: '
+                f'{self._public_switch_state_map(self.stopper_states)}'
+            )
+
+    def _publish_visual_switch_actual_updates(
+        self,
+        updates: Dict[str, str],
+        *,
+        source: str,
+    ) -> None:
+        if not self.publish_visual_switch_commands or not updates:
+            return
+
+        visual_entries = []
+        for switch_name, state in self._public_switch_state_map(updates).items():
+            visual_selector = self._visual_selector_for_selector(switch_name)
+            if visual_selector is None:
+                continue
+            visual_entries.append(
+                f'{visual_selector}={self._visual_mode_for_state(state)}'
+            )
+
+        if not visual_entries:
+            return
+
+        visual_command = ', '.join(visual_entries)
+        visual_message = String()
+        visual_message.data = visual_command
+        self.visual_switch_publisher.publish(visual_message)
+        self.get_logger().info(
+            f'Published visual switch command from actual state ({source}): '
+            f'{visual_command}'
+        )
+
+    def _state_update_time_s(self) -> float:
+        return self.get_clock().now().nanoseconds / 1e9
+
+    def _pop_due_discrete_state_updates(
+        self,
+        pending_updates: Dict[str, PendingDiscreteStateUpdate],
+    ) -> Dict[str, PendingDiscreteStateUpdate]:
+        now_s = self._state_update_time_s()
+        due_updates: Dict[str, PendingDiscreteStateUpdate] = {}
+        for name, pending_update in list(pending_updates.items()):
+            if pending_update.apply_at_s > now_s:
+                continue
+            due_updates[name] = pending_update
+            pending_updates.pop(name, None)
+        return due_updates
+
+    def _pending_state_payload(
+        self,
+        pending_updates: Dict[str, PendingDiscreteStateUpdate],
+    ) -> Dict[str, dict]:
+        now_s = self._state_update_time_s()
+        payload: Dict[str, dict] = {}
+        for name in sorted(pending_updates):
+            pending_update = pending_updates[name]
+            payload[self._public_switch_name(name)] = {
+                'remaining_s': max(0.0, pending_update.apply_at_s - now_s),
+                'source': pending_update.source,
+                'target_state': pending_update.target_state,
+            }
+        return payload
+
+    def _publish_switch_state(self) -> None:
+        message = String()
+        message.data = json.dumps(
+            {
+                'state_kind': 'actual',
+                'switch_states': self._public_switch_state_map(self.switch_states),
+                'pending_switch_states': self._pending_state_payload(
+                    self.pending_switch_state_updates
+                ),
+                'motion_delay_s': self.switch_motion_delay_s,
+            },
+            sort_keys=True,
+        )
+        self.switch_state_publisher.publish(message)
+
+    def _publish_stopper_state(self) -> None:
+        message = String()
+        message.data = json.dumps(
+            {
+                'state_kind': 'actual',
+                'stopper_states': self._public_switch_state_map(self.stopper_states),
+                'pending_stopper_states': self._pending_state_payload(
+                    self.pending_stopper_state_updates
+                ),
+                'motion_delay_s': self.stopper_motion_delay_s,
+            },
+            sort_keys=True,
+        )
+        self.stopper_state_publisher.publish(message)
+
     def _on_parameter_update(self, parameters) -> SetParametersResult:
         numeric_parameters = {
             'pose_transform_a',
@@ -2985,6 +3440,8 @@ class Room315KinematicShuttleNode(Node):
             'shuttle_collision_distance_m',
             'collision_search_iterations',
             'start_slot_occupancy_radius_m',
+            'switch_motion_delay_s',
+            'stopper_motion_delay_s',
         }
         boolean_parameters = {
             'enable_collision_avoidance',
@@ -3001,6 +3458,16 @@ class Room315KinematicShuttleNode(Node):
                         self.gazebo_set_pose_period = 1.0 / max(rate, 1.0)
                     elif parameter.name == 'collision_search_iterations':
                         self.collision_search_iterations = max(1, int(parameter.value))
+                    elif parameter.name in {
+                        'switch_motion_delay_s',
+                        'stopper_motion_delay_s',
+                    }:
+                        delay_s = float(parameter.value)
+                        if delay_s < 0.0:
+                            raise ValueError(
+                                f'{parameter.name} must be greater than or equal to 0.0.'
+                            )
+                        setattr(self, parameter.name, delay_s)
                     else:
                         setattr(self, parameter.name, float(parameter.value))
                 elif parameter.name in boolean_parameters:
@@ -3015,9 +3482,12 @@ class Room315KinematicShuttleNode(Node):
         dt = max(0.0, (now - self.last_tick).nanoseconds / 1e9)
         self.last_tick = now
         self._update_device_markers()
+        self._apply_due_pending_state_updates()
 
         if not self.shuttles:
             self._publish_state([], [])
+            self._publish_switch_state()
+            self._publish_stopper_state()
             self._publish_sensor_state()
             self._publish_position_sensor_state()
             return
@@ -3066,6 +3536,8 @@ class Room315KinematicShuttleNode(Node):
                 )
 
         self._publish_state(raw_poses, gazebo_poses)
+        self._publish_switch_state()
+        self._publish_stopper_state()
         self._publish_sensor_state()
         self._publish_position_sensor_state()
 
@@ -3551,6 +4023,12 @@ class Room315KinematicShuttleNode(Node):
                 'shuttles': shuttles_payload,
                 'switch_states': self._public_switch_state_map(self.switch_states),
                 'stopper_states': self._public_switch_state_map(self.stopper_states),
+                'pending_switch_states': self._pending_state_payload(
+                    self.pending_switch_state_updates
+                ),
+                'pending_stopper_states': self._pending_state_payload(
+                    self.pending_stopper_state_updates
+                ),
                 'sensor_events': self._sensor_events(),
                 'position_sensor_events': self._position_sensor_events(),
             },

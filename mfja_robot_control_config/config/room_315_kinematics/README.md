@@ -133,11 +133,12 @@ For devices that use `points:`, select the point with `--point-index`.
 The tool refuses to write when the point is far from the rail unless `--force`
 is passed.
 
-Topics, namespaces, and message types are unchanged in this phase. The approach
-sensor topic is still `/room_315_right/sensors/switch_approach` or
-`/room_315_left/sensors/switch_approach`, the position sensor topic is still
-`/room_315_right/sensors/position` or `/room_315_left/sensors/position`, and the
-messages are still `std_msgs/msg/String` JSON payloads.
+Rail device YAML does not change the sensor topics. The approach sensor topic
+is still `/room_315_right/sensors/switch_approach` or
+`/room_315_left/sensors/switch_approach`, and the position sensor topic is still
+`/room_315_right/sensors/position` or `/room_315_left/sensors/position`.
+Phase 3 adds separate switch and stopper command/state topics, but the messages
+are still `std_msgs/msg/String`.
 
 ## Validate Rail Devices
 
@@ -281,7 +282,8 @@ The current runtime additions can be validated with four quick checks:
 1. Switch commands:
 
 ```bash
-ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=E A4=I'}"
+ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=E A4=I'}"
+ros2 topic echo /room_315_right/switch_state
 ```
 
 2. Reset after `FALLING` without restarting Gazebo:
@@ -310,21 +312,65 @@ Start slots are numbered as follows:
 - `slot 3`: lower indexing pair, left physical position.
 - `slot 4`: lower indexing pair, right physical position.
 
-## Switch Commands
+## Command and State Topics
 
-Switch states are controlled through the rail-specific switch topic, for example
-`/room_315_right/switch_states`. Use public station labels `A1` through `A4`
-with `EXTERIOR` / `INTERIOR` or the short `E` / `I` forms.
+Phase 3 separates requested commands from actual states while keeping
+`std_msgs/msg/String`. Commands ask for a change. State topics report the actual
+state after the configured motion delay has elapsed. Rail routing uses the
+actual switch state, not the raw command payload.
 
-Example:
+Right rail topics:
 
-```bash
-ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=EXTERIOR A4=INTERIOR'}"
+```text
+switch commands:  /room_315_right/switch_cmd
+switch state:     /room_315_right/switch_state
+stopper commands: /room_315_right/stopper_cmd
+stopper state:    /room_315_right/stopper_state
+shuttle commands: /room_315_right/shuttle/control_cmd
+shuttle state:    /room_315_right/shuttle/state
 ```
 
-The node also republishes visual switch commands on
-`/mfja/conveyor/switch_cmd` so the Gazebo switch visuals rotate with the logical
-state.
+Left rail topics use the same names under `/room_315_left/...`.
+
+The old mixed topics are still accepted as deprecated command aliases:
+
+```text
+/room_315_right/switch_states
+/room_315_left/switch_states
+/room_315_right/stopper_states
+/room_315_left/stopper_states
+```
+
+Use public switch labels `A1` through `A4` with `EXTERIOR` / `INTERIOR` or the
+short `E` / `I` forms:
+
+```bash
+ros2 topic echo /room_315_right/switch_state
+ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=EXTERIOR A2=INTERIOR A3=EXTERIOR A4=INTERIOR'}"
+```
+
+The node also republishes visual switch commands on `/mfja/conveyor/switch_cmd`
+when the delayed actual switch state is applied, so the Gazebo switch visuals
+rotate after the same `switch_motion_delay_s`.
+
+Switch and stopper motion delays are configurable:
+
+```bash
+ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py \
+  gazebo_world_name:=room_315_only \
+  switch_motion_delay_s:=0.3 \
+  stopper_motion_delay_s:=0.1
+```
+
+The delay is measured on the node ROS clock, so with `use_sim_time:=true` it
+follows Gazebo simulation time.
+
+At runtime, the same parameters can be changed on each shuttle node:
+
+```bash
+ros2 param set /room_315_right/room_315_kinematic_shuttle switch_motion_delay_s 0.5
+ros2 param set /room_315_right/room_315_kinematic_shuttle stopper_motion_delay_s 0.2
+```
 
 ## Stopper and Sensor Workflow
 
@@ -372,9 +418,10 @@ Example:
 
 ```bash
 ros2 topic echo /room_315_right/sensors/switch_approach
-ros2 topic pub --once /room_315_right/stopper_states std_msgs/msg/String "{data: 'A1=1'}"
-ros2 topic pub --once /room_315_right/switch_states std_msgs/msg/String "{data: 'A1=INTERIOR'}"
-ros2 topic pub --once /room_315_right/stopper_states std_msgs/msg/String "{data: 'A1=0'}"
+ros2 topic echo /room_315_right/stopper_state
+ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'A1=1'}"
+ros2 topic pub --once /room_315_right/switch_cmd std_msgs/msg/String "{data: 'A1=INTERIOR'}"
+ros2 topic pub --once /room_315_right/stopper_cmd std_msgs/msg/String "{data: 'A1=0'}"
 ```
 
 The rail device YAML also defines virtual shuttle position detectors on:
@@ -395,8 +442,10 @@ Practical use:
 
 - Spawn or reset on `slot 1`, `slot 2`, `slot 3`, and `slot 4` to check the
   nearby `DZI...R` indexing-zone detectors.
-- Send `ALL=EXTERIOR` to observe the `...GR` branch detectors.
-- Send `ALL=INTERIOR` to observe the `...SR` branch detectors.
+- Send `ALL=EXTERIOR` on `/room_315_right/switch_cmd` to observe the `...GR`
+  branch detectors.
+- Send `ALL=INTERIOR` on `/room_315_right/switch_cmd` to observe the `...SR`
+  branch detectors.
 
 ## Start Slots
 
@@ -422,6 +471,12 @@ Per-shuttle motion control is available through:
 
 ```text
 /room_315_right/shuttle/control_cmd
+```
+
+The actual shuttle state is published separately on:
+
+```text
+/room_315_right/shuttle/state
 ```
 
 Examples:
