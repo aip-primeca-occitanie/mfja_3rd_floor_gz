@@ -1,0 +1,3545 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Room 315 Shuttle and Rail Control Report</title>
+  <style>
+    :root {
+      --paper: #ffffff;
+      --bg: #eef2f5;
+      --ink: #17212b;
+      --muted: #596774;
+      --line: #d8e0e8;
+      --soft: #f5f8fa;
+      --accent: #0e787c;
+      --accent-2: #385f96;
+      --warn: #a86200;
+      --code: #101820;
+      --code-ink: #e8eef4;
+      --page-shadow: 0 18px 50px rgba(20, 31, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Naskh Arabic", "Noto Sans Arabic", Tahoma, Arial, sans-serif;
+      line-height: 1.75;
+      counter-reset: section;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .book {
+      display: grid;
+      gap: 22px;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px 54px;
+    }
+
+    .page {
+      position: relative;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--page-shadow);
+      padding: 54px 58px 76px;
+      counter-increment: section;
+      break-inside: auto;
+    }
+
+    .page::after {
+      content: "قسم " counter(section);
+      position: absolute;
+      bottom: 28px;
+      left: 44px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .kicker {
+      color: var(--accent);
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      margin: 0 0 8px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 16px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 2.7rem;
+    }
+
+    h2 {
+      font-size: 2rem;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 1.28rem;
+      margin-top: 22px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 18px;
+      padding-inline-start: 26px;
+    }
+
+    li {
+      margin: 5px 0;
+    }
+
+    code,
+    .en {
+      direction: ltr;
+      unicode-bidi: embed;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    :not(pre) > code {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: #eef5f6;
+      color: #174a50;
+      font-size: 0.92em;
+    }
+
+    pre {
+      direction: ltr;
+      text-align: left;
+      margin: 14px 0 22px;
+      padding: 16px;
+      overflow-x: auto;
+      border-radius: 8px;
+      background: var(--code);
+      color: var(--code-ink);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 22px;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f8;
+      font-weight: 800;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+      padding: 16px;
+      margin: 16px 0;
+    }
+
+    .callout {
+      border-right: 5px solid var(--accent);
+      background: #eef8f8;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+
+    .warning {
+      border-right-color: var(--warn);
+      background: #fff5e6;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      padding: 14px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      font-size: 1.08rem;
+    }
+
+    .diagram {
+      direction: ltr;
+      display: block;
+      width: 100%;
+      max-width: 760px;
+      margin: 18px auto 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .toc {
+      columns: 2;
+      column-gap: 34px;
+      padding-inline-start: 18px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .ltr {
+      direction: ltr;
+      text-align: left;
+    }
+
+    .title-meta {
+      margin-top: 40px;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      color: var(--muted);
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .book {
+        display: block;
+        max-width: none;
+        padding: 0;
+      }
+
+      .page {
+        box-shadow: none;
+        border: 0;
+        border-bottom: 1px solid #d8e0e8;
+        border-radius: 0;
+        padding: 20mm 18mm 18mm;
+        page-break-after: auto;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 34px 24px 70px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="book">
+    <section class="page" id="p01">
+      <p class="kicker">Room 315 / ROS 2 Jazzy / Gazebo Harmonic</p>
+      <h1>تقرير تفصيلي للتحكم بالـ Shuttles والـ Rail System</h1>
+      <p class="lead">
+        هذا التقرير يشرح خطوة بخطوة كيف يعمل نظام الـ kinematic shuttles في Room 315،
+        كيف نتحكم بالـ shuttles والـ switches والـ stoppers والـ sensors، وكيف أضفنا
+        الـ topics والـ custom messages داخل ROS 2.
+      </p>
+      <div class="callout">
+        هذا الإصدار مكتوب لشخص لم يعمل سابقاً بـ <code>ROS 2</code>. كل مفهوم سيتم ربطه مباشرة
+        بملف من المشروع وبمثال من الكود وبأمر يمكن تجربته في Terminal.
+      </div>
+      <div class="box">
+        <p>اللغة: العربية، مع إبقاء مصطلحات ROS و Gazebo وملفات الكود باللغة الإنكليزية.</p>
+        <p>الملفات الأساسية:</p>
+        <ul>
+          <li><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></li>
+          <li><code>mfja_rail_interfaces/msg/*.msg</code></li>
+          <li><code>mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py</code></li>
+          <li><code>mfja_room_315_bringup/launch/room_315_only.launch.py</code></li>
+          <li><code>mfja_3rd_floor_bringup/launch/full_floor.launch.py</code></li>
+        </ul>
+      </div>
+      <p class="title-meta">
+        الهدف من التقرير ليس فقط تشغيل الأوامر، بل فهم المبدأ حتى تستطيع تعديل الكود وإضافة features جديدة بثقة.
+      </p>
+    </section>
+
+    <section class="page" id="p02">
+      <h2>فهرس التقرير</h2>
+      <ol class="toc">
+        <li>الغرض من النظام</li>
+        <li>نظرة عامة على ROS 2</li>
+        <li>ما هو Node وTopic وMessage</li>
+        <li>ما هو Service وParameter وLaunch</li>
+        <li>هيكل workspace والـ packages</li>
+        <li>Build وSource</li>
+        <li>Architecture العامة</li>
+        <li>مبدأ kinematic simulation</li>
+        <li>Rail graph وCSV segments</li>
+        <li>Path backend</li>
+        <li>حالة الـ shuttle</li>
+        <li>كيف تزداد قيمة s رياضياً</li>
+        <li>معادلات الانتقال بين segments</li>
+        <li>تأثير stoppers وcollision avoidance على s</li>
+        <li>Lifecycle</li>
+        <li>Startup shuttles</li>
+        <li>Runtime add stopped/moving</li>
+        <li>ON/OFF/RESET/REMOVE</li>
+        <li>Switch control</li>
+        <li>تشريح أوامر ros2 topic pub</li>
+        <li>من أين يأتي message type مثل mfja_rail_interfaces/msg/SwitchCommand</li>
+        <li>قراءة ملفات .msg و ros2 interface show</li>
+        <li>Stopper control</li>
+        <li>Sensors feedback</li>
+        <li>Device YAML</li>
+        <li>Gazebo services</li>
+        <li>أين نعدل بالكود</li>
+        <li>كيف نضيف topic جديد</li>
+        <li>كيف نضيف message جديد</li>
+        <li>Debugging وTroubleshooting</li>
+        <li>Checklist نهائية</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p03">
+      <h2>الفكرة العامة للمشروع</h2>
+      <p>
+        المشروع يمثل simulation لغرفة Room 315 ضمن طابق MFJA الثالث. لدينا rails ثابتة داخل Gazebo،
+        وshuttles تتحرك فوقها، لكن الحركة ليست مبنية على فيزياء عجلات واحتكاك. الحركة مبنية على
+        حساب موضع shuttle على path معروف، ثم إرسال pose إلى Gazebo.
+      </p>
+      <div class="callout">
+        المبدأ: الكود يحسب أين يجب أن يكون الـ shuttle، ثم يحرك model في Gazebo عبر
+        <code>/world/&lt;world_name&gt;/set_pose</code>.
+      </div>
+      <p>هذا يجعل النظام مناسباً للتجارب التعليمية والتحكم المنطقي:</p>
+      <ul>
+        <li>إضافة shuttle أثناء التشغيل.</li>
+        <li>تشغيل وإيقاف shuttle بدون إعادة تشغيل Gazebo.</li>
+        <li>اختبار switches وstoppers وsensors.</li>
+        <li>اختبار collision avoidance بين shuttles.</li>
+        <li>توصيل النظام مع robots في Gazebo.</li>
+      </ul>
+    </section>
+
+    <section class="page" id="p04">
+      <h2>أساسيات ROS 2: الفكرة قبل الكود</h2>
+      <p>
+        ROS 2 هو framework يربط أجزاء robot system مع بعضها. بدل أن يكون لدينا برنامج واحد ضخم،
+        نقسم النظام إلى nodes صغيرة تتواصل عبر topics وservices وparameters.
+      </p>
+      <table>
+        <thead>
+          <tr><th>المفهوم</th><th>المعنى</th><th>مثال من مشروعنا</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Node</code></td><td>برنامج صغير مستقل</td><td><code>room_315_kinematic_shuttle_node.py</code></td></tr>
+          <tr><td><code>Topic</code></td><td>قناة نشر/استقبال رسائل</td><td><code>/room_315/rails/right/shuttles/command</code></td></tr>
+          <tr><td><code>Message</code></td><td>شكل البيانات المرسلة على topic</td><td><code>mfja_rail_interfaces/msg/ShuttleCommand</code></td></tr>
+          <tr><td><code>Service</code></td><td>طلب/جواب</td><td><code>/world/room_315_only/create</code></td></tr>
+          <tr><td><code>Parameter</code></td><td>إعداد قابل للتغيير</td><td><code>speed</code>, <code>start_enabled</code></td></tr>
+          <tr><td><code>Launch</code></td><td>ملف يبدأ عدة nodes معاً</td><td><code>room_315_only.launch.py</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p05">
+      <h2>Node وTopic وMessage</h2>
+      <p>
+        عندما ترسل أمر مثل <code>ON</code>، أنت لا تستدعي function مباشرة. أنت تنشر رسالة
+        على topic. الـ node المشترك بهذا topic يستقبل الرسالة ويقرر ماذا يفعل.
+      </p>
+      <svg class="diagram" viewBox="0 0 760 260" role="img" aria-label="ROS topic diagram">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#0e787c"></path>
+          </marker>
+        </defs>
+        <rect x="30" y="80" width="170" height="80" rx="8" fill="#eef8f8" stroke="#0e787c"></rect>
+        <text x="115" y="115" text-anchor="middle" font-size="16">Terminal</text>
+        <text x="115" y="140" text-anchor="middle" font-size="13">ros2 topic pub</text>
+        <line x1="210" y1="120" x2="360" y2="120" stroke="#0e787c" stroke-width="3" marker-end="url(#arrow)"></line>
+        <rect x="370" y="70" width="210" height="100" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="475" y="105" text-anchor="middle" font-size="15">Topic</text>
+        <text x="475" y="132" text-anchor="middle" font-size="12">/room_315/rails/right/...</text>
+        <line x1="590" y1="120" x2="700" y2="120" stroke="#0e787c" stroke-width="3" marker-end="url(#arrow)"></line>
+        <rect x="610" y="80" width="120" height="80" rx="8" fill="#eef4ff" stroke="#385f96"></rect>
+        <text x="670" y="115" text-anchor="middle" font-size="15">Node</text>
+        <text x="670" y="140" text-anchor="middle" font-size="12">callback</text>
+      </svg>
+      <p>
+        لذلك عند إضافة feature جديدة غالباً نقرر: هل نحتاج topic جديد؟ أم يكفي توسيع command على topic موجود؟
+        في feature الأخيرة اخترنا توسيع <code>command</code> داخل <code>ShuttleCommand</code> بدون إنشاء message جديد.
+      </p>
+    </section>
+
+    <section class="page" id="p06">
+      <h2>Service وParameter وLaunch</h2>
+      <p>
+        في ROS 2، الـ topic جيد للأوامر المستمرة أو events. أما الـ service فيستخدم عندما نحتاج request/response.
+        Gazebo create/remove/set_pose هي services لأننا نطلب من Gazebo تنفيذ عملية محددة.
+      </p>
+      <table>
+        <thead>
+          <tr><th>النوع</th><th>متى نستخدمه؟</th><th>مثال</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Topic</code></td><td>أمر أو state متكرر</td><td>shuttle command/state</td></tr>
+          <tr><td><code>Service</code></td><td>طلب يحتاج رد</td><td>spawn/delete/set_pose في Gazebo</td></tr>
+          <tr><td><code>Parameter</code></td><td>إعداد node</td><td><code>speed</code>, <code>shuttle_count</code></td></tr>
+          <tr><td><code>Launch</code></td><td>تشغيل مجموعة nodes مع arguments</td><td>Room 315 launch</td></tr>
+        </tbody>
+      </table>
+      <p>
+        مثال: عند إضافة shuttle جديد، node ينشئ object داخلي، ثم يستخدم Gazebo service
+        <code>/world/&lt;world&gt;/create</code> إذا model غير موجود مسبقاً.
+      </p>
+    </section>
+
+    <section class="page" id="p07">
+      <h2>هيكل الـ Workspace والـ Packages</h2>
+      <p>المشروع meta-repository يحوي عدة ROS packages:</p>
+      <table>
+        <thead>
+          <tr><th>Package</th><th>الدور</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>mfja_rail_interfaces</code></td><td>تعريف custom messages الخاصة بالـ rails.</td></tr>
+          <tr><td><code>mfja_robot_control_config</code></td><td>الـ node الرئيسي، launch base، scripts، YAML configs.</td></tr>
+          <tr><td><code>mfja_3rd_floor_description</code></td><td>models, worlds, meshes, URDF/SDF.</td></tr>
+          <tr><td><code>mfja_room_315_bringup</code></td><td>launch entry point لـ Room 315 فقط.</td></tr>
+          <tr><td><code>mfja_3rd_floor_bringup</code></td><td>launch entry point للطابق الكامل.</td></tr>
+          <tr><td><code>mfja_3rd_floor_gz</code></td><td>top-level launch wrappers.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        عندما تضيف message جديد، غالباً تعدل <code>mfja_rail_interfaces</code>. عندما تضيف behavior جديد،
+        غالباً تعدل <code>room_315_kinematic_shuttle_node.py</code>.
+      </div>
+    </section>
+
+    <section class="page" id="p08">
+      <h2>Build وSource</h2>
+      <p>بعد تعديل كود Python أو launch غالباً يكفي build عادي، وبعد تعديل messages يجب rebuild للـ interface package أيضاً.</p>
+      <pre><code>cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash</code></pre>
+      <p>إذا فتحت terminal جديد فقط:</p>
+      <pre><code>cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash</code></pre>
+      <p class="small">
+        لأن <code>room_315_kinematic_shuttle_node.py</code> installed كـ program داخل package، استخدام
+        <code>--symlink-install</code> يساعدك ترى التعديلات بسرعة بدون نسخ يدوي.
+      </p>
+    </section>
+
+    <section class="page" id="p09">
+      <h2>Architecture العامة للنظام</h2>
+      <p>الصورة التالية تلخص كيف تتحرك البيانات من المستخدم إلى Gazebo:</p>
+      <svg class="diagram" viewBox="0 0 820 430" role="img" aria-label="System architecture">
+        <defs>
+          <marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#385f96"></path>
+          </marker>
+        </defs>
+        <rect x="30" y="40" width="160" height="70" rx="8" fill="#eef8f8" stroke="#0e787c"></rect>
+        <text x="110" y="72" text-anchor="middle" font-size="15">User Terminal</text>
+        <text x="110" y="94" text-anchor="middle" font-size="12">ros2 topic pub</text>
+        <rect x="280" y="30" width="250" height="95" rx="8" fill="#eef4ff" stroke="#385f96"></rect>
+        <text x="405" y="62" text-anchor="middle" font-size="15">room_315_kinematic_shuttle_node</text>
+        <text x="405" y="88" text-anchor="middle" font-size="12">callbacks + kinematic core</text>
+        <rect x="625" y="40" width="160" height="70" rx="8" fill="#fff5e6" stroke="#a86200"></rect>
+        <text x="705" y="72" text-anchor="middle" font-size="15">Gazebo</text>
+        <text x="705" y="94" text-anchor="middle" font-size="12">create / set_pose / remove</text>
+        <line x1="190" y1="75" x2="270" y2="75" stroke="#385f96" stroke-width="3" marker-end="url(#arr2)"></line>
+        <line x1="535" y1="75" x2="615" y2="75" stroke="#385f96" stroke-width="3" marker-end="url(#arr2)"></line>
+        <rect x="80" y="190" width="170" height="70" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="165" y="222" text-anchor="middle" font-size="14">YAML Devices</text>
+        <text x="165" y="244" text-anchor="middle" font-size="12">slots, sensors, stoppers</text>
+        <rect x="325" y="190" width="170" height="70" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="410" y="222" text-anchor="middle" font-size="14">Rail Network</text>
+        <text x="410" y="244" text-anchor="middle" font-size="12">segments + switches</text>
+        <rect x="570" y="190" width="170" height="70" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="655" y="222" text-anchor="middle" font-size="14">State Topics</text>
+        <text x="655" y="244" text-anchor="middle" font-size="12">shuttle/switch/sensor</text>
+        <line x1="250" y1="225" x2="315" y2="225" stroke="#385f96" stroke-width="2" marker-end="url(#arr2)"></line>
+        <line x1="410" y1="190" x2="410" y2="130" stroke="#385f96" stroke-width="2" marker-end="url(#arr2)"></line>
+        <line x1="530" y1="225" x2="560" y2="225" stroke="#385f96" stroke-width="2" marker-end="url(#arr2)"></line>
+      </svg>
+    </section>
+
+    <section class="page" id="p10">
+      <h2>مبدأ Kinematic Simulation</h2>
+      <p>
+        في simulation الفيزيائي التقليدي، نترك الـ physics engine يحسب حركة الجسم من forces وjoints وcontacts.
+        هنا اخترنا kinematic simulation: نحن نحسب pose مباشرة.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Physics-based</th><th>Kinematic-first في مشروعنا</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>يعتمد على wheels/contacts/friction</td><td>يعتمد على rail path معروف</td></tr>
+          <tr><td>أصعب للتحكم الدقيق</td><td>أسهل لتجارب switch routing</td></tr>
+          <tr><td>يتأثر بالـ physics instability</td><td>أكثر deterministic</td></tr>
+          <tr><td>واقعي أكثر ميكانيكياً</td><td>مناسب للتحكم والمنطق والتوثيق</td></tr>
+        </tbody>
+      </table>
+      <p>الـ node يقوم كل tick بما يلي: حساب pose، نشر state، إرسال set_pose إلى Gazebo عند الحاجة.</p>
+    </section>
+
+    <section class="page" id="p11">
+      <h2>Rail Graph وCSV Segments</h2>
+      <p>
+        الـ rail ليست خطاً واحداً. هي graph من segments. كل segment له اسم مثل
+        <code>A23</code>, <code>A14</code>, <code>A12E</code>, <code>A12I</code>.
+        الـ switches تحدد أي successor سيختاره الـ shuttle عند نهاية segment.
+      </p>
+      <div class="grid">
+        <div class="card">
+          <h3>CSV geometry</h3>
+          <p>الملفات داخل <code>raw_segments</code> و<code>normalized_segments</code> تعطي points للrail.</p>
+        </div>
+        <div class="card">
+          <h3>Rail network YAML</h3>
+          <p><code>rail_network_right.yaml</code> و<code>rail_network_left.yaml</code> يحددان graph والـ switches.</p>
+        </div>
+      </div>
+      <p>
+        عندما يتغير switch من <code>EXTERIOR</code> إلى <code>INTERIOR</code>، يتغير المسار التالي من branch إلى آخر.
+      </p>
+    </section>
+
+    <section class="page" id="p12">
+      <h2>Path Backend: لماذا Cubic Hermite؟</h2>
+      <p>
+        الـ CSV points تعطينا نقاطاً منفصلة. كي يتحرك shuttle بسلاسة، نحتاج path يمكن sampling عليه حسب arc length.
+        لذلك نستخدم <code>cubic_hermite</code> كـ default.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Backend</th><th>الاستخدام</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>cubic_hermite</code></td><td>الحركة الطبيعية السلسة.</td></tr>
+          <tr><td><code>polyline</code></td><td>Debug ومقارنة مباشرة مع CSV.</td></tr>
+        </tbody>
+      </table>
+      <pre><code># Normal mode
+-p path_backend:=cubic_hermite
+
+# Debug mode
+-p path_backend:=polyline</code></pre>
+    </section>
+
+    <section class="page" id="p13">
+      <h2>حالة الـ Shuttle</h2>
+      <p>كل shuttle له state داخلي وstate منشور على topic.</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>اسم shuttle في Gazebo وROS.</td></tr>
+          <tr><td><code>mode</code></td><td><code>MOVING</code>, <code>WAITING</code>, <code>FALLING</code>.</td></tr>
+          <tr><td><code>current_segment</code></td><td>اسم segment الحالي.</td></tr>
+          <tr><td><code>s</code></td><td>الموقع على segment.</td></tr>
+          <tr><td><code>x,y,z,yaw</code></td><td>pose في world/Gazebo بعد transform.</td></tr>
+          <tr><td><code>speed</code></td><td>سرعة الحركة m/s.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+    </section>
+
+    <section class="page" id="p14">
+      <h2>Lifecycle للـ Shuttle</h2>
+      <p>من لحظة الإضافة حتى الحذف، يمر الـ shuttle بهذه المراحل:</p>
+      <svg class="diagram" viewBox="0 0 820 290" role="img" aria-label="Shuttle lifecycle">
+        <defs>
+          <marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#0e787c"></path>
+          </marker>
+        </defs>
+        <g fill="#eef8f8" stroke="#0e787c">
+          <rect x="35" y="95" width="120" height="70" rx="8"></rect>
+          <rect x="205" y="95" width="120" height="70" rx="8"></rect>
+          <rect x="375" y="95" width="120" height="70" rx="8"></rect>
+          <rect x="545" y="95" width="120" height="70" rx="8"></rect>
+          <rect x="700" y="95" width="90" height="70" rx="8"></rect>
+        </g>
+        <text x="95" y="134" text-anchor="middle" font-size="14">ADD</text>
+        <text x="265" y="125" text-anchor="middle" font-size="14">WAITING</text>
+        <text x="265" y="148" text-anchor="middle" font-size="12">ADD_STOPPED</text>
+        <text x="435" y="134" text-anchor="middle" font-size="14">MOVING</text>
+        <text x="605" y="134" text-anchor="middle" font-size="14">RESET/OFF</text>
+        <text x="745" y="134" text-anchor="middle" font-size="14">REMOVE</text>
+        <line x1="155" y1="130" x2="195" y2="130" stroke="#0e787c" stroke-width="3" marker-end="url(#arr3)"></line>
+        <line x1="325" y1="130" x2="365" y2="130" stroke="#0e787c" stroke-width="3" marker-end="url(#arr3)"></line>
+        <line x1="495" y1="130" x2="535" y2="130" stroke="#0e787c" stroke-width="3" marker-end="url(#arr3)"></line>
+        <line x1="665" y1="130" x2="690" y2="130" stroke="#0e787c" stroke-width="3" marker-end="url(#arr3)"></line>
+      </svg>
+      <p>الأوامر الأساسية: <code>ADD_STOPPED</code>, <code>ADD_MOVING</code>, <code>ON</code>, <code>OFF</code>, <code>RESET</code>, <code>REMOVE</code>.</p>
+    </section>
+
+    <section class="page" id="p15">
+      <h2>Startup Shuttles عبر Launch Arguments</h2>
+      <p>
+        عند تشغيل launch، يمكنك إنشاء shuttles مبدئياً. السلوك صار أبسط الآن:
+        إذا جعلت عدد shuttles أكبر من صفر، فهي تظهر دائماً في Gazebo على السكة. القرار الوحيد المتبقي هو:
+        هل تبدأ waiting أم تتحرك مباشرة؟
+      </p>
+      <table>
+        <thead>
+          <tr><th>Argument</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>room315_right_shuttle_count</code></td><td>عدد shuttles على right rail.</td></tr>
+          <tr><td><code>room315_left_shuttle_count</code></td><td>عدد shuttles على left rail.</td></tr>
+          <tr><td><code>room315_shuttles_start_enabled</code></td><td>إذا <code>false</code> تظهر shuttles وهي waiting. إذا <code>true</code> تظهر وتبدأ moving مباشرة.</td></tr>
+          <tr><td><code>room315_right_start_slot</code></td><td>يحدد رقم مكان البداية على right rail: أي slot سيظهر عنده الشاتل، وأي slot سيعود إليه عند <code>RESET</code>.</td></tr>
+          <tr><td><code>room315_left_start_slot</code></td><td>نفس الفكرة لكن على left rail.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        لا يوجد بعد الآن خيار hidden/deployed عند startup. إذا <code>room315_right_shuttle_count</code>
+        أو <code>room315_left_shuttle_count</code> أكبر من صفر، الشاتل يظهر دائماً. استخدم
+        <code>room315_shuttles_start_enabled</code> فقط لتقرر waiting أو moving.
+      </div>
+      <table>
+        <thead>
+          <tr><th>الإعدادات</th><th>النتيجة عند التشغيل</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>room315_right_shuttle_count:=1</code><br><code>room315_right_start_slot:=2</code><br><code>room315_shuttles_start_enabled:=false</code></td><td>شاتل واحد يظهر على right rail عند slot 2 ويبقى waiting إلى أن ترسل له <code>ON</code>.</td></tr>
+          <tr><td><code>room315_right_shuttle_count:=1</code><br><code>room315_right_start_slot:=4</code><br><code>room315_shuttles_start_enabled:=true</code></td><td>شاتل واحد يظهر عند slot 4 ويبدأ moving مباشرة.</td></tr>
+          <tr><td><code>room315_right_shuttle_count:=0</code></td><td>لا يتم إنشاء startup shuttle على right rail. يمكنك إضافته لاحقاً runtime باستخدام <code>ADD_STOPPED</code> أو <code>ADD_MOVING</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        تخيلها مثل سيارة: <code>start_slot</code> هو رقم الموقف الذي ستقف فيه السيارة،
+        و<code>start_enabled</code> هو هل المحرك شغال من البداية أم السيارة واقفة تنتظر أمر التشغيل.
+      </p>
+    </section>
+
+    <section class="page" id="p16">
+      <h2>Runtime Add: ساكن أو متحرك مباشرة</h2>
+      <p>
+        هذه هي feature الأخيرة التي أضفناها. لم نضف field جديد إلى <code>ShuttleCommand.msg</code>.
+        استعملنا حقل <code>command</code> نفسه بطريقة أوضح.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Command</th><th>السلوك</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ADD_STOPPED</code></td><td>ينشئ shuttle ظاهر، لكنه disabled/waiting حتى ترسل <code>ON</code>.</td></tr>
+          <tr><td><code>ADD_MOVING</code></td><td>ينشئ shuttle ويبدأ الحركة مباشرة.</td></tr>
+          <tr><td><code>ADD</code></td><td>alias قديم، بقي moving مباشرة للتوافق.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        هذه الطريقة أفضل من تغيير message definition لأنها لا تكسر الأوامر القديمة ولا تحتاج migration كبير.
+      </div>
+    </section>
+
+    <section class="page" id="p17">
+      <h2>مثال: إضافة Shuttle ساكن ثم تحريكه</h2>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ADD_STOPPED', start_slot: '2', speed: 0.2}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON'}"</code></pre>
+      <p>ماذا يحدث داخلياً؟</p>
+      <ol>
+        <li>callback يستقبل <code>ShuttleCommand</code>.</li>
+        <li>parser يقرأ <code>command='ADD_STOPPED'</code>.</li>
+        <li>يقرر <code>enabled=False</code>.</li>
+        <li>ينشئ <code>ManagedShuttle</code> في mode <code>WAITING</code>.</li>
+        <li>عند أمر <code>ON</code> يتحول إلى enabled ويبدأ <code>MOVING</code>.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p18">
+      <h2>مثال: إضافة Shuttle متحرك مباشرة</h2>
+      <pre><code>ros2 topic pub --once /room_315/rails/left/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_left_shuttle_2', command: 'ADD_MOVING', start_slot: '1', speed: 0.25}"</code></pre>
+      <p>داخلياً:</p>
+      <ol>
+        <li>parser يقرأ <code>ADD_MOVING</code>.</li>
+        <li>يقرر <code>enabled=True</code>.</li>
+        <li>ينشئ shuttle على start slot.</li>
+        <li>إذا speed أكبر من صفر وshuttle visible/active، يبدأ mode <code>MOVING</code>.</li>
+      </ol>
+      <p>القيمة المقبولة للحركة المباشرة هي <code>ADD_MOVING</code>. إذا أردت shuttle يظهر ساكناً استخدم <code>ADD_STOPPED</code>.</p>
+    </section>
+
+    <section class="page" id="p19">
+      <h2>ON/OFF/RESET/REMOVE</h2>
+      <p>هذه الأوامر ترسل على topic التحكم، وليس add topic:</p>
+      <pre><code>/room_315/rails/right/shuttles/command
+/room_315/rails/left/shuttles/command</code></pre>
+      <table>
+        <thead>
+          <tr><th>Command</th><th>الوظيفة</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ON</code></td><td>يفعل shuttle ويجعله يتحرك إذا speed أكبر من صفر.</td></tr>
+          <tr><td><code>OFF</code></td><td>يوقف الحركة ويبقي model في مكانه.</td></tr>
+          <tr><td><code>RESET</code></td><td>يعيد shuttle إلى start slot.</td></tr>
+          <tr><td><code>REMOVE</code></td><td>يحذف model من Gazebo ويفصله من node.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p20">
+      <h2>Switch Control</h2>
+      <p>
+        الـ switch يغير routing. في public API نستعمل labels <code>A1</code> إلى <code>A4</code>
+        وحالات <code>EXTERIOR</code> أو <code>INTERIOR</code>.
+      </p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'A1', state: 'INTERIOR'}]}"</code></pre>
+      <p>الـ command ليس بالضرورة يصبح actual فوراً. يوجد delay عبر parameter:</p>
+      <pre><code>room315_switch_motion_delay_s:=0.3</code></pre>
+      <p>actual state ينشر على:</p>
+      <pre><code>/room_315/rails/right/switches/state
+/room_315/rails/left/switches/state</code></pre>
+    </section>
+
+    <section class="page" id="p21">
+      <h2>Stopper Control</h2>
+      <p>
+        الـ stopper هو منطق إيقاف قبل switch. نستخدمه حتى نوقف shuttle، نغير switch، ثم نفتح stopper.
+      </p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/stoppers/command \
+  mfja_rail_interfaces/msg/StopperCommand \
+  "{stoppers: [{name: 'A1', state: '1'}]}"</code></pre>
+      <table>
+        <thead>
+          <tr><th>State</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>1</code>, <code>CLOSED</code>, <code>STOP</code></td><td>يغلق stopper ويوقف shuttle عنده.</td></tr>
+          <tr><td><code>0</code>, <code>OPEN</code>, <code>RELEASE</code></td><td>يفتح stopper ويسمح بالمرور.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p22">
+      <h2>Sensor Feedback</h2>
+      <p>لدينا نوعان رئيسيان:</p>
+      <ul>
+        <li><code>approach sensors</code>: تخبرنا أن shuttle يقترب من switch/stopper.</li>
+        <li><code>position sensors</code>: تخبرنا أن shuttle مر بنقطة detector معينة.</li>
+      </ul>
+      <pre><code>ros2 topic echo /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+
+ros2 topic echo /room_315/rails/right/sensors/position_feedback \
+  mfja_rail_interfaces/msg/SensorFeedback</code></pre>
+      <div class="warning callout">
+        ملاحظة: approach sensor markers لونها cyan/teal في الكود، لكنها غالباً مخفية خلف stopper الأحمر في Gazebo لأن الموقع نفسه تقريباً.
+      </div>
+    </section>
+
+    <section class="page" id="p23">
+      <h2>Manual Workflow: Sensor ثم Stopper ثم Switch</h2>
+      <p>هذا workflow مهم لفهم منطق التحكم اليدوي:</p>
+      <ol>
+        <li>راقب <code>sensors/feedback</code>.</li>
+        <li>عندما يظهر shuttle يقترب من <code>A1</code> مثلاً، أغلق <code>A1 stopper</code>.</li>
+        <li>غيّر <code>A1 switch</code>.</li>
+        <li>افتح stopper حتى يكمل shuttle.</li>
+      </ol>
+      <pre><code>ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '0'}]}"</code></pre>
+    </section>
+
+    <section class="page" id="p24">
+      <h2>Device YAML</h2>
+      <p>أماكن slots/sensors/stoppers ليست hard-coded فقط؛ موجودة في YAML:</p>
+      <pre><code>mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml
+mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml</code></pre>
+      <p>مثال entry:</p>
+      <pre><code>position_sensors:
+  - name: DZI1R
+    segment: A23
+    s_ratio: 0.35
+    radius_m: 0.08</code></pre>
+      <p>
+        لتغيير مكان sensor، عدل <code>segment</code> أو <code>s_ratio</code> ثم شغل
+        <code>device validator</code>. المقصود بالـ validator هنا script موجود في المشروع اسمه:
+      </p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_devices_validator.py</code></pre>
+      <p>
+        وظيفته أن يفحص ملفي <code>rail_devices_right.yaml</code> و
+        <code>rail_devices_left.yaml</code> ويتأكد أن أسماء segments موجودة وأن
+        <code>s_ratio</code> بين <code>0.0</code> و <code>1.0</code> وأن fields المطلوبة موجودة.
+      </p>
+    </section>
+
+    <section class="page" id="p25">
+      <h2>Device Position Tool</h2>
+      <p>إذا لديك coordinate من Gazebo وتريد أقرب <code>segment</code> و<code>s_ratio</code>:</p>
+      <pre><code>python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -10.50 \
+  --y -3.20 \
+  --z 0.85</code></pre>
+      <p>وإذا تريد كتابة النتيجة مباشرة داخل YAML:</p>
+      <pre><code>python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -10.50 \
+  --y -3.20 \
+  --z 0.85 \
+  --category position_sensors \
+  --name DZI1R \
+  --write</code></pre>
+      <div class="callout">
+        <code>--category</code> مطلوب فقط عندما تريد <code>--write</code> أو عندما تريد توضيح أين يجب أن يبحث tool داخل
+        <code>rail_devices_*.yaml</code>. إذا كنت فقط تريد حساب أقرب <code>segment</code> و<code>s_ratio</code> فلا تحتاج
+        <code>--category</code> ولا <code>--name</code>. ولأن default هو <code>position_sensors</code>، يمكن حذف
+        <code>--category position_sensors</code> عند تحديث position sensor مثل <code>DZI1R</code>.
+      </div>
+      <p>نفس أمر الكتابة يمكن اختصاره هكذا لأن <code>position_sensors</code> هي القيمة الافتراضية:</p>
+      <pre><code>python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -10.50 \
+  --y -3.20 \
+  --z 0.85 \
+  --name DZI1R \
+  --write</code></pre>
+      <p>
+        أما إذا كنت تعدل <code>stoppers</code> أو <code>approach_sensors</code> أو <code>slots</code>، فاكتب
+        <code>--category</code> صراحة حتى يعرف tool أي list يعدل.
+      </p>
+    </section>
+
+    <section class="page" id="p26">
+      <h2>Gazebo Services</h2>
+      <p>الـ node يتعامل مع Gazebo عبر services:</p>
+      <table>
+        <thead>
+          <tr><th>Service</th><th>الاستخدام</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>/world/room_315_only/set_pose</code></td><td>تحريك shuttle model.</td></tr>
+          <tr><td><code>/world/room_315_only/create</code></td><td>spawn model جديد أو marker.</td></tr>
+          <tr><td><code>/world/room_315_only/remove</code></td><td>حذف shuttle model.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>ros2 service list | grep -E "set_pose|create|remove"</code></pre>
+      <p>في full floor يصبح world name هو <code>mfja_3rd_floor</code>.</p>
+    </section>
+
+    <section class="page" id="p27">
+      <h2>Topics الأساسية</h2>
+      <table>
+        <thead>
+          <tr><th>Purpose</th><th>Right rail</th><th>Message</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Add shuttle</td><td><code>/room_315/rails/right/shuttles/add_command</code></td><td><code>ShuttleCommand</code></td></tr>
+          <tr><td>Control shuttle</td><td><code>/room_315/rails/right/shuttles/command</code></td><td><code>ShuttleCommand</code></td></tr>
+          <tr><td>Shuttle state</td><td><code>/room_315/rails/right/shuttles/state</code></td><td><code>ShuttleState</code></td></tr>
+          <tr><td>Switch command</td><td><code>/room_315/rails/right/switches/command</code></td><td><code>SwitchCommand</code></td></tr>
+          <tr><td>Stopper command</td><td><code>/room_315/rails/right/stoppers/command</code></td><td><code>StopperCommand</code></td></tr>
+          <tr><td>Sensors</td><td><code>/room_315/rails/right/sensors/feedback</code></td><td><code>SensorFeedback</code></td></tr>
+        </tbody>
+      </table>
+      <p>نفس الأسماء موجودة تحت <code>/room_315/rails/left/...</code> للـ left rail.</p>
+    </section>
+
+    <section class="page" id="p28">
+      <h2>Custom Messages</h2>
+      <p>الـ messages موجودة في <code>mfja_rail_interfaces/msg</code>.</p>
+      <pre><code>ShuttleCommand.msg
+std_msgs/Header header
+string name
+string command
+string start_slot
+float64 speed</code></pre>
+      <p>
+        لم نضف field جديد لـ stopped/moving لأن <code>command</code> يكفي:
+        <code>ADD_STOPPED</code> أو <code>ADD_MOVING</code>.
+      </p>
+      <p>إذا أردت مستقبلاً إضافة field مثل <code>bool start_enabled</code>، ستحتاج تعديل msg ثم rebuild.</p>
+    </section>
+
+    <section class="page" id="p29">
+      <h2>كيف أضفنا الـ Topics؟</h2>
+      <p>إضافة topic في ROS 2 تمر عادة بهذه الخطوات:</p>
+      <ol>
+        <li>تعريف message في <code>mfja_rail_interfaces/msg</code>.</li>
+        <li>إضافة message إلى <code>rosidl_generate_interfaces</code> في <code>CMakeLists.txt</code>.</li>
+        <li>إضافة dependency في <code>package.xml</code>.</li>
+        <li>في node: إنشاء publisher أو subscription.</li>
+        <li>كتابة callback إذا كان subscription.</li>
+        <li>تحديث launch/documentation.</li>
+      </ol>
+      <p>في مشروعنا الـ topics موجودة كـ default strings داخل <code>RIGHT_TOPIC_DEFAULTS</code> و<code>LEFT_TOPIC_DEFAULTS</code>.</p>
+    </section>
+
+    <section class="page" id="p30">
+      <h2>أين نعدل بالكود؟ خريطة الملفات</h2>
+      <table>
+        <thead>
+          <tr><th>أريد أن أعدل...</th><th>الملف</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>سلوك shuttle أو parser أو topics</td><td><code>room_315_kinematic_shuttle_node.py</code></td></tr>
+          <tr><td>الرسائل typed messages</td><td><code>mfja_rail_interfaces/msg/*.msg</code></td></tr>
+          <tr><td>تشغيل right/left rail nodes</td><td><code>room_315_dual_kinematic_shuttles.launch.py</code></td></tr>
+          <tr><td>Room 315 launch arguments</td><td><code>mfja_room_315_bringup/launch/room_315_only.launch.py</code></td></tr>
+          <tr><td>Full floor launch arguments</td><td><code>mfja_3rd_floor_bringup/launch/full_floor.launch.py</code></td></tr>
+          <tr><td>مواقع sensors/stoppers/slots</td><td><code>rail_devices_right.yaml</code>, <code>rail_devices_left.yaml</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p31">
+      <h2>Topic Defaults في الكود</h2>
+      <p>
+        في أعلى <code>room_315_kinematic_shuttle_node.py</code> يوجد maps:
+        <code>RIGHT_TOPIC_DEFAULTS</code> و<code>LEFT_TOPIC_DEFAULTS</code>.
+      </p>
+      <pre><code>RIGHT_TOPIC_DEFAULTS = {
+  'add_shuttle_command_topic': '/room_315/rails/right/shuttles/add_command',
+  'switch_command_topic': '/room_315/rails/right/switches/command',
+  'stopper_command_topic': '/room_315/rails/right/stoppers/command',
+  'sensor_state_topic': '/room_315/rails/right/sensors/feedback',
+}</code></pre>
+      <p>إذا أردت تغيير topic name افتراضياً، هذا أحد الأماكن التي تنظر إليها، لكن الأفضل غالباً تمريره كـ parameter.</p>
+    </section>
+
+    <section class="page" id="p32">
+      <h2>Parameters داخل Node</h2>
+      <p>
+        داخل constructor يتم استدعاء <code>declare_parameter</code>. هذه تعطي node إعدادات قابلة للتمرير من launch.
+      </p>
+      <pre><code>self.declare_parameter('shuttle_count', 1)
+self.declare_parameter('start_enabled', False)
+self.declare_parameter('speed', 0.25)
+self.declare_parameter('enable_gazebo_set_pose', False)</code></pre>
+      <p>
+        عند تعديل behavior يحتاج configuration، أضف parameter بدل hard-code. ثم مرره من launch إذا احتجته.
+      </p>
+    </section>
+
+    <section class="page" id="p33">
+      <h2>Publishers وSubscriptions</h2>
+      <p>
+        الـ publisher يرسل state. الـ subscription يستقبل commands.
+      </p>
+      <pre><code>self.add_shuttle_subscription = self.create_subscription(
+    RailShuttleCommand,
+    add_shuttle_command_topic,
+    self._on_add_shuttle_command,
+    10,
+)</code></pre>
+      <pre><code>self.state_publisher = self.create_publisher(
+    RailShuttleState,
+    shuttle_state_topic,
+    10,
+)</code></pre>
+      <p>الرقم <code>10</code> هو QoS depth بسيط للqueue.</p>
+    </section>
+
+    <section class="page" id="p34">
+      <h2>Callback: استقبال ADD</h2>
+      <p>
+        عند وصول message على add topic، callback <code>_on_add_shuttle_command</code> يعمل.
+      </p>
+      <pre><code>def _on_add_shuttle_command(self, message):
+    entity_name, slot, speed, enabled = self._parse_add_shuttle_typed_command(message)
+    shuttle = self._create_managed_shuttle(
+        entity_name=entity_name,
+        slot=slot,
+        speed=speed,
+        enabled=enabled,
+    )
+    self._finish_add_shuttle(shuttle)</code></pre>
+      <p>لاحظ أن أهم نتيجة جديدة هي <code>enabled</code>.</p>
+    </section>
+
+    <section class="page" id="p35">
+      <h2>Parser: ADD_STOPPED وADD_MOVING</h2>
+      <p>
+        أضفنا function تفهم command string وتعيد boolean:
+      </p>
+      <pre><code>def _add_shuttle_start_enabled_from_command(raw_command):
+    if command == 'ADD_MOVING':
+        return True
+    if command == 'ADD_STOPPED':
+        return False
+    return None</code></pre>
+      <p>هذه function تجعل معنى الأمر واضحاً جداً: هناك حالتان فقط عند إضافة shuttle، ساكن أو متحرك مباشرة.</p>
+    </section>
+
+    <section class="page" id="p36">
+      <h2>Create Managed Shuttle</h2>
+      <p>
+        function <code>_create_managed_shuttle</code> مسؤولة عن object الداخلي.
+        إذا <code>enabled=False</code> يبدأ mode كـ <code>WAITING</code> ويظهر stopped_by كـ <code>DISABLED</code>.
+      </p>
+      <pre><code>mode = MOVING if enabled and deployed and speed > 0.0 else WAITING</code></pre>
+      <p>
+        كلمة <code>deployed</code> هنا state داخلي معناها أن model موجود حالياً في Gazebo. لم نعد نعرض
+        launch argument يسمح بجعل startup shuttles مخفية؛ أي startup shuttle بعدد أكبر من صفر يبدأ
+        <code>deployed=True</code> دائماً.
+      </p>
+      <p>
+        لذلك <code>ADD_STOPPED</code> لا يحتاج logic خاص في tick؛ يكفي أن يبدأ <code>enabled=False</code>.
+      </p>
+    </section>
+
+    <section class="page" id="p37">
+      <h2>Tick Loop</h2>
+      <p>كل فترة زمنية، node يشغل <code>_tick</code>:</p>
+      <ol>
+        <li>يحدث device markers.</li>
+        <li>يطبق switch/stopper pending updates.</li>
+        <li>يمر على كل shuttle.</li>
+        <li>إذا shuttle disabled، يبقى WAITING.</li>
+        <li>إذا enabled، يحسب الحركة مع guards.</li>
+        <li>ينشر state وsensor feedback.</li>
+      </ol>
+      <p>هذه الحلقة هي قلب runtime behavior.</p>
+    </section>
+
+    <section class="page" id="p37a">
+      <h2>كيف تزداد قيمة s؟ الفكرة الرياضية</h2>
+      <p>
+        قيمة <code>s</code> هي المسافة المقطوعة على <code>current_segment</code> ابتداءً من بداية ذلك segment.
+        يعني إذا كان shuttle على segment طوله <code>L</code>، فالقيمة الطبيعية لـ <code>s</code> تكون:
+      </p>
+      <pre><code>0 <= s <= L</code></pre>
+      <p>
+        كل tick، الـ node يحسب الزمن الذي مر منذ tick السابق. في الكود:
+      </p>
+      <pre><code>dt = max(0.0, (now - self.last_tick).nanoseconds / 1e9)</code></pre>
+      <p>
+        رياضياً:
+      </p>
+      <pre><code>dt = t_now - t_previous</code></pre>
+      <p>
+        حيث <code>dt</code> بالثواني. إذا كان update rate حوالي <code>30 Hz</code>، فالزمن التقريبي بين ticks:
+      </p>
+      <pre><code>dt ≈ 1 / 30 = 0.033333 s</code></pre>
+      <p>
+        بعد ذلك يستخدم الكود سرعة shuttle، وهي <code>speed</code> أو <code>v</code> بوحدة meter/second.
+        المسافة التي يجب أن يقطعها خلال هذا tick هي:
+      </p>
+      <pre><code>Δs = v * dt</code></pre>
+      <p>
+        فإذا كانت السرعة <code>v = 0.2 m/s</code> و <code>dt = 0.033333 s</code>:
+      </p>
+      <pre><code>Δs = 0.2 * 0.033333 = 0.0066666 m</code></pre>
+      <p>
+        يعني shuttle يتقدم تقريباً <code>6.7 mm</code> في كل tick. إذا لم يوجد stopper أو collision أو نهاية segment،
+        تصبح المعادلة البسيطة:
+      </p>
+      <pre><code>s_new = s_old + v * dt</code></pre>
+      <p>
+        هذه هي قاعدة الحركة الأساسية. كل ما حولها في الكود هو حماية: لا نتجاوز نهاية segment، لا نعبر stopper مغلق،
+        ولا نقترب من shuttle آخر أكثر من اللازم.
+      </p>
+    </section>
+
+    <section class="page" id="p37b">
+      <h2>المعادلة داخل KinematicShuttleCore.step</h2>
+      <p>
+        الحركة الفعلية تحدث في الملف:
+      </p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py</code></pre>
+      <p>داخل function:</p>
+      <pre><code>def step(self, dt, switch_states=None)</code></pre>
+      <p>الكود يحسب أولاً:</p>
+      <pre><code>remaining_distance = self.state.speed * dt</code></pre>
+      <p>رياضياً:</p>
+      <pre><code>R = v * dt</code></pre>
+      <p>
+        حيث <code>R</code> هي المسافة التي ما زال يجب صرفها خلال هذا tick. لماذا لا نسميها مباشرة
+        <code>Δs</code> فقط؟ لأن shuttle قد يكون قريباً من نهاية segment. إذا كانت المسافة المطلوبة أكبر من
+        المتبقي في segment، يجب صرف جزء منها للوصول إلى النهاية، ثم الانتقال إلى segment التالي وصرف الباقي هناك.
+      </p>
+      <pre><code>segment = network.segments[current_segment]
+L = segment.length
+d_end = max(0, L - s)</code></pre>
+      <p>
+        المعنى:
+      </p>
+      <table>
+        <thead>
+          <tr><th>رمز</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>L</code></td><td>طول الـ current segment.</td></tr>
+          <tr><td><code>s</code></td><td>موقع shuttle الحالي على هذا segment.</td></tr>
+          <tr><td><code>d_end</code></td><td>المسافة المتبقية حتى نهاية segment.</td></tr>
+          <tr><td><code>R</code></td><td>المسافة التي يجب أن يتحركها shuttle خلال هذا tick.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        توجد حالتان:
+      </p>
+      <h3>الحالة 1: الحركة لا تصل إلى نهاية segment</h3>
+      <pre><code>if R < d_end:
+    s_new = s_old + R
+    R = 0</code></pre>
+      <p>
+        رياضياً:
+      </p>
+      <pre><code>s_{k+1} = s_k + v * dt</code></pre>
+      <p>
+        وهنا يبقى <code>current_segment</code> كما هو.
+      </p>
+      <h3>الحالة 2: الحركة تصل إلى نهاية segment أو تتجاوزها</h3>
+      <pre><code>R = R - d_end
+s = L
+successor = resolve_successor(current_segment, switch_states)
+current_segment = successor
+s = 0</code></pre>
+      <p>
+        يعني نصل إلى نهاية segment، ثم نسأل rail graph: ما هو segment التالي؟ إذا وجدنا successor صالح،
+        ينتقل shuttle إلى بداية successor وتصبح <code>s = 0</code> هناك. إذا بقي جزء من <code>R</code>،
+        يستمر while loop ويصرف هذا الجزء على segment الجديد.
+      </p>
+    </section>
+
+    <section class="page" id="p37c">
+      <h2>مثال رقمي: زيادة s خطوة خطوة</h2>
+      <p>
+        لنفرض:
+      </p>
+      <pre><code>speed v = 0.2 m/s
+dt = 0.033333 s
+segment length L = 1.000 m
+s0 = 0.400 m</code></pre>
+      <p>المسافة في كل tick:</p>
+      <pre><code>Δs = v * dt = 0.2 * 0.033333 = 0.006667 m</code></pre>
+      <table>
+        <thead>
+          <tr><th>tick</th><th>المعادلة</th><th>قيمة s</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>0</code></td><td>قيمة البداية</td><td><code>0.400000</code></td></tr>
+          <tr><td><code>1</code></td><td><code>s1 = 0.400000 + 0.006667</code></td><td><code>0.406667</code></td></tr>
+          <tr><td><code>2</code></td><td><code>s2 = 0.406667 + 0.006667</code></td><td><code>0.413334</code></td></tr>
+          <tr><td><code>3</code></td><td><code>s3 = 0.413334 + 0.006667</code></td><td><code>0.420001</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        إذا لم يحدث أي توقف، يمكن كتابة العلاقة بعد <code>n</code> ticks:
+      </p>
+      <pre><code>s_n = s_0 + n * v * dt</code></pre>
+      <p>
+        لكن هذه العلاقة صالحة فقط طالما لم نصل إلى نهاية segment. عدد ticks التقريبي للوصول إلى النهاية:
+      </p>
+      <pre><code>n_to_end = ceil((L - s0) / (v * dt))</code></pre>
+      <p>في المثال:</p>
+      <pre><code>n_to_end = ceil((1.000 - 0.400) / 0.006667)
+         = ceil(90.0)
+         = 90 ticks</code></pre>
+      <p>والزمن اللازم للوصول إلى النهاية:</p>
+      <pre><code>t_to_end = (L - s0) / v
+         = 0.600 / 0.2
+         = 3.0 s</code></pre>
+    </section>
+
+    <section class="page" id="p37d">
+      <h2>ماذا يحدث عند نهاية segment؟</h2>
+      <p>
+        افترض أن shuttle قريب جداً من نهاية segment:
+      </p>
+      <pre><code>L = 1.000 m
+s_old = 0.980 m
+v = 0.2 m/s
+dt = 0.2 s</code></pre>
+      <p>المسافة المطلوبة خلال tick:</p>
+      <pre><code>R = v * dt = 0.2 * 0.2 = 0.040 m</code></pre>
+      <p>المسافة المتبقية حتى نهاية segment:</p>
+      <pre><code>d_end = L - s_old = 1.000 - 0.980 = 0.020 m</code></pre>
+      <p>
+        بما أن <code>R >= d_end</code>، فالحركة تكفي للوصول للنهاية وتبقى مسافة إضافية:
+      </p>
+      <pre><code>R_after_end = R - d_end = 0.040 - 0.020 = 0.020 m</code></pre>
+      <p>
+        الكود يضع:
+      </p>
+      <pre><code>s = L
+current_segment = successor
+s = 0</code></pre>
+      <p>
+        ثم يستعمل المسافة الباقية <code>0.020 m</code> على الـ successor:
+      </p>
+      <pre><code>s_on_successor = 0.000 + 0.020 = 0.020 m</code></pre>
+      <p>
+        لذلك عند عبور نهاية segment لا تضيع المسافة الزائدة. الكود يحافظ عليها في
+        <code>remaining_distance</code> ويكمل بها على segment التالي.
+      </p>
+    </section>
+
+    <section class="page" id="p37e">
+      <h2>كيف يقرر الكود الـ successor؟</h2>
+      <p>
+        عند نهاية segment، shuttle لا يعرف وحده أين يذهب. rail network يحتوي routing table.
+        الكود يستدعي:
+      </p>
+      <pre><code>successor = network.resolve_successor(current_segment, switch_states)</code></pre>
+      <p>
+        إذا كان route ثابتاً، فالـ successor محدد مباشرة. إذا كان segment ينتهي عند switch،
+        يقرأ الكود حالة switch:
+      </p>
+      <pre><code>switch_state = switch_states[switch_name]</code></pre>
+      <p>
+        ثم يختار branch حسب state:
+      </p>
+      <pre><code>EXTERIOR / E -> G branch
+INTERIOR / I -> S branch</code></pre>
+      <p>
+        رياضياً، نستطيع كتابة successor كدالة:
+      </p>
+      <pre><code>next_segment = f(current_segment, switch_states)</code></pre>
+      <p>
+        إذا لم يوجد successor صالح:
+      </p>
+      <pre><code>mode = FALLING</code></pre>
+      <p>
+        وهذا يعني أن graph لم يعطِ مساراً صالحاً بعد نهاية segment. عندها لا تستمر زيادة <code>s</code>
+        بشكل طبيعي، لأن shuttle خرج من path المعروف.
+      </p>
+    </section>
+
+    <section class="page" id="p37f">
+      <h2>كيف يتحول s إلى x/y/z/yaw؟</h2>
+      <p>
+        قيمة <code>s</code> وحدها ليست pose في Gazebo. هي فقط مسافة على segment.
+        لتحويلها إلى position، يستدعي الكود:
+      </p>
+      <pre><code>point, yaw = segment.sample(s)</code></pre>
+      <p>
+        عند استخدام <code>polyline</code>، لدينا نقاط CSV:
+      </p>
+      <pre><code>P0, P1, P2, ...</code></pre>
+      <p>
+        يحسب الكود أولاً cumulative arc lengths:
+      </p>
+      <pre><code>S0 = 0
+S1 = distance(P0, P1)
+S2 = S1 + distance(P1, P2)
+...</code></pre>
+      <p>
+        إذا وقع <code>s</code> بين <code>S_i</code> و <code>S_{i+1}</code>، يحسب:
+      </p>
+      <pre><code>r = (s - S_i) / (S_{i+1} - S_i)</code></pre>
+      <p>
+        ثم interpolation خطي:
+      </p>
+      <pre><code>P(s) = P_i + r * (P_{i+1} - P_i)</code></pre>
+      <p>
+        وبالنسبة للاتجاه:
+      </p>
+      <pre><code>yaw = atan2(y_{i+1} - y_i, x_{i+1} - x_i)</code></pre>
+      <p>
+        لذلك <code>s</code> لا يعني x ولا y. هو عدّاد مسافة على المسار، وبعدها يتم تحويله إلى
+        <code>x/y/z/yaw</code>.
+      </p>
+    </section>
+
+    <section class="page" id="p37g">
+      <h2>Cubic Hermite: المعادلات المستخدمة للمسار السلس</h2>
+      <p>
+        الـ default backend هو <code>cubic_hermite</code>. هنا لا نتحرك بخطوط مستقيمة فقط بين نقاط CSV،
+        بل نستعمل curve ناعم بين كل نقطتين.
+      </p>
+      <p>
+        لكل interval بين <code>P0</code> و <code>P1</code> يوجد parameter اسمه <code>u</code>:
+      </p>
+      <pre><code>0 <= u <= 1</code></pre>
+      <p>
+        <code>u=0</code> يعني بداية interval، و<code>u=1</code> يعني نهايته. معادلات Hermite basis في الكود:
+      </p>
+      <pre><code>h00 =  2u^3 - 3u^2 + 1
+h10 =   u^3 - 2u^2 + u
+h01 = -2u^3 + 3u^2
+h11 =   u^3 - u^2</code></pre>
+      <p>
+        ومعادلة النقطة:
+      </p>
+      <pre><code>P(u) = h00*P0 + h10*h*M0 + h01*P1 + h11*h*M1</code></pre>
+      <table>
+        <thead>
+          <tr><th>رمز</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>P0, P1</code></td><td>نقطتا بداية ونهاية interval.</td></tr>
+          <tr><td><code>M0, M1</code></td><td>tangents عند النقطتين.</td></tr>
+          <tr><td><code>h</code></td><td>طول chord تقريباً بين النقطتين على أساس arc length الأصلي.</td></tr>
+          <tr><td><code>u</code></td><td>نسبة داخل interval من 0 إلى 1.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        لكن انتبه: الحركة عندنا لا تزيد <code>u</code> مباشرة. الحركة تزيد <code>s</code> كمسافة.
+        لذلك يبني الكود جدولاً اسمه <code>arc_map</code> يربط بين:
+      </p>
+      <pre><code>s  ->  interval index + u</code></pre>
+      <p>
+        عند sampling، يبحث عن أقرب قيمتين في <code>arc_map</code> حول <code>s</code>، ثم يقدر
+        <code>u</code> بالاستيفاء:
+      </p>
+      <pre><code>ratio = (s - lower_s) / (upper_s - lower_s)
+u = lower_u + ratio * (upper_u - lower_u)</code></pre>
+      <p>
+        بعدها يحسب <code>P(u)</code> و tangent. والـ yaw يأتي من tangent:
+      </p>
+      <pre><code>yaw = atan2(tangent_y, tangent_x)</code></pre>
+    </section>
+
+    <section class="page" id="p37h">
+      <h2>تأثير Stopper على زيادة s</h2>
+      <p>
+        إذا كان stopper مغلقاً أمام shuttle، لا يسمح الكود لـ <code>s</code> أن يتجاوز نقطة التوقف.
+        أولاً يحسب المسافة بين shuttle ونقطة التوقف:
+      </p>
+      <pre><code>d_stop = stop_s - s</code></pre>
+      <p>
+        إذا كانت <code>d_stop</code> موجبة أو صفرية، فالـ stopper أمام shuttle على نفس segment.
+        إذا كان الوقت اللازم للوصول إليه أقل من tick الحالي:
+      </p>
+      <pre><code>t_stop = d_stop / v</code></pre>
+      <p>
+        ثم:
+      </p>
+      <pre><code>if t_stop <= dt:
+    effective_dt = t_stop</code></pre>
+      <p>
+        هذا يعني أن الكود لا يحرك shuttle طوال مدة tick، بل فقط حتى وقت الوصول إلى stopper.
+        بعد الحركة يثبت:
+      </p>
+      <pre><code>s = stop_s
+mode = WAITING
+stopped_by = stopper_name</code></pre>
+      <p>
+        مثال:
+      </p>
+      <pre><code>s = 0.900 m
+stop_s = 0.950 m
+v = 0.2 m/s
+dt = 0.5 s
+
+d_stop = 0.950 - 0.900 = 0.050 m
+t_stop = 0.050 / 0.2 = 0.25 s</code></pre>
+      <p>
+        لأن <code>t_stop=0.25</code> أصغر من <code>dt=0.5</code>، سيتحرك shuttle فقط نصف tick تقريباً،
+        ويقف تماماً عند <code>s=0.950</code>.
+      </p>
+    </section>
+
+    <section class="page" id="p37i">
+      <h2>تأثير Collision Avoidance على s</h2>
+      <p>
+        إذا كان هناك shuttle آخر قريب، الكود يجرب الحركة المقترحة أولاً:
+      </p>
+      <pre><code>proposed_pose = core.step(dt)</code></pre>
+      <p>
+        إذا كانت النتيجة آمنة، يعتمدها. إذا كانت ستسبب اقتراباً خطيراً، يعمل binary search على الزمن.
+        رياضياً، يبحث عن أكبر زمن آمن:
+      </p>
+      <pre><code>0 <= t_safe <= dt</code></pre>
+      <p>
+        في كل iteration:
+      </p>
+      <pre><code>mid = (low + high) / 2</code></pre>
+      <p>
+        إذا الحركة حتى <code>mid</code> تسبب collision:
+      </p>
+      <pre><code>high = mid</code></pre>
+      <p>
+        وإذا كانت آمنة:
+      </p>
+      <pre><code>low = mid</code></pre>
+      <p>
+        بعد عدة iterations، يتحرك shuttle بالزمن الآمن <code>low</code> فقط:
+      </p>
+      <pre><code>s_new ≈ s_old + v * low</code></pre>
+      <p>
+        ثم يضع:
+      </p>
+      <pre><code>mode = WAITING
+blocked_by = other_shuttle_name</code></pre>
+      <p>
+        لذلك collision avoidance لا يغير معادلة الحركة الأساسية، لكنه يبدل <code>dt</code> الكبير بزمن أصغر آمن.
+      </p>
+    </section>
+
+    <section class="page" id="p38">
+      <h2>Motion Guards</h2>
+      <p>
+        الحركة ليست مجرد زيادة <code>s</code>. قبل الحركة، node يتحقق من:
+      </p>
+      <ul>
+        <li>هل shuttle enabled؟</li>
+        <li>هل يوجد stopper مغلق أمامه؟</li>
+        <li>هل يوجد shuttle آخر قريب؟</li>
+        <li>هل routing يؤدي إلى successor صالح؟</li>
+      </ul>
+      <p>إذا فشل route قد يدخل shuttle mode <code>FALLING</code>. إذا كان قريباً من shuttle آخر يدخل <code>WAITING</code>.</p>
+    </section>
+
+    <section class="page" id="p39">
+      <h2>Collision Avoidance</h2>
+      <p>
+        الـ node يستخدم distance threshold بين shuttles. القيمة الافتراضية تقريباً:
+      </p>
+      <pre><code>enable_collision_avoidance = true
+shuttle_collision_distance_m = 0.33</code></pre>
+      <p>
+        إذا shuttle متحرك سيصير قريباً جداً من shuttle آخر، يتوقف عند آخر pose آمن.
+      </p>
+      <p>هذا collision avoidance منطقي/kinematic وليس Gazebo physics collision.</p>
+    </section>
+
+    <section class="page" id="p40">
+      <h2>Gazebo Spawn وSet Pose وRemove</h2>
+      <p>ثلاث عمليات مهمة:</p>
+      <ul>
+        <li><code>_request_spawn_if_needed</code>: يطلب create إذا model غير موجود.</li>
+        <li><code>_send_gazebo_pose</code>: يرسل pose إلى <code>set_pose</code>.</li>
+        <li><code>_remove_shuttle</code>: يحذف model ويزيله من القائمة.</li>
+      </ul>
+      <pre><code>ros2 service list | grep /world/room_315_only</code></pre>
+      <p>إذا services غير موجودة، غالباً Gazebo world name غير صحيح أو launch لم يبدأ بعد.</p>
+    </section>
+
+    <section class="page" id="p41">
+      <h2>Switch State Updates</h2>
+      <p>
+        الـ switch command يصل كطلب. ثم node يطبق actual state بعد delay.
+        هذا يسمح بمحاكاة زمن حركة switch.
+      </p>
+      <pre><code>room315_switch_motion_delay_s:=0.3</code></pre>
+      <p>عند تطبيق actual state، ينشر node على:</p>
+      <pre><code>/room_315/rails/right/switches/state</code></pre>
+      <p>ويستطيع أيضاً نشر visual switch command إلى <code>/mfja/conveyor/switch_cmd</code>.</p>
+    </section>
+
+    <section class="page" id="p42">
+      <h2>Stopper State Updates</h2>
+      <p>
+        الـ stopper مشابه للـ switch: command ثم actual state بعد delay.
+      </p>
+      <pre><code>room315_stopper_motion_delay_s:=0.1</code></pre>
+      <p>
+        عند إغلاق stopper، لا يغير rail route، بل يوقف shuttle قبل switch.
+        لذلك هو عنصر safety/control مختلف عن switch.
+      </p>
+    </section>
+
+    <section class="page" id="p43">
+      <h2>Sensor Generation</h2>
+      <p>
+        sensors ليست physical sensors داخل Gazebo. هي virtual sensors يحسبها node من موقع shuttle على path.
+      </p>
+      <ul>
+        <li>إذا shuttle داخل radius position sensor، ينشر reading active.</li>
+        <li>إذا shuttle يقترب من stopper ضمن distance، ينشر approach feedback.</li>
+      </ul>
+      <p>الرسالة:</p>
+      <pre><code>SensorFeedback
+  Header header
+  SensorReading[] readings</code></pre>
+    </section>
+
+    <section class="page" id="p44">
+      <h2>Device Markers في Gazebo</h2>
+      <p>
+        markers تساعدك ترى slots وsensors وstoppers. الكود يعرف ألواناً وأشكالاً داخل
+        <code>DEVICE_MARKER_STYLES</code>.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Device</th><th>Color</th><th>Shape</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>slot</td><td>green</td><td>sphere</td></tr>
+          <tr><td>position_sensor</td><td>blue</td><td>sphere</td></tr>
+          <tr><td>approach_sensor</td><td>cyan/teal</td><td>sphere</td></tr>
+          <tr><td>stopper</td><td>red</td><td>cylinder</td></tr>
+        </tbody>
+      </table>
+      <p>إذا لم ترَ cyan، فهذا طبيعي غالباً لأنه في نفس موقع stopper الأحمر.</p>
+    </section>
+
+    <section class="page" id="p45">
+      <h2>Launch Files</h2>
+      <p>الـ launch files تجمع كل شيء:</p>
+      <ul>
+        <li><code>room_315_only.launch.py</code>: يبدأ Room 315 world، robots اختيارياً، rail nodes اختيارياً.</li>
+        <li><code>full_floor.launch.py</code>: يبدأ full floor world.</li>
+        <li><code>room_315_dual_kinematic_shuttles.launch.py</code>: يبدأ right/left shuttle nodes.</li>
+      </ul>
+      <pre><code>ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true</code></pre>
+    </section>
+
+    <section class="page" id="p46">
+      <h2>كيف نضيف Topic جديد؟</h2>
+      <ol>
+        <li>قرر اسم topic namespace. مثال: <code>/room_315/rails/right/my_feature/command</code>.</li>
+        <li>قرر message type. هل تستخدم message موجود أم تضيف جديد؟</li>
+        <li>أضف default topic في <code>RIGHT_TOPIC_DEFAULTS</code> و<code>LEFT_TOPIC_DEFAULTS</code>.</li>
+        <li>أضف <code>declare_parameter</code> إذا تريد topic configurable.</li>
+        <li>أنشئ <code>create_subscription</code> أو <code>create_publisher</code>.</li>
+        <li>اكتب callback أو publish function.</li>
+        <li>وثق الأوامر في HTML/README.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p47">
+      <h2>كيف نضيف Message جديد؟</h2>
+      <p>إذا لا يكفي message موجود، أضف message جديد:</p>
+      <ol>
+        <li>أنشئ ملف <code>mfja_rail_interfaces/msg/NewMessage.msg</code>.</li>
+        <li>أضفه في <code>rosidl_generate_interfaces</code>.</li>
+        <li>تأكد من dependencies في <code>package.xml</code>.</li>
+        <li>استخدمه في Python import بعد build.</li>
+      </ol>
+      <pre><code>colcon build --packages-select mfja_rail_interfaces mfja_robot_control_config
+source install/setup.bash
+ros2 interface show mfja_rail_interfaces/msg/NewMessage</code></pre>
+      <div class="callout warning">
+        تغيير message قد يتطلب rebuild لكل package يعتمد عليه. لذلك إذا feature بسيطة يمكن تمثيلها داخل field موجود، قد يكون ذلك أفضل.
+      </div>
+    </section>
+
+    <section class="page" id="p48">
+      <h2>Debugging عملي</h2>
+      <table>
+        <thead>
+          <tr><th>المشكلة</th><th>أمر فحص</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>لا أرى topics</td><td><code>ros2 topic list | grep room_315</code></td></tr>
+          <tr><td>Gazebo لا يتحرك</td><td><code>ros2 service list | grep set_pose</code></td></tr>
+          <tr><td>ADD مرفوض</td><td>افحص start slot occupied في logs/state.</td></tr>
+          <tr><td>Shuttle لا يتحرك</td><td>افحص <code>enabled</code>, <code>mode</code>, <code>speed</code>.</td></tr>
+          <tr><td>Switch لا يؤثر</td><td>أرسل command إلى rail topic وليس visual topic فقط.</td></tr>
+          <tr><td>Sensor لا يظهر</td><td>راقب <code>sensors/feedback</code> أثناء مرور shuttle قرب stopper.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p49">
+      <h2>أمثلة تشغيل كاملة</h2>
+      <h3>Room 315 مع shuttle ساكن</h3>
+      <pre><code>ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true</code></pre>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ADD_STOPPED', start_slot: '2', speed: 0.2}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON'}"</code></pre>
+      <h3>Room 315 مع shuttle متحرك مباشرة</h3>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{command: 'ADD_MOVING', start_slot: '3', speed: 0.2}"</code></pre>
+    </section>
+
+    <section class="page" id="p50">
+      <h2>Checklist نهائية</h2>
+      <p>قبل أن تعتبر feature جديدة جاهزة، راجع هذه القائمة:</p>
+      <ul>
+        <li>هل يوجد topic واضح وmessage مناسب؟</li>
+        <li>هل الأسماء ضمن namespace صحيح مثل <code>/room_315/rails/right/...</code>؟</li>
+        <li>هل parser يعطي error مفهوم للأوامر الخاطئة؟</li>
+        <li>هل بقيت الأوامر النهائية واضحة وبدون aliases قديمة؟</li>
+        <li>هل أضفنا examples في README وHTML؟</li>
+        <li>هل جربنا <code>py_compile</code> أو build؟</li>
+        <li>هل state topic يوضح النتيجة؟</li>
+        <li>هل Gazebo services جاهزة؟</li>
+      </ul>
+      <div class="callout">
+        الخلاصة: المشروع مبني على ROS topics typed messages + kinematic core + Gazebo services.
+        عندما تفهم هذه الطبقات الثلاث، تصبح إضافة features جديدة مثل <code>ADD_STOPPED</code> و<code>ADD_MOVING</code>
+        عملية مباشرة ومنظمة.
+      </div>
+    </section>
+
+    <section class="page" id="p101">
+      <h2>مسار المبتدئ المطلق: كيف تقرأ هذا المشروع؟</h2>
+      <p>
+        إذا لم تعمل سابقاً بـ <code>ROS 2</code>، لا تبدأ من الكود مباشرة. ابدأ من السؤال:
+        ما هي البرامج التي تعمل؟ ما هي الرسائل التي تتبادلها؟ أين يدخل أمر المستخدم؟
+      </p>
+      <h3>الخريطة التي سنستخدمها في كل شرح</h3>
+      <table>
+        <thead>
+          <tr><th>السؤال</th><th>جوابه في مشروعنا</th><th>الملف أو الأمر</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ما البرنامج الذي يتحكم بالـ shuttles؟</td><td><code>room_315_kinematic_shuttle_node.py</code></td><td><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></td></tr>
+          <tr><td>ما شكل أوامر الـ shuttle؟</td><td><code>ShuttleCommand.msg</code></td><td><code>mfja_rail_interfaces/msg/ShuttleCommand.msg</code></td></tr>
+          <tr><td>أين نرسل أمر add؟</td><td><code>/room_315/rails/right/shuttles/add_command</code></td><td><code>ros2 topic pub</code></td></tr>
+          <tr><td>أين نقرأ state؟</td><td><code>/room_315/rails/right/shuttles/state</code></td><td><code>ros2 topic echo</code></td></tr>
+          <tr><td>أين تتحدد launch options؟</td><td><code>room_315_only.launch.py</code></td><td><code>mfja_room_315_bringup/launch/room_315_only.launch.py</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        سنكرر هذا النمط دائماً: مفهوم ROS، ثم أين يظهر في المشروع، ثم الكود، ثم تجربة عملية.
+      </p>
+    </section>
+
+    <section class="page" id="p102">
+      <h2>ما هو ROS 2 عملياً؟</h2>
+      <p>
+        <code>ROS 2</code> ليس robot simulator. هو نظام تواصل وتنظيم للبرامج التي تتحكم بالروبوتات أو simulations.
+        في مشروعنا، <code>Gazebo</code> يعرض العالم، أما <code>ROS 2</code> فيرسل الأوامر ويقرأ الحالات.
+      </p>
+      <h3>مثال من مشروعنا</h3>
+      <p>عندما تريد إضافة shuttle، لا تفتح function وتستدعيها. بل ترسل message:</p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ADD_STOPPED', start_slot: '2', speed: 0.2}"</code></pre>
+      <p>هذا الأمر يدخل إلى ROS 2، ثم يصل إلى callback داخل الملف:</p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+      <p>الـ callback الذي يستقبل الأمر اسمه:</p>
+      <pre><code>_on_add_shuttle_command</code></pre>
+    </section>
+
+    <section class="page" id="p103">
+      <h2>ما هو Package؟</h2>
+      <p>
+        في ROS 2، الـ <code>package</code> هو مجلد منظم يحتوي كود أو messages أو launch files.
+        كل package عنده عادة <code>package.xml</code>، وأحياناً <code>CMakeLists.txt</code>.
+      </p>
+      <h3>Packages في مشروعنا</h3>
+      <table>
+        <thead>
+          <tr><th>Package</th><th>لماذا موجود؟</th><th>مثال ملف</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>mfja_rail_interfaces</code></td><td>يحوي message definitions.</td><td><code>msg/ShuttleCommand.msg</code></td></tr>
+          <tr><td><code>mfja_robot_control_config</code></td><td>يحوي node والـ scripts والـ launch base.</td><td><code>scripts/room_315_kinematic_shuttle_node.py</code></td></tr>
+          <tr><td><code>mfja_room_315_bringup</code></td><td>يشغل Room 315 بسهولة.</td><td><code>launch/room_315_only.launch.py</code></td></tr>
+          <tr><td><code>mfja_3rd_floor_description</code></td><td>يحوي Gazebo models/worlds.</td><td><code>worlds/room_315_only.world</code></td></tr>
+        </tbody>
+      </table>
+      <p>إذا أردت معرفة dependencies لأي package، افتح <code>package.xml</code>.</p>
+    </section>
+
+    <section class="page" id="p104">
+      <h2>package.xml: ماذا يخبرنا؟</h2>
+      <p>
+        افتح:
+      </p>
+      <pre><code>mfja_robot_control_config/package.xml</code></pre>
+      <p>ستجد dependencies مثل:</p>
+      <pre><code>&lt;exec_depend&gt;rclpy&lt;/exec_depend&gt;
+&lt;exec_depend&gt;mfja_rail_interfaces&lt;/exec_depend&gt;
+&lt;exec_depend&gt;ros_gz_interfaces&lt;/exec_depend&gt;
+&lt;exec_depend&gt;ros_gz_sim&lt;/exec_depend&gt;</code></pre>
+      <table>
+        <thead>
+          <tr><th>Dependency</th><th>لماذا نحتاجها؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>rclpy</code></td><td>مكتبة كتابة ROS 2 nodes بلغة Python.</td></tr>
+          <tr><td><code>mfja_rail_interfaces</code></td><td>حتى يستطيع node استخدام messages مثل <code>ShuttleCommand</code>.</td></tr>
+          <tr><td><code>ros_gz_interfaces</code></td><td>messages/services للتواصل مع Gazebo.</td></tr>
+          <tr><td><code>ros_gz_sim</code></td><td>تشغيل وتكامل Gazebo مع ROS.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p105">
+      <h2>CMakeLists.txt: لماذا يهمنا؟</h2>
+      <p>
+        في package <code>mfja_rail_interfaces</code>، ملف <code>CMakeLists.txt</code> يقول لـ ROS كيف يبني messages.
+      </p>
+      <pre><code>rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/NamedState.msg"
+  "msg/SwitchCommand.msg"
+  "msg/StopperCommand.msg"
+  "msg/ShuttleCommand.msg"
+  "msg/ShuttleState.msg"
+  "msg/SensorFeedback.msg"
+  DEPENDENCIES std_msgs
+)</code></pre>
+      <p>
+        هذا يعني: عندما تعمل <code>colcon build</code>، ROS يولد Python/C++ types لهذه messages.
+        لذلك نستطيع في Python أن نكتب:
+      </p>
+      <pre><code>from mfja_rail_interfaces.msg import ShuttleCommand as RailShuttleCommand</code></pre>
+      <p>
+        إذا أضفت ملف <code>.msg</code> جديد ولم تضفه هنا، لن يعرفه ROS.
+      </p>
+    </section>
+
+    <section class="page" id="p106">
+      <h2>ما هو Node؟ شرح من الصفر</h2>
+      <p>
+        الـ <code>Node</code> هو برنامج صغير داخل ROS. يمكنه أن يرسل messages، يستقبل messages، يستخدم services،
+        ويملك parameters.
+      </p>
+      <h3>Node في مشروعنا</h3>
+      <p>الملف:</p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+      <p>داخله class تمثل node:</p>
+      <pre><code>class Room315KinematicShuttleNode(Node):</code></pre>
+      <p>
+        هذا يعني أن class يرث من <code>rclpy.node.Node</code>. ومن خلال هذا الوراثة يستطيع استعمال:
+      </p>
+      <ul>
+        <li><code>create_subscription</code></li>
+        <li><code>create_publisher</code></li>
+        <li><code>create_client</code></li>
+        <li><code>declare_parameter</code></li>
+        <li><code>get_logger</code></li>
+      </ul>
+    </section>
+
+    <section class="page" id="p107">
+      <h2>كيف يبدأ Node؟</h2>
+      <p>
+        في ROS 2 Python، عادة يوجد function اسمها <code>main</code> في آخر الملف. وظيفتها تهيئة ROS وتشغيل node.
+        في هذا النوع من الملفات ستجد نمطاً مشابهاً:
+      </p>
+      <pre><code>rclpy.init()
+node = Room315KinematicShuttleNode()
+rclpy.spin(node)
+rclpy.shutdown()</code></pre>
+      <p>
+        معنى <code>spin</code>: ابقَ شغالاً، واستقبل callbacks، ونفذ timers، ولا تخرج فوراً.
+      </p>
+      <div class="callout">
+        إذا لم يعمل <code>spin</code>، فلن يستقبل node أي topic messages. لذلك ROS program عادة لا ينتهي مباشرة.
+      </div>
+    </section>
+
+    <section class="page" id="p108">
+      <h2>ما هو Topic؟ شرح من المشروع</h2>
+      <p>
+        الـ <code>Topic</code> هو قناة اسمها string. البرامج ترسل وتستقبل عليها.
+        لا يوجد function call مباشر بين terminal والnode. يوجد message على topic.
+      </p>
+      <h3>Topic الإضافة</h3>
+      <pre><code>/room_315/rails/right/shuttles/add_command</code></pre>
+      <h3>أين معرف في الكود؟</h3>
+      <p>في الملف:</p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+      <p>داخل map اسمه:</p>
+      <pre><code>RIGHT_TOPIC_DEFAULTS = {
+    'add_shuttle_command_topic': '/room_315/rails/right/shuttles/add_command',
+}</code></pre>
+      <p>
+        هذا default. يمكن تغييره كـ parameter، لكن غالباً نستخدمه كما هو.
+      </p>
+    </section>
+
+    <section class="page" id="p109">
+      <h2>ما هو Subscription؟</h2>
+      <p>
+        الـ <code>Subscription</code> يعني: هذا node مهتم برسائل topic معين.
+        عندما تصل رسالة، شغل callback.
+      </p>
+      <h3>مثال من مشروعنا</h3>
+      <pre><code>self.add_shuttle_subscription = self.create_subscription(
+    RailShuttleCommand,
+    add_shuttle_command_topic,
+    self._on_add_shuttle_command,
+    10,
+)</code></pre>
+      <table>
+        <thead>
+          <tr><th>السطر</th><th>معناه</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>RailShuttleCommand</code></td><td>نوع الرسالة المتوقع.</td></tr>
+          <tr><td><code>add_shuttle_command_topic</code></td><td>اسم topic.</td></tr>
+          <tr><td><code>self._on_add_shuttle_command</code></td><td>function التي تعمل عند وصول message.</td></tr>
+          <tr><td><code>10</code></td><td>queue depth.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p110">
+      <h2>ما هو Callback؟</h2>
+      <p>
+        الـ callback هو function يناديها ROS عندما تصل message. أنت لا تستدعيها بيدك.
+      </p>
+      <h3>Callback إضافة shuttle</h3>
+      <pre><code>def _on_add_shuttle_command(self, message: RailShuttleCommand) -> None:
+    entity_name, slot, speed, enabled = self._parse_add_shuttle_typed_command(message)
+    shuttle = self._create_managed_shuttle(
+        entity_name=entity_name,
+        slot=slot,
+        speed=speed,
+        enabled=enabled,
+    )
+    self._finish_add_shuttle(shuttle)</code></pre>
+      <p>
+        إذا كنت مبتدئاً، اقرأها هكذا:
+      </p>
+      <ol>
+        <li>خذ message.</li>
+        <li>حللها إلى name/slot/speed/enabled.</li>
+        <li>أنشئ object داخلي للshuttle.</li>
+        <li>أضفه للنظام واطلب spawn إذا يلزم.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p111">
+      <h2>ما هو Publisher؟</h2>
+      <p>
+        الـ <code>Publisher</code> يرسل state أو feedback إلى باقي النظام.
+        مثلاً node ينشر shuttle state حتى نستطيع مراقبته.
+      </p>
+      <h3>مثال من الكود</h3>
+      <pre><code>self.state_publisher = self.create_publisher(
+    RailShuttleState,
+    shuttle_state_topic,
+    10,
+)</code></pre>
+      <p>ثم لاحقاً، node يبني message وينشره:</p>
+      <pre><code>self.state_publisher.publish(message)</code></pre>
+      <p>الأمر الذي يقرأ ما نشره publisher:</p>
+      <pre><code>ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+    </section>
+
+    <section class="page" id="p112">
+      <h2>ما هو Message؟</h2>
+      <p>
+        الـ <code>Message</code> هو schema. يعني شكل البيانات. ROS لا يرسل dictionary عشوائي؛ يرسل نوعاً معروفاً.
+      </p>
+      <h3>ملف message في مشروعنا</h3>
+      <pre><code>mfja_rail_interfaces/msg/ShuttleCommand.msg</code></pre>
+      <pre><code>std_msgs/Header header
+string name
+string command
+string start_slot
+float64 speed</code></pre>
+      <p>عندما تكتب:</p>
+      <pre><code>"{name: 'room315_right_shuttle_1', command: 'ON'}"</code></pre>
+      <p>
+        ROS يحول النص إلى object من نوع <code>ShuttleCommand</code>.
+      </p>
+    </section>
+
+    <section class="page" id="p113">
+      <h2>ما هو Service؟</h2>
+      <p>
+        الـ <code>Service</code> يشبه سؤال وجواب. ترسل request وتنتظر response.
+        نستخدمه مع Gazebo لأننا نطلب عمليات محددة: create, remove, set_pose.
+      </p>
+      <h3>مثال من الكود</h3>
+      <pre><code>self.spawn_client = self.create_client(SpawnEntity, gazebo_spawn_service)
+self.set_pose_client = self.create_client(SetEntityPose, gazebo_set_pose_service)
+self.delete_client = self.create_client(DeleteEntity, gazebo_delete_service)</code></pre>
+      <p>أين تأتي أسماء services؟ من world name:</p>
+      <pre><code>/world/room_315_only/create
+/world/room_315_only/set_pose
+/world/room_315_only/remove</code></pre>
+      <p>افحصها:</p>
+      <pre><code>ros2 service list | grep /world/room_315_only</code></pre>
+    </section>
+
+    <section class="page" id="p114">
+      <h2>ما هو Parameter؟</h2>
+      <p>
+        الـ <code>Parameter</code> هو قيمة إعداد داخل node. مثلاً: السرعة، عدد shuttles، هل نستخدم Gazebo spawn.
+      </p>
+      <h3>تعريف parameter في الكود</h3>
+      <pre><code>self.declare_parameter('speed', 0.25)
+self.declare_parameter('shuttle_count', 1)
+self.declare_parameter('start_enabled', False)</code></pre>
+      <h3>قراءة parameter</h3>
+      <pre><code>speed = float(self.get_parameter('speed').value)
+start_enabled = bool(self.get_parameter('start_enabled').value)</code></pre>
+      <p>عند launch يمكن تمريرها:</p>
+      <pre><code>ros2 launch ... room315_shuttle_speed:=0.2</code></pre>
+    </section>
+
+    <section class="page" id="p115">
+      <h2>ما هو Launch File؟</h2>
+      <p>
+        الـ <code>launch file</code> يشغل مجموعة nodes ويعطيها parameters. بدل أن تبدأ كل node يدوياً،
+        نكتب launch ينسق التشغيل.
+      </p>
+      <h3>مثال ملف</h3>
+      <pre><code>mfja_room_315_bringup/launch/room_315_only.launch.py</code></pre>
+      <p>فيه arguments مثل:</p>
+      <pre><code>DeclareLaunchArgument(
+    'room315_shuttles_start_enabled',
+    default_value='false',
+    choices=['true', 'false'],
+)</code></pre>
+      <p>وتشغله هكذا:</p>
+      <pre><code>ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  room315_shuttles_start_enabled:=true</code></pre>
+    </section>
+
+    <section class="page" id="p116">
+      <h2>من Launch Argument إلى Parameter</h2>
+      <p>
+        المبتدئ غالباً يخلط بين <code>Launch Argument</code> و<code>Node Parameter</code>.
+        الـ launch argument قيمة تدخل للlaunch. بعدها launch يمررها كparameter إلى node.
+      </p>
+      <h3>في launch</h3>
+      <pre><code>'start_enabled': LaunchConfiguration('room315_shuttles_start_enabled')</code></pre>
+      <h3>في node</h3>
+      <pre><code>start_enabled = bool(self.get_parameter('start_enabled').value)</code></pre>
+      <p>
+        إذا عرّفت argument ولم تمرره في parameters، فلن يؤثر على node.
+      </p>
+    </section>
+
+    <section class="page" id="p117">
+      <h2>ما هو Timer أو Tick Loop؟</h2>
+      <p>
+        node لا ينتظر commands فقط. يحتاج أيضاً تحديث حركة shuttles كل فترة. لذلك يستخدم timer يشغل function
+        اسمها غالباً <code>_tick</code>.
+      </p>
+      <p>في <code>_tick</code> يحدث الآتي:</p>
+      <ol>
+        <li>حساب الزمن منذ آخر tick.</li>
+        <li>تحديث markers.</li>
+        <li>تطبيق switch/stopper updates.</li>
+        <li>تحريك كل shuttle أو إبقاؤه waiting.</li>
+        <li>نشر state وsensor feedback.</li>
+      </ol>
+      <p>هذا هو "نبض" النظام.</p>
+    </section>
+
+    <section class="page" id="p118">
+      <h2>كيف ترتبط ROS مع Gazebo؟</h2>
+      <p>
+        Gazebo هو simulator. ROS node لا يحرك model مباشرة داخل memory، بل يستخدم services مقدمة عبر
+        <code>ros_gz</code>.
+      </p>
+      <table>
+        <thead>
+          <tr><th>ماذا يريد ROS؟</th><th>كيف يطلب من Gazebo؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>إنشاء shuttle model</td><td><code>/world/room_315_only/create</code></td></tr>
+          <tr><td>تحريك shuttle</td><td><code>/world/room_315_only/set_pose</code></td></tr>
+          <tr><td>حذف shuttle</td><td><code>/world/room_315_only/remove</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        لذلك إذا Gazebo لم يبدأ، أو world name خطأ، ستفشل هذه services.
+      </p>
+    </section>
+
+    <section class="page" id="p119">
+      <h2>كيف نقرأ الكود بدون ضياع؟</h2>
+      <p>
+        ملف <code>room_315_kinematic_shuttle_node.py</code> طويل. لا تقرأه من السطر الأول إلى الأخير.
+        اقرأه حسب feature.
+      </p>
+      <h3>إذا تريد فهم إضافة shuttle</h3>
+      <ol>
+        <li>ابحث عن <code>add_shuttle_command_topic</code>.</li>
+        <li>ابحث عن <code>create_subscription</code> الخاص به.</li>
+        <li>اذهب إلى <code>_on_add_shuttle_command</code>.</li>
+        <li>اذهب إلى parser.</li>
+        <li>اذهب إلى create/finish/spawn.</li>
+      </ol>
+      <h3>إذا تريد فهم switch</h3>
+      <ol>
+        <li>ابحث عن <code>switch_command_topic</code>.</li>
+        <li>اذهب إلى switch callback.</li>
+        <li>ابحث عن pending switch updates.</li>
+        <li>راقب publish switch state.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p120">
+      <h2>مثال كامل: Topic جديد من الفكرة إلى التطبيق</h2>
+      <p>
+        لنفترض أنك تريد topic جديد يخبرك بعدد shuttles. سنطبقها كفكرة تعليمية.
+      </p>
+      <h3>1. اختر topic name</h3>
+      <pre><code>/room_315/rails/right/shuttles/count</code></pre>
+      <h3>2. اختر message type</h3>
+      <p>لا نحتاج custom message. نستخدم:</p>
+      <pre><code>std_msgs/msg/Int32</code></pre>
+      <h3>3. أضف publisher في node</h3>
+      <pre><code>from std_msgs.msg import Int32
+
+self.shuttle_count_publisher = self.create_publisher(
+    Int32,
+    f'/room_315/rails/{self.rail_side}/shuttles/count',
+    10,
+)</code></pre>
+      <h3>4. انشر العدد</h3>
+      <pre><code>message = Int32()
+message.data = len(self.shuttles)
+self.shuttle_count_publisher.publish(message)</code></pre>
+      <p>هذا المثال يعلمك إضافة publisher بدون custom message.</p>
+    </section>
+
+    <section class="page" id="p121">
+      <h2>مثال كامل: Command جديد داخل Topic موجود</h2>
+      <p>
+        هذا ما فعلناه في <code>ADD_STOPPED</code> و<code>ADD_MOVING</code>.
+      </p>
+      <h3>الفكرة</h3>
+      <p>بدل topic جديد، أضف قيمة جديدة في <code>command</code>.</p>
+      <h3>الملف</h3>
+      <pre><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+      <h3>المكان</h3>
+      <pre><code>_add_shuttle_start_enabled_from_command</code></pre>
+      <h3>الكود</h3>
+      <pre><code>if command == 'ADD_STOPPED':
+    return False
+
+if command == 'ADD_MOVING':
+    return True</code></pre>
+      <p>هذه الطريقة مناسبة عندما command الجديد نفس message ونفس topic ونفس callback تقريباً.</p>
+    </section>
+
+    <section class="page" id="p122">
+      <h2>مثال كامل: Message جديد من الصفر</h2>
+      <p>إذا احتجت data جديدة لا تناسب messages الحالية:</p>
+      <h3>1. أنشئ ملف</h3>
+      <pre><code>mfja_rail_interfaces/msg/ShuttleCount.msg</code></pre>
+      <h3>2. اكتب fields</h3>
+      <pre><code>std_msgs/Header header
+string rail_side
+int32 count</code></pre>
+      <h3>3. أضفه في CMakeLists</h3>
+      <pre><code>rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/ShuttleCount.msg"
+  ...
+)</code></pre>
+      <h3>4. Build</h3>
+      <pre><code>colcon build --packages-select mfja_rail_interfaces mfja_robot_control_config
+source install/setup.bash</code></pre>
+      <h3>5. استخدمه في Python</h3>
+      <pre><code>from mfja_rail_interfaces.msg import ShuttleCount</code></pre>
+    </section>
+
+    <section class="page" id="p123">
+      <h2>كيف تختار بين Topic وService؟</h2>
+      <p>
+        سؤال مهم جداً للمبتدئ: هل أضيف topic أم service؟
+      </p>
+      <table>
+        <thead>
+          <tr><th>استخدم Topic عندما...</th><th>استخدم Service عندما...</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>تريد بث state بشكل مستمر.</td><td>تريد طلباً واضحاً ورداً واضحاً.</td></tr>
+          <tr><td>الأمر لا يحتاج response مباشر.</td><td>تحتاج تعرف هل العملية نجحت فوراً.</td></tr>
+          <tr><td>عدة nodes قد تستمع لنفس البيانات.</td><td>الطلب موجه لمزود خدمة محدد.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        في مشروعنا: shuttle commands هي topics. Gazebo create/remove هي services.
+      </p>
+    </section>
+
+    <section class="page" id="p124">
+      <h2>كيف تفهم Namespaces؟</h2>
+      <p>
+        الـ namespace يمنع الفوضى. لدينا right rail وleft rail. لو سمينا كل topics <code>/shuttle/command</code>
+        لن نعرف أي rail نقصد.
+      </p>
+      <p>لذلك نستخدم:</p>
+      <pre><code>/room_315/rails/right/shuttles/command
+/room_315/rails/left/shuttles/command</code></pre>
+      <p>
+        في launch، node يستخدم namespace:
+      </p>
+      <pre><code>namespace='room_315/rails/right'</code></pre>
+      <p>
+        وهذا يجعل نفس node code يخدم الجهتين إذا تغيرت parameters والnamespace.
+      </p>
+    </section>
+
+    <section class="page" id="p125">
+      <h2>كيف تفهم QoS بشكل مبسط؟</h2>
+      <p>
+        في <code>create_publisher(..., 10)</code> أو <code>create_subscription(..., 10)</code> الرقم 10 هو queue depth.
+        يعني ROS يحتفظ بعدد محدود من الرسائل إذا لم تعالج فوراً.
+      </p>
+      <p>
+        في مشروعنا، commands ليست عالية التردد، لذلك depth 10 مناسب.
+      </p>
+      <div class="callout">
+        كمبتدئ، لا تبدأ بتعديل QoS إلا إذا لديك مشكلة واضحة في ضياع رسائل أو timing.
+      </div>
+    </section>
+
+    <section class="page" id="p126">
+      <h2>كيف تفهم Headers؟</h2>
+      <p>
+        كثير من messages تبدأ بـ <code>std_msgs/Header header</code>. هذا يعطي timestamp وframe_id أحياناً.
+      </p>
+      <p>مثال:</p>
+      <pre><code>std_msgs/Header header
+string name
+string command</code></pre>
+      <p>
+        في commands البسيطة قد لا تهتم بالheader. لكن في states وsensor feedback، timestamp مهم لفهم متى حدثت القراءة.
+      </p>
+    </section>
+
+    <section class="page" id="p127">
+      <h2>كيف تفهم frame_id وworld؟</h2>
+      <p>
+        في robotics، الـ pose دائماً مرتبط بإطار مرجعي. في مشروعنا غالباً نستخدم <code>world</code>.
+      </p>
+      <p>parameter:</p>
+      <pre><code>self.declare_parameter('frame_id', 'world')</code></pre>
+      <p>
+        عندما ننشر pose أو state، نفهم أن <code>x,y,z,yaw</code> هي بالنسبة إلى Gazebo world.
+      </p>
+    </section>
+
+    <section class="page" id="p128">
+      <h2>كيف تعمل Pose Transform؟</h2>
+      <p>
+        CSV rail data قد يكون في coordinate system مختلف عن Gazebo. لذلك node يحتوي transform parameters:
+      </p>
+      <pre><code>pose_transform_a
+pose_transform_b
+pose_transform_tx
+pose_transform_c
+pose_transform_d
+pose_transform_ty</code></pre>
+      <p>
+        هذه تحول raw rail coordinates إلى Gazebo coordinates. لذلك عندما ترى sensor في YAML،
+        موقعه النهائي في Gazebo قد يمر عبر transform.
+      </p>
+      <p>إذا أردت تعديل calibration مؤقتاً، استخدم pose offset topic بدلاً من تغيير CSV مباشرة.</p>
+    </section>
+
+    <section class="page" id="p129">
+      <h2>كيف تفهم الـ YAML Configs؟</h2>
+      <p>
+        YAML ملفات إعداد يقرأها الكود عند التشغيل. ليست Python code، لكنها تحدد data.
+      </p>
+      <table>
+        <thead>
+          <tr><th>YAML</th><th>ماذا يحدد؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>rail_network_right.yaml</code></td><td>الgraph والsegments والswitches.</td></tr>
+          <tr><td><code>rail_devices_right.yaml</code></td><td>slots/sensors/stoppers على right rail.</td></tr>
+          <tr><td><code>robots_room_315_only.yaml</code></td><td>أي robots spawn داخل Room 315.</td></tr>
+        </tbody>
+      </table>
+      <p>إذا غيرت YAML، قد لا تحتاج rebuild، لكن غالباً تحتاج relaunch.</p>
+    </section>
+
+    <section class="page" id="p130">
+      <h2>كيف تقرأ robots_room_315_only.yaml؟</h2>
+      <p>الملف المفتوح عندك:</p>
+      <pre><code>mfja_robot_control_config/config/robots_room_315_only.yaml</code></pre>
+      <p>كل robot entry يحتوي:</p>
+      <pre><code>- name: kuka1
+  model: kuka_kr6r900sixx
+  x_pose: -10.6366
+  y_pose: -6.0
+  z_pose: 1.0
+  yaw: 3.14
+  enabled: true</code></pre>
+      <p>
+        الـ launch يقرأ هذه القائمة ويقرر أي robots يspawn حسب argument <code>robots:=...</code>.
+      </p>
+    </section>
+
+    <section class="page" id="p131">
+      <h2>كيف يعمل robots:=kuka؟</h2>
+      <p>
+        في launch/control code توجد shortcuts. عندما تكتب:
+      </p>
+      <pre><code>robots:=kuka</code></pre>
+      <p>
+        الكود يطابقها مع robot model يبدأ بـ <code>kuka_</code> أو name مناسب. لذلك لا تحتاج كتابة
+        <code>kuka1</code> دائماً.
+      </p>
+      <p>أمثلة:</p>
+      <pre><code>robots:=none
+robots:=all
+robots:=kuka
+robots:=kuka,tiago
+robots:=1,5</code></pre>
+    </section>
+
+    <section class="page" id="p132">
+      <h2>كيف تقرأ State بدل التخمين؟</h2>
+      <p>
+        لا تعتمد على النظر إلى Gazebo فقط. ROS يعطيك state مباشر.
+      </p>
+      <pre><code>ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+      <p>إذا shuttle لا يتحرك، انظر إلى:</p>
+      <ul>
+        <li><code>mode</code></li>
+        <li><code>speed</code></li>
+        <li><code>current_segment</code></li>
+        <li><code>s</code></li>
+      </ul>
+      <p>هذه المعلومات أهم من الانطباع البصري.</p>
+    </section>
+
+    <section class="page" id="p133">
+      <h2>كيف تعرف أن Command وصل؟</h2>
+      <p>ثلاث طرق:</p>
+      <ol>
+        <li>راقب terminal الذي يشغل launch، ستظهر logs.</li>
+        <li>راقب state topic قبل وبعد الأمر.</li>
+        <li>استخدم <code>ros2 topic echo</code> على command topic إذا أردت رؤية الرسائل المنشورة.</li>
+      </ol>
+      <pre><code>ros2 topic echo /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand</code></pre>
+      <p>
+        افتح هذا في terminal، ثم من terminal آخر أرسل command. سترى الرسالة كما وصلت.
+      </p>
+    </section>
+
+    <section class="page" id="p134">
+      <h2>كيف تستخدم ros2 topic pub بشكل صحيح؟</h2>
+      <p>
+        أمر <code>ros2 topic pub</code> هو الطريقة اليدوية لإرسال رسالة على <code>topic</code>.
+        إذا كنت جديداً على ROS 2، اقرأ الأمر كجملة كاملة: "انشر message من نوع محدد على topic محدد، وضع داخلها هذه القيم".
+      </p>
+      <p>البنية العامة:</p>
+      <pre><code>ros2 topic pub --once TOPIC MESSAGE_TYPE "YAML_MESSAGE"</code></pre>
+      <p>مثال تحكم بـ shuttle موجود:</p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON'}"</code></pre>
+      <table>
+        <thead>
+          <tr><th>جزء الأمر</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ros2</code></td><td>برنامج command line الخاص بـ ROS 2.</td></tr>
+          <tr><td><code>topic</code></td><td>مجموعة أوامر التعامل مع topics.</td></tr>
+          <tr><td><code>pub</code></td><td>اختصار publish: أرسل message.</td></tr>
+          <tr><td><code>--once</code></td><td>انشر الرسالة مرة واحدة.</td></tr>
+          <tr><td><code>TOPIC</code></td><td>القناة التي ترسل عليها. يجب أن تكون node مشتركة في نفس topic حتى تستقبل الرسالة.</td></tr>
+          <tr><td><code>MESSAGE_TYPE</code></td><td>نوع الرسالة بصيغة <code>package/msg/MessageName</code>.</td></tr>
+          <tr><td><code>YAML_MESSAGE</code></td><td>القيم التي تملأ fields داخل الرسالة.</td></tr>
+          <tr><td><code>\</code></td><td>هذا ليس جزءاً من ROS. في Bash يعني: "الأمر لم ينته، كمل على السطر التالي".</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        أهم نقطة للمبتدئ: <code>TOPIC</code> يحدد "أين تذهب الرسالة"، أما
+        <code>MESSAGE_TYPE</code> يحدد "شكل الرسالة"، وأما <code>YAML_MESSAGE</code>
+        فيحدد "المحتوى الفعلي للرسالة".
+      </div>
+    </section>
+
+    <section class="page" id="p134a">
+      <h2>تشريح أمر Switch سطر بسطر</h2>
+      <p>خذ هذا الأمر كمثال:</p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'A1', state: 'INTERIOR'}]}"</code></pre>
+      <table>
+        <thead>
+          <tr><th>القسم</th><th>ماذا يعني؟</th><th>على ماذا يدل في مشروعنا؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>/room_315</code></td><td>namespace عام للغرفة.</td><td>الأمر يخص Room 315 وليس نظاماً آخر.</td></tr>
+          <tr><td><code>/rails</code></td><td>قسم السكك.</td><td>نحن لا نرسل أمر robot arm، بل أمر rail system.</td></tr>
+          <tr><td><code>/right</code></td><td>اختيار السكة اليمينية.</td><td>لو أردت اليسار تستخدم <code>/left</code>.</td></tr>
+          <tr><td><code>/switches</code></td><td>الجهاز المستهدف هو switches.</td><td>ليس shuttles وليس stoppers.</td></tr>
+          <tr><td><code>/command</code></td><td>هذا topic أوامر.</td><td>نكتب عليه لتغيير الحالة، ولا نقرأ منه state النهائي.</td></tr>
+          <tr><td><code>mfja_rail_interfaces/msg/SwitchCommand</code></td><td>نوع الرسالة.</td><td>ROS سيبني object من نوع <code>SwitchCommand</code> ويملأ fields من النص.</td></tr>
+          <tr><td><code>switches</code></td><td>field داخل <code>SwitchCommand</code>.</td><td>لأنه يمكن إرسال أكثر من switch في نفس الرسالة.</td></tr>
+          <tr><td><code>name: 'A1'</code></td><td>اسم الـ switch المطلوب.</td><td>نختار switch المحطة <code>A1</code>.</td></tr>
+          <tr><td><code>state: 'INTERIOR'</code></td><td>الحالة المطلوبة.</td><td>وجه المسار إلى branch الداخلي.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        النتيجة المنطقية هي: <code>A1</code> على right rail يصبح باتجاه
+        <code>INTERIOR</code>. في الكود هذه القيمة تتحول داخلياً إلى الرمز المختصر
+        <code>S</code>، بينما <code>EXTERIOR</code> تتحول إلى <code>G</code>.
+      </p>
+      <pre><code>EXTERIOR أو E  -> G
+INTERIOR أو I  -> S</code></pre>
+    </section>
+
+    <section class="page" id="p134b">
+      <h2>رحلة أمر Switch داخل الكود</h2>
+      <p>
+        حتى لا يبقى الأمر مجرد نص في terminal، هذه رحلته داخل المشروع:
+      </p>
+      <ol>
+        <li>أنت تنشر message على <code>/room_315/rails/right/switches/command</code>.</li>
+        <li>ROS 2 يتأكد أن نوع الرسالة هو <code>SwitchCommand</code>.</li>
+        <li>الـ node المشتركة بهذا topic تستقبل الرسالة.</li>
+        <li>callback اسمها <code>_on_switch_command</code> تقرأ <code>message.switches</code>.</li>
+        <li>الكود يحول <code>INTERIOR</code> إلى state داخلي مختصر.</li>
+        <li>الكود يحدّث switch state ويؤثر على routing عند وصول shuttle إلى ذلك switch.</li>
+      </ol>
+      <h3>مكان الاشتراك بالـ topic</h3>
+      <pre><code>self.switch_subscription = self.create_subscription(
+    SwitchCommand,
+    switch_command_topic,
+    self._on_switch_command,
+    10,
+)</code></pre>
+      <h3>مكان استقبال الرسالة</h3>
+      <pre><code>def _on_switch_command(self, message: SwitchCommand) -> None:
+    updates = self._switch_updates_from_named_states(message.switches)
+    self._handle_switch_updates(updates, source='typed command')</code></pre>
+      <h3>مكان فهم state</h3>
+      <pre><code>if state in {'G', 'E', 'EXTERIOR'}:
+    return 'G'
+if state in {'S', 'I', 'INTERIOR'}:
+    return 'S'</code></pre>
+      <p>
+        لذلك عندما تكتب <code>state: 'INTERIOR'</code> في terminal، الكود لا يحرك model مباشرة في نفس السطر.
+        هو يحول الأمر إلى state منطقي للـ switch، ثم يستخدم هذا state لاحقاً عندما يقرر المسار التالي للـ shuttle.
+      </p>
+    </section>
+
+    <section class="page" id="p135">
+      <h2>كيف تستخدم ros2 topic echo؟</h2>
+      <p>البنية:</p>
+      <pre><code>ros2 topic echo TOPIC MESSAGE_TYPE</code></pre>
+      <p>مثال:</p>
+      <pre><code>ros2 topic echo /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback</code></pre>
+      <p>
+        إذا لا تظهر رسائل، قد يكون السبب أن الحدث لم يحدث بعد. مثلاً sensor feedback يظهر عندما يقترب shuttle من sensor.
+      </p>
+    </section>
+
+    <section class="page" id="p136">
+      <h2>كيف تستخدم ros2 interface show؟</h2>
+      <p>
+        هذا الأمر أساسي للمبتدئ لأنه يخبرك ما fields المطلوبة داخل message.
+        عندما ترى نوعاً مثل <code>mfja_rail_interfaces/msg/SwitchCommand</code>، لا تحفظه بصم.
+        اسأل ROS عنه:
+      </p>
+      <pre><code>ros2 interface show mfja_rail_interfaces/msg/SwitchCommand</code></pre>
+      <p>سيظهر أن <code>SwitchCommand</code> يحتوي:</p>
+      <pre><code>std_msgs/Header header
+NamedState[] switches</code></pre>
+      <p>
+        هذا يعني أن الرسالة فيها field اسمه <code>header</code> وfield اسمه
+        <code>switches</code>. الرمز <code>[]</code> يعني list/array. نوع عناصر هذه list هو
+        <code>NamedState</code>. لذلك نكمل ونفحص <code>NamedState</code>:
+      </p>
+      <pre><code>ros2 interface show mfja_rail_interfaces/msg/NamedState</code></pre>
+      <p>سيظهر:</p>
+      <pre><code>string name
+string state</code></pre>
+      <p>فتعرف أن الرسالة يجب أن تكون مثل:</p>
+      <pre><code>"{switches: [{name: 'A1', state: 'INTERIOR'}]}"</code></pre>
+      <div class="callout">
+        لم نكتب <code>header</code> داخل الأمر لأننا لا نحتاجه هنا. ROS 2 يعطيه default value
+        إذا لم نمرره. المهم لهذا command هو field <code>switches</code>.
+      </div>
+    </section>
+
+    <section class="page" id="p136a">
+      <h2>من أين جاء mfja_rail_interfaces/msg/SwitchCommand؟</h2>
+      <p>
+        هذه العبارة ليست path عادي على القرص، بل <code>ROS 2 interface type</code>.
+        صيغتها العامة:
+      </p>
+      <pre><code>package_name/msg/MessageName</code></pre>
+      <table>
+        <thead>
+          <tr><th>القسم</th><th>معنى</th><th>في مثالنا</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>package_name</code></td><td>اسم package التي تملك تعريف الرسالة.</td><td><code>mfja_rail_interfaces</code></td></tr>
+          <tr><td><code>msg</code></td><td>نوع interface: message وليس service أو action.</td><td><code>msg</code></td></tr>
+          <tr><td><code>MessageName</code></td><td>اسم الرسالة بدون extension.</td><td><code>SwitchCommand</code></td></tr>
+        </tbody>
+      </table>
+      <p>الملف الحقيقي في المشروع هو:</p>
+      <pre><code>mfja_rail_interfaces/msg/SwitchCommand.msg</code></pre>
+      <p>
+        لكن عندما تستخدمه في أوامر ROS 2، تحذف <code>.msg</code> وتكتبه بصيغة:
+      </p>
+      <pre><code>mfja_rail_interfaces/msg/SwitchCommand</code></pre>
+      <p>
+        نفس القاعدة تنطبق على بقية الرسائل:
+      </p>
+      <table>
+        <thead>
+          <tr><th>ملف في المشروع</th><th>النوع الذي تكتبه في terminal</th><th>متى نستخدمه؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>mfja_rail_interfaces/msg/SwitchCommand.msg</code></td><td><code>mfja_rail_interfaces/msg/SwitchCommand</code></td><td>إرسال أوامر switches.</td></tr>
+          <tr><td><code>mfja_rail_interfaces/msg/StopperCommand.msg</code></td><td><code>mfja_rail_interfaces/msg/StopperCommand</code></td><td>إرسال أوامر stoppers.</td></tr>
+          <tr><td><code>mfja_rail_interfaces/msg/ShuttleCommand.msg</code></td><td><code>mfja_rail_interfaces/msg/ShuttleCommand</code></td><td>إضافة أو التحكم بـ shuttles.</td></tr>
+          <tr><td><code>mfja_rail_interfaces/msg/ShuttleState.msg</code></td><td><code>mfja_rail_interfaces/msg/ShuttleState</code></td><td>قراءة حالة shuttles.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p136b">
+      <h2>كيف يتحول ملف .msg إلى نوع يستعمله ROS؟</h2>
+      <p>
+        ملف <code>.msg</code> وحده ليس كافياً. يجب أن يكون مسجلاً في
+        <code>mfja_rail_interfaces/CMakeLists.txt</code> داخل <code>rosidl_generate_interfaces</code>.
+      </p>
+      <pre><code>rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/NamedState.msg"
+  "msg/SwitchCommand.msg"
+  "msg/SwitchState.msg"
+  "msg/StopperCommand.msg"
+  "msg/StopperState.msg"
+  "msg/ShuttleCommand.msg"
+  "msg/ShuttleState.msg"
+  "msg/SensorReading.msg"
+  "msg/SensorFeedback.msg"
+  DEPENDENCIES std_msgs
+)</code></pre>
+      <p>
+        عند تنفيذ <code>colcon build</code>، ROS 2 يولد كوداً داخلياً لهذه messages.
+        لذلك يصبح بإمكان Python node أن يكتب:
+      </p>
+      <pre><code>from mfja_rail_interfaces.msg import SwitchCommand
+from mfja_rail_interfaces.msg import NamedState</code></pre>
+      <p>
+        وبعدها ينشئ subscription يتوقع رسائل من هذا النوع:
+      </p>
+      <pre><code>self.switch_subscription = self.create_subscription(
+    SwitchCommand,
+    switch_command_topic,
+    self._on_switch_command,
+    10,
+)</code></pre>
+      <p>
+        معنى هذا الكود: "استقبل messages من نوع <code>SwitchCommand</code> على
+        <code>switch_command_topic</code>، وعند وصول رسالة شغّل function اسمها
+        <code>_on_switch_command</code>".
+      </p>
+    </section>
+
+    <section class="page" id="p136c">
+      <h2>كيف تعرف نوع أي Topic بنفسك؟</h2>
+      <p>
+        لا تحتاج أن تخمن message type. ROS 2 يستطيع أن يخبرك.
+      </p>
+      <h3>1. اعرض topics الخاصة بالمشروع</h3>
+      <pre><code>ros2 topic list | grep /room_315/rails</code></pre>
+      <h3>2. اسأل عن topic محدد</h3>
+      <pre><code>ros2 topic info /room_315/rails/right/switches/command</code></pre>
+      <p>سترى شيئاً مثل:</p>
+      <pre><code>Type: mfja_rail_interfaces/msg/SwitchCommand
+Publisher count: ...
+Subscription count: ...</code></pre>
+      <p>
+        الآن عرفت النوع. بعدها افحص fields:
+      </p>
+      <pre><code>ros2 interface show mfja_rail_interfaces/msg/SwitchCommand</code></pre>
+      <div class="callout">
+        القاعدة العملية: <code>topic info</code> يعطيك نوع الرسالة، و
+        <code>interface show</code> يعطيك شكل الرسالة من الداخل.
+      </div>
+    </section>
+
+    <section class="page" id="p136d">
+      <h2>كيف تتحول YAML Message إلى Fields؟</h2>
+      <p>
+        آخر جزء من <code>ros2 topic pub</code> هو نص بصيغة قريبة من YAML. ROS 2 يأخذ هذا النص
+        ويحاول تعبئة fields الموجودة في message type.
+      </p>
+      <pre><code>"{switches: [{name: 'A1', state: 'INTERIOR'}]}"</code></pre>
+      <p>التحويل يحدث بهذا الشكل:</p>
+      <table>
+        <thead>
+          <tr><th>من النص</th><th>إلى message field</th><th>النوع</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>switches</code></td><td><code>SwitchCommand.switches</code></td><td>array/list</td></tr>
+          <tr><td><code>{name: 'A1', state: 'INTERIOR'}</code></td><td>عنصر داخل <code>switches</code></td><td><code>NamedState</code></td></tr>
+          <tr><td><code>name</code></td><td><code>NamedState.name</code></td><td><code>string</code></td></tr>
+          <tr><td><code>state</code></td><td><code>NamedState.state</code></td><td><code>string</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        إذا كتبت field غير موجود، أو كتبت شكل list بطريقة خاطئة، سيفشل الأمر قبل أن يصل إلى node.
+        لذلك نستخدم <code>ros2 interface show</code> دائماً قبل كتابة message جديدة.
+      </p>
+      <h3>نفس الرسالة بشكل أوضح</h3>
+      <pre><code>{
+  switches: [
+    {
+      name: 'A1',
+      state: 'INTERIOR'
+    }
+  ]
+}</code></pre>
+    </section>
+
+    <section class="page" id="p136e">
+      <h2>شرح ملفات .msg المفتوحة عندك</h2>
+      <p>
+        هذه الملفات هي contract بين الـ terminal والـ node. أي طرف يريد إرسال أو استقبال message
+        يجب أن يتفق على نفس الشكل.
+      </p>
+      <table>
+        <thead>
+          <tr><th>الملف</th><th>المحتوى</th><th>المعنى العملي</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>NamedState.msg</code></td><td><code>string name</code><br><code>string state</code></td><td>زوج بسيط: اسم device وحالته. مثل <code>A1 / INTERIOR</code> أو <code>A1 / 1</code>.</td></tr>
+          <tr><td><code>SwitchCommand.msg</code></td><td><code>std_msgs/Header header</code><br><code>NamedState[] switches</code></td><td>أمر يرسله المستخدم إلى switches. field <code>switches</code> list لأنك قد تغير عدة switches معاً.</td></tr>
+          <tr><td><code>SwitchState.msg</code></td><td><code>std_msgs/Header header</code><br><code>NamedState[] switches</code></td><td>حالة switches المنشورة من node للقراءة. نفس شكل command تقريباً، لكن الاتجاه بالعكس: node ينشر وأنت تقرأ.</td></tr>
+          <tr><td><code>StopperCommand.msg</code></td><td><code>std_msgs/Header header</code><br><code>NamedState[] stoppers</code></td><td>أمر فتح/إغلاق stoppers. مثال: <code>A1=1</code> يعني أغلق/stop، و<code>A1=0</code> يعني افتح/release.</td></tr>
+          <tr><td><code>StopperState.msg</code></td><td><code>std_msgs/Header header</code><br><code>NamedState[] stoppers</code></td><td>حالة stoppers الحالية التي تنشرها node.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        الفرق بين <code>Command</code> و<code>State</code>: الـ <code>Command</code> ترسله أنت إلى node لتطلب تغييراً.
+        الـ <code>State</code> تنشره node لتخبرك بما حدث أو ما هي الحالة الحالية.
+      </div>
+      <h3>نفس NamedState، استخدامات مختلفة</h3>
+      <pre><code># Switch command
+{switches: [{name: 'A1', state: 'INTERIOR'}]}
+
+# Stopper command
+{stoppers: [{name: 'A1', state: '1'}]}</code></pre>
+      <p>
+        لاحظ أن <code>NamedState</code> نفسه بسيط جداً، لكن اسم الـ field الخارجي يغير معنى الرسالة:
+        <code>switches</code> يعني نتحكم بالـ switches، و<code>stoppers</code> يعني نتحكم بالـ stoppers.
+      </p>
+    </section>
+
+    <section class="page" id="p137">
+      <h2>لماذا SwitchCommand يحتوي Array؟</h2>
+      <p>
+        لأنه أحياناً تريد تغيير أكثر من switch في رسالة واحدة.
+      </p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [
+    {name: 'A1', state: 'INTERIOR'},
+    {name: 'A2', state: 'EXTERIOR'}
+  ]}"</code></pre>
+      <p>
+        هذا أفضل من إرسال رسالتين إذا أردت update منطقي واحد.
+      </p>
+    </section>
+
+    <section class="page" id="p138">
+      <h2>كيف تفهم arrays داخل messages؟</h2>
+      <p>
+        في <code>.msg</code>، الرمز <code>[]</code> يعني list/array.
+      </p>
+      <pre><code>NamedState[] switches</code></pre>
+      <p>لذلك في YAML message نكتب:</p>
+      <pre><code>{switches: [{name: 'A1', state: 'INTERIOR'}]}</code></pre>
+      <p>إذا يوجد أكثر من عنصر:</p>
+      <pre><code>{switches: [
+  {name: 'A1', state: 'INTERIOR'},
+  {name: 'A2', state: 'EXTERIOR'}
+]}</code></pre>
+    </section>
+
+    <section class="page" id="p139">
+      <h2>كيف تفهم code naming؟</h2>
+      <p>أسماء functions ليست عشوائية:</p>
+      <table>
+        <thead>
+          <tr><th>Pattern</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>_on_...</code></td><td>Callback يستقبل event/message.</td></tr>
+          <tr><td><code>_parse_...</code></td><td>تحويل نص/message إلى values منظمة.</td></tr>
+          <tr><td><code>_resolve_...</code></td><td>حل قيمة ناقصة أو تحقق من صلاحيتها.</td></tr>
+          <tr><td><code>_publish_...</code></td><td>نشر message على topic.</td></tr>
+          <tr><td><code>_request_...</code></td><td>إرسال request إلى service أو future.</td></tr>
+        </tbody>
+      </table>
+      <p>عندما تبحث في الكود، هذه patterns تساعدك تعرف وظيفة function قبل قراءة تفاصيلها.</p>
+    </section>
+
+    <section class="page" id="p140">
+      <h2>الخلاصة التعليمية للمبتدئ</h2>
+      <p>بعد قراءة هذا المسار يجب أن تكون قادراً على شرح الآتي:</p>
+      <ul>
+        <li><code>ROS 2</code> ينظم التواصل بين programs.</li>
+        <li><code>Node</code> يستقبل وينشر messages.</li>
+        <li><code>Topic</code> هو قناة، و<code>Message</code> هو شكل البيانات.</li>
+        <li><code>Callback</code> هو function تعمل عندما تصل message.</li>
+        <li><code>Launch</code> يشغل nodes ويمرر parameters.</li>
+        <li>Room 315 shuttles تتحرك kinematically وليس بعجلات فيزيائية.</li>
+        <li><code>ADD_STOPPED</code> و<code>ADD_MOVING</code> مجرد قيم command جديدة على add topic.</li>
+        <li>أي feature جديدة يجب أن تتبع مسار: command -> parser -> state change -> publish/debug.</li>
+      </ul>
+      <div class="callout">
+        إذا نسيت كل التفاصيل، ارجع لهذه الجملة: في ROS 2 نحن لا ننادي functions مباشرة، بل ننشر messages على topics،
+        والnodes تستقبلها عبر callbacks وتغير state أو تطلب services من Gazebo.
+      </div>
+    </section>
+
+    <section class="page" id="p51">
+      <h2>منهج التعلم العملي داخل هذا المشروع</h2>
+      <p>
+        من هذه الصفحة فصاعداً، سنمشي بطريقة أبطأ وأكثر تفصيلاً: ليس فقط ماذا نفعل، بل لماذا نفعل ذلك،
+        وكيف تربط مفاهيم <code>ROS 2</code> مباشرة مع ملفات مشروع Room 315.
+      </p>
+      <div class="callout">
+        الفكرة التي يجب أن تثبت في ذهنك: كل feature في هذا المشروع تمر غالباً عبر أربع طبقات:
+        <code>Message</code> ثم <code>Topic</code> ثم <code>Node callback</code> ثم <code>Gazebo action/state publication</code>.
+      </div>
+      <h3>طريقة الدراسة المقترحة</h3>
+      <ol>
+        <li>افتح التقرير في المتصفح.</li>
+        <li>افتح الكود بجانبه في VS Code.</li>
+        <li>شغل Room 315 في Terminal 1.</li>
+        <li>نفذ أوامر <code>ros2 topic</code> في Terminal 2.</li>
+        <li>كلما قرأت function في التقرير، ابحث عنها في الملف بالاسم.</li>
+        <li>بعد الفهم، طبق تعديل صغير بنفسك ثم اختبره.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p52">
+      <h2>ROS 2 من الصفر: لماذا نحتاجه هنا؟</h2>
+      <p>
+        تخيل أننا نريد التحكم بنظام فيه shuttles، rails، switches، stoppers، sensors، وGazebo.
+        بدون ROS سنكتب برنامجاً واحداً ضخماً فيه كل شيء: simulation، control، commands، logging، state.
+        هذا يصعب تطويره وفهمه.
+      </p>
+      <p>
+        <code>ROS 2</code> يحل هذه المشكلة بفصل النظام إلى أجزاء صغيرة اسمها <code>Nodes</code>.
+        كل <code>Node</code> مسؤول عن وظيفة معينة ويتواصل مع باقي النظام عبر <code>Topics</code> و<code>Services</code>.
+      </p>
+      <table>
+        <thead>
+          <tr><th>لو لم نستخدم ROS</th><th>مع ROS 2</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>كل شيء داخل برنامج واحد</td><td>عدة <code>Nodes</code> واضحة المسؤولية</td></tr>
+          <tr><td>تغيير صغير قد يكسر أجزاء كثيرة</td><td>نغير topic أو callback محدد</td></tr>
+          <tr><td>صعب مراقبة state</td><td><code>ros2 topic echo</code> يعرض البيانات مباشرة</td></tr>
+          <tr><td>صعب اختبار أمر واحد</td><td><code>ros2 topic pub</code> يرسل command واحد</td></tr>
+        </tbody>
+      </table>
+      <p>
+        لذلك ROS هنا ليس شيئاً إضافياً فقط؛ هو طريقة تنظيم المشروع والتحكم به.
+      </p>
+    </section>
+
+    <section class="page" id="p53">
+      <h2>أول Mental Model: Publisher وSubscriber</h2>
+      <p>
+        أهم فكرة في ROS هي أن <code>Publisher</code> لا يعرف من يستقبل الرسالة، و<code>Subscriber</code>
+        لا يعرف من أرسلها. كلاهما يتفقان على اسم <code>Topic</code> ونوع <code>Message</code>.
+      </p>
+      <svg class="diagram" viewBox="0 0 840 330" role="img" aria-label="Publisher subscriber mental model">
+        <defs>
+          <marker id="arrps" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#0e787c"></path>
+          </marker>
+        </defs>
+        <rect x="40" y="90" width="190" height="90" rx="8" fill="#eef8f8" stroke="#0e787c"></rect>
+        <text x="135" y="123" text-anchor="middle" font-size="16">Publisher</text>
+        <text x="135" y="150" text-anchor="middle" font-size="13">ros2 topic pub</text>
+        <line x1="235" y1="135" x2="335" y2="135" stroke="#0e787c" stroke-width="3" marker-end="url(#arrps)"></line>
+        <rect x="345" y="75" width="190" height="120" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="440" y="112" text-anchor="middle" font-size="16">Topic</text>
+        <text x="440" y="140" text-anchor="middle" font-size="12">/room_315/rails/right</text>
+        <text x="440" y="163" text-anchor="middle" font-size="12">/shuttles/add_command</text>
+        <line x1="540" y1="135" x2="640" y2="135" stroke="#0e787c" stroke-width="3" marker-end="url(#arrps)"></line>
+        <rect x="650" y="90" width="150" height="90" rx="8" fill="#eef4ff" stroke="#385f96"></rect>
+        <text x="725" y="123" text-anchor="middle" font-size="16">Subscriber</text>
+        <text x="725" y="150" text-anchor="middle" font-size="13">callback</text>
+      </svg>
+      <p>
+        في مشروعنا، عندما نرسل <code>ADD_STOPPED</code> على add topic، نحن publisher مؤقت.
+        الـ node <code>room_315_kinematic_shuttle_node.py</code> هو subscriber.
+      </p>
+    </section>
+
+    <section class="page" id="p54">
+      <h2>كيف تقرأ Topic Name؟</h2>
+      <p>
+        أسماء topics في مشروعنا ليست عشوائية. هي namespace منظم يعطيك معنى من الاسم وحده.
+      </p>
+      <pre><code>/room_315/rails/right/shuttles/add_command</code></pre>
+      <table>
+        <thead>
+          <tr><th>الجزء</th><th>معنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>/room_315</code></td><td>النظام أو المكان.</td></tr>
+          <tr><td><code>/rails</code></td><td>Subsystem الخاص بالسكة.</td></tr>
+          <tr><td><code>/right</code></td><td>أي جهة من السكة: right أو left.</td></tr>
+          <tr><td><code>/shuttles</code></td><td>نوع العنصر الذي نتحكم به.</td></tr>
+          <tr><td><code>/add_command</code></td><td>نوع العملية: إضافة shuttle.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        هذه الطريقة تجعل التوسع أسهل. إذا أردنا إضافة subsystem جديد، نتبع نفس النمط.
+      </p>
+    </section>
+
+    <section class="page" id="p55">
+      <h2>كيف تعرف نوع Message لأي Topic؟</h2>
+      <p>
+        قبل أن ترسل command، يجب أن تعرف نوع message. استخدم:
+      </p>
+      <pre><code>ros2 topic info /room_315/rails/right/shuttles/add_command</code></pre>
+      <p>بعدها اعرض شكل الرسالة:</p>
+      <pre><code>ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand</code></pre>
+      <p>سيظهر:</p>
+      <pre><code>std_msgs/Header header
+string name
+string command
+string start_slot
+float64 speed</code></pre>
+      <p>
+        معنى ذلك أن الأمر الذي ترسله يجب أن يحتوي fields مطابقة. ليس ضرورياً ملء كل fields،
+        لكن يجب أن يكون syntax صحيحاً.
+      </p>
+    </section>
+
+    <section class="page" id="p56">
+      <h2>شرح ShuttleCommand بالتفصيل</h2>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>متى يستخدم؟</th><th>مثال</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>اسم shuttle. مهم عند التحكم أو إضافة اسم محدد.</td><td><code>room315_right_shuttle_1</code></td></tr>
+          <tr><td><code>command</code></td><td>نوع العملية.</td><td><code>ADD_STOPPED</code>, <code>ON</code></td></tr>
+          <tr><td><code>start_slot</code></td><td>مكان البداية عند add/reset-like creation.</td><td><code>2</code></td></tr>
+          <tr><td><code>speed</code></td><td>سرعة shuttle. إذا صفر يستخدم default speed.</td><td><code>0.2</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        نفس message يستخدم في موضوعين مختلفين:
+      </p>
+      <ul>
+        <li><code>shuttles/add_command</code>: لإضافة shuttle جديد.</li>
+        <li><code>shuttles/command</code>: للتحكم بـ shuttle موجود.</li>
+      </ul>
+      <div class="callout">
+        الفرق ليس في message type، بل في topic الذي ترسل إليه، والcallback الذي يستقبل الرسالة.
+      </div>
+    </section>
+
+    <section class="page" id="p57">
+      <h2>لماذا لم نضف Message جديد لـ ADD_STOPPED؟</h2>
+      <p>
+        عندما طلبنا feature "إضافة shuttle ساكن أو متحرك مباشرة"، كان أمامنا خياران:
+      </p>
+      <ol>
+        <li>نضيف field جديد مثل <code>bool start_enabled</code> إلى <code>ShuttleCommand.msg</code>.</li>
+        <li>نستخدم field <code>command</code> ونضيف values جديدة مثل <code>ADD_STOPPED</code>.</li>
+      </ol>
+      <p>
+        اخترنا الخيار الثاني لأنه أبسط وأوضح: لا نحتاج message جديد، ولا نحتاج topic جديد،
+        فقط نحدد قيمتين نهائيتين داخل <code>command</code>: <code>ADD_STOPPED</code> و<code>ADD_MOVING</code>.
+      </p>
+      <table>
+        <thead>
+          <tr><th>الخيار</th><th>الميزة</th><th>المشكلة</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Field جديد</td><td>واضح جداً</td><td>يحتاج rebuild وممكن يؤثر على مستخدمين آخرين</td></tr>
+          <tr><td>Command values جديدة</td><td>توافق خلفي وسهل</td><td>يجب توثيق القيم جيداً</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p58">
+      <h2>من Terminal إلى Function: رحلة ADD_STOPPED</h2>
+      <p>لنمشي خطوة بخطوة:</p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ADD_STOPPED', start_slot: '2', speed: 0.2}"</code></pre>
+      <ol>
+        <li><code>ros2 topic pub</code> يبني message من النص.</li>
+        <li>ROS يرسل message على topic.</li>
+        <li>Subscription داخل node يستقبلها.</li>
+        <li>callback <code>_on_add_shuttle_command</code> يعمل.</li>
+        <li>parser <code>_parse_add_shuttle_typed_command</code> يقرأ fields.</li>
+        <li><code>_add_shuttle_start_enabled_from_command</code> يحول <code>ADD_STOPPED</code> إلى <code>False</code>.</li>
+        <li><code>_create_managed_shuttle</code> ينشئ shuttle داخلياً.</li>
+        <li><code>_finish_add_shuttle</code> يضيفه للقائمة ويطلب spawn إذا احتاج.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p59">
+      <h2>تتبع الكود بيدك</h2>
+      <p>افتح الملف:</p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+      <p>ابحث بالترتيب عن هذه functions:</p>
+      <ol>
+        <li><code>_on_add_shuttle_command</code></li>
+        <li><code>_parse_add_shuttle_typed_command</code></li>
+        <li><code>_add_shuttle_start_enabled_from_command</code></li>
+        <li><code>_resolve_add_shuttle_request</code></li>
+        <li><code>_create_managed_shuttle</code></li>
+        <li><code>_finish_add_shuttle</code></li>
+        <li><code>_request_spawn_if_needed</code></li>
+      </ol>
+      <p>
+        هذه السلسلة هي أفضل تمرين لفهم كيف يتحول command من نص في terminal إلى shuttle داخل simulation.
+      </p>
+    </section>
+
+    <section class="page" id="p60">
+      <h2>الفرق بين ADD topic وControl topic</h2>
+      <p>
+        من أكثر الأخطاء شيوعاً الخلط بين topic الإضافة وtopic التحكم.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Topic</th><th>الغرض</th><th>Commands</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>shuttles/add_command</code></td><td>إنشاء shuttle جديد</td><td><code>ADD_STOPPED</code>, <code>ADD_MOVING</code></td></tr>
+          <tr><td><code>shuttles/command</code></td><td>التحكم بـ shuttle موجود</td><td><code>ON</code>, <code>OFF</code>, <code>RESET</code>, <code>REMOVE</code></td></tr>
+        </tbody>
+      </table>
+      <p>إذا أرسلت <code>ON</code> إلى add topic فهذا ليس المكان الصحيح. وإذا أرسلت <code>ADD_STOPPED</code> إلى control topic فهذا أيضاً غير صحيح.</p>
+    </section>
+
+    <section class="page" id="p61">
+      <h2>تمرين 1: اكتشف النظام بالأوامر</h2>
+      <p>شغل Room 315 ثم نفذ:</p>
+      <pre><code>ros2 topic list | grep /room_315/rails</code></pre>
+      <p>اختر topic add:</p>
+      <pre><code>ros2 topic info /room_315/rails/right/shuttles/add_command</code></pre>
+      <p>اعرض message:</p>
+      <pre><code>ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand</code></pre>
+      <p>الهدف من التمرين: لا تعتمد على الحفظ. تعلم كيف تسأل ROS عن النظام.</p>
+    </section>
+
+    <section class="page" id="p62">
+      <h2>تمرين 2: أضف Shuttle ساكن</h2>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_10', command: 'ADD_STOPPED', start_slot: '2', speed: 0.2}"</code></pre>
+      <p>راقب state:</p>
+      <pre><code>ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+      <p>يجب أن ترى shuttle موجود لكنه ليس moving. بعدها شغله:</p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_10', command: 'ON'}"</code></pre>
+    </section>
+
+    <section class="page" id="p63">
+      <h2>تمرين 3: أضف Shuttle متحرك مباشرة</h2>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_11', command: 'ADD_MOVING', start_slot: '3', speed: 0.2}"</code></pre>
+      <p>راقب state وسترى أنه يتحرك مباشرة إذا لم يوجد blocker:</p>
+      <pre><code>ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+      <p>إذا تم رفض الأمر، غالباً start slot occupied. جرب slot آخر أو أزل shuttle.</p>
+    </section>
+
+    <section class="page" id="p64">
+      <h2>تمرين 4: أوقف Shuttle ثم أعد تشغيله</h2>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_11', command: 'OFF'}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_11', command: 'ON'}"</code></pre>
+      <p>راقب كيف يتغير <code>mode</code> وموضع shuttle.</p>
+      <p>هذا يوضح الفرق بين object موجود لكنه disabled، وبين object محذوف.</p>
+    </section>
+
+    <section class="page" id="p65">
+      <h2>تمرين 5: RESET وREMOVE</h2>
+      <p><code>RESET</code> يعيد shuttle إلى start slot. <code>REMOVE</code> يحذفه.</p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_11', command: 'RESET'}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_11', command: 'REMOVE'}"</code></pre>
+      <div class="callout warning">
+        إذا كان spawn request أو delete request لا يزال قيد التنفيذ، قد يرفض node بعض العمليات مؤقتاً.
+      </div>
+    </section>
+
+    <section class="page" id="p66">
+      <h2>Rail System: كيف يفكر Shuttle بالمسار؟</h2>
+      <p>
+        الـ shuttle لا يرى rail كـ mesh في Gazebo. يرى rail كـ graph في الذاكرة.
+        كل segment له بداية ونهاية، والـ switch يقرر أي segment يأتي بعده.
+      </p>
+      <p>مثال مبسط:</p>
+      <pre><code>A14 -> A1 switch -> A1G or A1S
+A23 -> A3 switch -> A3G or A3S</code></pre>
+      <p>
+        عندما يكون switch <code>EXTERIOR</code> يختار branch معين، وعندما يكون <code>INTERIOR</code>
+        يختار branch آخر.
+      </p>
+    </section>
+
+    <section class="page" id="p67">
+      <h2>s وs_ratio: ما معناهما؟</h2>
+      <p>
+        لفهم sensors وdevices، يجب فهم <code>s</code> و<code>s_ratio</code>.
+      </p>
+      <table>
+        <thead>
+          <tr><th>مصطلح</th><th>المعنى</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>s</code></td><td>مسافة طولية على segment، عملياً بالمتر، من بداية segment حتى موضع shuttle.</td></tr>
+          <tr><td><code>s_ratio</code></td><td>نسبة من 0 إلى 1 على طول segment: <code>s_ratio = s / segment.length</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        إذا كان <code>s_ratio=0.0</code> فهو قريب من بداية segment. إذا <code>1.0</code> فهو قريب من نهايته.
+      </p>
+      <p>
+        العلاقة بينهما:
+      </p>
+      <pre><code>s = s_ratio * segment.length
+s_ratio = s / segment.length</code></pre>
+      <p>لذلك device YAML يستخدم <code>segment</code> و<code>s_ratio</code> لوضع sensor/stopper على المسار.</p>
+    </section>
+
+    <section class="page" id="p68">
+      <h2>Switches: Command vs State</h2>
+      <p>
+        عند إرسال switch command، هذا يعني "أريد أن يتحرك switch". لكن actual state قد يتغير بعد delay.
+      </p>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'A1', state: 'INTERIOR'}]}"</code></pre>
+      <p>راقب actual state:</p>
+      <pre><code>ros2 topic echo /room_315/rails/right/switches/state \
+  mfja_rail_interfaces/msg/SwitchState</code></pre>
+      <p>
+        هذا الفصل بين command وstate مهم في الأنظمة الحقيقية: request لا يعني أن الحركة انتهت فوراً.
+      </p>
+    </section>
+
+    <section class="page" id="p69">
+      <h2>Stoppers: لماذا ليست Switches؟</h2>
+      <p>
+        الـ switch يغير الطريق. الـ stopper يوقف shuttle مؤقتاً. كلاهما مرتبط بالrail، لكن وظيفتهما مختلفة.
+      </p>
+      <table>
+        <thead>
+          <tr><th>العنصر</th><th>يغير route؟</th><th>يوقف shuttle؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Switch</code></td><td>نعم</td><td>لا بشكل مباشر</td></tr>
+          <tr><td><code>Stopper</code></td><td>لا</td><td>نعم</td></tr>
+        </tbody>
+      </table>
+      <p>
+        workflow الصحيح: نوقف shuttle بالstopper، نغير switch، ثم نفتح stopper.
+      </p>
+    </section>
+
+    <section class="page" id="p70">
+      <h2>Sensors: كيف تظهر القراءات؟</h2>
+      <p>
+        الـ node يحسب sensor readings بناءً على موضع shuttle. إذا دخل shuttle منطقة sensor،
+        ينشر <code>SensorReading</code> داخل <code>SensorFeedback</code>.
+      </p>
+      <pre><code>SensorReading:
+  name
+  sensor_type
+  active
+  shuttle_name
+  segment
+  s
+  s_ratio
+  distance_m</code></pre>
+      <p>
+        هذا يعني أنك تستطيع debugging sensor بدون النظر إلى Gazebo: اقرأ topic فقط.
+      </p>
+    </section>
+
+    <section class="page" id="p71">
+      <h2>كيف أعدل مكان Sensor؟</h2>
+      <p>الخطوات العملية:</p>
+      <ol>
+        <li>حدد هل sensor على right أو left rail.</li>
+        <li>افتح <code>rail_devices_right.yaml</code> أو <code>rail_devices_left.yaml</code>.</li>
+        <li>ابحث عن <code>name</code>.</li>
+        <li>عدل <code>segment</code> و<code>s_ratio</code>.</li>
+        <li>شغل <code>device validator</code>، وهو script الفحص <code>room_315_devices_validator.py</code>.</li>
+        <li>أعد تشغيل Gazebo.</li>
+      </ol>
+      <pre><code>python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_devices_validator.py</code></pre>
+      <p>
+        إذا أعطى <code>SUMMARY PASS</code> فملفات devices صحيحة من ناحية البنية. إذا أعطى
+        <code>FAIL</code> اقرأ السطر الذي يبدأ بـ <code>FAIL:</code> لتعرف أي sensor أو stopper فيه خطأ.
+      </p>
+    </section>
+
+    <section class="page" id="p72">
+      <h2>كيف أستخدم Gazebo Coordinate؟</h2>
+      <p>
+        أحياناً تختار نقطة بصرياً في Gazebo وتريد تحويلها إلى rail device location.
+        استخدم tool:
+      </p>
+      <pre><code>python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -10.50 \
+  --y -3.20 \
+  --z 0.85</code></pre>
+      <p>
+        الأداة ترجع أقرب <code>segment</code> و<code>s_ratio</code>. بعدها تنسخ القيم إلى YAML.
+      </p>
+    </section>
+
+    <section class="page" id="p73">
+      <h2>كيف أضيف Feature جديدة؟ خريطة قرار</h2>
+      <p>قبل كتابة الكود، اسأل:</p>
+      <ol>
+        <li>هل feature هي command جديد على shuttle موجود؟ إذا نعم، وسع parser في control topic.</li>
+        <li>هل feature تضيف shuttle بطريقة جديدة؟ إذا نعم، وسع add command parser.</li>
+        <li>هل تحتاج state جديد؟ إذا نعم، أضف field أو topic state جديد.</li>
+        <li>هل تحتاج data جديدة من المستخدم؟ إذا نعم، هل تكفي fields الحالية؟</li>
+        <li>هل data الجديدة عامة ومتكررة؟ ربما تحتاج message جديد.</li>
+      </ol>
+      <div class="callout">
+        لا تبدأ بإضافة topic جديد دائماً. أحياناً command value جديد يكفي وأبسط.
+      </div>
+    </section>
+
+    <section class="page" id="p74">
+      <h2>تطبيق بيدك: تتبع ADD_STOPPED</h2>
+      <p>
+        لنفترض أنك تريد التأكد لماذا <code>ADD_STOPPED</code> يجعل shuttle ينتظر.
+        أين تنظر في الكود؟
+      </p>
+      <p>افتح function:</p>
+      <pre><code>_add_shuttle_start_enabled_from_command</code></pre>
+      <p>ستجد القرار النهائي واضحاً:</p>
+      <pre><code>if command == 'ADD_STOPPED':
+    return False</code></pre>
+      <p>ثم شغل:</p>
+      <pre><code>python3 -m py_compile mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+    </section>
+
+    <section class="page" id="p75">
+      <h2>تطبيق بيدك: أضف Topic مراقبة جديد</h2>
+      <p>
+        مثال تعليمي: تريد topic ينشر عدد shuttles الحالي. الطريقة:
+      </p>
+      <ol>
+        <li>اختر message موجود: <code>std_msgs/msg/Int32</code>.</li>
+        <li>أضف import في Python.</li>
+        <li>أضف publisher في constructor.</li>
+        <li>في <code>_tick</code> أو بعد add/remove، انشر العدد.</li>
+      </ol>
+      <pre><code>from std_msgs.msg import Int32
+
+self.shuttle_count_publisher = self.create_publisher(
+    Int32,
+    f'/room_315/rails/{self.rail_side}/shuttles/count',
+    10,
+)
+
+msg = Int32()
+msg.data = len(self.shuttles)
+self.shuttle_count_publisher.publish(msg)</code></pre>
+      <p>هذا مثال بسيط يوضح دورة إضافة publisher.</p>
+    </section>
+
+    <section class="page" id="p76">
+      <h2>تطبيق بيدك: أضف Command جديد للتحكم</h2>
+      <p>
+        لنفترض تريد command اسمه <code>PAUSE</code> يعمل مثل <code>OFF</code>.
+        لا تحتاج topic جديد. عدل normalization:
+      </p>
+      <pre><code>def _normalize_enabled_state(raw_state):
+    if state in {'0', 'OFF', 'DISABLE', 'DISABLED', 'STOP', 'PAUSE', 'FALSE'}:
+        return False</code></pre>
+      <p>
+        إذا command جديد يعني action مختلف تماماً، عندها تعدل:
+      </p>
+      <ul>
+        <li><code>_normalize_shuttle_action</code></li>
+        <li><code>_apply_shuttle_action</code></li>
+        <li>function جديدة تنفذ behavior</li>
+      </ul>
+    </section>
+
+    <section class="page" id="p77">
+      <h2>تطبيق بيدك: أضف Parameter جديد</h2>
+      <p>
+        إذا feature تحتاج رقم أو boolean قابل للتغيير من launch، استخدم parameter.
+      </p>
+      <pre><code>self.declare_parameter('my_feature_enabled', False)
+self.my_feature_enabled = bool(
+    self.get_parameter('my_feature_enabled').value
+)</code></pre>
+      <p>ثم في launch:</p>
+      <pre><code>parameters=[
+  common_parameters,
+  {
+    'my_feature_enabled': LaunchConfiguration('my_feature_enabled'),
+  },
+]</code></pre>
+      <p>
+        لا تضع constants داخل الكود إذا كنت تتوقع تغييرها أثناء التجارب.
+      </p>
+    </section>
+
+    <section class="page" id="p78">
+      <h2>تطبيق بيدك: أضف Launch Argument</h2>
+      <p>في launch file أضف:</p>
+      <pre><code>DeclareLaunchArgument(
+    'my_feature_enabled',
+    default_value='false',
+    choices=['true', 'false'],
+    description='Enable my feature.',
+)</code></pre>
+      <p>ثم مرره إلى node parameters:</p>
+      <pre><code>'my_feature_enabled': LaunchConfiguration('my_feature_enabled')</code></pre>
+      <p>ثم تستخدمه:</p>
+      <pre><code>ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  my_feature_enabled:=true</code></pre>
+    </section>
+
+    <section class="page" id="p79">
+      <h2>كيف تختبر بعد التعديل؟</h2>
+      <ol>
+        <li>افحص syntax:
+          <pre><code>python3 -m py_compile mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py</code></pre>
+        </li>
+        <li>ابن workspace:
+          <pre><code>cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash</code></pre>
+        </li>
+        <li>شغل launch.</li>
+        <li>افحص topics:
+          <pre><code>ros2 topic list | grep room_315</code></pre>
+        </li>
+        <li>أرسل command صغير.</li>
+        <li>راقب state topic وlogs.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p80">
+      <h2>قراءة Logs وفهم الأخطاء</h2>
+      <p>الكود يستعمل logger لرسائل مهمة مثل:</p>
+      <ul>
+        <li><code>Failed to add shuttle</code></li>
+        <li><code>start slot is occupied</code></li>
+        <li><code>Gazebo spawn service is not ready yet</code></li>
+        <li><code>Unknown shuttle</code></li>
+        <li><code>entered FALLING mode</code></li>
+      </ul>
+      <p>
+        لا تتجاهل logs. غالباً تخبرك مباشرة أين المشكلة: topic خطأ، command غير مدعوم، slot مشغول،
+        service غير جاهز، أو route غير صالح.
+      </p>
+    </section>
+
+    <section class="page" id="p81">
+      <h2>FALLING وWAITING وDISABLED</h2>
+      <table>
+        <thead>
+          <tr><th>Mode/State</th><th>متى يحدث؟</th><th>ماذا تفعل؟</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>WAITING</code></td><td>shuttle متوقف، بسبب OFF أو stopper أو collision avoidance.</td><td>افحص <code>stopped_by</code> أو شغل <code>ON</code>.</td></tr>
+          <tr><td><code>DISABLED</code></td><td>أمر <code>OFF</code> أو <code>ADD_STOPPED</code>.</td><td>أرسل <code>ON</code>.</td></tr>
+          <tr><td><code>FALLING</code></td><td>لا يوجد successor صالح حسب switch routing.</td><td>صحح switch ثم <code>RESET</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        في debugging، لا تسأل "لماذا لا يتحرك؟" فقط. اسأل: ما هو mode؟ ما هو stopped_by؟ هل speed أكبر من صفر؟
+      </p>
+    </section>
+
+    <section class="page" id="p82">
+      <h2>كيف تعمل Occupied Start Slot؟</h2>
+      <p>
+        عند إضافة shuttle، node يفحص إذا كان start slot مشغولاً. إذا كان shuttle آخر قريباً من نفس slot
+        ضمن radius محدد، يرفض الإضافة.
+      </p>
+      <pre><code>reject_occupied_start_slots = true
+start_slot_occupancy_radius_m = 0.33</code></pre>
+      <p>
+        هذا يمنع spawn shuttles فوق بعضها. إذا تريد التجربة من slot معين، تأكد أنه فارغ أو استخدم <code>REMOVE</code>
+        أو انتظر حتى يبتعد shuttle.
+      </p>
+    </section>
+
+    <section class="page" id="p83">
+      <h2>Right Rail وLeft Rail: نفس المنطق، Config مختلف</h2>
+      <p>
+        لدينا node لنفس الكود لكنه يعمل مرة على right rail ومرة على left rail.
+        الفرق يأتي من parameters مثل:
+      </p>
+      <ul>
+        <li><code>rail_side:=right</code> أو <code>left</code></li>
+        <li><code>network_yaml</code></li>
+        <li><code>devices_yaml</code></li>
+        <li>topic defaults</li>
+      </ul>
+      <p>
+        هذا تصميم جيد لأننا لا نكرر الكود. نفس class يخدم الجهتين.
+      </p>
+    </section>
+
+    <section class="page" id="p84">
+      <h2>لماذا نعتمد Topics نهائية فقط؟</h2>
+      <p>
+        أثناء التطوير تغيرت أسماء topics أكثر من مرة، لكن النسخة النهائية أبسط:
+        نعتمد فقط على namespace واحد واضح هو <code>/room_315/rails/{right,left}/...</code>.
+        لذلك لا توجد aliases قديمة في الكود النهائي.
+      </p>
+      <table>
+        <thead>
+          <tr><th>النوع</th><th>Topic النهائي</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>إضافة shuttle</td><td><code>/room_315/rails/right/shuttles/add_command</code></td></tr>
+          <tr><td>تحكم switches</td><td><code>/room_315/rails/right/switches/command</code></td></tr>
+          <tr><td>تحكم stoppers</td><td><code>/room_315/rails/right/stoppers/command</code></td></tr>
+        </tbody>
+      </table>
+      <p>إذا بدك left rail، غيّر <code>right</code> إلى <code>left</code> بنفس البنية.</p>
+    </section>
+
+    <section class="page" id="p85">
+      <h2>كيف تربط Robot مع Shuttle؟</h2>
+      <p>
+        robots في المشروع تستخدم topics مختلفة مثل <code>/kuka1/joint_trajectory</code>.
+        الـ shuttle يستخدم rail topics. كلاهما موجودان في Gazebo world نفسه.
+      </p>
+      <p>الفكرة:</p>
+      <ul>
+        <li>Robot يتحرك عبر joint trajectory.</li>
+        <li>Shuttle يتحرك عبر set_pose kinematic.</li>
+        <li>Gazebo يعرضهما في نفس scene.</li>
+        <li>Collision models يمكن أن تتفاعل بصرياً/فيزيائياً حسب masks.</li>
+      </ul>
+      <p>لذلك robot-shuttle experiments تحتاج تشغيل world مع robots وshuttles معاً.</p>
+    </section>
+
+    <section class="page" id="p86">
+      <h2>متى أستخدم Room 315 ومتى Full Floor؟</h2>
+      <table>
+        <thead>
+          <tr><th>الوضع</th><th>استخدمه عندما...</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Room 315 only</code></td><td>تريد اختبار rails/shuttles/sensors بسرعة.</td></tr>
+          <tr><td><code>Full floor</code></td><td>تريد البيئة الكاملة أو robots أخرى.</td></tr>
+          <tr><td><code>Single industrial robot</code></td><td>تريد اختبار robot فقط بدون Room 315.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        ابدأ دائماً بأصغر launch يكفيك. هذا يجعل debugging أسرع.
+      </p>
+    </section>
+
+    <section class="page" id="p87">
+      <h2>كيف تقرأ Launch File؟</h2>
+      <p>ابحث عن ثلاثة أشياء:</p>
+      <ol>
+        <li><code>DeclareLaunchArgument</code>: ما هي الخيارات المتاحة؟</li>
+        <li><code>IncludeLaunchDescription</code>: أي launch آخر يتم تشغيله؟</li>
+        <li><code>Node</code>: ما هي nodes التي تبدأ؟ وما هي parameters؟</li>
+      </ol>
+      <p>مثال argument:</p>
+      <pre><code>DeclareLaunchArgument(
+    'room315_shuttles_start_enabled',
+    default_value='false',
+    choices=['true', 'false'],
+)</code></pre>
+      <p>هذا يعني أنك تستطيع تمريره من terminal.</p>
+    </section>
+
+    <section class="page" id="p88">
+      <h2>كيف تربط Launch Argument مع Node Parameter؟</h2>
+      <p>
+        في launch، argument لا يؤثر على node حتى تمرره داخل parameters.
+      </p>
+      <pre><code>'start_enabled': LaunchConfiguration('room315_shuttles_start_enabled')</code></pre>
+      <p>
+        ثم داخل node:
+      </p>
+      <pre><code>start_enabled = bool(self.get_parameter('start_enabled').value)</code></pre>
+      <p>
+        هذا هو الجسر بين terminal argument والكود الداخلي.
+      </p>
+    </section>
+
+    <section class="page" id="p89">
+      <h2>كيف أضيف حالة جديدة للـ Shuttle؟</h2>
+      <p>إذا أردت mode جديد مثل <code>CHARGING</code> مثلاً، ستحتاج:</p>
+      <ol>
+        <li>تعريف constant جديد في الكود.</li>
+        <li>تحديد متى يدخل shuttle هذا mode.</li>
+        <li>تحديد ماذا يفعل tick loop في هذا mode.</li>
+        <li>تحديث state publication حتى يظهر mode.</li>
+        <li>تحديث README/report.</li>
+      </ol>
+      <p>
+        لا تضف mode جديد فقط لأنه اسم جميل. أضفه عندما يكون له behavior مختلف فعلاً.
+      </p>
+    </section>
+
+    <section class="page" id="p90">
+      <h2>كيف أضيف Sensor Type جديد؟</h2>
+      <ol>
+        <li>أضف category أو field في device YAML إذا لزم.</li>
+        <li>عدّل loader الذي يقرأ devices.</li>
+        <li>أضف logic يحسب متى sensor active.</li>
+        <li>انشر <code>SensorReading</code> مناسباً.</li>
+        <li>أضف marker style إذا تريد رؤيته في Gazebo.</li>
+      </ol>
+      <p>إذا sensor الجديد مجرد position sensor بنمط مختلف، ربما يكفي YAML فقط.</p>
+    </section>
+
+    <section class="page" id="p91">
+      <h2>كيف أضيف Switch جديد؟</h2>
+      <p>
+        هذا أصعب من إضافة command لأنه مرتبط بالrail graph.
+      </p>
+      <ol>
+        <li>أضف geometry/segments المطلوبة.</li>
+        <li>حدث <code>rail_network_*.yaml</code>.</li>
+        <li>حدث switch mapping والـ public labels إذا لزم.</li>
+        <li>حدث device YAML للstoppers/sensors.</li>
+        <li>شغل validators.</li>
+      </ol>
+      <pre><code>ros2 run mfja_robot_control_config room_315_network_validator.py
+ros2 run mfja_robot_control_config room_315_continuous_path_validator.py</code></pre>
+    </section>
+
+    <section class="page" id="p92">
+      <h2>كيف أضيف Start Slot جديد؟</h2>
+      <p>
+        Start slots تأتي من device/network configuration. يجب أن تكون على rail segment صالح.
+      </p>
+      <ol>
+        <li>حدد موقع slot على rail.</li>
+        <li>احسب <code>segment</code> و<code>s_ratio</code>.</li>
+        <li>أضفه في device YAML أو network config حسب التصميم الحالي.</li>
+        <li>تأكد أن add command يقبل هذا slot.</li>
+        <li>اختبر occupied slot logic.</li>
+      </ol>
+      <p>لا تضف slot في Gazebo بصرياً فقط؛ يجب أن يعرفه kinematic core.</p>
+    </section>
+
+    <section class="page" id="p93">
+      <h2>كيف أفهم أخطاء Build؟</h2>
+      <table>
+        <thead>
+          <tr><th>نوع الخطأ</th><th>غالباً سببه</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Python syntax error</td><td>خطأ indentation أو أقواس. استخدم <code>py_compile</code>.</td></tr>
+          <tr><td>Message import error</td><td>لم تبنِ <code>mfja_rail_interfaces</code> أو لم تعمل source.</td></tr>
+          <tr><td>Launch argument unknown</td><td>أضفت argument في launch مختلف عن الذي تشغله.</td></tr>
+          <tr><td>Topic لا يظهر</td><td>node لم يبدأ أو namespace مختلف.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p94">
+      <h2>منهجية Debug لأي Feature جديدة</h2>
+      <ol>
+        <li>هل الأمر يصل؟ ضع log في callback.</li>
+        <li>هل parser يفهمه؟ اطبع normalized action.</li>
+        <li>هل state الداخلي تغير؟ راقب state topic.</li>
+        <li>هل Gazebo service جاهز؟ افحص service list.</li>
+        <li>هل model موجود؟ راقب Gazebo scene/logs.</li>
+        <li>هل documentation مطابق للكود؟ جرب copy-paste من HTML.</li>
+      </ol>
+      <p>لا تقفز مباشرة إلى Gazebo visual. ابدأ من topic ثم callback ثم state ثم Gazebo.</p>
+    </section>
+
+    <section class="page" id="p95">
+      <h2>تمرين شامل: افهم مسار ADD_STOPPED بنفسك</h2>
+      <p>المطلوب: تتبع كيف يصل أمر <code>ADD_STOPPED</code> من terminal إلى إنشاء shuttle ساكن.</p>
+      <ol>
+        <li>افتح <code>room_315_kinematic_shuttle_node.py</code>.</li>
+        <li>ابحث عن <code>_on_add_shuttle_command</code>.</li>
+        <li>انتقل إلى <code>_parse_add_shuttle_typed_command</code>.</li>
+        <li>لاحظ أن <code>ADD_STOPPED</code> تعطي <code>enabled=False</code>.</li>
+        <li>شغل Room 315.</li>
+        <li>أرسل add command بالقيمة النهائية.</li>
+        <li>راقب أن shuttle ينتظر ولا يتحرك.</li>
+      </ol>
+      <pre><code>ros2 topic pub --once /room_315/rails/right/shuttles/add_command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_test', command: 'ADD_STOPPED', start_slot: '2', speed: 0.2}"</code></pre>
+    </section>
+
+    <section class="page" id="p96">
+      <h2>تمرين شامل: أضف Documentation صحيح</h2>
+      <p>بعد أي feature، لا تتركها في الكود فقط. وثقها في:</p>
+      <ul>
+        <li><code>README.md</code></li>
+        <li><code>runbook.html</code></li>
+        <li>هذا التقرير إذا كانت feature تعليمية مهمة</li>
+      </ul>
+      <p>اكتب دائماً:</p>
+      <ol>
+        <li>ما المشكلة التي تحلها؟</li>
+        <li>ما الأمر الجديد؟</li>
+        <li>مثال copy-paste.</li>
+        <li>هل يوجد تأثير على commands الحالية؟</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p97">
+      <h2>ملخص العلاقات بين الملفات</h2>
+      <svg class="diagram" viewBox="0 0 840 420" role="img" aria-label="File relationships">
+        <defs>
+          <marker id="arrfiles" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#385f96"></path>
+          </marker>
+        </defs>
+        <rect x="40" y="40" width="220" height="70" rx="8" fill="#eef8f8" stroke="#0e787c"></rect>
+        <text x="150" y="82" text-anchor="middle" font-size="13">mfja_rail_interfaces/msg</text>
+        <rect x="320" y="40" width="220" height="70" rx="8" fill="#eef4ff" stroke="#385f96"></rect>
+        <text x="430" y="82" text-anchor="middle" font-size="13">room_315_kinematic_shuttle_node.py</text>
+        <rect x="600" y="40" width="200" height="70" rx="8" fill="#fff5e6" stroke="#a86200"></rect>
+        <text x="700" y="82" text-anchor="middle" font-size="13">Gazebo services</text>
+        <rect x="180" y="190" width="220" height="70" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="290" y="232" text-anchor="middle" font-size="13">launch files</text>
+        <rect x="460" y="190" width="220" height="70" rx="8" fill="#f5f8fa" stroke="#d8e0e8"></rect>
+        <text x="570" y="232" text-anchor="middle" font-size="13">YAML config</text>
+        <line x1="260" y1="75" x2="310" y2="75" stroke="#385f96" stroke-width="2" marker-end="url(#arrfiles)"></line>
+        <line x1="540" y1="75" x2="590" y2="75" stroke="#385f96" stroke-width="2" marker-end="url(#arrfiles)"></line>
+        <line x1="290" y1="190" x2="380" y2="112" stroke="#385f96" stroke-width="2" marker-end="url(#arrfiles)"></line>
+        <line x1="570" y1="190" x2="480" y2="112" stroke="#385f96" stroke-width="2" marker-end="url(#arrfiles)"></line>
+      </svg>
+      <p>اقرأ الرسم هكذا: messages تحدد شكل البيانات، launch يشغل node ويمرر parameters، YAML يعطي geometry/devices، والnode يربط كل ذلك مع Gazebo.</p>
+    </section>
+
+    <section class="page" id="p98">
+      <h2>مصطلحات يجب أن تحفظها</h2>
+      <table>
+        <thead>
+          <tr><th>مصطلح</th><th>معنى سريع في مشروعنا</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Node</code></td><td>برنامج يتحكم أو ينشر state.</td></tr>
+          <tr><td><code>Topic</code></td><td>قناة رسائل.</td></tr>
+          <tr><td><code>Message</code></td><td>شكل البيانات على topic.</td></tr>
+          <tr><td><code>Callback</code></td><td>function تعمل عند وصول message.</td></tr>
+          <tr><td><code>Parameter</code></td><td>إعداد node.</td></tr>
+          <tr><td><code>Launch Argument</code></td><td>إعداد تمرره عند تشغيل launch.</td></tr>
+          <tr><td><code>Service Client</code></td><td>node يطلب عملية من service مثل Gazebo create.</td></tr>
+          <tr><td><code>Kinematic</code></td><td>حركة محسوبة مباشرة، لا تعتمد على physics wheels.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="p99">
+      <h2>خطة مراجعة قبل الامتحان أو المناقشة</h2>
+      <ol>
+        <li>اشرح لماذا اخترنا kinematic simulation.</li>
+        <li>ارسم Topic flow من terminal إلى node.</li>
+        <li>اذكر الفرق بين add topic وcontrol topic.</li>
+        <li>اشرح <code>ADD_STOPPED</code> مقابل <code>ADD_MOVING</code>.</li>
+        <li>اشرح switch command/state delay.</li>
+        <li>اشرح stopper workflow.</li>
+        <li>اشرح كيف تعمل sensors بدون physical Gazebo sensor.</li>
+        <li>افتح الكود واعرض callback الذي يستقبل add command.</li>
+        <li>اعرض أين تضيف alias جديد.</li>
+        <li>اعرض كيف تختبر عبر <code>ros2 topic echo</code>.</li>
+      </ol>
+    </section>
+
+    <section class="page" id="p100">
+      <h2>الخلاصة الكبرى</h2>
+      <p>
+        إذا أردت فهم المشروع بعمق، اختصره في هذه الجملة:
+      </p>
+      <div class="callout">
+        لدينا <code>ROS 2 Node</code> يقرأ أوامر typed من <code>Topics</code>، يحولها إلى state داخلي
+        للـ <code>Shuttles</code> على rail graph، ثم يحرك Gazebo models عبر services وينشر state/sensor feedback.
+      </div>
+      <p>
+        كل feature مستقبلية ستدور حول هذه الحلقة. عندما تضيف command جديداً، اسأل:
+        أين يدخل؟ كيف أفسره؟ أي state يغير؟ ماذا أنشر بعده؟ وهل يجب أن يظهر في Gazebo؟
+      </p>
+      <p>
+        إذا استطعت الإجابة على هذه الأسئلة، فأنت لا تستخدم المشروع فقط؛ أنت أصبحت قادراً على تطويره بيدك.
+      </p>
+    </section>
+  </main>
+</body>
+</html>

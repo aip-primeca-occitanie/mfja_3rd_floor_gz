@@ -121,71 +121,31 @@ ALLOWED_START_POSES = {
 RIGHT_TOPIC_DEFAULTS = {
     'pose_topic': '/room_315/rails/right/shuttles/pose_cmd',
     'pose_topic_prefix': '/room_315/rails/right/shuttles',
-    'state_topic': '/room_315/rails/right/shuttles/state',
     'shuttle_state_topic': '/room_315/rails/right/shuttles/state',
-    'deprecated_shuttle_state_topic': '/room_315_right/shuttle/state',
-    'deprecated_shuttle_state_json_topic': '/room_315_right/shuttle/state_json',
     'add_shuttle_command_topic': '/room_315/rails/right/shuttles/add_command',
-    'deprecated_add_shuttle_typed_command_topic': '/room_315_right/shuttle/add_cmd',
-    'deprecated_add_shuttle_command_topic': '/room_315_right/shuttle/add_cmd_string',
     'shuttle_control_command_topic': '/room_315/rails/right/shuttles/command',
-    'deprecated_shuttle_control_typed_command_topic': '/room_315_right/shuttle/control_cmd',
-    'deprecated_shuttle_control_command_topic': '/room_315_right/shuttle/control_cmd_string',
     'switch_command_topic': '/room_315/rails/right/switches/command',
-    'deprecated_switch_typed_command_topic': '/room_315_right/switch_cmd',
     'switch_state_topic': '/room_315/rails/right/switches/state',
-    'deprecated_switch_state_topic': '/room_315_right/switch_state',
-    'deprecated_switch_state_json_topic': '/room_315_right/switch_state_json',
-    'deprecated_switch_command_topic': '/room_315_right/switch_states',
     'stopper_command_topic': '/room_315/rails/right/stoppers/command',
-    'deprecated_stopper_typed_command_topic': '/room_315_right/stopper_cmd',
     'stopper_state_topic': '/room_315/rails/right/stoppers/state',
-    'deprecated_stopper_state_topic': '/room_315_right/stopper_state',
-    'deprecated_stopper_state_json_topic': '/room_315_right/stopper_state_json',
-    'deprecated_stopper_command_topic': '/room_315_right/stopper_states',
     'sensor_state_topic': '/room_315/rails/right/sensors/feedback',
-    'deprecated_sensor_state_topic': '/room_315_right/sensors/switch_approach',
-    'deprecated_sensor_state_json_topic': '/room_315_right/sensors/switch_approach_json',
     'position_sensor_state_topic': '/room_315/rails/right/sensors/position_feedback',
-    'deprecated_position_sensor_state_topic': '/room_315_right/sensors/position',
-    'deprecated_position_sensor_state_json_topic': '/room_315_right/sensors/position_json',
     'pose_offset_command_topic': '/room_315/rails/right/shuttles/pose_offset_command',
-    'deprecated_pose_offset_command_topic': '/room_315_right/shuttle/pose_offset_cmd',
 }
 
 LEFT_TOPIC_DEFAULTS = {
     'pose_topic': '/room_315/rails/left/shuttles/pose_cmd',
     'pose_topic_prefix': '/room_315/rails/left/shuttles',
-    'state_topic': '/room_315/rails/left/shuttles/state',
     'shuttle_state_topic': '/room_315/rails/left/shuttles/state',
-    'deprecated_shuttle_state_topic': '/room_315_left/shuttle/state',
-    'deprecated_shuttle_state_json_topic': '/room_315_left/shuttle/state_json',
     'add_shuttle_command_topic': '/room_315/rails/left/shuttles/add_command',
-    'deprecated_add_shuttle_typed_command_topic': '/room_315_left/shuttle/add_cmd',
-    'deprecated_add_shuttle_command_topic': '/room_315_left/shuttle/add_cmd_string',
     'shuttle_control_command_topic': '/room_315/rails/left/shuttles/command',
-    'deprecated_shuttle_control_typed_command_topic': '/room_315_left/shuttle/control_cmd',
-    'deprecated_shuttle_control_command_topic': '/room_315_left/shuttle/control_cmd_string',
     'switch_command_topic': '/room_315/rails/left/switches/command',
-    'deprecated_switch_typed_command_topic': '/room_315_left/switch_cmd',
     'switch_state_topic': '/room_315/rails/left/switches/state',
-    'deprecated_switch_state_topic': '/room_315_left/switch_state',
-    'deprecated_switch_state_json_topic': '/room_315_left/switch_state_json',
-    'deprecated_switch_command_topic': '/room_315_left/switch_states',
     'stopper_command_topic': '/room_315/rails/left/stoppers/command',
-    'deprecated_stopper_typed_command_topic': '/room_315_left/stopper_cmd',
     'stopper_state_topic': '/room_315/rails/left/stoppers/state',
-    'deprecated_stopper_state_topic': '/room_315_left/stopper_state',
-    'deprecated_stopper_state_json_topic': '/room_315_left/stopper_state_json',
-    'deprecated_stopper_command_topic': '/room_315_left/stopper_states',
     'sensor_state_topic': '/room_315/rails/left/sensors/feedback',
-    'deprecated_sensor_state_topic': '/room_315_left/sensors/switch_approach',
-    'deprecated_sensor_state_json_topic': '/room_315_left/sensors/switch_approach_json',
     'position_sensor_state_topic': '/room_315/rails/left/sensors/position_feedback',
-    'deprecated_position_sensor_state_topic': '/room_315_left/sensors/position',
-    'deprecated_position_sensor_state_json_topic': '/room_315_left/sensors/position_json',
     'pose_offset_command_topic': '/room_315/rails/left/shuttles/pose_offset_command',
-    'deprecated_pose_offset_command_topic': '/room_315_left/shuttle/pose_offset_cmd',
 }
 
 RIGHT_ENTITY_DEFAULTS = {
@@ -725,7 +685,6 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('arc_length_samples_per_edge', 16)
         self.declare_parameter('shuttle_count', 1)
         self.declare_parameter('start_enabled', False)
-        self.declare_parameter('start_deployed', True)
         self.declare_parameter('start_slot', 2)
         self.declare_parameter('start_slots', '')
         self.declare_parameter('start_snap_tolerance_m', 0.25)
@@ -738,110 +697,33 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('collision_search_iterations', 12)
         self.declare_parameter('pose_topic', RIGHT_TOPIC_DEFAULTS['pose_topic'])
         self.declare_parameter('pose_topic_prefix', RIGHT_TOPIC_DEFAULTS['pose_topic_prefix'])
-        self.declare_parameter('state_topic', RIGHT_TOPIC_DEFAULTS['state_topic'])
         self.declare_parameter('shuttle_state_topic', RIGHT_TOPIC_DEFAULTS['shuttle_state_topic'])
-        self.declare_parameter(
-            'deprecated_shuttle_state_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_shuttle_state_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_shuttle_state_json_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_shuttle_state_json_topic'],
-        )
         self.declare_parameter(
             'add_shuttle_command_topic',
             RIGHT_TOPIC_DEFAULTS['add_shuttle_command_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_add_shuttle_typed_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_add_shuttle_typed_command_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_add_shuttle_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_add_shuttle_command_topic'],
         )
         self.declare_parameter(
             'shuttle_control_command_topic',
             RIGHT_TOPIC_DEFAULTS['shuttle_control_command_topic'],
         )
         self.declare_parameter(
-            'deprecated_shuttle_control_typed_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_shuttle_control_typed_command_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_shuttle_control_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_shuttle_control_command_topic'],
-        )
-        self.declare_parameter(
             'switch_command_topic',
             RIGHT_TOPIC_DEFAULTS['switch_command_topic'],
         )
-        self.declare_parameter(
-            'deprecated_switch_typed_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_switch_typed_command_topic'],
-        )
         self.declare_parameter('switch_state_topic', RIGHT_TOPIC_DEFAULTS['switch_state_topic'])
-        self.declare_parameter(
-            'deprecated_switch_state_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_switch_state_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_switch_state_json_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_switch_state_json_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_switch_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_switch_command_topic'],
-        )
         self.declare_parameter(
             'stopper_command_topic',
             RIGHT_TOPIC_DEFAULTS['stopper_command_topic'],
         )
-        self.declare_parameter(
-            'deprecated_stopper_typed_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_stopper_typed_command_topic'],
-        )
         self.declare_parameter('stopper_state_topic', RIGHT_TOPIC_DEFAULTS['stopper_state_topic'])
-        self.declare_parameter(
-            'deprecated_stopper_state_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_stopper_state_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_stopper_state_json_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_stopper_state_json_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_stopper_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_stopper_command_topic'],
-        )
         self.declare_parameter('sensor_state_topic', RIGHT_TOPIC_DEFAULTS['sensor_state_topic'])
-        self.declare_parameter(
-            'deprecated_sensor_state_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_sensor_state_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_sensor_state_json_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_sensor_state_json_topic'],
-        )
         self.declare_parameter(
             'position_sensor_state_topic',
             RIGHT_TOPIC_DEFAULTS['position_sensor_state_topic'],
         )
         self.declare_parameter(
-            'deprecated_position_sensor_state_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_position_sensor_state_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_position_sensor_state_json_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_position_sensor_state_json_topic'],
-        )
-        self.declare_parameter(
             'pose_offset_command_topic',
             RIGHT_TOPIC_DEFAULTS['pose_offset_command_topic'],
-        )
-        self.declare_parameter(
-            'deprecated_pose_offset_command_topic',
-            RIGHT_TOPIC_DEFAULTS['deprecated_pose_offset_command_topic'],
         )
         self.declare_parameter('visual_switch_command_topic', '/mfja/conveyor/switch_cmd')
         self.declare_parameter('visual_switch_state_topic', '/mfja/conveyor/switch_states')
@@ -914,10 +796,6 @@ class Room315KinematicShuttleNode(Node):
         )
         shuttle_count = int(self.get_parameter('shuttle_count').value)
         start_enabled = bool(self.get_parameter('start_enabled').value)
-        start_deployed = (
-            bool(self.get_parameter('start_deployed').value)
-            or start_enabled
-        )
         start_slot = self.get_parameter('start_slot').value
         start_slots = str(self.get_parameter('start_slots').value)
         start_snap_tolerance_m = float(
@@ -948,193 +826,66 @@ class Room315KinematicShuttleNode(Node):
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         ).rstrip('/')
-        legacy_state_topic_raw = str(self.get_parameter('state_topic').value)
-        shuttle_state_topic_raw = str(self.get_parameter('shuttle_state_topic').value)
         shuttle_state_topic = self._side_default_string(
-            shuttle_state_topic_raw,
+            str(self.get_parameter('shuttle_state_topic').value),
             'shuttle_state_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        legacy_state_topic = self._side_default_string(
-            legacy_state_topic_raw,
-            'state_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        )
-        if (
-            shuttle_state_topic_raw == RIGHT_TOPIC_DEFAULTS['shuttle_state_topic']
-            and legacy_state_topic_raw != RIGHT_TOPIC_DEFAULTS['state_topic']
-        ):
-            shuttle_state_topic = legacy_state_topic
-        deprecated_shuttle_state_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_shuttle_state_topic').value),
-            'deprecated_shuttle_state_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_shuttle_state_json_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_shuttle_state_json_topic').value),
-            'deprecated_shuttle_state_json_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         add_shuttle_command_topic = self._side_default_string(
             str(self.get_parameter('add_shuttle_command_topic').value),
             'add_shuttle_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_add_shuttle_typed_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_add_shuttle_typed_command_topic').value),
-            'deprecated_add_shuttle_typed_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_add_shuttle_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_add_shuttle_command_topic').value),
-            'deprecated_add_shuttle_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         shuttle_control_command_topic = self._side_default_string(
             str(self.get_parameter('shuttle_control_command_topic').value),
             'shuttle_control_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_shuttle_control_typed_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_shuttle_control_typed_command_topic').value),
-            'deprecated_shuttle_control_typed_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_shuttle_control_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_shuttle_control_command_topic').value),
-            'deprecated_shuttle_control_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         switch_command_topic = self._side_default_string(
             str(self.get_parameter('switch_command_topic').value),
             'switch_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_switch_typed_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_switch_typed_command_topic').value),
-            'deprecated_switch_typed_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         switch_state_topic = self._side_default_string(
             str(self.get_parameter('switch_state_topic').value),
             'switch_state_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_switch_state_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_switch_state_topic').value),
-            'deprecated_switch_state_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_switch_state_json_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_switch_state_json_topic').value),
-            'deprecated_switch_state_json_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_switch_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_switch_command_topic').value),
-            'deprecated_switch_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         stopper_command_topic = self._side_default_string(
             str(self.get_parameter('stopper_command_topic').value),
             'stopper_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_stopper_typed_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_stopper_typed_command_topic').value),
-            'deprecated_stopper_typed_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         stopper_state_topic = self._side_default_string(
             str(self.get_parameter('stopper_state_topic').value),
             'stopper_state_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_stopper_state_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_stopper_state_topic').value),
-            'deprecated_stopper_state_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_stopper_state_json_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_stopper_state_json_topic').value),
-            'deprecated_stopper_state_json_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_stopper_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_stopper_command_topic').value),
-            'deprecated_stopper_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         sensor_state_topic = self._side_default_string(
             str(self.get_parameter('sensor_state_topic').value),
             'sensor_state_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_sensor_state_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_sensor_state_topic').value),
-            'deprecated_sensor_state_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_sensor_state_json_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_sensor_state_json_topic').value),
-            'deprecated_sensor_state_json_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         position_sensor_state_topic = self._side_default_string(
             str(self.get_parameter('position_sensor_state_topic').value),
             'position_sensor_state_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_position_sensor_state_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_position_sensor_state_topic').value),
-            'deprecated_position_sensor_state_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
-        deprecated_position_sensor_state_json_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_position_sensor_state_json_topic').value),
-            'deprecated_position_sensor_state_json_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         pose_offset_command_topic = self._side_default_string(
             str(self.get_parameter('pose_offset_command_topic').value),
             'pose_offset_command_topic',
             right_defaults=RIGHT_TOPIC_DEFAULTS,
             left_defaults=LEFT_TOPIC_DEFAULTS,
         )
-        deprecated_pose_offset_command_topic = self._side_default_string(
-            str(self.get_parameter('deprecated_pose_offset_command_topic').value),
-            'deprecated_pose_offset_command_topic',
-            right_defaults=RIGHT_TOPIC_DEFAULTS,
-            left_defaults=LEFT_TOPIC_DEFAULTS,
-        ).strip()
         self._ensure_command_state_topics_are_distinct(
             'switch',
             switch_command_topic,
@@ -1433,45 +1184,15 @@ class Room315KinematicShuttleNode(Node):
             for name, config in self.stopper_configs.items()
         }
         self.shuttle_state_topic = shuttle_state_topic
-        self.deprecated_shuttle_state_topic = deprecated_shuttle_state_topic
-        self.deprecated_shuttle_state_json_topic = deprecated_shuttle_state_json_topic
         self.add_shuttle_command_topic = add_shuttle_command_topic
-        self.deprecated_add_shuttle_typed_command_topic = (
-            deprecated_add_shuttle_typed_command_topic
-        )
-        self.deprecated_add_shuttle_command_topic = deprecated_add_shuttle_command_topic
         self.shuttle_control_command_topic = shuttle_control_command_topic
-        self.deprecated_shuttle_control_typed_command_topic = (
-            deprecated_shuttle_control_typed_command_topic
-        )
-        self.deprecated_shuttle_control_command_topic = (
-            deprecated_shuttle_control_command_topic
-        )
         self.switch_command_topic = switch_command_topic
-        self.deprecated_switch_typed_command_topic = deprecated_switch_typed_command_topic
         self.switch_state_topic = switch_state_topic
-        self.deprecated_switch_state_topic = deprecated_switch_state_topic
-        self.deprecated_switch_state_json_topic = deprecated_switch_state_json_topic
-        self.deprecated_switch_command_topic = deprecated_switch_command_topic
         self.stopper_command_topic = stopper_command_topic
-        self.deprecated_stopper_typed_command_topic = deprecated_stopper_typed_command_topic
         self.stopper_state_topic = stopper_state_topic
-        self.deprecated_stopper_state_topic = deprecated_stopper_state_topic
-        self.deprecated_stopper_state_json_topic = deprecated_stopper_state_json_topic
-        self.deprecated_stopper_command_topic = deprecated_stopper_command_topic
-        self.deprecated_sensor_state_topic = deprecated_sensor_state_topic
-        self.deprecated_sensor_state_json_topic = deprecated_sensor_state_json_topic
-        self.deprecated_position_sensor_state_topic = deprecated_position_sensor_state_topic
-        self.deprecated_position_sensor_state_json_topic = (
-            deprecated_position_sensor_state_json_topic
-        )
         self.pose_offset_command_topic = pose_offset_command_topic
-        self.deprecated_pose_offset_command_topic = deprecated_pose_offset_command_topic
         self.pending_switch_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
         self.pending_stopper_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
-        self.deprecated_switch_command_warning_logged = False
-        self.deprecated_stopper_command_warning_logged = False
-        self.deprecated_typed_command_warning_topics: set[str] = set()
         shuttle_specs = self._resolve_shuttle_specs(
             shuttle_count=shuttle_count,
             raw_start_slot=start_slot,
@@ -1487,7 +1208,7 @@ class Room315KinematicShuttleNode(Node):
                     slot=slot,
                     speed=speed,
                     enabled=start_enabled,
-                    deployed=start_deployed,
+                    deployed=True,
                     pose_topic_override=pose_topic if shuttle_index == 0 else None,
                 )
             )
@@ -1497,84 +1218,25 @@ class Room315KinematicShuttleNode(Node):
             shuttle_state_topic,
             10,
         )
-        self.deprecated_state_publisher = (
-            self.create_publisher(RailShuttleState, deprecated_shuttle_state_topic, 10)
-            if deprecated_shuttle_state_topic
-            and deprecated_shuttle_state_topic != shuttle_state_topic
-            else None
-        )
-        self.deprecated_state_json_publisher = (
-            self.create_publisher(String, deprecated_shuttle_state_json_topic, 10)
-            if deprecated_shuttle_state_json_topic
-            else None
-        )
         self.switch_state_publisher = self.create_publisher(
             RailSwitchState,
             switch_state_topic,
             10,
-        )
-        self.deprecated_switch_state_publisher = (
-            self.create_publisher(RailSwitchState, deprecated_switch_state_topic, 10)
-            if deprecated_switch_state_topic
-            and deprecated_switch_state_topic != switch_state_topic
-            else None
-        )
-        self.deprecated_switch_state_json_publisher = (
-            self.create_publisher(String, deprecated_switch_state_json_topic, 10)
-            if deprecated_switch_state_json_topic
-            else None
         )
         self.stopper_state_publisher = self.create_publisher(
             RailStopperState,
             stopper_state_topic,
             10,
         )
-        self.deprecated_stopper_state_publisher = (
-            self.create_publisher(RailStopperState, deprecated_stopper_state_topic, 10)
-            if deprecated_stopper_state_topic
-            and deprecated_stopper_state_topic != stopper_state_topic
-            else None
-        )
-        self.deprecated_stopper_state_json_publisher = (
-            self.create_publisher(String, deprecated_stopper_state_json_topic, 10)
-            if deprecated_stopper_state_json_topic
-            else None
-        )
         self.sensor_state_publisher = self.create_publisher(
             SensorFeedback,
             sensor_state_topic,
             10,
         )
-        self.deprecated_sensor_state_publisher = (
-            self.create_publisher(SensorFeedback, deprecated_sensor_state_topic, 10)
-            if deprecated_sensor_state_topic
-            and deprecated_sensor_state_topic != sensor_state_topic
-            else None
-        )
-        self.deprecated_sensor_state_json_publisher = (
-            self.create_publisher(String, deprecated_sensor_state_json_topic, 10)
-            if deprecated_sensor_state_json_topic
-            else None
-        )
         self.position_sensor_state_publisher = self.create_publisher(
             SensorFeedback,
             position_sensor_state_topic,
             10,
-        )
-        self.deprecated_position_sensor_state_publisher = (
-            self.create_publisher(
-                SensorFeedback,
-                deprecated_position_sensor_state_topic,
-                10,
-            )
-            if deprecated_position_sensor_state_topic
-            and deprecated_position_sensor_state_topic != position_sensor_state_topic
-            else None
-        )
-        self.deprecated_position_sensor_state_json_publisher = (
-            self.create_publisher(String, deprecated_position_sensor_state_json_topic, 10)
-            if deprecated_position_sensor_state_json_topic
-            else None
         )
         self.visual_switch_publisher = self.create_publisher(
             String,
@@ -1587,143 +1249,24 @@ class Room315KinematicShuttleNode(Node):
             self._on_switch_command,
             10,
         )
-        self.deprecated_switch_typed_subscription = None
-        if (
-            deprecated_switch_typed_command_topic
-            and deprecated_switch_typed_command_topic != switch_command_topic
-        ):
-            self.deprecated_switch_typed_subscription = self.create_subscription(
-                SwitchCommand,
-                deprecated_switch_typed_command_topic,
-                lambda message: self._on_switch_typed_alias_command(
-                    message,
-                    deprecated_switch_typed_command_topic,
-                ),
-                10,
-            )
-        self.deprecated_switch_subscription = None
-        if (
-            deprecated_switch_command_topic
-            and deprecated_switch_command_topic != switch_command_topic
-        ):
-            if deprecated_switch_command_topic == switch_state_topic:
-                self.get_logger().warn(
-                    f'Deprecated switch command alias {deprecated_switch_command_topic} '
-                    'matches the switch state topic, so the alias subscription is disabled.'
-                )
-            else:
-                self.deprecated_switch_subscription = self.create_subscription(
-                    String,
-                    deprecated_switch_command_topic,
-                    lambda message: self._on_switch_string_command(
-                        message,
-                        deprecated_topic=True,
-                    ),
-                    10,
-                )
         self.stopper_subscription = self.create_subscription(
             StopperCommand,
             stopper_command_topic,
             self._on_stopper_command,
             10,
         )
-        self.deprecated_stopper_typed_subscription = None
-        if (
-            deprecated_stopper_typed_command_topic
-            and deprecated_stopper_typed_command_topic != stopper_command_topic
-        ):
-            self.deprecated_stopper_typed_subscription = self.create_subscription(
-                StopperCommand,
-                deprecated_stopper_typed_command_topic,
-                lambda message: self._on_stopper_typed_alias_command(
-                    message,
-                    deprecated_stopper_typed_command_topic,
-                ),
-                10,
-            )
-        self.deprecated_stopper_subscription = None
-        if (
-            deprecated_stopper_command_topic
-            and deprecated_stopper_command_topic != stopper_command_topic
-        ):
-            if deprecated_stopper_command_topic == stopper_state_topic:
-                self.get_logger().warn(
-                    f'Deprecated stopper command alias {deprecated_stopper_command_topic} '
-                    'matches the stopper state topic, so the alias subscription is disabled.'
-                )
-            else:
-                self.deprecated_stopper_subscription = self.create_subscription(
-                    String,
-                    deprecated_stopper_command_topic,
-                    lambda message: self._on_stopper_string_command(
-                        message,
-                        deprecated_topic=True,
-                    ),
-                    10,
-                )
         self.add_shuttle_subscription = self.create_subscription(
             RailShuttleCommand,
             add_shuttle_command_topic,
             self._on_add_shuttle_command,
             10,
         )
-        self.deprecated_add_shuttle_typed_subscription = None
-        if (
-            deprecated_add_shuttle_typed_command_topic
-            and deprecated_add_shuttle_typed_command_topic != add_shuttle_command_topic
-        ):
-            self.deprecated_add_shuttle_typed_subscription = self.create_subscription(
-                RailShuttleCommand,
-                deprecated_add_shuttle_typed_command_topic,
-                lambda message: self._on_add_shuttle_typed_alias_command(
-                    message,
-                    deprecated_add_shuttle_typed_command_topic,
-                ),
-                10,
-            )
-        self.deprecated_add_shuttle_subscription = None
-        if (
-            deprecated_add_shuttle_command_topic
-            and deprecated_add_shuttle_command_topic != add_shuttle_command_topic
-        ):
-            self.deprecated_add_shuttle_subscription = self.create_subscription(
-                String,
-                deprecated_add_shuttle_command_topic,
-                self._on_add_shuttle_string_command,
-                10,
-            )
         self.shuttle_control_subscription = self.create_subscription(
             RailShuttleCommand,
             shuttle_control_command_topic,
             self._on_shuttle_control_command,
             10,
         )
-        self.deprecated_shuttle_control_typed_subscription = None
-        if (
-            deprecated_shuttle_control_typed_command_topic
-            and deprecated_shuttle_control_typed_command_topic
-            != shuttle_control_command_topic
-        ):
-            self.deprecated_shuttle_control_typed_subscription = self.create_subscription(
-                RailShuttleCommand,
-                deprecated_shuttle_control_typed_command_topic,
-                lambda message: self._on_shuttle_control_typed_alias_command(
-                    message,
-                    deprecated_shuttle_control_typed_command_topic,
-                ),
-                10,
-            )
-        self.deprecated_shuttle_control_subscription = None
-        if (
-            deprecated_shuttle_control_command_topic
-            and deprecated_shuttle_control_command_topic != shuttle_control_command_topic
-        ):
-            self.deprecated_shuttle_control_subscription = self.create_subscription(
-                String,
-                deprecated_shuttle_control_command_topic,
-                self._on_shuttle_control_string_command,
-                10,
-            )
         self.visual_switch_state_subscription = None
         if self.sync_from_visual_switch_states:
             visual_state_qos = QoSProfile(depth=1)
@@ -1741,20 +1284,6 @@ class Room315KinematicShuttleNode(Node):
             self._on_pose_offset_command,
             10,
         )
-        self.deprecated_pose_offset_subscription = None
-        if (
-            deprecated_pose_offset_command_topic
-            and deprecated_pose_offset_command_topic != pose_offset_command_topic
-        ):
-            self.deprecated_pose_offset_subscription = self.create_subscription(
-                String,
-                deprecated_pose_offset_command_topic,
-                lambda message: self._on_pose_offset_alias_command(
-                    message,
-                    deprecated_pose_offset_command_topic,
-                ),
-                10,
-            )
         self.set_pose_client = None
         if self.enable_gazebo_set_pose:
             self.set_pose_client = self.create_client(SetEntityPose, gazebo_set_pose_service)
@@ -1801,68 +1330,6 @@ class Room315KinematicShuttleNode(Node):
             f'device_markers={len(self.device_markers)}, '
             f'shuttles={self._shuttle_summary()}'
         )
-        if self.deprecated_switch_subscription is not None:
-            self.get_logger().warn(
-                f'Deprecated switch command alias {deprecated_switch_command_topic} '
-                f'is still accepted; use {switch_command_topic} for commands and '
-                f'{switch_state_topic} for actual state.'
-            )
-        if self.deprecated_switch_typed_subscription is not None:
-            self.get_logger().warn(
-                f'Deprecated switch typed command alias '
-                f'{deprecated_switch_typed_command_topic} is still accepted; '
-                f'use {switch_command_topic}.'
-            )
-        if self.deprecated_switch_state_publisher is not None:
-            self.get_logger().warn(
-                f'Deprecated switch state alias {deprecated_switch_state_topic} '
-                f'is still published; use {switch_state_topic}.'
-            )
-        if self.deprecated_stopper_subscription is not None:
-            self.get_logger().warn(
-                f'Deprecated stopper command alias {deprecated_stopper_command_topic} '
-                f'is still accepted; use {stopper_command_topic} for commands and '
-                f'{stopper_state_topic} for actual state.'
-            )
-        if self.deprecated_stopper_typed_subscription is not None:
-            self.get_logger().warn(
-                f'Deprecated stopper typed command alias '
-                f'{deprecated_stopper_typed_command_topic} is still accepted; '
-                f'use {stopper_command_topic}.'
-            )
-        if self.deprecated_stopper_state_publisher is not None:
-            self.get_logger().warn(
-                f'Deprecated stopper state alias {deprecated_stopper_state_topic} '
-                f'is still published; use {stopper_state_topic}.'
-            )
-        if self.deprecated_shuttle_control_typed_subscription is not None:
-            self.get_logger().warn(
-                f'Deprecated shuttle command alias '
-                f'{deprecated_shuttle_control_typed_command_topic} is still accepted; '
-                f'use {shuttle_control_command_topic}.'
-            )
-        if self.deprecated_add_shuttle_typed_subscription is not None:
-            self.get_logger().warn(
-                f'Deprecated add-shuttle command alias '
-                f'{deprecated_add_shuttle_typed_command_topic} is still accepted; '
-                f'use {add_shuttle_command_topic}.'
-            )
-        if self.deprecated_state_publisher is not None:
-            self.get_logger().warn(
-                f'Deprecated shuttle state alias {deprecated_shuttle_state_topic} '
-                f'is still published; use {shuttle_state_topic}.'
-            )
-        if self.deprecated_sensor_state_publisher is not None:
-            self.get_logger().warn(
-                f'Deprecated sensor feedback alias {deprecated_sensor_state_topic} '
-                f'is still published; use {sensor_state_topic}.'
-            )
-        if self.deprecated_position_sensor_state_publisher is not None:
-            self.get_logger().warn(
-                f'Deprecated position sensor feedback alias '
-                f'{deprecated_position_sensor_state_topic} is still published; '
-                f'use {position_sensor_state_topic}.'
-            )
 
     @staticmethod
     def _split_list_parameter(raw_value: str) -> list[str]:
@@ -2400,6 +1867,16 @@ class Room315KinematicShuttleNode(Node):
             if pose_topic_override is not None
             else f'{self.pose_topic_prefix}/{self._topic_safe_name(entity_name)}/pose_cmd'
         )
+        if not deployed:
+            initial_stopped_by = 'NOT_DEPLOYED'
+            initial_stopper_distance_m = 0.0
+        elif not enabled:
+            initial_stopped_by = 'DISABLED'
+            initial_stopper_distance_m = 0.0
+        else:
+            initial_stopped_by = None
+            initial_stopper_distance_m = None
+
         return ManagedShuttle(
             entity_name=entity_name,
             start_slot=resolved_slot,
@@ -2419,17 +1896,20 @@ class Room315KinematicShuttleNode(Node):
             gazebo_spawned=self._is_preloaded_shuttle_entity(entity_name),
             deployed=deployed,
             enabled=enabled,
-            stopped_by=None if deployed else 'NOT_DEPLOYED',
-            stopper_distance_m=None if deployed else 0.0,
+            stopped_by=initial_stopped_by,
+            stopper_distance_m=initial_stopper_distance_m,
         )
 
     def _on_add_shuttle_command(self, message: RailShuttleCommand) -> None:
         try:
-            entity_name, slot, speed = self._parse_add_shuttle_typed_command(message)
+            entity_name, slot, speed, enabled = self._parse_add_shuttle_typed_command(
+                message
+            )
             shuttle = self._create_managed_shuttle(
                 entity_name=entity_name,
                 slot=slot,
                 speed=speed,
+                enabled=enabled,
             )
         except (RuntimeError, ValueError) as error:
             self.get_logger().error(f'Failed to add shuttle: {error}')
@@ -2437,52 +1917,24 @@ class Room315KinematicShuttleNode(Node):
 
         self._finish_add_shuttle(shuttle)
 
-    def _on_add_shuttle_typed_alias_command(
-        self,
-        message: RailShuttleCommand,
-        deprecated_topic: str,
-    ) -> None:
-        self._warn_deprecated_typed_topic_once(
-            deprecated_topic,
-            self.add_shuttle_command_topic,
-        )
-        self._on_add_shuttle_command(message)
-
-    def _on_add_shuttle_string_command(self, message: String) -> None:
-        try:
-            entity_name, slot, speed = self._parse_add_shuttle_command(message.data)
-            shuttle = self._create_managed_shuttle(
-                entity_name=entity_name,
-                slot=slot,
-                speed=speed,
-            )
-        except (RuntimeError, ValueError, json.JSONDecodeError) as error:
-            self.get_logger().error(f'Failed to add shuttle: {error}')
-            return
-
-        self.get_logger().warn(
-            f'Received add-shuttle command on deprecated String topic '
-            f'{self.deprecated_add_shuttle_command_topic}; use typed '
-            f'mfja_rail_interfaces/msg/ShuttleCommand on {self.add_shuttle_command_topic}.'
-        )
-        self._finish_add_shuttle(shuttle)
-
     def _finish_add_shuttle(self, shuttle: ManagedShuttle) -> None:
         self.shuttles.append(shuttle)
         self._request_spawn_if_needed(shuttle)
         self.get_logger().info(
             f'Added shuttle {shuttle.entity_name} at slot {shuttle.start_slot}; '
+            f'enabled={shuttle.enabled}; '
             f'shuttles={self._shuttle_summary()}'
         )
 
     def _parse_add_shuttle_typed_command(
         self,
         command: RailShuttleCommand,
-    ) -> tuple[str, str, float]:
+    ) -> tuple[str, str, float, bool]:
         raw_command = command.command.strip().upper()
-        if raw_command and raw_command not in {'ADD', 'CREATE', 'SPAWN'}:
+        enabled = self._add_shuttle_start_enabled_from_command(raw_command)
+        if enabled is None:
             raise ValueError(
-                f'Add shuttle typed command must use command ADD/CREATE/SPAWN, '
+                f'Add shuttle command must use ADD_STOPPED or ADD_MOVING, '
                 f'got {command.command!r}.'
             )
         slot = (
@@ -2499,52 +1951,17 @@ class Room315KinematicShuttleNode(Node):
             entity_name=command.name.strip(),
             slot=slot,
             speed=speed,
+            enabled=enabled,
         )
 
-    def _parse_add_shuttle_command(self, raw_command: str) -> tuple[str, str, float]:
-        command = raw_command.strip()
-        if not command:
-            raise ValueError('Empty add shuttle command')
-
-        if command.startswith('{'):
-            payload = json.loads(command)
-            assignments = [(str(key), str(value)) for key, value in payload.items()]
-        elif '=' not in command and ':' not in command:
-            assignments = [('slot', command)]
-        else:
-            assignments = []
-            for token in re.split(r'[\s,;]+', command.replace(':', '=')):
-                if not token:
-                    continue
-                if '=' not in token:
-                    raise ValueError(
-                        f'Add shuttle command must look like slot=3, got {token!r}'
-                    )
-                key, raw_value = token.split('=', 1)
-                assignments.append((key, raw_value))
-
-        slot = ''
-        entity_name = ''
-        speed = self.default_shuttle_speed
-        for raw_key, raw_value in assignments:
-            key = raw_key.strip().lower()
-            value = raw_value.strip()
-            if key in {'slot', 'start_slot', 'start'}:
-                slot = self._normalize_start_slot(value)
-            elif key in {'entity', 'entity_name', 'gazebo_entity_name', 'name'}:
-                entity_name = value
-            elif key == 'speed':
-                speed = float(value)
-            else:
-                raise ValueError(
-                    f'Unknown add shuttle key {raw_key!r}; use slot, entity, or speed.'
-                )
-
-        return self._resolve_add_shuttle_request(
-            entity_name=entity_name,
-            slot=slot,
-            speed=speed,
-        )
+    @staticmethod
+    def _add_shuttle_start_enabled_from_command(raw_command: str) -> bool | None:
+        command = str(raw_command).strip().upper().replace('-', '_')
+        if command == 'ADD_MOVING':
+            return True
+        if command == 'ADD_STOPPED':
+            return False
+        return None
 
     def _resolve_add_shuttle_request(
         self,
@@ -2552,7 +1969,8 @@ class Room315KinematicShuttleNode(Node):
         entity_name: str,
         slot: str,
         speed: float,
-    ) -> tuple[str, str, float]:
+        enabled: bool,
+    ) -> tuple[str, str, float, bool]:
         if not slot:
             slot = self._next_unused_start_slot()
         if self.reject_occupied_start_slots:
@@ -2574,7 +1992,7 @@ class Room315KinematicShuttleNode(Node):
                 f'Gazebo entity {entity_name!r} is already controlled by this node.'
             )
 
-        return entity_name, slot, speed
+        return entity_name, slot, speed, enabled
 
     def _next_unused_start_slot(self) -> str:
         slots = sorted(self.allowed_start_poses)
@@ -3062,17 +2480,6 @@ class Room315KinematicShuttleNode(Node):
             f'offset_z={self.pose_offset_z:.4f}'
         )
 
-    def _on_pose_offset_alias_command(
-        self,
-        message: String,
-        deprecated_topic: str,
-    ) -> None:
-        self._warn_deprecated_typed_topic_once(
-            deprecated_topic,
-            self.pose_offset_command_topic,
-        )
-        self._on_pose_offset_command(message)
-
     def _parse_pose_offset_command(self, raw_command: str) -> Dict[str, float]:
         command = raw_command.strip()
         if not command:
@@ -3229,37 +2636,6 @@ class Room315KinematicShuttleNode(Node):
 
         self._handle_stopper_updates(updates, source='typed command')
 
-    def _on_stopper_typed_alias_command(
-        self,
-        message: StopperCommand,
-        deprecated_topic: str,
-    ) -> None:
-        self._warn_deprecated_typed_topic_once(
-            deprecated_topic,
-            self.stopper_command_topic,
-        )
-        self._on_stopper_command(message)
-
-    def _on_stopper_string_command(
-        self,
-        message: String,
-        *,
-        deprecated_topic: bool = False,
-    ) -> None:
-        if deprecated_topic:
-            self._warn_deprecated_stopper_command_topic_once()
-
-        try:
-            updates = self._parse_stopper_command(message.data)
-        except (ValueError, json.JSONDecodeError) as error:
-            self.get_logger().error(str(error))
-            return
-
-        self._handle_stopper_updates(
-            updates,
-            source='deprecated String command' if deprecated_topic else 'String command',
-        )
-
     def _handle_stopper_updates(
         self,
         updates: Dict[str, str],
@@ -3271,41 +2647,6 @@ class Room315KinematicShuttleNode(Node):
             source=source,
         )
         self._publish_stopper_state()
-
-    def _warn_deprecated_switch_command_topic_once(self) -> None:
-        if self.deprecated_switch_command_warning_logged:
-            return
-        self.deprecated_switch_command_warning_logged = True
-        self.get_logger().warn(
-            f'Received switch command on deprecated mixed topic '
-            f'{self.deprecated_switch_command_topic}; use '
-            f'{self.switch_command_topic} for commands and '
-            f'{self.switch_state_topic} for actual switch state.'
-        )
-
-    def _warn_deprecated_stopper_command_topic_once(self) -> None:
-        if self.deprecated_stopper_command_warning_logged:
-            return
-        self.deprecated_stopper_command_warning_logged = True
-        self.get_logger().warn(
-            f'Received stopper command on deprecated mixed topic '
-            f'{self.deprecated_stopper_command_topic}; use '
-            f'{self.stopper_command_topic} for commands and '
-            f'{self.stopper_state_topic} for actual stopper state.'
-        )
-
-    def _warn_deprecated_typed_topic_once(
-        self,
-        deprecated_topic: str,
-        preferred_topic: str,
-    ) -> None:
-        if deprecated_topic in self.deprecated_typed_command_warning_topics:
-            return
-        self.deprecated_typed_command_warning_topics.add(deprecated_topic)
-        self.get_logger().warn(
-            f'Received command on deprecated Room 315 rail topic '
-            f'{deprecated_topic}; use {preferred_topic}.'
-        )
 
     def _schedule_switch_state_updates(
         self,
@@ -3402,10 +2743,6 @@ class Room315KinematicShuttleNode(Node):
 
         return immediate_updates
 
-    def _parse_stopper_command(self, raw_command: str) -> Dict[str, str]:
-        assignments = self._parse_assignments(raw_command, 'Stopper')
-        return self._stopper_updates_from_assignments(assignments)
-
     def _stopper_updates_from_named_states(
         self,
         named_states,
@@ -3454,32 +2791,6 @@ class Room315KinematicShuttleNode(Node):
 
         self._apply_shuttle_control_updates(updates)
 
-    def _on_shuttle_control_typed_alias_command(
-        self,
-        message: RailShuttleCommand,
-        deprecated_topic: str,
-    ) -> None:
-        self._warn_deprecated_typed_topic_once(
-            deprecated_topic,
-            self.shuttle_control_command_topic,
-        )
-        self._on_shuttle_control_command(message)
-
-    def _on_shuttle_control_string_command(self, message: String) -> None:
-        try:
-            updates = self._parse_shuttle_control_command(message.data)
-        except (ValueError, json.JSONDecodeError) as error:
-            self.get_logger().error(str(error))
-            return
-
-        self.get_logger().warn(
-            f'Received shuttle control on deprecated String topic '
-            f'{self.deprecated_shuttle_control_command_topic}; use typed '
-            f'mfja_rail_interfaces/msg/ShuttleCommand on '
-            f'{self.shuttle_control_command_topic}.'
-        )
-        self._apply_shuttle_control_updates(updates)
-
     def _apply_shuttle_control_updates(self, updates: Dict[str, str]) -> None:
         applied_updates: Dict[str, str] = {}
         for entity_name, action in updates.items():
@@ -3519,44 +2830,8 @@ class Room315KinematicShuttleNode(Node):
                 return {self.shuttles[0].entity_name: action}
             raise ValueError(
                 'Typed shuttle control command must set name, or use name=ALL.'
-            )
+        )
         return {raw_selector: action}
-
-    def _parse_shuttle_control_command(self, raw_command: str) -> Dict[str, str]:
-        assignments = self._parse_assignments(raw_command, 'Shuttle control')
-        keyed_payload = {key.strip().lower(): value for key, value in assignments}
-        if {'entity', 'entity_name', 'name', 'shuttle'} & set(keyed_payload):
-            entity_name = (
-                keyed_payload.get('entity')
-                or keyed_payload.get('entity_name')
-                or keyed_payload.get('name')
-                or keyed_payload.get('shuttle')
-            )
-            raw_action = (
-                keyed_payload.get('action')
-                or keyed_payload.get('command')
-                or keyed_payload.get('enabled')
-                or keyed_payload.get('state')
-                or keyed_payload.get('mode')
-                or keyed_payload.get('power')
-            )
-            if entity_name is None or raw_action is None:
-                raise ValueError(
-                    'Shuttle control command with entity=... must also include '
-                    'enabled=ON/OFF or action=RESET/REMOVE.'
-                )
-            return {entity_name: self._normalize_shuttle_action(raw_action)}
-
-        updates: Dict[str, str] = {}
-        for raw_selector, raw_action in assignments:
-            selector = raw_selector.strip()
-            action = self._normalize_shuttle_action(raw_action)
-            if selector.upper() == 'ALL':
-                for shuttle in self.shuttles:
-                    updates[shuttle.entity_name] = action
-            else:
-                updates[selector] = action
-        return updates
 
     @staticmethod
     def _normalize_enabled_state(raw_state: str) -> bool:
@@ -3740,30 +3015,6 @@ class Room315KinematicShuttleNode(Node):
                 return shuttle
         return None
 
-    @staticmethod
-    def _parse_assignments(raw_command: str, command_name: str) -> list[tuple[str, str]]:
-        command = raw_command.strip()
-        if not command:
-            raise ValueError(f'Empty {command_name.lower()} command')
-
-        if command.startswith('{'):
-            payload = json.loads(command)
-            if not isinstance(payload, dict):
-                raise ValueError(f'{command_name} JSON command must be an object.')
-            return [(str(key), str(value)) for key, value in payload.items()]
-
-        assignments = []
-        for token in re.split(r'[\s,;]+', command.replace(':', '=')):
-            if not token:
-                continue
-            if '=' not in token:
-                raise ValueError(
-                    f'{command_name} command must look like NAME=VALUE, got {token!r}'
-                )
-            key, value = token.split('=', 1)
-            assignments.append((key, value))
-        return assignments
-
     def _on_switch_command(
         self,
         message: SwitchCommand,
@@ -3775,37 +3026,6 @@ class Room315KinematicShuttleNode(Node):
             return
 
         self._handle_switch_updates(updates, source='typed command')
-
-    def _on_switch_typed_alias_command(
-        self,
-        message: SwitchCommand,
-        deprecated_topic: str,
-    ) -> None:
-        self._warn_deprecated_typed_topic_once(
-            deprecated_topic,
-            self.switch_command_topic,
-        )
-        self._on_switch_command(message)
-
-    def _on_switch_string_command(
-        self,
-        message: String,
-        *,
-        deprecated_topic: bool = False,
-    ) -> None:
-        if deprecated_topic:
-            self._warn_deprecated_switch_command_topic_once()
-
-        try:
-            updates, _visual_command = self._parse_switch_command(message.data)
-        except (ValueError, json.JSONDecodeError) as error:
-            self.get_logger().error(str(error))
-            return
-
-        self._handle_switch_updates(
-            updates,
-            source='deprecated String command' if deprecated_topic else 'String command',
-        )
 
     def _handle_switch_updates(
         self,
@@ -3905,48 +3125,6 @@ class Room315KinematicShuttleNode(Node):
             return mapped_selector, 'left'
 
         return None, 'unknown'
-
-    def _parse_switch_command(self, raw_command: str) -> tuple[Dict[str, str], str]:
-        stripped = raw_command.strip()
-        if not stripped:
-            raise ValueError('Empty switch command')
-
-        if stripped.startswith('{'):
-            payload = json.loads(stripped)
-            assignments = [(str(switch_name), str(state)) for switch_name, state in payload.items()]
-        else:
-            assignments = []
-            for token in re.split(r'[\s,;]+', stripped.replace(':', '=')):
-                if not token:
-                    continue
-                if '=' not in token:
-                    raise ValueError(f'Switch command must look like A1=G, got {token!r}')
-                selector, raw_state = token.split('=', 1)
-                assignments.append((selector, raw_state))
-
-        updates: Dict[str, str] = {}
-        visual_entries = []
-        for selector, raw_state in assignments:
-            selector_name = selector.strip().upper()
-            state = self._normalize_commanded_switch_state(raw_state)
-            logic_targets = self._logic_targets_for_selector(selector_name)
-            visual_selector = self._visual_selector_for_selector(selector_name)
-
-            if not logic_targets and visual_selector is None:
-                raise ValueError(
-                    f'Unknown switch selector {selector_name!r}; use A1..A4, A1R/A1L, '
-                    'RIGHT, LEFT, or ALL.'
-                )
-
-            for switch_name in logic_targets:
-                updates[switch_name] = state
-
-            if visual_selector is not None:
-                visual_entries.append(
-                    f'{visual_selector}={self._visual_mode_for_state(state)}'
-                )
-
-        return updates, ', '.join(visual_entries)
 
     def _switch_updates_from_named_states(
         self,
@@ -4115,21 +3293,6 @@ class Room315KinematicShuttleNode(Node):
             pending_updates.pop(name, None)
         return due_updates
 
-    def _pending_state_payload(
-        self,
-        pending_updates: Dict[str, PendingDiscreteStateUpdate],
-    ) -> Dict[str, dict]:
-        now_s = self._state_update_time_s()
-        payload: Dict[str, dict] = {}
-        for name in sorted(pending_updates):
-            pending_update = pending_updates[name]
-            payload[self._public_switch_name(name)] = {
-                'remaining_s': max(0.0, pending_update.apply_at_s - now_s),
-                'source': pending_update.source,
-                'target_state': pending_update.target_state,
-            }
-        return payload
-
     def _fill_header(self, message) -> None:
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = self.frame_id
@@ -4145,48 +3308,12 @@ class Room315KinematicShuttleNode(Node):
         self._fill_header(message)
         message.switches = self._named_states_from_map(self.switch_states)
         self.switch_state_publisher.publish(message)
-        if self.deprecated_switch_state_publisher is not None:
-            self.deprecated_switch_state_publisher.publish(message)
-
-        if self.deprecated_switch_state_json_publisher is None:
-            return
-        json_message = String()
-        json_message.data = json.dumps(
-            {
-                'state_kind': 'actual',
-                'switch_states': self._public_switch_state_map(self.switch_states),
-                'pending_switch_states': self._pending_state_payload(
-                    self.pending_switch_state_updates
-                ),
-                'motion_delay_s': self.switch_motion_delay_s,
-            },
-            sort_keys=True,
-        )
-        self.deprecated_switch_state_json_publisher.publish(json_message)
 
     def _publish_stopper_state(self) -> None:
         message = RailStopperState()
         self._fill_header(message)
         message.stoppers = self._named_states_from_map(self.stopper_states)
         self.stopper_state_publisher.publish(message)
-        if self.deprecated_stopper_state_publisher is not None:
-            self.deprecated_stopper_state_publisher.publish(message)
-
-        if self.deprecated_stopper_state_json_publisher is None:
-            return
-        json_message = String()
-        json_message.data = json.dumps(
-            {
-                'state_kind': 'actual',
-                'stopper_states': self._public_switch_state_map(self.stopper_states),
-                'pending_stopper_states': self._pending_state_payload(
-                    self.pending_stopper_state_updates
-                ),
-                'motion_delay_s': self.stopper_motion_delay_s,
-            },
-            sort_keys=True,
-        )
-        self.deprecated_stopper_state_json_publisher.publish(json_message)
 
     def _on_parameter_update(self, parameters) -> SetParametersResult:
         numeric_parameters = {
@@ -4688,20 +3815,6 @@ class Room315KinematicShuttleNode(Node):
             for event in events
         ]
         self.sensor_state_publisher.publish(message)
-        if self.deprecated_sensor_state_publisher is not None:
-            self.deprecated_sensor_state_publisher.publish(message)
-
-        if self.deprecated_sensor_state_json_publisher is None:
-            return
-        json_message = String()
-        json_message.data = json.dumps(
-            {
-                'sensors': events,
-                'stopper_states': self._public_switch_state_map(self.stopper_states),
-            },
-            sort_keys=True,
-        )
-        self.deprecated_sensor_state_json_publisher.publish(json_message)
 
     def _publish_position_sensor_state(self) -> None:
         events = self._position_sensor_events()
@@ -4712,19 +3825,6 @@ class Room315KinematicShuttleNode(Node):
             for event in events
         ]
         self.position_sensor_state_publisher.publish(message)
-        if self.deprecated_position_sensor_state_publisher is not None:
-            self.deprecated_position_sensor_state_publisher.publish(message)
-
-        if self.deprecated_position_sensor_state_json_publisher is None:
-            return
-        json_message = String()
-        json_message.data = json.dumps(
-            {
-                'sensors': events,
-            },
-            sort_keys=True,
-        )
-        self.deprecated_position_sensor_state_json_publisher.publish(json_message)
 
     @staticmethod
     def _sensor_reading_from_event(event: dict) -> SensorReading:
@@ -4759,32 +3859,6 @@ class Room315KinematicShuttleNode(Node):
         raw_poses: list[ShuttlePose],
         gazebo_poses: list[ShuttlePose],
     ) -> None:
-        shuttles_payload = []
-        for shuttle, pose, gazebo_pose in zip(self.shuttles, raw_poses, gazebo_poses):
-            pose_payload = asdict(pose)
-            pose_payload['current_segment'] = self._public_segment_name(pose.current_segment)
-            gazebo_pose_payload = asdict(gazebo_pose)
-            gazebo_pose_payload['current_segment'] = self._public_segment_name(
-                gazebo_pose.current_segment
-            )
-            shuttles_payload.append(
-                {
-                    **pose_payload,
-                    'entity_name': shuttle.entity_name,
-                    'blocked_by': shuttle.blocked_by,
-                    'collision_distance_m': shuttle.collision_distance_m,
-                    'enabled': shuttle.enabled,
-                    'stopped_by': shuttle.stopped_by,
-                    'stopper_distance_m': shuttle.stopper_distance_m,
-                    'gazebo_spawned': shuttle.gazebo_spawned,
-                    'deployed': shuttle.deployed,
-                    'gazebo_pose': gazebo_pose_payload,
-                    'start_slot': shuttle.start_slot,
-                    'start_snap_distance_m': shuttle.start_snap_distance_m,
-                    'speed': shuttle.core.state.speed,
-                }
-            )
-
         primary_payload = {
             'current_segment': None,
             'entity_name': None,
@@ -4824,49 +3898,6 @@ class Room315KinematicShuttleNode(Node):
 
         state_message = self._make_shuttle_state_message(primary_payload)
         self.state_publisher.publish(state_message)
-        if self.deprecated_state_publisher is not None:
-            self.deprecated_state_publisher.publish(state_message)
-
-        if self.deprecated_state_json_publisher is None:
-            return
-        state_payload = {
-            **primary_payload,
-            'pose_offset': {
-                'x': self.pose_offset_x,
-                'y': self.pose_offset_y,
-                'z': self.pose_offset_z,
-            },
-            'pose_scale': {
-                'x': self.pose_scale_x,
-                'y': self.pose_scale_y,
-                'origin_x': self.pose_scale_origin_x,
-                'origin_y': self.pose_scale_origin_y,
-            },
-            'pose_rotation': {
-                'deg': self.pose_rotation_deg,
-                'origin_x': self.pose_rotation_origin_x,
-                'origin_y': self.pose_rotation_origin_y,
-            },
-            'shuttle_count': len(self.shuttles),
-            'collision_avoidance': {
-                'enabled': self.enable_collision_avoidance,
-                'distance_m': self.shuttle_collision_distance_m,
-            },
-            'shuttles': shuttles_payload,
-            'switch_states': self._public_switch_state_map(self.switch_states),
-            'stopper_states': self._public_switch_state_map(self.stopper_states),
-            'pending_switch_states': self._pending_state_payload(
-                self.pending_switch_state_updates
-            ),
-            'pending_stopper_states': self._pending_state_payload(
-                self.pending_stopper_state_updates
-            ),
-            'sensor_events': self._sensor_events(),
-            'position_sensor_events': self._position_sensor_events(),
-        }
-        json_message = String()
-        json_message.data = json.dumps(state_payload, sort_keys=True)
-        self.deprecated_state_json_publisher.publish(json_message)
 
     def _make_shuttle_state_message(self, payload: dict) -> RailShuttleState:
         message = RailShuttleState()

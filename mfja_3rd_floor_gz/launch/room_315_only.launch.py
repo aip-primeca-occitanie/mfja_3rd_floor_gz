@@ -58,12 +58,6 @@ def generate_launch_description():
             description='Start initial Room 315 shuttles moving without waiting for ON.',
         ),
         DeclareLaunchArgument(
-            'room315_shuttles_start_deployed',
-            default_value='true',
-            choices=['true', 'false'],
-            description='Place initial Room 315 shuttles visibly on their slots when start_enabled is false.',
-        ),
-        DeclareLaunchArgument(
             'room315_right_shuttle_count',
             default_value='0',
             description='Number of initial shuttles on the Room 315 right rail.',
@@ -105,9 +99,6 @@ def generate_launch_description():
                 'room315_shuttle_speed': LaunchConfiguration('room315_shuttle_speed'),
                 'room315_shuttles_start_enabled': LaunchConfiguration(
                     'room315_shuttles_start_enabled'
-                ),
-                'room315_shuttles_start_deployed': LaunchConfiguration(
-                    'room315_shuttles_start_deployed'
                 ),
                 'room315_right_shuttle_count': LaunchConfiguration(
                     'room315_right_shuttle_count'
