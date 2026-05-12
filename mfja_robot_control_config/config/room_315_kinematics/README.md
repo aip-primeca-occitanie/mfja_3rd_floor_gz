@@ -139,8 +139,81 @@ feedback is on `/room_315/rails/right/sensors/feedback` or
 `/room_315/rails/left/sensors/feedback`, and position feedback is on
 `/room_315/rails/right/sensors/position_feedback` or
 `/room_315/rails/left/sensors/position_feedback`.
-Phase 4 migrates the rail and shuttle topics to `mfja_rail_interfaces` messages.
-Deprecated `std_msgs/msg/String` aliases remain for migration where practical.
+The public rail API uses typed `mfja_rail_interfaces` messages only.
+
+### Moving Single-Point and Multi-Point Devices
+
+A single-point device has `segment` and `s_ratio` directly on the device entry:
+
+```yaml
+- name: DZI1R
+  segment: A12E
+  s_ratio: 0.411866742
+  radius_m: 0.09
+```
+
+Move it from a Gazebo coordinate with a dry run first:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -10.50 \
+  --y -3.20 \
+  --z 0.85 \
+  --category position_sensors \
+  --name DZI1R
+```
+
+Then write the YAML and validate:
+
+```bash
+python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -10.50 \
+  --y -3.20 \
+  --z 0.85 \
+  --category position_sensors \
+  --name DZI1R \
+  --write
+
+python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_devices_validator.py
+```
+
+A multi-point device keeps one public name but has multiple physical points:
+
+```yaml
+- name: A4_APPROACH
+  stopper: A4
+  before_switch: A4
+  distance_m: 0.25
+  points:
+  - segment: A34E
+    s_ratio: 0.964078719
+  - segment: A34I
+    s_ratio: 0.943533612
+```
+
+Use `--point-index 0` for the first point and `--point-index 1` for the second:
+
+```bash
+python3 src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_device_position_tool.py \
+  --side right \
+  --x -11.20 \
+  --y -4.00 \
+  --z 0.85 \
+  --category approach_sensors \
+  --name A4_APPROACH \
+  --point-index 0 \
+  --write
+```
+
+If an approach sensor is meant to stay aligned with a stopper, update the
+matching `stoppers` entry too. Approach sensors publish feedback; the stopper is
+what actually stops the shuttle when its state is `1`.
 
 ## Validate Rail Devices
 
@@ -260,7 +333,9 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   enable_room315_kinematic_shuttles:=true
 ```
 
-Start with one right shuttle and one left shuttle visible but waiting for `ON`:
+Start with one right shuttle and one left shuttle visible but waiting for `ON`.
+Initial shuttles are always deployed visibly; `room315_shuttles_start_enabled`
+only chooses whether they wait or move immediately:
 
 ```bash
 ros2 launch mfja_room_315_bringup room_315_only.launch.py \
@@ -270,7 +345,6 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   enable_room315_kinematic_shuttles:=true \
   room315_right_shuttle_count:=1 \
   room315_left_shuttle_count:=1 \
-  room315_shuttles_start_deployed:=true \
   room315_shuttles_start_enabled:=false
 ```
 
@@ -350,13 +424,134 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interface
 
 ```bash
 ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'REMOVE'}"
-ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'ADD', start_slot: '1', speed: 0.2}"
+ros2 topic pub --once /room_315/rails/right/shuttles/add_command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'ADD_STOPPED', start_slot: '1', speed: 0.2}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'ON'}"
 ```
 
 4. Watch the new right-rail detector stream:
 
 ```bash
 ros2 topic echo /room_315/rails/right/sensors/position_feedback mfja_rail_interfaces/msg/SensorFeedback
+```
+
+## Sensor Test Cookbook
+
+Use these checks after editing `rail_devices_right.yaml` or
+`rail_devices_left.yaml`, or when you want to prove that the sensor model is
+working in Gazebo.
+
+### Test All Right-Rail Position Sensors
+
+Launch the right rail with four slow shuttles:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true \
+  enable_room315_left_rail:=false \
+  room315_right_shuttle_count:=4 \
+  room315_shuttles_start_enabled:=true \
+  room315_shuttle_speed:=0.08
+```
+
+In a command terminal, sweep the switches through exterior and interior routes:
+
+```bash
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+
+sleep 45
+
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
+```
+
+Watch the detector stream:
+
+```bash
+timeout 120s ros2 topic echo /room_315/rails/right/sensors/position_feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+```
+
+Expected right-rail position sensor families:
+
+- Indexing zone sensors: `DZI1R`, `DZI2R`, `DZI3R`, `DZI4R`.
+- Main switch sensors: `DA1R`, `DA2R`, `DA3R`, `DA4R`.
+- Exterior branch sensors: `DA1GR`, `DA2GR`, `DA3GR`, `DA4GR`.
+- Interior branch sensors: `DA1SR`, `DA2SR`, `DA3SR`, `DA4SR`.
+
+### Test All Right-Rail Approach Sensors
+
+Use the same slow right-rail launch and route sweep, but watch the approach
+feedback topic:
+
+```bash
+timeout 120s ros2 topic echo /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+```
+
+Expected right-rail approach sensors:
+
+- `A1_APPROACH`
+- `A2_APPROACH`
+- `A3_APPROACH`
+- `A4_APPROACH`
+
+Approach sensors activate when a shuttle is within the configured `distance_m`
+window before the matching stopper point.
+
+### Test All Left-Rail Sensors
+
+Launch only the left rail:
+
+```bash
+cd /home/tiago/ALI_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=false \
+  enable_room315_left_rail:=true \
+  room315_left_shuttle_count:=4 \
+  room315_shuttles_start_enabled:=true \
+  room315_shuttle_speed:=0.08
+```
+
+Sweep left switches:
+
+```bash
+ros2 topic pub --once /room_315/rails/left/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+
+sleep 45
+
+ros2 topic pub --once /room_315/rails/left/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
+```
+
+Watch both left-rail sensor streams:
+
+```bash
+timeout 120s ros2 topic echo /room_315/rails/left/sensors/position_feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+
+timeout 120s ros2 topic echo /room_315/rails/left/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
 ```
 
 Start slots are numbered as follows:
@@ -399,25 +594,8 @@ The interface package is `mfja_rail_interfaces`. Its Room 315 messages are:
 - `ShuttleCommand`, `ShuttleState`
 - `SensorReading`, `SensorFeedback`
 
-Old Phase 4 typed topics and the older mixed String topics are still accepted
-or published as deprecated migration aliases. The left rail keeps the matching
-`/room_315_left/...` aliases:
-
-```text
-/room_315_right/switch_cmd                 mfja_rail_interfaces/msg/SwitchCommand
-/room_315_right/switch_state               mfja_rail_interfaces/msg/SwitchState
-/room_315_right/stopper_cmd                mfja_rail_interfaces/msg/StopperCommand
-/room_315_right/stopper_state              mfja_rail_interfaces/msg/StopperState
-/room_315_right/shuttle/control_cmd        mfja_rail_interfaces/msg/ShuttleCommand
-/room_315_right/shuttle/add_cmd            mfja_rail_interfaces/msg/ShuttleCommand
-/room_315_right/shuttle/state              mfja_rail_interfaces/msg/ShuttleState
-/room_315_right/sensors/switch_approach    mfja_rail_interfaces/msg/SensorFeedback
-/room_315_right/sensors/position           mfja_rail_interfaces/msg/SensorFeedback
-/room_315_right/switch_states              std_msgs/msg/String
-/room_315_right/stopper_states             std_msgs/msg/String
-/room_315_right/shuttle/control_cmd_string std_msgs/msg/String
-/room_315_right/shuttle/add_cmd_string     std_msgs/msg/String
-```
+The supported public rail API is the typed
+`/room_315/rails/{right,left}/...` topic set shown above.
 
 Use public switch labels `A1` through `A4` with `EXTERIOR` / `INTERIOR` or the
 short `E` / `I` forms:
@@ -469,29 +647,15 @@ The manual teaching workflow is:
 sensor -> stop shuttle -> move switch -> unstop shuttle
 ```
 
-Sensor messages use `mfja_rail_interfaces/msg/SensorFeedback`. Its
-`readings` field is a list, so the same message can report several shuttles at
-once. Use `shuttle_name` to identify the shuttle associated with each event.
-Deprecated JSON mirrors are published on topics ending in `_json`.
+Sensor messages use `mfja_rail_interfaces/msg/SensorFeedback`. Its `readings`
+field is a list, so the same message can report several shuttles at once. Use
+`shuttle_name`, `segment`, `s`, `s_ratio`, and `distance_m` to identify the
+shuttle and where it is relative to the sensor point.
 
-Example:
-
-```json
-{
-  "sensors": [
-    {
-      "before_switch": "A1",
-      "distance_m": 0.247,
-      "entity_name": "room315_right_shuttle_4",
-      "segment": "A14",
-      "stopper": "A1"
-    }
-  ]
-}
-```
-
-This means `room315_right_shuttle_4` is approaching the A1 stopper on segment `A14`,
-and the distance to the stop point is about `0.247 m`.
+For example, a reading with `name: A1_APPROACH`, `shuttle_name:
+room315_right_shuttle_4`, `segment: A14`, and `distance_m: 0.247` means that
+`room315_right_shuttle_4` is approaching the A1 stopper on segment `A14`, about
+`0.247 m` before the stop point.
 
 Example:
 
@@ -543,6 +707,8 @@ slot 4: -14.77 -5.54 0.84 0 0 0
 
 Multiple shuttles can be started with `shuttle_count` and `start_slots`, or
 added while the node is running through `/room_315/rails/right/shuttles/add_command`.
+Use `ADD_STOPPED` to create a shuttle that waits for a later `ON` command, or
+`ADD_MOVING` to create one that starts immediately.
 
 Runtime add commands are rejected when the selected start slot is occupied.
 
