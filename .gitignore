@@ -10,3 +10,7 @@ __pycache__/
 *.log
 *.out
 *.toc
+generated/
+runbook.html
+room315_shuttle_rail_report_ar.html
+room315_shuttle_rail_report_ar.pdf
