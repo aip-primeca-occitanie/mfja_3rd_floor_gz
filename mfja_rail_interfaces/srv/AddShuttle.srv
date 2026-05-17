@@ -1,0 +1,8 @@
+string name
+string start_slot
+float64 speed
+bool start_enabled
+---
+bool success
+string message
+string name

@@ -21,6 +21,7 @@ install(
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
+    scripts/watch_sensor_feedback.py
     scripts/multi_robot_sync_demo.py
   DESTINATION lib/${PROJECT_NAME}
 )

@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ShuttleState.msg"
   "msg/SensorReading.msg"
   "msg/SensorFeedback.msg"
+  "srv/AddShuttle.srv"
   DEPENDENCIES std_msgs
 )
 
