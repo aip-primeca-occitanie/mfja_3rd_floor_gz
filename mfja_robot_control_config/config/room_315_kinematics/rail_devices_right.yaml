@@ -16,7 +16,7 @@ slots:
   s_ratio: 0.683726992
 position_sensors:
 - name: DZI2R
-  kind: indexing_zone
+  purpose: indexing_zone
   index_zone: '1'
   start_slot: '1'
   aliases:
@@ -26,7 +26,7 @@ position_sensors:
   radius_m: 0.09
   loop_side: EXTERIOR
 - name: DZI1R
-  kind: indexing_zone
+  purpose: indexing_zone
   index_zone: '2'
   start_slot: '2'
   aliases:
@@ -36,7 +36,7 @@ position_sensors:
   radius_m: 0.09
   loop_side: EXTERIOR
 - name: DZI4R
-  kind: indexing_zone
+  purpose: indexing_zone
   index_zone: '3'
   start_slot: '3'
   aliases:
@@ -46,7 +46,7 @@ position_sensors:
   radius_m: 0.09
   loop_side: EXTERIOR
 - name: DZI3R
-  kind: indexing_zone
+  purpose: indexing_zone
   index_zone: '4'
   start_slot: '4'
   aliases:
@@ -56,7 +56,7 @@ position_sensors:
   radius_m: 0.09
   loop_side: EXTERIOR
 - name: DA3R
-  kind: switch_main
+  purpose: switch_main
   switch: A3
   aliases:
   - DA3
@@ -64,7 +64,7 @@ position_sensors:
   s_ratio: 0.050401902
   radius_m: 0.08
 - name: DA3GR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A3
   branch: G
   aliases:
@@ -73,7 +73,7 @@ position_sensors:
   s_ratio: 0.919775213
   radius_m: 0.07
 - name: DA3SR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A3
   branch: S
   aliases:
@@ -83,7 +83,7 @@ position_sensors:
   s_ratio: 0.027598135
   radius_m: 0.07
 - name: DA4R
-  kind: switch_main
+  purpose: switch_main
   switch: A4
   aliases:
   - DA4
@@ -91,7 +91,7 @@ position_sensors:
   s_ratio: 0.969477997
   radius_m: 0.07
 - name: DA4GR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A4
   branch: G
   aliases:
@@ -100,7 +100,7 @@ position_sensors:
   s_ratio: 0.999578562
   radius_m: 0.08
 - name: DA4SR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A4
   branch: S
   aliases:
@@ -110,7 +110,7 @@ position_sensors:
   s_ratio: 0.008590209
   radius_m: 0.08
 - name: DA1R
-  kind: switch_main
+  purpose: switch_main
   switch: A1
   aliases:
   - DA1
@@ -118,7 +118,7 @@ position_sensors:
   s_ratio: 0.996442416
   radius_m: 0.08
 - name: DA1GR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A1
   branch: G
   aliases:
@@ -127,7 +127,7 @@ position_sensors:
   s_ratio: 0.986943769
   radius_m: 0.07
 - name: DA1SR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A1
   branch: S
   aliases:
@@ -137,7 +137,7 @@ position_sensors:
   s_ratio: 0.970647105
   radius_m: 0.07
 - name: DA2R
-  kind: switch_main
+  purpose: switch_main
   switch: A2
   aliases:
   - DA2
@@ -145,7 +145,7 @@ position_sensors:
   s_ratio: 0.101150462
   radius_m: 0.07
 - name: DA2GR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A2
   branch: G
   aliases:
@@ -154,7 +154,7 @@ position_sensors:
   s_ratio: 0.954170087
   radius_m: 0.08
 - name: DA2SR
-  kind: switch_branch
+  purpose: switch_branch
   switch: A2
   branch: S
   aliases:
@@ -169,11 +169,9 @@ approach_sensors:
   before_switch: A3
   segment: A23
   s_ratio: 0.711151221
-  distance_m: 0.25
 - name: A4_APPROACH
   stopper: A4
   before_switch: A4
-  distance_m: 0.25
   points:
   - segment: A34E
     s_ratio: 0.964078719
@@ -184,11 +182,9 @@ approach_sensors:
   before_switch: A1
   segment: A14
   s_ratio: 0.937923811
-  distance_m: 0.25
 - name: A2_APPROACH
   stopper: A2
   before_switch: A2
-  distance_m: 0.25
   points:
   - segment: A12E
     s_ratio: 0.964090232

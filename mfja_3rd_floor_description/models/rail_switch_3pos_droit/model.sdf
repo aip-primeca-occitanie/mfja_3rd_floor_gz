@@ -32,10 +32,12 @@
           </mesh>
         </geometry>
         <material>
-          <ambient>1.0 0.05 0.05 1</ambient>
-          <diffuse>1.0 0.05 0.05 1</diffuse>
-          <specular>0.45 0.12 0.12 1</specular>
-          <emissive>0.08 0.0 0.0 1</emissive>
+          <!-- Default exterior / GRAND_BOUCLE switch color. Runtime commands
+               recolor this visual through /world/<world>/visual_config. -->
+          <ambient>1.0 0.62 0.05 1</ambient>
+          <diffuse>1.0 0.62 0.05 1</diffuse>
+          <specular>0.25 0.12 0.02 1</specular>
+          <emissive>0.04 0.02 0.0 1</emissive>
         </material>
       </visual>
       <collision name="blade_collision">

@@ -147,6 +147,21 @@ MODE_ALIASES = {
 }
 
 MIXED_MODE = 'mixed'
+SWITCH_VISUAL_PATH = 'blade_link::blade_visual'
+SWITCH_MODE_COLORS = {
+    'petit_boucle': {
+        'ambient': (0.05, 0.85, 0.15, 1.0),
+        'diffuse': (0.05, 0.85, 0.15, 1.0),
+        'specular': (0.02, 0.20, 0.05, 1.0),
+        'emissive': (0.00, 0.03, 0.00, 1.0),
+    },
+    'grand_boucle': {
+        'ambient': (1.00, 0.62, 0.05, 1.0),
+        'diffuse': (1.00, 0.62, 0.05, 1.0),
+        'specular': (0.25, 0.12, 0.02, 1.0),
+        'emissive': (0.04, 0.02, 0.00, 1.0),
+    },
+}
 
 
 def _normalize_token(raw_value: str) -> str:
@@ -370,6 +385,7 @@ class ConveyorLoopModeController(Node):
             switch_name for switch_name in SWITCH_ORDER
             if switch_name in self.switch_layout
         ]
+        self.switch_visual_ids: Dict[str, int] = {}
         self.current_switch_states = _detect_switch_states_from_layout(
             self.switch_layout,
             self.managed_switches,
@@ -615,7 +631,7 @@ class ConveyorLoopModeController(Node):
                 )
 
         try:
-            failures = self._set_switch_poses_parallel(targeted_switches)
+            failures = self._set_switches_in_place(targeted_switches)
         finally:
             if world_was_paused_by_controller and resume_after:
                 resume_ok, resume_output = self._set_world_pause(False)
@@ -686,6 +702,213 @@ class ConveyorLoopModeController(Node):
             yaw=target_yaw,
         )
 
+    @staticmethod
+    def _proto_string(value: str) -> str:
+        return value.replace('\\', '\\\\').replace('"', '\\"')
+
+    @staticmethod
+    def _switch_model_sdf(mode: str) -> str:
+        colors = SWITCH_MODE_COLORS[mode]
+
+        def rgba(name: str) -> str:
+            red, green, blue, alpha = colors[name]
+            return f'{red:.3f} {green:.3f} {blue:.3f} {alpha:.3f}'
+
+        return (
+            "<sdf version='1.9'>"
+            "<model name='rail_switch_3pos_droit'>"
+            "<static>true</static>"
+            "<link name='blade_link'>"
+            "<kinematic>true</kinematic>"
+            "<gravity>false</gravity>"
+            "<inertial><mass>0.1</mass><inertia>"
+            "<ixx>0.001</ixx><ixy>0.0</ixy><ixz>0.0</ixz>"
+            "<iyy>0.001</iyy><iyz>0.0</iyz><izz>0.001</izz>"
+            "</inertia></inertial>"
+            "<visual name='blade_visual'>"
+            "<geometry><mesh>"
+            "<uri>model://rail_switch_3pos_droit/meshes/aiguillage3.stl</uri>"
+            "<scale>39.37 39.37 39.37</scale>"
+            "</mesh></geometry>"
+            "<material>"
+            f"<ambient>{rgba('ambient')}</ambient>"
+            f"<diffuse>{rgba('diffuse')}</diffuse>"
+            f"<specular>{rgba('specular')}</specular>"
+            f"<emissive>{rgba('emissive')}</emissive>"
+            "</material>"
+            "</visual>"
+            "<collision name='blade_collision'>"
+            "<geometry><mesh>"
+            "<uri>model://rail_switch_3pos_droit/meshes/aiguillage3.stl</uri>"
+            "<scale>39.37 39.37 39.37</scale>"
+            "</mesh></geometry>"
+            "<surface><friction><ode><mu>0.35</mu><mu2>0.35</mu2></ode>"
+            "<bullet><friction>0.35</friction><friction2>0.35</friction2>"
+            "<rolling_friction>0.005</rolling_friction></bullet></friction>"
+            "<contact><collide_bitmask>0x0001</collide_bitmask>"
+            "<ode><kp>2000000</kp><kd>50</kd><max_vel>0.1</max_vel>"
+            "<min_depth>0.001</min_depth></ode>"
+            "<bullet><kp>2000000</kp><kd>50</kd></bullet>"
+            "</contact></surface>"
+            "</collision>"
+            "</link>"
+            "</model>"
+            "</sdf>"
+        )
+
+    def _build_remove_switch_command(
+        self,
+        switch_name: str,
+        timeout_ms: Optional[int] = None,
+    ):
+        return [
+            'gz', 'service',
+            '-s', f'/world/{self.world_name}/remove',
+            '--reqtype', 'gz.msgs.Entity',
+            '--reptype', 'gz.msgs.Boolean',
+            '--timeout', str(timeout_ms if timeout_ms is not None else self.timeout_ms),
+            '--req', f'name: "{switch_name}", type: MODEL',
+        ]
+
+    def _build_create_switch_command(
+        self,
+        switch_name: str,
+        switch_pose: SwitchPose,
+        target_yaw: float,
+        mode: str,
+        timeout_ms: Optional[int] = None,
+    ):
+        qx, qy, qz, qw = _quaternion_from_rpy(
+            switch_pose.roll,
+            switch_pose.pitch,
+            target_yaw,
+        )
+        sdf = self._proto_string(self._switch_model_sdf(mode))
+        request = (
+            f'sdf: "{sdf}", '
+            f'name: "{switch_name}", '
+            'allow_renaming: false, '
+            'relative_to: "world", '
+            'pose { '
+            f'position {{x: {switch_pose.x}, y: {switch_pose.y}, z: {switch_pose.z}}} '
+            f'orientation {{x: {qx}, y: {qy}, z: {qz}, w: {qw}}} '
+            '}'
+        )
+        return [
+            'gz', 'service',
+            '-s', f'/world/{self.world_name}/create',
+            '--reqtype', 'gz.msgs.EntityFactory',
+            '--reptype', 'gz.msgs.Boolean',
+            '--timeout', str(timeout_ms if timeout_ms is not None else self.timeout_ms),
+            '--req', request,
+        ]
+
+    def _build_visual_config_command(
+        self,
+        switch_name: str,
+        visual_id: int,
+        mode: str,
+        timeout_ms: Optional[int] = None,
+    ):
+        colors = SWITCH_MODE_COLORS[mode]
+
+        def color_block(name: str) -> str:
+            red, green, blue, alpha = colors[name]
+            return (
+                f'{name} {{ r: {red:.3f} g: {green:.3f} '
+                f'b: {blue:.3f} a: {alpha:.3f} }}'
+            )
+
+        request = (
+            f'id: {visual_id} '
+            'material { '
+            f'{color_block("ambient")} '
+            f'{color_block("diffuse")} '
+            f'{color_block("specular")} '
+            f'{color_block("emissive")} '
+            '}'
+        )
+        command = [
+            'gz', 'service',
+            '-s', f'/world/{self.world_name}/visual_config',
+            '--reqtype', 'gz.msgs.Visual',
+            '--reptype', 'gz.msgs.Boolean',
+            '--timeout', str(timeout_ms if timeout_ms is not None else self.timeout_ms),
+            '--req', request,
+        ]
+        return command
+
+    def _build_scene_graph_command(self, timeout_ms: Optional[int] = None):
+        return [
+            'gz', 'service',
+            '-s', f'/world/{self.world_name}/scene/graph',
+            '--reqtype', 'gz.msgs.Empty',
+            '--reptype', 'gz.msgs.StringMsg',
+            '--timeout', str(timeout_ms if timeout_ms is not None else self.timeout_ms),
+            '--req', '',
+        ]
+
+    @staticmethod
+    def _decode_scene_graph_response(output: str) -> str:
+        match = re.search(r'data:\s*"(.*)"\s*$', output, flags=re.DOTALL)
+        if not match:
+            return output
+        return bytes(match.group(1), 'utf-8').decode('unicode_escape')
+
+    @staticmethod
+    def _visual_ids_from_scene_graph(graph_text: str) -> Dict[str, int]:
+        labels: Dict[int, str] = {}
+        children: Dict[int, List[int]] = {}
+        for match in re.finditer(r'^\s*(\d+)\s+\[label="(.+?) \((\d+)\)"\];', graph_text, re.MULTILINE):
+            node_id = int(match.group(1))
+            labels[node_id] = match.group(2)
+        for match in re.finditer(r'^\s*(\d+)\s*->\s*(\d+)\s*\[', graph_text, re.MULTILINE):
+            parent_id = int(match.group(1))
+            child_id = int(match.group(2))
+            children.setdefault(parent_id, []).append(child_id)
+
+        switch_visual_ids: Dict[str, int] = {}
+        for model_id, label in labels.items():
+            if label not in SWITCH_ORDER:
+                continue
+            link_ids = [
+                child_id for child_id in children.get(model_id, [])
+                if labels.get(child_id) == 'blade_link'
+            ]
+            for link_id in link_ids:
+                visual_ids = [
+                    child_id for child_id in children.get(link_id, [])
+                    if labels.get(child_id) == 'blade_visual'
+                ]
+                if visual_ids:
+                    switch_visual_ids[label] = visual_ids[0]
+                    break
+        return switch_visual_ids
+
+    def _refresh_switch_visual_ids(self) -> bool:
+        command = self._build_scene_graph_command()
+        environment = os.environ.copy()
+        environment['GZ_PARTITION'] = self.partition
+        completed = subprocess.run(
+            command,
+            check=False,
+            env=environment,
+            text=True,
+            capture_output=True,
+        )
+        output = '\n'.join(
+            part for part in [completed.stdout, completed.stderr] if part
+        ).strip()
+        if completed.returncode != 0 or 'timed out' in output.lower():
+            return False
+        visual_ids = self._visual_ids_from_scene_graph(
+            self._decode_scene_graph_response(output)
+        )
+        if not visual_ids:
+            return False
+        self.switch_visual_ids.update(visual_ids)
+        return True
+
     def _set_world_pause(self, paused: bool):
         command = [
             'gz', 'service',
@@ -717,6 +940,200 @@ class ConveyorLoopModeController(Node):
                 return True, output
 
         return False, output
+
+    def _run_gz_command(self, command: List[str]):
+        environment = os.environ.copy()
+        environment['GZ_PARTITION'] = self.partition
+        completed = subprocess.run(
+            command,
+            check=False,
+            env=environment,
+            text=True,
+            capture_output=True,
+        )
+        output = '\n'.join(
+            part for part in [completed.stdout, completed.stderr] if part
+        ).strip()
+        lowered_output = output.lower()
+        timed_out = 'timed out' in lowered_output
+        returned_false = 'data: false' in lowered_output
+        success = completed.returncode == 0 and not timed_out and not returned_false
+        return success, output
+
+    def _recreate_switch_model(
+        self,
+        switch_name: str,
+        switch_pose: SwitchPose,
+        target_yaw: float,
+        mode: str,
+    ):
+        remove_ok, remove_output = self._run_gz_command(
+            self._build_remove_switch_command(switch_name)
+        )
+        if not remove_ok:
+            return False, remove_output
+
+        create_ok, create_output = self._run_gz_command(
+            self._build_create_switch_command(
+                switch_name=switch_name,
+                switch_pose=switch_pose,
+                target_yaw=target_yaw,
+                mode=mode,
+            )
+        )
+        return create_ok, create_output
+
+    def _set_switch_models(self, requested_switch_modes: Dict[str, str]):
+        pending = {
+            switch_name: (
+                self.switch_layout[switch_name],
+                MODE_YAWS[mode][switch_name],
+                mode,
+            )
+            for switch_name, mode in requested_switch_modes.items()
+            if switch_name in self.switch_layout
+        }
+        failures = {}
+
+        for attempt in range(1, self.retries + 1):
+            if not pending:
+                break
+
+            next_pending = {}
+            failures.clear()
+
+            for switch_name, (switch_pose, target_yaw, mode) in pending.items():
+                success, output = self._recreate_switch_model(
+                    switch_name=switch_name,
+                    switch_pose=switch_pose,
+                    target_yaw=target_yaw,
+                    mode=mode,
+                )
+                if success:
+                    self.switch_layout[switch_name] = SwitchPose(
+                        x=switch_pose.x,
+                        y=switch_pose.y,
+                        z=switch_pose.z,
+                        roll=switch_pose.roll,
+                        pitch=switch_pose.pitch,
+                        yaw=target_yaw,
+                    )
+                    self.switch_visual_ids.pop(switch_name, None)
+                    continue
+
+                failures[switch_name] = output
+                next_pending[switch_name] = (switch_pose, target_yaw, mode)
+
+            pending = next_pending
+            if pending and attempt < self.retries:
+                self.get_logger().warning(
+                    f'Switch model recreate round {attempt} failed for '
+                    f'{len(pending)} switch(es); retrying the remaining requests.'
+                )
+
+        return [(switch_name, failures.get(switch_name, '')) for switch_name in pending]
+
+    def _set_switches_in_place(self, requested_switch_modes: Dict[str, str]):
+        # Keep the switch model visible while changing state; recreate only if
+        # Gazebo rejects the direct pose or material update.
+        pose_failures = dict(self._set_switch_poses_parallel(requested_switch_modes))
+        color_targets = {
+            switch_name: mode
+            for switch_name, mode in requested_switch_modes.items()
+            if switch_name not in pose_failures
+        }
+        color_failures = dict(self._set_switch_materials_parallel(color_targets))
+        fallback_targets = {
+            switch_name: requested_switch_modes[switch_name]
+            for switch_name in set(pose_failures) | set(color_failures)
+        }
+        if not fallback_targets:
+            return []
+
+        self.get_logger().warning(
+            'Direct switch pose/color update failed for '
+            f'{len(fallback_targets)} switch(es); recreating only those switches as fallback.'
+        )
+        return self._set_switch_models(fallback_targets)
+
+    def _set_switch_materials_parallel(self, requested_switch_modes: Dict[str, str]):
+        target_modes = {
+            switch_name: mode
+            for switch_name, mode in requested_switch_modes.items()
+            if switch_name in self.switch_layout and mode in SWITCH_MODE_COLORS
+        }
+        pending = dict(target_modes)
+        failures = {}
+        environment = os.environ.copy()
+        environment['GZ_PARTITION'] = self.partition
+
+        for attempt in range(1, self.retries + 1):
+            if not pending:
+                break
+            missing_visual_ids = [
+                switch_name for switch_name in pending
+                if switch_name not in self.switch_visual_ids
+            ]
+            if missing_visual_ids:
+                self._refresh_switch_visual_ids()
+
+            launched = {}
+            for switch_name, mode in pending.items():
+                visual_id = self.switch_visual_ids.get(switch_name)
+                if visual_id is None:
+                    continue
+                command = self._build_visual_config_command(
+                    switch_name=switch_name,
+                    visual_id=visual_id,
+                    mode=mode,
+                )
+                launched[switch_name] = (
+                    subprocess.Popen(
+                        command,
+                        env=environment,
+                        text=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    ),
+                    mode,
+                )
+
+            next_pending = {
+                switch_name: mode
+                for switch_name, mode in pending.items()
+                if switch_name not in launched
+            }
+            failures = {
+                switch_name: (
+                    f'Could not resolve Gazebo visual id for '
+                    f'{switch_name}::{SWITCH_VISUAL_PATH}.'
+                )
+                for switch_name in pending
+                if switch_name not in launched
+            }
+
+            for switch_name, (process, mode) in launched.items():
+                stdout, stderr = process.communicate()
+                output = '\n'.join(part for part in [stdout, stderr] if part).strip()
+                lowered_output = output.lower()
+                timed_out = 'timed out' in lowered_output
+                returned_false = 'data: false' in lowered_output
+                success = process.returncode == 0 and not timed_out and not returned_false
+
+                if success:
+                    continue
+
+                failures[switch_name] = output
+                next_pending[switch_name] = mode
+
+            pending = next_pending
+            if pending and attempt < self.retries:
+                self.get_logger().warning(
+                    f'Switch color update round {attempt} failed for '
+                    f'{len(pending)} switch(es); retrying the remaining requests.'
+                )
+
+        return [(switch_name, failures.get(switch_name, '')) for switch_name in pending]
 
     def _set_switch_poses_parallel(self, requested_switch_modes: Dict[str, str]):
         pending = {

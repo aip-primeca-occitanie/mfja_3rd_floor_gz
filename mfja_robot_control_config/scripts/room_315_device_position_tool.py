@@ -287,6 +287,28 @@ def _find_device_entry(
     raise ValueError(f'Could not find {category}.{name} in devices YAML.')
 
 
+def _find_device_entry_auto(
+    config: dict[str, Any],
+    name: str,
+) -> tuple[str, dict[str, Any]]:
+    matches: list[tuple[str, dict[str, Any]]] = []
+    for category in sorted(DEVICE_CATEGORIES):
+        target_name = _canonical_name(category, name)
+        for raw_name, entry in _device_entries(config, category):
+            if _canonical_name(category, raw_name) == target_name:
+                matches.append((category, entry))
+
+    if not matches:
+        raise ValueError(f'Could not find {name} in devices YAML.')
+    if len(matches) > 1:
+        categories = ', '.join(category for category, _entry in matches)
+        raise ValueError(
+            f'Found {name} in multiple device groups: {categories}. '
+            'Use --category to choose one explicitly.'
+        )
+    return matches[0]
+
+
 def _target_mapping_for_update(
     entry: dict[str, Any],
     point_index: int,
@@ -308,17 +330,20 @@ def _target_mapping_for_update(
 
 def update_device_yaml(
     devices_path: Path,
-    category: str,
+    category: str | None,
     name: str,
     point_index: int,
     closest: ClosestRailPosition,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[str, dict[str, Any], dict[str, Any]]:
     with devices_path.open() as handle:
         config = yaml.safe_load(handle) or {}
     if not isinstance(config, dict):
         raise ValueError(f'{devices_path} must contain a YAML mapping.')
 
-    entry = _find_device_entry(config, category, name)
+    if category is None:
+        category, entry = _find_device_entry_auto(config, name)
+    else:
+        entry = _find_device_entry(config, category, name)
     target = _target_mapping_for_update(entry, point_index)
     previous = {
         'segment': target.get('segment'),
@@ -334,7 +359,7 @@ def update_device_yaml(
             default_flow_style=False,
             allow_unicode=False,
         )
-    return previous, {'segment': target['segment'], 's_ratio': target['s_ratio']}
+    return category, previous, {'segment': target['segment'], 's_ratio': target['s_ratio']}
 
 
 def parse_args() -> argparse.Namespace:
@@ -352,7 +377,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         '--category',
         choices=sorted(DEVICE_CATEGORIES),
-        default='position_sensors',
+        default=None,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument('--name', help='Device name to update, for example DZI1R.')
     parser.add_argument(
@@ -447,7 +473,7 @@ def main() -> int:
         print('FAIL: refusing to write a far target; use --force to override.', file=sys.stderr)
         return 1
 
-    previous, updated = update_device_yaml(
+    _category, previous, updated = update_device_yaml(
         devices_path=devices_path,
         category=args.category,
         name=args.name,
@@ -456,7 +482,7 @@ def main() -> int:
     )
     print(f'Updated: {devices_path}')
     print(
-        f'{args.category}.{args.name}: '
+        f'{args.name}: '
         f'{previous["segment"]}@{previous["s_ratio"]} -> '
         f'{updated["segment"]}@{updated["s_ratio"]}'
     )

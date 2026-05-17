@@ -275,10 +275,6 @@ def validate_devices(
                         _validate_positive_number(point['radius_m'], f'{context}.radius_m', result.errors)
 
                 if category == 'approach_sensors':
-                    if not _has_field(point, 'distance_m'):
-                        result.errors.append(f'{context} is missing required field distance_m.')
-                    else:
-                        _validate_positive_number(point['distance_m'], f'{context}.distance_m', result.errors)
                     stopper = _canonical_name(
                         'stoppers',
                         str(point.get('stopper', raw_name)).replace('_APPROACH', ''),
@@ -293,8 +289,6 @@ def validate_devices(
 
                 if category != 'position_sensors' and _has_field(point, 'radius_m'):
                     _validate_positive_number(point['radius_m'], f'{context}.radius_m', result.errors)
-                if category != 'approach_sensors' and _has_field(point, 'distance_m'):
-                    _validate_positive_number(point['distance_m'], f'{context}.distance_m', result.errors)
 
     for stopper_name in sorted(stopper_names):
         if not any(target_name == stopper_name for target_name, _segment in approach_targets):
@@ -311,11 +305,16 @@ def print_result(result: ValidationResult) -> None:
         f'{result.devices_path} against {result.network_path}'
     )
     if result.counts:
-        counts = ', '.join(
-            f'{category}={result.counts.get(category, 0)}'
-            for category in DEVICE_CATEGORIES
+        sensor_count = (
+            result.counts.get('position_sensors', 0)
+            + result.counts.get('approach_sensors', 0)
         )
-        print(f'  devices: {counts}')
+        print(
+            '  devices: '
+            f'slots={result.counts.get("slots", 0)}, '
+            f'sensors={sensor_count}, '
+            f'stoppers={result.counts.get("stoppers", 0)}'
+        )
     for warning in result.warnings:
         print(f'  WARN: {warning}')
     for error in result.errors:

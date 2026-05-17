@@ -572,14 +572,14 @@ def _default_sensor_label_offset(
     sensor_x: float,
     sensor_y: float,
     bounds: tuple[float, float, float, float],
-    kind: str,
+    purpose: str,
     branch: str,
 ) -> tuple[float, float]:
     min_x, max_x, min_y, max_y = bounds
     center_x = 0.5 * (min_x + max_x)
     center_y = 0.5 * (min_y + max_y)
     dx = 0.24 if sensor_x >= center_x else -0.24
-    if kind == 'switch_main':
+    if purpose == 'switch_main':
         dy = 0.14 if sensor_y >= center_y else -0.14
     elif branch == 'G':
         dy = 0.18 if sensor_y >= center_y else -0.18
@@ -1005,11 +1005,11 @@ def _plot_sensor_panel(
             transform,
             start_slots,
         )
-        kind = str(sensor_config.get('kind', '')).strip().lower()
+        purpose = str(sensor_config.get('purpose', '')).strip().lower()
         branch = str(sensor_config.get('branch', '')).strip().upper()
         aliases = sensor_config.get('aliases', []) or []
 
-        if kind == 'indexing_zone':
+        if purpose == 'indexing_zone':
             slot = str(sensor_config['slot']).strip()
             slot_x, slot_y, _slot_z = start_slots[slot]['pose'][:3]
             axis.add_patch(
@@ -1049,7 +1049,7 @@ def _plot_sensor_panel(
             )
             continue
 
-        if kind == 'switch_main':
+        if purpose == 'switch_main':
             color = DA_MAIN_COLOR
         elif branch == 'G':
             color = EXTERIOR_COLOR
@@ -1068,7 +1068,7 @@ def _plot_sensor_panel(
         )
         offset_x, offset_y = SENSOR_LABEL_OFFSETS.get(
             sensor_name,
-            _default_sensor_label_offset(sensor_x, sensor_y, bounds, kind, branch),
+            _default_sensor_label_offset(sensor_x, sensor_y, bounds, purpose, branch),
         )
         nearest_display_switch = _nearest_display_switch_label(
             sensor_x,
