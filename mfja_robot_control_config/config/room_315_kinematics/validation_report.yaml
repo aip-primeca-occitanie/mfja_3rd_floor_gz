@@ -1,5 +1,5 @@
 phase: 3
-network_yaml: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml
+network_yaml: rail_network_right.yaml
 snap_tolerance_m: 0.05
 duplicate_tolerance_m: 1.0e-06
 tangent_warning_threshold_deg: 25.0

@@ -42,36 +42,77 @@ The focused HTML runbook is available at:
 runbook.html
 ```
 
-## Build
+## Clean Workspace Install
 
-Use this build command from the workspace root. The explicit `--base-paths` is
-important because this repository contains several ROS packages inside one git
-repository.
+Use these commands on a fresh ROS 2 Jazzy machine. The repository is a
+meta-repository: clone it once under `src/`, then let `colcon` discover the ROS
+packages inside it.
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+sudo apt update
+sudo apt install -y git python3-rosdep python3-colcon-common-extensions
+
+# Run this only if rosdep has not already been initialized on the machine.
+sudo rosdep init || true
+rosdep update
+
+export MFJA_WS=~/test_mfja_ws
+mkdir -p "$MFJA_WS/src"
+cd "$MFJA_WS/src"
+git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 
-colcon build --base-paths \
-  src/mfja_3rd_floor_gz/mfja_rail_interfaces \
-  src/mfja_3rd_floor_gz/mfja_robot_control_config \
-  src/mfja_3rd_floor_gz/mfja_3rd_floor_description \
-  src/mfja_3rd_floor_gz/mfja_room_315_bringup \
-  src/mfja_3rd_floor_gz/mfja_3rd_floor_bringup \
-  src/mfja_3rd_floor_gz/mfja_3rd_floor_gz \
-  --packages-select \
-  mfja_rail_interfaces \
-  mfja_robot_control_config \
-  mfja_3rd_floor_description \
-  mfja_room_315_bringup \
-  mfja_3rd_floor_bringup \
-  mfja_3rd_floor_gz \
-  --symlink-install
+rosdep install --from-paths src -y --ignore-src --rosdistro jazzy
+colcon build --symlink-install
 
 source install/setup.bash
 ```
 
-If you only edit README files, no rebuild is required.
+After opening a new terminal, restore the workspace with:
+
+```bash
+export MFJA_WS=~/test_mfja_ws
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+```
+
+Quick launch checks:
+
+```bash
+ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true
+```
+
+```bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true
+```
+
+If you only edit README files, no rebuild is required. If you edit launch files,
+Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
+config files, rebuild and source again.
+
+## Troubleshooting
+
+- `PackageNotFoundError`: source `/opt/ros/jazzy/setup.bash`, build the
+  workspace, then source `$MFJA_WS/install/setup.bash` in the same terminal.
+- Gazebo opens but models are missing: launch through the provided ROS launch
+  files. They set `GZ_SIM_MODEL_PATH` and `GZ_SIM_RESOURCE_PATH` from the
+  installed `mfja_3rd_floor_description` package.
+- `rosdep` cannot resolve a package: confirm that ROS 2 Jazzy and the
+  ROS-Gazebo packages for Gazebo Harmonic are installed from the official ROS
+  repositories, then run `rosdep update`.
+- Custom messages or services are missing after editing `mfja_rail_interfaces`:
+  rebuild the workspace and open a fresh sourced terminal.
 
 ## Step-by-Step Feature Guide
 
@@ -83,7 +124,8 @@ quickly without searching through the reference sections below.
 Use this terminal before any launch or topic command:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+export MFJA_WS=~/test_mfja_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
@@ -92,7 +134,8 @@ source install/setup.bash
 If the workspace is already built and you only opened a new terminal, use:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+export MFJA_WS=~/test_mfja_ws
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
@@ -103,7 +146,7 @@ Terminal 1 - start Room 315 with rails, device YAML, markers, typed topics,
 and shuttle nodes enabled, but with no initial shuttles:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -121,7 +164,7 @@ Terminal 2 - check that the rail topics exist:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
+source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
 
 ros2 topic list | grep /room_315/rails
 ```
@@ -138,7 +181,7 @@ Expected namespaces:
 Terminal 1:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -156,7 +199,7 @@ Terminal 2 - verify the full-floor Gazebo services:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
+source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
 
 ros2 service list | grep /world/mfja_3rd_floor
 ```
@@ -178,7 +221,7 @@ fixtures, other robots, or TIAGo.
 Terminal 1 - choose exactly one robot:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -200,7 +243,7 @@ Terminal 2 - check the selected robot topics. Example for KUKA:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
+source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
 
 ros2 topic list | grep kuka1
 ```
@@ -267,7 +310,7 @@ with an `ON` command:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
+source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
 
 ros2 service call /room_315/rails/right/shuttles/add \
   mfja_rail_interfaces/srv/AddShuttle \
@@ -353,7 +396,7 @@ Terminal 3 - command switch A1 to the interior branch:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
+source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
 
 ros2 topic pub --once /room_315/rails/right/switches/command \
   mfja_rail_interfaces/msg/SwitchCommand \
@@ -391,7 +434,7 @@ Terminal 3 - close stopper A1:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
+source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
 
 ros2 topic pub --once /room_315/rails/right/stoppers/command \
   mfja_rail_interfaces/msg/StopperCommand \
@@ -578,7 +621,7 @@ To move a device:
 Validate both YAML files:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -591,7 +634,7 @@ Use this when you read a desired sensor position from Gazebo and want the
 nearest rail segment plus `s_ratio`:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -738,7 +781,7 @@ Canonical topics use `mfja_rail_interfaces` messages under
 Run this after changing rail network or CSV geometry:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -795,7 +838,7 @@ To compare against the direct CSV interpolation, use:
 Validate the continuous path backend after changing rail geometry:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -825,7 +868,7 @@ arguments.
 Terminal 1 - start Room 315 with the rail stack:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -877,7 +920,7 @@ Optional advanced mode - start one right-rail kinematic shuttle directly after
 launching Gazebo with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -895,7 +938,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
 Optional advanced mode - start one left-rail kinematic shuttle directly:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -915,7 +958,7 @@ Optional advanced mode - start the ready-made dual launch separately:
 Right only:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -930,7 +973,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Left only:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -945,7 +988,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Both rails together:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -963,7 +1006,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Open one extra terminal for commands:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
@@ -1097,7 +1140,7 @@ That is why the shuttle node must use:
 Terminal 1 - start the full floor with the Room 315 rail stack:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1125,7 +1168,7 @@ Optional advanced mode - start one kinematic shuttle on the full floor after
 launching with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1150,7 +1193,7 @@ The launch automatically starts ROS-Gazebo service bridges for:
 Check them with:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1185,7 +1228,7 @@ or select only the robots you need.
 Full floor with all configured robots:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1198,7 +1241,7 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
 Room 315 only with all configured robots:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1281,7 +1324,7 @@ ros2 launch mfja_3rd_floor_gz single_industrial_robot.launch.py robot:=hc10
 After launching the simulation with robots enabled, open a new terminal:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
@@ -1842,7 +1885,7 @@ ros2 topic list | grep room_315
 Run these after changing CSV geometry or `rail_network_right.yaml`:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 

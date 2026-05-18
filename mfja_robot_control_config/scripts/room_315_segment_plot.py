@@ -34,35 +34,29 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _package_share_dir() -> Path:
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return Path(get_package_share_directory('mfja_robot_control_config'))
+    except Exception:
+        return _repo_root() / 'mfja_robot_control_config'
+
+
+def _default_config_dir() -> Path:
+    return _package_share_dir() / 'config' / 'room_315_kinematics'
+
+
 def _default_raw_dir() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'raw_segments'
-    )
+    return _default_config_dir() / 'raw_segments'
 
 
 def _default_normalized_dir() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'normalized_segments'
-    )
+    return _default_config_dir() / 'normalized_segments'
 
 
 def _default_output_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'debug_plots'
-        / 'room_315_segments_overview.png'
-    )
+    return _default_config_dir() / 'debug_plots' / 'room_315_segments_overview.png'
 
 
 def _parse_segment_args(raw_values: Iterable[str]) -> List[str]:

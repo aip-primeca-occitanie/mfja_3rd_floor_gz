@@ -56,35 +56,29 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _package_share_dir() -> Path:
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return Path(get_package_share_directory('mfja_robot_control_config'))
+    except Exception:
+        return _repo_root() / 'mfja_robot_control_config'
+
+
+def _default_config_dir() -> Path:
+    return _package_share_dir() / 'config' / 'room_315_kinematics'
+
+
 def _default_network_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'rail_network_right.yaml'
-    )
+    return _default_config_dir() / 'rail_network_right.yaml'
 
 
 def _default_report_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'validation_report.yaml'
-    )
+    return _default_config_dir() / 'validation_report.yaml'
 
 
 def _default_plot_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'debug_plots'
-        / 'network_validation.png'
-    )
+    return _default_config_dir() / 'debug_plots' / 'network_validation.png'
 
 
 def _resolve_path(raw_path: str, network_path: Path) -> Path:
@@ -92,9 +86,14 @@ def _resolve_path(raw_path: str, network_path: Path) -> Path:
     if path.is_absolute():
         return path
 
-    repo_relative = _repo_root() / path
-    if repo_relative.exists():
-        return repo_relative
+    config_relative = _package_share_dir() / path
+    if config_relative.exists():
+        return config_relative
+
+    source_relative = _repo_root() / path
+    if source_relative.exists():
+        return source_relative
+
     return network_path.parent / path
 
 

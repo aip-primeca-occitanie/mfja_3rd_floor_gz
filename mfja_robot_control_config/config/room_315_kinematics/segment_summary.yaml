@@ -1,7 +1,7 @@
 phase: 1
 description: CSV preprocessing and normalization for room 315 shuttle segments
-input_dir: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments
-output_dir: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/normalized_segments
+input_dir: raw_segments
+output_dir: normalized_segments
 input_stage: raw
 duplicate_tolerance: 1.0e-06
 segment_order:

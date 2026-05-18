@@ -10,13 +10,13 @@
   <link name="base_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60/visual/base_link.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/base_link.stl"/>
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60/collision/base_link.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/base_link.stl"/>
       </geometry>
     </collision>
   </link>
@@ -24,13 +24,13 @@
   <link name="link_1">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60/visual/link_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/link_1.stl"/>
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60/collision/link_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_1.stl"/>
       </geometry>
     </collision>
   </link>
@@ -38,13 +38,13 @@
   <link name="link_2">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60l/visual/link_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/visual/link_2.stl"/>
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_2.stl"/>
       </geometry>
     </collision>
   </link>
@@ -52,13 +52,13 @@
   <link name="link_3">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60/visual/link_3.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/link_3.stl"/>
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60/collision/link_3.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_3.stl"/>
       </geometry>
     </collision>
   </link>
@@ -66,13 +66,13 @@
   <link name="link_4">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60l/visual/link_4.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/visual/link_4.stl"/>
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_4.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_4.stl"/>
       </geometry>
     </collision>
   </link>
@@ -80,13 +80,13 @@
   <link name="link_5">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx60/visual/link_5.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_5.stl"/>
       </geometry>
       <material name="staubli_grey"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx60/collision/link_5.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_5.stl"/>
       </geometry>
     </collision>
   </link>
@@ -94,13 +94,13 @@
   <link name="link_6">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx60/visual/link_6.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_6.stl"/>
       </geometry>
       <material name="staubli_grey"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/staubli_tx2_60l/meshes/tx60/collision/link_6.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_6.stl"/>
       </geometry>
     </collision>
   </link>

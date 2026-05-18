@@ -88,13 +88,13 @@
   <link name="torso_fixed_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_fix.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/torso/torso_fix.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_fix.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/torso/torso_fix.stl"/>
       </geometry>
     </collision>
   </link>
@@ -102,13 +102,13 @@
   <link name="torso_lift_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_lift_with_arm.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/torso/torso_lift_with_arm.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/torso/torso_lift_with_arm.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/torso/torso_lift_with_arm.stl"/>
       </geometry>
     </collision>
   </link>
@@ -116,13 +116,13 @@
   <link name="arm_1_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_1.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_1.stl"/>
       </geometry>
     </collision>
   </link>
@@ -130,13 +130,13 @@
   <link name="arm_2_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_2.stl"/>
       </geometry>
       <material name="tiago_dark"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_2.stl"/>
       </geometry>
     </collision>
   </link>
@@ -144,13 +144,13 @@
   <link name="arm_3_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_3.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_3.stl"/>
       </geometry>
       <material name="tiago_dark"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_3.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_3.stl"/>
       </geometry>
     </collision>
   </link>
@@ -158,13 +158,13 @@
   <link name="arm_4_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_4.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_4.stl"/>
       </geometry>
       <material name="tiago_dark"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_4.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_4.stl"/>
       </geometry>
     </collision>
   </link>
@@ -172,13 +172,13 @@
   <link name="arm_5_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_5-wrist-2010.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_5-wrist-2010.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_5-wrist-2010.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_5-wrist-2010.stl"/>
       </geometry>
     </collision>
   </link>
@@ -186,13 +186,13 @@
   <link name="arm_6_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
       </geometry>
     </collision>
   </link>
@@ -232,13 +232,13 @@
   <link name="head_1_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/head/head_1.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/head/head_1.stl"/>
       </geometry>
     </collision>
   </link>
@@ -246,13 +246,13 @@
   <link name="head_2_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/head/head_2.stl"/>
       </geometry>
       <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/tiago/meshes/head/head_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/head/head_2.stl"/>
       </geometry>
     </collision>
   </link>

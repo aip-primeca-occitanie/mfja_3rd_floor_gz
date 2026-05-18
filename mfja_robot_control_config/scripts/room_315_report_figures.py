@@ -291,28 +291,107 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _package_share_dir() -> Path:
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return Path(get_package_share_directory('mfja_robot_control_config'))
+    except Exception:
+        return _repo_root() / 'mfja_robot_control_config'
+
+
+def _default_config_dir() -> Path:
+    return _package_share_dir() / 'config' / 'room_315_kinematics'
+
+
 def _default_network_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'rail_network_right.yaml'
-    )
+    return _default_config_dir() / 'rail_network_right.yaml'
 
 
 def _default_left_network_path() -> Path:
     return _default_network_path().with_name('rail_network_left.yaml')
 
 
+def _default_devices_path(rail_side: str) -> Path:
+    suffix = 'left' if rail_side == 'left' else 'right'
+    return _default_network_path().with_name(f'rail_devices_{suffix}.yaml')
+
+
 def _default_output_dir() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'report_figures'
-    )
+    return _default_config_dir() / 'report_figures'
+
+
+def _slot_key(raw_name: str) -> str:
+    name = str(raw_name).strip()
+    lowered = name.lower().replace('-', '_')
+    for prefix in ('start_slot_', 'start_', 'slot_'):
+        if lowered.startswith(prefix):
+            return lowered[len(prefix):]
+    return name
+
+
+def _named_mapping(raw_entries: object) -> dict:
+    if isinstance(raw_entries, dict):
+        return dict(raw_entries)
+    if raw_entries is None:
+        return {}
+    entries = {}
+    for index, raw_entry in enumerate(raw_entries):
+        if not isinstance(raw_entry, dict):
+            raise ValueError(f'Device entry {index} must be a mapping.')
+        if 'name' not in raw_entry:
+            raise ValueError(f'Device entry {index} is missing required field name.')
+        entries[str(raw_entry['name'])] = dict(raw_entry)
+    return entries
+
+
+def _device_point_pose(
+    raw_config: dict,
+    hermite_network: RailNetwork,
+    transform: PoseTransform,
+) -> list[float]:
+    segment_name = str(raw_config['segment']).strip()
+    segment = hermite_network.segments[segment_name]
+    if 's' in raw_config:
+        s = float(raw_config['s'])
+    else:
+        s_ratio = float(raw_config.get('s_ratio', 0.0))
+        s = segment.length * max(0.0, min(1.0, s_ratio))
+    point, yaw = segment.sample(max(0.0, min(s, segment.length)))
+    x, y, z = transform.point(point.x, point.y, point.z)
+    return [x, y, z, 0.0, 0.0, yaw]
+
+
+def _merge_devices_into_report_config(
+    network_config: dict,
+    devices_config: dict,
+    hermite_network: RailNetwork,
+    transform: PoseTransform,
+) -> None:
+    start_slots = {}
+    for raw_name, raw_slot in _named_mapping(devices_config.get('slots')).items():
+        slot_name = _slot_key(raw_slot.get('name', raw_name))
+        slot_config = dict(raw_slot)
+        slot_config['pose'] = _device_point_pose(slot_config, hermite_network, transform)
+        start_slots[slot_name] = slot_config
+    if start_slots:
+        network_config['start_slots'] = start_slots
+
+    position_sensors = {}
+    for raw_name, raw_sensor in _named_mapping(devices_config.get('position_sensors')).items():
+        sensor_config = dict(raw_sensor)
+        if 'slot' not in sensor_config and 'start_slot' in sensor_config:
+            sensor_config['slot'] = _slot_key(sensor_config['start_slot'])
+        position_sensors[str(sensor_config.get('name', raw_name))] = sensor_config
+    if position_sensors:
+        network_config['position_sensors'] = position_sensors
+
+    stoppers = {}
+    for raw_name, raw_stopper in _named_mapping(devices_config.get('stoppers')).items():
+        stopper_config = dict(raw_stopper)
+        stoppers[str(stopper_config.get('name', raw_name))] = stopper_config
+    if stoppers:
+        network_config['stoppers'] = stoppers
 
 
 def _segment_color(segment_name: str) -> str:
@@ -498,6 +577,8 @@ def _sensor_point_xy(
     segment = hermite_network.segments[segment_name]
     if 's' in sensor_config:
         sensor_s = float(sensor_config['s'])
+    elif 's_ratio' in sensor_config:
+        sensor_s = segment.length * float(sensor_config['s_ratio'])
     else:
         offset_m = float(sensor_config.get('offset_m', 0.0))
         reference = str(sensor_config.get('reference', 'start')).strip().lower()
@@ -527,16 +608,25 @@ def _stopper_points(
         default_stop_offset_m = float(raw_config.get('stop_offset_m', 0.08))
         raw_stop_points = raw_config.get('stop_points')
         if raw_stop_points is None:
-            raw_stop_points = [
-                {'segment': segment_name}
-                for segment_name in raw_config.get('segments', [])
-            ]
+            raw_stop_points = raw_config.get('points')
+        if raw_stop_points is None:
+            if 'segment' in raw_config:
+                raw_stop_points = [raw_config]
+            else:
+                raw_stop_points = [
+                    {'segment': segment_name}
+                    for segment_name in raw_config.get('segments', [])
+                ]
 
         for raw_stop_point in raw_stop_points:
             segment_name = str(raw_stop_point['segment']).strip()
             segment = hermite_network.segments[segment_name]
             if 's' in raw_stop_point:
                 stop_s = float(raw_stop_point['s'])
+                if reverse_direction:
+                    stop_s = segment.length - stop_s
+            elif 's_ratio' in raw_stop_point:
+                stop_s = segment.length * float(raw_stop_point['s_ratio'])
                 if reverse_direction:
                     stop_s = segment.length - stop_s
             else:
@@ -1246,6 +1336,12 @@ def parse_args() -> argparse.Namespace:
         help='Which rail naming and calibration preset to use.',
     )
     parser.add_argument(
+        '--devices',
+        type=Path,
+        default=None,
+        help='Path to rail_devices_right.yaml or rail_devices_left.yaml.',
+    )
+    parser.add_argument(
         '--output-dir',
         type=Path,
         default=_default_output_dir(),
@@ -1267,6 +1363,14 @@ def main() -> int:
         args.network,
         path_backend=CUBIC_HERMITE_PATH_BACKEND,
         arc_length_samples_per_edge=16,
+    )
+    devices_path = args.devices or _default_devices_path(rail_side)
+    devices_config = _load_network_config(devices_path)
+    _merge_devices_into_report_config(
+        network_config,
+        devices_config,
+        hermite_network,
+        transform,
     )
     bounds = _compute_bounds(network_config, hermite_network, transform)
 

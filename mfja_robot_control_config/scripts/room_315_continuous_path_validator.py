@@ -23,35 +23,29 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _package_share_dir() -> Path:
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return Path(get_package_share_directory('mfja_robot_control_config'))
+    except Exception:
+        return _repo_root() / 'mfja_robot_control_config'
+
+
+def _default_config_dir() -> Path:
+    return _package_share_dir() / 'config' / 'room_315_kinematics'
+
+
 def _default_network_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'rail_network_right.yaml'
-    )
+    return _default_config_dir() / 'rail_network_right.yaml'
 
 
 def _default_report_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'continuous_path_report.yaml'
-    )
+    return _default_config_dir() / 'continuous_path_report.yaml'
 
 
 def _default_plot_path() -> Path:
-    return (
-        _repo_root()
-        / 'mfja_robot_control_config'
-        / 'config'
-        / 'room_315_kinematics'
-        / 'debug_plots'
-        / 'continuous_path_validation.png'
-    )
+    return _default_config_dir() / 'debug_plots' / 'continuous_path_validation.png'
 
 
 def _point_to_segment_distance(point: Point3D, start: Point3D, end: Point3D) -> float:

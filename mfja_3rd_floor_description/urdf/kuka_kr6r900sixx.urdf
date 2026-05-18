@@ -10,13 +10,13 @@
   <link name="base_link">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/base_link.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/base_link.stl"/>
       </geometry>
       <material name="kuka_dark"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/base_link.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/base_link.stl"/>
       </geometry>
     </collision>
   </link>
@@ -24,13 +24,13 @@
   <link name="link_1">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_1.stl"/>
       </geometry>
       <material name="kuka_orange"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_1.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_1.stl"/>
       </geometry>
     </collision>
   </link>
@@ -38,13 +38,13 @@
   <link name="link_2">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_2.stl"/>
       </geometry>
       <material name="kuka_orange"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_2.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_2.stl"/>
       </geometry>
     </collision>
   </link>
@@ -52,13 +52,13 @@
   <link name="link_3">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_3.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_3.stl"/>
       </geometry>
       <material name="kuka_orange"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_3.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_3.stl"/>
       </geometry>
     </collision>
   </link>
@@ -66,13 +66,13 @@
   <link name="link_4">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_4.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_4.stl"/>
       </geometry>
       <material name="kuka_orange"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_4.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_4.stl"/>
       </geometry>
     </collision>
   </link>
@@ -80,13 +80,13 @@
   <link name="link_5">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_5.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_5.stl"/>
       </geometry>
       <material name="kuka_orange"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_5.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_5.stl"/>
       </geometry>
     </collision>
   </link>
@@ -94,13 +94,13 @@
   <link name="link_6">
     <visual>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/converted_visual/link_6.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_6.stl"/>
       </geometry>
       <material name="kuka_dark"/>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_gz/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_6.stl"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_6.stl"/>
       </geometry>
     </collision>
   </link>

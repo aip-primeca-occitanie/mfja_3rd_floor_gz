@@ -104,7 +104,7 @@ You can also compute `segment` and `s_ratio` from a Gazebo XYZ coordinate with
 position visually in Gazebo:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"/src/mfja_3rd_floor_gz
 python3 mfja_robot_control_config/scripts/room_315_device_position_tool.py \
   --side right \
   --name DZI1R \
@@ -151,7 +151,7 @@ A single-point device has `segment` and `s_ratio` directly on the device entry:
 Move it from a Gazebo coordinate with a dry run first:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -212,7 +212,7 @@ what actually stops the shuttle when its state is `1`.
 Run the device validator after editing either rail device YAML:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"/src/mfja_3rd_floor_gz
 python3 mfja_robot_control_config/scripts/room_315_devices_validator.py
 ```
 
@@ -260,7 +260,7 @@ Run these commands from the repository root after editing any file in
 `raw_segments/` or after changing the network topology:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"/src/mfja_3rd_floor_gz
 
 python3 mfja_robot_control_config/scripts/room_315_csv_preprocessor.py
 python3 mfja_robot_control_config/scripts/room_315_network_validator.py
@@ -287,7 +287,7 @@ Status: PASS (0 warnings)
 Use the meta-repository build command from the workspace root:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 
 colcon build --base-paths \
@@ -318,7 +318,7 @@ count defaults to `0`, so no shuttle moves until you add one or request startup
 shuttles:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -360,7 +360,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
 Start the full floor with the same Room 315 rail stack enabled:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -378,7 +378,7 @@ Optional advanced mode: start a kinematic shuttle node manually after launching
 Gazebo with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -441,7 +441,7 @@ working in Gazebo.
 Launch the right rail with four slow shuttles:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -511,7 +511,7 @@ point within `sensor_detection_tolerance_m`, and `active=0` otherwise.
 Launch only the left rail:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
