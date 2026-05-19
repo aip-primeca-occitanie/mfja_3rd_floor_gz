@@ -30,7 +30,8 @@
             setuptools
           ]);
 
-          cxxRuntimeLibs = pkgs.lib.makeLibraryPath [
+          rosRuntimeLibs = pkgs.lib.makeLibraryPath [
+            pkgs.lttng-ust.out
             pkgs.stdenv.cc.cc.lib
           ];
 
@@ -55,6 +56,7 @@
               pkgs.gcc
               pkgs.git
               pkgs.gnumake
+              pkgs.lttng-ust.out
               pkgs.ninja
               pkgs.pkg-config
               pkgs.stdenv.cc.cc.lib
@@ -64,7 +66,7 @@
             shellHook = ''
               export ROS_DISTRO=jazzy
               export MFJA_NIX_MODE=hybrid
-              export LD_LIBRARY_PATH="${cxxRuntimeLibs}''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
+              export LD_LIBRARY_PATH="${rosRuntimeLibs}''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
 
               if [ -f /opt/ros/jazzy/setup.bash ]; then
                 source /opt/ros/jazzy/setup.bash
