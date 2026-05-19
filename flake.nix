@@ -30,6 +30,10 @@
             setuptools
           ]);
 
+          cxxRuntimeLibs = pkgs.lib.makeLibraryPath [
+            pkgs.stdenv.cc.cc.lib
+          ];
+
           colconWrapper = pkgs.writeShellScriptBin "colcon" ''
             if [ -x /usr/bin/colcon ]; then
               exec /usr/bin/colcon "$@"
@@ -53,12 +57,14 @@
               pkgs.gnumake
               pkgs.ninja
               pkgs.pkg-config
+              pkgs.stdenv.cc.cc.lib
               pythonEnv
             ];
 
             shellHook = ''
               export ROS_DISTRO=jazzy
               export MFJA_NIX_MODE=hybrid
+              export LD_LIBRARY_PATH="${cxxRuntimeLibs}''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
 
               if [ -f /opt/ros/jazzy/setup.bash ]; then
                 source /opt/ros/jazzy/setup.bash
