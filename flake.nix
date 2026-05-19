@@ -1,88 +1,79 @@
 {
-  description = "Development shell for the MFJA 3rd floor ROS 2 Jazzy / Gazebo Harmonic simulation";
+  description = "Hybrid development shell for the MFJA 3rd floor ROS 2 Jazzy / Gazebo Harmonic simulation";
 
   inputs = {
-    nix-ros-overlay.url = "github:lopsided98/nix-ros-overlay/master";
-    nixpkgs.follows = "nix-ros-overlay/nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
   };
 
-  outputs = { nix-ros-overlay, nixpkgs, ... }:
-    nix-ros-overlay.inputs.flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ nix-ros-overlay.overlays.default ];
-        };
+  outputs = { nixpkgs, ... }:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
 
-        ros = pkgs.rosPackages.jazzy;
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+    in
+    {
+      devShells = forAllSystems (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+          };
 
-        rosEnv = with ros; buildEnv {
-          paths = [
-            ros-base
-            ros2launch
+          pythonEnv = pkgs.python312.withPackages (ps: with ps; [
+            catkin-pkg
+            empy
+            lark
+            pyyaml
+            setuptools
+          ]);
 
-            ament-cmake
-            ament-index-python
-            ament-lint-auto
-            ament-lint-common
-            rosidl-default-generators
-            rosidl-default-runtime
+          colconWrapper = pkgs.writeShellScriptBin "colcon" ''
+            if [ -x /usr/bin/colcon ]; then
+              exec /usr/bin/colcon "$@"
+            fi
 
-            rcl-interfaces
-            rclpy
-            geometry-msgs
-            nav-msgs
-            rosgraph-msgs
-            sensor-msgs
-            std-msgs
-            tf2-msgs
-            tf2-ros
-            trajectory-msgs
-
-            robot-state-publisher
-            ros-gz
-            ros-gz-bridge
-            ros-gz-interfaces
-            ros-gz-sim
-
-            rmw-cyclonedds-cpp
-          ];
-        };
-
-        pythonEnv = pkgs.python3.withPackages (ps: with ps; [
-          pyyaml
-          setuptools
-        ]);
-      in
-      {
-        devShells.default = pkgs.mkShell {
-          name = "mfja-ros2-jazzy-gz-harmonic";
-
-          packages = [
-            pkgs.cmake
-            pkgs.colcon
-            pkgs.gcc
-            pkgs.git
-            pkgs.gnumake
-            pkgs.ninja
-            pkgs.pkg-config
-            pythonEnv
-            rosEnv
-          ];
-
-          shellHook = ''
-            export ROS_DISTRO=jazzy
-
-            echo "Entered MFJA ROS 2 Jazzy / Gazebo Harmonic Nix shell."
-            echo "Next steps: colcon build --symlink-install && source install/setup.bash"
+            echo "colcon is not installed on the host." >&2
+            echo "Install it with: sudo apt install python3-colcon-common-extensions" >&2
+            exit 127
           '';
-        };
-      });
+        in
+        {
+          default = pkgs.mkShell {
+            name = "mfja-hybrid-ros2-jazzy-gz-harmonic";
 
-  nixConfig = {
-    extra-substituters = [ "https://ros.cachix.org" ];
-    extra-trusted-public-keys = [
-      "ros.cachix.org-1:dSyZxI8geDCJrwgvCOHDoAfOm5sV1wCPjBkKL+38Rvo="
-    ];
-  };
+            packages = [
+              pkgs.bashInteractive
+              pkgs.cmake
+              colconWrapper
+              pkgs.gcc
+              pkgs.git
+              pkgs.gnumake
+              pkgs.ninja
+              pkgs.pkg-config
+              pythonEnv
+            ];
+
+            shellHook = ''
+              export ROS_DISTRO=jazzy
+              export MFJA_NIX_MODE=hybrid
+
+              if [ -f /opt/ros/jazzy/setup.bash ]; then
+                source /opt/ros/jazzy/setup.bash
+                echo "Entered MFJA hybrid Nix shell."
+                echo "ROS 2 Jazzy was sourced from /opt/ros/jazzy."
+              else
+                echo "Entered MFJA hybrid Nix shell."
+                echo "WARNING: /opt/ros/jazzy/setup.bash was not found."
+                echo "Install ROS 2 Jazzy and the ROS-Gazebo packages on the host before building."
+              fi
+
+              echo "Nix provides build tools only; ROS 2 and Gazebo come from the host apt installation."
+              echo "Build from the colcon workspace root, for example:"
+              echo "  cd ../.. && colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz"
+            '';
+          };
+        });
+    };
 }

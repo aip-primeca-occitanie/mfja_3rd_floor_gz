@@ -44,13 +44,42 @@ runbook.html
 
 ## Clean Workspace Install
 
-Use these commands on a fresh ROS 2 Jazzy machine. The repository is a
-meta-repository: clone it once under `src/`, then let `colcon` discover the ROS
-packages inside it.
+Use these commands on a fresh Ubuntu 24.04 machine. This repository is a
+meta-repository: clone it once under `src/`, then build from the colcon
+workspace root and point colcon at `src/mfja_3rd_floor_gz`.
+
+First configure the ROS apt repository if `/opt/ros/jazzy` does not already
+exist:
 
 ```bash
 sudo apt update
-sudo apt install -y git python3-rosdep python3-colcon-common-extensions
+sudo apt install -y curl gnupg lsb-release software-properties-common
+sudo add-apt-repository -y universe
+
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+  -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo "$UBUNTU_CODENAME") main" | \
+  sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+```
+
+Then install ROS 2 Jazzy, ROS-Gazebo for Gazebo Harmonic, and the normal
+colcon tools from apt:
+
+```bash
+sudo apt update
+sudo apt install -y \
+  build-essential \
+  cmake \
+  git \
+  ninja-build \
+  pkg-config \
+  python3-colcon-common-extensions \
+  python3-rosdep \
+  python3-yaml \
+  ros-jazzy-desktop \
+  ros-jazzy-robot-state-publisher \
+  ros-jazzy-ros-gz
 
 # Run this only if rosdep has not already been initialized on the machine.
 sudo rosdep init || true
@@ -64,8 +93,8 @@ git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 
-rosdep install --from-paths src -y --ignore-src --rosdistro jazzy
-colcon build --symlink-install
+rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
+colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 
 source install/setup.bash
 ```
@@ -103,9 +132,23 @@ config files, rebuild and source again.
 
 ## Optional Nix Development Shell
 
-This repository also includes a basic `flake.nix` for users who want Nix to
-provide the ROS 2 Jazzy / Gazebo Harmonic development tools. It is optional:
-the normal `/opt/ros/jazzy` and `rosdep` workflow above is still supported.
+The repository includes a `flake.nix`, but it intentionally uses **hybrid
+mode**:
+
+- ROS 2 Jazzy and Gazebo Harmonic come from the host apt installation in
+  `/opt/ros/jazzy`.
+- Nix provides general development tools: `bash`, `cmake`, `gcc`, `git`,
+  `make`, `ninja`, `pkg-config`, Python 3.12, and Python packages used by the
+  project such as `PyYAML`, `catkin_pkg`, `empy`, `lark`, and `setuptools`.
+- The `colcon` command in the Nix shell is a small wrapper around
+  `/usr/bin/colcon`, so install `python3-colcon-common-extensions` from apt.
+  This keeps colcon and its ROS extensions matched to the host ROS install.
+
+This flake does **not** provide a full Nix ROS/Gazebo distribution. The earlier
+full-Nix attempt used `nix-ros-overlay` and had to build or fetch Gazebo vendor
+packages such as `gz-ogre-next-vendor`; those packages are fragile when their
+fixed-output source hashes change upstream. The hybrid shell is the supported
+setup for this repository.
 
 Install Nix first if it is not already installed:
 
@@ -116,15 +159,18 @@ sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
 Then enter the development shell from this repository root:
 
 ```bash
+export MFJA_WS=~/test_mfja_ws
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
 nix develop
 ```
 
-Inside the Nix shell, build and source the repository as a colcon workspace:
+Inside the Nix shell, build from the colcon workspace root:
 
 ```bash
-colcon build --symlink-install
+cd "$MFJA_WS"
+colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 source install/setup.bash
+
 ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
@@ -132,29 +178,33 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   enable_room315_kinematic_shuttles:=true
 ```
 
-Do not also source `/opt/ros/jazzy/setup.bash` inside the Nix shell. The Nix
-shell provides its own ROS environment.
+The shell automatically sources `/opt/ros/jazzy/setup.bash` when that file
+exists. If it prints a warning that `/opt/ros/jazzy/setup.bash` is missing,
+install ROS 2 Jazzy and `ros-jazzy-ros-gz` from apt first.
 
-The Nix shell includes the build tools and ROS packages used by this repository:
-`colcon`, `cmake`, `ament_cmake`, `ament_index_python`,
-`rosidl_default_generators`, `rosidl_default_runtime`, `rclpy`,
-`rcl_interfaces`, `geometry_msgs`, `nav_msgs`, `rosgraph_msgs`, `sensor_msgs`,
-`std_msgs`, `tf2_msgs`, `tf2_ros`, `trajectory_msgs`,
-`robot_state_publisher`, `ros_gz`, `ros_gz_bridge`, `ros_gz_interfaces`,
-`ros_gz_sim`, and `python3-yaml`.
+### Full-Nix Status
 
-Known Nix limitations:
+Full ROS 2 Jazzy + Gazebo Harmonic through Nix is not supported by this
+repository right now. If that mode is attempted again later, do not point at a
+moving overlay branch without committing `flake.lock`.
 
-- Nix itself must be installed manually before `nix develop` can work.
-- The first `nix develop` can take time. It may download packages from
-  `cache.nixos.org` and the ROS Cachix cache, or build packages locally if a
-  cache entry is unavailable.
-- Gazebo GUI and RViz still depend on host graphics drivers. On non-NixOS
-  systems, OpenGL/Qt issues may require extra host graphics support such as
-  `nixGL` or `nix-system-graphics`.
-- This flake covers the packages in this repository. If you add sibling ROS
-  packages to the same colcon workspace later, update `flake.nix` with their
-  dependencies too.
+If a future full-Nix branch uses the ROS Cachix cache, configure Nix as root in
+`/etc/nix/nix.conf`; untrusted users cannot enable this cache only from a flake:
+
+```text
+trusted-users = root <your-linux-username>
+substituters = https://cache.nixos.org https://ros.cachix.org
+trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= ros.cachix.org-1:dSyZxI8geDCJrwgvCOHDoAfOm5sV1wCPjBkKL+38Rvo=
+```
+
+Restart the Nix daemon after changing this file:
+
+```bash
+sudo systemctl restart nix-daemon
+```
+
+The current hybrid flake does not use `ros.cachix.org`, so this Cachix
+configuration is not required for the supported workflow.
 
 ## Troubleshooting
 
