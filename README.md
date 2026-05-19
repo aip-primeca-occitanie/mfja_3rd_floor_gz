@@ -139,7 +139,8 @@ mode**:
   `/opt/ros/jazzy`.
 - Nix provides general development tools: `bash`, `cmake`, `gcc`, `git`,
   `make`, `ninja`, `pkg-config`, Python 3.12, and Python packages used by the
-  project such as `PyYAML`, `catkin_pkg`, `empy`, `lark`, and `setuptools`.
+  project such as `NumPy`, `PyYAML`, `catkin_pkg`, `empy`, `lark`, and
+  `setuptools`.
 - The `colcon` command in the Nix shell is a small wrapper around
   `/usr/bin/colcon`, so install `python3-colcon-common-extensions` from apt.
   This keeps colcon and its ROS extensions matched to the host ROS install.
@@ -167,6 +168,8 @@ nix develop
 Inside the Nix shell, build from the colcon workspace root:
 
 ```bash
+python3 -c "import numpy; print(numpy.get_include())"
+
 cd "$MFJA_WS"
 colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 source install/setup.bash

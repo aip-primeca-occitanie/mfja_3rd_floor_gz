@@ -25,6 +25,7 @@
             catkin-pkg
             empy
             lark
+            numpy
             pyyaml
             setuptools
           ]);
