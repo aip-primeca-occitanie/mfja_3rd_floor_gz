@@ -40,34 +40,15 @@ The focused HTML runbook is available at:
 runbook.html
 ```
 
-## Quick Start
+## Installation
 
-This repository supports two setup workflows:
+Use Ubuntu 24.04 with ROS 2 Jazzy. This repository is a meta-repository, so
+clone it inside a colcon workspace `src/` directory and build from the
+workspace root.
 
-- **Option A - Standard ROS apt workflow**: use Ubuntu apt packages for ROS 2
-  Jazzy, Gazebo Harmonic integration, colcon, and Python tooling.
-- **Option B - Hybrid Nix development shell**: use apt for ROS 2 Jazzy, Gazebo
-  Harmonic, and `ros-jazzy-ros-gz`, while Nix provides development tools,
-  Python packages, and small runtime helper libraries.
+### 1. Install ROS 2 And Build Tools
 
-Both workflows require ROS 2 Jazzy and the ROS-Gazebo packages from Ubuntu apt.
-The Nix shell is **not** a full ROS/Gazebo distribution and does not install
-ROS or Gazebo by itself.
-
-This git repository is a meta-repository, not a ROS 2 package. Always clone it
-under a colcon workspace `src/` directory, build from the workspace root, and
-use:
-
-```bash
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-```
-
-## Option A — Standard ROS apt workflow
-
-### Install Prerequisites
-
-Use these commands on a fresh Ubuntu 24.04 machine. First configure the ROS apt
-repository if `/opt/ros/jazzy` does not already exist:
+If ROS 2 Jazzy is not installed yet, configure the ROS apt repository:
 
 ```bash
 sudo apt update
@@ -81,7 +62,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
   sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 ```
 
-Install ROS 2 Jazzy, ROS-Gazebo for Gazebo Harmonic, and colcon:
+Install the required packages:
 
 ```bash
 sudo apt update
@@ -103,7 +84,7 @@ sudo rosdep init || true
 rosdep update
 ```
 
-### Clone The Repository
+### 2. Clone The Repository
 
 ```bash
 export MFJA_WS=~/test_mfja_ws
@@ -112,7 +93,22 @@ cd "$MFJA_WS/src"
 git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
 ```
 
-### Build The Workspace
+### 3. Optional: Enter The Nix Shell
+
+If you use Nix, install it once:
+
+```bash
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
+```
+
+Then enter the shell from the repository directory before building:
+
+```bash
+cd "$MFJA_WS/src/mfja_3rd_floor_gz"
+nix develop
+```
+
+### 4. Build The Workspace
 
 ```bash
 cd "$MFJA_WS"
@@ -122,128 +118,13 @@ rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro ja
 colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 ```
 
-### Source The Workspace
+### 5. Source The Workspace
 
 ```bash
 source install/setup.bash
 ```
 
-### Run Verification Checks
-
-Use the verification checklist below. For the standard apt workflow,
-`RMW_IMPLEMENTATION` may be empty unless you set it yourself.
-
-### Launch Room 315
-
-Use either tested launch command in the Tested Launch Commands section below.
-
-## Option B — Hybrid Nix development shell
-
-### Install Prerequisites
-
-Install the same host apt prerequisites from Option A first. ROS 2 Jazzy,
-Gazebo Harmonic integration, `ros-jazzy-ros-gz`, and
-`python3-colcon-common-extensions` still come from apt.
-
-Install Nix if it is not already installed:
-
-```bash
-sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
-```
-
-The repository includes a `flake.nix`, but it intentionally uses **hybrid
-mode**:
-
-- ROS 2 Jazzy and Gazebo Harmonic come from the host apt installation in
-  `/opt/ros/jazzy`.
-- Nix provides general development tools: `bash`, `cmake`, `gcc`, `git`,
-  `make`, `ninja`, `pkg-config`, Python 3.12, and Python packages used by the
-  project such as `NumPy`, `PyYAML`, `catkin_pkg`, `empy`, `lark`, and
-  `setuptools`.
-- Nix also adds small runtime library paths so apt-installed ROS Python
-  extensions such as `rclpy` can find `libstdc++.so.6`,
-  `liblttng-ust.so.1`, `libspdlog.so.1.12`, `libfmt.so.9`,
-  `libtinyxml2.so.10`, and OpenSSL 3 runtime libraries when imported by the
-  Nix Python interpreter.
-- The shell defaults `RMW_IMPLEMENTATION` to `rmw_fastrtps_cpp`, which matches
-  the Fast DDS RMW installed by the recommended host apt setup.
-- The `colcon` command in the Nix shell is a small wrapper around
-  `/usr/bin/colcon`, so apt-installed colcon and ROS extensions stay matched to
-  the host ROS install.
-
-This flake does **not** provide a full Nix ROS/Gazebo distribution. The earlier
-full-Nix attempt used `nix-ros-overlay` and had to build or fetch Gazebo vendor
-packages such as `gz-ogre-next-vendor`; those packages are fragile when their
-fixed-output source hashes change upstream. The hybrid shell is the supported
-Nix setup for this repository.
-
-### Clone The Repository
-
-```bash
-export MFJA_WS=~/test_mfja_ws
-mkdir -p "$MFJA_WS/src"
-cd "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
-```
-
-### Enter The Nix Shell
-
-```bash
-cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-nix develop
-```
-
-The shell automatically sources `/opt/ros/jazzy/setup.bash` when that file
-exists. If it prints a warning that `/opt/ros/jazzy/setup.bash` is missing,
-install ROS 2 Jazzy and `ros-jazzy-ros-gz` from apt first.
-
-### Build The Workspace
-
-```bash
-cd "$MFJA_WS"
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-```
-
-### Source The Workspace
-
-```bash
-source install/setup.bash
-```
-
-### Run Verification Checks
-
-Use the verification checklist below. In the hybrid Nix shell,
-`RMW_IMPLEMENTATION` should be `rmw_fastrtps_cpp`.
-
-### Launch Room 315
-
-Use either tested launch command in the Tested Launch Commands section below.
-
-### Full-Nix Status
-
-Full ROS 2 Jazzy + Gazebo Harmonic through Nix is not supported by this
-repository right now. If that mode is attempted again later, do not point at a
-moving overlay branch without committing `flake.lock`.
-
-If a future full-Nix branch uses the ROS Cachix cache, configure Nix as root in
-`/etc/nix/nix.conf`; untrusted users cannot enable this cache only from a flake:
-
-```text
-trusted-users = root <your-linux-username>
-substituters = https://cache.nixos.org https://ros.cachix.org
-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= ros.cachix.org-1:dSyZxI8geDCJrwgvCOHDoAfOm5sV1wCPjBkKL+38Rvo=
-```
-
-Restart the Nix daemon after changing this file:
-
-```bash
-sudo systemctl restart nix-daemon
-```
-
-The current hybrid flake does not use `ros.cachix.org`, so this Cachix
-configuration is not required for the supported workflow.
-
-## Every New Terminal
+### 6. Every New Terminal
 
 Without Nix:
 
@@ -263,31 +144,6 @@ nix develop
 
 cd "$MFJA_WS"
 source install/setup.bash
-```
-
-## Verification checklist
-
-Run these after sourcing the workspace:
-
-```bash
-ros2 pkg prefix ros_gz_sim
-python3 -c "import numpy; print(numpy.get_include())"
-python3 -c "import rclpy; print('rclpy ok')"
-python3 -c "import rclpy; rclpy.init(); print('rclpy init ok'); rclpy.shutdown()"
-echo "$RMW_IMPLEMENTATION"
-```
-
-Expected results:
-
-- `ros_gz_sim` should resolve under `/opt/ros/jazzy`.
-- `rclpy ok`
-- `rclpy init ok`
-- In hybrid Nix, `RMW_IMPLEMENTATION` should be `rmw_fastrtps_cpp`.
-
-For RMW dependency debugging:
-
-```bash
-ldd /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so | grep "not found" || true
 ```
 
 ## Tested Launch Commands
@@ -315,42 +171,6 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 If you only edit README files, no rebuild is required. If you edit launch files,
 Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
 config files, rebuild and source again.
-
-## Installation Troubleshooting
-
-- `PackageNotFoundError`: source `/opt/ros/jazzy/setup.bash`, build the
-  workspace, then source `$MFJA_WS/install/setup.bash` in the same terminal.
-- `ImportError: libstdc++.so.6`, `ImportError: liblttng-ust.so.1`, or
-  `ImportError: libspdlog.so.1.12` while importing `rclpy`, or an
-  `rclpy.init()` failure mentioning `libtinyxml2.so.10`: stay in the Nix shell
-  and make sure you are using the current `flake.nix`. Hybrid mode uses Nix
-  Python with apt ROS Python extensions, so the shell adds Nix's C++ runtime,
-  LTTng UST runtime, ROS Jazzy-compatible spdlog/fmt, tinyxml2, and OpenSSL
-  runtime libraries to `LD_LIBRARY_PATH` for those binary extensions.
-- To check the selected RMW in hybrid mode, run
-  `echo "$RMW_IMPLEMENTATION"`. The shell defaults it to `rmw_fastrtps_cpp`.
-- Gazebo opens but the viewport is black: this is usually an OpenGL or
-  VirtualBox rendering issue, not a ROS, Nix, or build issue. Test headless
-  first with `gui:=false`. For software rendering, try:
-
-```bash
-export LIBGL_ALWAYS_SOFTWARE=1
-export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
-```
-
-  In VirtualBox, use Graphics Controller `VMSVGA`, Video Memory `128 MB`, and
-  Enable 3D Acceleration `ON`.
-- Gazebo opens but models are missing: launch through the provided ROS launch
-  files. They set `GZ_SIM_MODEL_PATH` and `GZ_SIM_RESOURCE_PATH` from the
-  installed `mfja_3rd_floor_description` package.
-- `rosdep` cannot resolve a package: confirm that ROS 2 Jazzy and the
-  ROS-Gazebo packages for Gazebo Harmonic are installed from the official ROS
-  repositories, then run `rosdep update`.
-- Custom messages or services are missing after editing `mfja_rail_interfaces`:
-  rebuild the workspace and open a fresh sourced terminal.
-- CMake reports that `CMakeCache.txt` was created in another directory: remove
-  the local generated `build/`, `install/`, and `log/` directories, then run
-  `colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz` again.
 
 ## Step-by-Step Feature Guide
 
