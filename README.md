@@ -144,7 +144,10 @@ mode**:
 - Nix also adds small runtime library paths so apt-installed ROS Python
   extensions such as `rclpy` can find `libstdc++.so.6` and
   `liblttng-ust.so.1`, plus the ROS Jazzy-compatible `libspdlog.so.1.12` and
-  `libfmt.so.9`, when imported by the Nix Python interpreter.
+  `libfmt.so.9`, `libtinyxml2.so.10`, and OpenSSL 3 runtime libraries when
+  imported by the Nix Python interpreter.
+- The shell defaults `RMW_IMPLEMENTATION` to `rmw_fastrtps_cpp`, which matches
+  the Fast DDS RMW installed by the recommended host apt setup.
 - The `colcon` command in the Nix shell is a small wrapper around
   `/usr/bin/colcon`, so install `python3-colcon-common-extensions` from apt.
   This keeps colcon and its ROS extensions matched to the host ROS install.
@@ -178,6 +181,8 @@ cd "$MFJA_WS"
 colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 source install/setup.bash
 python3 -c "import rclpy; print('rclpy ok')"
+python3 -c "import rclpy; rclpy.init(); print('rclpy init ok'); rclpy.shutdown()"
+ldd /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so | grep "not found" || true
 
 ros2 launch mfja_room_315_bringup room_315_only.launch.py \
   robots:=none \
@@ -219,12 +224,14 @@ configuration is not required for the supported workflow.
 - `PackageNotFoundError`: source `/opt/ros/jazzy/setup.bash`, build the
   workspace, then source `$MFJA_WS/install/setup.bash` in the same terminal.
 - `ImportError: libstdc++.so.6`, `ImportError: liblttng-ust.so.1`, or
-  `ImportError: libspdlog.so.1.12` while importing `rclpy` inside
-  `nix develop`: stay in the Nix shell and make sure you are using the current
-  `flake.nix`. Hybrid mode uses Nix Python with apt ROS Python extensions, so
-  the shell adds Nix's C++ runtime, LTTng UST runtime, and ROS Jazzy-compatible
-  spdlog/fmt runtime libraries to `LD_LIBRARY_PATH` for those binary
-  extensions.
+  `ImportError: libspdlog.so.1.12` while importing `rclpy`, or an
+  `rclpy.init()` failure mentioning `libtinyxml2.so.10`: stay in the Nix shell
+  and make sure you are using the current `flake.nix`. Hybrid mode uses Nix
+  Python with apt ROS Python extensions, so the shell adds Nix's C++ runtime,
+  LTTng UST runtime, ROS Jazzy-compatible spdlog/fmt, tinyxml2, and OpenSSL
+  runtime libraries to `LD_LIBRARY_PATH` for those binary extensions.
+- To check the selected RMW in hybrid mode, run
+  `echo "$RMW_IMPLEMENTATION"`. The shell defaults it to `rmw_fastrtps_cpp`.
 - Gazebo opens but models are missing: launch through the provided ROS launch
   files. They set `GZ_SIM_MODEL_PATH` and `GZ_SIM_RESOURCE_PATH` from the
   installed `mfja_3rd_floor_description` package.

@@ -46,11 +46,24 @@
             doCheck = false;
           });
 
+          tinyxml2Ros = pkgs.tinyxml-2.overrideAttrs (finalAttrs: _oldAttrs: {
+            version = "10.0.0";
+
+            src = pkgs.fetchFromGitHub {
+              owner = "leethomason";
+              repo = "tinyxml2";
+              rev = finalAttrs.version;
+              hash = "sha256-9xrpPFMxkAecg3hMHzzThuy0iDt970Iqhxs57Od+g2g=";
+            };
+          });
+
           rosRuntimeLibs = pkgs.lib.makeLibraryPath [
             pkgs.fmt_9
             pkgs.lttng-ust.out
+            pkgs.openssl
             spdlogRos
             pkgs.stdenv.cc.cc.lib
+            tinyxml2Ros
           ];
 
           colconWrapper = pkgs.writeShellScriptBin "colcon" ''
@@ -77,15 +90,18 @@
               pkgs.gnumake
               pkgs.lttng-ust.out
               pkgs.ninja
+              pkgs.openssl
               pkgs.pkg-config
               spdlogRos
               pkgs.stdenv.cc.cc.lib
+              tinyxml2Ros
               pythonEnv
             ];
 
             shellHook = ''
               export ROS_DISTRO=jazzy
               export MFJA_NIX_MODE=hybrid
+              export RMW_IMPLEMENTATION="''${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}"
               export LD_LIBRARY_PATH="${rosRuntimeLibs}''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
 
               if [ -f /opt/ros/jazzy/setup.bash ]; then
