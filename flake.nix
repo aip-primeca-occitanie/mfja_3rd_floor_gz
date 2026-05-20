@@ -30,8 +30,26 @@
             setuptools
           ]);
 
+          spdlogRos = (pkgs.spdlog.override {
+            fmt = pkgs.fmt_9;
+          }).overrideAttrs (finalAttrs: _oldAttrs: {
+            version = "1.12.0";
+
+            src = pkgs.fetchFromGitHub {
+              owner = "gabime";
+              repo = "spdlog";
+              rev = "v${finalAttrs.version}";
+              hash = "sha256-cxTaOuLXHRU8xMz9gluYz0a93O0ez2xOxbloyc1m1ns=";
+            };
+
+            patches = [ ];
+            doCheck = false;
+          });
+
           rosRuntimeLibs = pkgs.lib.makeLibraryPath [
+            pkgs.fmt_9
             pkgs.lttng-ust.out
+            spdlogRos
             pkgs.stdenv.cc.cc.lib
           ];
 
@@ -54,11 +72,13 @@
               pkgs.cmake
               colconWrapper
               pkgs.gcc
+              pkgs.fmt_9
               pkgs.git
               pkgs.gnumake
               pkgs.lttng-ust.out
               pkgs.ninja
               pkgs.pkg-config
+              spdlogRos
               pkgs.stdenv.cc.cc.lib
               pythonEnv
             ];
