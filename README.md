@@ -25,9 +25,7 @@ directories. Package-specific files must live inside the package that owns them.
 - `mfja_3rd_floor_description/`: models, meshes, worlds, and URDF/SDF assets.
 - `mfja_rail_interfaces/`: typed ROS 2 message interfaces for Room 315 rail commands, states, and sensors.
 - `mfja_robot_control_config/`: launch base, bridge config, shuttle/switch scripts, and Room 315 kinematic config.
-- `mfja_room_315_bringup/`: launch entry point for Room 315 only.
-- `mfja_3rd_floor_bringup/`: launch entry point for the full floor.
-- `mfja_3rd_floor_gz/`: top-level launch wrappers that forward to the bringup packages.
+- `mfja_3rd_floor_bringup/`: launch entry points for Room 315, the full floor, and isolated industrial robot runs.
 - `mfja_robot_control_config/config/room_315_kinematics/raw_segments/`: source rail segment CSV files for the Room 315 kinematic rail network.
 
 The detailed Room 315 kinematic artifacts are also documented here:
@@ -42,14 +40,34 @@ The focused HTML runbook is available at:
 runbook.html
 ```
 
-## Clean Workspace Install
+## Quick Start
 
-Use these commands on a fresh Ubuntu 24.04 machine. This repository is a
-meta-repository: clone it once under `src/`, then build from the colcon
-workspace root and point colcon at `src/mfja_3rd_floor_gz`.
+This repository supports two setup workflows:
 
-First configure the ROS apt repository if `/opt/ros/jazzy` does not already
-exist:
+- **Option A - Standard ROS apt workflow**: use Ubuntu apt packages for ROS 2
+  Jazzy, Gazebo Harmonic integration, colcon, and Python tooling.
+- **Option B - Hybrid Nix development shell**: use apt for ROS 2 Jazzy, Gazebo
+  Harmonic, and `ros-jazzy-ros-gz`, while Nix provides development tools,
+  Python packages, and small runtime helper libraries.
+
+Both workflows require ROS 2 Jazzy and the ROS-Gazebo packages from Ubuntu apt.
+The Nix shell is **not** a full ROS/Gazebo distribution and does not install
+ROS or Gazebo by itself.
+
+This git repository is a meta-repository, not a ROS 2 package. Always clone it
+under a colcon workspace `src/` directory, build from the workspace root, and
+use:
+
+```bash
+colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
+```
+
+## Option A — Standard ROS apt workflow
+
+### Install Prerequisites
+
+Use these commands on a fresh Ubuntu 24.04 machine. First configure the ROS apt
+repository if `/opt/ros/jazzy` does not already exist:
 
 ```bash
 sudo apt update
@@ -63,8 +81,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
   sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 ```
 
-Then install ROS 2 Jazzy, ROS-Gazebo for Gazebo Harmonic, and the normal
-colcon tools from apt:
+Install ROS 2 Jazzy, ROS-Gazebo for Gazebo Harmonic, and colcon:
 
 ```bash
 sudo apt update
@@ -84,53 +101,55 @@ sudo apt install -y \
 # Run this only if rosdep has not already been initialized on the machine.
 sudo rosdep init || true
 rosdep update
+```
 
+### Clone The Repository
+
+```bash
 export MFJA_WS=~/test_mfja_ws
 mkdir -p "$MFJA_WS/src"
 cd "$MFJA_WS/src"
 git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+```
 
+### Build The Workspace
+
+```bash
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 
 rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
 colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
+```
 
+### Source The Workspace
+
+```bash
 source install/setup.bash
 ```
 
-After opening a new terminal, restore the workspace with:
+### Run Verification Checks
+
+Use the verification checklist below. For the standard apt workflow,
+`RMW_IMPLEMENTATION` may be empty unless you set it yourself.
+
+### Launch Room 315
+
+Use either tested launch command in the Tested Launch Commands section below.
+
+## Option B — Hybrid Nix development shell
+
+### Install Prerequisites
+
+Install the same host apt prerequisites from Option A first. ROS 2 Jazzy,
+Gazebo Harmonic integration, `ros-jazzy-ros-gz`, and
+`python3-colcon-common-extensions` still come from apt.
+
+Install Nix if it is not already installed:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
 ```
-
-Quick launch checks:
-
-```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
-  robots:=none \
-  start_paused:=false \
-  gui:=true \
-  enable_room315_kinematic_shuttles:=true
-```
-
-```bash
-ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
-  robots:=none \
-  start_paused:=false \
-  gui:=true \
-  enable_room315_kinematic_shuttles:=true
-```
-
-If you only edit README files, no rebuild is required. If you edit launch files,
-Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
-config files, rebuild and source again.
-
-## Optional Nix Development Shell
 
 The repository includes a `flake.nix`, but it intentionally uses **hybrid
 mode**:
@@ -142,58 +161,63 @@ mode**:
   project such as `NumPy`, `PyYAML`, `catkin_pkg`, `empy`, `lark`, and
   `setuptools`.
 - Nix also adds small runtime library paths so apt-installed ROS Python
-  extensions such as `rclpy` can find `libstdc++.so.6` and
-  `liblttng-ust.so.1`, plus the ROS Jazzy-compatible `libspdlog.so.1.12` and
-  `libfmt.so.9`, `libtinyxml2.so.10`, and OpenSSL 3 runtime libraries when
-  imported by the Nix Python interpreter.
+  extensions such as `rclpy` can find `libstdc++.so.6`,
+  `liblttng-ust.so.1`, `libspdlog.so.1.12`, `libfmt.so.9`,
+  `libtinyxml2.so.10`, and OpenSSL 3 runtime libraries when imported by the
+  Nix Python interpreter.
 - The shell defaults `RMW_IMPLEMENTATION` to `rmw_fastrtps_cpp`, which matches
   the Fast DDS RMW installed by the recommended host apt setup.
 - The `colcon` command in the Nix shell is a small wrapper around
-  `/usr/bin/colcon`, so install `python3-colcon-common-extensions` from apt.
-  This keeps colcon and its ROS extensions matched to the host ROS install.
+  `/usr/bin/colcon`, so apt-installed colcon and ROS extensions stay matched to
+  the host ROS install.
 
 This flake does **not** provide a full Nix ROS/Gazebo distribution. The earlier
 full-Nix attempt used `nix-ros-overlay` and had to build or fetch Gazebo vendor
 packages such as `gz-ogre-next-vendor`; those packages are fragile when their
 fixed-output source hashes change upstream. The hybrid shell is the supported
-setup for this repository.
+Nix setup for this repository.
 
-Install Nix first if it is not already installed:
-
-```bash
-sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
-```
-
-Then enter the development shell from this repository root:
+### Clone The Repository
 
 ```bash
 export MFJA_WS=~/test_mfja_ws
-cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-nix develop
+mkdir -p "$MFJA_WS/src"
+cd "$MFJA_WS/src"
+git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
 ```
 
-Inside the Nix shell, build from the colcon workspace root:
+### Enter The Nix Shell
 
 ```bash
-python3 -c "import numpy; print(numpy.get_include())"
-
-cd "$MFJA_WS"
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-source install/setup.bash
-python3 -c "import rclpy; print('rclpy ok')"
-python3 -c "import rclpy; rclpy.init(); print('rclpy init ok'); rclpy.shutdown()"
-ldd /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so | grep "not found" || true
-
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
-  robots:=none \
-  start_paused:=false \
-  gui:=true \
-  enable_room315_kinematic_shuttles:=true
+cd "$MFJA_WS/src/mfja_3rd_floor_gz"
+nix develop
 ```
 
 The shell automatically sources `/opt/ros/jazzy/setup.bash` when that file
 exists. If it prints a warning that `/opt/ros/jazzy/setup.bash` is missing,
 install ROS 2 Jazzy and `ros-jazzy-ros-gz` from apt first.
+
+### Build The Workspace
+
+```bash
+cd "$MFJA_WS"
+colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
+```
+
+### Source The Workspace
+
+```bash
+source install/setup.bash
+```
+
+### Run Verification Checks
+
+Use the verification checklist below. In the hybrid Nix shell,
+`RMW_IMPLEMENTATION` should be `rmw_fastrtps_cpp`.
+
+### Launch Room 315
+
+Use either tested launch command in the Tested Launch Commands section below.
 
 ### Full-Nix Status
 
@@ -219,7 +243,80 @@ sudo systemctl restart nix-daemon
 The current hybrid flake does not use `ros.cachix.org`, so this Cachix
 configuration is not required for the supported workflow.
 
-## Troubleshooting
+## Every New Terminal
+
+Without Nix:
+
+```bash
+export MFJA_WS=~/test_mfja_ws
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+```
+
+With hybrid Nix:
+
+```bash
+export MFJA_WS=~/test_mfja_ws
+cd "$MFJA_WS/src/mfja_3rd_floor_gz"
+nix develop
+
+cd "$MFJA_WS"
+source install/setup.bash
+```
+
+## Verification checklist
+
+Run these after sourcing the workspace:
+
+```bash
+ros2 pkg prefix ros_gz_sim
+python3 -c "import numpy; print(numpy.get_include())"
+python3 -c "import rclpy; print('rclpy ok')"
+python3 -c "import rclpy; rclpy.init(); print('rclpy init ok'); rclpy.shutdown()"
+echo "$RMW_IMPLEMENTATION"
+```
+
+Expected results:
+
+- `ros_gz_sim` should resolve under `/opt/ros/jazzy`.
+- `rclpy ok`
+- `rclpy init ok`
+- In hybrid Nix, `RMW_IMPLEMENTATION` should be `rmw_fastrtps_cpp`.
+
+For RMW dependency debugging:
+
+```bash
+ldd /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so | grep "not found" || true
+```
+
+## Tested Launch Commands
+
+GUI:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true
+```
+
+Headless:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=false \
+  enable_room315_kinematic_shuttles:=true
+```
+
+If you only edit README files, no rebuild is required. If you edit launch files,
+Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
+config files, rebuild and source again.
+
+## Installation Troubleshooting
 
 - `PackageNotFoundError`: source `/opt/ros/jazzy/setup.bash`, build the
   workspace, then source `$MFJA_WS/install/setup.bash` in the same terminal.
@@ -232,6 +329,17 @@ configuration is not required for the supported workflow.
   runtime libraries to `LD_LIBRARY_PATH` for those binary extensions.
 - To check the selected RMW in hybrid mode, run
   `echo "$RMW_IMPLEMENTATION"`. The shell defaults it to `rmw_fastrtps_cpp`.
+- Gazebo opens but the viewport is black: this is usually an OpenGL or
+  VirtualBox rendering issue, not a ROS, Nix, or build issue. Test headless
+  first with `gui:=false`. For software rendering, try:
+
+```bash
+export LIBGL_ALWAYS_SOFTWARE=1
+export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
+```
+
+  In VirtualBox, use Graphics Controller `VMSVGA`, Video Memory `128 MB`, and
+  Enable 3D Acceleration `ON`.
 - Gazebo opens but models are missing: launch through the provided ROS launch
   files. They set `GZ_SIM_MODEL_PATH` and `GZ_SIM_RESOURCE_PATH` from the
   installed `mfja_3rd_floor_description` package.
@@ -242,7 +350,7 @@ configuration is not required for the supported workflow.
   rebuild the workspace and open a fresh sourced terminal.
 - CMake reports that `CMakeCache.txt` was created in another directory: remove
   the local generated `build/`, `install/`, and `log/` directories, then run
-  `colcon build --symlink-install` again.
+  `colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz` again.
 
 ## Step-by-Step Feature Guide
 
@@ -257,7 +365,7 @@ Use this terminal before any launch or topic command:
 export MFJA_WS=~/test_mfja_ws
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-colcon build --symlink-install
+colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 source install/setup.bash
 ```
 
@@ -280,7 +388,7 @@ cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -383,7 +491,7 @@ ros2 topic list | grep kuka1
 No initial shuttles, but rail nodes are running:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -395,7 +503,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
 One right shuttle and one left shuttle visible, waiting for your `ON` command:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -408,7 +516,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
 One right shuttle and one left shuttle moving immediately:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -544,7 +652,7 @@ ros2 topic pub --once /room_315/rails/right/switches/command \
 Run with a longer switch delay so the visual delay is easy to see:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -582,7 +690,7 @@ ros2 topic pub --once /room_315/rails/right/stoppers/command \
 Run with a longer stopper delay:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -613,7 +721,7 @@ Quick empty-rail check:
 Terminal 1:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -660,7 +768,7 @@ To test all right-rail position sensors, run a slow sweep and watch
 `/room_315/rails/right/sensors/feedback`:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -753,7 +861,7 @@ removed from the sensor interface.
 Hide device markers when you want a cleaner Gazebo scene:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -765,12 +873,12 @@ If a marker does not appear immediately, wait a few seconds. The node retries
 Gazebo create requests while the `/world/<world_name>/create` bridge becomes
 ready.
 
-### 14. Test Shuttle-Shuttle Collision Avoidance
+### 13. Test Shuttle-Shuttle Collision Avoidance
 
 Launch two shuttles on one rail:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -790,12 +898,12 @@ ros2 topic echo /room_315/rails/right/shuttles/state \
 When one shuttle gets too close to another, it should stop at a safe pose
 instead of passing through it.
 
-### 15. Test Robot-Shuttle Gazebo Collision
+### 14. Test Robot-Shuttle Gazebo Collision
 
 Launch Room 315 with one industrial robot and one visible shuttle:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=kuka \
   start_paused:=false \
   gui:=true \
@@ -810,7 +918,7 @@ shuttle body. The shuttle has a conservative robot-contact collision volume.
 Rail path geometry and rail switch geometry use a separate collision bitmask, so
 the shuttle should not collide with the rail it follows.
 
-### 16. Show Message Types and Topic Types
+### 15. Show Message Types and Topic Types
 
 Inspect custom interfaces:
 
@@ -831,22 +939,14 @@ ros2 topic info /room_315/rails/right/sensors/feedback
 Canonical topics use `mfja_rail_interfaces` messages under
 `/room_315/rails/{right,left}/...`.
 
-### 17. Compatibility Launch Names
+### 16. Launch Names
 
-Preferred launches:
+All high-level launch entry points live in `mfja_3rd_floor_bringup/launch`:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py
 ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py robot:=kuka
-```
-
-Compatibility wrappers also work:
-
-```bash
-ros2 launch mfja_3rd_floor_gz room_315_only.launch.py
-ros2 launch mfja_3rd_floor_gz full_floor.launch.py
-ros2 launch mfja_3rd_floor_gz single_industrial_robot.launch.py robot:=kuka
 ```
 
 ## Room 315 Continuous Path Backend
@@ -888,7 +988,7 @@ cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -899,7 +999,7 @@ Start Room 315 with one right shuttle and one left shuttle visible but waiting
 for your `ON` command:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -912,7 +1012,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
 Start Room 315 with one right shuttle and one left shuttle moving immediately:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -925,7 +1025,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
 To start Gazebo without the rail shuttle nodes:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -1072,7 +1172,6 @@ ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interface
 ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
 ros2 topic echo /room_315/rails/right/shuttles/state mfja_rail_interfaces/msg/ShuttleState
 ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
-ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
 Left rail basic commands:
@@ -1083,7 +1182,6 @@ ros2 service call /room_315/rails/left/shuttles/add mfja_rail_interfaces/srv/Add
 ros2 service call /room_315/rails/left/shuttles/add mfja_rail_interfaces/srv/AddShuttle "{name: 'room315_left_shuttle_3', start_slot: '2', speed: 0.2, start_enabled: true}"
 ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
 ros2 topic echo /room_315/rails/left/shuttles/state mfja_rail_interfaces/msg/ShuttleState
-ros2 topic echo /room_315/rails/left/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ros2 topic echo /room_315/rails/left/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
@@ -1131,7 +1229,6 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interface
 ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'REMOVE'}"
 ros2 topic echo /room_315/rails/right/shuttles/state mfja_rail_interfaces/msg/ShuttleState
 
-ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
@@ -1261,7 +1358,7 @@ cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=all \
   start_paused:=false \
   gui:=true
@@ -1327,12 +1424,6 @@ robot:=kuka
 robot:=staubli
 robot:=hc10
 robot:=hc10dt
-```
-
-The top-level wrapper also works:
-
-```bash
-ros2 launch mfja_3rd_floor_gz single_industrial_robot.launch.py robot:=hc10
 ```
 
 ### Robot Topic Checks
@@ -1896,7 +1987,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 | `publish_visual_switch_commands` | `true` | Move the visible Gazebo switch models when delayed actual switch states are applied. |
 | `sync_from_visual_switch_states` | `true` | Sync route logic from the latest visual switch state. |
 
-## Troubleshooting
+## Runtime Troubleshooting
 
 - If Gazebo does not open, start the room-only or full-floor launch before the shuttle node.
 - If `Gazebo set_pose service is not ready yet`, check `gazebo_world_name` and `ros2 service list`.

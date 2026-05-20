@@ -170,16 +170,12 @@ colcon build --base-paths \
   src/mfja_3rd_floor_gz/mfja_rail_interfaces \
   src/mfja_3rd_floor_gz/mfja_robot_control_config \
   src/mfja_3rd_floor_gz/mfja_3rd_floor_description \
-  src/mfja_3rd_floor_gz/mfja_room_315_bringup \
   src/mfja_3rd_floor_gz/mfja_3rd_floor_bringup \
-  src/mfja_3rd_floor_gz/mfja_3rd_floor_gz \
   --packages-select \
   mfja_rail_interfaces \
   mfja_robot_control_config \
   mfja_3rd_floor_description \
-  mfja_room_315_bringup \
   mfja_3rd_floor_bringup \
-  mfja_3rd_floor_gz \
   --symlink-install
 
 source install/setup.bash
@@ -198,7 +194,7 @@ cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -210,7 +206,7 @@ Initial shuttles are always deployed visibly; `room315_shuttles_start_enabled`
 only chooses whether they wait or move immediately:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -223,7 +219,7 @@ ros2 launch mfja_room_315_bringup room_315_only.launch.py \
 Start with one right shuttle and one left shuttle moving immediately:
 
 ```bash
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -321,7 +317,7 @@ cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
@@ -391,7 +387,7 @@ cd "${MFJA_WS:-$HOME/test_mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch mfja_room_315_bringup room_315_only.launch.py \
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
