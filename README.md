@@ -675,7 +675,195 @@ For the left rail, use the same commands with `/room_315/rails/left/...`,
 `enable_room315_right_rail:=false`, `enable_room315_left_rail:=true`, and
 `room315_left_shuttle_count:=4`.
 
-### 11. Edit Rail Device YAML and Move Markers
+### 11. Run the Room 315 VLA Supervisor
+
+The VLA experiment layer adds independent right-rail and left-rail RGB-D
+cameras, visible slot fiducial placeholders, a status panel, a virtual
+emergency-stop pedestal, and a ROS action supervisor. The supervisor accepts
+either natural-language text or JSON from a VLA model and expands it into the
+existing Room 315 rail commands.
+An optional VLA agent can now sit in front of the supervisor: it reads the
+camera image plus `/room_315/vla/status`, accepts a human goal on
+`/room_315/vla/user_goal`, and publishes the selected JSON action to
+`/room_315/vla/command`.
+
+Terminal 1 - launch Room 315 with the VLA bridge and supervisor:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true
+```
+
+Terminal 2 - watch the VLA status:
+
+```bash
+ros2 topic echo /room_315/vla/status std_msgs/msg/String
+```
+
+To run the model-facing agent in deterministic local mode, add
+`enable_room315_real_vla_agent:=true`. This mode does not call an external
+model; it is useful to test the full topic chain:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_real_vla_agent:=true \
+  room315_vla_agent_provider:=mock
+```
+
+Then publish high-level user goals to the agent:
+
+```bash
+ros2 topic pub --once /room_315/vla/user_goal std_msgs/msg/String \
+  "{data: 'move the right shuttle from Yaskawa to Staubli'}"
+```
+
+The VLA layer uses task-level templates instead of robot-specific shortcut names.
+For transport tasks, the supervisor rejects the command unless it currently
+detects an available shuttle on one of the source slot sensors. When the selected
+shuttle reaches one of the target slot sensors, the supervisor stops it and marks
+the task complete.
+
+The Room 315 VLA station mapping is:
+
+```text
+Right rail slots 1-2: Yaskawa HC10DT
+Right rail slots 3-4: Staubli TX2
+Left rail slots 1-2: Yaskawa HC10
+Left rail slots 3-4: KUKA KR6
+```
+
+Task templates:
+
+```text
+right_yaskawa_to_staubli: right slots 1-2 -> right slots 3-4
+right_staubli_to_yaskawa: right slots 3-4 -> right slots 1-2
+left_yaskawa_to_kuka: left slots 1-2 -> left slots 3-4
+left_kuka_to_yaskawa: left slots 3-4 -> left slots 1-2
+right_enter_interior_loop: right slots 1-2, set A3/A4 interior, wait for DA3IR, set A1/A2 interior, keep circulating
+left_enter_interior_loop: left slots 1-2, set A3/A4 interior, wait for DA3IL, set A1/A2 interior, keep circulating
+```
+
+Watch the agent decision stream:
+
+```bash
+ros2 topic echo /room_315/vla/agent_status std_msgs/msg/String
+```
+
+To collect demonstrations for an open-source SmolVLA/LeRobot pipeline, enable
+the dataset recorder. It stores each episode as JSONL rows plus JPEG camera
+frames under the selected dataset directory. Each row can include
+`observation.images.right_rail_rgb` and `observation.images.left_rail_rgb`:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_real_vla_agent:=true \
+  room315_vla_agent_provider:=mock \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo
+```
+
+With `dataset_auto_start_on_goal` enabled by default, a new episode starts when
+a goal arrives on `/room_315/vla/user_goal`. Stop or mark the episode from
+another terminal:
+
+```bash
+ros2 topic pub --once /room_315/vla/episode_control std_msgs/msg/String \
+  "{data: 'stop success'}"
+```
+
+Recorder status is published on:
+
+```bash
+ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String
+```
+
+The recorded action vector follows
+`mfja_robot_control_config/config/room_315_vla/action_space.yaml`. This keeps
+the learning target compact and reproducible: a policy predicts a discrete
+Room 315 rail-cell action vector, then a post-processor converts it to the JSON
+command accepted by the supervisor. Dataset actions are labeled with task-level
+template ids such as `right_yaskawa_to_staubli`, `left_kuka_to_yaskawa`, and
+`right_enter_interior_loop`.
+
+For an OpenAI-backed vision model, set `OPENAI_API_KEY` and use provider
+`openai`. You can optionally set `OPENAI_MODEL` or pass
+`room315_vla_agent_model:=...`:
+
+```bash
+export OPENAI_API_KEY=...
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_real_vla_agent:=true \
+  room315_vla_agent_provider:=openai
+```
+
+For another VLA server, use `room315_vla_agent_provider:=http` and provide
+`room315_vla_agent_http_endpoint:=http://host:port/path`. The endpoint receives
+the goal, supervisor status, latest JPEG image as base64, allowed actions, and
+task templates, then returns the same JSON action format accepted by the
+supervisor.
+
+Send a task-level text command:
+
+```bash
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: 'move the left shuttle from KUKA to Yaskawa'}"
+```
+
+Or send a structured VLA action:
+
+```bash
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"route_template\",\"template\":\"left_yaskawa_to_kuka\"}'}"
+```
+
+Send an interior-loop entry task:
+
+```bash
+ros2 topic pub --once /room_315/vla/user_goal std_msgs/msg/String \
+  "{data: 'make the right shuttle circulate on the interior loop'}"
+```
+
+Trigger and clear the virtual emergency stop:
+
+```bash
+ros2 topic pub --once /room_315/vla/emergency_stop std_msgs/msg/Bool "{data: true}"
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"clear_emergency_stop\"}'}"
+```
+
+The independent rail-focused RGB-D cameras are bridged under:
+
+```text
+/room_315/vla/right_rail_rgbd/image
+/room_315/vla/right_rail_rgbd/camera_info
+/room_315/vla/right_rail_rgbd/depth_image
+/room_315/vla/right_rail_rgbd/points
+/room_315/vla/left_rail_rgbd/image
+/room_315/vla/left_rail_rgbd/camera_info
+/room_315/vla/left_rail_rgbd/depth_image
+/room_315/vla/left_rail_rgbd/points
+```
+
+### 12. Edit Rail Device YAML and Move Markers
 
 Device YAML files:
 
@@ -725,7 +913,7 @@ Stopper-linked position sensors do not have their own `segment`, `s_ratio`, or
 sensor moves with it. If a stopper has multiple physical points, edit only
 `stoppers[].points`.
 
-### 12. Check Visual Device Markers in Gazebo
+### 13. Check Visual Device Markers in Gazebo
 
 Launch Room 315 or the full floor with the rail stack enabled. Markers are
 spawned from the YAML-resolved positions:
@@ -757,7 +945,7 @@ If a marker does not appear immediately, wait a few seconds. The node retries
 Gazebo create requests while the `/world/<world_name>/create` bridge becomes
 ready.
 
-### 13. Test Shuttle-Shuttle Collision Avoidance
+### 14. Test Shuttle-Shuttle Collision Avoidance
 
 Launch two shuttles on one rail:
 
@@ -782,7 +970,7 @@ ros2 topic echo /room_315/rails/right/shuttles/state \
 When one shuttle gets too close to another, it should stop at a safe pose
 instead of passing through it.
 
-### 14. Test Robot-Shuttle Gazebo Collision
+### 15. Test Robot-Shuttle Gazebo Collision
 
 Launch Room 315 with one industrial robot and one visible shuttle:
 
@@ -802,7 +990,7 @@ shuttle body. The shuttle has a conservative robot-contact collision volume.
 Rail path geometry and rail switch geometry use a separate collision bitmask, so
 the shuttle should not collide with the rail it follows.
 
-### 15. Show Message Types and Topic Types
+### 16. Show Message Types and Topic Types
 
 Inspect custom interfaces:
 
@@ -823,7 +1011,7 @@ ros2 topic info /room_315/rails/right/sensors/feedback
 Canonical topics use `mfja_rail_interfaces` messages under
 `/room_315/rails/{right,left}/...`.
 
-### 16. Launch Names
+### 17. Launch Names
 
 All high-level launch entry points live in `mfja_3rd_floor_bringup/launch`:
 

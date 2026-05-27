@@ -1,0 +1,137 @@
+schema_version: 3
+description: >
+  High-level VLA task templates for Room 315. A real Vision-Language-Action
+  model should publish one of these task templates, or an equivalent JSON
+  command, to /room_315/vla/command. The supervisor validates the current rail
+  state, chooses an available shuttle from the requested source slots, expands
+  the task into existing rail primitives, and keeps emergency-stop gating in one
+  place.
+
+defaults:
+  speed: 0.2
+  shuttle_name_by_side:
+    right: room315_right_shuttle_1
+    left: room315_left_shuttle_1
+  slot_sensor_by_side:
+    right:
+      "1": DZI1R
+      "2": DZI2R
+      "3": DZI3R
+      "4": DZI4R
+    left:
+      "1": DZI1L
+      "2": DZI2L
+      "3": DZI3L
+      "4": DZI4L
+
+route_templates:
+  right_yaskawa_to_staubli:
+    type: transport
+    description: Move a right-rail shuttle from Yaskawa HC10DT slots 1-2 to Staubli TX2 slots 3-4.
+    side: right
+    source_slots: ["1", "2"]
+    target_slots: ["3", "4"]
+    loop: exterior
+    switches:
+      ALL: EXTERIOR
+    stoppers:
+      ALL: "0"
+    completion_timeout_s: 90.0
+  right_staubli_to_yaskawa:
+    type: transport
+    description: Move a right-rail shuttle from Staubli TX2 slots 3-4 to Yaskawa HC10DT slots 1-2.
+    side: right
+    source_slots: ["3", "4"]
+    target_slots: ["1", "2"]
+    loop: exterior
+    switches:
+      ALL: EXTERIOR
+    stoppers:
+      ALL: "0"
+    completion_timeout_s: 90.0
+  left_yaskawa_to_kuka:
+    type: transport
+    description: Move a left-rail shuttle from Yaskawa HC10 slots 1-2 to KUKA KR6 slots 3-4.
+    side: left
+    source_slots: ["1", "2"]
+    target_slots: ["3", "4"]
+    loop: exterior
+    switches:
+      ALL: EXTERIOR
+    stoppers:
+      ALL: "0"
+    completion_timeout_s: 90.0
+  left_kuka_to_yaskawa:
+    type: transport
+    description: Move a left-rail shuttle from KUKA KR6 slots 3-4 to Yaskawa HC10 slots 1-2.
+    side: left
+    source_slots: ["3", "4"]
+    target_slots: ["1", "2"]
+    loop: exterior
+    switches:
+      ALL: EXTERIOR
+    stoppers:
+      ALL: "0"
+    completion_timeout_s: 90.0
+  right_enter_interior_loop:
+    type: loop_entry
+    description: Route a right-rail shuttle from slots 1-2 into the interior loop.
+    side: right
+    source_slots: ["1", "2"]
+    stoppers:
+      ALL: "0"
+    initial_switches:
+      A1: EXTERIOR
+      A2: EXTERIOR
+      A3: INTERIOR
+      A4: INTERIOR
+    trigger_sensor: DA3IR
+    trigger_sensors: [DA3IR]
+    trigger_segments: [A34I]
+    final_switches:
+      A1: INTERIOR
+      A2: INTERIOR
+    timeout_s: 12.0
+    final_resume_delay_s: 0.6
+    keepalive_duration_s: 3.0
+    keepalive_period_s: 0.5
+  left_enter_interior_loop:
+    type: loop_entry
+    description: Route a left-rail shuttle from slots 1-2 into the interior loop.
+    side: left
+    source_slots: ["1", "2"]
+    stoppers:
+      ALL: "0"
+    initial_switches:
+      A1: EXTERIOR
+      A2: EXTERIOR
+      A3: INTERIOR
+      A4: INTERIOR
+    trigger_sensor: DA3IL
+    trigger_sensors: [DA3IL, DA2L]
+    trigger_segments: [A23, A34I]
+    final_switches:
+      A1: INTERIOR
+      A2: INTERIOR
+    timeout_s: 12.0
+    final_resume_delay_s: 0.6
+    keepalive_duration_s: 3.0
+    keepalive_period_s: 0.5
+
+task_aliases:
+  "move right shuttle from yaskawa to staubli": right_yaskawa_to_staubli
+  "move the right shuttle from yaskawa to staubli": right_yaskawa_to_staubli
+  "move right shuttle from yaskawa to stäubli": right_yaskawa_to_staubli
+  "move the right shuttle from yaskawa to stäubli": right_yaskawa_to_staubli
+  "move right shuttle from staubli to yaskawa": right_staubli_to_yaskawa
+  "move the right shuttle from staubli to yaskawa": right_staubli_to_yaskawa
+  "move right shuttle from stäubli to yaskawa": right_staubli_to_yaskawa
+  "move the right shuttle from stäubli to yaskawa": right_staubli_to_yaskawa
+  "move left shuttle from yaskawa to kuka": left_yaskawa_to_kuka
+  "move the left shuttle from yaskawa to kuka": left_yaskawa_to_kuka
+  "move left shuttle from kuka to yaskawa": left_kuka_to_yaskawa
+  "move the left shuttle from kuka to yaskawa": left_kuka_to_yaskawa
+  "make right shuttle circulate on the interior loop": right_enter_interior_loop
+  "make the right shuttle circulate on the interior loop": right_enter_interior_loop
+  "make left shuttle circulate on the interior loop": left_enter_interior_loop
+  "make the left shuttle circulate on the interior loop": left_enter_interior_loop

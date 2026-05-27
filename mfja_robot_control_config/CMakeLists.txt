@@ -21,6 +21,13 @@ install(
 
 install(
   FILES
+    config/room_315_vla/action_space.yaml
+    config/room_315_vla/vla_supervisor.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_vla
+)
+
+install(
+  FILES
     config/room_315_kinematics/README.md
     config/room_315_kinematics/rail_devices_left.yaml
     config/room_315_kinematics/rail_devices_right.yaml
@@ -41,7 +48,22 @@ install(
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
+    scripts/room_315_real_vla_agent.py
+    scripts/room_315_vla_dataset_recorder.py
+    scripts/room_315_vla_supervisor.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(
+    test_room315_vla_task_templates
+    test/test_room315_vla_task_templates.py
+  )
+  ament_add_pytest_test(
+    test_room315_rail_devices
+    test/test_room315_rail_devices.py
+  )
+endif()
 
 ament_package()

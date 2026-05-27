@@ -94,7 +94,7 @@ position_sensors:
 - name: DA2ER
   switch: A2
   branch: E
-  segment: A2E
+  segment: A12E
   s_ratio: 0.94125
   radius_m: 0.08
 - name: DA2IR

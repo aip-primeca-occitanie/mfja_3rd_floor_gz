@@ -16,6 +16,11 @@ def generate_launch_description():
         'launch',
         'room_315_dual_kinematic_shuttles.launch.py',
     )
+    vla_launch = os.path.join(
+        control_pkg_path,
+        'launch',
+        'room_315_vla_supervisor.launch.py',
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -140,6 +145,56 @@ def generate_launch_description():
             choices=['true', 'false'],
             description='Show Room 315 position sensor and stopper markers.',
         ),
+        DeclareLaunchArgument(
+            'enable_room315_vla',
+            default_value='false',
+            choices=['true', 'false'],
+            description='Start the Room 315 VLA camera bridge and action supervisor.',
+        ),
+        DeclareLaunchArgument(
+            'enable_room315_vla_camera_bridge',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Bridge the Room 315 VLA rail-focused RGB-D cameras to ROS.',
+        ),
+        DeclareLaunchArgument(
+            'enable_room315_real_vla_agent',
+            default_value='false',
+            choices=['true', 'false'],
+            description='Start the Room 315 model-facing VLA agent.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_agent_provider',
+            default_value='mock',
+            choices=['mock', 'openai', 'http'],
+            description='Room 315 VLA agent provider.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_agent_model',
+            default_value='',
+            description='Optional model name for provider:=openai.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_agent_http_endpoint',
+            default_value='',
+            description='HTTP endpoint for room315_vla_agent_provider:=http.',
+        ),
+        DeclareLaunchArgument(
+            'enable_room315_vla_dataset_recorder',
+            default_value='false',
+            choices=['true', 'false'],
+            description='Record Room 315 VLA episodes for SmolVLA/LeRobot fine-tuning.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_dataset_dir',
+            default_value='~/.ros/room315_vla_datasets/smolvla_demo',
+            description='Output directory for Room 315 VLA demonstrations.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_dataset_sample_period_s',
+            default_value='0.2',
+            description='Sample period in seconds for Room 315 VLA demonstrations.',
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),
             launch_arguments={
@@ -195,6 +250,43 @@ def generate_launch_description():
                         ),
                         'enable_right': LaunchConfiguration('enable_room315_right_rail'),
                         'enable_left': LaunchConfiguration('enable_room315_left_rail'),
+                    }.items(),
+                ),
+            ],
+        ),
+        TimerAction(
+            period=5.0,
+            actions=[
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(vla_launch),
+                    condition=IfCondition(LaunchConfiguration('enable_room315_vla')),
+                    launch_arguments={
+                        'use_sim_time': LaunchConfiguration('use_sim_time'),
+                        'enable_camera_bridge': LaunchConfiguration(
+                            'enable_room315_vla_camera_bridge'
+                        ),
+                        'enable_supervisor': 'true',
+                        'enable_real_vla_agent': LaunchConfiguration(
+                            'enable_room315_real_vla_agent'
+                        ),
+                        'vla_agent_provider': LaunchConfiguration(
+                            'room315_vla_agent_provider'
+                        ),
+                        'vla_agent_model': LaunchConfiguration(
+                            'room315_vla_agent_model'
+                        ),
+                        'vla_agent_http_endpoint': LaunchConfiguration(
+                            'room315_vla_agent_http_endpoint'
+                        ),
+                        'enable_dataset_recorder': LaunchConfiguration(
+                            'enable_room315_vla_dataset_recorder'
+                        ),
+                        'dataset_dir': LaunchConfiguration(
+                            'room315_vla_dataset_dir'
+                        ),
+                        'dataset_sample_period_s': LaunchConfiguration(
+                            'room315_vla_dataset_sample_period_s'
+                        ),
                     }.items(),
                 ),
             ],
