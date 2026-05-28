@@ -49,20 +49,31 @@ install(
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
     scripts/room_315_real_vla_agent.py
+    scripts/room_315_vla_benchmark_runner.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_supervisor.py
+    scripts/vla_teleop_generator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
-  ament_add_pytest_test(
-    test_room315_vla_task_templates
-    test/test_room315_vla_task_templates.py
-  )
+
   ament_add_pytest_test(
     test_room315_rail_devices
     test/test_room315_rail_devices.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_benchmark_runner
+    test/test_room315_vla_benchmark_runner.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_debug_colors
+    test/test_room315_visual_debug_colors.py
+  )
+  ament_add_pytest_test(
+    test_vla_teleop_generator
+    test/test_vla_teleop_generator.py
   )
 endif()
 

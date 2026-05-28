@@ -20,6 +20,7 @@ def generate_launch_description():
         'stopper_motion_delay_s': LaunchConfiguration('stopper_motion_delay_s'),
         'sensor_publish_rate_hz': LaunchConfiguration('sensor_publish_rate_hz'),
         'show_device_markers': LaunchConfiguration('show_device_markers'),
+        'visual_debug_colors': LaunchConfiguration('visual_debug_colors'),
         'use_sim_time': LaunchConfiguration('use_sim_time'),
     }
 
@@ -105,6 +106,12 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description='Spawn visual markers for position sensors and stoppers.',
+        ),
+        DeclareLaunchArgument(
+            'visual_debug_colors',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Use debug colors for shuttle mode; false keeps shuttles black.',
         ),
         DeclareLaunchArgument(
             'right_start_slot',

@@ -19,14 +19,10 @@ from std_msgs.msg import String
 
 SIDES = ('right', 'left')
 DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
-RIGHT_YASKAWA_TOKENS = ('yaskawa', 'hc10dt')
-LEFT_YASKAWA_TOKENS = ('yaskawa', 'hc10')
-STAUBLI_TOKENS = ('staubli', 'stäubli', 'tx2')
-KUKA_TOKENS = ('kuka', 'kr6', 'كوكا')
+
 
 ACTION_IDS = {
     'status': 0,
-    'route_template': 1,
     'route_shuttle': 2,
     'switches': 3,
     'stoppers': 4,
@@ -36,15 +32,7 @@ ACTION_IDS = {
     'emergency_stop': 8,
     'clear_emergency_stop': 9,
 }
-TEMPLATE_IDS = {
-    'none': 0,
-    'right_yaskawa_to_staubli': 1,
-    'right_staubli_to_yaskawa': 2,
-    'left_yaskawa_to_kuka': 3,
-    'left_kuka_to_yaskawa': 4,
-    'right_enter_interior_loop': 5,
-    'left_enter_interior_loop': 6,
-}
+
 SIDE_IDS = {'none': 0, 'right': 1, 'left': 2}
 LOOP_IDS = {'none': 0, 'exterior': 1, 'interior': 2}
 SHUTTLE_COMMAND_IDS = {'none': 0, 'OFF': 1, 'ON': 2, 'ADD_STOPPED': 3, 'ADD_MOVING': 4}
@@ -53,7 +41,6 @@ STOPPER_ALL_STATE_IDS = {'none': 0, 'open': 1, 'closed': 2}
 
 ACTION_VECTOR_FIELDS = [
     'action_id',
-    'template_id',
     'side_id',
     'slot_id',
     'loop_id',
@@ -110,57 +97,7 @@ def _parse_json_or_text(raw: str) -> Any:
             return json.loads(text)
         except json.JSONDecodeError:
             return {'text_command': text}
-    template = _task_template_for_text(text.casefold())
-    if template:
-        return {
-            'action': 'route_template',
-            'template': template,
-            'text_command': text,
-        }
     return {'text_command': text}
-
-
-def _has_any(text: str, tokens: tuple[str, ...]) -> bool:
-    return any(token in text for token in tokens)
-
-
-def _appears_before(text: str, first_tokens: tuple[str, ...], second_tokens: tuple[str, ...]) -> bool:
-    first_positions = [text.find(token) for token in first_tokens if token in text]
-    second_positions = [text.find(token) for token in second_tokens if token in text]
-    if not first_positions or not second_positions:
-        return False
-    return min(first_positions) < min(second_positions)
-
-
-def _task_template_for_text(text: str) -> str | None:
-    side = 'left' if any(token in text for token in ('left', 'gauche', 'يسار')) else 'right'
-    loop = 'interior' if any(
-        token in text for token in ('interior', 'internal', 'small', 'petit', 'داخلي', 'صغير')
-    ) else 'exterior'
-    if loop == 'interior' and any(token in text for token in ('loop', 'circulate', 'دور', 'دائرة')):
-        return 'left_enter_interior_loop' if side == 'left' else 'right_enter_interior_loop'
-
-    if _has_any(text, STAUBLI_TOKENS) and _has_any(text, RIGHT_YASKAWA_TOKENS):
-        if _appears_before(text, RIGHT_YASKAWA_TOKENS, STAUBLI_TOKENS) or (
-            'to staubli' in text or 'to stäubli' in text or 'to tx2' in text
-        ):
-            return 'right_yaskawa_to_staubli'
-        if _appears_before(text, STAUBLI_TOKENS, RIGHT_YASKAWA_TOKENS) or (
-            'to yaskawa' in text or 'to hc10dt' in text
-        ):
-            return 'right_staubli_to_yaskawa'
-
-    if _has_any(text, KUKA_TOKENS) and _has_any(text, LEFT_YASKAWA_TOKENS):
-        if _appears_before(text, LEFT_YASKAWA_TOKENS, KUKA_TOKENS) or (
-            'to kuka' in text or 'to kr6' in text
-        ):
-            return 'left_yaskawa_to_kuka'
-        if _appears_before(text, KUKA_TOKENS, LEFT_YASKAWA_TOKENS) or (
-            'to yaskawa' in text or 'to hc10' in text
-        ):
-            return 'left_kuka_to_yaskawa'
-
-    return None
 
 
 def _as_command_dict(command: Any) -> dict[str, Any]:
@@ -174,8 +111,6 @@ def _as_command_dict(command: Any) -> dict[str, Any]:
 def _normalize_action_name(command: dict[str, Any]) -> str:
     action = str(command.get('action') or command.get('intent') or command.get('type') or 'status')
     action = action.lower().strip()
-    if action in {'template'}:
-        return 'route_template'
     if action in {'route', 'start_route'}:
         return 'route_shuttle'
     if action in {'switch'}:
@@ -235,17 +170,15 @@ def _stopper_all_state(command: dict[str, Any]) -> str:
 def _encode_action(command: Any) -> list[float]:
     command_dict = _as_command_dict(command)
     action = _normalize_action_name(command_dict)
-    template = str(command_dict.get('template') or command_dict.get('name') or 'none')
     side = str(command_dict.get('side') or 'none').lower()
     loop = str(command_dict.get('loop') or 'none').lower()
     shuttle_command = str(command_dict.get('command') or 'none').upper()
     switch_state = _switch_all_state(command_dict)
     stopper_state = _stopper_all_state(command_dict)
-    default_start = action in {'route_template', 'route_shuttle'}
+    default_start = action in {'route_shuttle'}
     start = command_dict.get('start', command_dict.get('start_after_prepare', default_start))
     return [
         float(ACTION_IDS.get(action, 0)),
-        float(TEMPLATE_IDS.get(template, 0)),
         float(SIDE_IDS.get(side, 0)),
         _numeric_slot(command_dict.get('start_slot')),
         float(LOOP_IDS.get(loop, 0)),

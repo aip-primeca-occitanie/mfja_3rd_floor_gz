@@ -716,7 +716,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_vla:=true \
   enable_room315_real_vla_agent:=true \
-  room315_vla_agent_provider:=mock
+  room315_vla_agent_provider:=http
 ```
 
 Then publish high-level user goals to the agent:
@@ -769,12 +769,18 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   start_paused:=false \
   gui:=true \
   enable_room315_kinematic_shuttles:=true \
+  room315_visual_debug_colors:=false \
   enable_room315_vla:=true \
   enable_room315_real_vla_agent:=true \
-  room315_vla_agent_provider:=mock \
+  room315_vla_agent_provider:=http \
   enable_room315_vla_dataset_recorder:=true \
   room315_vla_dataset_dir:=~/room315_smolvla_demo
 ```
+
+Set `room315_visual_debug_colors:=false` for realistic VLA datasets: switches
+stay rail-colored and shuttles stay black even if the simulated shuttle enters
+`FALLING` mode. Use `room315_visual_debug_colors:=true` to restore the older
+debug colors for quick visual troubleshooting.
 
 With `dataset_auto_start_on_goal` enabled by default, a new episode starts when
 a goal arrives on `/room_315/vla/user_goal`. Stop or mark the episode from
@@ -799,20 +805,46 @@ command accepted by the supervisor. Dataset actions are labeled with task-level
 template ids such as `right_yaskawa_to_staubli`, `left_kuka_to_yaskawa`, and
 `right_enter_interior_loop`.
 
-For an OpenAI-backed vision model, set `OPENAI_API_KEY` and use provider
-`openai`. You can optionally set `OPENAI_MODEL` or pass
-`room315_vla_agent_model:=...`:
+To evaluate a local VLA provider as a research
+baseline, enable the benchmark runner. It dispatches task-level goals
+automatically, waits for supervisor success/failure, optionally marks dataset
+episodes as success/failure, and writes JSONL metrics:
 
 ```bash
-export OPENAI_API_KEY=...
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
   gui:=true \
   enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
   enable_room315_vla:=true \
   enable_room315_real_vla_agent:=true \
-  room315_vla_agent_provider:=openai
+  room315_vla_agent_provider:=http \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo \
+  enable_room315_vla_benchmark_runner:=true \
+  room315_vla_benchmark_tasks:=transport \
+  room315_vla_benchmark_report_dir:=~/room315_vla_benchmarks
+```
+
+Use `room315_vla_benchmark_tasks:=all`, `transport`, `loop_entry`, or a
+comma-separated list such as
+`right_yaskawa_to_staubli,left_kuka_to_yaskawa`. The runner publishes live
+status on:
+
+```bash
+ros2 topic echo /room_315/vla/benchmark_status std_msgs/msg/String
+```
+
+Each benchmark run writes:
+
+```text
+~/room315_vla_benchmarks/room315_vla_benchmark_<timestamp>.jsonl
+~/room315_vla_benchmarks/room315_vla_benchmark_<timestamp>_summary.json
 ```
 
 For another VLA server, use `room315_vla_agent_provider:=http` and provide

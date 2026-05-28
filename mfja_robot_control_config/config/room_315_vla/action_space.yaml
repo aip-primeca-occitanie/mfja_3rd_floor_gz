@@ -7,7 +7,6 @@ description: >
 
 action_vector_fields:
   - action_id
-  - template_id
   - side_id
   - slot_id
   - loop_id
@@ -20,7 +19,6 @@ action_vector_fields:
 
 action_ids:
   status: 0
-  route_template: 1
   route_shuttle: 2
   switches: 3
   stoppers: 4
@@ -30,14 +28,6 @@ action_ids:
   emergency_stop: 8
   clear_emergency_stop: 9
 
-template_ids:
-  none: 0
-  right_yaskawa_to_staubli: 1
-  right_staubli_to_yaskawa: 2
-  left_yaskawa_to_kuka: 3
-  left_kuka_to_yaskawa: 4
-  right_enter_interior_loop: 5
-  left_enter_interior_loop: 6
 
 side_ids:
   none: 0

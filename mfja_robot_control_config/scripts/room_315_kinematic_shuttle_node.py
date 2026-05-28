@@ -857,6 +857,7 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('device_marker_spawn_interval_s', 0.05)
         self.declare_parameter('device_marker_retry_interval_s', 0.5)
         self.declare_parameter('device_marker_max_spawn_attempts', 8)
+        self.declare_parameter('visual_debug_colors', True)
         self.declare_parameter('shuttle_model_sdf', str(_default_shuttle_model_sdf_path()))
         self.declare_parameter('preloaded_shuttle_count', 4)
         self.declare_parameter('reject_occupied_start_slots', True)
@@ -1064,6 +1065,7 @@ class Room315KinematicShuttleNode(Node):
             0,
             int(self.get_parameter('device_marker_max_spawn_attempts').value),
         )
+        self.visual_debug_colors = bool(self.get_parameter('visual_debug_colors').value)
         self.shuttle_model_sdf = Path(str(self.get_parameter('shuttle_model_sdf').value))
         self.preloaded_shuttle_count = int(
             self._side_default_numeric(
@@ -2161,8 +2163,9 @@ class Room315KinematicShuttleNode(Node):
         factory.pose.orientation.w = qw
         return factory
 
-    @staticmethod
-    def _desired_shuttle_visual_state(shuttle: ManagedShuttle) -> str:
+    def _desired_shuttle_visual_state(self, shuttle: ManagedShuttle) -> str:
+        if not self.visual_debug_colors:
+            return SHUTTLE_VISUAL_NORMAL
         return (
             SHUTTLE_VISUAL_FALLING
             if shuttle.core.state.mode == FALLING

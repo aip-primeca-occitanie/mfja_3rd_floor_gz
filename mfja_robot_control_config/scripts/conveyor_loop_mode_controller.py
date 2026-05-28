@@ -151,6 +151,12 @@ SWITCH_MODE_COLORS = {
         'emissive': (0.04, 0.02, 0.00, 1.0),
     },
 }
+SWITCH_NEUTRAL_COLORS = {
+    'ambient': (0.72, 0.74, 0.78, 1.0),
+    'diffuse': (0.72, 0.74, 0.78, 1.0),
+    'specular': (0.18, 0.18, 0.18, 1.0),
+    'emissive': (0.00, 0.00, 0.00, 1.0),
+}
 
 
 def _normalize_token(raw_value: str) -> str:
@@ -356,6 +362,7 @@ class ConveyorLoopModeController(Node):
         self.initial_loop_mode = _normalize_initial_loop_mode(args.initial_loop_mode)
         self.keep_paused_after_initial_loop = args.keep_paused_after_initial_loop
         self.pause_during_switch_update = args.pause_during_switch_update
+        self.visual_debug_colors = args.visual_debug_colors
         if self.initial_loop_mode is None and args.initial_loop_mode.strip().lower() not in (
             '',
             'auto',
@@ -431,6 +438,8 @@ class ConveyorLoopModeController(Node):
                 f'Listening on {self.switch_command_topic} for explicit switch commands.'
             )
         self._publish_current_switch_state()
+        if not self.visual_debug_colors:
+            self._apply_neutral_switch_materials()
         self.get_logger().info(
             'Per-switch command topic: '
             f'{self.switch_command_topic} '
@@ -681,9 +690,13 @@ class ConveyorLoopModeController(Node):
     def _proto_string(value: str) -> str:
         return value.replace('\\', '\\\\').replace('"', '\\"')
 
-    @staticmethod
-    def _switch_model_sdf(mode: str) -> str:
-        colors = SWITCH_MODE_COLORS[mode]
+    def _switch_colors_for_mode(self, mode: str) -> Dict[str, Tuple[float, float, float, float]]:
+        if not self.visual_debug_colors:
+            return SWITCH_NEUTRAL_COLORS
+        return SWITCH_MODE_COLORS[mode]
+
+    def _switch_model_sdf(self, mode: str) -> str:
+        colors = self._switch_colors_for_mode(mode)
 
         def rgba(name: str) -> str:
             red, green, blue, alpha = colors[name]
@@ -785,7 +798,7 @@ class ConveyorLoopModeController(Node):
         mode: str,
         timeout_ms: Optional[int] = None,
     ):
-        colors = SWITCH_MODE_COLORS[mode]
+        colors = self._switch_colors_for_mode(mode)
 
         def color_block(name: str) -> str:
             red, green, blue, alpha = colors[name]
@@ -1110,6 +1123,18 @@ class ConveyorLoopModeController(Node):
 
         return [(switch_name, failures.get(switch_name, '')) for switch_name in pending]
 
+    def _apply_neutral_switch_materials(self) -> None:
+        current_modes = {
+            switch_name: self.current_switch_states.get(switch_name) or 'exterior'
+            for switch_name in self.managed_switches
+        }
+        failures = dict(self._set_switch_materials_parallel(current_modes))
+        if failures:
+            self.get_logger().warning(
+                'Neutral switch color update failed for '
+                + ', '.join(sorted(failures))
+            )
+
     def _set_switch_poses_parallel(self, requested_switch_modes: Dict[str, str]):
         pending = {
             switch_name: (
@@ -1277,7 +1302,16 @@ def main():
         action='store_false',
         help='Move visual switches without pausing the Gazebo world.',
     )
-    parser.set_defaults(pause_during_switch_update=False)
+    parser.add_argument(
+        '--neutral-visual-colors',
+        dest='visual_debug_colors',
+        action='store_false',
+        help=(
+            'Use neutral rail-colored switch visuals instead of debug colors '
+            'for INTERIOR / EXTERIOR.'
+        ),
+    )
+    parser.set_defaults(pause_during_switch_update=False, visual_debug_colors=True)
     args, ros_args = parser.parse_known_args()
 
     rclpy.init(args=ros_args)

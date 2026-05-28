@@ -76,6 +76,12 @@ def generate_launch_description():
             description='Pause Gazebo while applying visual switch pose updates.',
         ),
         DeclareLaunchArgument(
+            'room315_visual_debug_colors',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Use switch/shuttle debug colors; false keeps rail-like colors for VLA data.',
+        ),
+        DeclareLaunchArgument(
             'enable_room315_kinematic_shuttles',
             default_value='true',
             choices=['true', 'false'],
@@ -165,14 +171,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'room315_vla_agent_provider',
-            default_value='mock',
-            choices=['mock', 'openai', 'http'],
-            description='Room 315 VLA agent provider.',
-        ),
-        DeclareLaunchArgument(
-            'room315_vla_agent_model',
-            default_value='',
-            description='Optional model name for provider:=openai.',
+            default_value='http',
+            description='Room 315 VLA agent provider (only http is supported now).',
         ),
         DeclareLaunchArgument(
             'room315_vla_agent_http_endpoint',
@@ -195,6 +195,32 @@ def generate_launch_description():
             default_value='0.2',
             description='Sample period in seconds for Room 315 VLA demonstrations.',
         ),
+        DeclareLaunchArgument(
+            'enable_room315_vla_benchmark_runner',
+            default_value='false',
+            choices=['true', 'false'],
+            description='Run Room 315 VLA task-level benchmark episodes automatically.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_benchmark_tasks',
+            default_value='all',
+            description='Comma-separated VLA benchmark tasks, or group: all, transport, loop_entry.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_benchmark_report_dir',
+            default_value='~/.ros/room315_vla_benchmarks',
+            description='Output directory for Room 315 VLA benchmark reports.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_benchmark_task_timeout_s',
+            default_value='120.0',
+            description='Maximum seconds to wait for each Room 315 VLA benchmark task.',
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_benchmark_settle_time_s',
+            default_value='2.0',
+            description='Seconds to wait between Room 315 VLA benchmark tasks.',
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),
             launch_arguments={
@@ -207,6 +233,7 @@ def generate_launch_description():
                 'start_paused': LaunchConfiguration('start_paused'),
                 'initial_loop_mode': LaunchConfiguration('initial_loop_mode'),
                 'pause_during_switch_update': LaunchConfiguration('pause_during_switch_update'),
+                'visual_debug_colors': LaunchConfiguration('room315_visual_debug_colors'),
             }.items(),
         ),
         TimerAction(
@@ -235,6 +262,9 @@ def generate_launch_description():
                         ),
                         'show_device_markers': LaunchConfiguration(
                             'room315_show_device_markers'
+                        ),
+                        'visual_debug_colors': LaunchConfiguration(
+                            'room315_visual_debug_colors'
                         ),
                         'right_start_slot': LaunchConfiguration(
                             'room315_right_start_slot'
@@ -272,9 +302,7 @@ def generate_launch_description():
                         'vla_agent_provider': LaunchConfiguration(
                             'room315_vla_agent_provider'
                         ),
-                        'vla_agent_model': LaunchConfiguration(
-                            'room315_vla_agent_model'
-                        ),
+
                         'vla_agent_http_endpoint': LaunchConfiguration(
                             'room315_vla_agent_http_endpoint'
                         ),
@@ -286,6 +314,21 @@ def generate_launch_description():
                         ),
                         'dataset_sample_period_s': LaunchConfiguration(
                             'room315_vla_dataset_sample_period_s'
+                        ),
+                        'enable_benchmark_runner': LaunchConfiguration(
+                            'enable_room315_vla_benchmark_runner'
+                        ),
+                        'benchmark_tasks': LaunchConfiguration(
+                            'room315_vla_benchmark_tasks'
+                        ),
+                        'benchmark_report_dir': LaunchConfiguration(
+                            'room315_vla_benchmark_report_dir'
+                        ),
+                        'benchmark_task_timeout_s': LaunchConfiguration(
+                            'room315_vla_benchmark_task_timeout_s'
+                        ),
+                        'benchmark_settle_time_s': LaunchConfiguration(
+                            'room315_vla_benchmark_settle_time_s'
                         ),
                     }.items(),
                 ),

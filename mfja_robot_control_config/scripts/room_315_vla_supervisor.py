@@ -42,14 +42,7 @@ DEFAULT_SLOT_SENSOR_BY_SIDE = {
         '4': 'DZI4L',
     },
 }
-RIGHT_YASKAWA_TOKENS = ('yaskawa', 'hc10dt')
-LEFT_YASKAWA_TOKENS = ('yaskawa', 'hc10')
-STAUBLI_TOKENS = ('staubli', 'stäubli', 'tx2')
-KUKA_TOKENS = ('kuka', 'kr6')
-ARABIC_STOP_WORDS = ('وقف', 'اوقف', 'إيقاف', 'ايقاف', 'طوارئ')
-ARABIC_START_WORDS = ('شغل', 'ابدأ', 'أبدأ', 'تحرك')
-ARABIC_OPEN_WORDS = ('افتح', 'أفتح')
-ARABIC_CLOSE_WORDS = ('اغلق', 'أغلق', 'سكر')
+
 
 
 def _default_config_path() -> Path:
@@ -87,9 +80,9 @@ def _clean_token(value: Any) -> str:
 
 def _normalize_side(raw: Any, default: str = 'right') -> str:
     value = _clean_token(raw).lower()
-    if value in {'right', 'r', 'droit', 'droite', 'يمين'}:
+    if value in {'right', 'r', 'droit', 'droite'}:
         return 'right'
-    if value in {'left', 'l', 'gauche', 'يسار'}:
+    if value in {'left', 'l', 'gauche'}:
         return 'left'
     return default
 
@@ -98,9 +91,9 @@ def _normalize_loop(raw: Any | None) -> str | None:
     if raw is None:
         return None
     value = _clean_token(raw).lower()
-    if value in {'g', 'e', 'exterior', 'external', 'grand', 'grand_boucle', 'big', 'خارجي', 'كبير'}:
+    if value in {'g', 'e', 'exterior', 'external', 'grand', 'grand_boucle', 'big'}:
         return 'exterior'
-    if value in {'s', 'i', 'interior', 'internal', 'petit', 'petit_boucle', 'small', 'داخلي', 'صغير'}:
+    if value in {'s', 'i', 'interior', 'internal', 'petit', 'petit_boucle', 'small'}:
         return 'interior'
     return None
 
@@ -115,9 +108,9 @@ def _switch_state_for_loop(loop: str | None) -> str | None:
 
 def _normalize_stopper_state(raw: Any) -> str:
     value = _clean_token(raw).lower()
-    if value in {'0', 'open', 'opened', 'release', 'released', 'off', 'false', 'افتح', 'أفتح'}:
+    if value in {'0', 'open', 'opened', 'release', 'released', 'off', 'false'}:
         return '0'
-    if value in {'1', 'close', 'closed', 'stop', 'blocked', 'on', 'true', 'اغلق', 'أغلق', 'سكر'}:
+    if value in {'1', 'close', 'closed', 'stop', 'blocked', 'on', 'true'}:
         return '1'
     return _clean_token(raw)
 
@@ -152,8 +145,7 @@ class Room315VlaSupervisor(Node):
         config_path = Path(raw_config_path) if raw_config_path else _default_config_path()
         self.config = _load_yaml(config_path)
         self.defaults = self.config.get('defaults', {})
-        self.route_templates = self.config.get('route_templates', {})
-        self.task_aliases = self.config.get('task_aliases', {})
+
         self.slot_sensor_by_side = self._slot_sensor_map_from_config()
 
         self.emergency_stop = False
@@ -164,7 +156,7 @@ class Room315VlaSupervisor(Node):
         self.image_frame_count = 0
         self.camera_info_frame_id = ''
         self.camera_vision: dict[str, dict[str, Any]] = {}
-        self.active_tasks: dict[str, dict[str, Any]] = {}
+
         self.rails: dict[str, dict[str, Any]] = {
             side: {
                 'shuttles': {},
@@ -363,8 +355,7 @@ class Room315VlaSupervisor(Node):
                     item['distance_m'] = round(float(distance_m), 4)
                 active.append(item)
         self.rails[side][key] = active
-        if key == 'active_position_sensors' and self.active_tasks:
-            self._update_active_tasks()
+
 
     def _on_emergency_stop(self, msg: Bool) -> None:
         self.emergency_stop = bool(msg.data)
@@ -400,24 +391,12 @@ class Room315VlaSupervisor(Node):
 
         if 'clear' in text and ('emergency' in text or 'estop' in text):
             return {'action': 'clear_emergency_stop'}
-        if 'stop all' in text or 'all off' in text or 'وقف الكل' in text:
+        if 'stop all' in text or 'all off' in text:
             return {'action': 'stop_all'}
-        if any(word in text for word in ARABIC_STOP_WORDS) or 'emergency stop' in text or 'estop' in text:
+        if 'emergency stop' in text or 'estop' in text:
             return {'action': 'emergency_stop'}
 
-        task_template = self._infer_task_template(text, side, loop)
-        if task_template:
-            return {
-                'action': 'route_template',
-                'template': task_template,
-            }
 
-        for alias, template_name in self.task_aliases.items():
-            if str(alias).casefold() in text:
-                return {
-                    'action': 'route_template',
-                    'template': template_name,
-                }
 
         switch_names = self._infer_switch_names(text)
         if 'switch' in text or switch_names:
@@ -431,11 +410,11 @@ class Room315VlaSupervisor(Node):
                 'switches': {name: state for name in names},
             }
 
-        if 'stopper' in text or 'stoppers' in text or 'ستوبر' in text:
+        if 'stopper' in text or 'stoppers' in text:
             names = switch_names or ['ALL']
-            if any(word in text for word in ARABIC_CLOSE_WORDS) or 'close' in text or 'block' in text:
+            if 'close' in text or 'block' in text:
                 state = '1'
-            elif any(word in text for word in ARABIC_OPEN_WORDS) or 'open' in text or 'release' in text:
+            elif 'open' in text or 'release' in text:
                 state = '0'
             else:
                 raise ValueError('stopper command needs open/close state')
@@ -446,8 +425,7 @@ class Room315VlaSupervisor(Node):
             }
 
         if (
-            any(word in text for word in ARABIC_START_WORDS)
-            or 'start' in text
+            'start' in text
             or 'run' in text
             or ' on' in f' {text} '
             or slot is not None
@@ -462,56 +440,17 @@ class Room315VlaSupervisor(Node):
 
         return {'action': 'status'}
 
-    def _infer_task_template(self, text: str, side: str, loop: str | None) -> str | None:
-        if loop == 'interior' and any(token in text for token in ('loop', 'circulate', 'دور', 'دائرة')):
-            if side == 'left':
-                return 'left_enter_interior_loop'
-            return 'right_enter_interior_loop'
-
-        yaskawa_to_staubli = self._appears_before(text, RIGHT_YASKAWA_TOKENS, STAUBLI_TOKENS)
-        staubli_to_yaskawa = self._appears_before(text, STAUBLI_TOKENS, RIGHT_YASKAWA_TOKENS)
-        if self._has_any(text, STAUBLI_TOKENS) and self._has_any(text, RIGHT_YASKAWA_TOKENS):
-            if yaskawa_to_staubli or ('to staubli' in text or 'to stäubli' in text or 'to tx2' in text):
-                return 'right_yaskawa_to_staubli'
-            if staubli_to_yaskawa or 'to yaskawa' in text or 'to hc10dt' in text:
-                return 'right_staubli_to_yaskawa'
-
-        yaskawa_to_kuka = self._appears_before(text, LEFT_YASKAWA_TOKENS, KUKA_TOKENS)
-        kuka_to_yaskawa = self._appears_before(text, KUKA_TOKENS, LEFT_YASKAWA_TOKENS)
-        if self._has_any(text, KUKA_TOKENS) and self._has_any(text, LEFT_YASKAWA_TOKENS):
-            if yaskawa_to_kuka or 'to kuka' in text or 'to kr6' in text:
-                return 'left_yaskawa_to_kuka'
-            if kuka_to_yaskawa or 'to yaskawa' in text or 'to hc10' in text:
-                return 'left_kuka_to_yaskawa'
-
-        return None
-
-    def _has_any(self, text: str, tokens: tuple[str, ...]) -> bool:
-        return any(token in text for token in tokens)
-
-    def _appears_before(
-        self,
-        text: str,
-        first_tokens: tuple[str, ...],
-        second_tokens: tuple[str, ...],
-    ) -> bool:
-        first_positions = [text.find(token) for token in first_tokens if token in text]
-        second_positions = [text.find(token) for token in second_tokens if token in text]
-        if not first_positions or not second_positions:
-            return False
-        return min(first_positions) < min(second_positions)
-
     def _infer_side(self, text: str) -> str:
-        if any(token in text for token in ('left', 'gauche', 'يسار')):
+        if any(token in text for token in ('left', 'gauche')):
             return 'left'
-        if any(token in text for token in ('right', 'droit', 'droite', 'يمين')):
+        if any(token in text for token in ('right', 'droit', 'droite')):
             return 'right'
         return 'right'
 
     def _infer_loop(self, text: str) -> str | None:
-        if any(token in text for token in ('interior', 'internal', 'petit', 'small', 'داخلي', 'صغير')):
+        if any(token in text for token in ('interior', 'internal', 'petit', 'small')):
             return 'interior'
-        if any(token in text for token in ('exterior', 'external', 'grand', 'large', 'خارجي', 'كبير')):
+        if any(token in text for token in ('exterior', 'external', 'grand', 'large')):
             return 'exterior'
         return None
 
@@ -520,13 +459,13 @@ class Room315VlaSupervisor(Node):
         if match:
             return match.group(1)
         match = re.search(r'\b([1-4])\b', text)
-        if match and any(token in text for token in ('slot', 'فتحة', 'خانه', 'خانة')):
+        if match and 'slot' in text:
             return match.group(1)
         return None
 
     def _infer_switch_names(self, text: str) -> list[str]:
         names = sorted({match.group(0).upper() for match in re.finditer(r'\bA[1-4]\b', text, re.IGNORECASE)})
-        if 'all' in text or 'كل' in text:
+        if 'all' in text:
             return ['ALL']
         return names
 
@@ -559,10 +498,7 @@ class Room315VlaSupervisor(Node):
         if self.emergency_stop:
             raise RuntimeError('emergency stop is active; clear it before motion commands')
 
-        if action in {'route_template', 'template'}:
-            template_name = str(command.get('template') or command.get('name') or '')
-            self._execute_route_template(template_name, command)
-            return
+
         if action in {'route_shuttle', 'route', 'start_route'}:
             self._execute_route(command)
             return
@@ -579,29 +515,6 @@ class Room315VlaSupervisor(Node):
             self._execute_stoppers(command)
             return
         raise ValueError(f'unknown VLA action {action!r}')
-
-    def _execute_route_template(self, template_name: str, overrides: dict[str, Any]) -> None:
-        if not template_name:
-            raise ValueError('route_template needs "template"')
-        template = self.route_templates.get(template_name)
-        if not isinstance(template, dict):
-            raise ValueError(f'unknown route template {template_name!r}')
-        override_items = {
-            key: value
-            for key, value in overrides.items()
-            if key not in {'action', 'intent', 'type', 'template', 'name'} and value is not None
-        }
-        command = {**template, **override_items}
-        template_type = str(command.get('type') or 'route').lower()
-        if template_type in {'transport', 'transport_task'}:
-            self._execute_transport_task(template_name, command)
-            return
-        if template_type in {'loop_entry', 'interior_loop_entry'}:
-            self._execute_loop_entry_task(template_name, command)
-            return
-        command['action'] = 'route_shuttle'
-        self._execute_route(command)
-        self._set_result(f'route template {template_name} executed')
 
     def _execute_route(self, command: dict[str, Any]) -> None:
         side = _normalize_side(command.get('side', 'right'))
@@ -635,122 +548,7 @@ class Room315VlaSupervisor(Node):
 
         self._set_result(f'route prepared on {side}: loop={loop or "unchanged"} start={start}')
 
-    def _execute_transport_task(self, template_name: str, command: dict[str, Any]) -> None:
-        side = _normalize_side(command.get('side', 'right'))
-        source_slots = self._normalize_slots(command.get('source_slots'))
-        target_slots = self._normalize_slots(command.get('target_slots'))
-        if not source_slots:
-            raise ValueError(f'transport task {template_name} needs source_slots')
-        if not target_slots:
-            raise ValueError(f'transport task {template_name} needs target_slots')
 
-        shuttle_name, source_slot, source_sensor = self._find_shuttle_in_slots(side, source_slots)
-        if not shuttle_name:
-            sensors = ', '.join(self._sensor_names_for_slots(side, source_slots))
-            slots = ' or '.join(source_slots)
-            raise ValueError(
-                f'task {template_name} rejected: no {side}-rail shuttle detected in '
-                f'source slots {slots}; expected one of sensors {sensors}'
-            )
-
-        loop = _normalize_loop(command.get('loop')) or 'exterior'
-        switches = self._switch_assignments_from_command(command, loop)
-        stoppers = dict(command.get('stoppers') or {'ALL': '0'})
-
-        self._publish_shuttle_command(side, shuttle_name, 'OFF')
-        if stoppers:
-            self._publish_stoppers(side, stoppers)
-        if switches:
-            self._publish_switches(side, switches)
-        self._publish_shuttle_command(
-            side,
-            shuttle_name,
-            'ON',
-            speed=float(command.get('speed', self._default_speed())),
-        )
-
-        task_id = self._new_task_id(template_name, side, shuttle_name)
-        self.active_tasks[task_id] = {
-            'type': 'transport',
-            'template': template_name,
-            'side': side,
-            'shuttle': shuttle_name,
-            'source_slot': source_slot,
-            'source_sensor': source_sensor,
-            'target_slots': target_slots,
-            'target_sensors': self._sensor_names_for_slots(side, target_slots),
-            'timeout_s': float(command.get('completion_timeout_s', 0.0) or 0.0),
-            'started_at': time.monotonic(),
-        }
-        self._set_result(
-            f'task {template_name} started: {side} shuttle {shuttle_name} from '
-            f'slot {source_slot} toward target slots {" or ".join(target_slots)}'
-        )
-
-    def _execute_loop_entry_task(self, template_name: str, command: dict[str, Any]) -> None:
-        side = _normalize_side(command.get('side', 'right'))
-        source_slots = self._normalize_slots(command.get('source_slots'))
-        if not source_slots:
-            raise ValueError(f'loop-entry task {template_name} needs source_slots')
-        shuttle_name, source_slot, source_sensor = self._find_shuttle_in_slots(side, source_slots)
-        if not shuttle_name:
-            sensors = ', '.join(self._sensor_names_for_slots(side, source_slots))
-            slots = ' or '.join(source_slots)
-            raise ValueError(
-                f'task {template_name} rejected: no {side}-rail shuttle detected in '
-                f'source slots {slots}; expected one of sensors {sensors}'
-            )
-
-        trigger_sensor = str(command.get('trigger_sensor') or '').strip()
-        trigger_sensors = self._normalize_names(command.get('trigger_sensors'))
-        if trigger_sensor and trigger_sensor not in trigger_sensors:
-            trigger_sensors.insert(0, trigger_sensor)
-        if not trigger_sensors:
-            raise ValueError(f'loop-entry task {template_name} needs trigger_sensor')
-        timeout_s = float(command.get('timeout_s', 12.0) or 12.0)
-        initial_switches = dict(command.get('initial_switches') or {})
-        final_switches = dict(command.get('final_switches') or {})
-        stoppers = dict(command.get('stoppers') or {'ALL': '0'})
-        final_resume_delay_s = float(command.get('final_resume_delay_s', 0.6) or 0.6)
-        keepalive_duration_s = float(command.get('keepalive_duration_s', 3.0) or 3.0)
-        keepalive_period_s = float(command.get('keepalive_period_s', 0.5) or 0.5)
-
-        self._publish_shuttle_command(side, shuttle_name, 'OFF')
-        if stoppers:
-            self._publish_stoppers(side, stoppers)
-        if initial_switches:
-            self._publish_switches(side, initial_switches)
-        self._publish_shuttle_command(
-            side,
-            shuttle_name,
-            'ON',
-            speed=float(command.get('speed', self._default_speed())),
-        )
-
-        task_id = self._new_task_id(template_name, side, shuttle_name)
-        self.active_tasks[task_id] = {
-            'type': 'loop_entry',
-            'template': template_name,
-            'side': side,
-            'shuttle': shuttle_name,
-            'source_slot': source_slot,
-            'source_sensor': source_sensor,
-            'trigger_sensor': trigger_sensors[0],
-            'trigger_sensors': trigger_sensors,
-            'trigger_segments': self._normalize_segments(command.get('trigger_segments')),
-            'final_switches': final_switches,
-            'stoppers': stoppers,
-            'timeout_s': timeout_s,
-            'phase': 'waiting_for_trigger',
-            'final_resume_delay_s': max(final_resume_delay_s, 0.0),
-            'keepalive_duration_s': max(keepalive_duration_s, 0.0),
-            'keepalive_period_s': max(keepalive_period_s, 0.1),
-            'started_at': time.monotonic(),
-        }
-        self._set_result(
-            f'task {template_name} started: waiting for {trigger_sensor} before '
-            f'commanding final interior switches'
-        )
 
     def _execute_add_shuttle(self, command: dict[str, Any]) -> None:
         side = _normalize_side(command.get('side', 'right'))
@@ -916,146 +714,10 @@ class Room315VlaSupervisor(Node):
                 return reading
         return None
 
-    def _first_triggered_slot(
-        self,
-        side: str,
-        slots: list[str],
-        shuttle_name: str,
-    ) -> tuple[str, str] | None:
-        for slot in slots:
-            sensor_name = self._slot_sensor_name(side, slot)
-            if sensor_name and self._active_sensor_reading(side, sensor_name, shuttle_name):
-                return slot, sensor_name
-        return None
-
-    def _loop_entry_trigger_reason(
-        self,
-        side: str,
-        shuttle_name: str,
-        trigger_sensors: list[str],
-        trigger_segments: list[str],
-    ) -> str:
-        for trigger_sensor in trigger_sensors:
-            if self._active_sensor_reading(side, trigger_sensor, shuttle_name):
-                return trigger_sensor
-        if trigger_segments:
-            shuttle = self.rails.get(side, {}).get('shuttles', {}).get(shuttle_name, {})
-            segment = str(shuttle.get('segment') or '').upper()
-            if segment in trigger_segments:
-                return f'segment {segment}'
-        return ''
-
-    def _new_task_id(self, template_name: str, side: str, shuttle_name: str) -> str:
-        started_ms = int(time.monotonic() * 1000)
-        return f'{template_name}:{side}:{shuttle_name}:{started_ms}'
-
     def _on_status_timer(self) -> None:
-        self._update_active_tasks()
         self._publish_status()
 
-    def _update_active_tasks(self) -> None:
-        if not self.active_tasks:
-            return
-        now = time.monotonic()
-        completed_task_ids = []
-        for task_id, task in list(self.active_tasks.items()):
-            task_type = str(task.get('type') or '')
-            side = str(task.get('side') or 'right')
-            shuttle_name = str(task.get('shuttle') or '')
-            template_name = str(task.get('template') or task_id)
-            started_at = float(task.get('started_at') or now)
-            timeout_s = float(task.get('timeout_s') or 0.0)
 
-            if task_type == 'transport':
-                hit = self._first_triggered_slot(
-                    side,
-                    list(task.get('target_slots') or []),
-                    shuttle_name,
-                )
-                if hit:
-                    target_slot, target_sensor = hit
-                    self._publish_shuttle_command(side, shuttle_name, 'OFF')
-                    self._set_result(
-                        f'task {template_name} completed: {side} shuttle {shuttle_name} '
-                        f'reached target slot {target_slot} via {target_sensor}'
-                    )
-                    completed_task_ids.append(task_id)
-                    continue
-                if timeout_s > 0.0 and now - started_at > timeout_s:
-                    self._publish_shuttle_command(side, shuttle_name, 'OFF')
-                    self._set_result(
-                        f'task {template_name} failed: target slots '
-                        f'{" or ".join(task.get("target_slots") or [])} were not reached '
-                        f'within {timeout_s:.1f}s; shuttle {shuttle_name} stopped'
-                    )
-                    completed_task_ids.append(task_id)
-                    continue
-
-            if task_type == 'loop_entry':
-                phase = str(task.get('phase') or 'waiting_for_trigger')
-                if phase == 'circulating':
-                    keepalive_until = float(task.get('keepalive_until') or started_at)
-                    next_keepalive_at = float(task.get('next_keepalive_at') or now)
-                    if now <= keepalive_until and now >= next_keepalive_at:
-                        self._publish_shuttle_command(side, shuttle_name, 'ON')
-                        stoppers = dict(task.get('stoppers') or {})
-                        if stoppers:
-                            self._publish_stoppers(side, stoppers)
-                        task['next_keepalive_at'] = now + float(
-                            task.get('keepalive_period_s') or 0.5
-                        )
-                    if now > keepalive_until:
-                        self._set_result(
-                            f'task {template_name} completed: {side} shuttle {shuttle_name} '
-                            f'is circulating on the interior loop'
-                        )
-                        completed_task_ids.append(task_id)
-                    continue
-
-                trigger_sensor = str(task.get('trigger_sensor') or '')
-                trigger_reason = self._loop_entry_trigger_reason(
-                    side,
-                    shuttle_name,
-                    list(task.get('trigger_sensors') or [trigger_sensor]),
-                    list(task.get('trigger_segments') or []),
-                )
-                if trigger_reason:
-                    final_switches = dict(task.get('final_switches') or {})
-                    if final_switches:
-                        self._publish_switches(side, final_switches)
-                    stoppers = dict(task.get('stoppers') or {})
-                    if stoppers:
-                        self._publish_stoppers(side, stoppers)
-                    task['phase'] = 'circulating'
-                    task['triggered_at'] = now
-                    task['next_keepalive_at'] = now + float(
-                        task.get('final_resume_delay_s') or 0.6
-                    )
-                    task['keepalive_until'] = now + float(
-                        task.get('keepalive_duration_s') or 3.0
-                    )
-                    self._set_result(
-                        f'task {template_name}: {trigger_reason} triggered; final switches '
-                        f'commanded {final_switches}; keeping {shuttle_name} enabled for '
-                        f'interior circulation'
-                    )
-                    continue
-                if timeout_s > 0.0 and now - started_at > timeout_s:
-                    self._publish_shuttle_command(side, shuttle_name, 'OFF')
-                    trigger_names = list(task.get('trigger_sensors') or [trigger_sensor])
-                    trigger_targets = ' or '.join([
-                        *trigger_names,
-                        *[f'segment {segment}' for segment in task.get('trigger_segments') or []],
-                    ])
-                    self._set_result(
-                        f'task {template_name} failed: {trigger_targets} was not triggered '
-                        f'within {timeout_s:.1f}s; shuttle {shuttle_name} stopped'
-                    )
-                    completed_task_ids.append(task_id)
-                    continue
-
-        for task_id in completed_task_ids:
-            self.active_tasks.pop(task_id, None)
 
     def _switch_assignments_from_command(
         self,
@@ -1139,7 +801,6 @@ class Room315VlaSupervisor(Node):
             self._publish_shuttle_command(side, 'ALL', 'OFF')
             if close_stoppers:
                 self._publish_stoppers(side, {'ALL': '1'})
-        self.active_tasks.clear()
         self._set_result(f'{reason}: all shuttles OFF')
 
     def _default_speed(self) -> float:
@@ -1160,15 +821,7 @@ class Room315VlaSupervisor(Node):
         msg.data = json.dumps(self._snapshot(), sort_keys=True)
         self.status_pub.publish(msg)
 
-    def _active_task_snapshot(self) -> dict[str, dict[str, Any]]:
-        now = time.monotonic()
-        snapshot = {}
-        for task_id, task in self.active_tasks.items():
-            item = {key: value for key, value in task.items() if key != 'started_at'}
-            started_at = task.get('started_at')
-            item['age_s'] = None if started_at is None else round(now - float(started_at), 3)
-            snapshot[task_id] = item
-        return snapshot
+
 
     def _snapshot(self) -> dict[str, Any]:
         now = time.monotonic()
@@ -1198,7 +851,7 @@ class Room315VlaSupervisor(Node):
             'emergency_stop': self.emergency_stop,
             'last_command': self.last_command,
             'last_result': self.last_result,
-            'active_tasks': self._active_task_snapshot(),
+
             'vision': {
                 'image_frames': self.image_frame_count,
                 'last_image_age_s': image_age,

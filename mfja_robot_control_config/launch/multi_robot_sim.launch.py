@@ -361,6 +361,9 @@ def _launch_setup(context, *args, **kwargs):
     pause_during_switch_update = (
         LaunchConfiguration('pause_during_switch_update').perform(context).lower() == 'true'
     )
+    visual_debug_colors = (
+        LaunchConfiguration('visual_debug_colors').perform(context).lower() == 'true'
+    )
     robot_config = LaunchConfiguration('robot_config').perform(context)
     selected_robots = _parse_selected_robots(
         LaunchConfiguration('robots').perform(context)
@@ -390,6 +393,8 @@ def _launch_setup(context, *args, **kwargs):
         conveyor_controller_arguments.append('--keep-paused-after-initial-loop')
     if not pause_during_switch_update:
         conveyor_controller_arguments.append('--no-pause-during-switch-update')
+    if not visual_debug_colors:
+        conveyor_controller_arguments.append('--neutral-visual-colors')
 
     gz_server_args = f'-s {world}' if start_paused else f'-r -s {world}'
 
@@ -575,6 +580,12 @@ def generate_launch_description():
             default_value='false',
             choices=['true', 'false'],
             description='Pause Gazebo while applying visual switch pose updates.',
+        ),
+        DeclareLaunchArgument(
+            'visual_debug_colors',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Use debug colors for switch states; false keeps switches rail-colored.',
         ),
         OpaqueFunction(function=_launch_setup),
     ])

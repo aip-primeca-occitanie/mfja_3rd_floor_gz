@@ -61,7 +61,7 @@ def generate_launch_description():
             'status_topic': LaunchConfiguration('status_topic'),
             'command_topic': LaunchConfiguration('command_topic'),
             'agent_status_topic': LaunchConfiguration('agent_status_topic'),
-            'openai_model': LaunchConfiguration('vla_agent_model'),
+
             'http_endpoint': LaunchConfiguration('vla_agent_http_endpoint'),
             'decision_period_s': LaunchConfiguration('vla_agent_decision_period_s'),
             'request_timeout_s': LaunchConfiguration('vla_agent_request_timeout_s'),
@@ -87,6 +87,28 @@ def generate_launch_description():
             'recorder_status_topic': LaunchConfiguration('dataset_status_topic'),
             'sample_period_s': LaunchConfiguration('dataset_sample_period_s'),
             'auto_start_on_goal': LaunchConfiguration('dataset_auto_start_on_goal'),
+        }],
+    )
+
+    benchmark_runner = Node(
+        package='mfja_robot_control_config',
+        executable='room_315_vla_benchmark_runner.py',
+        name='room_315_vla_benchmark_runner',
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('enable_benchmark_runner')),
+        parameters=[{
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'tasks': LaunchConfiguration('benchmark_tasks'),
+            'goal_topic': LaunchConfiguration('user_goal_topic'),
+            'status_topic': LaunchConfiguration('status_topic'),
+            'episode_control_topic': LaunchConfiguration('episode_control_topic'),
+            'benchmark_status_topic': LaunchConfiguration('benchmark_status_topic'),
+            'report_dir': LaunchConfiguration('benchmark_report_dir'),
+            'task_timeout_s': LaunchConfiguration('benchmark_task_timeout_s'),
+            'settle_time_s': LaunchConfiguration('benchmark_settle_time_s'),
+            'start_delay_s': LaunchConfiguration('benchmark_start_delay_s'),
+            'auto_start': LaunchConfiguration('benchmark_auto_start'),
+            'mark_dataset_episodes': LaunchConfiguration('benchmark_mark_dataset_episodes'),
         }],
     )
 
@@ -122,15 +144,15 @@ def generate_launch_description():
             description='Record Room 315 VLA episodes for SmolVLA/LeRobot fine-tuning.',
         ),
         DeclareLaunchArgument(
-            'vla_agent_provider',
-            default_value='mock',
-            choices=['mock', 'openai', 'http'],
-            description='VLA agent provider: mock, openai, or http.',
+            'enable_benchmark_runner',
+            default_value='false',
+            choices=['true', 'false'],
+            description='Run task-level Room 315 VLA benchmark episodes automatically.',
         ),
         DeclareLaunchArgument(
-            'vla_agent_model',
-            default_value='',
-            description='Optional OpenAI model name. Empty uses OPENAI_MODEL or the agent default.',
+            'vla_agent_provider',
+            default_value='http',
+            description='VLA agent provider (only http is supported now).',
         ),
         DeclareLaunchArgument(
             'vla_agent_http_endpoint',
@@ -199,6 +221,48 @@ def generate_launch_description():
             description='Start a new dataset episode when a VLA user goal arrives.',
         ),
         DeclareLaunchArgument(
+            'benchmark_status_topic',
+            default_value='/room_315/vla/benchmark_status',
+            description='std_msgs/String JSON status output from the VLA benchmark runner.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_tasks',
+            default_value='all',
+            description='Comma-separated VLA benchmark task names, or group: all, transport, loop_entry.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_report_dir',
+            default_value='~/.ros/room315_vla_benchmarks',
+            description='Output directory for VLA benchmark JSONL and summary reports.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_task_timeout_s',
+            default_value='120.0',
+            description='Maximum seconds to wait for each benchmark task.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_settle_time_s',
+            default_value='2.0',
+            description='Seconds to wait between benchmark tasks.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_start_delay_s',
+            default_value='3.0',
+            description='Seconds to wait before dispatching the first benchmark task.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_auto_start',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Automatically dispatch benchmark tasks after launch.',
+        ),
+        DeclareLaunchArgument(
+            'benchmark_mark_dataset_episodes',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Publish stop success/failure to the dataset recorder after each task.',
+        ),
+        DeclareLaunchArgument(
             'emergency_stop_topic',
             default_value='/room_315/vla/emergency_stop',
             description='std_msgs/Bool virtual emergency stop input.',
@@ -237,4 +301,5 @@ def generate_launch_description():
         supervisor,
         real_vla_agent,
         dataset_recorder,
+        benchmark_runner,
     ])
