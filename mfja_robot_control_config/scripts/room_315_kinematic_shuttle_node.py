@@ -3262,17 +3262,19 @@ class Room315KinematicShuttleNode(Node):
         updates: Dict[str, str] = {}
         for raw_selector, raw_state in assignments:
             selector = raw_selector.strip().upper()
-            state = self._normalize_stopper_state(raw_state)
             if selector == 'ALL':
+                state = self._normalize_stopper_state(raw_state)
                 for stopper_name in self.stopper_configs:
                     updates[stopper_name] = state
-                continue
-            if selector not in self.stopper_configs:
-                allowed = ', '.join(['ALL', *sorted(self.stopper_configs)])
-                raise ValueError(
-                    f'Unknown stopper selector {selector!r}; use one of: {allowed}.'
-                )
-            updates[selector] = state
+
+        for raw_selector, raw_state in assignments:
+            selector = raw_selector.strip().upper()
+            if selector != 'ALL':
+                state = self._normalize_stopper_state(raw_state)
+                if selector not in self.stopper_configs:
+                    allowed = ', '.join(['ALL', *sorted(self.stopper_configs)])
+                    raise ValueError(f'Unknown stopper selector {selector!r}; use {allowed}.')
+                updates[selector] = state
         return updates
 
     @staticmethod
@@ -3295,9 +3297,12 @@ class Room315KinematicShuttleNode(Node):
 
         self._apply_shuttle_control_updates(updates)
 
-    def _apply_shuttle_control_updates(self, updates: Dict[str, str]) -> None:
+    def _apply_shuttle_control_updates(
+        self,
+        updates: Dict[str, tuple[str, float | None]],
+    ) -> None:
         applied_updates: Dict[str, str] = {}
-        for entity_name, action in updates.items():
+        for entity_name, (action, speed) in updates.items():
             shuttle = self._find_shuttle(entity_name)
             if shuttle is None:
                 self.get_logger().warn(
@@ -3305,8 +3310,10 @@ class Room315KinematicShuttleNode(Node):
                 )
                 continue
             try:
-                self._apply_shuttle_action(shuttle, action)
-                applied_updates[entity_name] = action
+                self._apply_shuttle_action(shuttle, action, speed)
+                applied_updates[entity_name] = (
+                    action if speed is None else f'{action}@{speed:.3f}m/s'
+                )
             except ValueError as error:
                 self.get_logger().error(str(error))
 
@@ -3319,7 +3326,7 @@ class Room315KinematicShuttleNode(Node):
     def _parse_shuttle_control_typed_command(
         self,
         command: RailShuttleCommand,
-    ) -> Dict[str, str]:
+    ) -> Dict[str, tuple[str, float | None]]:
         raw_selector = command.name.strip()
         raw_action = command.command.strip()
         if not raw_action:
@@ -3327,15 +3334,17 @@ class Room315KinematicShuttleNode(Node):
                 'Typed shuttle control command must set command=ON/OFF/RESET/REMOVE.'
             )
         action = self._normalize_shuttle_action(raw_action)
+        speed = float(command.speed) if command.speed > 0.0 else None
+        update = (action, speed)
         if raw_selector.upper() == 'ALL':
-            return {shuttle.entity_name: action for shuttle in self.shuttles}
+            return {shuttle.entity_name: update for shuttle in self.shuttles}
         if not raw_selector:
             if len(self.shuttles) == 1:
-                return {self.shuttles[0].entity_name: action}
+                return {self.shuttles[0].entity_name: update}
             raise ValueError(
                 'Typed shuttle control command must set name, or use name=ALL.'
         )
-        return {raw_selector: action}
+        return {raw_selector: update}
 
     @staticmethod
     def _normalize_enabled_state(raw_state: str) -> bool:
@@ -3357,9 +3366,14 @@ class Room315KinematicShuttleNode(Node):
             return 'REMOVE'
         return 'ENABLE' if cls._normalize_enabled_state(raw_state) else 'DISABLE'
 
-    def _apply_shuttle_action(self, shuttle: ManagedShuttle, action: str) -> None:
+    def _apply_shuttle_action(
+        self,
+        shuttle: ManagedShuttle,
+        action: str,
+        speed: float | None = None,
+    ) -> None:
         if action == 'ENABLE':
-            self._set_shuttle_enabled(shuttle, True)
+            self._set_shuttle_enabled(shuttle, True, speed)
             return
         if action == 'DISABLE':
             self._set_shuttle_enabled(shuttle, False)
@@ -3372,7 +3386,12 @@ class Room315KinematicShuttleNode(Node):
             return
         raise ValueError(f'Unsupported shuttle action {action!r}.')
 
-    def _set_shuttle_enabled(self, shuttle: ManagedShuttle, enabled: bool) -> None:
+    def _set_shuttle_enabled(
+        self,
+        shuttle: ManagedShuttle,
+        enabled: bool,
+        speed: float | None = None,
+    ) -> None:
         shuttle.enabled = enabled
         shuttle.blocked_by = None
         shuttle.collision_distance_m = None
@@ -3392,6 +3411,8 @@ class Room315KinematicShuttleNode(Node):
         if shuttle.stopped_by in {'DISABLED', 'NOT_DEPLOYED'}:
             shuttle.stopped_by = None
             shuttle.stopper_distance_m = None
+        if speed is not None:
+            shuttle.core.state.speed = speed
         if shuttle.core.state.mode in {WAITING, FALLING} and shuttle.core.state.speed > 0.0:
             shuttle.core.state.mode = MOVING
 
@@ -3657,15 +3678,27 @@ class Room315KinematicShuttleNode(Node):
                     'RIGHT, LEFT, or ALL.'
                 )
 
-            for switch_name in logic_targets:
-                updates[switch_name] = state
+            if selector_name in ('ALL', 'RIGHT', 'LEFT', self.active_visual_group_selector):
+                for switch_name in logic_targets:
+                    updates[switch_name] = state
 
-            if visual_selector is not None:
-                visual_entries.append(
-                    f'{visual_selector}={self._visual_mode_for_state(state)}'
-                )
+            if visual_selector:
+                visual_entries.append((visual_selector, state))
 
-        return updates, ', '.join(visual_entries)
+        for selector, raw_state in assignments:
+            selector_name = selector.strip().upper()
+            if selector_name not in ('ALL', 'RIGHT', 'LEFT', self.active_visual_group_selector):
+                state = self._normalize_commanded_switch_state(raw_state)
+                logic_targets = self._logic_targets_for_selector(selector_name)
+                for switch_name in logic_targets:
+                    updates[switch_name] = state
+
+        visual_command_parts = [
+            f'{selector}={self._visual_mode_for_state(state)}'
+            for selector, state in visual_entries
+        ]
+
+        return updates, ', '.join(visual_command_parts)
 
     def _normalize_commanded_switch_state(self, raw_state: str) -> str:
         state = raw_state.strip().upper()

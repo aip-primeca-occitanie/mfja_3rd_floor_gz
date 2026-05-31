@@ -152,8 +152,8 @@ SWITCH_MODE_COLORS = {
     },
 }
 SWITCH_NEUTRAL_COLORS = {
-    'ambient': (0.72, 0.74, 0.78, 1.0),
-    'diffuse': (0.72, 0.74, 0.78, 1.0),
+    'ambient': (0.38, 0.40, 0.43, 1.0),
+    'diffuse': (0.38, 0.40, 0.43, 1.0),
     'specular': (0.18, 0.18, 0.18, 1.0),
     'emissive': (0.00, 0.00, 0.00, 1.0),
 }

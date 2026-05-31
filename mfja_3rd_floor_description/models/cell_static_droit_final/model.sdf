@@ -10,8 +10,8 @@
           </mesh>
         </geometry>
         <material>
-          <ambient>0.72 0.74 0.78 1</ambient>
-          <diffuse>0.72 0.74 0.78 1</diffuse>
+          <ambient>0.38 0.40 0.43 1</ambient>
+          <diffuse>0.38 0.40 0.43 1</diffuse>
           <specular>0.30 0.30 0.30 1</specular>
           <emissive>0 0 0 1</emissive>
         </material>

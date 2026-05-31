@@ -32,3 +32,119 @@ def test_teleop_generator_stops_shuttle_after_station_timeout():
     assert 'try:\n            self.on(side)' in text
     assert 'finally:\n            self.off(side)' in text
     assert 'slot wait diagnostics' in text
+
+
+def test_stopper_wait_accepts_real_stopper_sensor_feedback():
+    module = ast.parse(_script_text())
+    constants = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in module.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+    }
+    text = _script_text()
+
+    assert constants['STOPPER_SENSOR_NAMES']['A1'] == 'A1_STOPPER_SENSOR'
+    assert 'if self.active_sensor(side, (sensor_name,)):' in text
+    assert 'return True\n            if self.segment(side) not in target_segments:' in text
+
+
+def test_segment_leave_wait_uses_requested_timeout_for_slow_loops():
+    text = _script_text()
+
+    assert 'min(timeout_s, 20.0)' not in text
+    assert "f'{side} shuttle to leave segments {sorted(normalized)}'" in text
+    assert 'return \'\'' in text
+
+
+def test_a4_transition_stages_interior_approach_before_switching_a4():
+    module = ast.parse(_script_text())
+    constants = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in module.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+    }
+    text = _script_text()
+
+    assert constants['A4_INTERIOR_APPROACH_SEGMENT'] == {
+        'right': 'A34I',
+        'left': 'A34I',
+    }
+    assert constants['A4_INTERIOR_EXIT_SEGMENTS'] == {
+        'right': {'A14'},
+        'left': {'A14'},
+    }
+    assert constants['A4_INTERIOR_PASS_PLANS']['left'] == {
+        'approach_segment': 'A34I',
+        'exit_segments': {'A14'},
+        'pass_switches': {'A4': 'INTERIOR'},
+        'stage_from_stopper': 'A3',
+        'stage_switches': {'A3': 'INTERIOR', 'A4': 'EXTERIOR'},
+        'stage_stopper': 'A4',
+    }
+    assert 'def stage_a4_interior_approach' in text
+    assert "self.sw_i(side, plan['stage_switches'])" in text
+    assert "self.sw_i(side, plan['pass_switches'])" in text
+
+
+def test_interior_segments_exit_with_side_specific_guard_switches():
+    module = ast.parse(_script_text())
+    constants = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in module.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+    }
+
+    plans = constants['INTERIOR_EXTERIOR_EXIT_PLANS']
+
+    assert {
+        'segments': {'A1I', 'A12I', 'A2I'},
+        'switches': {'A4': 'INTERIOR'},
+        'stopper': 'A1',
+    } in plans['left']
+    assert {
+        'segments': {'A1I', 'A12I', 'A2I'},
+        'switches': {'A2': 'INTERIOR'},
+        'stopper': 'A3',
+    } in plans['right']
+
+
+def test_switch_transition_episode_labels_are_task_level():
+    text = _script_text()
+
+    assert 'stop at A3 then switch A3 interior' not in text
+    assert 'stop at A4 then switch A4 interior' not in text
+    assert 'route right shuttle through A3 into the interior branch' in text
+    assert 'pass right shuttle through A4 from the interior approach' in text
+    assert 'route left shuttle through A3 into the interior branch' in text
+    assert 'pass left shuttle through A4 from the interior approach' in text
+
+
+def test_loop_mode_changes_stop_at_gate_and_wait_for_switch_feedback():
+    module = ast.parse(_script_text())
+    constants = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in module.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+    }
+    text = _script_text()
+
+    assert constants['MODE_CHANGE_STOPPER'] == {
+        'right': 'A3',
+        'left': 'A1',
+    }
+    assert 'from mfja_rail_interfaces.msg import SwitchState as RailSwitchState' in text
+    assert 'f\'{prefix}/switches/state\'' in text
+    assert 'def wait_for_all_switches' in text
+    assert "self._stop_before_mode_change_gate(side, approach_state)" in text
+    assert "self._stop_before_mode_change_gate(side, 'INTERIOR')" in text
+    assert "self._set_all_switches_before_continuing(side, 'INTERIOR')" in text
+    assert "self._set_all_switches_before_continuing(side, 'EXTERIOR')" in text
+    assert "if not self.force_exterior(side):" in text

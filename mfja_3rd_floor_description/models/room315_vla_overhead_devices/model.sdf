@@ -109,104 +109,11 @@
       </sensor>
     </link>
 
-    <link name="vla_status_panel_link">
-      <pose>-10.25 -2.55 1.45 0 0 1.5708</pose>
-
-      <visual name="panel_board_visual">
-        <geometry>
-          <box>
-            <size>0.04 0.56 0.34</size>
-          </box>
-        </geometry>
-        <material>
-          <ambient>0.02 0.02 0.025 1</ambient>
-          <diffuse>0.02 0.02 0.025 1</diffuse>
-        </material>
-      </visual>
-
-      <visual name="panel_green_ready_visual">
-        <pose>0.03 -0.18 0.07 0 1.5708 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.045</radius>
-            <length>0.02</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.0 0.5 0.08 1</ambient>
-          <diffuse>0.0 0.9 0.12 1</diffuse>
-          <emissive>0.0 0.2 0.03 1</emissive>
-        </material>
-      </visual>
-
-      <visual name="panel_yellow_vla_visual">
-        <pose>0.03 0.0 0.07 0 1.5708 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.045</radius>
-            <length>0.02</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.55 0.36 0.0 1</ambient>
-          <diffuse>1.0 0.72 0.02 1</diffuse>
-          <emissive>0.22 0.14 0.0 1</emissive>
-        </material>
-      </visual>
-
-      <visual name="panel_red_estop_visual">
-        <pose>0.03 0.18 0.07 0 1.5708 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.045</radius>
-            <length>0.02</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.55 0.0 0.0 1</ambient>
-          <diffuse>1.0 0.0 0.0 1</diffuse>
-          <emissive>0.22 0.0 0.0 1</emissive>
-        </material>
-      </visual>
-    </link>
-
-    <link name="vla_estop_pedestal_link">
-      <pose>-10.25 -2.05 0.55 0 0 0</pose>
-
-      <visual name="estop_post_visual">
-        <geometry>
-          <cylinder>
-            <radius>0.035</radius>
-            <length>0.90</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.02 0.02 0.025 1</ambient>
-          <diffuse>0.02 0.02 0.025 1</diffuse>
-        </material>
-      </visual>
-
-      <visual name="estop_button_visual">
-        <pose>0 0 0.50 0 0 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.10</radius>
-            <length>0.06</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.60 0.0 0.0 1</ambient>
-          <diffuse>1.0 0.0 0.0 1</diffuse>
-          <emissive>0.15 0.0 0.0 1</emissive>
-        </material>
-      </visual>
-    </link>
-
     <link name="slot_fiducial_placeholders_link">
       <pose>0 0 0 0 0 0</pose>
 
       <visual name="right_slot_1_marker">
-        <pose>-15.43 -3.86 0.856 0 0 0</pose>
+        <pose>-14.95 -3.86 0.856 0 0 0</pose>
         <geometry>
           <box>
             <size>0.16 0.10 0.012</size>
@@ -216,10 +123,11 @@
           <ambient>0.0 0.1 0.55 1</ambient>
           <diffuse>0.0 0.18 1.0 1</diffuse>
         </material>
+
       </visual>
 
       <visual name="right_slot_2_marker">
-        <pose>-14.95 -3.86 0.856 0 0 0</pose>
+        <pose>-15.43 -3.86 0.856 0 0 0</pose>
         <geometry>
           <box>
             <size>0.16 0.10 0.012</size>
@@ -231,8 +139,10 @@
         </material>
       </visual>
 
+
       <visual name="right_slot_3_marker">
-        <pose>-14.77 -5.54 0.856 0 0 0</pose>
+        <pose>-15.24 -5.54 0.856 0 0 0</pose>
+
         <geometry>
           <box>
             <size>0.16 0.10 0.012</size>
@@ -242,10 +152,11 @@
           <ambient>0.52 0.32 0.0 1</ambient>
           <diffuse>1.0 0.66 0.0 1</diffuse>
         </material>
+
       </visual>
 
       <visual name="right_slot_4_marker">
-        <pose>-15.24 -5.54 0.856 0 0 0</pose>
+        <pose>-14.77 -5.54 0.856 0 0 0</pose>
         <geometry>
           <box>
             <size>0.16 0.10 0.012</size>

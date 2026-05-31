@@ -221,8 +221,7 @@
       <pose>-9.822 -4.42 0.726 0 0 -2.63653</pose>
     </include>
 
-    <!-- VLA experiment devices: rail-focused RGB-D cameras, visual slot markers,
-         status lights, and a virtual emergency-stop pedestal. -->
+    <!-- VLA experiment devices: rail-focused RGB-D cameras and visual slot markers. -->
     <include>
       <uri>model://room315_vla_overhead_devices</uri>
       <name>room315_vla_overhead_devices_1</name>

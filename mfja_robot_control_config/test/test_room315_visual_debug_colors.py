@@ -44,6 +44,36 @@ def test_shuttle_visual_debug_colors_can_keep_falling_shuttle_black():
     assert node._shuttle_visual_rgba(shuttle_node.SHUTTLE_VISUAL_NORMAL) == (0.01, 0.01, 0.01, 1.0)
 
 
+def test_shuttle_on_command_speed_updates_existing_shuttle():
+    shuttle_node = _load_module(
+        'room_315_kinematic_shuttle_node',
+        SCRIPTS_DIR / 'room_315_kinematic_shuttle_node.py',
+    )
+    node = object.__new__(shuttle_node.Room315KinematicShuttleNode)
+    shuttle = SimpleNamespace(
+        core=SimpleNamespace(
+            state=SimpleNamespace(
+                mode=shuttle_node.WAITING,
+                speed=0.25,
+            )
+        ),
+        deployed=True,
+        blocked_by='other_shuttle',
+        collision_distance_m=0.1,
+        stopped_by='DISABLED',
+        stopper_distance_m=0.0,
+    )
+
+    node._apply_shuttle_action(shuttle, 'ENABLE', 0.6)
+
+    assert shuttle.enabled is True
+    assert shuttle.core.state.speed == 0.6
+    assert shuttle.core.state.mode == shuttle_node.MOVING
+    assert shuttle.blocked_by is None
+    assert shuttle.collision_distance_m is None
+    assert shuttle.stopped_by is None
+
+
 def test_switch_visual_debug_colors_can_use_neutral_rail_color():
     controller = _load_module(
         'conveyor_loop_mode_controller',
@@ -58,6 +88,7 @@ def test_switch_visual_debug_colors_can_use_neutral_rail_color():
     node.visual_debug_colors = False
     assert node._switch_colors_for_mode('interior') == controller.SWITCH_NEUTRAL_COLORS
     assert node._switch_colors_for_mode('exterior') == controller.SWITCH_NEUTRAL_COLORS
+    assert controller.SWITCH_NEUTRAL_COLORS['diffuse'] == (0.38, 0.40, 0.43, 1.0)
 
 
 def test_visual_debug_color_launch_argument_is_threaded_to_room315_nodes():
