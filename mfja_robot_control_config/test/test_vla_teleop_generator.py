@@ -148,3 +148,54 @@ def test_loop_mode_changes_stop_at_gate_and_wait_for_switch_feedback():
     assert "self._set_all_switches_before_continuing(side, 'INTERIOR')" in text
     assert "self._set_all_switches_before_continuing(side, 'EXTERIOR')" in text
     assert "if not self.force_exterior(side):" in text
+
+
+def test_visual_recovery_training_scenarios_are_registered():
+    module = ast.parse(_script_text())
+    constants = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in module.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+    }
+    text = _script_text()
+
+    expected = (
+        'unknown_position_recovery',
+        'visual_stop_before_A3',
+        'visual_stop_before_A4',
+        'visual_center_at_station',
+        'sensor_dropout_route',
+        'visual_marker_target',
+        'visual_obstacle_stop',
+    )
+
+    assert constants['VISUAL_TRAINING_SCENARIOS'] == expected
+    for index, scenario_name in enumerate(expected, 3):
+        assert f'def m{index:02d}(self):' in text
+        assert f"self.begin('{scenario_name}')" in text
+        assert f'self.m{index:02d}' in text
+
+
+def test_visual_recovery_scenarios_are_sensor_driven_and_safe():
+    text = _script_text()
+
+    assert 'def reacquire_unknown_position' in text
+    assert 'tuple(SLOT_SENSORS[side])' in text
+    assert 'leave_first=bool(start_slot)' in text
+    assert 'def route_with_sensor_dropout_fallback' in text
+    assert 'checkpoint stopper {fallback_stopper}' in text
+    assert 'self.wait_for_stopper_stop(side, fallback_stopper, 90.0)' in text
+    assert 'self.wait_for_slot(side, target_slots, 30.0)' in text
+    assert 'def visual_obstacle_stop' in text
+    assert "self.st_i(side, {'ALL': '0', stopper_name: '1'})" in text
+    assert "self.go_to_slot('left', '4', require_leave=True)" in text
+
+
+def test_teleop_generator_documents_privileged_state_not_model_input():
+    text = _script_text()
+
+    assert 'overhead images plus binary rail' in text
+    assert 'used here only by' in text
+    assert 'keeps those privileged values out of model_input' in text

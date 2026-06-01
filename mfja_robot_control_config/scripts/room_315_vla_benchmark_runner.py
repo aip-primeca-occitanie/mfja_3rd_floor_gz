@@ -80,7 +80,18 @@ def task_state_from_status(status: dict[str, Any], task_name: str) -> tuple[str,
     if isinstance(active_tasks, dict):
         for task in active_tasks.values():
             if isinstance(task, dict) and task.get('template') == task_name:
-                return 'running', result
+                return 'running', _json_dumps(task)
+
+    completed_tasks = status.get('completed_tasks', [])
+    if isinstance(completed_tasks, list):
+        for task in reversed(completed_tasks):
+            if not isinstance(task, dict) or task.get('template') != task_name:
+                continue
+            task_status = str(task.get('status') or '')
+            if task_status == 'succeeded':
+                return 'succeeded', _json_dumps(task)
+            if task_status == 'failed':
+                return 'failed', _json_dumps(task)
 
     lowered = result.casefold()
     task_marker = f'task {task_name}'.casefold()
@@ -95,12 +106,21 @@ def task_state_from_status(status: dict[str, Any], task_name: str) -> tuple[str,
     return 'unknown', result
 
 
+def safety_metrics_from_status(status: dict[str, Any]) -> dict[str, Any]:
+    safety = status.get('safety_decoder', {})
+    if isinstance(safety, dict) and isinstance(safety.get('metrics'), dict):
+        return dict(safety['metrics'])
+    metrics = status.get('safety_decoder_metrics', {})
+    return dict(metrics) if isinstance(metrics, dict) else {}
+
+
 class Room315VlaBenchmarkRunner(Node):
     def __init__(self) -> None:
         super().__init__('room_315_vla_benchmark_runner')
 
         self.declare_parameter('tasks', 'all')
         self.declare_parameter('goal_topic', '/room_315/vla/user_goal')
+        self.declare_parameter('command_topic', '/room_315/vla/command')
         self.declare_parameter('status_topic', '/room_315/vla/status')
         self.declare_parameter('episode_control_topic', '/room_315/vla/episode_control')
         self.declare_parameter('benchmark_status_topic', '/room_315/vla/benchmark_status')
@@ -134,6 +154,11 @@ class Room315VlaBenchmarkRunner(Node):
         self.goal_pub = self.create_publisher(
             String,
             str(self.get_parameter('goal_topic').value),
+            10,
+        )
+        self.command_pub = self.create_publisher(
+            String,
+            str(self.get_parameter('command_topic').value),
             10,
         )
         self.episode_control_pub = self.create_publisher(
@@ -197,9 +222,13 @@ class Room315VlaBenchmarkRunner(Node):
         self.next_task_index += 1
 
         msg = String()
-        msg.data = goal
-        self.goal_pub.publish(msg)
-        self.get_logger().info(f'Benchmark task started: {task_name} -> {goal}')
+        msg.data = _json_dumps({'action': 'route_template', 'template': task_name})
+        if _as_bool(self.get_parameter('mark_dataset_episodes').value):
+            control = String()
+            control.data = f'start {goal}'
+            self.episode_control_pub.publish(control)
+        self.command_pub.publish(msg)
+        self.get_logger().info(f'Benchmark task started: {task_name} -> {msg.data}')
         self._publish_status()
 
     def _update_current_task(self, now: float) -> None:
@@ -235,6 +264,7 @@ class Room315VlaBenchmarkRunner(Node):
             'duration_s': round(elapsed_s, 3),
             'success': bool(success),
             'detail': detail,
+            'safety_decoder_metrics': safety_metrics_from_status(self.latest_status),
         }
         self.results.append(row)
         self.report_stream.write(_json_dumps(row) + '\n')
@@ -267,6 +297,7 @@ class Room315VlaBenchmarkRunner(Node):
             'successes': successes,
             'failures': total - successes,
             'success_rate': None if total == 0 else round(successes / total, 4),
+            'safety_decoder_metrics': safety_metrics_from_status(self.latest_status),
             'report_jsonl': str(self.report_jsonl),
             'results': self.results,
         }
@@ -301,6 +332,7 @@ class Room315VlaBenchmarkRunner(Node):
             'results_total': total,
             'successes': successes,
             'failures': total - successes,
+            'safety_decoder_metrics': safety_metrics_from_status(self.latest_status),
             'report_jsonl': str(self.report_jsonl),
             'report_summary': str(self.report_summary),
             'last_error': self.last_error,

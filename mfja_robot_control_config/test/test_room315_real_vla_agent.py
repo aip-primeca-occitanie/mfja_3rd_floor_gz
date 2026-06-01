@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+
+import importlib.util
+import json
+from pathlib import Path
+from types import MethodType
+from types import SimpleNamespace
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_PATH = REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_real_vla_agent.py'
+
+
+def _load_module():
+    spec = importlib.util.spec_from_file_location('room_315_real_vla_agent', SCRIPT_PATH)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _status():
+    return {
+        'rails': {
+            'right': {
+                'shuttles': {
+                    'room315_right_shuttle_1': {
+                        'segment': 'A12E',
+                        's': 0.25,
+                        'x': 1.0,
+                        'y': 2.0,
+                        'z': 0.3,
+                        'yaw': 1.57,
+                        'distance_to_switch': 0.1,
+                        'normalized_position': 0.25,
+                    }
+                },
+                'switches': {'A1': 'E', 'A2': 'I', 'A3': 'EXTERIOR', 'A4': 'interior'},
+                'stoppers': {'A1': '0', 'A2': '1', 'A3': 'open', 'A4': 'closed'},
+                'active_sensors': [],
+                'active_position_sensors': [{'name': 'DZI2R'}],
+            },
+            'left': {
+                'shuttles': {},
+                'switches': {'A1': 'unknown', 'A2': '', 'A3': None, 'A4': 'E'},
+                'stoppers': {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'},
+                'active_sensors': [],
+                'active_position_sensors': [{'name': 'DA3IL'}],
+            },
+        },
+        'last_primitive_command': {
+            'action': 'shuttle',
+            'side': 'right',
+            'shuttle': 'room315_right_shuttle_1',
+            'command': 'ON',
+        },
+    }
+
+
+def test_agent_model_input_schema_v2_excludes_privileged_state():
+    agent_module = _load_module()
+
+    model_input = agent_module._model_input_from_status(
+        _status(),
+        language='move the right shuttle from Yaskawa to Staubli',
+        overhead_images={
+            'right_rail_rgb': 'right-jpeg-b64',
+            'left_rail_rgb': 'left-jpeg-b64',
+            'legacy_primary_rgb': 'legacy-should-not-be-sent',
+        },
+        last_command={
+            'action': 'switches',
+            'side': 'right',
+            'switches': {'A3': 'I'},
+            'supervisor_status': _status(),
+            'segment': 'A12E',
+        },
+        sensor_event_times={'right': 10.0, 'left': None},
+        now_s=12.5,
+    )
+
+    assert agent_module.MODEL_INPUT_SCHEMA_VERSION == 2
+    assert set(model_input) == set(agent_module.MODEL_INPUT_FIELDS)
+    assert set(model_input['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
+    assert model_input['binary_sensor_bits']['right']['DZI2R'] == 1
+    assert model_input['binary_sensor_bits']['right']['DZI3R'] == 0
+    assert model_input['binary_sensor_bits']['left']['DA3IL'] == 1
+    assert model_input['switch_states']['right'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'INTERIOR',
+    }
+    assert model_input['switch_states']['left']['A4'] == 'EXTERIOR'
+    assert model_input['stopper_states']['right']['A2'] == 'closed'
+    assert model_input['last_command'] == {
+        'action': 'switches',
+        'side': 'right',
+        'switches': {'A3': 'INTERIOR'},
+    }
+    assert model_input['shuttle_command_state']['right']['last_command'] == 'ON'
+    assert model_input['time_since_last_sensor_event']['right'] == 2.5
+
+    serialized = json.dumps(model_input, sort_keys=True)
+    assert 'supervisor_status' not in serialized
+    assert 'A12E' not in serialized
+    assert 'distance_to_switch' not in serialized
+    assert 'normalized_position' not in serialized
+    for privileged_key in ('segment', '"x"', '"y"', '"z"', 'yaw', '"s"'):
+        assert privileged_key not in serialized
+
+
+def test_http_plan_sends_only_schema_v2_model_input_to_provider():
+    agent_module = _load_module()
+    agent = agent_module.Room315RealVlaAgent.__new__(agent_module.Room315RealVlaAgent)
+    agent.latest_status = _status()
+    agent.last_command = {'action': 'status'}
+    agent.last_sensor_event_time_by_side = {'right': 20.0, 'left': 21.0}
+
+    captured = {}
+
+    def get_parameter(_self, name):
+        values = {'http_endpoint': 'http://example.test/vla'}
+        return SimpleNamespace(value=values[name])
+
+    def post_json(_self, url, payload, headers):
+        captured['url'] = url
+        captured['payload'] = payload
+        captured['headers'] = headers
+        return {'action': 'status'}
+
+    agent.get_parameter = MethodType(get_parameter, agent)
+    agent._post_json = MethodType(post_json, agent)
+
+    command = agent_module.Room315RealVlaAgent._http_plan(
+        agent,
+        'make the right shuttle circulate on the interior loop',
+        {
+            'right_rail_rgb': 'right-jpeg-b64',
+            'left_rail_rgb': 'left-jpeg-b64',
+            'legacy_primary_rgb': 'legacy-should-not-be-sent',
+        },
+    )
+
+    payload = captured['payload']
+    assert command == {'action': 'status'}
+    assert captured['url'] == 'http://example.test/vla'
+    assert 'supervisor_status' not in payload
+    assert 'image_jpeg_b64' not in payload
+    assert 'images_jpeg_b64' not in payload
+    assert payload['model_input_schema_version'] == 2
+    assert set(payload['model_input']) == set(agent_module.MODEL_INPUT_FIELDS)
+    assert set(payload['model_input']['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
+    assert 'A12E' not in json.dumps(payload['model_input'], sort_keys=True)

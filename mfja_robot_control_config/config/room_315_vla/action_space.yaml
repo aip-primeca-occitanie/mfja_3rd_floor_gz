@@ -1,70 +1,172 @@
-schema_version: 1
+schema_version: 2
+model_input_schema_version: 2
 description: >
-  Discrete action representation used to adapt open-source VLA policies such as
-  SmolVLA to the Room 315 rail-cell task. The policy predicts this compact
-  vector; a post-processor converts it to the JSON commands accepted by the
-  Room 315 VLA supervisor.
+  Event-level symbolic action representation used to adapt open-source VLA
+  policies such as SmolVLA to the Room 315 rail-cell task. The policy predicts
+  the next decision event, not repeated framewise commands and not raw Gazebo
+  controls.
 
 action_vector_fields:
-  - action_id
+  - primitive_id
   - side_id
-  - slot_id
-  - loop_id
-  - shuttle_command_id
-  - switch_all_state_id
-  - stopper_all_state_id
-  - start
-  - close_stoppers
-  - speed_mps
+  - switch_mask_A1
+  - switch_mask_A2
+  - switch_mask_A3
+  - switch_mask_A4
+  - switch_value_A1
+  - switch_value_A2
+  - switch_value_A3
+  - switch_value_A4
+  - stopper_mask_A1
+  - stopper_mask_A2
+  - stopper_mask_A3
+  - stopper_mask_A4
+  - stopper_value_A1
+  - stopper_value_A2
+  - stopper_value_A3
+  - stopper_value_A4
+  - wait_condition_id
+  - target_id
+  - reason_id
 
-action_ids:
-  status: 0
-  route_shuttle: 2
-  switches: 3
-  stoppers: 4
-  shuttle: 5
-  add_shuttle: 6
-  stop_all: 7
-  emergency_stop: 8
-  clear_emergency_stop: 9
+symbolic_action_fields:
+  - primitive
+  - side
+  - switch_mask
+  - switch_values
+  - stopper_mask
+  - stopper_values
+  - wait_condition
+  - target_id
+  - reason
 
+primitive_ids:
+  WAIT: 0
+  DONE: 1
+  SET_SWITCHES: 2
+  SET_STOPPERS: 3
+  SHUTTLE_ON_FAST: 4
+  SHUTTLE_ON_SLOW: 5
+  STOP_NOW: 6
+  EMERGENCY_STOP: 7
 
 side_ids:
-  none: 0
-  right: 1
-  left: 2
+  right: 0
+  left: 1
 
-loop_ids:
-  none: 0
-  exterior: 1
-  interior: 2
-
-shuttle_command_ids:
-  none: 0
-  "OFF": 1
-  "ON": 2
-  ADD_STOPPED: 3
-  ADD_MOVING: 4
-
-switch_all_state_ids:
-  none: 0
+switch_value_ids:
+  UNCHANGED: 0
   EXTERIOR: 1
   INTERIOR: 2
 
-stopper_all_state_ids:
-  none: 0
+stopper_value_ids:
+  UNCHANGED: 0
   open: 1
   closed: 2
+
+device_mask_ids:
+  unchanged: 0
+  selected: 1
+
+wait_condition_ids:
+  none: 0
+  switch_state_match: 1
+  stopper_state_match: 2
+  shuttle_command_applied: 3
+  task_terminal_status: 4
+  task_phase_observed: 5
+  terminal: 6
+  target_sensor_active: 7
+
+target_ids:
+  none: 0
+  A1: 1
+  A2: 2
+  A3: 3
+  A4: 4
+  ALL_SWITCHES: 5
+  ALL_STOPPERS: 6
+  MULTIPLE_DEVICES: 7
+  right_shuttle: 8
+  left_shuttle: 9
+  right_yaskawa_to_staubli: 10
+  right_staubli_to_yaskawa: 11
+  left_yaskawa_to_kuka: 12
+  left_kuka_to_yaskawa: 13
+  right_enter_interior_loop: 14
+  left_enter_interior_loop: 15
+  task_phase: 16
+  terminal: 17
+  DZI1R: 18
+  DZI2R: 19
+  DZI3R: 20
+  DZI4R: 21
+  DZI1L: 22
+  DZI2L: 23
+  DZI3L: 24
+  DZI4L: 25
+  DA3IR: 26
+  DA3IL: 27
+
+reason_ids:
+  none: 0
+  command_event: 1
+  route_template_requested: 2
+  task_phase: 3
+  task_succeeded: 4
+  task_failed: 5
+  episode_stopped: 6
+  episode_discarded: 7
+  switch_update: 8
+  stopper_update: 9
+  shuttle_start: 10
+  shuttle_stop: 11
+  emergency: 12
+  unsupported_command: 13
 
 observation_state_fields:
   - emergency_stop
   - vision_image_frames
-  - right_shuttle_count
-  - right_active_sensors
-  - right_active_position_sensors
-  - left_shuttle_count
-  - left_active_sensors
-  - left_active_position_sensors
+  - right_sensor_DZI1R
+  - right_sensor_DZI2R
+  - right_sensor_DZI3R
+  - right_sensor_DZI4R
+  - right_sensor_DA1R
+  - right_sensor_DA1ER
+  - right_sensor_DA1IR
+  - right_sensor_DA2R
+  - right_sensor_DA2ER
+  - right_sensor_DA2IR
+  - right_sensor_DA3R
+  - right_sensor_DA3ER
+  - right_sensor_DA3IR
+  - right_sensor_DA4R
+  - right_sensor_DA4ER
+  - right_sensor_DA4IR
+  - right_sensor_A1_STOPPER_SENSOR
+  - right_sensor_A2_STOPPER_SENSOR
+  - right_sensor_A3_STOPPER_SENSOR
+  - right_sensor_A4_STOPPER_SENSOR
+  - left_sensor_DZI1L
+  - left_sensor_DZI2L
+  - left_sensor_DZI3L
+  - left_sensor_DZI4L
+  - left_sensor_DA1L
+  - left_sensor_DA1EL
+  - left_sensor_DA1IL
+  - left_sensor_DA2L
+  - left_sensor_DA2EL
+  - left_sensor_DA2IL
+  - left_sensor_DA3L
+  - left_sensor_DA3EL
+  - left_sensor_DA3IL
+  - left_sensor_DA4L
+  - left_sensor_DA4EL
+  - left_sensor_DA4IL
+  - left_sensor_A1_STOPPER_SENSOR
+  - left_sensor_A2_STOPPER_SENSOR
+  - left_sensor_A3_STOPPER_SENSOR
+  - left_sensor_A4_STOPPER_SENSOR
   - right_switch_A1
   - right_switch_A2
   - right_switch_A3
@@ -82,9 +184,80 @@ observation_state_fields:
   - left_stopper_A3
   - left_stopper_A4
 
+debug_observation_fields:
+  - right_shuttle_count
+  - right_active_sensors_count
+  - right_active_position_sensors_count
+  - left_shuttle_count
+  - left_active_sensors_count
+  - left_active_position_sensors_count
+
+model_input_fields:
+  - language
+  - overhead_images
+  - binary_sensor_bits
+  - switch_states
+  - stopper_states
+  - last_command
+  - shuttle_command_state
+  - time_since_last_sensor_event
+
+privileged_eval_fields:
+  - supervisor_status
+  - raw_shuttle_states
+  - raw_active_sensor_readings
+  - visual_eval_labels
+
+sensor_ids_by_side:
+  right:
+    - DZI1R
+    - DZI2R
+    - DZI3R
+    - DZI4R
+    - DA1R
+    - DA1ER
+    - DA1IR
+    - DA2R
+    - DA2ER
+    - DA2IR
+    - DA3R
+    - DA3ER
+    - DA3IR
+    - DA4R
+    - DA4ER
+    - DA4IR
+    - A1_STOPPER_SENSOR
+    - A2_STOPPER_SENSOR
+    - A3_STOPPER_SENSOR
+    - A4_STOPPER_SENSOR
+  left:
+    - DZI1L
+    - DZI2L
+    - DZI3L
+    - DZI4L
+    - DA1L
+    - DA1EL
+    - DA1IL
+    - DA2L
+    - DA2EL
+    - DA2IL
+    - DA3L
+    - DA3EL
+    - DA3IL
+    - DA4L
+    - DA4EL
+    - DA4IL
+    - A1_STOPPER_SENSOR
+    - A2_STOPPER_SENSOR
+    - A3_STOPPER_SENSOR
+    - A4_STOPPER_SENSOR
+
 state_encodings:
+  sensor_multi_hot:
+    inactive: 0
+    active: 1
   switch:
-    unknown: 0
+    UNKNOWN: 0
     EXTERIOR: 1
     INTERIOR: 2
   stopper:

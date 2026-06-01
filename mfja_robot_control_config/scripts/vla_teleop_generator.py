@@ -7,6 +7,11 @@ deterministic low-level VLA JSON commands. Unlike the first draft, station and
 loop tasks are now feedback-driven: transport tasks stop on slot sensors, full
 loops return to the starting slot/segment, and loop mode changes stop at a
 guarded gate before switching every turnout to the target mode.
+
+The model-facing dataset must learn from overhead images plus binary rail
+sensors. Segment and arc-length values from ShuttleState are used here only by
+the deterministic expert for safe reset/recovery/evaluation decisions; the
+dataset recorder keeps those privileged values out of model_input.
 """
 
 import json
@@ -139,6 +144,15 @@ STOPPER_SENSOR_NAMES = {
     'A4': 'A4_STOPPER_SENSOR',
 }
 SENSOR_FEEDBACK_TOPICS = ('feedback', 'position_feedback')
+VISUAL_TRAINING_SCENARIOS = (
+    'unknown_position_recovery',
+    'visual_stop_before_A3',
+    'visual_stop_before_A4',
+    'visual_center_at_station',
+    'sensor_dropout_route',
+    'visual_marker_target',
+    'visual_obstacle_stop',
+)
 
 
 class VLATeleopGenerator(Node):
@@ -607,6 +621,147 @@ class VLATeleopGenerator(Node):
         finally:
             self.off(side)
         return bool(hit)
+
+    def reacquire_unknown_position(self, side: str = 'right') -> bool:
+        """Recover a known rail location from binary slot sensors only."""
+        if not self.wait_for_state(side):
+            return False
+        if not self.wait_for_sensor_feedback(side):
+            return False
+        if not self.force_exterior(side):
+            return False
+
+        start_slot = self.active_slot(side)
+        self.get_logger().info(
+            f'{side} unknown-position recovery: '
+            f'start_slot={start_slot or "unknown"}, active_sensors={self.active_sensor_summary(side)}'
+        )
+        self.st(side, '0')
+        hit = ''
+        try:
+            self.on(side, 0.2)
+            hit = self.wait_for_slot(
+                side,
+                tuple(SLOT_SENSORS[side]),
+                90.0,
+                leave_first=bool(start_slot),
+            )
+        finally:
+            self.off(side)
+        return bool(hit)
+
+    def go_to_slot(self, side: str, slot: str, *, require_leave: bool = False) -> bool:
+        if slot not in SLOT_SENSORS[side]:
+            self.get_logger().warning(f'unsupported {side} slot target {slot!r}')
+            return False
+        if not self.wait_for_state(side):
+            return False
+        if not self.wait_for_sensor_feedback(side):
+            return False
+        if not self.force_exterior(side):
+            return False
+
+        if self.active_slot(side, (slot,)) and not require_leave:
+            self.get_logger().info(f'{side} shuttle is already centered on slot {slot}')
+            self.off(side)
+            return True
+
+        self.get_logger().info(
+            f'moving {side} shuttle to visual slot marker {slot} '
+            f'({SLOT_SENSORS[side][slot]})'
+        )
+        self.st(side, '0')
+        hit = ''
+        try:
+            self.on(side, 0.2)
+            hit = self.wait_for_slot(
+                side,
+                (slot,),
+                90.0,
+                leave_first=require_leave,
+            )
+        finally:
+            self.off(side)
+        return bool(hit)
+
+    def center_at_station(
+        self,
+        side: str,
+        station: str,
+        *,
+        require_leave: bool = True,
+    ) -> bool:
+        self.get_logger().info(f'centering {side} shuttle at {station} station using slot sensors')
+        return self.go_to_station(side, station, require_leave=require_leave)
+
+    def route_with_sensor_dropout_fallback(
+        self,
+        side: str,
+        target_station: str,
+        fallback_stopper: str,
+    ) -> bool:
+        """Route toward a station with a stopper checkpoint before trusting slots.
+
+        This demonstrates a useful recovery pattern for temporary slot-sensor
+        dropout: do not run forever waiting for the station DZI detector; first
+        stop at a known guarded checkpoint, then release and reacquire a target
+        slot if the binary sensor is available.
+        """
+        if not self.wait_for_state(side):
+            return False
+        if not self.wait_for_sensor_feedback(side):
+            return False
+        if not self.force_exterior(side):
+            return False
+
+        target_slots = STATION_SLOTS[side][target_station]
+        self.get_logger().info(
+            f'{side} sensor-dropout route: checkpoint stopper {fallback_stopper}, '
+            f'then target slots {target_slots}'
+        )
+        self.st_i(side, {'ALL': '0', fallback_stopper: '1'})
+        checkpoint_reached = False
+        try:
+            self.on(side, 0.2)
+            checkpoint_reached = self.wait_for_stopper_stop(side, fallback_stopper, 90.0)
+        finally:
+            self.off(side)
+
+        if not checkpoint_reached:
+            return False
+
+        self.st_i(side, {fallback_stopper: '0'})
+        hit = ''
+        try:
+            self.on(side, 0.15)
+            hit = self.wait_for_slot(side, target_slots, 30.0)
+        finally:
+            self.off(side)
+        if not hit:
+            self.get_logger().warning(
+                f'{side} sensor-dropout route reached checkpoint but did not reacquire '
+                f'target slots {target_slots}; ending safely at current pose'
+            )
+        return True
+
+    def visual_obstacle_stop(self, side: str, stopper_name: str) -> bool:
+        """Use a closed stopper as a visible/physical obstacle and stop before it."""
+        if not self.wait_for_state(side):
+            return False
+        if not self.wait_for_sensor_feedback(side):
+            return False
+        if not self.force_exterior(side):
+            return False
+
+        self.get_logger().info(f'{side} visual obstacle: closing stopper {stopper_name}')
+        self.st_i(side, {'ALL': '0', stopper_name: '1'})
+        stopped = False
+        try:
+            self.on(side, 0.2)
+            stopped = self.wait_for_stopper_stop(side, stopper_name, 90.0)
+        finally:
+            self.off(side)
+        return stopped
 
     def stop_at_stopper(self, side: str, stopper_name: str) -> bool:
         if not self.wait_for_state(side):
@@ -1092,6 +1247,44 @@ class VLATeleopGenerator(Node):
         self.slp(3)
         self.end()
 
+    # ------------------------------------------------------------------
+    # VLA perception, recovery, and robustness scenarios
+    # ------------------------------------------------------------------
+    def m03(self):
+        self.begin('unknown_position_recovery')
+        self.reacquire_unknown_position('right')
+        self.end()
+
+    def m04(self):
+        self.begin('visual_stop_before_A3')
+        self.stop_at_stopper('right', 'A3')
+        self.end()
+
+    def m05(self):
+        self.begin('visual_stop_before_A4')
+        self.stop_at_stopper('right', 'A4')
+        self.end()
+
+    def m06(self):
+        self.begin('visual_center_at_station')
+        self.center_at_station('right', 'staubli')
+        self.end()
+
+    def m07(self):
+        self.begin('sensor_dropout_route')
+        self.route_with_sensor_dropout_fallback('right', 'staubli', 'A4')
+        self.end()
+
+    def m08(self):
+        self.begin('visual_marker_target')
+        self.go_to_slot('left', '4', require_leave=True)
+        self.end()
+
+    def m09(self):
+        self.begin('visual_obstacle_stop')
+        self.visual_obstacle_stop('left', 'A3')
+        self.end()
+
     def run_all(self):
         self.wait_subs()
         self.slp(5)
@@ -1104,6 +1297,7 @@ class VLATeleopGenerator(Node):
             self.l06, self.l07, self.l08, self.l09,
             self.l10, self.l11, self.l12, self.l13,
             self.m01, self.m02,
+            self.m03, self.m04, self.m05, self.m06, self.m07, self.m08, self.m09,
         ]
         self.get_logger().info(f'====== {len(scenarios)} scenarios ======')
         for i, scenario in enumerate(scenarios, 1):

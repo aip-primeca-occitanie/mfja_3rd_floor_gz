@@ -50,7 +50,9 @@ install(
     scripts/room_315_kinematic_shuttle_node.py
     scripts/room_315_real_vla_agent.py
     scripts/room_315_vla_benchmark_runner.py
+    scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_dataset_recorder.py
+    scripts/room_315_vla_event_extractor.py
     scripts/room_315_vla_supervisor.py
     scripts/vla_teleop_generator.py
   DESTINATION lib/${PROJECT_NAME}
@@ -66,6 +68,30 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_vla_benchmark_runner
     test/test_room315_vla_benchmark_runner.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_baseline_eval
+    test/test_room315_vla_baseline_eval.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_dataset_recorder
+    test/test_room315_vla_dataset_recorder.py
+  )
+  ament_add_pytest_test(
+    test_room315_real_vla_agent
+    test/test_room315_real_vla_agent.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_event_extractor
+    test/test_room315_vla_event_extractor.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_supervisor
+    test/test_room315_vla_supervisor.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_smoke
+    test/test_room315_vla_smoke.py
   )
   ament_add_pytest_test(
     test_room315_visual_debug_colors

@@ -100,6 +100,7 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'tasks': LaunchConfiguration('benchmark_tasks'),
             'goal_topic': LaunchConfiguration('user_goal_topic'),
+            'command_topic': LaunchConfiguration('command_topic'),
             'status_topic': LaunchConfiguration('status_topic'),
             'episode_control_topic': LaunchConfiguration('episode_control_topic'),
             'benchmark_status_topic': LaunchConfiguration('benchmark_status_topic'),

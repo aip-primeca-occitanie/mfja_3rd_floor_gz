@@ -229,6 +229,12 @@
     </include>
 
     <include>
+      <uri>model://room315_vla_removable_obstacle_marker</uri>
+      <name>room315_vla_removable_obstacle_marker</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <include>
       <uri>model://lab_table</uri>
       <name>lab_table_1</name>
       <pose>-17.0 0.87 0.0 0 0 -1.57</pose>

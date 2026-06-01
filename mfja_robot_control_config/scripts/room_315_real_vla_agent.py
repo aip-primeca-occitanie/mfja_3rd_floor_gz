@@ -19,6 +19,7 @@ from std_msgs.msg import String
 
 
 ALLOWED_ACTIONS = (
+    'route_template',
     'route_shuttle',
     'switches',
     'stoppers',
@@ -29,9 +30,318 @@ ALLOWED_ACTIONS = (
     'clear_emergency_stop',
     'status',
 )
+SIDES = ('right', 'left')
+DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
+SENSOR_IDS_BY_SIDE = {
+    'right': (
+        'DZI1R',
+        'DZI2R',
+        'DZI3R',
+        'DZI4R',
+        'DA1R',
+        'DA1ER',
+        'DA1IR',
+        'DA2R',
+        'DA2ER',
+        'DA2IR',
+        'DA3R',
+        'DA3ER',
+        'DA3IR',
+        'DA4R',
+        'DA4ER',
+        'DA4IR',
+        'A1_STOPPER_SENSOR',
+        'A2_STOPPER_SENSOR',
+        'A3_STOPPER_SENSOR',
+        'A4_STOPPER_SENSOR',
+    ),
+    'left': (
+        'DZI1L',
+        'DZI2L',
+        'DZI3L',
+        'DZI4L',
+        'DA1L',
+        'DA1EL',
+        'DA1IL',
+        'DA2L',
+        'DA2EL',
+        'DA2IL',
+        'DA3L',
+        'DA3EL',
+        'DA3IL',
+        'DA4L',
+        'DA4EL',
+        'DA4IL',
+        'A1_STOPPER_SENSOR',
+        'A2_STOPPER_SENSOR',
+        'A3_STOPPER_SENSOR',
+        'A4_STOPPER_SENSOR',
+    ),
+}
+MODEL_INPUT_SCHEMA_VERSION = 2
+MODEL_INPUT_FIELDS = (
+    'language',
+    'overhead_images',
+    'binary_sensor_bits',
+    'switch_states',
+    'stopper_states',
+    'last_command',
+    'shuttle_command_state',
+    'time_since_last_sensor_event',
+)
+OVERHEAD_IMAGE_NAMES = {'right_rail_rgb', 'left_rail_rgb'}
+
 
 def _json_dumps(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True)
+
+
+def _rails_from_status(status: dict[str, Any]) -> dict[str, Any]:
+    rails = status.get('rails', {}) if isinstance(status.get('rails'), dict) else {}
+    return rails
+
+
+def _rail_from_status(status: dict[str, Any], side: str) -> dict[str, Any]:
+    rail = _rails_from_status(status).get(side, {})
+    return rail if isinstance(rail, dict) else {}
+
+
+def _normalize_switch_state(raw: Any) -> str:
+    state = str(raw or '').strip().upper()
+    if state in {'E', 'EXTERIOR'}:
+        return 'EXTERIOR'
+    if state in {'I', 'INTERIOR'}:
+        return 'INTERIOR'
+    return 'UNKNOWN'
+
+
+def _normalize_stopper_state(raw: Any) -> str:
+    state = str(raw or '').strip().lower()
+    if state in {'0', 'open', 'opened', 'release', 'released', 'off', 'false'}:
+        return 'open'
+    if state in {'1', 'closed', 'close', 'stop', 'blocked', 'on', 'true'}:
+        return 'closed'
+    return 'unknown'
+
+
+def _active_sensor_ids_from_readings(raw_readings: Any) -> set[str]:
+    sensor_ids: set[str] = set()
+    if isinstance(raw_readings, dict):
+        iterable = raw_readings.values()
+    elif isinstance(raw_readings, list):
+        iterable = raw_readings
+    else:
+        return sensor_ids
+    for reading in iterable:
+        if isinstance(reading, dict):
+            name = str(reading.get('name') or reading.get('sensor') or '').strip()
+        else:
+            name = str(reading or '').strip()
+        if name:
+            sensor_ids.add(name.upper())
+    return sensor_ids
+
+
+def _active_sensor_ids(rail: dict[str, Any]) -> set[str]:
+    return (
+        _active_sensor_ids_from_readings(rail.get('active_sensors'))
+        | _active_sensor_ids_from_readings(rail.get('active_position_sensors'))
+    )
+
+
+def _binary_sensor_bits(status: dict[str, Any]) -> dict[str, dict[str, int]]:
+    bits: dict[str, dict[str, int]] = {}
+    for side in SIDES:
+        active_ids = _active_sensor_ids(_rail_from_status(status, side))
+        bits[side] = {
+            sensor_name: 1 if sensor_name in active_ids else 0
+            for sensor_name in SENSOR_IDS_BY_SIDE[side]
+        }
+    return bits
+
+
+def _switch_states(status: dict[str, Any]) -> dict[str, dict[str, str]]:
+    states: dict[str, dict[str, str]] = {}
+    for side in SIDES:
+        rail = _rail_from_status(status, side)
+        switches = rail.get('switches', {}) if isinstance(rail.get('switches'), dict) else {}
+        states[side] = {
+            name: _normalize_switch_state(switches.get(name))
+            for name in DEVICE_NAMES
+        }
+    return states
+
+
+def _stopper_states(status: dict[str, Any]) -> dict[str, dict[str, str]]:
+    states: dict[str, dict[str, str]] = {}
+    for side in SIDES:
+        rail = _rail_from_status(status, side)
+        stoppers = rail.get('stoppers', {}) if isinstance(rail.get('stoppers'), dict) else {}
+        states[side] = {
+            name: _normalize_stopper_state(stoppers.get(name))
+            for name in DEVICE_NAMES
+        }
+    return states
+
+
+def _overhead_images(image_refs: dict[str, Any]) -> dict[str, Any]:
+    return {
+        camera_name: image_ref
+        for camera_name, image_ref in image_refs.items()
+        if camera_name in OVERHEAD_IMAGE_NAMES
+    }
+
+
+def _normalize_action_name(command: dict[str, Any]) -> str:
+    action = str(command.get('action') or command.get('intent') or command.get('type') or 'status')
+    action = action.lower().strip()
+    if action in {'route', 'start_route'}:
+        return 'route_shuttle'
+    if action in {'template', 'task'}:
+        return 'route_template'
+    if action in {'switch'}:
+        return 'switches'
+    if action in {'stopper'}:
+        return 'stoppers'
+    if action in {'shuttle_command'}:
+        return 'shuttle'
+    if action in {'spawn_shuttle'}:
+        return 'add_shuttle'
+    if action in {'all_off'}:
+        return 'stop_all'
+    if action in {'estop'}:
+        return 'emergency_stop'
+    if action in {'clear_estop', 'reset_estop'}:
+        return 'clear_emergency_stop'
+    return action if action in ALLOWED_ACTIONS else 'status'
+
+
+def _normalized_assignment_map(raw: Any, *, value_kind: str) -> dict[str, str]:
+    if not isinstance(raw, dict):
+        return {}
+    normalized: dict[str, str] = {}
+    for name, state in raw.items():
+        device_name = str(name).strip().upper()
+        if not device_name:
+            continue
+        if value_kind == 'switch':
+            normalized[device_name] = _normalize_switch_state(state)
+        elif value_kind == 'stopper':
+            normalized[device_name] = _normalize_stopper_state(state)
+        else:
+            normalized[device_name] = str(state).strip()
+    return normalized
+
+
+def _normalize_last_command(command: Any) -> dict[str, Any]:
+    if not isinstance(command, dict):
+        return {'action': 'status'}
+    action = _normalize_action_name(command)
+    normalized: dict[str, Any] = {'action': action}
+    if command.get('side') is not None:
+        side = str(command.get('side') or '').strip().lower()
+        if side in SIDES:
+            normalized['side'] = side
+    if action == 'route_template' and command.get('template') is not None:
+        normalized['template'] = str(command.get('template') or '').strip()
+    if action == 'route_shuttle':
+        if command.get('loop') is not None:
+            normalized['loop'] = str(command.get('loop') or '').strip().lower()
+        if command.get('start') is not None:
+            normalized['start'] = bool(command.get('start'))
+        if command.get('start_slot') is not None:
+            normalized['start_slot'] = str(command.get('start_slot') or '').strip()
+    if action == 'switches':
+        normalized['switches'] = _normalized_assignment_map(
+            command.get('switches'),
+            value_kind='switch',
+        )
+    if action == 'stoppers':
+        normalized['stoppers'] = _normalized_assignment_map(
+            command.get('stoppers'),
+            value_kind='stopper',
+        )
+    if action == 'shuttle':
+        normalized['command'] = str(command.get('command') or '').strip().upper()
+        if command.get('shuttle') is not None:
+            normalized['shuttle'] = str(command.get('shuttle') or '').strip()
+        if command.get('start_slot') is not None:
+            normalized['start_slot'] = str(command.get('start_slot') or '').strip()
+    if action == 'stop_all' and command.get('close_stoppers') is not None:
+        normalized['close_stoppers'] = bool(command.get('close_stoppers'))
+    if command.get('speed') is not None and action in {'route_shuttle', 'shuttle'}:
+        try:
+            normalized['speed'] = float(command.get('speed') or 0.0)
+        except (TypeError, ValueError):
+            normalized['speed'] = 0.0
+    return normalized
+
+
+def _shuttle_command_state(status: dict[str, Any]) -> dict[str, dict[str, str]]:
+    state = {
+        side: {
+            'last_command': 'UNKNOWN',
+            'last_shuttle': '',
+        }
+        for side in SIDES
+    }
+    primitive = status.get('last_primitive_command')
+    if not isinstance(primitive, dict):
+        return state
+    if str(primitive.get('action') or '').strip().lower() != 'shuttle':
+        return state
+    side = str(primitive.get('side') or '').strip().lower()
+    if side not in SIDES:
+        return state
+    state[side] = {
+        'last_command': str(primitive.get('command') or '').strip().upper() or 'UNKNOWN',
+        'last_shuttle': str(primitive.get('shuttle') or '').strip(),
+    }
+    return state
+
+
+def _time_since_last_sensor_event(
+    sensor_event_times: dict[str, float | None] | None,
+    now_s: float | None,
+) -> dict[str, float | None]:
+    now_value = time.monotonic() if now_s is None else float(now_s)
+    times = sensor_event_times or {}
+    elapsed: dict[str, float | None] = {}
+    side_values = []
+    for side in SIDES:
+        event_time = times.get(side)
+        if event_time is None:
+            elapsed[side] = None
+            continue
+        value = round(max(now_value - float(event_time), 0.0), 3)
+        elapsed[side] = value
+        side_values.append(value)
+    elapsed['any'] = None if not side_values else min(side_values)
+    return elapsed
+
+
+def _model_input_from_status(
+    status: dict[str, Any],
+    *,
+    language: str,
+    overhead_images: dict[str, Any],
+    last_command: Any,
+    sensor_event_times: dict[str, float | None] | None = None,
+    now_s: float | None = None,
+) -> dict[str, Any]:
+    return {
+        'language': str(language or ''),
+        'overhead_images': _overhead_images(overhead_images),
+        'binary_sensor_bits': _binary_sensor_bits(status),
+        'switch_states': _switch_states(status),
+        'stopper_states': _stopper_states(status),
+        'last_command': _normalize_last_command(last_command),
+        'shuttle_command_state': _shuttle_command_state(status),
+        'time_since_last_sensor_event': _time_since_last_sensor_event(
+            sensor_event_times,
+            now_s,
+        ),
+    }
 
 
 
@@ -103,6 +413,10 @@ class Room315RealVlaAgent(Node):
         self.busy = False
         self.last_command: dict[str, Any] | None = None
         self.last_error = ''
+        self.last_sensor_signature_by_side: dict[str, str] = {side: '' for side in SIDES}
+        self.last_sensor_event_time_by_side: dict[str, float | None] = {
+            side: None for side in SIDES
+        }
 
         self.command_pub = self.create_publisher(
             String,
@@ -155,6 +469,17 @@ class Room315RealVlaAgent(Node):
             return
         if isinstance(parsed, dict):
             self.latest_status = parsed
+            self._update_sensor_event_tracking(parsed)
+
+    def _update_sensor_event_tracking(self, status: dict[str, Any]) -> None:
+        now = time.monotonic()
+        sensor_bits = _binary_sensor_bits(status)
+        for side in SIDES:
+            signature = _json_dumps(sensor_bits.get(side, {}))
+            if signature == self.last_sensor_signature_by_side.get(side):
+                continue
+            self.last_sensor_signature_by_side[side] = signature
+            self.last_sensor_event_time_by_side[side] = now
 
     def _subscribe_image(self, camera_name: str, topic: str) -> None:
         topic = topic.strip()
@@ -228,13 +553,20 @@ class Room315RealVlaAgent(Node):
         endpoint = str(self.get_parameter('http_endpoint').value).strip()
         if not endpoint:
             raise RuntimeError('http_endpoint is empty')
+        model_input = _model_input_from_status(
+            self.latest_status,
+            language=goal,
+            overhead_images=images_b64,
+            last_command=self.last_command or {'action': 'status'},
+            sensor_event_times=self.last_sensor_event_time_by_side,
+            now_s=time.monotonic(),
+        )
         response = self._post_json(
             endpoint,
             {
-                'goal': goal,
-                'supervisor_status': self.latest_status,
-                'image_jpeg_b64': next(iter(images_b64.values())),
-                'images_jpeg_b64': images_b64,
+                'model_input_schema_version': MODEL_INPUT_SCHEMA_VERSION,
+                'model_input': model_input,
+                'model_input_fields': MODEL_INPUT_FIELDS,
                 'allowed_actions': ALLOWED_ACTIONS,
             },
             headers={},
