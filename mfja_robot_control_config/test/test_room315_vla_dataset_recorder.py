@@ -111,6 +111,7 @@ def _blank_event_action(module, *, primitive='WAIT', side='right', wait_conditio
         'switch_values': {name: 'UNCHANGED' for name in module.DEVICE_NAMES},
         'stopper_mask': {name: 0 for name in module.DEVICE_NAMES},
         'stopper_values': {name: 'UNCHANGED' for name in module.DEVICE_NAMES},
+        'speed_mps': 0.0,
         'wait_condition': wait_condition,
         'target_id': target_id,
         'reason': reason,
@@ -172,7 +173,7 @@ def test_event_action_v2_shuttle_wait_done_roundtrips():
     actions = [
         _blank_event_action(
             recorder,
-            primitive='SHUTTLE_ON_FAST',
+            primitive='SHUTTLE_ON',
             side='right',
             wait_condition='shuttle_command_applied',
             target_id='right_shuttle',
@@ -180,7 +181,7 @@ def test_event_action_v2_shuttle_wait_done_roundtrips():
         ),
         _blank_event_action(
             recorder,
-            primitive='SHUTTLE_ON_SLOW',
+            primitive='SHUTTLE_ON',
             side='left',
             wait_condition='shuttle_command_applied',
             target_id='left_shuttle',
@@ -219,6 +220,8 @@ def test_event_action_v2_shuttle_wait_done_roundtrips():
             reason='emergency',
         ),
     ]
+    actions[0]['speed_mps'] = 0.45
+    actions[1]['speed_mps'] = 0.12
 
     for action in actions:
         assert recorder._decode_action(recorder._encode_action(action)) == action
@@ -477,7 +480,7 @@ def test_action_space_observation_schema_matches_recorder():
     assert 'switch_all_state_id' not in config['action_vector_fields']
     assert 'switch_mask_A3' in config['action_vector_fields']
     assert 'stopper_value_A4' in config['action_vector_fields']
-    assert 'speed_mps' not in config['action_vector_fields']
+    assert 'speed_mps' in config['action_vector_fields']
     assert 'right_sensor_DZI2R' in config['observation_state_fields']
     assert 'right_active_sensors' not in config['observation_state_fields']
     assert 'right_active_sensors_count' in config['debug_observation_fields']
@@ -503,7 +506,8 @@ def test_event_labels_do_not_repeat_long_shuttle_on_command():
     rows = _jsonl_rows(recorder.event_stream)
     assert len(rows) == 1
     assert rows[0]['legacy_next_action']['command'] == 'ON'
-    assert rows[0]['next_action']['primitive'] == 'SHUTTLE_ON_SLOW'
+    assert rows[0]['next_action']['primitive'] == 'SHUTTLE_ON'
+    assert rows[0]['next_action']['speed_mps'] == 0.2
     assert rows[0]['next_action']['reason'] == 'shuttle_start'
 
     recorder._record_command_event({**on_command, 'command': 'OFF'})

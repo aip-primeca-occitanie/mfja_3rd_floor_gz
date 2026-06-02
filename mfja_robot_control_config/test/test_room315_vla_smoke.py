@@ -138,6 +138,7 @@ def _blank_action(module, primitive: str, side: str = 'right') -> dict:
         'switch_values': {name: 'UNCHANGED' for name in module.DEVICE_NAMES},
         'stopper_mask': {name: 0 for name in module.DEVICE_NAMES},
         'stopper_values': {name: 'UNCHANGED' for name in module.DEVICE_NAMES},
+        'speed_mps': 0.0,
         'wait_condition': 'none',
         'target_id': 'none',
         'reason': 'none',
@@ -149,6 +150,7 @@ def _event_vector(
     *,
     primitive: str,
     side: str = 'right',
+    speed_mps: float = 0.0,
     switch_values: dict[str, str] | None = None,
     stopper_values: dict[str, str] | None = None,
     wait_condition: str = 'none',
@@ -169,6 +171,7 @@ def _event_vector(
 
     set_field('primitive_id', primitive_ids[primitive])
     set_field('side_id', side_ids[side])
+    set_field('speed_mps', speed_mps)
     for switch_name, state in switch_values.items():
         set_field(f'switch_mask_{switch_name}', 1)
         set_field(f'switch_value_{switch_name}', {'EXTERIOR': 1, 'INTERIOR': 2}[state])
@@ -199,6 +202,7 @@ def _done_action() -> dict:
             'A3': 'UNCHANGED',
             'A4': 'UNCHANGED',
         },
+        'speed_mps': 0.0,
         'wait_condition': 'terminal',
         'target_id': 'terminal',
         'reason': 'task_succeeded',
@@ -335,8 +339,8 @@ def test_smoke_action_json_vector_roundtrip_for_event_v2_primitives():
         _blank_action(recorder, 'DONE'),
         _blank_action(recorder, 'EMERGENCY_STOP', side='left'),
         _blank_action(recorder, 'STOP_NOW'),
-        _blank_action(recorder, 'SHUTTLE_ON_FAST'),
-        _blank_action(recorder, 'SHUTTLE_ON_SLOW', side='left'),
+        _blank_action(recorder, 'SHUTTLE_ON'),
+        _blank_action(recorder, 'SHUTTLE_ON', side='left'),
         _blank_action(recorder, 'SET_SWITCHES'),
         _blank_action(recorder, 'SET_STOPPERS', side='left'),
     ]
@@ -346,6 +350,8 @@ def test_smoke_action_json_vector_roundtrip_for_event_v2_primitives():
     actions[1]['target_id'] = 'terminal'
     actions[1]['reason'] = 'task_succeeded'
     actions[2]['reason'] = 'emergency'
+    actions[4]['speed_mps'] = 0.45
+    actions[5]['speed_mps'] = 0.12
     for action in actions[3:6]:
         action['wait_condition'] = 'shuttle_command_applied'
         action['target_id'] = f'{action["side"]}_shuttle'
@@ -394,16 +400,18 @@ def test_smoke_safety_decoder_rejects_invalid_switch_and_move_combos():
     )
     unsafe_move_vector = _event_vector(
         supervisor,
-        primitive='SHUTTLE_ON_FAST',
+        primitive='SHUTTLE_ON',
         side='right',
+        speed_mps=0.4,
         wait_condition='none',
         target_id='none',
         reason='shuttle_start',
     )
     blocked_move_vector = _event_vector(
         supervisor,
-        primitive='SHUTTLE_ON_FAST',
+        primitive='SHUTTLE_ON',
         side='right',
+        speed_mps=0.4,
         wait_condition='shuttle_command_applied',
         target_id='right_shuttle',
         reason='shuttle_start',

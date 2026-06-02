@@ -111,10 +111,9 @@ EVENT_PRIMITIVE_BY_ID = {
     1: 'DONE',
     2: 'SET_SWITCHES',
     3: 'SET_STOPPERS',
-    4: 'SHUTTLE_ON_FAST',
-    5: 'SHUTTLE_ON_SLOW',
-    6: 'STOP_NOW',
-    7: 'EMERGENCY_STOP',
+    4: 'SHUTTLE_ON',
+    5: 'STOP_NOW',
+    6: 'EMERGENCY_STOP',
 }
 EVENT_SIDE_BY_ID = {
     0: 'right',
@@ -183,12 +182,11 @@ EVENT_ACTION_VECTOR_FIELDS = [
     *[f'switch_value_{name}' for name in SWITCHES],
     *[f'stopper_mask_{name}' for name in SWITCHES],
     *[f'stopper_value_{name}' for name in SWITCHES],
+    'speed_mps',
     'wait_condition_id',
     'target_id',
     'reason_id',
 ]
-EVENT_FAST_SPEED_MPS = 0.6
-EVENT_SLOW_SPEED_MPS = 0.1
 
 
 
@@ -709,6 +707,7 @@ def _decode_event_action_vector(action_vector: Any) -> dict[str, Any]:
         'switch_values': switch_values,
         'stopper_mask': stopper_mask,
         'stopper_values': stopper_values,
+        'speed_mps': round(float(field('speed_mps')), 4),
         'wait_condition': EVENT_WAIT_CONDITION_BY_ID.get(
             _round_index(field('wait_condition_id')),
             'none',
@@ -758,7 +757,7 @@ def _event_action_to_ros_command(
             'shuttle': shuttle_name,
             'command': 'OFF',
         }, ''
-    if primitive in {'SHUTTLE_ON_FAST', 'SHUTTLE_ON_SLOW'}:
+    if primitive == 'SHUTTLE_ON':
         if wait_condition == 'none' or target_id == 'none':
             return None, 'unsafe shuttle ON: missing wait_condition or target_id'
         expected_target = f'{side}_shuttle'
@@ -767,14 +766,18 @@ def _event_action_to_ros_command(
                 f'unsafe shuttle ON: target_id {target_id!r} does not match '
                 f'{expected_target!r}'
             )
+        try:
+            speed_mps = float(event_action.get('speed_mps', 0.0) or 0.0)
+        except (TypeError, ValueError):
+            speed_mps = 0.0
+        if speed_mps <= 0.0:
+            return None, 'unsafe shuttle ON: speed_mps must be > 0'
         return {
             'action': 'shuttle',
             'side': side,
             'shuttle': shuttle_name,
             'command': 'ON',
-            'speed': EVENT_FAST_SPEED_MPS
-            if primitive == 'SHUTTLE_ON_FAST'
-            else EVENT_SLOW_SPEED_MPS,
+            'speed': speed_mps,
         }, ''
     if primitive == 'SET_SWITCHES':
         assignments = _selected_assignments_from_event_action(
@@ -1085,11 +1088,19 @@ def _decode_room315_vla_action(
         if command_name == 'ON':
             blocked = _closed_stoppers(rails, side)
             if blocked:
-                return _safety_decision(
-                    accepted=False,
-                    original_action=command,
-                    reason=f'path blocked by closed stopper(s) on {side}: {", ".join(blocked)}',
-                )
+                target_stopper = _clean_token(
+                    command.get('target_stopper')
+                    or command.get('stopper_target')
+                    or command.get('target')
+                    or ''
+                ).upper()
+                if target_stopper not in blocked or len(blocked) != 1:
+                    return _safety_decision(
+                        accepted=False,
+                        original_action=command,
+                        reason=f'path blocked by closed stopper(s) on {side}: {", ".join(blocked)}',
+                    )
+                corrected['target_stopper'] = target_stopper
         if command.get('start_slot') is not None and not _valid_slot(command.get('start_slot')):
             return _safety_decision(
                 accepted=False,

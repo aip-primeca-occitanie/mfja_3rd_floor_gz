@@ -176,22 +176,22 @@ event-level symbolic action, then a post-processor converts that accepted event
 action to the JSON command accepted by the supervisor.
 
 Action space schema v2 uses only these primitives: `WAIT`, `DONE`,
-`SET_SWITCHES`, `SET_STOPPERS`, `SHUTTLE_ON_FAST`, `SHUTTLE_ON_SLOW`,
-`STOP_NOW`, and `EMERGENCY_STOP`. The vector fields are `primitive_id`,
+`SET_SWITCHES`, `SET_STOPPERS`, `SHUTTLE_ON`, `STOP_NOW`, and
+`EMERGENCY_STOP`. The vector fields are `primitive_id`,
 `side_id`, per-device `switch_mask_A1..A4`/`switch_value_A1..A4`,
 per-device `stopper_mask_A1..A4`/`stopper_value_A1..A4`,
-`wait_condition_id`, `target_id`, and `reason_id`. A mask value of `0` means
+`speed_mps`, `wait_condition_id`, `target_id`, and `reason_id`. A mask value of `0` means
 `UNCHANGED`; only devices with mask `1` are decoded as selected devices.
 This represents partial decisions such as “set only A3 to INTERIOR” or “close
-only A4” without accidentally changing A1/A2/A3/A4 together. Fast versus slow
-shuttle movement is represented by the primitive itself, not by a continuous
-speed field.
+only A4” without accidentally changing A1/A2/A3/A4 together. Shuttle movement
+uses the `SHUTTLE_ON` primitive plus an explicit `speed_mps` value, so policies
+can request the actual shuttle speed in meters per second.
 
 The same vector can be sent directly to the supervisor for guarded execution:
 
 ```bash
 ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
-  "{data: '{\"action_vector\":[2,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,1,3,8]}'}"
+  "{data: '{\"action_vector\":[2,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0.0,1,3,8]}'}"
 ```
 
 That example decodes to `SET_SWITCHES` on the right rail, selecting only A3 and

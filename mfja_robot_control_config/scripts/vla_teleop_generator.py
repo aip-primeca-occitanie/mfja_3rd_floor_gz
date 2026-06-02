@@ -253,8 +253,11 @@ class VLATeleopGenerator(Node):
     def st_i(self, side: str, assignments: dict[str, str]) -> None:
         self.cmd({'action': 'stoppers', 'side': side, 'stoppers': assignments})
 
-    def on(self, side: str, speed: float = 0.3) -> None:
-        self.cmd({'action': 'shuttle', 'side': side, 'command': 'ON', 'speed': speed})
+    def on(self, side: str, speed: float = 0.3, *, target_stopper: str | None = None) -> None:
+        command = {'action': 'shuttle', 'side': side, 'command': 'ON', 'speed': speed}
+        if target_stopper:
+            command['target_stopper'] = target_stopper
+        self.cmd(command)
 
     def off(self, side: str) -> None:
         self.cmd({'action': 'shuttle', 'side': side, 'command': 'OFF'})
@@ -722,7 +725,7 @@ class VLATeleopGenerator(Node):
         self.st_i(side, {'ALL': '0', fallback_stopper: '1'})
         checkpoint_reached = False
         try:
-            self.on(side, 0.2)
+            self.on(side, 0.2, target_stopper=fallback_stopper)
             checkpoint_reached = self.wait_for_stopper_stop(side, fallback_stopper, 90.0)
         finally:
             self.off(side)
@@ -757,7 +760,7 @@ class VLATeleopGenerator(Node):
         self.st_i(side, {'ALL': '0', stopper_name: '1'})
         stopped = False
         try:
-            self.on(side, 0.2)
+            self.on(side, 0.2, target_stopper=stopper_name)
             stopped = self.wait_for_stopper_stop(side, stopper_name, 90.0)
         finally:
             self.off(side)
@@ -774,7 +777,7 @@ class VLATeleopGenerator(Node):
         self.st_i(side, {'ALL': '0', stopper_name: '1'})
         hit = False
         try:
-            self.on(side)
+            self.on(side, target_stopper=stopper_name)
             hit = self.wait_for_stopper_stop(side, stopper_name)
         finally:
             self.off(side)
@@ -826,7 +829,7 @@ class VLATeleopGenerator(Node):
         self.slp(1.0)
         self.st_i(side, {first: '0', second: '1'})
         try:
-            self.on(side)
+            self.on(side, target_stopper=second)
             self.wait_for_stopper_stop(side, second, 90.0)
         finally:
             self.off(side)
@@ -866,7 +869,7 @@ class VLATeleopGenerator(Node):
             return False
         self.st_i(side, {'ALL': '0', gate: '1'})
         try:
-            self.on(side)
+            self.on(side, target_stopper=gate)
             return self.wait_for_stopper_stop(side, gate, timeout_s)
         finally:
             self.off(side)
@@ -909,7 +912,7 @@ class VLATeleopGenerator(Node):
             self.sw_i(side, plan['switches'])
             self.st_i(side, {'ALL': '0', plan['stopper']: '1'})
             try:
-                self.on(side)
+                self.on(side, target_stopper=plan['stopper'])
                 self.wait_for_stopper_stop(side, plan['stopper'], 60.0)
             finally:
                 self.off(side)
@@ -959,7 +962,7 @@ class VLATeleopGenerator(Node):
         self.sw_i(side, {'A3': 'INTERIOR'})
         self.st_i(side, {'ALL': '0', 'A4': '1'})
         try:
-            self.on(side, 0.15)
+            self.on(side, 0.15, target_stopper='A4')
             self.wait_for_stopper_stop(side, 'A4', 30.0)
         finally:
             self.off(side)
@@ -1037,7 +1040,7 @@ class VLATeleopGenerator(Node):
         self.sw_i(side, plan['stage_switches'])
         self.st_i(side, {'ALL': '0', plan['stage_stopper']: '1'})
         try:
-            self.on(side, 0.15)
+            self.on(side, 0.15, target_stopper=plan['stage_stopper'])
             if not self.wait_for_stopper_stop(side, plan['stage_stopper'], 45.0):
                 return False
         finally:

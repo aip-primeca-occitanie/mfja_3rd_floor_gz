@@ -67,8 +67,7 @@ WAIT
 DONE
 SET_SWITCHES
 SET_STOPPERS
-SHUTTLE_ON_FAST
-SHUTTLE_ON_SLOW
+SHUTTLE_ON
 STOP_NOW
 EMERGENCY_STOP
 ```
@@ -78,11 +77,13 @@ Partial device commands are encoded with per-device masks and values:
 ```text
 switch_mask[A1,A2,A3,A4] + switch_value[A1,A2,A3,A4]
 stopper_mask[A1,A2,A3,A4] + stopper_value[A1,A2,A3,A4]
+speed_mps
 ```
 
 Unselected devices are `UNCHANGED`, so an action such as "set only A3 to
 INTERIOR" cannot accidentally change A1, A2, or A4. The action vector also
-stores `side`, `wait_condition`, `target_id`, and `reason`.
+stores `side`, explicit shuttle `speed_mps`, `wait_condition`, `target_id`,
+and `reason`.
 
 ## Scenario Families
 

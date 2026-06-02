@@ -86,10 +86,9 @@ PRIMITIVE_IDS = {
     'DONE': 1,
     'SET_SWITCHES': 2,
     'SET_STOPPERS': 3,
-    'SHUTTLE_ON_FAST': 4,
-    'SHUTTLE_ON_SLOW': 5,
-    'STOP_NOW': 6,
-    'EMERGENCY_STOP': 7,
+    'SHUTTLE_ON': 4,
+    'STOP_NOW': 5,
+    'EMERGENCY_STOP': 6,
 }
 
 SIDE_IDS = {'right': 0, 'left': 1}
@@ -151,7 +150,6 @@ REASON_IDS = {
     'emergency': 12,
     'unsupported_command': 13,
 }
-FAST_SPEED_THRESHOLD_MPS = 0.3
 PRIMITIVE_IDS_BY_VALUE = {value: key for key, value in PRIMITIVE_IDS.items()}
 SIDE_IDS_BY_VALUE = {value: key for key, value in SIDE_IDS.items()}
 SWITCH_VALUE_IDS_BY_VALUE = {value: key for key, value in SWITCH_VALUE_IDS.items()}
@@ -167,6 +165,7 @@ ACTION_VECTOR_FIELDS = [
     *[f'switch_value_{name}' for name in DEVICE_NAMES],
     *[f'stopper_mask_{name}' for name in DEVICE_NAMES],
     *[f'stopper_value_{name}' for name in DEVICE_NAMES],
+    'speed_mps',
     'wait_condition_id',
     'target_id',
     'reason_id',
@@ -178,6 +177,7 @@ EVENT_ACTION_FIELDS = [
     'switch_values',
     'stopper_mask',
     'stopper_values',
+    'speed_mps',
     'wait_condition',
     'target_id',
     'reason',
@@ -696,6 +696,7 @@ def _event_action_v2_from_symbolic_action(
     )
 
     primitive = 'WAIT'
+    speed_mps = 0.0
     if action == 'switches':
         primitive = 'SET_SWITCHES'
     elif action == 'stoppers':
@@ -706,18 +707,18 @@ def _event_action_v2_from_symbolic_action(
             primitive = 'STOP_NOW'
         elif shuttle_command == 'ON':
             try:
-                speed = float(command_dict.get('speed', 0.0) or 0.0)
+                speed_mps = float(command_dict.get('speed', 0.0) or 0.0)
             except (TypeError, ValueError):
-                speed = 0.0
-            primitive = 'SHUTTLE_ON_FAST' if speed >= FAST_SPEED_THRESHOLD_MPS else 'SHUTTLE_ON_SLOW'
+                speed_mps = 0.0
+            primitive = 'SHUTTLE_ON'
     elif action == 'route_shuttle':
         start = command_dict.get('start', command_dict.get('start_after_prepare', True))
         if _as_bool(start):
             try:
-                speed = float(command_dict.get('speed', 0.0) or 0.0)
+                speed_mps = float(command_dict.get('speed', 0.0) or 0.0)
             except (TypeError, ValueError):
-                speed = 0.0
-            primitive = 'SHUTTLE_ON_FAST' if speed >= FAST_SPEED_THRESHOLD_MPS else 'SHUTTLE_ON_SLOW'
+                speed_mps = 0.0
+            primitive = 'SHUTTLE_ON'
         else:
             primitive = 'STOP_NOW'
     elif action == 'stop_all':
@@ -737,7 +738,7 @@ def _event_action_v2_from_symbolic_action(
             target_id = _target_from_assignments(switch_assignments, device_kind='switch')
         elif primitive == 'SET_STOPPERS':
             target_id = _target_from_assignments(stopper_assignments, device_kind='stopper')
-        elif primitive in {'SHUTTLE_ON_FAST', 'SHUTTLE_ON_SLOW', 'STOP_NOW'}:
+        elif primitive in {'SHUTTLE_ON', 'STOP_NOW'}:
             target_id = f'{side}_shuttle'
         elif primitive == 'DONE':
             target_id = _normalize_target_id(command_dict.get('template')) or 'terminal'
@@ -755,6 +756,7 @@ def _event_action_v2_from_symbolic_action(
         'switch_values': switch_values,
         'stopper_mask': stopper_mask,
         'stopper_values': stopper_values,
+        'speed_mps': round(float(speed_mps), 4),
         'wait_condition': wait_condition_type,
         'target_id': _normalize_target_id(target_id),
         'reason': _reason_for_action(
@@ -835,6 +837,10 @@ def _normalize_event_action_v2(action: Any) -> dict[str, Any]:
         name: STOPPER_VALUE_IDS_BY_VALUE.get(int(stopper_values[index]), 'UNCHANGED')
         for index, name in enumerate(DEVICE_NAMES)
     }
+    try:
+        speed_mps = float(action_dict.get('speed_mps', action_dict.get('speed', 0.0)) or 0.0)
+    except (TypeError, ValueError):
+        speed_mps = 0.0
     return {
         'primitive': primitive,
         'side': side,
@@ -842,6 +848,7 @@ def _normalize_event_action_v2(action: Any) -> dict[str, Any]:
         'switch_values': switch_value_dict,
         'stopper_mask': stopper_mask_dict,
         'stopper_values': stopper_value_dict,
+        'speed_mps': round(float(speed_mps), 4),
         'wait_condition': _normalize_wait_condition(action_dict.get('wait_condition')),
         'target_id': _normalize_target_id(action_dict.get('target_id')),
         'reason': _normalize_reason(action_dict.get('reason')),
@@ -869,6 +876,7 @@ def _encode_action(command: Any) -> list[float]:
         *switch_values,
         *stopper_mask,
         *stopper_values,
+        float(action['speed_mps']),
         float(WAIT_CONDITION_IDS[action['wait_condition']]),
         float(TARGET_IDS[action['target_id']]),
         float(REASON_IDS[action['reason']]),
@@ -937,6 +945,7 @@ def _decode_action(action_vector: Any) -> dict[str, Any]:
         'switch_values': switch_values,
         'stopper_mask': stopper_mask,
         'stopper_values': stopper_values,
+        'speed_mps': round(float(field('speed_mps')), 4),
         'wait_condition': WAIT_CONDITION_IDS_BY_VALUE.get(
             _round_index(field('wait_condition_id')),
             'none',

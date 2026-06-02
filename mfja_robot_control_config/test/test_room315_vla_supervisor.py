@@ -104,6 +104,7 @@ def _event_vector(
     *,
     primitive: str,
     side: str = 'right',
+    speed_mps: float = 0.0,
     switch_values: dict[str, str] | None = None,
     stopper_values: dict[str, str] | None = None,
     wait_condition: str = 'none',
@@ -125,6 +126,7 @@ def _event_vector(
 
     set_field('primitive_id', primitive_ids[primitive])
     set_field('side_id', side_ids[side])
+    set_field('speed_mps', speed_mps)
     for switch_name, state in switch_values.items():
         set_field(f'switch_mask_{switch_name}', 1)
         set_field(f'switch_value_{switch_name}', {'EXTERIOR': 1, 'INTERIOR': 2}[state])
@@ -247,6 +249,23 @@ def test_safety_decoder_rejects_shuttle_on_when_path_blocked():
 
     assert decision['accepted'] is False
     assert 'path blocked by closed stopper' in decision['reason']
+
+
+def test_safety_decoder_allows_explicit_target_stopper_stop():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['stoppers']['A2'] = '1'
+
+    decision = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+        'target_stopper': 'A2',
+    })
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['target_stopper'] == 'A2'
 
 
 def test_safety_decoder_rejects_emergency_and_falling_states():
@@ -432,8 +451,9 @@ def test_action_vector_rejects_shuttle_on_without_wait_or_target():
     supervisor = _fake_supervisor(module)
     unsafe_vector = _event_vector(
         module,
-        primitive='SHUTTLE_ON_FAST',
+        primitive='SHUTTLE_ON',
         side='right',
+        speed_mps=0.35,
         wait_condition='none',
         target_id='none',
         reason='shuttle_start',
@@ -446,8 +466,9 @@ def test_action_vector_rejects_shuttle_on_without_wait_or_target():
 
     safe_vector = _event_vector(
         module,
-        primitive='SHUTTLE_ON_FAST',
+        primitive='SHUTTLE_ON',
         side='right',
+        speed_mps=0.35,
         wait_condition='shuttle_command_applied',
         target_id='right_shuttle',
         reason='shuttle_start',
@@ -456,7 +477,7 @@ def test_action_vector_rejects_shuttle_on_without_wait_or_target():
 
     assert accepted['accepted'] is True
     assert accepted['executed_action']['command'] == 'ON'
-    assert accepted['executed_action']['speed'] == module.EVENT_FAST_SPEED_MPS
+    assert accepted['executed_action']['speed'] == 0.35
 
 
 def test_action_vector_emergency_stop_is_allowed_and_logged():
@@ -484,8 +505,9 @@ def test_action_vector_rejection_log_contains_required_fields():
     supervisor = _fake_supervisor(module)
     action_vector = _event_vector(
         module,
-        primitive='SHUTTLE_ON_SLOW',
+        primitive='SHUTTLE_ON',
         side='left',
+        speed_mps=0.1,
         wait_condition='none',
         target_id='none',
         reason='shuttle_start',

@@ -25,6 +25,7 @@ action_vector_fields:
   - stopper_value_A2
   - stopper_value_A3
   - stopper_value_A4
+  - speed_mps
   - wait_condition_id
   - target_id
   - reason_id
@@ -36,6 +37,7 @@ symbolic_action_fields:
   - switch_values
   - stopper_mask
   - stopper_values
+  - speed_mps
   - wait_condition
   - target_id
   - reason
@@ -45,10 +47,9 @@ primitive_ids:
   DONE: 1
   SET_SWITCHES: 2
   SET_STOPPERS: 3
-  SHUTTLE_ON_FAST: 4
-  SHUTTLE_ON_SLOW: 5
-  STOP_NOW: 6
-  EMERGENCY_STOP: 7
+  SHUTTLE_ON: 4
+  STOP_NOW: 5
+  EMERGENCY_STOP: 6
 
 side_ids:
   right: 0
