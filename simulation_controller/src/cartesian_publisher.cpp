@@ -85,7 +85,7 @@ public:
         // compute reference (position = 0)
         Eigen::VectorXd q_ref = Eigen::Map<const Eigen::VectorXd>(REF_ANGLES.data(), REF_ANGLES.size());
         pinocchio::forwardKinematics(model, *data, q_ref);
-        pinocchio::framesForwardKinematics(model, *data, q_ref);
+        pinocchio::framesForwardKinematics(model, *data, q_ref); //?
         ref_transform = data->oMf[eef_frame_id];
         q_current = q_ref;
 
@@ -98,7 +98,7 @@ public:
             "/cartesian_target", 10,
             std::bind(&CartesianPublisher::cartesianTargetCb, this, std::placeholders::_1));
         
-        //move to initial position
+        //move to initial position (simulation only)
         trajectory_msgs::msg::JointTrajectory traj;
         traj.header.stamp = this->now();
         traj.header.frame_id = "base_link";
@@ -162,15 +162,12 @@ private:
 
             Eigen::VectorXd dq_task = J_pinv * (-IK_LAMBDA * err_vec); //ds = 0 ?
 
-            Eigen::VectorXd p = IK_NULL_GAIN * (q_ref - q);
+            Eigen::VectorXd p = IK_NULL_GAIN * (q_ref - q); //p=?
             Eigen::MatrixXd null_proj = Eigen::MatrixXd::Identity(nv, nv) - J_pinv * J;
             Eigen::VectorXd dq_null = null_proj * p;
 
             Eigen::VectorXd dq = dq_task + dq_null;
             q = pinocchio::integrate(model, q, IK_DT * dq);
-
-            q = q.cwiseMax(model.lowerPositionLimit)
-                  .cwiseMin(model.upperPositionLimit);
         }
         return false;   // did not converge
     }
