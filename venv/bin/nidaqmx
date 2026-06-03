@@ -1,0 +1,6 @@
+#!/home/benjamin/stage2026_ROS2/sensor_clement/venv/bin/python
+import sys
+from nidaqmx.__main__ import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

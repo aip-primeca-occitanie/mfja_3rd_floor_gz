@@ -1,129 +1,71 @@
-# MFJA 3rd Floor Gazebo Simulation
+# Staubli_ROS2
+ROS2 port of the Staubli_VAL3_ROS driver with all components it requires, expanded with FAU-FAPS adaptive_motion_middleware.
 
-This repository contains the Gazebo Harmonic / ROS 2 Jazzy simulation assets for the MFJA 3rd floor. 
+## general
+This repository contains a port for ROS2 for everything that is required to use Staubli robots using the CS9 controller, based on the ROS1 driver (https://github.com/ros-industrial/staubli_val3_driver/tree/master).
+This includes a port of the ROS simple message package and everything it requires (https://github.com/ros-industrial/industrial_core).
+Also included is a port of FAU-FAPS adaptive_motion_middleware package to enable velocity and pose tracking control.
+However, to use these features, you will need to install 'motion' and 'velocity' expansion for the CS9 controller.
+These can be downloaded via the Staubli software center after creating a Staubli account. They should be installed and enabled on the controller via VAL3, and transferred to the physical robot by placing the corresponding .so file in the app folder of the controller. 
+For more details about this functionality, visit the original adaptive motion middleware repo at:
+  https://github.com/FAU-FAPS/adaptive_motion_control.git
+  
+Included is a moveit config and description package for the Staubli TX2-60L model. If another CS9 capable robot is used, these files can be used as a template.
+In the moveit config, there are two launch files:
 
-## 📖 General Overview
+Fully simulated robot: staubli_tx2_60l_planning_execution_sim.launch.py
+  
+Real robot: staubli_tx2_60l_planning_execution_real.launch.py
 
-The simulation environment provides a comprehensive digital twin of the MFJA 3rd floor, featuring multiple work cells, industrial robotic arms (KUKA, Stäubli, Yaskawa), and mobile robots (TIAGo). 
+## Installing the VAL3 components
+Copy the contents of the _staubli_val3_driver/val3_ folder to the CS9 controller via USB or an FTP client such as WinScp or the transfer manager found in the Staubli Robotics Suite.
 
-A major focus of this repository is the **Room 315 flexible rail system**, which currently utilizes a highly reliable **kinematic shuttle simulation**. Instead of relying on complex physics interactions like wheel friction, shuttles move along arc-length paths generated from a calibrated explicit rail graph, ensuring smooth and predictable behavior for testing routing logic, multi-shuttle interactions, and switch controls.
+## Configuring the robot
+The TCP sockets on the robot controller must be set correctly prior to use. 
+from the teach pendant home:
+1) IO --> Socket --> TCP Servers --> "+"
+2) Configure the following new sockets:
+   
+    | Name   | Port  | Timeout |End of string | Nagle |
+    | ---    | ---   | ---     | ---          | ---   |
+    | Motion | 11000 | -1      | 13           | Off   |
+    | System | 11001 | -1      | 13           | Off   |
+    | State  | 11002 | -1      | 13           | Off   |
+    | IO     | 11003 | -1      | 13           | Off   |
 
-Whether you are testing mobile robot navigation on the full floor, running pick-and-place tasks with a single robotic arm, or orchestrating a complex multi-shuttle logistics scenario in Room 315, this repository provides the necessary models and launch configurations.
+## How to use
+### Staubli-side:
+Load the driver from the teach pendant home:
+1) Application manager --> Val3 applications
+2) +Disk --> ros_server
+3) VAL# --> Memory --> select `ros_server` --> ▶
 
----
+### ROS-side:
+There are 3 different options for using this package:
+  * Using a simulated robot:
+    ```
+    1) ros2 launch staubli_tx2_60l_planning_execution_sim.launch.py
+    ```
+  * Using a real robot with moveit only:
+    ```
+    1) ros2 launch staubli_tx2_60l_moveit_config staubli_tx2_60l_planning_execution_real.launch.py
+    2) ros2 launch staubli_val3_driver robot_interface_streaming.launch.py robot_ip:=<ROBOT_IP>
+    ```
+  * Using a real robot with moveit and the adaptive motion middleware:
+  
+    (In this situation, some of the communication will go via the middleware, using IP 127.0.0.1)
+    
+    (For illustrative purposes, the entire launch sequence is written down here, in practice it is recommended to combine this in one launch file)
+    ```
+    1) ros2 launch robot_middleware robot_middleware.launch.py robot_ip:=<ROBOT_IP>
+    2) ros2 launch staubli_val3_driver robot_state.launch.py robot_ip:=127.0.0.1
+    3) ros2 launch staubli_val3_driver motion_streaming_interface.launch.py robot_ip:=127.0.0.1
+    4) ros2 launch staubli_val3_driver io_interface.launch.py robot_ip:=<ROBOT_IP>
+    5) ros2 launch staubli_val3_driver system_interface.launch.py robot_ip:=<ROBOT_IP>
+    6) ros2 launch staubli_tx2_60l_moveit_config staubli_tx2_60l_planning_execution_real.launch.py 
+    7) ros2 run industrial_robot_client joint_trajectory_action
+    8) ros2 run moveit_interface moveit_interface planning_group:=manipulator
+    ```
 
-## 🛠️ Installation Guide
-
-The project requires **Ubuntu 24.04** and **ROS 2 Jazzy**. The repository acts as a meta-repository and must be built inside a colcon workspace.
-
-### 1. Install Prerequisites
-Make sure ROS 2 Jazzy is installed, along with essential build tools:
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake git ninja-build pkg-config \
-  python3-colcon-common-extensions python3-rosdep python3-yaml \
-  ros-jazzy-desktop ros-jazzy-robot-state-publisher ros-jazzy-ros-gz
-
-# Initialize rosdep if you haven't already
-sudo rosdep init || true
-rosdep update
-```
-
-### 2. Clone the Repository
-Create a workspace and clone this meta-repository inside its `src/` folder:
-```bash
-export MFJA_WS=~/mfja_ws
-mkdir -p "$MFJA_WS/src"
-cd "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
-```
-
-### 3. Build and Source
-Install ROS dependencies, build the workspace, and source it:
-```bash
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-
-# Install dependencies defined in package.xml files
-rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
-
-# Build the workspace
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-
-# Source the installed environment
-source install/setup.bash
-```
-*(Note: You must run `source install/setup.bash` in every new terminal you open.)*
-
----
-
-## ⚡ Basic Commands & Quick Start
-
-The repository offers multiple run modes depending on what you want to test.
-
-### 1. Launching the Full Floor
-To run the complete 3rd-floor environment with all rooms, you can launch the `full_floor.launch.py`. You can choose to load all robots or none:
-```bash
-ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
-  robots:=none \
-  start_paused:=false \
-  gui:=true
-```
-*(Change `robots:=none` to `robots:=all` to spawn TIAGo, KUKA, Stäubli, and Yaskawa robots).*
-
-### 2. Launching Room 315 (Rail Simulation)
-If you only want to focus on the flexible rail system and shuttles in Room 315:
-```bash
-ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
-  robots:=none \
-  gui:=true \
-  enable_room315_kinematic_shuttles:=true \
-  room315_right_shuttle_count:=1 \
-  room315_left_shuttle_count:=1 \
-  room315_shuttles_start_enabled:=false
-```
-
-### 3. Launching a Single Industrial Robot
-For isolated testing of a specific robotic arm (e.g., KUKA) without the rest of the floor:
-```bash
-ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
-  robot:=kuka \
-  gui:=true
-```
-*(Other options for `robot` include `staubli`, `hc10`, and `hc10dt`).*
-
-### 4. Basic Shuttle Control (Room 315)
-If you launched the Room 315 shuttles, you can control them via ROS topics:
-
-**Turn ON a shuttle:**
-```bash
-ros2 topic pub --once /room_315/rails/right/shuttles/command \
-  mfja_rail_interfaces/msg/ShuttleCommand \
-  "{name: 'room315_right_shuttle_1', command: 'ON'}"
-```
-
-**Control rail switches (e.g., switch all to interior):**
-```bash
-ros2 topic pub --once /room_315/rails/right/switches/command \
-  mfja_rail_interfaces/msg/SwitchCommand \
-  "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
-```
-
----
-
-## 📂 Repository Layout
-
-*   `mfja_3rd_floor_description/`: Gazebo worlds, models, meshes, and URDF/SDF assets.
-*   `mfja_rail_interfaces/`: Custom ROS 2 interfaces for commands, states, and sensors.
-*   `mfja_robot_control_config/`: Shuttle/switch scripts, bridge configurations, and rail kinematic settings.
-*   `mfja_3rd_floor_bringup/`: Centralized launch entry points for the full floor, Room 315, and single robot setups.
-
----
-
-## 📚 Detailed Documentation
-
-For a deep dive into advanced features, please refer to our dedicated documentation files:
-
-*   **[Detailed Feature & API Guide (DETAILED_GUIDE.md)](DETAILED_GUIDE.md)**: Includes step-by-step guides for adding shuttles dynamically, reading sensor feedback, testing industrial robots, and troubleshooting.
-*   **[Room 315 Kinematic Rail Network Specs](mfja_robot_control_config/config/room_315_kinematics/README.md)**: Technical details about segment directions, device YAMLs, and sensor cookbook testing.
-*   **[HTML Runbook](runbook.html)**: A focused visualization and operational guide.
+  
+ 

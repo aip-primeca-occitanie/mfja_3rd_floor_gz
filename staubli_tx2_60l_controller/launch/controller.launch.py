@@ -1,0 +1,102 @@
+import os
+from ament_index_python import get_package_share_path
+from launch import LaunchDescription
+from launch.substitutions import PathJoinSubstitution, Command
+from launch.actions import (TimerAction)
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
+import xacro
+
+def generate_launch_description():
+
+    ctrl_pkg = get_package_share_directory("staubli_tx2_60l_controller")
+
+    robot_description_config = xacro.process_file(
+        os.path.join(
+            ctrl_pkg,
+            "config",
+            "staubli_tx2_60l.urdf.xacro",
+        )
+    )
+
+    robot_description = {
+    "robot_description": robot_description_config.toxml()
+    }
+
+    robot_controllers = os.path.join(ctrl_pkg, 'config', 'ros2_controllers.yaml')
+
+    rviz_config_file = PathJoinSubstitution([FindPackageShare("staubli_tx2_60l_description"), "rviz","view_tx2_60l.rviz"])
+    
+    controller_manager = Node(
+        package='controller_manager',
+        executable='ros2_control_node',
+        name='controller_manager',
+        parameters=[
+            {'robot_description': robot_description},
+            robot_controllers,
+        ],
+        output='screen',
+    )
+
+    controller_node = Node(
+        package='staubli_tx2_60l_controller',
+        executable='staubli_controller',
+        name='staubli_controller',
+        output='screen',
+    )
+    
+    robot_state_publisher_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        output="both",
+        parameters=[robot_description],
+    )
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="log",
+        arguments=["-d", rviz_config_file],
+    )
+
+    spawner_jsb = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'joint_state_broadcaster',
+            '--controller-manager', '/controller_manager',
+        ],
+    )
+
+    spawner_vel = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'velocity_controller',
+            '--controller-manager', '/controller_manager',
+        ],
+    )
+
+    spawner_pos = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'position_controller',
+            '--controller-manager', '/controller_manager',
+            '--inactive'
+        ],
+    )
+
+    return LaunchDescription([
+        controller_manager,
+        robot_state_publisher_node,
+        
+        spawner_jsb,
+        spawner_vel,
+        spawner_pos,
+
+        controller_node,
+        rviz,
+    ])

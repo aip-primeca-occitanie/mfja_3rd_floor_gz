@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package flr_api.v2;
+
+message StateHeader
+{
+    google.protobuf.Timestamp timestamp = 1;
+}
+
+message CmdHeader
+{
+    google.protobuf.Timestamp timestamp = 1;
+}
+
+message Vector3
+{
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message Quaternion
+{
+    double qx = 1;
+    double qy = 2;
+    double qz = 3;
+    double qw = 4;
+}
+
+message Pose
+{
+    Vector3 translation = 1;
+    optional Quaternion rotation = 2; // No value set means identity quaternion
+}
+
+message Twist
+{
+    Vector3 linear = 1;
+    Vector3 angular = 2;
+}
+
+message Joints
+{
+    repeated double value = 1;
+}

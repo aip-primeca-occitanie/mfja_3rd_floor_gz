@@ -1,0 +1,414 @@
+syntax = "proto3";
+
+import "protos/api_v2.proto";
+
+package flr_api.v2.rtos;
+
+/* -------------------------------------------------------------------------- */
+/*                                    Misc                                    */
+/* -------------------------------------------------------------------------- */
+
+/* ------------------------------ Control mode ------------------------------ */
+enum RTOSControlMode {
+    RTOS_CONTROL_MODE_UNSPECIFIED = 0;
+    RTOS_CONTROL_MODE_IDLE = 1; // Acts as TRAJECTORY_ACTIONS_STOP
+    RTOS_CONTROL_MODE_JOGGING = 2;
+    RTOS_CONTROL_MODE_TRAJECTORY = 3;
+}
+
+message RTOSControlModeCmd {
+    CmdHeader header = 1;
+    RTOSControlMode control_mode_request = 2;
+}
+
+/* ------------------------------ Initialization ----------------------------- */
+
+message JointLimits {
+    double min_position = 1;
+    double max_position = 2;
+    double max_velocity = 3;
+    double max_acceleration = 4;
+    double max_jerk = 5;
+}
+
+message ExtendedAxisDefinition {
+    JointLimits joint_limits = 1;
+}
+
+message RTOSDriverInitializationCmd {
+    CmdHeader header = 1;
+    bool dummy_mode = 2;
+    string robot_brand = 3;
+    string robot_model = 4;
+    string robot_controller_model = 5;
+    optional string local_address = 6;
+    optional uint32 local_port = 7;
+    optional string robot_address = 8;
+    optional uint32 robot_port = 9;
+    repeated ExtendedAxisDefinition extended_axes = 10;
+    optional Joints joint_position_commands = 11;
+    optional Joints extended_joint_position_commands = 12;
+}
+
+/* ---------------------------------- Tool ---------------------------------- */
+message Tool {
+    string name = 1;
+    Pose flange_to_tcp = 2;
+}
+
+message ToolCmd {
+    CmdHeader header = 1;
+    Tool tool = 2;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                   Jogging                                  */
+/* -------------------------------------------------------------------------- */
+
+message JoggingSpeedOverrideCmd {
+    CmdHeader header = 1;
+    double percent = 2;
+}
+
+message CartesianPoseJoggingCmd {
+    CmdHeader header = 1;
+    Pose desired_pose = 2;
+}
+
+message CartesianVelocityJoggingCmd {
+    CmdHeader header = 1;
+    Twist desired_velocity = 2;
+}
+
+message JointPositionJoggingCmd {
+    CmdHeader header = 1;
+    optional Joints joint_positions = 2;
+    optional Joints extended_joint_positions = 3;
+}
+
+message JointVelocityJoggingCmd {
+    CmdHeader header = 1;
+    optional Joints joint_velocities = 2;
+    optional Joints extended_joint_velocities = 3;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Operational mode                              */
+/* -------------------------------------------------------------------------- */
+
+enum OperationalMode {
+    OPERATIONAL_MODE_UNSPECIFIED = 0;
+    OPERATIONAL_MODE_MANUAL = 1;
+    OPERATIONAL_MODE_AUTO = 2;
+    OPERATIONAL_MODE_EXTERNAL = 3;
+}
+
+message OperationalModeCmd {
+    CmdHeader header = 1;
+    OperationalMode operational_mode = 2;
+}
+
+enum SpeedMode {
+    SPEED_MODE_UNSPECIFIED = 0;
+    SPEED_MODE_REDUCED = 1;
+    SPEED_MODE_FAST = 2;
+    SPEED_MODE_MAX = 3;
+}
+
+message SpeedModeCmd {
+    CmdHeader header = 1;
+    SpeedMode speed_mode = 3;
+}
+
+message OperationalSwitchCmd {
+    CmdHeader header = 1;
+    OperationalMode operational_mode = 2;
+    SpeedMode speed_mode = 3;
+}
+
+message DeadmanHeartbeatCmd {
+    CmdHeader header = 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Inputs / Outputs                              */
+/* -------------------------------------------------------------------------- */
+
+enum IoType {
+    IOTYPE_UNSPECIFIED = 0;
+    IOTYPE_INPUT = 1;
+    IOTYPE_OUTPUT = 2;
+}
+
+enum IoValueType
+{
+    IODATATYPE_UNSPECIFIED = 0;
+    IODATATYPE_BOOL = 1;
+    IODATATYPE_UINT8 = 2;
+    IODATATYPE_INT8 = 3;
+    IODATATYPE_UINT16 = 4;
+    IODATATYPE_INT16 = 5;
+    IODATATYPE_UINT32 = 6;
+    IODATATYPE_INT32 = 7;
+    IODATATYPE_FLOAT32 = 8;
+    IODATATYPE_UINT64 = 9;
+    IODATATYPE_INT64 = 10;
+}
+
+message InputOutput {
+    string name = 1;
+    IoType io_type = 2;
+    IoValueType value_type = 3;
+    string value = 4;
+    optional uint32 index = 5;
+}
+
+message InputOutputRange {
+    InputOutput first_io = 1;
+    optional uint32 quantity = 2;
+}
+
+message WriteIosCmd {
+    CmdHeader header = 1;
+    repeated InputOutput ios = 2;
+}
+
+message ReadIosCmd {
+    CmdHeader header = 1;
+    repeated InputOutputRange io_ranges = 2;
+}
+
+message AvailableIosResponse {
+    StateHeader header = 1;
+    repeated InputOutputRange ios = 2;
+}
+
+message ReadIoResponse {
+    StateHeader header = 1;
+    InputOutput io = 2;
+}
+
+message ReadIosResponse {
+    StateHeader header = 1;
+    repeated InputOutput ios = 2;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                System state                                */
+/* -------------------------------------------------------------------------- */
+
+enum ConnectionState {
+    CONNECTION_STATE_UNSPECIFIED = 0;
+    CONNECTION_STATE_CONNECTED = 1;
+    CONNECTION_STATE_NOT_CONNECTED = 2;
+    CONNECTION_STATE_UNREACHABLE = 3;
+}
+
+message RobotControllerState {
+    StateHeader header = 1;
+    /* name format : brand model
+    example: Fanuc M-20iD/35
+    */
+    string name = 2;
+    bool ready_to_execute_commands = 3;
+    optional bool safety_system_ready = 4;
+    optional bool robot_script_running = 5;
+    optional bool power_stage_enabled = 6;
+    optional uint64 number_of_late_packets = 7;
+    optional Joints latest_robot_language_setpoint = 8;
+    double control_period = 9;
+}
+
+message RTOSState {
+    StateHeader header = 1;
+    string version = 2;
+    reserved 3;
+    SpeedMode speed_mode = 4;
+    OperationalMode operational_mode = 5;
+    RTOSControlMode robot_control_mode = 6;
+    ConnectionState connection_state = 7;
+    repeated string allowed_events = 8;
+    Joints latest_position_setpoints = 9;
+    Joints joint_position_setpoints = 10;
+    Joints joint_velocity_setpoints = 11;
+    Pose tool_pose_setpoint = 12;
+    Twist tool_velocity_setpoint = 13;
+    double jogging_speed_override_percent = 14;
+    repeated string available_trajectory_uuids = 15;
+    double jogging_command_watchdog_timeout = 16;
+    double jogging_command_watchdog_current_time = 17;
+    double jogging_mode_watchdog_timeout = 18;
+    double jogging_mode_watchdog_current_time = 19;
+    double comm_period = 20;
+    Joints extended_joint_position_setpoints = 21;
+    Joints extended_joint_velocity_setpoints = 22;
+}
+
+message RobotState {
+    StateHeader header = 1;
+    repeated string joint_names = 2;
+    Joints joint_positions = 3;
+    Joints joint_velocities = 4;
+    Joints joint_accelerations = 5;
+    Joints joint_jerks = 6;
+    Tool tool = 7;
+    Pose tool_pose = 8;
+    Twist tool_velocity = 9;
+    Twist tool_acceleration = 10;
+    Joints joint_position_commands = 11;
+    Joints extended_joint_positions = 12;
+    Joints extended_joint_position_commands = 13;
+    Joints extended_joint_velocities = 14;
+}
+
+message SystemState {
+    StateHeader header = 1;
+    RobotControllerState robot_controller_state = 2;
+    RTOSState rtos_state = 3;
+    RobotState robot_state = 4;
+    TrajectoryState trajectory_state = 5;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Trajectory player                             */
+/* -------------------------------------------------------------------------- */
+
+enum TrajectoryPlayerAction {
+    TRAJECTORY_PLAYER_ACTION_UNSPECIFIED = 0;
+    TRAJECTORY_PLAYER_ACTION_PAUSE = 1;
+    TRAJECTORY_PLAYER_ACTION_PLAY = 2;
+    TRAJECTORY_PLAYER_ACTION_REWIND = 3;
+    TRAJECTORY_PLAYER_ACTION_APPROACH = 4;
+}
+
+message TrajectoryPlayerCmd {
+    CmdHeader header = 1;
+    TrajectoryPlayerAction action = 2;
+}
+
+message TrajectoryOverrideSpeedCmd {
+    CmdHeader header = 1;
+    double percent = 2;
+}
+
+enum PlayerState {
+    PLAYER_STATE_UNSPECIFIED = 0;
+    PLAYER_STATE_STOPPED = 1;
+    PLAYER_STATE_PAUSED = 2;
+    PLAYER_STATE_PLAYING = 3;
+    PLAYER_STATE_REWINDING = 4;
+    PLAYER_STATE_CONVERGING_TOWARDS_TARGET = 5;
+    PLAYER_STATE_FINISHED = 6;
+}
+
+message TrajectoryState {
+    StateHeader header = 1;
+    string uuid = 2; // The generation UUID
+    bool is_playable = 3;
+    bool is_on_trajectory = 4;
+    bool is_advancing = 5;
+    PlayerState player_state = 6;
+    double override_speed = 7;
+    double current_time = 8;
+    double duration = 9;
+    string asset_uuid = 10;
+    double tcp_speed = 11; // Linear speed in m/s before applying the speed override
+    bool pause_at_current_time = 12; // Pause built in the trajectory at the current time
+    double pause_current_time = 13; // Current time in seconds at the pause built in the trajectory
+    double pause_duration = 14; // Pause duration in seconds at the current time built in the trajectory
+    bool paused_by_blocking_io = 15;
+    string blocking_io_name = 16;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             Trajectory Library                             */
+/* -------------------------------------------------------------------------- */
+
+message SelectTrajectoryCmd {
+    CmdHeader header = 1;
+    string trajectory_uuid = 2;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            Trajectory Generator                            */
+/* -------------------------------------------------------------------------- */
+
+enum MotionType {
+    MOTION_TYPE_UNSPECIFIED = 0;
+    MOTION_TYPE_PTP = 1;
+    MOTION_TYPE_LIN = 2;
+    MOTION_TYPE_SPLINE = 3;
+    MOTION_TYPE_JOINT_SPLINE = 4;
+}
+
+enum BlendingSpeedType {
+    BLENDING_SPEED_TYPE_UNSPECIFIED = 0;
+    BLENDING_SPEED_TYPE_AUTO = 1;
+    BLENDING_SPEED_TYPE_VARYING = 2;
+    BLENDING_SPEED_TYPE_CONSTANT = 3;
+}
+
+message RobotPose {
+    Pose pose = 1;
+    optional Joints joint_seeds = 2;
+}
+
+message Waypoint {
+    MotionType motion_type = 1;
+    optional RobotPose robot_pose = 2;
+    optional Joints joint_positions = 3;
+    string name = 4;
+    string uuid = 5;
+    optional double velocity_scaling_percent = 6;
+    double blending_percent = 7;
+    BlendingSpeedType blending_speed_type = 8;
+    optional double pause_duration = 9;
+    optional double time_from_start = 10;
+}
+
+message WaypointWithIos {
+    Waypoint waypoint = 1;
+    repeated InputOutput ios = 2;
+}
+
+message TrajectoryGenOptions {
+    bool force_constant_speed = 1;
+    optional string desired_uuid = 2;
+}
+
+message MotionProfileConstraints {
+    double initial_position = 1;
+    double initial_velocity = 2;
+    double initial_acceleration = 3;
+    double final_position = 4;
+    double final_velocity = 5;
+    double final_acceleration = 6;
+    double max_speed = 7;
+    double max_acceleration = 8;
+    optional double max_deceleration = 9;
+    double max_jerk = 10;
+    optional double duration = 11;
+}
+
+message Robot {
+    string brand = 1;
+    string model = 2;
+    Pose flange_to_tcp = 3;
+}
+
+message TrajectoryGenInputs {
+    repeated Waypoint waypoints = 1;
+    Robot robot = 2;
+    TrajectoryGenOptions options = 3;
+    // Reserved for Fuzzy Logic exclusive usage
+    repeated MotionProfileConstraints motion_profile_constaints = 4;
+}
+
+message TrajectoryGenerationCmd {
+    CmdHeader header = 1;
+    TrajectoryGenInputs inputs = 2;
+}
+
+message PathPreview {
+    repeated Pose poses = 1;
+}

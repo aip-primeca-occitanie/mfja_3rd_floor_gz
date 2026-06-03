@@ -1,0 +1,24 @@
+1/ Connect your laptop to the Staubli robot using the Ethernet cable.
+Check the network configuration from the robot teach pendant and configure the Ethernet interface on your laptop with a static IP address on the same subnet.
+
+2/ On the Staubli controller, launch the program named ros_server.
+
+\i If the popup message:
+"Please reset E-Stop"
+appears while all emergency stops are already released:
+press and engage one E-Stop,
+release it,
+then press the blue safety reset button. \i
+
+3/ In a first terminal :
+ros2 launch real_commander pos_command.launch.py 
+to correctly initialize moveit and the topics you need
+
+4/ In a second terminal :
+ros2 launch staubli_val3_driver robot_interface_streaming.launch.py robot_ip:=172.31.0.1
+to establish communication with the staubli
+
+5/ In a third terminal :
+ros2 run real_commander position_commander 
+tis is where you enter commands to move the robot.
+example : 2 0.1 moves joint 2 by +0.1 rad. 6 -0.05 moves joint 6 by -0.05 rad.

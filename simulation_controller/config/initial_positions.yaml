@@ -1,0 +1,9 @@
+joint_state_publisher:
+  ros__parameters:
+    zeros:
+      joint_1: 0.0
+      joint_2: 0.7854   # PI/4
+      joint_3: 0.7854   # PI/4
+      joint_4: 0.0
+      joint_5: 1.5708   # PI/2
+      joint_6: 0.0
