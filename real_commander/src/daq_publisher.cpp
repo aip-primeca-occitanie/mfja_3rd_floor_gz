@@ -10,11 +10,11 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
     auto node = rclcpp::Node::make_shared("daq_publisher_node");
 
     // Create a ROS publisher
-    auto fz_pub = node->create_publisher<std_msgs::msg::Float64>("/Fz", 10);
-    auto mz_pub = node->create_publisher<std_msgs::msg::Float64>("/Mz", 10);
+    auto fz_pub = node->create_publisher<std_msgs::msg::Float64>("/Fz", 100);
+    auto mz_pub = node->create_publisher<std_msgs::msg::Float64>("/Mz", 100);
 
     // Create a rate
-    rclcpp::Rate rate(5);//250 Hz
+    rclcpp::Rate rate(100);//100 Hz, reading too slowly might make the node crash
 
     /*--------------------------
     Paramétrage DAQmx :
@@ -34,9 +34,9 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
     std::cout << "Devices: " << buffer << std::endl;
 
     //This function then configured a virtual voltage channel:
-    DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandle, "cDAQ2Mod1/ai7", "", DAQmx_Val_Cfg_Default, -10.0, 10.0, DAQmx_Val_Volts, NULL));
+    DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandle, "cDAQ1Mod1/ai7", "", DAQmx_Val_Cfg_Default, -10.0, 10.0, DAQmx_Val_Volts, NULL));
 
-    DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandle, "cDAQ2Mod1/ai6", "", DAQmx_Val_Cfg_Default, -10.0, 10.0, DAQmx_Val_Volts, NULL));
+    DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandle, "cDAQ1Mod1/ai6", "", DAQmx_Val_Cfg_Default, -10.0, 10.0, DAQmx_Val_Volts, NULL));
 
     //After configuring the virtual voltage channels, a sample clock setting function specified the sampling rate, sample mode, and number of samples to read:
     DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandle, "", 100.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 10));
@@ -45,7 +45,7 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
     DAQmxErrChk(DAQmxStartTask(taskHandle));
     //-------------------------------------
 
-    RCLCPP_INFO(node->get_logger(), "Acquisition DAQ démarrée, publication à 100 Hz.");
+    RCLCPP_INFO(node->get_logger(), "Acquisition DAQ démarrée, publication à 10 Hz.");
 
     while (rclcpp::ok())
     {
@@ -55,8 +55,8 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
 
         std_msgs::msg::Float64 fz_msg, mz_msg;
         //vérification sur les paramètres de config sur WITIS, Fz correspond à AI7 et Mz à AI6
-        fz_msg.data = data[1];
-        mz_msg.data = data[0];
+        fz_msg.data = data[0];
+        mz_msg.data = data[1];
 
         fz_pub->publish(fz_msg);
         mz_pub->publish(mz_msg);
@@ -64,7 +64,7 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
         rclcpp::spin_some(node); //Create a default single-threaded executor and execute any immediately available work. 
         rate.sleep();
     }
-
+    
     Error:
        if( DAQmxFailed(error)) {
         DAQmxGetExtendedErrorInfo(errBuff,2048);
