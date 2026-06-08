@@ -97,12 +97,12 @@ def generate_launch_description():
     )
 
     timer_action = TimerAction(
-        period=10.0,
+        period=5.0,
         actions=[cartesian_publisher_node,cartesian_converter_node,force_simulation_node] #10 might not be sufficient, to improve
     )
 
     force_pid_controller_delayed = TimerAction(
-        period=15.0,
+        period=10.0,
         actions=[force_pid_controller_node]
     )
 

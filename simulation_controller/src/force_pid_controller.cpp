@@ -18,8 +18,8 @@ public:
     {
         const double KP = 1.0;
         const double KI = 0.1;
-        const double KD = 0.05;
-        const double MAX_OUTPUT = 0.01; // 1 cm max par frame
+        const double KD = 0.5;
+        const double MAX_OUTPUT = 0.005; // 0.5 cm max par frame
 
         PIDGains g;
         g.kp = KP;
@@ -55,7 +55,7 @@ private:
     PIDController pid;
 
     double current_force = 0.0;
-    double target_force = 15.0;
+    double target_force = 300.0;
     double prev_target_force = 0.0;
 
     double current_z = 0.0;
