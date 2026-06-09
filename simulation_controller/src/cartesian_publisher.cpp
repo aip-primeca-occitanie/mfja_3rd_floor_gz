@@ -33,8 +33,7 @@ static constexpr double IK_TIMEOUT = 0.05; // seconds
 static constexpr double IK_TRESHOLD = 1e-4;
 static constexpr int IK_MAX_ITER = 1000;
 static constexpr double IK_DT = 1e-1;
-static constexpr double IK_DAMP = 1e-6;
-static constexpr double IK_LAMBDA    = 1e-1;
+static constexpr double IK_DAMP = 1e-2;
 static constexpr double IK_NULL_GAIN = 0.1;  
 
 namespace real_commander {
@@ -99,6 +98,7 @@ public:
             std::bind(&CartesianPublisher::cartesianTargetCb, this, std::placeholders::_1));
         
         //move to initial position (simulation only)
+        rclcpp::sleep_for(std::chrono::seconds(2));
         trajectory_msgs::msg::JointTrajectory traj;
         traj.header.stamp = this->now();
         traj.header.frame_id = "base_link";
@@ -153,20 +153,21 @@ private:
 
             pinocchio::Data::Matrix6x J(6, nv);
             J.setZero();
-            pinocchio::computeJointJacobians(model, *data, q);
-            pinocchio::getJointJacobian(model, *data, model.frames[eef_frame_id].parent, pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, J);
+            pinocchio::computeFrameJacobian(model, *data, q, eef_frame_id, pinocchio::ReferenceFrame::LOCAL, J);
 
             Eigen::MatrixXd JJt = J * J.transpose(); //Jpinv(q)*(ds-lambda e) + (I - JpinvJ)p
             JJt.diagonal().array() += IK_DAMP;
             Eigen::MatrixXd J_pinv = J.transpose() * JJt.inverse();
 
-            Eigen::VectorXd dq_task = J_pinv * (-IK_LAMBDA * err_vec); //ds = 0 ?
+            Eigen::VectorXd dq_task = J_pinv * err_vec; //ds = 0 ?
 
+            /*
             Eigen::VectorXd p = IK_NULL_GAIN * (q_ref - q); //p=?
             Eigen::MatrixXd null_proj = Eigen::MatrixXd::Identity(nv, nv) - J_pinv * J;
             Eigen::VectorXd dq_null = null_proj * p;
+            */
 
-            Eigen::VectorXd dq = dq_task + dq_null;
+            Eigen::VectorXd dq = dq_task; //+ dq_null;
             q = pinocchio::integrate(model, q, IK_DT * dq);
         }
         return false;   // did not converge
@@ -174,8 +175,8 @@ private:
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         geometry_msgs::msg::Pose corrected_pose = msg->pose;
-        corrected_pose.position.x = msg->pose.position.x;
-        corrected_pose.position.z = msg->pose.position.z; //inverted ?
+        corrected_pose.position.x = - msg->pose.position.z;
+        corrected_pose.position.z = msg->pose.position.x; //inverted ?
 
         Eigen::Isometry3d pose_relative;
         tf2::fromMsg(corrected_pose, pose_relative);
@@ -223,7 +224,7 @@ private:
         traj.joint_names = joint_names;
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions.assign(q_solution.data(), q_solution.data() + q_solution.size());
-        //point.time_from_start  = rclcpp::Duration::from_seconds(1.0);
+        point.time_from_start  = rclcpp::Duration::from_seconds(1.0);
         traj.points.push_back(point);
         pub_traj->publish(traj);
         }
