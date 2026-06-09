@@ -175,7 +175,7 @@ private:
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         geometry_msgs::msg::Pose corrected_pose = msg->pose;
-        corrected_pose.position.x = - msg->pose.position.z;
+        corrected_pose.position.x = msg->pose.position.z;
         corrected_pose.position.z = msg->pose.position.x; //inverted ?
 
         Eigen::Isometry3d pose_relative;
