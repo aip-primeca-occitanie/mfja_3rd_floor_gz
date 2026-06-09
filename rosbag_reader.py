@@ -11,7 +11,7 @@ from rosbags.highlevel import AnyReader
 # CONFIGURATION
 # ==========================
 
-BAG_PATH = "/home/tiago/staubli_ws/rosbag2_2026_06_04-09_45_24/"
+BAG_PATH = "/home/tiago/staubli_ws/rosbag2_2026_06_09-10_42_37"
 
 POSITION_TOPIC = "/cartesian_state"
 FORCE_TOPIC = "/Fz"
