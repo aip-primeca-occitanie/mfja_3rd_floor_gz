@@ -38,19 +38,25 @@ TASK_FAMILY_METRIC_FIELDS = (
     'task_success',
     'completion_time',
     'command_count',
+    'skipped_redundant_event_count',
+    'redundant_action_rate',
+    'noop_action_rate',
+    'effective_action_rate',
     'illegal_proposal_rate',
     'rejected_action_rate',
-    'unknown_position_success',
-    'sensor_dropout_success',
     'visual_target_success',
     'obstacle_stop_success',
 )
 TASK_FAMILY_KEYWORDS = (
-    ('unknown_position', ('unknown_position_recovery', 'unknown position', 'reacquire')),
-    ('sensor_dropout', ('sensor_dropout_route', 'sensor dropout', 'dropout')),
-    ('visual_target', ('visual_marker_target', 'visual marker target', 'visual_center_at_station', 'center_at_station')),
-    ('obstacle_stop', ('visual_obstacle_stop', 'obstacle stop', 'obstacle')),
-    ('visual_stop', ('visual_stop_before_a3', 'visual_stop_before_a4', 'stop before a3', 'stop before a4')),
+    (
+        'visual_target',
+        (
+            'left_slot3_kuka_then_slot2',
+            'visual_marker_target',
+            'visual marker target',
+        ),
+    ),
+    ('obstacle_stop', ('obstacle_aware_route', 'obstacle stop', 'obstacle')),
     ('loop_entry', ('enter_interior_loop', 'interior loop', 'interior mode')),
     ('transport', ('yaskawa_to_staubli', 'staubli_to_yaskawa', 'yaskawa_to_kuka', 'kuka_to_yaskawa',
                    'from yaskawa to staubli', 'from staubli to yaskawa',
@@ -157,8 +163,10 @@ def _event_row(row: dict[str, Any], fallback_step_index: int) -> dict[str, Any]:
         'observation_state': row.get('observation.state', []),
         'images': _image_fields(row),
         'action': _action_from_row(row),
+        'auxiliary_targets': row.get('auxiliary_targets', {}),
         'privileged_eval': row.get('privileged_eval', {}),
         'safety_decoder_metrics': row.get('safety_decoder_metrics', {}),
+        'event_generation_metrics': row.get('event_generation_metrics', {}),
         'original_command': row.get('original_command', {}),
     }
 
@@ -207,7 +215,14 @@ def _language(row: dict[str, Any]) -> str:
 
 def _binary_state(row: dict[str, Any]) -> dict[str, Any]:
     model_input = row.get('model_input', {})
-    if isinstance(model_input, dict) and model_input:
+    if (
+        isinstance(model_input, dict)
+        and (
+            'binary_sensor_bits' in model_input
+            or 'switch_states' in model_input
+            or 'stopper_states' in model_input
+        )
+    ):
         return {
             'binary_sensor_bits': model_input.get('binary_sensor_bits', {}),
             'switch_states': model_input.get('switch_states', {}),
@@ -285,13 +300,16 @@ def image_feature(image_ref: str, dataset_root: Path) -> dict[str, Any]:
 
 
 def vla_feature(row: dict[str, Any], dataset_root: Path) -> str:
+    model_input = row.get('model_input', {})
+    if not isinstance(model_input, dict):
+        model_input = {}
     images = {
         camera_name: image_feature(image_ref, dataset_root)
         for camera_name, image_ref in sorted(row.get('images', {}).items())
     }
     return _json_dumps({
         'language': _language(row),
-        'binary_state': _binary_state(row),
+        'last_command': model_input.get('last_command', {}),
         'overhead_images': images,
     })
 
@@ -372,28 +390,53 @@ def _terminal_success(row: dict[str, Any]) -> bool | None:
     return None
 
 
-def _latest_safety_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _latest_runtime_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     latest: dict[str, Any] = {}
     for row in rows:
-        metrics = row.get('safety_decoder_metrics')
-        if isinstance(metrics, dict) and metrics:
-            latest = metrics
+        merged = {}
+        safety = row.get('safety_decoder_metrics')
+        event_generation = row.get('event_generation_metrics')
+        if isinstance(safety, dict):
+            merged.update(safety)
+        if isinstance(event_generation, dict):
+            merged.update(event_generation)
+        if merged:
+            latest = merged
     return latest
 
 
-def _rate_from_safety(metrics: dict[str, Any], key: str) -> float | None:
+def _metric_float(metrics: dict[str, Any], key: str) -> float | None:
     if not metrics:
         return None
     if key in metrics:
         value = _safe_float(metrics.get(key))
         if value is not None:
             return round(value, 6)
+    return None
+
+
+def _rate_from_runtime(metrics: dict[str, Any], key: str) -> float | None:
+    direct = _metric_float(metrics, key)
+    if direct is not None:
+        return direct
     total = _safe_float(metrics.get('total_proposed_actions'))
-    if not total:
-        return None
     if key == 'rejected_action_rate':
+        if not total:
+            return None
         rejected = _safe_float(metrics.get('rejected_actions')) or 0.0
         return round(rejected / total, 6)
+    candidates = _safe_float(metrics.get('event_candidate_count'))
+    if not candidates:
+        return None
+    if key == 'redundant_action_rate':
+        skipped = _safe_float(metrics.get('skipped_redundant_event_count')) or 0.0
+        return round(skipped / candidates, 6)
+    if key == 'noop_action_rate':
+        noop = _safe_float(metrics.get('noop_action_count')) or 0.0
+        return round(noop / candidates, 6)
+    if key == 'effective_action_rate':
+        recorded = _safe_float(metrics.get('recorded_event_count')) or 0.0
+        return round(recorded / candidates, 6)
     return None
 
 
@@ -438,7 +481,7 @@ def _aggregate_task_metrics(rows: list[dict[str, Any]], family_name: str = 'all'
             completion_times.append(completion_time)
         command_counts.append(float(len(episode_rows)))
 
-    latest_safety = _latest_safety_metrics(all_family_rows)
+    latest_runtime = _latest_runtime_metrics(all_family_rows)
     success_rate = None if not terminal_values else round(
         sum(1 for value in terminal_values if value) / len(terminal_values),
         6,
@@ -450,18 +493,19 @@ def _aggregate_task_metrics(rows: list[dict[str, Any]], family_name: str = 'all'
         'task_success': success_rate,
         'completion_time': _mean_or_none(completion_times),
         'command_count': _mean_or_none(command_counts),
-        'illegal_proposal_rate': _rate_from_safety(latest_safety, 'illegal_proposal_rate'),
-        'rejected_action_rate': _rate_from_safety(latest_safety, 'rejected_action_rate'),
-        'unknown_position_success': None,
-        'sensor_dropout_success': None,
+        'skipped_redundant_event_count': _metric_float(
+            latest_runtime,
+            'skipped_redundant_event_count',
+        ),
+        'redundant_action_rate': _rate_from_runtime(latest_runtime, 'redundant_action_rate'),
+        'noop_action_rate': _rate_from_runtime(latest_runtime, 'noop_action_rate'),
+        'effective_action_rate': _rate_from_runtime(latest_runtime, 'effective_action_rate'),
+        'illegal_proposal_rate': _rate_from_runtime(latest_runtime, 'illegal_proposal_rate'),
+        'rejected_action_rate': _rate_from_runtime(latest_runtime, 'rejected_action_rate'),
         'visual_target_success': None,
         'obstacle_stop_success': None,
     }
-    if family_name == 'unknown_position':
-        metrics['unknown_position_success'] = success_rate
-    elif family_name == 'sensor_dropout':
-        metrics['sensor_dropout_success'] = success_rate
-    elif family_name == 'visual_target':
+    if family_name == 'visual_target':
         metrics['visual_target_success'] = success_rate
     elif family_name == 'obstacle_stop':
         metrics['obstacle_stop_success'] = success_rate
@@ -666,7 +710,10 @@ def run_baseline_eval(
         'task_family_metrics': family_metrics,
         'notes': {
             'state_only': 'language + binary_state -> event action; no overhead images or privileged pose.',
-            'vla': 'language + overhead_images + binary_state -> event action; no privileged pose.',
+            'vla': (
+                'language + overhead_images + previous last_command -> event action; '
+                'no binary sensor state or privileged pose.'
+            ),
             'oracle': 'privileged replay upper bound; uses the event action generated by the expert/oracle labels.',
         },
     }

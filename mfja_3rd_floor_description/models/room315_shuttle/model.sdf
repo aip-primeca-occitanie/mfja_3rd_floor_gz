@@ -40,8 +40,8 @@
         </geometry>
         <surface>
           <contact>
-            <!-- Collides with default robot collisions, but not with Room 315 rail masks. -->
-            <collide_bitmask>0x0002</collide_bitmask>
+            <!-- Visual/kinematic shuttle: ROS-side collision avoidance handles spacing. -->
+            <collide_bitmask>0x0000</collide_bitmask>
           </contact>
         </surface>
       </collision>

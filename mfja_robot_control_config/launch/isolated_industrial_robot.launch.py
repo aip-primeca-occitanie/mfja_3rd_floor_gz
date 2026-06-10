@@ -161,8 +161,8 @@ def _make_bridge_yaml(robot_name, world_name):
         {
             'ros_topic_name': f'/{robot_name}/joint_trajectory_progress',
             'gz_topic_name': f'/model/{robot_name}/joint_trajectory_progress',
-            'ros_type_name': 'std_msgs/msg/Float64',
-            'gz_type_name': 'gz.msgs.Double',
+            'ros_type_name': 'std_msgs/msg/Float32',
+            'gz_type_name': 'gz.msgs.Float',
             'direction': 'GZ_TO_ROS',
         },
     ]
@@ -200,7 +200,9 @@ def _launch_setup(context, *args, **kwargs):
     world_name = LaunchConfiguration('world_name').perform(context)
     world_path = os.path.join(description_pkg_path, 'worlds', f'{world_name}.world')
     world_entity_name = _get_world_entity_name(world_path)
-    gui_config_file = os.path.join(control_pkg_path, 'config', 'mfja_default.gui.config')
+    gui_config_file = LaunchConfiguration('gui_config').perform(context).strip()
+    if not os.path.isabs(gui_config_file):
+        gui_config_file = os.path.join(control_pkg_path, gui_config_file)
 
     gz_partition = LaunchConfiguration('gz_partition').perform(context).strip()
     enable_gui = LaunchConfiguration('gui').perform(context).lower() == 'true'
@@ -352,6 +354,14 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description='Start Gazebo GUI client.',
+        ),
+        DeclareLaunchArgument(
+            'gui_config',
+            default_value='config/mfja_light.gui.config',
+            description=(
+                'Gazebo GUI config path. Relative paths are resolved inside '
+                'mfja_robot_control_config.'
+            ),
         ),
         DeclareLaunchArgument(
             'start_paused',

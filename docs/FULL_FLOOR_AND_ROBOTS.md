@@ -230,39 +230,73 @@ TIAGo additionally exposes a mobile-base command topic:
 /tiago1/cmd_vel
 ```
 
+The recommended helper command publishes the correct `JointTrajectory` message
+for each robot and accepts angular values in radians or degrees:
+
+```bash
+ros2 run mfja_robot_control_config robot_joint_command.py --list
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit rad --positions 0.6 -1.0 1.1 0.0 0.6 0.0
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit deg --positions 34.38 -57.30 63.03 0.0 34.38 0.0
+```
+
+When `--unit deg` is used, angular joints are converted to radians before
+publishing. Linear joints, such as TIAGo's `torso_lift_joint`, stay in meters.
+
 ### KUKA KR6 R900 Sixx
 
 ```bash
-ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.6,-1.0,1.1,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit rad \
+  --positions 0.6 -1.0 1.1 0.0 0.6 0.0
+
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit deg \
+  --positions 34.38 -57.30 63.03 0.0 34.38 0.0
 ```
 
 ### Staeubli TX2-60L
 
 ```bash
-ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.1,0.4,-0.6,0.0,0.5,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"
+ros2 run mfja_robot_control_config robot_joint_command.py staubli --unit rad \
+  --positions 0.1 0.4 -0.6 0.0 0.5 0.0
+
+ros2 run mfja_robot_control_config robot_joint_command.py staubli --unit deg \
+  --positions 5.73 22.92 -34.38 0.0 28.65 0.0
 ```
 
 ### Yaskawa HC10
 
 ```bash
-ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.2,-0.7,0.9,0.0,0.4,0.2], time_from_start: {sec: 3, nanosec: 0}}]}"
+ros2 run mfja_robot_control_config robot_joint_command.py hc10 --unit rad \
+  --positions 0.2 -0.7 0.9 0.0 0.4 0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py hc10 --unit deg \
+  --positions 11.46 -40.11 51.57 0.0 22.92 11.46
 ```
 
 ### Yaskawa HC10DT
 
 ```bash
-ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [-0.2,-0.5,0.8,0.0,0.5,-0.2], time_from_start: {sec: 3, nanosec: 0}}]}"
+ros2 run mfja_robot_control_config robot_joint_command.py hc10dt --unit rad \
+  --positions -0.2 -0.5 0.8 0.0 0.5 -0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py hc10dt --unit deg \
+  --positions -11.46 -28.65 45.84 0.0 28.65 -11.46
 ```
 
 ### TIAGo Arm and Head
 
 ```bash
-ros2 topic pub --once /tiago1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-"{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint','arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], time_from_start: {sec: 4, nanosec: 0}}]}"
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 --unit rad \
+  --positions 0.10 0.3 -0.5 -0.4 1.0 0.2 -0.2 0.1 0.2 -0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 --unit deg \
+  --positions 0.10 17.19 -28.65 -22.92 57.30 11.46 -11.46 5.73 11.46 -11.46
+```
+
+### TIAGo Base Torso
+
+```bash
+ros2 run mfja_robot_control_config robot_joint_command.py tiago_base1 --unit rad \
+  --positions 0.10
 ```
 
 ### TIAGo Base Motion

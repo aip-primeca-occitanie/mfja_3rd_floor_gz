@@ -3,6 +3,7 @@
 import json
 import os
 import time
+from copy import deepcopy
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -206,19 +207,16 @@ DEBUG_OBSERVATION_FIELDS = [
         'active_position_sensors_count',
     )
 ]
-MODEL_INPUT_SCHEMA_VERSION = 2
+MODEL_INPUT_SCHEMA_VERSION = 3
 MODEL_INPUT_FIELDS = [
     'language',
     'overhead_images',
-    'binary_sensor_bits',
-    'switch_states',
-    'stopper_states',
     'last_command',
-    'shuttle_command_state',
-    'time_since_last_sensor_event',
 ]
+START_LAST_COMMAND = {'action': 'START'}
 PRIVILEGED_EVAL_FIELDS = [
     'supervisor_status',
+    'expert_sensor_state',
     'raw_shuttle_states',
     'raw_active_sensor_readings',
     'visual_eval_labels',
@@ -235,49 +233,20 @@ STATION_SENSOR_GROUPS = {
     },
 }
 VISUAL_EVAL_MARKERS = {
-    'colored_station_markers': [
-        {
-            'id': 'right_yaskawa_station_marker',
-            'side': 'right',
-            'station': 'yaskawa_hc10dt',
-            'color': 'blue',
-        },
-        {
-            'id': 'right_staubli_station_marker',
-            'side': 'right',
-            'station': 'staubli_tx2',
-            'color': 'amber',
-        },
-        {
-            'id': 'left_yaskawa_station_marker',
-            'side': 'left',
-            'station': 'yaskawa_hc10',
-            'color': 'blue',
-        },
-        {
-            'id': 'left_kuka_station_marker',
-            'side': 'left',
-            'station': 'kuka_kr6',
-            'color': 'orange',
-        },
-    ],
-    'inspection_markers': [
-        {'id': 'right_green_inspection_marker', 'side': 'right', 'color': 'green'},
-        {'id': 'left_green_inspection_marker', 'side': 'left', 'color': 'green'},
-    ],
-    'station_status_markers': [
-        {'id': 'right_station_empty_marker', 'side': 'right', 'meaning': 'empty'},
-        {'id': 'right_station_occupied_marker', 'side': 'right', 'meaning': 'occupied'},
-        {'id': 'left_station_empty_marker', 'side': 'left', 'meaning': 'empty'},
-        {'id': 'left_station_occupied_marker', 'side': 'left', 'meaning': 'occupied'},
-    ],
     'removable_obstacle_marker': {
-        'entity': 'room315_vla_removable_obstacle_marker',
+        'entities': {
+            'right': 'room315_vla_right_obstacle_marker',
+            'left': 'room315_vla_left_obstacle_marker',
+        },
+        'model_uri': 'model://room315_vla_removable_obstacle_marker',
         'visual_ids': [
-            'right_removable_obstacle_marker',
-            'left_removable_obstacle_marker',
+            'obstacle_body_visual',
+            'obstacle_top_warning_stripe',
+            'obstacle_front_warning_stripe',
+            'obstacle_back_warning_stripe',
         ],
         'default_present': True,
+        'independent_pose_control': True,
         'visual_only': True,
     },
 }
@@ -289,6 +258,31 @@ def _utc_now() -> str:
 
 def _json_dumps(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True)
+
+
+def _empty_event_generation_metrics() -> dict[str, Any]:
+    return {
+        'event_candidate_count': 0,
+        'recorded_event_count': 0,
+        'skipped_redundant_event_count': 0,
+        'noop_action_count': 0,
+        'redundant_action_rate': 0.0,
+        'noop_action_rate': 0.0,
+        'effective_action_rate': 0.0,
+        'task_success': None,
+    }
+
+
+def _event_generation_metrics_with_rates(metrics: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(metrics)
+    total = int(updated.get('event_candidate_count') or 0)
+    recorded = int(updated.get('recorded_event_count') or 0)
+    skipped = int(updated.get('skipped_redundant_event_count') or 0)
+    noop = int(updated.get('noop_action_count') or 0)
+    updated['redundant_action_rate'] = 0.0 if total == 0 else round(skipped / total, 6)
+    updated['noop_action_rate'] = 0.0 if total == 0 else round(noop / total, 6)
+    updated['effective_action_rate'] = 0.0 if total == 0 else round(recorded / total, 6)
+    return updated
 
 
 def _as_bool(value: Any) -> bool:
@@ -363,6 +357,9 @@ def _normalize_symbolic_action(command: Any) -> dict[str, Any]:
     command_dict = _as_command_dict(command)
     action = _normalize_action_name(command_dict)
     side = str(command_dict.get('side') or '').strip().lower()
+
+    if str(command_dict.get('action') or '').strip().upper() == 'START':
+        return dict(START_LAST_COMMAND)
 
     if str(command_dict.get('action') or '').strip().upper() == 'DONE':
         return {
@@ -1046,7 +1043,8 @@ def _station_occupancy_eval_labels(status: dict[str, Any]) -> dict[str, dict[str
             labels[side][station] = {
                 'label': 'occupied' if active_sensors else 'empty',
                 'active_slot_sensors': active_sensors,
-                'source': 'binary_slot_sensors',
+                'source': 'binary_slot_sensors_privileged_eval_label',
+                'model_task': 'infer visual occupancy from shuttle-over-slot-fiducials',
             }
     return labels
 
@@ -1084,12 +1082,120 @@ def _stopper_states(status: dict[str, Any]) -> dict[str, dict[str, str]]:
     return states
 
 
+def _normalize_device_assignment_value(raw: Any, *, value_kind: str) -> str:
+    if value_kind == 'switch':
+        return _normalize_switch_state(raw)
+    if value_kind == 'stopper':
+        return _normalize_stopper_state(raw)
+    return 'unknown'
+
+
+def _device_unknown_value(*, value_kind: str) -> str:
+    return 'UNKNOWN' if value_kind == 'switch' else 'unknown'
+
+
+def _expand_device_assignments(
+    assignments: dict[str, Any],
+    *,
+    value_kind: str,
+) -> dict[str, str]:
+    expanded: dict[str, str] = {}
+    for raw_name, raw_value in assignments.items():
+        name = str(raw_name).strip().upper()
+        if not name:
+            continue
+        value = _normalize_device_assignment_value(raw_value, value_kind=value_kind)
+        if value == _device_unknown_value(value_kind=value_kind):
+            continue
+        if name == 'ALL':
+            for device_name in DEVICE_NAMES:
+                expanded[device_name] = value
+        elif name in DEVICE_NAMES:
+            expanded[name] = value
+    return expanded
+
+
+def _minimal_device_assignments_for_status(
+    status: dict[str, Any],
+    *,
+    side: str,
+    assignments: dict[str, Any],
+    value_kind: str,
+) -> tuple[dict[str, str], dict[str, str]]:
+    desired = _expand_device_assignments(assignments, value_kind=value_kind)
+    if not desired:
+        return {}, {}
+    state_by_side = _switch_states(status) if value_kind == 'switch' else _stopper_states(status)
+    current = state_by_side.get(side, {})
+    needed = {
+        name: desired_value
+        for name, desired_value in desired.items()
+        if current.get(name, _device_unknown_value(value_kind=value_kind)) != desired_value
+    }
+    redundant = {
+        name: desired_value
+        for name, desired_value in desired.items()
+        if name not in needed
+    }
+    return needed, redundant
+
+
+def _minimal_symbolic_action_for_status(
+    status: dict[str, Any],
+    action: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    action_name = str(action.get('action') or '')
+    if action_name not in {'switches', 'stoppers'}:
+        return action, {'status': 'not_applicable'}
+
+    side = str(action.get('side') or 'right').strip().lower()
+    if side not in SIDE_IDS:
+        side = 'right'
+    key = 'switches' if action_name == 'switches' else 'stoppers'
+    value_kind = 'switch' if action_name == 'switches' else 'stopper'
+    assignments = action.get(key)
+    assignments = assignments if isinstance(assignments, dict) else {}
+    needed, redundant = _minimal_device_assignments_for_status(
+        status,
+        side=side,
+        assignments=assignments,
+        value_kind=value_kind,
+    )
+    metadata = {
+        'status': 'minimalized',
+        'device_kind': value_kind,
+        'side': side,
+        'requested': _expand_device_assignments(assignments, value_kind=value_kind),
+        'needed': needed,
+        'redundant': redundant,
+    }
+    if not needed:
+        metadata['status'] = 'redundant'
+        return None, metadata
+    minimal = dict(action)
+    minimal['side'] = side
+    minimal[key] = needed
+    return minimal, metadata
+
+
 def _overhead_images(image_refs: dict[str, Any]) -> dict[str, Any]:
     return {
         camera_name: image_ref
         for camera_name, image_ref in image_refs.items()
         if camera_name in OVERHEAD_IMAGE_NAMES
     }
+
+
+def _normalize_model_last_command(command: Any) -> dict[str, Any] | None:
+    if command is None:
+        return None
+    if isinstance(command, dict) and 'primitive' in command:
+        return {
+            field: deepcopy(command[field])
+            for field in EVENT_ACTION_FIELDS
+            if field in command
+        }
+    return _normalize_symbolic_action(command)
 
 
 def _shuttle_command_state(status: dict[str, Any]) -> dict[str, dict[str, str]]:
@@ -1144,25 +1250,47 @@ def _model_input_from_status(
     sensor_event_times: dict[str, float | None] | None = None,
     now_s: float | None = None,
 ) -> dict[str, Any]:
+    _ = status, sensor_event_times, now_s
     return {
         'language': str(language or ''),
         'overhead_images': _overhead_images(overhead_images),
+        'last_command': _normalize_model_last_command(last_command),
+    }
+
+
+def _expert_sensor_state_from_status(
+    status: dict[str, Any],
+    *,
+    sensor_event_times: dict[str, float | None] | None = None,
+    now_s: float | None = None,
+) -> dict[str, Any]:
+    return {
         'binary_sensor_bits': _binary_sensor_bits(status),
         'switch_states': _switch_states(status),
         'stopper_states': _stopper_states(status),
-        'last_command': _normalize_symbolic_action(last_command),
         'shuttle_command_state': _shuttle_command_state(status),
         'time_since_last_sensor_event': _time_since_last_sensor_event(
             sensor_event_times,
             now_s,
         ),
+        'model_input_exposure': 'excluded',
     }
 
 
-def _privileged_eval_from_status(status: dict[str, Any]) -> dict[str, Any]:
+def _privileged_eval_from_status(
+    status: dict[str, Any],
+    *,
+    sensor_event_times: dict[str, float | None] | None = None,
+    now_s: float | None = None,
+) -> dict[str, Any]:
     rails = _rails_from_status(status)
     return {
         'supervisor_status': status,
+        'expert_sensor_state': _expert_sensor_state_from_status(
+            status,
+            sensor_event_times=sensor_event_times,
+            now_s=now_s,
+        ),
         'raw_shuttle_states': {
             side: (
                 rails.get(side, {}).get('shuttles', {})
@@ -1187,6 +1315,72 @@ def _privileged_eval_from_status(status: dict[str, Any]) -> dict[str, Any]:
             for side in SIDES
         },
         'visual_eval_labels': _visual_eval_labels_from_status(status),
+    }
+
+
+def _shuttle_visual_region_targets(status: dict[str, Any]) -> dict[str, Any]:
+    targets: dict[str, Any] = {}
+    for side in SIDES:
+        rail = _rail_from_status(status, side)
+        active_ids = _active_sensor_ids(rail)
+        region = 'not_visible_or_unknown'
+        for station_name, sensors in STATION_SENSOR_GROUPS.get(side, {}).items():
+            if any(sensor_name in active_ids for sensor_name in sensors):
+                region = station_name
+                break
+        if region == 'not_visible_or_unknown' and active_ids:
+            region = 'rail_visible_between_stations'
+        targets[side] = {
+            'region': region,
+            'active_position_sensor_labels': sorted(active_ids),
+            'source': 'privileged_sensor_label_for_visual_auxiliary_training',
+        }
+    return targets
+
+
+def _obstacle_blocking_target(
+    status: dict[str, Any],
+    task_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contexts: list[dict[str, Any]] = []
+    if isinstance(task_context, dict):
+        contexts.append(task_context)
+    active_tasks = status.get('active_tasks', {})
+    if isinstance(active_tasks, dict):
+        contexts.extend(task for task in active_tasks.values() if isinstance(task, dict))
+    completed_tasks = status.get('completed_tasks', [])
+    if isinstance(completed_tasks, list):
+        contexts.extend(task for task in completed_tasks if isinstance(task, dict))
+
+    applicable = False
+    for context in contexts:
+        template = str(context.get('template') or context.get('task') or '').strip()
+        if 'obstacle' in template:
+            applicable = True
+        decision = context.get('obstacle_decision')
+        if isinstance(decision, dict) and 'blocks_path' in decision:
+            return {
+                'applicable': True,
+                'blocks_path': bool(decision.get('blocks_path')),
+                'source': 'expert_obstacle_decision',
+            }
+    return {
+        'applicable': applicable,
+        'blocks_path': None,
+        'source': 'not_available' if applicable else 'not_applicable',
+    }
+
+
+def _auxiliary_targets_from_status(
+    status: dict[str, Any],
+    task_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        'switch_states': _switch_states(status),
+        'stopper_states': _stopper_states(status),
+        'shuttle_visual_region': _shuttle_visual_region_targets(status),
+        'obstacle_blocking': _obstacle_blocking_target(status, task_context),
+        'model_input_exposure': 'excluded',
     }
 
 
@@ -1370,6 +1564,9 @@ class Room315VlaDatasetRecorder(Node):
         self.last_error = ''
         self.last_event_signature = ''
         self.last_primitive_signature = ''
+        self.previous_event_command: dict[str, Any] | None = deepcopy(START_LAST_COMMAND)
+        self.event_generation_metrics: dict[str, Any] = _empty_event_generation_metrics()
+        self.current_task_success: bool | None = None
         self.last_task_phase_by_id: dict[str, str] = {}
         self.completed_task_signatures: set[str] = set()
         self.last_sensor_signature_by_side: dict[str, str] = {side: '' for side in SIDES}
@@ -1500,6 +1697,9 @@ class Room315VlaDatasetRecorder(Node):
         self.started_at = _utc_now()
         self.last_event_signature = ''
         self.last_primitive_signature = ''
+        self.previous_event_command = deepcopy(START_LAST_COMMAND)
+        self.event_generation_metrics = _empty_event_generation_metrics()
+        self.current_task_success = None
         self.last_task_phase_by_id = {}
         self.completed_task_signatures = set()
         self.last_sensor_signature_by_side = {side: '' for side in SIDES}
@@ -1515,6 +1715,8 @@ class Room315VlaDatasetRecorder(Node):
         terminal_status = 'discarded' if discarded else (
             'success' if success is True else 'failure' if success is False else 'stopped'
         )
+        self.current_task_success = success
+        self.event_generation_metrics['task_success'] = success
         self._record_event(
             {
                 'action': 'DONE',
@@ -1546,6 +1748,7 @@ class Room315VlaDatasetRecorder(Node):
             'training_labels': 'events.jsonl',
             'raw_replay': 'data.jsonl',
             'safety_decoder_metrics': self._safety_decoder_metrics(),
+            'event_generation_metrics': self._event_generation_metrics(),
         }
         if self.episode_dir is not None:
             with (self.episode_dir / 'episode.json').open('w', encoding='utf-8') as stream:
@@ -1576,9 +1779,38 @@ class Room315VlaDatasetRecorder(Node):
     def _safety_decoder_metrics(self) -> dict[str, Any]:
         safety = self.latest_status.get('safety_decoder', {})
         if isinstance(safety, dict) and isinstance(safety.get('metrics'), dict):
-            return dict(safety['metrics'])
-        metrics = self.latest_status.get('safety_decoder_metrics', {})
-        return dict(metrics) if isinstance(metrics, dict) else {}
+            metrics = dict(safety['metrics'])
+        else:
+            raw_metrics = self.latest_status.get('safety_decoder_metrics', {})
+            metrics = dict(raw_metrics) if isinstance(raw_metrics, dict) else {}
+        total = float(metrics.get('total_proposed_actions') or 0.0)
+        rejected = float(metrics.get('rejected_actions') or 0.0)
+        metrics['rejected_action_rate'] = 0.0 if total == 0.0 else round(rejected / total, 6)
+        metrics.update(self._event_generation_metrics())
+        return metrics
+
+    def _event_generation_metrics(self) -> dict[str, Any]:
+        return _event_generation_metrics_with_rates(
+            getattr(self, 'event_generation_metrics', _empty_event_generation_metrics())
+        )
+
+    def _count_event_candidate(self) -> None:
+        metrics = getattr(self, 'event_generation_metrics', _empty_event_generation_metrics())
+        metrics['event_candidate_count'] = int(metrics.get('event_candidate_count') or 0) + 1
+        self.event_generation_metrics = metrics
+
+    def _count_redundant_event_skip(self) -> None:
+        metrics = getattr(self, 'event_generation_metrics', _empty_event_generation_metrics())
+        metrics['skipped_redundant_event_count'] = (
+            int(metrics.get('skipped_redundant_event_count') or 0) + 1
+        )
+        metrics['noop_action_count'] = int(metrics.get('noop_action_count') or 0) + 1
+        self.event_generation_metrics = metrics
+
+    def _count_recorded_event(self) -> None:
+        metrics = getattr(self, 'event_generation_metrics', _empty_event_generation_metrics())
+        metrics['recorded_event_count'] = int(metrics.get('recorded_event_count') or 0) + 1
+        self.event_generation_metrics = metrics
 
     def _write_raw_sample(
         self,
@@ -1598,11 +1830,12 @@ class Room315VlaDatasetRecorder(Node):
                 command,
             )
             frame_index = self.frame_index
+            previous_command = getattr(self, 'previous_event_command', deepcopy(START_LAST_COMMAND))
             model_input = _model_input_from_status(
                 self.latest_status,
                 language=self.latest_goal,
                 overhead_images=image_relpaths,
-                last_command=command,
+                last_command=previous_command,
                 sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
                 now_s=time.monotonic(),
             )
@@ -1623,6 +1856,10 @@ class Room315VlaDatasetRecorder(Node):
                 'observation.debug_counts': _debug_observation_counts(self.latest_status),
                 'model_input_schema_version': MODEL_INPUT_SCHEMA_VERSION,
                 'model_input': model_input,
+                'auxiliary_targets': _auxiliary_targets_from_status(
+                    self.latest_status,
+                    task_context,
+                ),
                 'action': _encode_action(command),
                 'action_schema': ACTION_VECTOR_FIELDS,
                 'command': command,
@@ -1635,7 +1872,12 @@ class Room315VlaDatasetRecorder(Node):
                 'primitive_commands': task_context.get('primitive_commands', []),
                 'last_primitive_command': self.latest_status.get('last_primitive_command'),
                 'safety_decoder_metrics': self._safety_decoder_metrics(),
-                'privileged_eval': _privileged_eval_from_status(self.latest_status),
+                'event_generation_metrics': self._event_generation_metrics(),
+                'privileged_eval': _privileged_eval_from_status(
+                    self.latest_status,
+                    sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
+                    now_s=time.monotonic(),
+                ),
                 'debug': {
                     'supervisor_status': self.latest_status,
                     'observation_counts': _debug_observation_counts(self.latest_status),
@@ -1763,6 +2005,15 @@ class Room315VlaDatasetRecorder(Node):
         normalized_action = _normalize_symbolic_action(next_action)
         if not _is_meaningful_event_action(normalized_action):
             return
+        self._count_event_candidate()
+        minimal_action, minimal_metadata = _minimal_symbolic_action_for_status(
+            self.latest_status,
+            normalized_action,
+        )
+        if minimal_action is None:
+            self._count_redundant_event_skip()
+            return
+        normalized_action = minimal_action
         task_context = task_context or _task_context_from_status(self.latest_status, original_command)
         wait_condition = _wait_condition_for_action(normalized_action, task_context)
         event_action = _event_action_v2_from_symbolic_action(
@@ -1775,13 +2026,29 @@ class Room315VlaDatasetRecorder(Node):
         signature = _event_signature(event_action)
         if signature == self.last_event_signature:
             return
+        if event_action.get('primitive') == 'DONE':
+            reason = str(event_action.get('reason') or '')
+            if reason == 'task_succeeded' or str(status_text).lower() in {'success', 'succeeded'}:
+                self.current_task_success = True
+                self.event_generation_metrics['task_success'] = True
+            elif reason in {'task_failed', 'episode_discarded'} or str(status_text).lower() in {
+                'failure',
+                'failed',
+                'discarded',
+            }:
+                self.current_task_success = False
+                self.event_generation_metrics['task_success'] = False
+        self._count_recorded_event()
+        previous_command = deepcopy(
+            getattr(self, 'previous_event_command', deepcopy(START_LAST_COMMAND))
+        )
         raw_sample = self._write_raw_sample(original_command, task_context)
         image_frame_refs = {} if raw_sample is None else raw_sample['image_frame_refs']
         model_input = _model_input_from_status(
             self.latest_status,
             language=self.latest_goal,
             overhead_images=image_frame_refs,
-            last_command=original_command,
+            last_command=previous_command,
             sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
             now_s=time.monotonic(),
         )
@@ -1816,6 +2083,10 @@ class Room315VlaDatasetRecorder(Node):
             'observation.debug_counts': _debug_observation_counts(self.latest_status),
             'model_input_schema_version': MODEL_INPUT_SCHEMA_VERSION,
             'model_input': model_input,
+            'auxiliary_targets': _auxiliary_targets_from_status(
+                self.latest_status,
+                task_context,
+            ),
             'original_command': original_command,
             'legacy_next_action': normalized_action,
             'next_action': event_action,
@@ -1823,8 +2094,14 @@ class Room315VlaDatasetRecorder(Node):
             'action_vector': _action_vector_or_none(event_action),
             'action_schema': ACTION_VECTOR_FIELDS,
             'wait_condition': wait_condition,
+            'minimal_recording': minimal_metadata,
             'safety_decoder_metrics': self._safety_decoder_metrics(),
-            'privileged_eval': _privileged_eval_from_status(self.latest_status),
+            'event_generation_metrics': self._event_generation_metrics(),
+            'privileged_eval': _privileged_eval_from_status(
+                self.latest_status,
+                sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
+                now_s=time.monotonic(),
+            ),
             'debug': {
                 'observation_counts': _debug_observation_counts(self.latest_status),
             },
@@ -1839,6 +2116,7 @@ class Room315VlaDatasetRecorder(Node):
         self.event_stream.flush()
         self.event_index += 1
         self.last_event_signature = signature
+        self.previous_event_command = _normalize_model_last_command(event_action)
 
     def _write_image(self, camera_name: str, image: Image) -> str:
         if camera_name not in self.image_dirs or self.episode_dir is None:
@@ -1896,17 +2174,20 @@ class Room315VlaDatasetRecorder(Node):
             'model_input_features': MODEL_INPUT_FIELDS,
             'model_input_note': (
                 'model_input is the only model-facing observation object. It contains '
-                'language, overhead image references, binary sensor bits, normalized '
-                'switch/stopper states, last_command, shuttle_command_state, and '
-                'time_since_last_sensor_event. Exact Gazebo pose, true segment, '
-                'distance-to-switch, and normalized position values are excluded.'
+                'only language, overhead image references, and last_command. Binary '
+                'sensor bits, switch/stopper states, shuttle command state, exact '
+                'Gazebo pose, true segment, distance-to-switch, and normalized '
+                'position values are excluded from policy input.'
             ),
             'privileged_eval_fields': PRIVILEGED_EVAL_FIELDS,
             'visual_eval_markers': VISUAL_EVAL_MARKERS,
             'visual_eval_note': (
-                'Visual station/status/inspection/obstacle markers are visible in '
-                'overhead images and mirrored only in privileged_eval labels. They '
-                'are intentionally excluded from observation.state and model_input.'
+                'The model-facing scene keeps station/slot cues limited to slot '
+                'fiducials and shuttle visibility. Dedicated station, inspection, '
+                'and empty/occupied legend markers are not present. The removable '
+                'obstacle marker is visual-only. Occupancy labels derived from '
+                'binary slot sensors remain in privileged_eval for scoring and are '
+                'excluded from model_input.'
             ),
             'sensor_features_by_side': {
                 side: list(sensor_names)

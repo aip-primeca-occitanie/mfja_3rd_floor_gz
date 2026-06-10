@@ -1,10 +1,10 @@
 schema_version: 2
-model_input_schema_version: 2
+model_input_schema_version: 3
 description: >
   Event-level symbolic action representation used to adapt open-source VLA
   policies such as SmolVLA to the Room 315 rail-cell task. The policy predicts
-  the next decision event, not repeated framewise commands and not raw Gazebo
-  controls.
+  the next direct decision event, not a high-level route_template, not repeated
+  framewise commands, and not raw Gazebo controls.
 
 action_vector_fields:
   - primitive_id
@@ -196,15 +196,11 @@ debug_observation_fields:
 model_input_fields:
   - language
   - overhead_images
-  - binary_sensor_bits
-  - switch_states
-  - stopper_states
   - last_command
-  - shuttle_command_state
-  - time_since_last_sensor_event
 
 privileged_eval_fields:
   - supervisor_status
+  - expert_sensor_state
   - raw_shuttle_states
   - raw_active_sensor_readings
   - visual_eval_labels

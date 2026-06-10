@@ -25,6 +25,31 @@ def _rows(path: Path):
     ]
 
 
+def _action(primitive: str, *, side: str = 'right') -> dict:
+    return {
+        'primitive': primitive,
+        'side': side,
+        'switch_mask': {'A1': 0, 'A2': 0, 'A3': 0, 'A4': 0},
+        'switch_values': {
+            'A1': 'UNCHANGED',
+            'A2': 'UNCHANGED',
+            'A3': 'UNCHANGED',
+            'A4': 'UNCHANGED',
+        },
+        'stopper_mask': {'A1': 0, 'A2': 0, 'A3': 0, 'A4': 0},
+        'stopper_values': {
+            'A1': 'UNCHANGED',
+            'A2': 'UNCHANGED',
+            'A3': 'UNCHANGED',
+            'A4': 'UNCHANGED',
+        },
+        'speed_mps': 0.0,
+        'wait_condition': 'none',
+        'target_id': 'none',
+        'reason': 'command_event',
+    }
+
+
 def test_event_extractor_writes_minimal_training_rows_and_ignores_raw_frames(tmp_path):
     extractor = _load_module()
     dataset_dir = tmp_path / 'dataset'
@@ -64,6 +89,10 @@ def test_event_extractor_writes_minimal_training_rows_and_ignores_raw_frames(tmp
         'privileged_eval': {
             'raw_shuttle_states': {'right': {'room315_right_shuttle_1': {'segment': 'A12E'}}}
         },
+        'auxiliary_targets': {
+            'switch_states': {'right': {'A3': 'EXTERIOR'}},
+            'model_input_exposure': 'excluded',
+        },
     }
     (episode_dir / 'events.jsonl').write_text(json.dumps(event_row) + '\n', encoding='utf-8')
     (episode_dir / 'data.jsonl').write_text(
@@ -88,18 +117,26 @@ def test_event_extractor_writes_minimal_training_rows_and_ignores_raw_frames(tmp
         'episode_id': 'episode_000001_test',
         'step_index': 3,
         'task': 'move right shuttle',
-        'observation.images.left_rail_rgb': (
-            'episodes/episode_000001_test/images/left_rail_rgb/000003.jpg'
-        ),
-        'observation.images.right_rail_rgb': (
-            'episodes/episode_000001_test/images/right_rail_rgb/000003.jpg'
-        ),
-        'observation.state': [0.0, 1.0, 0.0],
+        'model_input_schema_version': 3,
+        'model_input': {
+            'language': 'move right shuttle',
+            'overhead_images': {
+                'left_rail_rgb': (
+                    'episodes/episode_000001_test/images/left_rail_rgb/000003.jpg'
+                ),
+                'right_rail_rgb': (
+                    'episodes/episode_000001_test/images/right_rail_rgb/000003.jpg'
+                ),
+            },
+            'last_command': {'action': 'START'},
+        },
         'action': event_row['action'],
-        'privileged_eval': event_row['privileged_eval'],
+        'auxiliary_targets': event_row['auxiliary_targets'],
     }
     assert 'command' not in rows[0]
     assert 'raw_replay_only' not in rows[0]
+    assert 'observation.state' not in rows[0]
+    assert 'privileged_eval' not in rows[0]
 
 
 def test_event_extractor_falls_back_to_next_action_and_step_index(tmp_path):
@@ -146,4 +183,91 @@ def test_event_extractor_falls_back_to_next_action_and_step_index(tmp_path):
     assert rows[0]['episode_id'] == 'episode_000002_test'
     assert rows[0]['step_index'] == 0
     assert rows[0]['action'] == action
-    assert rows[0]['observation.images.left_rail_rgb'] == 'left.jpg'
+    assert rows[0]['model_input'] == {
+        'language': 'terminal event',
+        'overhead_images': {'left_rail_rgb': 'left.jpg'},
+        'last_command': {'action': 'START'},
+    }
+
+
+def test_event_extractor_rebuilds_previous_command_and_ignores_leaking_input(tmp_path):
+    extractor = _load_module()
+    dataset_dir = tmp_path / 'dataset'
+    episode_dir = dataset_dir / 'episodes' / 'episode_000003_test'
+    episode_dir.mkdir(parents=True)
+
+    actions = [
+        _action('STOP_NOW'),
+        _action('SET_SWITCHES'),
+        _action('SET_STOPPERS'),
+        _action('SHUTTLE_ON'),
+        _action('STOP_NOW'),
+        _action('DONE'),
+    ]
+    for index, action in enumerate(actions):
+        action['target_id'] = 'terminal' if action['primitive'] == 'DONE' else 'right_shuttle'
+        action['reason'] = 'task_succeeded' if action['primitive'] == 'DONE' else 'command_event'
+        if action['primitive'] == 'SET_SWITCHES':
+            action['switch_mask']['A3'] = 1
+            action['switch_values']['A3'] = 'INTERIOR'
+        if action['primitive'] == 'SET_STOPPERS':
+            action['stopper_mask']['A3'] = 1
+            action['stopper_values']['A3'] = 'closed'
+        if action['primitive'] == 'SHUTTLE_ON':
+            action['speed_mps'] = 0.2
+
+    leaking_rows = []
+    for index, action in enumerate(actions):
+        leaking_rows.append({
+            'episode_id': 'episode_000003_test',
+            'event_index': index,
+            'task': 'regression command history',
+            'model_input_schema_version': 3,
+            'model_input': {
+                'language': 'regression command history',
+                'overhead_images': {'right_rail_rgb': f'right_{index}.jpg'},
+                'last_command': action,
+                'binary_sensor_bits': {'right': {'DZI2R': 1}},
+            },
+            'observation.state': [1.0, 2.0, 3.0],
+            'privileged_eval': {'raw_shuttle_states': {'right': {'s': 0.4}}},
+            'auxiliary_targets': {'switch_states': {'right': {'A3': 'EXTERIOR'}}},
+            'legacy_next_action': {'action': action['primitive']},
+            'action': action,
+            'action_vector': [float(index), float(index + 1)],
+        })
+    (episode_dir / 'events.jsonl').write_text(
+        ''.join(json.dumps(row) + '\n' for row in leaking_rows),
+        encoding='utf-8',
+    )
+    (episode_dir / 'data.jsonl').write_text(
+        json.dumps({'model_input': {'last_command': {'action': 'SHOULD_NOT_APPEAR'}}}) + '\n',
+        encoding='utf-8',
+    )
+
+    output = dataset_dir / 'meta' / 'training_events.jsonl'
+    summary = extractor.extract_event_dataset(dataset_dir, output)
+    rows = _rows(output)
+
+    assert summary['source'] == 'episodes/*/events.jsonl'
+    assert summary['ignored_source'] == 'episodes/*/data.jsonl'
+    assert [row['model_input']['last_command'] for row in rows] == [
+        {'action': 'START'},
+        actions[0],
+        actions[1],
+        actions[2],
+        actions[3],
+        actions[4],
+    ]
+    assert [row['action'] for row in rows] == actions
+    assert [row['action_vector'] for row in rows] == [
+        [float(index), float(index + 1)]
+        for index in range(len(actions))
+    ]
+    for row in rows:
+        assert row['model_input']['last_command'] != row['action']
+        assert set(row['model_input']) == {'language', 'overhead_images', 'last_command'}
+        assert 'binary_sensor_bits' not in row['model_input']
+        assert row['auxiliary_targets']['switch_states']['right']['A3'] == 'EXTERIOR'
+        assert 'observation.state' not in row
+        assert 'privileged_eval' not in row

@@ -21,6 +21,22 @@ if(BUILD_TESTING)
     test_room315_vla_camera_model
     test/test_room315_vla_camera_model.py
   )
+  ament_add_pytest_test(
+    test_industrial_robot_collision_free
+    test/test_industrial_robot_collision_free.py
+  )
+  ament_add_pytest_test(
+    test_lightweight_world_physics
+    test/test_lightweight_world_physics.py
+  )
+  ament_add_pytest_test(
+    test_kuka_initial_joint_positions
+    test/test_kuka_initial_joint_positions.py
+  )
+  ament_add_pytest_test(
+    test_room315_shuttle_collision_free
+    test/test_room315_shuttle_collision_free.py
+  )
 endif()
 
 ament_package()

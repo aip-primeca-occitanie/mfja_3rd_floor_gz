@@ -8,22 +8,27 @@ loop tasks are now feedback-driven: transport tasks stop on slot sensors, full
 loops return to the starting slot/segment, and loop mode changes stop at a
 guarded gate before switching every turnout to the target mode.
 
-The model-facing dataset must learn from overhead images plus binary rail
-sensors. Segment and arc-length values from ShuttleState are used here only by
-the deterministic expert for safe reset/recovery/evaluation decisions; the
-dataset recorder keeps those privileged values out of model_input.
+The model-facing dataset must learn from language, overhead images, and the
+previous command. Binary rail sensors, segment, and arc-length values are used
+here only by the deterministic expert for safe routing, reset, and evaluation;
+the dataset recorder keeps those privileged values out of model_input.
 """
 
 import json
+import math
+import csv
 import threading
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import String
+from trajectory_msgs.msg import JointTrajectory
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 from mfja_rail_interfaces.msg import SensorFeedback
 from mfja_rail_interfaces.msg import ShuttleState
@@ -34,6 +39,80 @@ SIDES = ('right', 'left')
 DEFAULT_SHUTTLE = {
     'right': 'room315_right_shuttle_1',
     'left': 'room315_left_shuttle_1',
+}
+DEFAULT_OBSTACLE_POSE_FILE = '~/.ros/room315_vla_obstacles.json'
+DEFAULT_MANUAL_OBSTACLE_POSE = {
+    'right': {
+        'x': -14.18,
+        'y': -4.68,
+        'z': 0.856,
+        'yaw': 0.0,
+    },
+    'left': {
+        'x': -9.86,
+        'y': -4.68,
+        'z': 0.856,
+        'yaw': 0.0,
+    },
+}
+OBSTACLE_PATH_THRESHOLD_M = 0.45
+OBSTACLE_HIDDEN_Z_THRESHOLD_M = 0.2
+OBSTACLE_STOP_BEFORE_M = 0.20
+FALLBACK_EXTERIOR_ROUTE_SEGMENTS_XY = (
+    ((-12.417, -3.779), (-12.415, -3.950)),
+    ((-12.415, -3.950), (-12.412, -4.210)),
+    ((-12.412, -4.210), (-12.411, -4.378)),
+    ((-12.411, -4.378), (-14.171, -4.462)),
+    ((-14.171, -4.462), (-14.298, -4.315)),
+    ((-14.298, -4.315), (-14.296, -3.842)),
+    ((-14.296, -3.842), (-14.170, -3.696)),
+    ((-14.170, -3.696), (-12.417, -3.779)),
+)
+EXTERIOR_LOOP_RAW_SEGMENT_CSVS = (
+    'A14.csv',
+    'A1E.csv',
+    'A12E.csv',
+    'A2E.csv',
+    'A23.csv',
+    'A3E.csv',
+    'A34E.csv',
+    'A4E.csv',
+)
+RAIL_TO_GAZEBO_CALIBRATION = {
+    'right': {
+        'a': -0.893249246800,
+        'b': 0.005839516878,
+        'tx': -26.921427375871,
+        'c': 0.001889497475,
+        'd': 1.308619216904,
+        'ty': 0.666926143808,
+        'scale_x': 1.0,
+        'scale_y': 1.0,
+        'scale_origin_x': -15.855195431322,
+        'scale_origin_y': -4.525523413467,
+        'rotation_deg': 0.0,
+        'rotation_origin_x': -15.855195431322,
+        'rotation_origin_y': -4.525523413467,
+        'offset_x': 0.0,
+        'offset_y': 0.0,
+    },
+    'left': {
+        'a': -0.8938584503560025,
+        'b': 0.005001975618640809,
+        'tx': -22.47198317328330,
+        'c': 0.001348127530438647,
+        'd': 1.255463611604302,
+        'ty': 0.4431777232193935,
+        'scale_x': 0.98,
+        'scale_y': 1.041,
+        'scale_origin_x': -10.6365565,
+        'scale_origin_y': -4.6995835,
+        'rotation_deg': 180.0,
+        'rotation_origin_x': -10.6365565,
+        'rotation_origin_y': -4.6995835,
+        'offset_x': 0.14,
+        'offset_y': 0.0,
+    },
 }
 SLOT_SENSORS = {
     'right': {
@@ -145,21 +224,62 @@ STOPPER_SENSOR_NAMES = {
 }
 SENSOR_FEEDBACK_TOPICS = ('feedback', 'position_feedback')
 VISUAL_TRAINING_SCENARIOS = (
-    'unknown_position_recovery',
-    'visual_stop_before_A3',
-    'visual_stop_before_A4',
-    'visual_center_at_station',
-    'sensor_dropout_route',
-    'visual_marker_target',
-    'visual_obstacle_stop',
+    'left_slot3_kuka_then_slot2',
+    'right_obstacle_aware_route',
+    'left_obstacle_aware_route',
 )
+KUKA_JOINT_NAMES = (
+    'joint_a1',
+    'joint_a2',
+    'joint_a3',
+    'joint_a4',
+    'joint_a5',
+    'joint_a6',
+)
+KUKA_SLOT3_INTERLOCK_POSITIONS_RAD = (
+    1.57079632679,
+    -0.52359877560,
+    1.91986217719,
+    0.69813170080,
+    -0.03490658504,
+    0.0,
+)
+KUKA_SLOT3_INTERLOCK_DURATION_S = 4.0
 
 
 class VLATeleopGenerator(Node):
     def __init__(self):
         super().__init__('vla_teleop_generator')
+        self.declare_parameter('scenario_names', '')
+        self.declare_parameter('reset_after_each_scenario', True)
+        self.declare_parameter('recorder_status_topic', '/room_315/vla/dataset_status')
+        self.declare_parameter('manual_obstacle_pose_file', DEFAULT_OBSTACLE_POSE_FILE)
+        for side, defaults in DEFAULT_MANUAL_OBSTACLE_POSE.items():
+            self.declare_parameter(f'{side}_manual_obstacle_x', defaults['x'])
+            self.declare_parameter(f'{side}_manual_obstacle_y', defaults['y'])
+            self.declare_parameter(f'{side}_manual_obstacle_z', defaults['z'])
+            self.declare_parameter(f'{side}_manual_obstacle_yaw', defaults['yaw'])
+            self.declare_parameter(f'{side}_manual_obstacle_use_pose_file', True)
+            self.declare_parameter(
+                f'{side}_manual_obstacle_path_threshold_m',
+                OBSTACLE_PATH_THRESHOLD_M,
+            )
+            self.declare_parameter(
+                f'{side}_manual_obstacle_hidden_z_threshold_m',
+                OBSTACLE_HIDDEN_Z_THRESHOLD_M,
+            )
+            self.declare_parameter(
+                f'{side}_manual_obstacle_stop_before_m',
+                OBSTACLE_STOP_BEFORE_M,
+            )
+
         self.cmd_pub = self.create_publisher(String, '/room_315/vla/command', 10)
         self.ctrl_pub = self.create_publisher(String, '/room_315/vla/episode_control', 10)
+        self.kuka_trajectory_pub = self.create_publisher(
+            JointTrajectory,
+            '/kuka1/joint_trajectory',
+            10,
+        )
         self.shuttle_states: dict[str, dict[str, dict[str, Any]]] = {
             side: {} for side in SIDES
         }
@@ -170,6 +290,9 @@ class VLATeleopGenerator(Node):
         self.sensor_feedback_times: dict[str, float] = {side: 0.0 for side in SIDES}
         self.switch_state_times: dict[str, float] = {side: 0.0 for side in SIDES}
         self.loop_mode_by_side: dict[str, str] = {side: '' for side in SIDES}
+        self.current_scenario_sides: set[str] = set()
+        self.latest_recorder_status: dict[str, Any] = {}
+        self.recorder_status_time_s = 0.0
 
         for side in SIDES:
             prefix = f'/room_315/rails/{side}'
@@ -193,11 +316,22 @@ class VLATeleopGenerator(Node):
                     10,
                 )
 
+        self.create_subscription(
+            String,
+            str(self.get_parameter('recorder_status_topic').value),
+            self._on_recorder_status,
+            10,
+        )
+
     def _on_shuttle_state(self, side: str, msg: ShuttleState) -> None:
         self.shuttle_states[side][msg.name] = {
             'mode': msg.mode,
             'segment': msg.current_segment,
             's': float(msg.s),
+            'x': float(msg.x),
+            'y': float(msg.y),
+            'z': float(msg.z),
+            'yaw': float(msg.yaw),
             'speed': float(msg.speed),
         }
 
@@ -228,6 +362,15 @@ class VLATeleopGenerator(Node):
         self.switch_state_times[side] = time.monotonic()
         self._remember_switch_assignments(side, states)
 
+    def _on_recorder_status(self, msg: String) -> None:
+        try:
+            parsed = json.loads(msg.data)
+        except json.JSONDecodeError:
+            return
+        if isinstance(parsed, dict):
+            self.latest_recorder_status = parsed
+            self.recorder_status_time_s = time.monotonic()
+
     def slp(self, seconds: float) -> None:
         time.sleep(max(float(seconds), 0.0))
 
@@ -239,27 +382,86 @@ class VLATeleopGenerator(Node):
         self.cmd_pub.publish(String(data=json.dumps(data, sort_keys=True)))
         self.slp(wait_s)
 
+    def _touch_side(self, side: str) -> None:
+        normalized = str(side).strip().lower()
+        if normalized in SIDES:
+            self.current_scenario_sides.add(normalized)
+
+    def command_kuka_joint_pose(
+        self,
+        positions_rad: tuple[float, ...],
+        *,
+        duration_s: float = KUKA_SLOT3_INTERLOCK_DURATION_S,
+        wait_timeout_s: float = 5.0,
+    ) -> bool:
+        if len(positions_rad) != len(KUKA_JOINT_NAMES):
+            self.get_logger().warning(
+                f'KUKA command expects {len(KUKA_JOINT_NAMES)} joints, '
+                f'got {len(positions_rad)}'
+            )
+            return False
+
+        if self.kuka_trajectory_pub.get_subscription_count() == 0:
+            self.wait_until(
+                lambda: self.kuka_trajectory_pub.get_subscription_count() > 0,
+                wait_timeout_s,
+                'KUKA joint trajectory subscriber',
+                period_s=0.1,
+            )
+        if self.kuka_trajectory_pub.get_subscription_count() == 0:
+            self.get_logger().warning('no subscriber matched /kuka1/joint_trajectory')
+            return False
+
+        whole_seconds = int(duration_s)
+        nanoseconds = int(round((float(duration_s) - whole_seconds) * 1_000_000_000))
+        if nanoseconds >= 1_000_000_000:
+            whole_seconds += 1
+            nanoseconds -= 1_000_000_000
+
+        point = JointTrajectoryPoint()
+        point.positions = list(positions_rad)
+        point.time_from_start.sec = whole_seconds
+        point.time_from_start.nanosec = nanoseconds
+
+        message = JointTrajectory()
+        message.joint_names = list(KUKA_JOINT_NAMES)
+        message.points = [point]
+
+        self.get_logger().info(
+            'moving KUKA to slot-3 interlock pose '
+            f'positions_rad={list(positions_rad)} duration_s={duration_s:.1f}'
+        )
+        self.kuka_trajectory_pub.publish(message)
+        self.slp(float(duration_s) + 0.5)
+        return True
+
     def sw(self, side: str, state: str) -> None:
+        self._touch_side(side)
         self.cmd({'action': 'switches', 'side': side, 'switches': {'ALL': state}})
         self._remember_switch_mode(side, state)
 
     def sw_i(self, side: str, assignments: dict[str, str]) -> None:
+        self._touch_side(side)
         self.cmd({'action': 'switches', 'side': side, 'switches': assignments})
         self._remember_switch_assignments(side, assignments)
 
     def st(self, side: str, state: str) -> None:
+        self._touch_side(side)
         self.cmd({'action': 'stoppers', 'side': side, 'stoppers': {'ALL': state}})
 
     def st_i(self, side: str, assignments: dict[str, str]) -> None:
+        self._touch_side(side)
         self.cmd({'action': 'stoppers', 'side': side, 'stoppers': assignments})
 
     def on(self, side: str, speed: float = 0.3, *, target_stopper: str | None = None) -> None:
+        self._touch_side(side)
         command = {'action': 'shuttle', 'side': side, 'command': 'ON', 'speed': speed}
         if target_stopper:
             command['target_stopper'] = target_stopper
         self.cmd(command)
 
     def off(self, side: str) -> None:
+        self._touch_side(side)
         self.cmd({'action': 'shuttle', 'side': side, 'command': 'OFF'})
 
     def _remember_switch_mode(self, side: str, state: str) -> None:
@@ -295,20 +497,321 @@ class VLATeleopGenerator(Node):
             return 'INTERIOR'
         return normalized
 
+    @staticmethod
+    def _project_to_segment_xy(
+        x: float,
+        y: float,
+        start: tuple[float, float],
+        end: tuple[float, float],
+    ) -> tuple[float, float, float]:
+        sx, sy = start
+        ex, ey = end
+        dx = ex - sx
+        dy = ey - sy
+        segment_length = math.hypot(dx, dy)
+        length_sq = dx * dx + dy * dy
+        if length_sq <= 1e-12:
+            return 0.0, math.hypot(x - sx, y - sy), 0.0
+        u = max(0.0, min(1.0, ((x - sx) * dx + (y - sy) * dy) / length_sq))
+        px = sx + u * dx
+        py = sy + u * dy
+        return u * segment_length, math.hypot(x - px, y - py), segment_length
+
+    @classmethod
+    def _room315_kinematics_path(cls) -> Path:
+        try:
+            from ament_index_python.packages import get_package_share_directory
+
+            return (
+                Path(get_package_share_directory('mfja_robot_control_config'))
+                / 'config'
+                / 'room_315_kinematics'
+            )
+        except Exception:
+            return (
+                Path(__file__).resolve().parents[1]
+                / 'config'
+                / 'room_315_kinematics'
+            )
+
+    @classmethod
+    def _read_raw_segment_xy(cls, filename: str) -> list[tuple[float, float]]:
+        path = cls._room315_kinematics_path() / 'raw_segments' / filename
+        points: list[tuple[float, float]] = []
+        with path.open(newline='', encoding='utf-8') as handle:
+            for row in csv.DictReader(handle):
+                points.append((float(row['x']), float(row['y'])))
+        return points
+
+    @classmethod
+    def _exterior_loop_polyline_xy(cls) -> tuple[tuple[float, float], ...]:
+        cached = getattr(cls, '_cached_exterior_loop_polyline_xy', None)
+        if cached:
+            return cached
+        points: list[tuple[float, float]] = []
+        try:
+            for filename in EXTERIOR_LOOP_RAW_SEGMENT_CSVS:
+                segment_points = cls._read_raw_segment_xy(filename)
+                if points and segment_points and points[-1] == segment_points[0]:
+                    points.extend(segment_points[1:])
+                else:
+                    points.extend(segment_points)
+        except (OSError, KeyError, ValueError) as exc:
+            # Keep teleop usable from a partial install, but log-worthy callers still
+            # get a geometrically valid fallback.
+            points = [FALLBACK_EXTERIOR_ROUTE_SEGMENTS_XY[0][0]]
+            points.extend(end for _start, end in FALLBACK_EXTERIOR_ROUTE_SEGMENTS_XY)
+        cached = tuple(points)
+        setattr(cls, '_cached_exterior_loop_polyline_xy', cached)
+        return cached
+
+    @classmethod
+    def _exterior_loop_segments_xy(cls) -> tuple[tuple[tuple[float, float], tuple[float, float]], ...]:
+        points = cls._exterior_loop_polyline_xy()
+        return tuple(zip(points, points[1:]))
+
+    @staticmethod
+    def _inverse_planar_rotation(
+        x: float,
+        y: float,
+        *,
+        origin_x: float,
+        origin_y: float,
+        rotation_deg: float,
+    ) -> tuple[float, float]:
+        theta = -math.radians(rotation_deg)
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        dx = x - origin_x
+        dy = y - origin_y
+        return (
+            origin_x + cos_theta * dx - sin_theta * dy,
+            origin_y + sin_theta * dx + cos_theta * dy,
+        )
+
+    @classmethod
+    def _gazebo_to_rail_xy(cls, side: str, x: float, y: float) -> tuple[float, float]:
+        calibration = RAIL_TO_GAZEBO_CALIBRATION[side]
+        unoffset_x = x - calibration['offset_x']
+        unoffset_y = y - calibration['offset_y']
+        unrotated_x, unrotated_y = cls._inverse_planar_rotation(
+            unoffset_x,
+            unoffset_y,
+            origin_x=calibration['rotation_origin_x'],
+            origin_y=calibration['rotation_origin_y'],
+            rotation_deg=calibration['rotation_deg'],
+        )
+        base_x = (
+            calibration['scale_origin_x']
+            + (unrotated_x - calibration['scale_origin_x']) / calibration['scale_x']
+        )
+        base_y = (
+            calibration['scale_origin_y']
+            + (unrotated_y - calibration['scale_origin_y']) / calibration['scale_y']
+        )
+        affine_x = base_x - calibration['tx']
+        affine_y = base_y - calibration['ty']
+        determinant = calibration['a'] * calibration['d'] - calibration['b'] * calibration['c']
+        if abs(determinant) <= 1e-12:
+            raise ValueError(f'{side} rail/Gazebo calibration is singular')
+        rail_x = (calibration['d'] * affine_x - calibration['b'] * affine_y) / determinant
+        rail_y = (-calibration['c'] * affine_x + calibration['a'] * affine_y) / determinant
+        return rail_x, rail_y
+
+    @classmethod
+    def _project_to_exterior_loop_xy(cls, x: float, y: float) -> dict[str, float]:
+        best_s = 0.0
+        best_distance = float('inf')
+        loop_length = 0.0
+        for start, end in cls._exterior_loop_segments_xy():
+            segment_s, distance, segment_length = cls._project_to_segment_xy(x, y, start, end)
+            if distance < best_distance:
+                best_s = loop_length + segment_s
+                best_distance = distance
+            loop_length += segment_length
+        return {
+            's_m': best_s,
+            'path_distance_m': best_distance,
+            'loop_length_m': loop_length,
+        }
+
+    @staticmethod
+    def _loop_distance_ahead(from_s: float, to_s: float, loop_length: float) -> float:
+        if loop_length <= 1e-9:
+            return 0.0
+        return (float(to_s) - float(from_s)) % float(loop_length)
+
+    @classmethod
+    def _distance_to_obstacle_path_xy(cls, x: float, y: float) -> float:
+        return cls._project_to_exterior_loop_xy(x, y)['path_distance_m']
+
+    def _pose_file_path(self) -> Path:
+        return Path(str(self.get_parameter('manual_obstacle_pose_file').value)).expanduser()
+
+    def _cached_obstacle_pose(self, side: str) -> dict[str, Any]:
+        if not self._as_bool(self.get_parameter(f'{side}_manual_obstacle_use_pose_file').value):
+            return {}
+        path = self._pose_file_path()
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError) as exc:
+            self.get_logger().warning(f'could not read obstacle pose cache {path}: {exc}')
+            return {}
+        if not isinstance(data, dict) or not isinstance(data.get(side), dict):
+            return {}
+        pose = data[side]
+        if not all(name in pose for name in ('x', 'y')):
+            return {}
+        return pose
+
+    def manual_obstacle_pose(self, side: str) -> dict[str, Any]:
+        pose = {
+            'x': float(self.get_parameter(f'{side}_manual_obstacle_x').value),
+            'y': float(self.get_parameter(f'{side}_manual_obstacle_y').value),
+            'z': float(self.get_parameter(f'{side}_manual_obstacle_z').value),
+            'yaw': float(self.get_parameter(f'{side}_manual_obstacle_yaw').value),
+            'source': 'ros_parameters',
+        }
+        cached = self._cached_obstacle_pose(side)
+        if cached:
+            for name in ('x', 'y', 'z', 'yaw'):
+                if name in cached:
+                    pose[name] = float(cached[name])
+            pose['source'] = f'pose_file:{self._pose_file_path()}'
+        return pose
+
+    def obstacle_decision(self, side: str, pose: dict[str, Any]) -> dict[str, Any]:
+        x = float(pose['x'])
+        y = float(pose['y'])
+        z = float(pose['z'])
+        threshold = float(self.get_parameter(f'{side}_manual_obstacle_path_threshold_m').value)
+        hidden_z = float(self.get_parameter(f'{side}_manual_obstacle_hidden_z_threshold_m').value)
+        rail_x, rail_y = self._gazebo_to_rail_xy(side, x, y)
+        obstacle_projection = self._project_to_exterior_loop_xy(rail_x, rail_y)
+        path_distance = obstacle_projection['path_distance_m']
+        if z < hidden_z:
+            return {
+                'blocks_path': False,
+                'reason': f'obstacle hidden below z threshold ({z:.3f} < {hidden_z:.3f})',
+                'path_distance_m': path_distance,
+                'path_threshold_m': threshold,
+                'obstacle_rail_x': rail_x,
+                'obstacle_rail_y': rail_y,
+                'obstacle_s_m': obstacle_projection['s_m'],
+                'loop_length_m': obstacle_projection['loop_length_m'],
+            }
+        return {
+            'blocks_path': path_distance <= threshold,
+            'reason': 'near rail path' if path_distance <= threshold else 'clear of rail path',
+            'path_distance_m': path_distance,
+            'path_threshold_m': threshold,
+            'obstacle_rail_x': rail_x,
+            'obstacle_rail_y': rail_y,
+            'obstacle_s_m': obstacle_projection['s_m'],
+            'loop_length_m': obstacle_projection['loop_length_m'],
+        }
+
     def begin(self, goal: str) -> None:
+        self.current_scenario_sides = set()
         self.get_logger().info(f'=== {goal} ===')
         self.ctrl(f'start {goal}')
 
     def end(self) -> None:
+        stop_sent_at = time.monotonic()
         self.ctrl('stop success')
-        self.slp(1.5)
+        if self.wait_for_recorder_stopped_before_reset(stop_sent_at):
+            self.reset_after_scenario()
+        else:
+            self.get_logger().warning(
+                'skipping post-scenario reset because the dataset recorder did not '
+                'confirm stop; this avoids recording reset frames or reset commands'
+            )
+
+    @staticmethod
+    def _as_bool(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+    def reset_after_scenario(self) -> None:
+        if not self._as_bool(self.get_parameter('reset_after_each_scenario').value):
+            return
+        sides = (
+            sorted(self.current_scenario_sides)
+            if self.current_scenario_sides
+            else list(SIDES)
+        )
+        self.get_logger().info(f'resetting shuttle(s) after scenario on sides={sides}')
+        for side in sides:
+            self.reset_side_after_scenario(side)
+        self.current_scenario_sides = set()
+
+    def reset_side_after_scenario(self, side: str) -> None:
+        shuttle = self.shuttle_name(side)
+        self.cmd(
+            {'action': 'shuttle', 'side': side, 'shuttle': shuttle, 'command': 'OFF'},
+            wait_s=0.4,
+        )
+        self.cmd(
+            {'action': 'shuttle', 'side': side, 'shuttle': shuttle, 'command': 'RESET'},
+            wait_s=1.0,
+        )
+        self.wait_until(
+            lambda: self.mode(side) != 'FALLING' and bool(self.segment(side)),
+            5.0,
+            f'{side} shuttle reset pose',
+            period_s=0.1,
+        )
+        self.cmd({'action': 'stoppers', 'side': side, 'stoppers': {'ALL': '0'}}, wait_s=0.4)
+        self.cmd(
+            {'action': 'switches', 'side': side, 'switches': {'ALL': 'EXTERIOR'}},
+            wait_s=0.4,
+        )
+        self._remember_switch_mode(side, 'EXTERIOR')
+
+    def recorder_has_stopped_since(self, stop_sent_at: float) -> bool:
+        if self.ctrl_pub.get_subscription_count() == 0:
+            return True
+        if self.recorder_status_time_s < stop_sent_at:
+            return False
+        status = self.latest_recorder_status
+        if not status:
+            return False
+        if status.get('active') is False:
+            return True
+        return str(status.get('state') or '').strip().lower() in {
+            'idle',
+            'ready',
+            'stopped',
+            'discarded',
+        }
+
+    def wait_for_recorder_stopped_before_reset(
+        self,
+        stop_sent_at: float,
+        timeout_s: float = 10.0,
+    ) -> bool:
+        if self.ctrl_pub.get_subscription_count() == 0:
+            return True
+        return self.wait_until(
+            lambda: self.recorder_has_stopped_since(stop_sent_at),
+            timeout_s,
+            'dataset recorder to stop before reset',
+            period_s=0.1,
+        )
 
     def wait_subs(self) -> None:
         while rclpy.ok():
-            if self.cmd_pub.get_subscription_count() > 0 and self.ctrl_pub.get_subscription_count() > 0:
+            if self.cmd_pub.get_subscription_count() > 0:
                 break
             self.slp(0.25)
-        self.get_logger().info('Subscribers connected')
+        if self.ctrl_pub.get_subscription_count() == 0:
+            self.get_logger().warning(
+                'No /room_315/vla/episode_control subscriber; running without dataset episodes.'
+            )
+        self.get_logger().info('VLA command subscriber connected')
 
     def wait_until(
         self,
@@ -326,6 +829,7 @@ class VLATeleopGenerator(Node):
         return False
 
     def wait_for_sensor_feedback(self, side: str, timeout_s: float = 5.0) -> bool:
+        self._touch_side(side)
         if self.sensor_feedback_times[side] > 0.0:
             return True
         ok = self.wait_until(
@@ -437,6 +941,7 @@ class VLATeleopGenerator(Node):
         return ''
 
     def wait_for_state(self, side: str, timeout_s: float = 10.0) -> bool:
+        self._touch_side(side)
         return self.wait_until(
             lambda: bool(self.shuttle_states[side]),
             timeout_s,
@@ -625,34 +1130,6 @@ class VLATeleopGenerator(Node):
             self.off(side)
         return bool(hit)
 
-    def reacquire_unknown_position(self, side: str = 'right') -> bool:
-        """Recover a known rail location from binary slot sensors only."""
-        if not self.wait_for_state(side):
-            return False
-        if not self.wait_for_sensor_feedback(side):
-            return False
-        if not self.force_exterior(side):
-            return False
-
-        start_slot = self.active_slot(side)
-        self.get_logger().info(
-            f'{side} unknown-position recovery: '
-            f'start_slot={start_slot or "unknown"}, active_sensors={self.active_sensor_summary(side)}'
-        )
-        self.st(side, '0')
-        hit = ''
-        try:
-            self.on(side, 0.2)
-            hit = self.wait_for_slot(
-                side,
-                tuple(SLOT_SENSORS[side]),
-                90.0,
-                leave_first=bool(start_slot),
-            )
-        finally:
-            self.off(side)
-        return bool(hit)
-
     def go_to_slot(self, side: str, slot: str, *, require_leave: bool = False) -> bool:
         if slot not in SLOT_SENSORS[side]:
             self.get_logger().warning(f'unsupported {side} slot target {slot!r}')
@@ -697,73 +1174,108 @@ class VLATeleopGenerator(Node):
         self.get_logger().info(f'centering {side} shuttle at {station} station using slot sensors')
         return self.go_to_station(side, station, require_leave=require_leave)
 
-    def route_with_sensor_dropout_fallback(
+    def wait_until_before_manual_obstacle(
         self,
         side: str,
-        target_station: str,
-        fallback_stopper: str,
+        decision: dict[str, Any],
+        *,
+        stop_before_m: float,
+        timeout_s: float = 120.0,
     ) -> bool:
-        """Route toward a station with a stopper checkpoint before trusting slots.
+        obstacle_s = float(decision['obstacle_s_m'])
+        loop_length = float(decision['loop_length_m'])
+        last_remaining = float('inf')
+        last_path_distance = float('inf')
 
-        This demonstrates a useful recovery pattern for temporary slot-sensor
-        dropout: do not run forever waiting for the station DZI detector; first
-        stop at a known guarded checkpoint, then release and reacquire a target
-        slot if the binary sensor is available.
-        """
-        if not self.wait_for_state(side):
-            return False
-        if not self.wait_for_sensor_feedback(side):
-            return False
-        if not self.force_exterior(side):
-            return False
-
-        target_slots = STATION_SLOTS[side][target_station]
-        self.get_logger().info(
-            f'{side} sensor-dropout route: checkpoint stopper {fallback_stopper}, '
-            f'then target slots {target_slots}'
-        )
-        self.st_i(side, {'ALL': '0', fallback_stopper: '1'})
-        checkpoint_reached = False
-        try:
-            self.on(side, 0.2, target_stopper=fallback_stopper)
-            checkpoint_reached = self.wait_for_stopper_stop(side, fallback_stopper, 90.0)
-        finally:
-            self.off(side)
-
-        if not checkpoint_reached:
-            return False
-
-        self.st_i(side, {fallback_stopper: '0'})
-        hit = ''
-        try:
-            self.on(side, 0.15)
-            hit = self.wait_for_slot(side, target_slots, 30.0)
-        finally:
-            self.off(side)
-        if not hit:
-            self.get_logger().warning(
-                f'{side} sensor-dropout route reached checkpoint but did not reacquire '
-                f'target slots {target_slots}; ending safely at current pose'
+        def reached_stop_point() -> bool:
+            nonlocal last_remaining, last_path_distance
+            state = self.shuttle_state(side)
+            projection = self._project_to_exterior_loop_xy(
+                float(state.get('x') or 0.0),
+                float(state.get('y') or 0.0),
             )
-        return True
+            last_path_distance = projection['path_distance_m']
+            last_remaining = self._loop_distance_ahead(
+                projection['s_m'],
+                obstacle_s,
+                loop_length,
+            )
+            return last_remaining <= float(stop_before_m)
 
-    def visual_obstacle_stop(self, side: str, stopper_name: str) -> bool:
-        """Use a closed stopper as a visible/physical obstacle and stop before it."""
+        ok = self.wait_until(
+            reached_stop_point,
+            timeout_s,
+            f'{side} shuttle to reach {stop_before_m:.2f}m before obstacle',
+            period_s=0.03,
+        )
+        if ok:
+            self.get_logger().info(
+                f'{side} reached manual-obstacle stop point: '
+                f'distance_ahead={last_remaining:.3f}m, '
+                f'path_offset={last_path_distance:.3f}m'
+            )
+        else:
+            self.get_logger().warning(
+                f'{side} manual-obstacle stop diagnostics: '
+                f'distance_ahead={last_remaining:.3f}m, '
+                f'path_offset={last_path_distance:.3f}m, '
+                f'segment={self.segment(side) or "-"}, mode={self.mode(side) or "-"}'
+            )
+        return ok
+
+    def stop_before_manual_obstacle(
+        self,
+        side: str,
+        *,
+        speed: float = 0.3,
+    ) -> bool:
+        """Run the exterior loop and stop before a visible obstacle if it blocks it."""
+        pose = self.manual_obstacle_pose(side)
+        self.get_logger().info(
+            f'{side} obstacle pose x={pose["x"]:.3f}, y={pose["y"]:.3f}, '
+            f'z={pose["z"]:.3f}, source={pose["source"]}; scenario will not move it'
+        )
+
+        decision = self.obstacle_decision(side, pose)
+        stop_before_m = float(self.get_parameter(f'{side}_manual_obstacle_stop_before_m').value)
+        self.get_logger().info(
+            f'{side} obstacle decision: blocks_path={decision["blocks_path"]}, '
+            f'reason={decision["reason"]}, distance={decision["path_distance_m"]:.3f}m, '
+            f'threshold={decision["path_threshold_m"]:.3f}m, '
+            f'rail_xy=({decision["obstacle_rail_x"]:.3f}, {decision["obstacle_rail_y"]:.3f}), '
+            f'stop_before={stop_before_m:.3f}m, route=EXTERIOR_LOOP'
+        )
+
+        if not decision['blocks_path']:
+            self.get_logger().info(
+                f'{side} obstacle is clear of the exterior loop; completing one big loop'
+            )
+            return self.full_exterior_loop(side, speed=speed)
+
         if not self.wait_for_state(side):
             return False
         if not self.wait_for_sensor_feedback(side):
             return False
         if not self.force_exterior(side):
             return False
-
-        self.get_logger().info(f'{side} visual obstacle: closing stopper {stopper_name}')
-        self.st_i(side, {'ALL': '0', stopper_name: '1'})
+        self.sw(side, 'EXTERIOR')
+        if not self.wait_for_all_switches(side, 'EXTERIOR'):
+            return False
+        self.st(side, '0')
         stopped = False
         try:
-            self.on(side, 0.2, target_stopper=stopper_name)
-            stopped = self.wait_for_stopper_stop(side, stopper_name, 90.0)
+            self.on(side, speed)
+            stopped = self.wait_until_before_manual_obstacle(
+                side,
+                decision,
+                stop_before_m=stop_before_m,
+            )
         finally:
             self.off(side)
+        if stopped:
+            self.get_logger().info(
+                f'{side} shuttle stopped directly before visual obstacle'
+            )
         return stopped
 
     def stop_at_stopper(self, side: str, stopper_name: str) -> bool:
@@ -784,10 +1296,15 @@ class VLATeleopGenerator(Node):
         return hit
 
     def move_station_to_station(self, side: str, source: str, target: str) -> None:
-        source_slots = STATION_SLOTS[side][source]
-        if not self.active_slot(side, source_slots):
+        if not self.wait_for_state(side):
+            return
+        if not self.wait_for_sensor_feedback(side):
+            return
+        current = self.current_station(side)
+        if current != source:
             self.get_logger().info(
-                f'{side} shuttle is not on a {source} slot; routing to source station first'
+                f'{side} shuttle is at {current or "unknown station"}, not {source}; '
+                f'routing to source station first'
             )
             if not self.go_to_station(side, source):
                 self.get_logger().warning(f'could not stage {side} shuttle at {source}')
@@ -795,14 +1312,16 @@ class VLATeleopGenerator(Node):
             self.slp(1.0)
         self.go_to_station(side, target, require_leave=True)
 
-    def full_exterior_loop(self, side: str, speed: float = 0.3) -> None:
-        self.wait_for_state(side)
-        self.wait_for_sensor_feedback(side)
+    def full_exterior_loop(self, side: str, speed: float = 0.3) -> bool:
+        if not self.wait_for_state(side):
+            return False
+        if not self.wait_for_sensor_feedback(side):
+            return False
         if not self.force_exterior(side):
-            return
+            return False
         self.sw(side, 'EXTERIOR')
         if not self.wait_for_all_switches(side, 'EXTERIOR'):
-            return
+            return False
         self.st(side, '0')
         start_slot = self.active_slot(side)
         start_segment = self.segment(side)
@@ -814,12 +1333,12 @@ class VLATeleopGenerator(Node):
         try:
             self.on(side, speed)
             if start_slot:
-                self.wait_for_slot(side, (start_slot,), 120.0, leave_first=True)
+                return bool(self.wait_for_slot(side, (start_slot,), 120.0, leave_first=True))
             elif start_segment:
-                self.wait_for_segment(side, {start_segment}, 120.0, leave_first=True)
-            else:
-                self.get_logger().warning('no start slot/segment known; using timed fallback')
-                self.slp(60)
+                return self.wait_for_segment(side, {start_segment}, 120.0, leave_first=True)
+            self.get_logger().warning('no start slot/segment known; using timed fallback')
+            self.slp(60)
+            return True
         finally:
             self.off(side)
 
@@ -1231,13 +1750,6 @@ class VLATeleopGenerator(Node):
     # ------------------------------------------------------------------
     # MISC
     # ------------------------------------------------------------------
-    def m01(self):
-        self.begin('close all right stoppers then open them')
-        self.st('right', '1')
-        self.slp(3)
-        self.st('right', '0')
-        self.end()
-
     def m02(self):
         self.begin('emergency stop all')
         if not self.force_exterior('right'):
@@ -1253,58 +1765,128 @@ class VLATeleopGenerator(Node):
     # ------------------------------------------------------------------
     # VLA perception, recovery, and robustness scenarios
     # ------------------------------------------------------------------
-    def m03(self):
-        self.begin('unknown_position_recovery')
-        self.reacquire_unknown_position('right')
-        self.end()
-
-    def m04(self):
-        self.begin('visual_stop_before_A3')
-        self.stop_at_stopper('right', 'A3')
-        self.end()
-
-    def m05(self):
-        self.begin('visual_stop_before_A4')
-        self.stop_at_stopper('right', 'A4')
-        self.end()
-
-    def m06(self):
-        self.begin('visual_center_at_station')
-        self.center_at_station('right', 'staubli')
-        self.end()
-
-    def m07(self):
-        self.begin('sensor_dropout_route')
-        self.route_with_sensor_dropout_fallback('right', 'staubli', 'A4')
-        self.end()
-
     def m08(self):
-        self.begin('visual_marker_target')
-        self.go_to_slot('left', '4', require_leave=True)
+        self.begin('left_slot3_kuka_then_slot2')
+        if not self.go_to_slot('left', '3', require_leave=True):
+            self.end()
+            return
+        if not self.command_kuka_joint_pose(KUKA_SLOT3_INTERLOCK_POSITIONS_RAD):
+            self.end()
+            return
+        self.go_to_slot('left', '2', require_leave=True)
         self.end()
 
-    def m09(self):
-        self.begin('visual_obstacle_stop')
-        self.visual_obstacle_stop('left', 'A3')
+    def m10(self):
+        self.begin('right_obstacle_aware_route')
+        self.stop_before_manual_obstacle('right')
         self.end()
+
+    def m11(self):
+        self.begin('left_obstacle_aware_route')
+        self.stop_before_manual_obstacle('left')
+        self.end()
+
+    @staticmethod
+    def _scenario_key(value: Any) -> str:
+        normalized = str(value or '').strip().replace('-', '_')
+        return '_'.join(normalized.split()).casefold()
+
+    def select_scenarios(
+        self,
+        scenarios: list[tuple[str, str, Callable[[], None]]],
+        raw_filter: str,
+    ) -> list[tuple[str, str, Callable[[], None]]]:
+        text = str(raw_filter or '').strip()
+        if not text:
+            return scenarios
+
+        wanted_by_key = {
+            self._scenario_key(token): token.strip()
+            for token in text.replace(';', ',').split(',')
+            if token.strip()
+        }
+        if not wanted_by_key or set(wanted_by_key) == {'all'}:
+            return scenarios
+
+        selected: list[tuple[str, str, Callable[[], None]]] = []
+        matched_keys: set[str] = set()
+        wanted_keys = set(wanted_by_key)
+        for code, name, scenario in scenarios:
+            aliases = {
+                self._scenario_key(code),
+                self._scenario_key(name),
+                self._scenario_key(getattr(scenario, '__name__', '')),
+            }
+            if aliases & wanted_keys:
+                selected.append((code, name, scenario))
+                matched_keys.update(aliases & wanted_keys)
+
+        missing = [
+            wanted_by_key[key]
+            for key in sorted(wanted_by_key)
+            if key not in matched_keys
+        ]
+        if missing:
+            allowed = ', '.join(
+                f'{code}:{name}'
+                for code, name, _scenario in scenarios
+            )
+            self.get_logger().warning(
+                f'unknown scenario_names entries: {missing}; allowed: {allowed}'
+            )
+        return selected
 
     def run_all(self):
         self.wait_subs()
         self.slp(5)
         scenarios = [
-            self.r01, self.r02, self.r03, self.r04, self.r05,
-            self.r06, self.r07, self.r08, self.r09,
-            self.r10, self.r11, self.r12, self.r13, self.r14, self.r15,
-            self.r16, self.r17,
-            self.l01, self.l02, self.l03, self.l04, self.l05,
-            self.l06, self.l07, self.l08, self.l09,
-            self.l10, self.l11, self.l12, self.l13,
-            self.m01, self.m02,
-            self.m03, self.m04, self.m05, self.m06, self.m07, self.m08, self.m09,
+            ('r01', 'move_right_shuttle_full_exterior_loop', self.r01),
+            ('r02', 'move_right_shuttle_from_yaskawa_to_staubli', self.r02),
+            ('r03', 'move_right_shuttle_from_staubli_to_yaskawa', self.r03),
+            ('r04', 'go_to_staubli_on_right_rail', self.r04),
+            ('r05', 'go_to_yaskawa_on_right_rail', self.r05),
+            ('r06', 'stop_right_shuttle_at_stopper_A1', self.r06),
+            ('r07', 'stop_right_shuttle_at_stopper_A2', self.r07),
+            ('r08', 'stop_right_shuttle_at_stopper_A3', self.r08),
+            ('r09', 'stop_right_shuttle_at_stopper_A4', self.r09),
+            ('r10', 'right_shuttle_enter_interior_loop_from_exterior', self.r10),
+            ('r11', 'move_right_shuttle_on_interior_loop', self.r11),
+            ('r12', 'route_right_shuttle_through_A3_into_the_interior_branch', self.r12),
+            ('r13', 'pass_right_shuttle_through_A4_from_the_interior_approach', self.r13),
+            ('r14', 'right_shuttle_stop_at_A3_then_resume_and_stop_at_A4', self.r14),
+            ('r15', 'right_shuttle_stop_at_A2_then_resume_and_stop_at_A4', self.r15),
+            ('r16', 'complete_one_fast_right_exterior_loop', self.r16),
+            ('r17', 'complete_one_slow_right_exterior_loop', self.r17),
+            ('l01', 'move_left_shuttle_full_exterior_loop', self.l01),
+            ('l02', 'move_left_shuttle_from_yaskawa_to_kuka', self.l02),
+            ('l03', 'move_left_shuttle_from_kuka_to_yaskawa', self.l03),
+            ('l04', 'go_to_kuka_on_left_rail', self.l04),
+            ('l05', 'go_to_yaskawa_on_left_rail', self.l05),
+            ('l06', 'stop_left_shuttle_at_stopper_A1', self.l06),
+            ('l07', 'stop_left_shuttle_at_stopper_A2', self.l07),
+            ('l08', 'stop_left_shuttle_at_stopper_A3', self.l08),
+            ('l09', 'stop_left_shuttle_at_stopper_A4', self.l09),
+            ('l10', 'left_shuttle_enter_interior_loop_from_exterior', self.l10),
+            ('l11', 'move_left_shuttle_on_interior_loop', self.l11),
+            ('l12', 'route_left_shuttle_through_A3_into_the_interior_branch', self.l12),
+            ('l13', 'pass_left_shuttle_through_A4_from_the_interior_approach', self.l13),
+            ('m02', 'emergency_stop_all', self.m02),
+            ('m08', 'left_slot3_kuka_then_slot2', self.m08),
+            ('m10', 'right_obstacle_aware_route', self.m10),
+            ('m11', 'left_obstacle_aware_route', self.m11),
         ]
+        scenarios = self.select_scenarios(
+            scenarios,
+            str(self.get_parameter('scenario_names').value),
+        )
+        if not scenarios:
+            self.get_logger().error('no VLA teleop scenarios selected')
+            return
         self.get_logger().info(f'====== {len(scenarios)} scenarios ======')
-        for i, scenario in enumerate(scenarios, 1):
+        for i, (scenario_code, scenario_name, scenario) in enumerate(scenarios, 1):
             self.get_logger().info(f'--- {i}/{len(scenarios)} ---')
+            self.get_logger().info(f'scenario_code={scenario_code}')
+            self.get_logger().info(f'scenario_name={scenario_name}')
             scenario()
             self.slp(3)
         self.get_logger().info('====== ALL DONE ======')

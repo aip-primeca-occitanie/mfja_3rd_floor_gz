@@ -24,13 +24,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="base_link_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10/collision/base_link.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="link_1_s">
@@ -53,13 +46,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="link_1_s_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10/collision/link_1_s.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="link_2_l">
@@ -82,13 +68,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="link_2_l_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10/collision/link_2_l.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="link_3_u">
@@ -111,13 +90,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="link_3_u_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10/collision/link_3_u.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="link_4_r">
@@ -140,13 +112,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="link_4_r_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10/collision/link_4_r.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="link_5_b">
@@ -169,13 +134,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="link_5_b_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10/collision/link_5_b.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="link_6_t">
@@ -198,13 +156,6 @@
           </mesh>
         </geometry>
       </visual>
-      <collision name="link_6_t_collision">
-        <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/hc10dt/collision/link_6_t.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
 
     <link name="tool0">
@@ -212,6 +163,37 @@
     </link>
     <link name="base">
       <pose relative_to="base_link-base">0 0 0 0 0 0</pose>
+    </link>
+    <link name="gripper">
+      <pose relative_to="tool0-gripper">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0.07 0 0 0</pose>
+        <mass>0.9</mass>
+        <inertia>
+          <ixx>0.0008</ixx>
+          <iyy>0.0008</iyy>
+          <izz>0.0005</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="zimmer_lwr50l_visual">
+        <pose>0 0 0.0186 -1.57079632679 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://yaskawa_hc10dt/meshes/gripper/lwr50l_03_00001_a_000.stl</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.22 0.23 0.23 1</ambient>
+          <diffuse>0.22 0.23 0.23 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <link name="gripper_tcp">
+      <pose relative_to="gripper_tcp_joint">0 0 0 0 0 0</pose>
     </link>
 
     <joint name="world_joint" type="fixed">
@@ -232,8 +214,8 @@
           <velocity>2.26892802759</velocity>
         </limit>
         <dynamics>
-          <damping>0.7</damping>
-          <friction>0.05</friction>
+          <damping>10.0</damping>
+          <friction>2.0</friction>
         </dynamics>
       </axis>
     </joint>
@@ -251,8 +233,8 @@
           <velocity>2.26892802759</velocity>
         </limit>
         <dynamics>
-          <damping>0.7</damping>
-          <friction>0.05</friction>
+          <damping>10.0</damping>
+          <friction>2.0</friction>
         </dynamics>
       </axis>
     </joint>
@@ -270,8 +252,8 @@
           <velocity>3.14159265359</velocity>
         </limit>
         <dynamics>
-          <damping>0.6</damping>
-          <friction>0.05</friction>
+          <damping>8.0</damping>
+          <friction>1.6</friction>
         </dynamics>
       </axis>
     </joint>
@@ -289,8 +271,8 @@
           <velocity>3.14159265359</velocity>
         </limit>
         <dynamics>
-          <damping>0.9</damping>
-          <friction>0.10</friction>
+          <damping>4.0</damping>
+          <friction>0.8</friction>
         </dynamics>
       </axis>
     </joint>
@@ -308,8 +290,8 @@
           <velocity>4.36332312999</velocity>
         </limit>
         <dynamics>
-          <damping>0.7</damping>
-          <friction>0.08</friction>
+          <damping>3.0</damping>
+          <friction>0.6</friction>
         </dynamics>
       </axis>
     </joint>
@@ -327,8 +309,8 @@
           <velocity>4.36332312999</velocity>
         </limit>
         <dynamics>
-          <damping>0.6</damping>
-          <friction>0.06</friction>
+          <damping>2.0</damping>
+          <friction>0.5</friction>
         </dynamics>
       </axis>
     </joint>
@@ -337,6 +319,18 @@
       <parent>link_6_t</parent>
       <child>tool0</child>
       <pose relative_to="link_6_t">0 0 -0.170 3.14159265359 0 0</pose>
+    </joint>
+
+    <joint name="tool0-gripper" type="fixed">
+      <parent>tool0</parent>
+      <child>gripper</child>
+      <pose relative_to="tool0">0 0 0 0 0 0</pose>
+    </joint>
+
+    <joint name="gripper_tcp_joint" type="fixed">
+      <parent>gripper</parent>
+      <child>gripper_tcp</child>
+      <pose relative_to="gripper">0 0 0.1515 0 0 0</pose>
     </joint>
 
     <joint name="base_link-base" type="fixed">
@@ -361,61 +355,61 @@
       name="gz::sim::systems::JointTrajectoryController">
       <joint_name>joint_1_s</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>170.0</position_p_gain>
-      <position_i_gain>0.10</position_i_gain>
-      <position_d_gain>25.0</position_d_gain>
-      <position_i_min>-2.0</position_i_min>
-      <position_i_max>2.0</position_i_max>
-      <position_cmd_min>-340.0</position_cmd_min>
-      <position_cmd_max>340.0</position_cmd_max>
+      <position_p_gain>450.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>85.0</position_d_gain>
+      <position_i_min>0.0</position_i_min>
+      <position_i_max>0.0</position_i_max>
+      <position_cmd_min>-500.0</position_cmd_min>
+      <position_cmd_max>500.0</position_cmd_max>
 
       <joint_name>joint_2_l</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>170.0</position_p_gain>
-      <position_i_gain>0.10</position_i_gain>
-      <position_d_gain>25.0</position_d_gain>
-      <position_i_min>-2.0</position_i_min>
-      <position_i_max>2.0</position_i_max>
-      <position_cmd_min>-340.0</position_cmd_min>
-      <position_cmd_max>340.0</position_cmd_max>
+      <position_p_gain>520.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>100.0</position_d_gain>
+      <position_i_min>0.0</position_i_min>
+      <position_i_max>0.0</position_i_max>
+      <position_cmd_min>-550.0</position_cmd_min>
+      <position_cmd_max>550.0</position_cmd_max>
 
       <joint_name>joint_3_u</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>120.0</position_p_gain>
-      <position_i_gain>0.08</position_i_gain>
-      <position_d_gain>18.0</position_d_gain>
-      <position_i_min>-1.5</position_i_min>
-      <position_i_max>1.5</position_i_max>
-      <position_cmd_min>-220.0</position_cmd_min>
-      <position_cmd_max>220.0</position_cmd_max>
+      <position_p_gain>420.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>80.0</position_d_gain>
+      <position_i_min>0.0</position_i_min>
+      <position_i_max>0.0</position_i_max>
+      <position_cmd_min>-260.0</position_cmd_min>
+      <position_cmd_max>260.0</position_cmd_max>
 
       <joint_name>joint_4_r</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>40.0</position_p_gain>
-      <position_i_gain>0.04</position_i_gain>
-      <position_d_gain>6.0</position_d_gain>
-      <position_i_min>-0.8</position_i_min>
-      <position_i_max>0.8</position_i_max>
+      <position_p_gain>120.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>28.0</position_d_gain>
+      <position_i_min>0.0</position_i_min>
+      <position_i_max>0.0</position_i_max>
       <position_cmd_min>-90.0</position_cmd_min>
       <position_cmd_max>90.0</position_cmd_max>
 
       <joint_name>joint_5_b</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>30.0</position_p_gain>
-      <position_i_gain>0.03</position_i_gain>
-      <position_d_gain>5.0</position_d_gain>
-      <position_i_min>-0.6</position_i_min>
-      <position_i_max>0.6</position_i_max>
+      <position_p_gain>90.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>22.0</position_d_gain>
+      <position_i_min>0.0</position_i_min>
+      <position_i_max>0.0</position_i_max>
       <position_cmd_min>-70.0</position_cmd_min>
       <position_cmd_max>70.0</position_cmd_max>
 
       <joint_name>joint_6_t</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>25.0</position_p_gain>
-      <position_i_gain>0.03</position_i_gain>
-      <position_d_gain>4.0</position_d_gain>
-      <position_i_min>-0.5</position_i_min>
-      <position_i_max>0.5</position_i_max>
+      <position_p_gain>70.0</position_p_gain>
+      <position_i_gain>0.0</position_i_gain>
+      <position_d_gain>18.0</position_d_gain>
+      <position_i_min>0.0</position_i_min>
+      <position_i_max>0.0</position_i_max>
       <position_cmd_min>-60.0</position_cmd_min>
       <position_cmd_max>60.0</position_cmd_max>
     </plugin>

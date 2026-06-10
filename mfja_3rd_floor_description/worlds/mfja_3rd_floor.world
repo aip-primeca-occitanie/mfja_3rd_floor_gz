@@ -228,11 +228,19 @@
       <pose>0 0 0 0 0 0</pose>
     </include>
 
+
     <include>
       <uri>model://room315_vla_removable_obstacle_marker</uri>
-      <name>room315_vla_removable_obstacle_marker</name>
-      <pose>0 0 0 0 0 0</pose>
+      <name>room315_vla_right_obstacle_marker</name>
+      <pose>-14.18 -4.68 0.856 0 0 0</pose>
     </include>
+
+    <include>
+      <uri>model://room315_vla_removable_obstacle_marker</uri>
+      <name>room315_vla_left_obstacle_marker</name>
+      <pose>-9.86 -4.68 0.856 0 0 0</pose>
+    </include>
+
 
     <include>
       <uri>model://lab_table</uri>

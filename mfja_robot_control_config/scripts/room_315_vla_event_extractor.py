@@ -2,8 +2,13 @@
 
 import argparse
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
+
+
+MODEL_INPUT_FIELDS = ('language', 'overhead_images', 'last_command')
+START_LAST_COMMAND = {'action': 'START'}
 
 
 def _json_dumps(data: Any) -> str:
@@ -41,7 +46,34 @@ def _image_fields(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _training_row(row: dict[str, Any], fallback_step_index: int) -> dict[str, Any]:
+def _overhead_images(row: dict[str, Any]) -> dict[str, Any]:
+    model_input = row.get('model_input')
+    if isinstance(model_input, dict) and isinstance(model_input.get('overhead_images'), dict):
+        return dict(model_input['overhead_images'])
+    return {
+        key.removeprefix('observation.images.'): value
+        for key, value in _image_fields(row).items()
+    }
+
+
+def _model_input(row: dict[str, Any], previous_command: Any) -> dict[str, Any]:
+    model_input = row.get('model_input')
+    language = ''
+    if isinstance(model_input, dict):
+        language = str(model_input.get('language') or '')
+    return {
+        'language': language or str(row.get('task') or ''),
+        'overhead_images': _overhead_images(row),
+        'last_command': deepcopy(previous_command),
+    }
+
+
+def _training_row(
+    row: dict[str, Any],
+    fallback_step_index: int,
+    *,
+    previous_command: Any,
+) -> dict[str, Any]:
     action = row.get('action')
     if not isinstance(action, dict):
         action = row.get('next_action')
@@ -54,11 +86,14 @@ def _training_row(row: dict[str, Any], fallback_step_index: int) -> dict[str, An
         'episode_id': row.get('episode_id', ''),
         'step_index': int(row.get('step_index', row.get('event_index', fallback_step_index)) or 0),
         'task': row.get('task', ''),
-        'observation.state': row.get('observation.state', []),
+        'model_input_schema_version': int(row.get('model_input_schema_version') or 3),
+        'model_input': _model_input(row, previous_command),
         'action': action,
-        'privileged_eval': row.get('privileged_eval', {}),
     }
-    training.update(_image_fields(row))
+    if row.get('action_vector') is not None:
+        training['action_vector'] = row.get('action_vector')
+    if isinstance(row.get('auxiliary_targets'), dict):
+        training['auxiliary_targets'] = deepcopy(row['auxiliary_targets'])
     return training
 
 
@@ -74,13 +109,19 @@ def extract_event_dataset(dataset_dir: Path, output_path: Path) -> dict[str, Any
     episodes_seen: set[str] = set()
     with output_path.open('w', encoding='utf-8') as output:
         for event_file in event_files:
+            previous_command: Any = deepcopy(START_LAST_COMMAND)
             for fallback_step_index, event_row in enumerate(_iter_jsonl(event_file)):
-                training_row = _training_row(event_row, fallback_step_index)
+                training_row = _training_row(
+                    event_row,
+                    fallback_step_index,
+                    previous_command=previous_command,
+                )
                 if not training_row['episode_id']:
                     training_row['episode_id'] = event_file.parent.name
                 output.write(_json_dumps(training_row) + '\n')
                 rows_written += 1
                 episodes_seen.add(str(training_row['episode_id']))
+                previous_command = deepcopy(training_row['action'])
 
     summary = {
         'dataset_dir': str(dataset_dir),

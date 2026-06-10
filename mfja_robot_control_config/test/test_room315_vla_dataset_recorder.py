@@ -71,6 +71,7 @@ def _fake_recorder(module):
     recorder.event_stream = StringIO()
     recorder.last_event_signature = ''
     recorder.last_primitive_signature = ''
+    recorder.previous_event_command = {'action': 'START'}
     recorder.last_task_phase_by_id = {}
     recorder.completed_task_signatures = set()
     recorder.last_sensor_signature_by_side = {side: '' for side in ('right', 'left')}
@@ -323,7 +324,7 @@ def test_switch_state_encoder_normalizes_short_and_long_values():
     assert _feature_value(recorder, status, 'left_switch_A4') == 0.0
 
 
-def test_model_input_schema_v2_contains_only_model_facing_fields():
+def test_model_input_schema_v3_is_visual_policy_input_only():
     recorder = _load_module()
     status = _status()
     status['rails']['right']['switches'] = {
@@ -367,41 +368,52 @@ def test_model_input_schema_v2_contains_only_model_facing_fields():
         now_s=100.0,
     )
 
-    assert recorder.MODEL_INPUT_SCHEMA_VERSION == 2
+    assert recorder.MODEL_INPUT_SCHEMA_VERSION == 3
     assert set(model_input) == set(recorder.MODEL_INPUT_FIELDS)
     assert set(model_input) == {
         'language',
         'overhead_images',
+        'last_command',
+    }
+    assert set(model_input['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
+    assert model_input['last_command']['action'] == 'switches'
+
+    serialized = json.dumps(model_input, sort_keys=True)
+    for expert_shortcut in (
         'binary_sensor_bits',
         'switch_states',
         'stopper_states',
-        'last_command',
         'shuttle_command_state',
         'time_since_last_sensor_event',
-    }
-    assert set(model_input['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
-    assert model_input['binary_sensor_bits']['right']['DZI2R'] == 1
-    assert model_input['binary_sensor_bits']['right']['DZI3R'] == 0
-    assert model_input['switch_states']['right'] == {
-        'A1': 'EXTERIOR',
-        'A2': 'INTERIOR',
-        'A3': 'EXTERIOR',
-        'A4': 'INTERIOR',
-    }
-    assert model_input['stopper_states']['right']['A1'] == 'open'
-    assert model_input['last_command']['action'] == 'switches'
-    assert model_input['shuttle_command_state']['right']['last_command'] == 'ON'
-    assert model_input['time_since_last_sensor_event']['right'] == 5.0
-    assert model_input['time_since_last_sensor_event']['left'] is None
-
-    serialized = json.dumps(model_input, sort_keys=True)
+        'DZI2R',
+        'DZI3R',
+    ):
+        assert expert_shortcut not in serialized
     assert 'A12E' not in serialized
     assert 'distance_to_switch' not in serialized
     assert 'normalized_position' not in serialized
     for privileged_key in ('segment', '"x"', '"y"', '"z"', 'yaw', '"s"'):
         assert privileged_key not in serialized
 
-    privileged = recorder._privileged_eval_from_status(status)
+    privileged = recorder._privileged_eval_from_status(
+        status,
+        sensor_event_times={'right': 95.0, 'left': None},
+        now_s=100.0,
+    )
+    expert_state = privileged['expert_sensor_state']
+    assert expert_state['binary_sensor_bits']['right']['DZI2R'] == 1
+    assert expert_state['binary_sensor_bits']['right']['DZI3R'] == 0
+    assert expert_state['switch_states']['right'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'INTERIOR',
+    }
+    assert expert_state['stopper_states']['right']['A1'] == 'open'
+    assert expert_state['shuttle_command_state']['right']['last_command'] == 'ON'
+    assert expert_state['time_since_last_sensor_event']['right'] == 5.0
+    assert expert_state['time_since_last_sensor_event']['left'] is None
+    assert expert_state['model_input_exposure'] == 'excluded'
     assert privileged['raw_shuttle_states']['right']['room315_right_shuttle_1']['segment'] == 'A12E'
 
 
@@ -418,6 +430,9 @@ def test_visual_eval_markers_are_privileged_labels_not_observation_features():
             marker_ids.update(str(item.get('id')) for item in marker_group)
         elif isinstance(marker_group, dict):
             marker_ids.add(str(marker_group.get('entity')))
+            entities = marker_group.get('entities', {})
+            if isinstance(entities, dict):
+                marker_ids.update(str(name) for name in entities.values())
             marker_ids.update(str(name) for name in marker_group.get('visual_ids', []))
 
     model_input = recorder._model_input_from_status(
@@ -437,12 +452,36 @@ def test_visual_eval_markers_are_privileged_labels_not_observation_features():
     labels = privileged['visual_eval_labels']
     assert labels['model_input_exposure'] == 'excluded'
     assert labels['policy_visibility'] == 'visual_input_only'
+    assert 'colored_station_markers' not in labels['marker_definitions']
+    assert 'inspection_markers' not in labels['marker_definitions']
+    assert 'station_status_markers' not in labels['marker_definitions']
     assert labels['station_occupancy']['right']['staubli_tx2']['label'] == 'occupied'
     assert labels['station_occupancy']['right']['yaskawa_hc10dt']['label'] == 'empty'
     assert (
-        labels['marker_definitions']['removable_obstacle_marker']['entity']
-        == 'room315_vla_removable_obstacle_marker'
+        labels['station_occupancy']['right']['staubli_tx2']['model_task']
+        == 'infer visual occupancy from shuttle-over-slot-fiducials'
     )
+    assert (
+        labels['marker_definitions']['removable_obstacle_marker']['entities']['right']
+        == 'room315_vla_right_obstacle_marker'
+    )
+    assert (
+        labels['marker_definitions']['removable_obstacle_marker']['entities']['left']
+        == 'room315_vla_left_obstacle_marker'
+    )
+    for removed_marker in (
+        'right_yaskawa_station_marker',
+        'right_staubli_station_marker',
+        'left_yaskawa_station_marker',
+        'left_kuka_station_marker',
+        'right_green_inspection_marker',
+        'left_green_inspection_marker',
+        'right_station_empty_marker',
+        'right_station_occupied_marker',
+        'left_station_empty_marker',
+        'left_station_occupied_marker',
+    ):
+        assert removed_marker not in json.dumps(labels['marker_definitions'])
 
 
 def test_structured_rail_state_is_sensor_and_device_only():
@@ -517,6 +556,61 @@ def test_event_labels_do_not_repeat_long_shuttle_on_command():
     assert rows[1]['next_action']['primitive'] == 'STOP_NOW'
 
 
+def test_event_model_input_last_command_is_previous_event_not_current_label():
+    recorder_module = _load_module()
+    recorder = _fake_recorder(recorder_module)
+
+    commands = [
+        {'action': 'shuttle', 'side': 'right', 'command': 'OFF'},
+        {'action': 'switches', 'side': 'right', 'switches': {'A3': 'INTERIOR'}},
+        {'action': 'stoppers', 'side': 'right', 'stoppers': {'A3': 'closed'}},
+        {'action': 'shuttle', 'side': 'right', 'command': 'ON', 'speed': 0.2},
+        {'action': 'shuttle', 'side': 'right', 'command': 'OFF'},
+    ]
+    for command in commands:
+        recorder._record_command_event(command)
+    recorder._record_event(
+        {'action': 'DONE', 'status': 'success'},
+        original_command={'action': 'DONE', 'status': 'success'},
+        event_type='episode_terminal',
+        status_text='success',
+    )
+
+    rows = _jsonl_rows(recorder.event_stream)
+
+    assert [row['action']['primitive'] for row in rows] == [
+        'STOP_NOW',
+        'SET_SWITCHES',
+        'SET_STOPPERS',
+        'SHUTTLE_ON',
+        'STOP_NOW',
+        'DONE',
+    ]
+    assert rows[0]['model_input']['last_command'] == {'action': 'START'}
+    assert rows[1]['model_input']['last_command'] == rows[0]['action']
+    assert rows[2]['model_input']['last_command'] == rows[1]['action']
+    assert rows[3]['model_input']['last_command'] == rows[2]['action']
+    assert rows[4]['model_input']['last_command'] == rows[3]['action']
+    assert rows[5]['model_input']['last_command'] == rows[4]['action']
+    for row in rows:
+        assert set(row['model_input']) == set(recorder_module.MODEL_INPUT_FIELDS)
+        assert row['model_input']['last_command'] != row['legacy_next_action']
+        assert row['model_input']['last_command'] != row['action']
+        assert row['action_vector'] == recorder_module._encode_action(row['action'])
+        serialized_model_input = json.dumps(row['model_input'], sort_keys=True)
+        for forbidden in (
+            'binary_sensor_bits',
+            'switch_states',
+            'stopper_states',
+            'raw_shuttle_states',
+            'privileged_eval',
+            'segment',
+            '"x"',
+            '"s"',
+        ):
+            assert forbidden not in serialized_model_input
+
+
 def test_switch_and_stopper_commands_create_separate_events():
     recorder_module = _load_module()
     recorder = _fake_recorder(recorder_module)
@@ -539,6 +633,98 @@ def test_switch_and_stopper_commands_create_separate_events():
     assert rows[1]['next_action']['stopper_mask']['A1'] == 1
     assert rows[0]['wait_condition']['type'] == 'switch_state_match'
     assert rows[1]['wait_condition']['type'] == 'stopper_state_match'
+
+
+def test_redundant_switch_command_is_skipped_when_state_already_matches():
+    recorder_module = _load_module()
+    recorder = _fake_recorder(recorder_module)
+
+    recorder._record_command_event({
+        'action': 'switches',
+        'side': 'right',
+        'switches': {'ALL': 'EXTERIOR'},
+    })
+
+    rows = _jsonl_rows(recorder.event_stream)
+    metrics = recorder._event_generation_metrics()
+    assert rows == []
+    assert recorder.previous_event_command == {'action': 'START'}
+    assert metrics['event_candidate_count'] == 1
+    assert metrics['skipped_redundant_event_count'] == 1
+    assert metrics['redundant_action_rate'] == 1.0
+    assert metrics['noop_action_rate'] == 1.0
+    assert metrics['effective_action_rate'] == 0.0
+
+
+def test_switch_event_records_only_devices_that_need_changes():
+    recorder_module = _load_module()
+    recorder = _fake_recorder(recorder_module)
+    recorder.latest_status['rails']['right']['switches']['A3'] = 'INTERIOR'
+
+    recorder._record_command_event({
+        'action': 'switches',
+        'side': 'right',
+        'switches': {'ALL': 'EXTERIOR'},
+    })
+
+    rows = _jsonl_rows(recorder.event_stream)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row['legacy_next_action']['switches'] == {'A3': 'EXTERIOR'}
+    assert row['action']['primitive'] == 'SET_SWITCHES'
+    assert row['action']['switch_mask'] == {'A1': 0, 'A2': 0, 'A3': 1, 'A4': 0}
+    assert row['action']['switch_values']['A3'] == 'EXTERIOR'
+    assert row['action_vector'] == recorder_module._encode_action(row['action'])
+    assert row['model_input']['last_command'] == {'action': 'START'}
+    assert set(row['model_input']) == set(recorder_module.MODEL_INPUT_FIELDS)
+    assert row['minimal_recording']['requested'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+    assert row['minimal_recording']['needed'] == {'A3': 'EXTERIOR'}
+    assert row['minimal_recording']['redundant'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+    assert row['auxiliary_targets']['switch_states']['right']['A3'] == 'INTERIOR'
+    assert 'auxiliary_targets' not in row['model_input']
+    assert 'privileged_eval' not in row['model_input']
+    assert row['event_generation_metrics']['effective_action_rate'] == 1.0
+
+
+def test_stopper_events_use_same_minimal_recording_logic():
+    recorder_module = _load_module()
+    recorder = _fake_recorder(recorder_module)
+
+    recorder._record_command_event({
+        'action': 'stoppers',
+        'side': 'right',
+        'stoppers': {'ALL': 'open'},
+    })
+    assert _jsonl_rows(recorder.event_stream) == []
+    assert recorder._event_generation_metrics()['skipped_redundant_event_count'] == 1
+
+    recorder.latest_status['rails']['right']['stoppers']['A2'] = '1'
+    recorder._record_command_event({
+        'action': 'stoppers',
+        'side': 'right',
+        'stoppers': {'ALL': 'open'},
+    })
+
+    rows = _jsonl_rows(recorder.event_stream)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row['legacy_next_action']['stoppers'] == {'A2': 'open'}
+    assert row['action']['primitive'] == 'SET_STOPPERS'
+    assert row['action']['stopper_mask'] == {'A1': 0, 'A2': 1, 'A3': 0, 'A4': 0}
+    assert row['action']['stopper_values']['A2'] == 'open'
+    assert row['action_vector'] == recorder_module._encode_action(row['action'])
+    assert row['model_input']['last_command'] == {'action': 'START'}
+    assert row['auxiliary_targets']['stopper_states']['right']['A2'] == 'closed'
+    assert set(row['model_input']) == {'language', 'overhead_images', 'last_command'}
 
 
 def test_route_template_phase_change_creates_one_event_per_phase():
@@ -582,6 +768,7 @@ def test_raw_framewise_recording_still_writes_replay_rows():
     assert rows[0]['command']['action'] == 'shuttle'
     assert rows[0]['model_input_schema_version'] == recorder_module.MODEL_INPUT_SCHEMA_VERSION
     assert set(rows[0]['model_input']) == set(recorder_module.MODEL_INPUT_FIELDS)
+    assert rows[0]['model_input']['last_command'] == {'action': 'START'}
     assert 'supervisor_status' not in rows[0]
     assert 'supervisor_status' in rows[0]['privileged_eval']
     assert rows[0]['safety_decoder_metrics']['illegal_proposal_rate'] == 0.5

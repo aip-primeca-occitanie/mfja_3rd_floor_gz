@@ -18,13 +18,6 @@
           <emissive>0.0 0.0 0.0 0.0</emissive>
         </material>
       </visual>
-      <collision name="carter_gauche_collision">
-        <geometry>
-          <mesh>
-            <uri>model://carter_gauche/meshes/carter_gauche.stl</uri>
-          </mesh>
-        </geometry>
-      </collision>
     </link>
   </model>
 </sdf>

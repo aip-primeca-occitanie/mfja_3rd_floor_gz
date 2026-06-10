@@ -51,6 +51,7 @@ def _row(
     task='route right shuttle through A3 into the interior branch',
     timestamp=1.0,
     safety_metrics=None,
+    event_generation_metrics=None,
     task_status='',
 ):
     (tmp_path / image_name).write_bytes(f'image-bytes-{image_name}'.encode('utf-8'))
@@ -63,20 +64,13 @@ def _row(
         'safety_decoder_metrics': safety_metrics or {},
         'model_input': {
             'language': task,
-            'binary_sensor_bits': {
-                'right': {'DZI1R': 0, 'DZI2R': 1, 'DZI3R': 0},
-                'left': {'DZI1L': 0},
-            },
-            'switch_states': {'right': {'A3': 'EXTERIOR'}, 'left': {'A1': 'EXTERIOR'}},
-            'stopper_states': {'right': {'A3': 'open'}, 'left': {'A1': 'open'}},
             'last_command': {'action': 'status'},
-            'shuttle_command_state': {'right': {'last_command': 'OFF'}},
-            'time_since_last_sensor_event': {'right': 0.4},
             'overhead_images': {'right_rail_rgb': image_name},
         },
         'observation.images.right_rail_rgb': image_name,
         'observation.state': [0.0, 1.0, 0.0],
         'action': action or _action(),
+        'event_generation_metrics': event_generation_metrics or {},
         'privileged_eval': {
             'raw_shuttle_states': {
                 'right': {
@@ -169,21 +163,32 @@ def test_vla_feature_changes_with_image_content(tmp_path):
     assert baseline.vla_feature(row_a, tmp_path) != baseline.vla_feature(row_b, tmp_path)
 
 
+def test_vla_feature_uses_images_not_sensor_state(tmp_path):
+    baseline = _load_module()
+    row_a = baseline._event_row(_row(tmp_path, image_name='same.jpg'), 0)
+    row_b = baseline._event_row(_row(tmp_path, image_name='same.jpg'), 1)
+    row_b['observation_state'] = [1.0, 0.0, 1.0]
+
+    assert baseline.state_only_feature(row_a) != baseline.state_only_feature(row_b)
+    assert baseline.vla_feature(row_a, tmp_path) == baseline.vla_feature(row_b, tmp_path)
+
+
 def test_task_family_metrics_include_requested_success_rates(tmp_path):
     baseline = _load_module()
     terminal = _action('DONE', 'right', 'terminal', 'task_succeeded')
     rows = [
         baseline._event_row(_row(
             tmp_path,
-            episode_id='episode_unknown',
-            task='unknown_position_recovery',
+            episode_id='episode_visual',
+            task='left_slot3_kuka_then_slot2',
+            image_name='visual_done.jpg',
             timestamp=1.0,
         ), 0),
         baseline._event_row(_row(
             tmp_path,
-            episode_id='episode_unknown',
-            task='unknown_position_recovery',
-            image_name='unknown_done.jpg',
+            episode_id='episode_visual',
+            task='left_slot3_kuka_then_slot2',
+            image_name='visual_done.jpg',
             timestamp=4.0,
             action=terminal,
             task_status='succeeded',
@@ -192,34 +197,22 @@ def test_task_family_metrics_include_requested_success_rates(tmp_path):
                 'rejected_actions': 2,
                 'illegal_proposal_rate': 0.2,
             },
+            event_generation_metrics={
+                'event_candidate_count': 10,
+                'recorded_event_count': 8,
+                'skipped_redundant_event_count': 2,
+                'noop_action_count': 2,
+            },
         ), 1),
         baseline._event_row(_row(
             tmp_path,
-            episode_id='episode_dropout',
-            task='sensor_dropout_route',
-            image_name='dropout_done.jpg',
-            timestamp=3.0,
-            action=terminal,
-            task_status='succeeded',
-        ), 2),
-        baseline._event_row(_row(
-            tmp_path,
-            episode_id='episode_visual',
-            task='visual_marker_target',
-            image_name='visual_done.jpg',
-            timestamp=3.0,
-            action=terminal,
-            task_status='succeeded',
-        ), 3),
-        baseline._event_row(_row(
-            tmp_path,
             episode_id='episode_obstacle',
-            task='visual_obstacle_stop',
+            task='right_obstacle_aware_route',
             image_name='obstacle_done.jpg',
             timestamp=3.0,
             action=terminal,
             task_status='succeeded',
-        ), 4),
+        ), 2),
     ]
 
     metrics = {
@@ -227,13 +220,17 @@ def test_task_family_metrics_include_requested_success_rates(tmp_path):
         for item in baseline.task_family_metrics(rows)
     }
 
-    assert metrics['unknown_position']['task_success'] == 1.0
-    assert metrics['unknown_position']['completion_time'] == 3.0
-    assert metrics['unknown_position']['command_count'] == 2.0
-    assert metrics['unknown_position']['illegal_proposal_rate'] == 0.2
-    assert metrics['unknown_position']['rejected_action_rate'] == 0.2
-    assert metrics['unknown_position']['unknown_position_success'] == 1.0
-    assert metrics['sensor_dropout']['sensor_dropout_success'] == 1.0
+    assert 'unknown_position' not in metrics
+    assert 'sensor_dropout' not in metrics
+    assert metrics['visual_target']['task_success'] == 1.0
+    assert metrics['visual_target']['completion_time'] == 3.0
+    assert metrics['visual_target']['command_count'] == 2.0
+    assert metrics['visual_target']['illegal_proposal_rate'] == 0.2
+    assert metrics['visual_target']['rejected_action_rate'] == 0.2
+    assert metrics['visual_target']['skipped_redundant_event_count'] == 2.0
+    assert metrics['visual_target']['redundant_action_rate'] == 0.2
+    assert metrics['visual_target']['noop_action_rate'] == 0.2
+    assert metrics['visual_target']['effective_action_rate'] == 0.8
     assert metrics['visual_target']['visual_target_success'] == 1.0
     assert metrics['obstacle_stop']['obstacle_stop_success'] == 1.0
 

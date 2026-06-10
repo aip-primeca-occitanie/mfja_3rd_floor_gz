@@ -1,12 +1,12 @@
-# Rail-only VLA under sparse binary sensing
+# Room 315 Visual VLA with expert sensor supervision
 
-The current Room 315 research setup is framed as a rail-only
-Vision-Language-Action problem under sparse binary sensing. The policy is not
-trained to control Gazebo poses or continuous shuttle coordinates. It observes a
-language goal, overhead camera images, binary rail sensors, switch states,
-stopper states, the previous command, shuttle command state, and
-time-since-last-sensor-event, then predicts the next event-level symbolic
-action.
+The current Room 315 research setup is framed as a rail-cell
+Vision-Language-Action problem with expert-side binary sensor supervision. The
+scenario generator and supervisor may use slot sensors, stopper sensors, switch
+state, and Gazebo state internally so demonstrations stop at correct, safe
+places. The learned policy should not receive those expert shortcuts. It
+observes a language goal, overhead camera images, and the previous command, then
+predicts the next event-level direct symbolic action.
 
 This gives the project a clear research boundary: the model must solve a
 partially observable routing and safety task from realistic rail-cell
@@ -16,48 +16,48 @@ execution and safety gating.
 ## Model Input vs Privileged Eval
 
 Training and online inference must use only `model_input`. Its schema is version
-2 and contains exactly:
+3 and contains exactly:
 
 ```text
 language
 overhead_images
-binary_sensor_bits
-switch_states
-stopper_states
 last_command
-shuttle_command_state
-time_since_last_sensor_event
 ```
 
-Exact Gazebo pose, true shuttle segment, arc-length position,
-distance-to-switch, normalized rail position, and reset/evaluation internals are
-not part of `model_input`. Those values may appear only under `privileged_eval`
-or debug fields. Use `privileged_eval` for offline scoring, oracle baselines,
-reset labels, and auditing; do not feed it to a learned policy.
+Binary sensor bits, switch/stopper states, shuttle command state,
+time-since-last-sensor-event, exact Gazebo pose, true shuttle segment,
+arc-length position, distance-to-switch, normalized rail position, and
+reset/evaluation internals are not part of `model_input`. Those values may
+appear only under `privileged_eval`, `structured_rail_state`, `observation.state`,
+or debug fields. Use them for expert execution, offline scoring, oracle
+baselines, reset labels, and auditing; do not feed them to a learned VLA policy.
 
 ## Why Images Matter
 
-The rail sensors are sparse binary sensors. A model may know that `DZI2R` or
-`DA3IL` is active, but most of the shuttle motion happens between sensors where
-the binary state alone is ambiguous. The overhead images provide the missing
-visual continuity: shuttle location between sensors, station markers,
-inspection markers, obstacle markers, and visual station occupancy cues.
+The rail sensors are sparse binary sensors and are still useful for generating
+correct demonstrations. They are not model-facing policy input. The overhead
+images provide the visual signal the policy must use: shuttle location between
+sensors, independently movable right/left obstacle markers, and station
+occupancy inferred from the black shuttle covering or revealing slot fiducials.
+Station-specific colored strips and green inspection disks are not used as
+model-facing visual shortcuts.
 
 This is why the project evaluates at least two policy families:
 
-- `state_only`: language plus binary sensor/switch/stopper state.
-- `vla`: language plus overhead images plus the same binary state.
+- `state_only`: language plus binary sensor/switch/stopper state, used only as
+  an ablation baseline.
+- `vla`: language plus overhead images, matching the deployable policy input.
 
 The expected research signal is the gap between these two policies on tasks
 where binary sensors alone are under-informative.
 
 ## Event-Level Action Schema V2
 
-Training labels are event-level decisions, not repeated framewise commands. Each
-training row represents:
+Training labels are event-level direct decisions, not high-level route templates
+and not repeated framewise commands. Each training row represents:
 
 ```text
-observation_before_decision -> next_symbolic_event_action
+observation_before_decision -> next_direct_symbolic_event_action
 ```
 
 The schema-v2 primitive set is:
@@ -85,6 +85,11 @@ INTERIOR" cannot accidentally change A1, A2, or A4. The action vector also
 stores `side`, explicit shuttle `speed_mps`, `wait_condition`, `target_id`,
 and `reason`.
 
+This action vector is the intended learned-model output. `route_template`
+commands remain useful for expert demonstration generation and benchmark
+orchestration, but the model should ultimately emit the event-level vector or an
+equivalent primitive JSON command.
+
 ## Scenario Families
 
 Use the scenario families to build a balanced dataset and report per-family
@@ -96,20 +101,27 @@ loop_entry
 station_navigation
 stopper
 exterior_loop
-visual_stop
-unknown_position
-sensor_dropout
 visual_target
 obstacle_stop
 emergency
 ```
 
-The perception/recovery scenarios include `unknown_position_recovery`,
-`visual_stop_before_A3`, `visual_stop_before_A4`,
-`visual_center_at_station`, `sensor_dropout_route`, `visual_marker_target`, and
-`visual_obstacle_stop`. These scenarios are designed so privileged Gazebo state
-can be used for reset/evaluation, while the model still receives only sparse
-binary state plus images.
+The retained perception/recovery scenario is `left_slot3_kuka_then_slot2`.
+Plain stopper-stop and station-navigation motions remain in the rail
+scenario group, so they are not duplicated as visual scenarios. Synthetic
+unknown-position recovery and sensor-dropout cases are intentionally excluded
+from the research set because they do not add a clear model-facing visual
+question. Stopper-only visual obstacle stops are excluded for the same reason.
+The obstacle-approach set adds
+`right_obstacle_aware_route` and `left_obstacle_aware_route`, where the expert
+reads a terminal-controlled visual-only obstacle pose. The scenario itself does
+not move or hide the obstacle. The task is one big exterior-loop lap: if the
+obstacle is close enough to the exterior rail path, the shuttle stops at the
+expert-computed point just before it and the episode ends there; if the obstacle
+is clear of the exterior loop, the shuttle completes the lap. These scenarios
+are designed so privileged Gazebo state can be used for reset/evaluation, while
+the model still receives only schema-v3 visual
+`model_input`.
 
 ## Dataset Export
 
@@ -131,8 +143,11 @@ meta/training_events.jsonl             # flattened training export
 ```
 
 Each training row contains `episode_id`, `step_index`, `task`,
-`observation.images.*`, `observation.state`, `action`, and `privileged_eval`.
-Use `events.jsonl` or `meta/training_events.jsonl` for learning. Do not train on
+`model_input`, `observation.images.*`, `observation.state`, `action`, and
+`privileged_eval`. Use only `model_input` plus the event action label for learned
+VLA policies. `observation.state`, `structured_rail_state`, and
+`privileged_eval` are for audits, ablations, and oracle evaluation. Use
+`events.jsonl` or `meta/training_events.jsonl` for learning. Do not train on
 `data.jsonl`, because it is framewise replay and can repeat the same command
 many times.
 
@@ -158,16 +173,16 @@ task_family_metrics.csv
 
 The baseline set is:
 
-- `state_only`: language plus sparse binary state predicts the event action.
-- `vla`: language plus overhead images plus sparse binary state predicts the
-  event action.
+- `state_only`: language plus sparse binary state predicts the event action as a
+  non-deployable ablation.
+- `vla`: language plus overhead images predicts the event action.
 - `oracle`: privileged replay upper bound for checking the evaluation pipeline.
 
 Report `task_success`, `action_accuracy`, `primitive_accuracy`,
 `side_accuracy`, `device_accuracy`, `completion_time`, `command_count`,
 `illegal_proposal_rate`, and `rejected_action_rate` per task family. Also report
-`unknown_position_success`, `sensor_dropout_success`, `visual_target_success`,
-and `obstacle_stop_success` for the perception-heavy families.
+`visual_target_success` and `obstacle_stop_success` for the perception-heavy
+families.
 
 ## Eval Commands
 

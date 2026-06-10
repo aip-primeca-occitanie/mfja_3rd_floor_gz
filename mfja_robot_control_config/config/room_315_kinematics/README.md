@@ -159,6 +159,8 @@ uses the existing Gazebo create/remove services. Markers are static SDF models
 with a single visual and no collision element, so they do not affect physics.
 Markers are spawned gradually instead of all at once so Gazebo has time to
 accept every create request.
+Runtime delete/recreate color refreshes are disabled by default to avoid Gazebo
+remove errors when a marker has not yet been inserted into the world.
 
 Colors:
 

@@ -3,6 +3,9 @@
   <material name="yaskawa_blue">
     <color rgba="0.10 0.22 0.62 1.0"/>
   </material>
+  <material name="zimmer_dark">
+    <color rgba="0.22 0.23 0.23 1.0"/>
+  </material>
 
   <link name="base_link">
     <visual>
@@ -11,11 +14,6 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/base_link.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_1_s">
@@ -25,11 +23,6 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_1_s.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_2_l">
@@ -39,11 +32,6 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_2_l.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_3_u">
@@ -53,11 +41,6 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_3_u.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_4_r">
@@ -67,11 +50,6 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_4_r.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_5_b">
@@ -81,11 +59,6 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_5_b.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_6_t">
@@ -95,15 +68,20 @@
       </geometry>
       <material name="yaskawa_blue"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10dt/collision/link_6_t.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="tool0"/>
   <link name="base"/>
+  <link name="gripper">
+    <visual>
+      <origin xyz="0 0 0.0186" rpy="-1.57079632679 0 0"/>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/gripper/lwr50l_03_00001_a_000.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="zimmer_dark"/>
+    </visual>
+  </link>
+  <link name="gripper_tcp"/>
 
   <joint name="joint_1_s" type="revolute">
     <origin xyz="0 0 0.275" rpy="0 0 0"/>
@@ -157,6 +135,18 @@
     <origin xyz="0 0 -0.170" rpy="3.14159265359 0 0"/>
     <parent link="link_6_t"/>
     <child link="tool0"/>
+  </joint>
+
+  <joint name="tool0-gripper" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="tool0"/>
+    <child link="gripper"/>
+  </joint>
+
+  <joint name="gripper_tcp_joint" type="fixed">
+    <origin xyz="0 0 0.1515" rpy="0 0 0"/>
+    <parent link="gripper"/>
+    <child link="gripper_tcp"/>
   </joint>
 
   <joint name="base_link-base" type="fixed">

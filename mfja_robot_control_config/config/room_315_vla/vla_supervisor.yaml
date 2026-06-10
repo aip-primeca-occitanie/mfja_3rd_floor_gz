@@ -1,11 +1,12 @@
 schema_version: 3
 description: >
-  High-level VLA task templates for Room 315. A real Vision-Language-Action
-  model should publish one of these task templates, or an equivalent JSON
-  command, to /room_315/vla/command. The supervisor validates the current rail
-  state, chooses an available shuttle from the requested source slots, expands
-  the task into existing rail primitives, and keeps emergency-stop gating in one
-  place.
+  High-level task templates for expert demos, manual checks, and benchmarks in
+  Room 315. The learned VLA policy is expected to output event-level direct
+  symbolic commands, preferably schema-v2 action_vector values, not these
+  templates as its final action interface. The supervisor still accepts
+  route_template commands so demos and benchmarks can expand them into
+  deterministic primitive rail commands while keeping emergency-stop gating in
+  one place.
 
 defaults:
   speed: 0.2

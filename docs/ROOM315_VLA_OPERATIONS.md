@@ -3,18 +3,13 @@
 ### 11. Run the Room 315 VLA Supervisor
 
 The VLA experiment layer adds independent right-rail and left-rail RGB-D
-cameras and a ROS action supervisor. The supervisor supports two command
-levels:
-
-- **High-level research/benchmark commands**: `route_template` tasks such as
-  `right_yaskawa_to_staubli`. These are the preferred VLA learning and
-  evaluation targets. The supervisor expands them into deterministic primitive
-  rail commands, tracks task phases, verifies success/failure, and publishes
-  `active_tasks` plus bounded `completed_tasks` in `/room_315/vla/status`.
-- **Primitive debugging/internal commands**: `switches`, `stoppers`, `shuttle`,
-  `route_shuttle`, `stop_all`, and emergency-stop commands. These remain
-  backward-compatible and are useful when manually inspecting switch, stopper,
-  and shuttle behavior.
+cameras and a ROS action supervisor. The learned VLA policy is intended to
+output event-level direct symbolic commands: preferably a schema-v2
+`action_vector`, or an equivalent JSON primitive command such as `switches`,
+`stoppers`, `shuttle`, `stop_all`, or `emergency_stop`. `route_template` tasks
+such as `right_yaskawa_to_staubli` are still supported for expert
+demonstration generation, manual checks, and benchmark orchestration, but they
+are not the final model-output interface.
 
 The supervisor never executes raw model actions directly. Incoming symbolic
 actions first pass through the Room 315 safety decoder, which normalizes the
@@ -59,8 +54,10 @@ ros2 topic echo /room_315/vla/status std_msgs/msg/String
 ```
 
 For model-facing experiments, run the HTTP VLA agent with a local or remote
-endpoint. The endpoint receives `model_input_schema_version: 2`,
-`model_input`, and the allowed action names, then returns a JSON action:
+endpoint. The endpoint receives `model_input_schema_version: 3`,
+`model_input`, the event-level action-vector contract, and allowed fallback JSON
+commands. The `allowed_actions` sent to the model intentionally excludes
+`route_template`; the preferred response is `{"action_vector": [...]}`:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
@@ -74,8 +71,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_vla_agent_http_endpoint:=http://127.0.0.1:8000/plan
 ```
 
-Without a model endpoint, publish a task template directly to the supervisor.
-With the HTTP agent running, publish high-level user goals to the agent:
+Without a model endpoint, publish a task template directly to the supervisor to
+exercise the expert/demo path. With the HTTP agent running, publish high-level
+user goals to the agent; the model should answer with an event-level command:
 
 ```bash
 ros2 topic pub --once /room_315/vla/user_goal std_msgs/msg/String \
@@ -85,11 +83,11 @@ ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
   "{data: '{\"action\":\"route_template\",\"template\":\"right_yaskawa_to_staubli\"}'}"
 ```
 
-The VLA layer uses task-level templates instead of robot-specific shortcut names.
-For transport tasks, the supervisor rejects the command unless it currently
-detects an available shuttle on one of the source slot sensors. When the selected
-shuttle reaches one of the target slot sensors, the supervisor stops it and marks
-the task complete.
+The demo and benchmark layer uses task-level templates instead of
+robot-specific shortcut names. For transport templates, the supervisor rejects
+the command unless it currently detects an available shuttle on one of the source
+slot sensors. When the selected shuttle reaches one of the target slot sensors,
+the supervisor stops it and marks the task complete.
 
 The Room 315 VLA station mapping is:
 
@@ -171,9 +169,9 @@ ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String
 
 The recorded action vector follows
 `mfja_robot_control_config/config/room_315_vla/action_space.yaml`. This keeps
-the learning target compact and reproducible: a policy predicts the next
-event-level symbolic action, then a post-processor converts that accepted event
-action to the JSON command accepted by the supervisor.
+the learning target compact and reproducible: a policy predicts the next direct
+event-level symbolic action, then the supervisor decodes and safety-checks that
+action before publishing rail commands.
 
 Action space schema v2 uses only these primitives: `WAIT`, `DONE`,
 `SET_SWITCHES`, `SET_STOPPERS`, `SHUTTLE_ON`, `STOP_NOW`, and
@@ -201,11 +199,10 @@ publishing the ROS switch command.
 Each episode now has two JSONL files:
 
 - `events.jsonl`: the training file. Each row is one decision event:
-  `observation_before_decision -> next_symbolic_action`. Events are written only
-  for meaningful actions such as `route_template`, `route_template_phase`,
-  `switches`, `stoppers`, `shuttle` `ON/OFF`, `route_shuttle`, and terminal
-  success/failure/stopped labels, but the training `next_action` is normalized
-  into the schema-v2 primitive set.
+  `observation_before_decision -> next_symbolic_action`. Even when demos are
+  triggered by `route_template`, the trainable `action` and `action_vector` are
+  normalized into the schema-v2 event-level primitive set. The learned model
+  should emit this event-level action, not repeat the route template.
 - `data.jsonl`: raw framewise replay. It keeps camera references, structured
   status, and the latest command for auditing and temporal reconstruction, but
   rows are marked `raw_replay_only` and should not be used as repeated
@@ -243,46 +240,106 @@ Each extracted row has the training shape:
 }
 ```
 
-The model-facing observation is `model_input_schema_version: 2`. Train and serve
-models from the `model_input` object only. Its fields are intentionally limited
-to `language`, `overhead_images`, `binary_sensor_bits`, `switch_states`,
-`stopper_states`, `last_command`, `shuttle_command_state`, and
-`time_since_last_sensor_event`. Exact Gazebo pose, true shuttle segment,
+The model-facing observation is `model_input_schema_version: 3`. Train and serve
+learned VLA policies from the `model_input` object only. Its fields are
+intentionally limited to `language`, `overhead_images`, and `last_command`.
+Binary sensor bits, switch/stopper states, shuttle command state,
+time-since-last-sensor-event, exact Gazebo pose, true shuttle segment,
 distance-to-switch, and normalized-position values are excluded from
-`model_input`; when needed for offline analysis they live under
-`privileged_eval`/`debug`, not in the policy input.
+`model_input`; when needed for expert execution, offline analysis, or debugging
+they live under `privileged_eval`, `structured_rail_state`, `observation.state`,
+or debug fields, not in the policy input.
 
-The training observation vector is identity-aware. It no longer uses sensor
-counts as primary features. Instead, `observation.state` contains a stable
-multi-hot feature for each known right/left rail sensor, including slot sensors
-such as `DZI2R`/`DZI3R`, switch approach sensors such as `DA3IR`, and
-`A*_STOPPER_SENSOR` entries. Switch states are normalized before encoding:
-`E`, `EXTERIOR`, and `exterior` all become `EXTERIOR`; `I`, `INTERIOR`, and
-`interior` all become `INTERIOR`; unknown or missing values become `UNKNOWN`.
-Old count-style values are retained only in `observation.debug_counts` for
-auditing, not as the primary training state.
+The raw event rows still retain an identity-aware `observation.state` vector for
+auditing and state-only ablations. It contains stable multi-hot features for each
+known right/left rail sensor, including slot sensors such as `DZI2R`/`DZI3R`,
+switch approach sensors such as `DA3IR`, and `A*_STOPPER_SENSOR` entries. Do not
+use `observation.state` when training the deployable VLA policy; use it only for
+diagnostics and baseline comparisons.
 
-The teleoperation scenario generator now includes perception/recovery tasks
-that are useful for training beyond simple route templates:
-`unknown_position_recovery`, `visual_stop_before_A3`,
-`visual_stop_before_A4`, `visual_center_at_station`,
-`sensor_dropout_route`, `visual_marker_target`, and
-`visual_obstacle_stop`. These scenarios still publish ordinary primitive VLA
-commands, but their labels emphasize visual localization, binary sensor
-reacquisition, stopper-based fallback, and obstacle stopping. Expert-side
-Gazebo state may be used by the generator for safe reset/recovery and by the
+The teleoperation scenario generator now keeps the nontrivial visual research
+tasks: `left_slot3_kuka_then_slot2`, `right_obstacle_aware_route`, and
+`left_obstacle_aware_route`. These scenarios still publish ordinary primitive
+VLA commands, but their labels emphasize camera-visible shuttle motion,
+KUKA/left-shuttle sequencing, and obstacle-aware go/stop decisions. Synthetic
+unknown-position recovery, stopper-only visual obstacle stops, and sensor-dropout
+cases are intentionally excluded from the research scenario set because they do
+not add a clear model-facing visual question. Expert-side sensors and Gazebo
+state may still be used by the generator for safe reset/recovery and by the
 recorder under `privileged_eval`, but the policy input remains limited to
-schema-v2 `model_input`: language, overhead images, binary sensor bits,
-switch/stopper states, last command, shuttle command state, and sensor-event
-timing.
+schema-v3 `model_input`: language, overhead images, and last command.
 
-The overhead-camera scene also contains visual-only evaluation markers:
-colored station strips, green inspection disks, empty/occupied station legend
-markers, and a removable magenta obstacle marker entity named
-`room315_vla_removable_obstacle_marker`. These objects are deliberately not
+The overhead-camera scene keeps station cues minimal: slot fiducials remain
+visible, while dedicated colored station strips, green inspection disks, and
+empty/occupied station legend markers are not present. Station occupancy is
+meant to be inferred visually from whether the black shuttle covers or reveals
+the station/slot fiducials. Two independent visual obstacle entities are still
+available for obstacle-stop scenarios: `room315_vla_right_obstacle_marker` and
+`room315_vla_left_obstacle_marker`. These visual cues are deliberately not
 added to `observation.state` or `model_input`; they are learned only through
-the camera images. Their definitions and station-occupancy labels are written
-under `privileged_eval.visual_eval_labels` for evaluation and auditing.
+the camera images. Occupancy labels derived from binary slot sensors are
+written only under `privileged_eval.visual_eval_labels` for evaluation and
+auditing.
+
+Move the right or left visual obstacle with explicit coordinates while Gazebo
+is running. The tool calls Gazebo `set_pose` and also writes
+`~/.ros/room315_vla_obstacles.json`, which `m10`/`m11` read at scenario start
+inside the same Gazebo run:
+
+```bash
+ros2 run mfja_robot_control_config room_315_vla_obstacle_tool.py \
+  --side right --x -14.18 --y -4.68
+
+ros2 run mfja_robot_control_config room_315_vla_obstacle_tool.py \
+  --side left --x -9.86 --y -4.68 --z 0.856 --yaw 0.0
+```
+
+Use a negative `--z`, such as `--z -5.0`, to hide one obstacle without deleting
+the model. To create a non-blocking example, move the obstacle away from the rail
+path, for example `--side right --x -15.24 --y -5.54`; then run `m10` and the
+shuttle should complete one exterior-loop lap.
+
+The teleop generator first reads the pose cache written by
+`room_315_vla_obstacle_tool.py`; it does not call `set_pose` or move the
+obstacle itself. `room_315_only.launch.py` and `full_floor.launch.py` clear this
+cache by default at simulation startup, because Gazebo resets the obstacle model
+to the world-file pose on every restart. This prevents `m10`/`m11` from stopping
+at a stale obstacle position from a previous run. Use
+`room315_clear_vla_obstacle_pose_cache:=false` only if you intentionally want to
+keep the old cache across launches.
+
+If the obstacle is within
+`*_manual_obstacle_path_threshold_m` of the exterior rail path, it runs the
+shuttle on the exterior loop and sends `OFF` when the shuttle reaches
+`*_manual_obstacle_stop_before_m` before the obstacle. The episode ends there.
+If the obstacle is farther away, or hidden below
+`*_manual_obstacle_hidden_z_threshold_m`, it opens the route and completes one
+exterior-loop lap.
+
+```bash
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m10
+```
+
+Use `m11` for the same obstacle-aware behavior on the left rail.
+
+Use `-p right_manual_obstacle_use_pose_file:=false` if you want to ignore the
+cache and provide coordinates directly with
+`right_manual_obstacle_x/y/z/yaw`. The obstacle-aware scenarios always use the
+exterior loop; they do not reroute through the interior branch.
+Use `right_manual_obstacle_stop_before_m` or
+`left_manual_obstacle_stop_before_m` to tune how close the shuttle stops before
+the obstacle. The default is `0.20`.
+If the teleop log says `source=ros_parameters`, the scenario is using the
+default/parameter pose rather than the cache from `room_315_vla_obstacle_tool.py`.
+That is expected immediately after a fresh simulation launch. After running the
+obstacle tool inside the same launch, the log should say `source=pose_file:...`.
+
+```bash
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m11 \
+  -p left_manual_obstacle_stop_before_m:=0.18
+```
 
 Run the lightweight baseline evaluator before training a larger policy:
 
@@ -296,9 +353,9 @@ ros2 run mfja_robot_control_config room_315_vla_baseline_eval.py \
 It evaluates three deterministic baselines on event-level labels:
 
 - `state_only`: `language + binary_state -> event action`, using binary sensor
-  bits plus normalized switch/stopper/last-command state, with no images.
-- `vla`: `language + overhead_images + binary_state -> event action`, using the
-  same state plus simple overhead-image color/content features.
+  bits plus normalized switch/stopper state as a non-deployable ablation.
+- `vla`: `language + overhead_images -> event action`, using the deployable
+  visual policy input plus simple overhead-image color/content features.
 - `oracle`: a privileged replay upper bound from the expert event labels. This
   is not a deployable policy; it checks the evaluation pipeline and defines the
   offline upper bound.
@@ -316,14 +373,15 @@ Report `task_success`, `action_accuracy`, `primitive_accuracy`,
 `side_accuracy`, `device_accuracy`, `completion_time`, `command_count`,
 `illegal_proposal_rate`, and `rejected_action_rate` per task family. The
 scenario-family success metrics are also broken out as
-`unknown_position_success`, `sensor_dropout_success`, `visual_target_success`,
-and `obstacle_stop_success`. Use the oracle gap when comparing learned VLA
-policies.
+`visual_target_success` and `obstacle_stop_success`. Use the oracle gap when
+comparing learned VLA policies.
 
-To evaluate the task-level VLA layer as a research baseline, enable the
-benchmark runner. It dispatches `route_template` commands automatically, waits
-for supervisor task success/failure from `active_tasks` and `completed_tasks`,
-optionally marks dataset episodes as success/failure, and writes JSONL metrics:
+To evaluate the expert/demo task layer, enable the benchmark runner. It
+dispatches `route_template` commands automatically, waits for supervisor task
+success/failure from `active_tasks` and `completed_tasks`, optionally marks
+dataset episodes as success/failure, and writes JSONL metrics. This benchmark is
+useful for collecting and checking episodes; it is separate from the final
+event-level model-output contract:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
@@ -367,10 +425,9 @@ therefore visible in the benchmark output.
 
 For another VLA server, use `room315_vla_agent_provider:=http` and provide
 `room315_vla_agent_http_endpoint:=http://host:port/path`. The endpoint receives
-the schema-v2 `model_input` object with language, overhead image JPEGs as
-base64, binary sensor bits, normalized switches/stoppers, last command, shuttle
-command state, and sensor-event timing. It does not receive exact Gazebo pose or
-true segment state.
+the schema-v3 `model_input` object with language, overhead image JPEGs as
+base64, and last command. It does not receive binary sensor bits,
+switch/stopper states, exact Gazebo pose, or true segment state.
 
 Send a high-level route template:
 

@@ -6,6 +6,9 @@
   <material name="kuka_dark">
     <color rgba="0.18 0.18 0.18 1.0"/>
   </material>
+  <material name="schunk_dark">
+    <color rgba="0.22 0.23 0.23 1.0"/>
+  </material>
 
   <link name="base_link">
     <visual>
@@ -14,11 +17,6 @@
       </geometry>
       <material name="kuka_dark"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/base_link.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_1">
@@ -28,11 +26,6 @@
       </geometry>
       <material name="kuka_orange"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_1.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_2">
@@ -42,11 +35,6 @@
       </geometry>
       <material name="kuka_orange"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_2.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_3">
@@ -56,11 +44,6 @@
       </geometry>
       <material name="kuka_orange"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_3.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_4">
@@ -70,11 +53,6 @@
       </geometry>
       <material name="kuka_orange"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_4.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_5">
@@ -84,11 +62,6 @@
       </geometry>
       <material name="kuka_orange"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_5.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="link_6">
@@ -98,16 +71,21 @@
       </geometry>
       <material name="kuka_dark"/>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_6.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <link name="flange"/>
   <link name="base"/>
   <link name="tool0"/>
+  <link name="gripper">
+    <visual>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 0"/>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/gripper/schunk_kgg_140_60_011l5_mss_22_01.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="schunk_dark"/>
+    </visual>
+  </link>
+  <link name="gripper_tcp"/>
 
   <joint name="joint_a1" type="revolute">
     <origin xyz="0 0 0.400" rpy="0 0 0"/>
@@ -173,5 +151,17 @@
     <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
     <parent link="flange"/>
     <child link="tool0"/>
+  </joint>
+
+  <joint name="tool0_gripper" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="tool0"/>
+    <child link="gripper"/>
+  </joint>
+
+  <joint name="gripper_tcp_joint" type="fixed">
+    <origin xyz="0 0 0.068" rpy="0 0 0"/>
+    <parent link="gripper"/>
+    <child link="gripper_tcp"/>
   </joint>
 </robot>

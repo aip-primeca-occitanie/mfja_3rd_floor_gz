@@ -407,6 +407,28 @@ source install/setup.bash</code></pre>
             </div>
           </div>
         </div>
+
+        <div class="callout">
+          To make Gazebo lighter, add <code>gui_config:=config/mfja_light.gui.config</code>
+          to launch commands that open the GUI. The Room 315 and full-floor world
+          files already disable scene shadows with <code>&lt;shadows&gt;false&lt;/shadows&gt;</code>.
+          The light GUI is meant for recording/performance and does not include the
+          full move/rotate toolbar. Use <code>gui_config:=config/mfja_default.gui.config</code>
+          when you need Gazebo tools such as <code>TransformControl</code>, entity
+          movement, and pose inspection.
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Light Gazebo GUI option</span><button class="copy-btn" data-copy="cmd-light-gazebo-gui">Copy</button></div>
+          <pre><code id="cmd-light-gazebo-gui"># Add this launch argument when running Gazebo with gui:=true:
+gui_config:=config/mfja_light.gui.config \</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Full Gazebo GUI tools</span><button class="copy-btn" data-copy="cmd-full-gazebo-gui">Copy</button></div>
+          <pre><code id="cmd-full-gazebo-gui"># Use this when you need to move entities or inspect exact poses in Gazebo:
+gui_config:=config/mfja_default.gui.config \</code></pre>
+        </div>
       </section>
 
       <section id="topic-map">
@@ -1075,6 +1097,9 @@ ros2 topic list | grep -E '^/(tiago1|tiago_base1)/'</code></pre>
           TIAGo variants also have <code>/&lt;robot_name&gt;/cmd_vel</code> for mobile-base motion.
           For <code>tiago_base</code>, <code>/joint_trajectory</code> is only for the
           existing torso joint; there is no arm or head to command.
+          The helper <code>robot_joint_command.py</code> accepts <code>--unit rad</code>
+          or <code>--unit deg</code>. Degree inputs are converted to radians for
+          angular joints; linear joints such as <code>torso_lift_joint</code> stay in meters.
         </p>
 
         <table>
@@ -1097,8 +1122,10 @@ ros2 topic list | grep -E '^/(tiago1|tiago_base1)/'</code></pre>
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic list | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1|tiago_base1)/'
-ros2 topic info /kuka1/joint_trajectory
+ros2 run mfja_robot_control_config robot_joint_command.py --list
+ros2 topic list --no-daemon | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1|tiago_base1)/'
+ros2 topic info /kuka1/joint_trajectory -v
+ros2 topic echo --once /kuka1/joint_states
 ros2 interface show trajectory_msgs/msg/JointTrajectory
 ros2 interface show geometry_msgs/msg/Twist</code></pre>
         </div>
@@ -1110,6 +1137,18 @@ ros2 interface show geometry_msgs/msg/Twist</code></pre>
           Use this scenario when you want to command one robot manually. First launch the full floor with only the robot you want.
           Change <code>robots:=kuka</code> to <code>staubli</code>, <code>hc10</code>, <code>hc10dt</code>, <code>tiago1</code>, or <code>tiago_base1</code>.
         </p>
+        <p>
+          Keep only one robot launch running at a time. If motion commands do not move the robot, stop old Gazebo and bridge processes, reset ROS discovery, then launch again before publishing a trajectory.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Clean stale simulation processes</span><button class="copy-btn" data-copy="cmd-clean-stale-sim">Copy</button></div>
+          <pre><code id="cmd-clean-stale-sim">pkill -f "ros2 launch mfja_3rd_floor_bringup" || true
+pkill -f "gz sim" || true
+pkill -f "parameter_bridge" || true
+ros2 daemon stop
+ros2 daemon start</code></pre>
+        </div>
 
         <div class="command">
           <div class="command-bar"><span>Launch full floor with one robot</span><button class="copy-btn" data-copy="cmd-full-floor-one-robot">Copy</button></div>
@@ -1124,6 +1163,15 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   enable_room315_kinematic_shuttles:=false</code></pre>
         </div>
 
+        <div class="command">
+          <div class="command-bar"><span>Wait for robot command bridge</span><button class="copy-btn" data-copy="cmd-wait-kuka-bridge">Copy</button></div>
+          <pre><code id="cmd-wait-kuka-bridge">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic info /kuka1/joint_trajectory -v</code></pre>
+        </div>
+
         <details open>
           <summary>Move KUKA KR6 R900 Sixx</summary>
           <div class="details-body">
@@ -1133,8 +1181,11 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.6,-1.0,1.1,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit rad \
+  --positions 0.6 -1.0 1.1 0.0 0.6 0.0
+
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit deg \
+  --positions 34.38 -57.30 63.03 0.0 34.38 0.0</code></pre>
             </div>
           </div>
         </details>
@@ -1148,8 +1199,11 @@ ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajector
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.1,0.4,-0.6,0.0,0.5,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py staubli --unit rad \
+  --positions 0.1 0.4 -0.6 0.0 0.5 0.0
+
+ros2 run mfja_robot_control_config robot_joint_command.py staubli --unit deg \
+  --positions 5.73 22.92 -34.38 0.0 28.65 0.0</code></pre>
             </div>
           </div>
         </details>
@@ -1163,8 +1217,11 @@ ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajec
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.2,-0.7,0.9,0.0,0.4,0.2], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py hc10 --unit rad \
+  --positions 0.2 -0.7 0.9 0.0 0.4 0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py hc10 --unit deg \
+  --positions 11.46 -40.11 51.57 0.0 22.92 11.46</code></pre>
             </div>
           </div>
         </details>
@@ -1178,8 +1235,11 @@ ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/Joint
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [-0.2,-0.5,0.8,0.0,0.5,-0.2], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py hc10dt --unit rad \
+  --positions -0.2 -0.5 0.8 0.0 0.5 -0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py hc10dt --unit deg \
+  --positions -11.46 -28.65 45.84 0.0 28.65 -11.46</code></pre>
             </div>
           </div>
         </details>
@@ -1194,8 +1254,11 @@ ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/Joi
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /tiago1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint','arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], time_from_start: {sec: 4, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 --unit rad \
+  --positions 0.10 0.3 -0.5 -0.4 1.0 0.2 -0.2 0.1 0.2 -0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 --unit deg \
+  --positions 0.10 17.19 -28.65 -22.92 57.30 11.46 -11.46 5.73 11.46 -11.46</code></pre>
               </div>
               <div class="command">
                 <div class="command-bar"><span>Move and stop tiago1 base</span><button class="copy-btn" data-copy="cmd-move-tiago-base">Copy</button></div>
@@ -1223,8 +1286,8 @@ ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /tiago_base1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['torso_lift_joint'], points: [{positions: [0.10], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py tiago_base1 --unit rad \
+  --positions 0.10</code></pre>
               </div>
               <div class="command">
                 <div class="command-bar"><span>Move and stop tiago_base1</span><button class="copy-btn" data-copy="cmd-move-tiago-base1-mobile">Copy</button></div>

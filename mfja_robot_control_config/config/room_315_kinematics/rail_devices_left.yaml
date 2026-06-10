@@ -85,9 +85,12 @@ position_sensors:
   radius_m: 0.07
 - name: DA4L
   switch: A4
-  segment: A2I
-  s_ratio: 0.966501924
   radius_m: 0.07
+  points:
+  - segment: A2E
+    s_ratio: 0.966501924
+  - segment: A2I
+    s_ratio: 0.966501924
 - name: DA4EL
   switch: A4
   branch: E

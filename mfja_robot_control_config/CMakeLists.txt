@@ -14,6 +14,7 @@ install(
   FILES
     config/gazebo_params.yaml
     config/mfja_default.gui.config
+    config/mfja_light.gui.config
     config/robots.yaml
     config/robots_room_315_only.yaml
   DESTINATION share/${PROJECT_NAME}/config
@@ -45,6 +46,8 @@ install(
 install(
   PROGRAMS
     scripts/conveyor_loop_mode_controller.py
+    scripts/presentation_left_slot3_kuka_slot2.py
+    scripts/robot_joint_command.py
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
@@ -53,6 +56,7 @@ install(
     scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
+    scripts/room_315_vla_obstacle_tool.py
     scripts/room_315_vla_supervisor.py
     scripts/vla_teleop_generator.py
   DESTINATION lib/${PROJECT_NAME}
@@ -61,6 +65,18 @@ install(
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
 
+  ament_add_pytest_test(
+    test_robot_joint_command
+    test/test_robot_joint_command.py
+  )
+  ament_add_pytest_test(
+    test_room315_device_marker_lifecycle
+    test/test_room315_device_marker_lifecycle.py
+  )
+  ament_add_pytest_test(
+    test_presentation_left_slot3_kuka_slot2
+    test/test_presentation_left_slot3_kuka_slot2.py
+  )
   ament_add_pytest_test(
     test_room315_rail_devices
     test/test_room315_rail_devices.py

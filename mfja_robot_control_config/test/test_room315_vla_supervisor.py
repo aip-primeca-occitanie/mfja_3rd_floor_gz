@@ -304,6 +304,7 @@ def test_safety_decoder_metrics_track_illegal_proposal_rate():
     assert supervisor.safety_metrics['accepted_actions'] == 1
     assert supervisor.safety_metrics['rejected_actions'] == 1
     assert supervisor.safety_metrics['illegal_proposal_rate'] == 0.5
+    assert supervisor.safety_metrics['rejected_action_rate'] == 0.5
     assert supervisor.safety_metrics['rejection_reasons'][rejected['reason']] == 1
 
 

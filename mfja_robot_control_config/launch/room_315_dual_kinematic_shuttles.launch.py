@@ -19,7 +19,14 @@ def generate_launch_description():
         'switch_motion_delay_s': LaunchConfiguration('switch_motion_delay_s'),
         'stopper_motion_delay_s': LaunchConfiguration('stopper_motion_delay_s'),
         'sensor_publish_rate_hz': LaunchConfiguration('sensor_publish_rate_hz'),
+        'sync_sensor_feedback_to_motion_tick': LaunchConfiguration(
+            'sync_sensor_feedback_to_motion_tick'
+        ),
+        'gazebo_set_pose_rate_hz': LaunchConfiguration('gazebo_set_pose_rate_hz'),
         'show_device_markers': LaunchConfiguration('show_device_markers'),
+        'sensor_marker_visual_hold_s': LaunchConfiguration(
+            'sensor_marker_visual_hold_s'
+        ),
         'visual_debug_colors': LaunchConfiguration('visual_debug_colors'),
         'use_sim_time': LaunchConfiguration('use_sim_time'),
     }
@@ -98,14 +105,30 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'sensor_publish_rate_hz',
-            default_value='10.0',
+            default_value='30.0',
             description='Publish rate for binary sensor feedback.',
+        ),
+        DeclareLaunchArgument(
+            'sync_sensor_feedback_to_motion_tick',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Publish sensor feedback from the same tick that updates shuttle motion.',
+        ),
+        DeclareLaunchArgument(
+            'gazebo_set_pose_rate_hz',
+            default_value='30.0',
+            description='Maximum Gazebo set_pose rate for visible shuttle motion.',
         ),
         DeclareLaunchArgument(
             'show_device_markers',
             default_value='true',
             choices=['true', 'false'],
             description='Spawn visual markers for position sensors and stoppers.',
+        ),
+        DeclareLaunchArgument(
+            'sensor_marker_visual_hold_s',
+            default_value='0.35',
+            description='Minimum seconds a crossed position sensor marker stays green.',
         ),
         DeclareLaunchArgument(
             'visual_debug_colors',

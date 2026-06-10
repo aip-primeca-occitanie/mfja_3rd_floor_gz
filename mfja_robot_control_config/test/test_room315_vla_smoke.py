@@ -91,7 +91,7 @@ def _fake_recorder(module):
     recorder.episode_id = 'episode_000001_smoke'
     recorder.frame_index = 0
     recorder.event_index = 0
-    recorder.latest_goal = 'visual_marker_target'
+    recorder.latest_goal = 'left_slot3_kuka_then_slot2'
     recorder.latest_task_index = 0
     recorder.latest_command = {'action': 'status'}
     recorder.latest_status = _status()
@@ -237,11 +237,8 @@ def _rails_for_safety():
 def test_smoke_has_one_episode_for_each_evaluator_task_family():
     evaluator = _load_eval()
     examples = {
-        'unknown_position': 'unknown_position_recovery',
-        'sensor_dropout': 'sensor_dropout_route',
-        'visual_target': 'visual_marker_target',
-        'obstacle_stop': 'visual_obstacle_stop',
-        'visual_stop': 'visual_stop_before_A3',
+        'visual_target': 'left_slot3_kuka_then_slot2',
+        'obstacle_stop': 'right_obstacle_aware_route',
         'loop_entry': 'right_enter_interior_loop',
         'transport': 'right_yaskawa_to_staubli',
         'station_navigation': 'center at station',
@@ -275,7 +272,7 @@ def test_smoke_has_one_episode_for_each_evaluator_task_family():
         assert metrics_by_family[family]['task_success'] == 1.0
 
 
-def test_smoke_model_input_has_no_exact_pose_leaks():
+def test_smoke_model_input_has_no_sensor_or_exact_pose_leaks():
     recorder = _load_recorder()
 
     model_input = recorder._model_input_from_status(
@@ -289,10 +286,16 @@ def test_smoke_model_input_has_no_exact_pose_leaks():
     serialized = json.dumps(model_input, sort_keys=True)
 
     assert set(model_input) == set(recorder.MODEL_INPUT_FIELDS)
-    assert model_input['binary_sensor_bits']['right']['DZI2R'] == 1
-    assert model_input['switch_states']['right']['A1'] == 'EXTERIOR'
-    assert model_input['switch_states']['right']['A2'] == 'INTERIOR'
     for forbidden in (
+        'binary_sensor_bits',
+        'switch_states',
+        'stopper_states',
+        'shuttle_command_state',
+        'time_since_last_sensor_event',
+        'DZI2R',
+        'DA3IL',
+        'EXTERIOR',
+        'INTERIOR',
         'A12E',
         'segment',
         '"x"',
@@ -305,7 +308,13 @@ def test_smoke_model_input_has_no_exact_pose_leaks():
     ):
         assert forbidden not in serialized
 
-    privileged = recorder._privileged_eval_from_status(_status())
+    privileged = recorder._privileged_eval_from_status(
+        _status(),
+        sensor_event_times={'right': 95.0, 'left': None},
+        now_s=100.0,
+    )
+    assert privileged['expert_sensor_state']['binary_sensor_bits']['right']['DZI2R'] == 1
+    assert privileged['expert_sensor_state']['switch_states']['right']['A2'] == 'INTERIOR'
     assert privileged['raw_shuttle_states']['right']['room315_right_shuttle_1']['segment'] == 'A12E'
 
 
@@ -324,8 +333,13 @@ def test_smoke_event_row_includes_images_binary_state_and_action():
     row = rows[0]
     assert row['observation.images.right_rail_rgb'].endswith('/right_rail_rgb/000000.jpg')
     assert row['observation.images.left_rail_rgb'].endswith('/left_rail_rgb/000000.jpg')
-    assert row['model_input']['binary_sensor_bits']['right']['DZI2R'] == 1
-    assert row['model_input']['binary_sensor_bits']['left']['DA3IL'] == 1
+    assert 'binary_sensor_bits' not in row['model_input']
+    assert 'auxiliary_targets' not in row['model_input']
+    assert row['auxiliary_targets']['switch_states']['right']['A2'] == 'INTERIOR'
+    assert row['auxiliary_targets']['stopper_states']['right']['A1'] == 'open'
+    assert row['auxiliary_targets']['shuttle_visual_region']['right']['region'] == 'yaskawa_hc10dt'
+    assert row['privileged_eval']['expert_sensor_state']['binary_sensor_bits']['right']['DZI2R'] == 1
+    assert row['privileged_eval']['expert_sensor_state']['binary_sensor_bits']['left']['DA3IL'] == 1
     assert row['structured_rail_state']['rails']['right']['sensor_multi_hot']['DZI2R'] == 1
     assert row['action']['primitive'] == 'SET_SWITCHES'
     assert row['action']['switch_mask']['A3'] == 1

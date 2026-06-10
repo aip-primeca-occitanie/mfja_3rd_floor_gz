@@ -1,0 +1,1442 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Room 315 VLA Runbook</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface-soft: #eef4f6;
+      --ink: #17212b;
+      --muted: #5d6b78;
+      --line: #d8e1e7;
+      --accent: #137c7f;
+      --accent-dark: #0d5f63;
+      --ok: #24704b;
+      --warning: #a85e00;
+      --code-bg: #101820;
+      --code-bar: #172431;
+      --code-ink: #e8eef4;
+      --radius: 8px;
+      --shadow: 0 12px 32px rgba(22, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      line-height: 1.7;
+    }
+
+    a {
+      color: var(--accent-dark);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px 22px 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent-dark);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.25rem);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 920px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 1.04rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 285px minmax(0, 1fr);
+      gap: 24px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 22px 48px;
+    }
+
+    nav {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    nav h2 {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+    }
+
+    nav a {
+      display: block;
+      padding: 7px 9px;
+      border-radius: 6px;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+
+    nav a:hover {
+      background: var(--surface-soft);
+      text-decoration: none;
+    }
+
+    main {
+      display: grid;
+      gap: 20px;
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.45rem;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      font-size: 1.06rem;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul,
+    ol {
+      margin: 10px 0 14px;
+      padding-inline-start: 22px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 0.92rem;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: start;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f8;
+      color: #273746;
+      font-weight: 800;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tile {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fbfcfd;
+      min-height: 100%;
+    }
+
+    .tile h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .callout {
+      border-inline-start: 4px solid var(--accent);
+      background: #eef7f7;
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+
+    .warning {
+      border-inline-start-color: var(--warning);
+      background: #fff5e6;
+    }
+
+    .success {
+      border-inline-start-color: var(--ok);
+      background: #edf8f2;
+    }
+
+    .command {
+      margin: 12px 0 18px;
+      border: 1px solid #263747;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--code-bg);
+      direction: ltr;
+    }
+
+    .command-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 8px 10px;
+      background: var(--code-bar);
+      border-bottom: 1px solid #2a3a49;
+      color: #d6e0ea;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .copy-btn {
+      border: 1px solid #476174;
+      border-radius: 6px;
+      background: #233444;
+      color: #f6f9fb;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 5px 10px;
+    }
+
+    .copy-btn:hover {
+      background: #2d4355;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow-x: auto;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      font-size: 0.89rem;
+      line-height: 1.45;
+      tab-size: 2;
+      text-align: left;
+      direction: ltr;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      direction: ltr;
+      unicode-bidi: embed;
+    }
+
+    :not(pre) > code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: var(--surface-soft);
+      color: #1f3d4a;
+      font-size: 0.92em;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      margin: 12px 0;
+      padding: 0;
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 12px 14px;
+      font-weight: 800;
+    }
+
+    details > .details-body {
+      padding: 0 14px 14px;
+    }
+
+    footer {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 22px 32px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        position: static;
+      }
+
+      .grid,
+      .grid.three {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <p class="eyebrow">MFJA ROS 2 Jazzy / Gazebo Harmonic</p>
+      <h1>Room 315 VLA Runbook</h1>
+      <p class="subtitle">
+        This runbook covers the Room 315 VLA layer: launching the world,
+        supervisor, cameras, recorder, teleop scenarios, obstacle workflows,
+        benchmark runner, agent integration, dataset inspection, and evaluation.
+        Each section shows what to run in each terminal.
+      </p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="Page navigation">
+      <h2>Sections</h2>
+      <a href="#setup">Terminal Setup</a>
+      <a href="#map">VLA Map</a>
+      <a href="#launch-basic">Basic VLA Launch</a>
+      <a href="#commands">Supervisor Commands</a>
+      <a href="#agent">External VLA Agent</a>
+      <a href="#dataset">Dataset Recording</a>
+      <a href="#teleop">Teleop Scenarios</a>
+      <a href="#obstacles">Visual Obstacles</a>
+      <a href="#benchmark">Benchmark Runner</a>
+      <a href="#extract-eval">Extract and Evaluate</a>
+      <a href="#topics">Useful Topics</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#scenario-recording-walkthrough">Scenario Recording Walkthrough</a>
+    </nav>
+
+    <main>
+      <section id="setup">
+        <h2>Terminal Setup</h2>
+        <p>
+          Build after changing code, launch files, messages, worlds, models, or
+          package metadata. Every new terminal must source ROS and the workspace.
+        </p>
+
+        <div class="grid">
+          <div>
+            <h3>Build</h3>
+            <div class="command">
+              <div class="command-bar"><span>Terminal: build workspace</span><button class="copy-btn" data-copy="cmd-build">Copy</button></div>
+              <pre><code id="cmd-build">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+
+colcon build --symlink-install
+
+source install/setup.bash</code></pre>
+            </div>
+          </div>
+          <div>
+            <h3>Source Only</h3>
+            <div class="command">
+              <div class="command-bar"><span>Every new terminal</span><button class="copy-btn" data-copy="cmd-source">Copy</button></div>
+              <pre><code id="cmd-source">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="map">
+        <h2>Quick Map: What VLA Means Here</h2>
+        <div class="grid three">
+          <div class="tile">
+            <h3>Supervisor</h3>
+            <p>
+              Receives JSON on <code>/room_315/vla/command</code>, runs the safety
+              decoder, then converts accepted event-level commands into switch,
+              stopper, and shuttle commands.
+            </p>
+            <div class="tag-row">
+              <span class="tag">action_vector</span>
+              <span class="tag">safety decoder</span>
+              <span class="tag">status JSON</span>
+            </div>
+          </div>
+          <div class="tile">
+            <h3>Cameras</h3>
+            <p>
+              One independent overhead RGB-D camera per rail side. These images
+              feed the recorder and the external VLA agent.
+            </p>
+            <div class="tag-row">
+              <span class="tag">right_rail_rgbd</span>
+              <span class="tag">left_rail_rgbd</span>
+            </div>
+          </div>
+          <div class="tile">
+            <h3>Dataset / Benchmark</h3>
+            <p>
+              The recorder writes episodes and event-level labels. The benchmark
+              runner dispatches task templates to generate demos and metrics.
+            </p>
+            <div class="tag-row">
+              <span class="tag">events.jsonl</span>
+              <span class="tag">training_events</span>
+              <span class="tag">metrics</span>
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>Component</th><th>File / Topic</th><th>Use</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>VLA supervisor</td><td><code>room_315_vla_supervisor.py</code></td><td>Executes and safety-checks VLA commands.</td></tr>
+            <tr><td>VLA config</td><td><code>config/room_315_vla/vla_supervisor.yaml</code></td><td>Task templates for demos and benchmarks.</td></tr>
+            <tr><td>Action space</td><td><code>config/room_315_vla/action_space.yaml</code></td><td>Event-level action vector definition. This is the preferred model output.</td></tr>
+            <tr><td>Command topic</td><td><code>/room_315/vla/command</code></td><td>JSON commands for the supervisor.</td></tr>
+            <tr><td>Status topic</td><td><code>/room_315/vla/status</code></td><td>Rails, tasks, camera state, and safety metrics.</td></tr>
+            <tr><td>User goal</td><td><code>/room_315/vla/user_goal</code></td><td>Natural-language goal for the real VLA agent.</td></tr>
+            <tr><td>Episode control</td><td><code>/room_315/vla/episode_control</code></td><td>Start/stop recorder episodes.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="launch-basic">
+        <h2>Basic VLA Launch</h2>
+        <p>
+          This is the smallest useful VLA setup: Room 315, kinematic shuttles,
+          the VLA camera bridge, and the VLA supervisor. Shuttles start stopped.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: launch Room 315 + VLA</span><button class="copy-btn" data-copy="cmd-launch-vla-basic">Copy</button></div>
+          <pre><code id="cmd-launch-vla-basic">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true</code></pre>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: VLA status</span><button class="copy-btn" data-copy="cmd-watch-vla-status">Copy</button></div>
+            <pre><code id="cmd-watch-vla-status">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/vla/status std_msgs/msg/String</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Terminal 3: camera topics</span><button class="copy-btn" data-copy="cmd-watch-vla-cameras">Copy</button></div>
+            <pre><code id="cmd-watch-vla-cameras">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic hz /room_315/vla/right_rail_rgbd/image
+ros2 topic hz /room_315/vla/left_rail_rgbd/image</code></pre>
+          </div>
+        </div>
+
+        <div class="callout">
+          For realistic datasets, keep <code>room315_visual_debug_colors:=false</code>
+          and <code>room315_show_device_markers:=false</code>. This prevents rail
+          sensor and stopper markers from appearing in the VLA camera images.
+          For visual debugging only, you can set them back to <code>true</code>.
+        </div>
+      </section>
+
+      <section id="commands">
+        <h2>Send Commands to the VLA Supervisor</h2>
+        <p>
+          The model should output an event-level direct command: either a
+          schema-v2 <code>action_vector</code>, or an equivalent primitive JSON
+          command such as <code>switches</code>, <code>stoppers</code>, or
+          <code>shuttle</code>. <code>route_template</code> remains useful for
+          manual checks, demo generation, and benchmarks, but it is not the final
+          model-output interface.
+        </p>
+
+        <h3>Task Templates for Demos and Benchmarks</h3>
+        <table>
+          <thead>
+            <tr><th>Template</th><th>Meaning</th><th>Start condition</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>right_yaskawa_to_staubli</code></td><td>Move the right shuttle from Yaskawa to Staubli.</td><td>Right slot 1 or 2.</td></tr>
+            <tr><td><code>right_staubli_to_yaskawa</code></td><td>Move the right shuttle from Staubli to Yaskawa.</td><td>Right slot 3 or 4.</td></tr>
+            <tr><td><code>left_yaskawa_to_kuka</code></td><td>Move the left shuttle from Yaskawa to KUKA.</td><td>Left slot 1 or 2.</td></tr>
+            <tr><td><code>left_kuka_to_yaskawa</code></td><td>Move the left shuttle from KUKA to Yaskawa.</td><td>Left slot 3 or 4.</td></tr>
+            <tr><td><code>right_enter_interior_loop</code></td><td>Route the right shuttle into the interior loop.</td><td>Right slot 1 or 2.</td></tr>
+            <tr><td><code>left_enter_interior_loop</code></td><td>Route the left shuttle into the interior loop.</td><td>Left slot 1 or 2.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 4: route template</span><button class="copy-btn" data-copy="cmd-route-template-right">Copy</button></div>
+            <pre><code id="cmd-route-template-right">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"route_template\",\"template\":\"right_yaskawa_to_staubli\"}'}"</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Terminal 4: another template</span><button class="copy-btn" data-copy="cmd-route-template-left">Copy</button></div>
+            <pre><code id="cmd-route-template-left">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"route_template\",\"template\":\"left_yaskawa_to_kuka\"}'}"</code></pre>
+          </div>
+        </div>
+
+        <details>
+          <summary>Event-level JSON primitives</summary>
+          <div class="details-body">
+            <div class="grid">
+              <div class="command">
+                <div class="command-bar"><span>Switches / stoppers</span><button class="copy-btn" data-copy="cmd-primitive-switch-stopper">Copy</button></div>
+                <pre><code id="cmd-primitive-switch-stopper">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"switches\",\"side\":\"right\",\"switches\":{\"ALL\":\"EXTERIOR\"}}'}"
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"stoppers\",\"side\":\"right\",\"stoppers\":{\"A3\":\"1\"}}'}"
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"stoppers\",\"side\":\"right\",\"stoppers\":{\"A3\":\"0\"}}'}"</code></pre>
+              </div>
+              <div class="command">
+                <div class="command-bar"><span>Shuttle OFF / RESET / stop_all</span><button class="copy-btn" data-copy="cmd-primitive-shuttle">Copy</button></div>
+                <pre><code id="cmd-primitive-shuttle">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"shuttle\",\"side\":\"right\",\"command\":\"OFF\"}'}"
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"shuttle\",\"side\":\"right\",\"command\":\"RESET\"}'}"
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"stop_all\",\"close_stoppers\":false}'}"</code></pre>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Direct action vector for the safety decoder</summary>
+          <div class="details-body">
+            <p class="note">
+              This event-level vector decodes to <code>SET_SWITCHES</code> on the
+              right side, selecting A3 as <code>INTERIOR</code>. It then goes
+              through the same safety checks. This is the preferred model output.
+            </p>
+            <div class="command">
+              <div class="command-bar"><span>Send action_vector</span><button class="copy-btn" data-copy="cmd-action-vector">Copy</button></div>
+              <pre><code id="cmd-action-vector">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action_vector\":[2,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0.0,1,3,8]}'}"</code></pre>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="agent">
+        <h2>Run an External VLA Agent</h2>
+        <p>
+          The agent reads camera images and supervisor status, accepts a natural
+          language goal on <code>/room_315/vla/user_goal</code>, and publishes a
+          JSON command to <code>/room_315/vla/command</code>. The practical
+          provider is HTTP.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: launch with HTTP VLA agent</span><button class="copy-btn" data-copy="cmd-launch-vla-agent">Copy</button></div>
+          <pre><code id="cmd-launch-vla-agent">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true \
+  enable_room315_real_vla_agent:=true \
+  room315_vla_agent_provider:=http \
+  room315_vla_agent_http_endpoint:=http://127.0.0.1:8000/plan</code></pre>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: send natural-language goal</span><button class="copy-btn" data-copy="cmd-send-user-goal">Copy</button></div>
+            <pre><code id="cmd-send-user-goal">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/user_goal std_msgs/msg/String \
+  "{data: 'move the right shuttle from Yaskawa to Staubli'}"</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Terminal 3: watch agent decisions</span><button class="copy-btn" data-copy="cmd-watch-agent-status">Copy</button></div>
+            <pre><code id="cmd-watch-agent-status">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/vla/agent_status std_msgs/msg/String</code></pre>
+          </div>
+        </div>
+
+        <div class="callout warning">
+          If no HTTP endpoint is running, do not enable
+          <code>enable_room315_real_vla_agent</code>. For tests without a model,
+          send a <code>route_template</code> directly to the supervisor. With a real
+          model, return <code>{"action_vector":[...]}</code> or a primitive JSON
+          command. The agent sends <code>allowed_actions</code> without
+          <code>route_template</code> so the model output stays event-level.
+        </div>
+      </section>
+
+      <section id="dataset">
+        <h2>Record a VLA Dataset</h2>
+        <p>
+          The recorder saves raw frames, JPEG images, and event-level labels
+          under <code>~/room315_smolvla_demo</code>. If
+          <code>dataset_auto_start_on_goal</code> is enabled, an episode starts
+          when a user goal arrives. With the teleop generator, episodes are
+          started and stopped through <code>/room_315/vla/episode_control</code>.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: launch VLA + recorder</span><button class="copy-btn" data-copy="cmd-launch-recorder">Copy</button></div>
+          <pre><code id="cmd-launch-recorder">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo</code></pre>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: recorder status</span><button class="copy-btn" data-copy="cmd-watch-recorder">Copy</button></div>
+            <pre><code id="cmd-watch-recorder">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Terminal 3: manual episode control</span><button class="copy-btn" data-copy="cmd-episode-control">Copy</button></div>
+            <pre><code id="cmd-episode-control">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/vla/episode_control std_msgs/msg/String \
+  "{data: 'start manual VLA test'}"
+
+ros2 topic pub --once /room_315/vla/episode_control std_msgs/msg/String \
+  "{data: 'stop success'}"</code></pre>
+          </div>
+        </div>
+
+        <div class="callout success">
+          The important training file is <code>episodes/*/events.jsonl</code>.
+          <code>data.jsonl</code> is framewise replay for auditing, not repeated
+          supervised labels.
+        </div>
+        <div class="callout">
+          The scenario expert may use sensors internally to stop in the correct
+          place and create correct labels. The model should train only from
+          <code>model_input_schema_version: 3</code>: <code>language</code>,
+          <code>overhead_images</code>, and <code>last_command</code>. Sensor and
+          switch/stopper state belongs under <code>privileged_eval</code> for
+          evaluation and auditing, not policy input.
+        </div>
+      </section>
+
+      <section id="teleop">
+        <h2>Teleop VLA Scenarios</h2>
+        <p>
+          <code>vla_teleop_generator.py</code> runs deterministic expert
+          scenarios and publishes VLA primitive commands. Each scenario resets
+          the shuttle afterward by default. The reset happens only after
+          <code>stop success</code> and after the recorder confirms
+          <code>active=false</code>, so reset frames and reset commands are not
+          part of the training episode.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: launch with recorder first</span><button class="copy-btn" data-copy="cmd-launch-teleop-base">Copy</button></div>
+          <pre><code id="cmd-launch-teleop-base">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo</code></pre>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: run one scenario by code</span><button class="copy-btn" data-copy="cmd-teleop-one-code">Copy</button></div>
+            <pre><code id="cmd-teleop-one-code">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=r02</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: run one scenario by name</span><button class="copy-btn" data-copy="cmd-teleop-one-name">Copy</button></div>
+            <pre><code id="cmd-teleop-one-name">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=right_obstacle_aware_route</code></pre>
+          </div>
+        </div>
+
+        <details open>
+          <summary>Scenario codes</summary>
+          <div class="details-body">
+            <table>
+              <thead>
+                <tr><th>Code</th><th>Scenario name</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>r01</code></td><td><code>move_right_shuttle_full_exterior_loop</code></td></tr>
+                <tr><td><code>r02</code></td><td><code>move_right_shuttle_from_yaskawa_to_staubli</code></td></tr>
+                <tr><td><code>r03</code></td><td><code>move_right_shuttle_from_staubli_to_yaskawa</code></td></tr>
+                <tr><td><code>r06</code>-<code>r09</code></td><td>Stop the right shuttle at stoppers A1..A4.</td></tr>
+                <tr><td><code>r10</code>-<code>r13</code></td><td>Right rail interior-loop entry, movement, and transitions.</td></tr>
+                <tr><td><code>l01</code>-<code>l13</code></td><td>Equivalent scenario families for the left rail.</td></tr>
+                <tr><td><code>m02</code></td><td><code>emergency_stop_all</code></td></tr>
+                <tr><td><code>m08</code></td><td><code>left_slot3_kuka_then_slot2</code></td></tr>
+                <tr><td><code>m10</code></td><td><code>right_obstacle_aware_route</code></td></tr>
+                <tr><td><code>m11</code></td><td><code>left_obstacle_aware_route</code></td></tr>
+              </tbody>
+            </table>
+
+            <h3>Current <code>m</code> scenarios</h3>
+            <table>
+              <thead>
+                <tr><th>Code</th><th>What it does</th><th>Recording notes</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>m02</code></td>
+                  <td>Starts an <code>emergency stop all</code> episode, prepares the right rail, runs the shuttle briefly, sends <code>stop_all</code>, and waits for the stop to settle.</td>
+                  <td>Useful for a clear safety command: stop all motion.</td>
+                </tr>
+                <tr>
+                  <td><code>m08</code></td>
+                  <td>Runs <code>left_slot3_kuka_then_slot2</code>: move the left shuttle to slot 3, send the KUKA joint pose for 4 seconds, then move the left shuttle to slot 2.</td>
+                  <td>Tests rail + robot sequencing, not only shuttle motion.</td>
+                </tr>
+                <tr>
+                  <td><code>m10</code></td>
+                  <td>Runs <code>right_obstacle_aware_route</code>. The shuttle makes a large exterior-loop lap. If the right visual obstacle blocks the path, the shuttle stops before it; otherwise it completes the loop.</td>
+                  <td>Stop distance is controlled by <code>right_manual_obstacle_stop_before_m</code>, default <code>0.20</code> m.</td>
+                </tr>
+                <tr>
+                  <td><code>m11</code></td>
+                  <td>Same as <code>m10</code>, but on the left rail with the left visual obstacle.</td>
+                  <td>The stop point is computed from the obstacle pose, not from a stopper.</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="note">
+              Removed scenarios: <code>m01</code>, <code>m03</code>, <code>m07</code>,
+              and <code>m09</code>. They were removed because they did not add a
+              clear visual research question or duplicated simpler rail-only behavior.
+            </p>
+          </div>
+        </details>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Run multiple selected scenarios</span><button class="copy-btn" data-copy="cmd-teleop-multiple">Copy</button></div>
+            <pre><code id="cmd-teleop-multiple">ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=r02,m08,m10</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Disable reset only for debugging</span><button class="copy-btn" data-copy="cmd-teleop-no-reset">Copy</button></div>
+            <pre><code id="cmd-teleop-no-reset">ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=r02,r03 \
+  -p reset_after_each_scenario:=false</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="obstacles">
+        <h2>Visual Obstacles and Obstacle Scenarios</h2>
+        <p>
+          There is one independent visual obstacle marker for the right rail and
+          one for the left rail. These markers are visible to the cameras but are
+          not exposed in <code>model_input</code> as privileged state. The obstacle
+          tool moves the marker in Gazebo and writes a pose cache used by
+          <code>m10</code> and <code>m11</code> during the same simulation run.
+        </p>
+
+        <div class="callout">
+          To move objects with the mouse or see poses in Gazebo, use the full GUI:
+          <code>gui_config:=config/mfja_default.gui.config</code>. The light GUI
+          <code>gui_config:=config/mfja_light.gui.config</code> is better for
+          recording performance, but it does not show the full move/rotate toolbar.
+          Moving an obstacle only from the Gazebo GUI does not update
+          <code>~/.ros/room315_vla_obstacles.json</code>. Use the obstacle tool if
+          <code>m10/m11</code> should react to the new pose. At a fresh Gazebo
+          startup, <code>room_315_only.launch.py</code> and
+          <code>full_floor.launch.py</code> clear this cache by default because the
+          world resets the obstacles to their default world-file poses.
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Move right visual obstacle</span><button class="copy-btn" data-copy="cmd-move-right-obstacle">Copy</button></div>
+            <pre><code id="cmd-move-right-obstacle">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_vla_obstacle_tool.py \
+  --side right --x -14.18 --y -4.68 --z 0.856 --yaw 0.0</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Move left visual obstacle</span><button class="copy-btn" data-copy="cmd-move-left-obstacle">Copy</button></div>
+            <pre><code id="cmd-move-left-obstacle">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_vla_obstacle_tool.py \
+  --side left --x -9.86 --y -4.68 --z 0.856 --yaw 0.0</code></pre>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Move obstacle away so the shuttle completes a loop</span><button class="copy-btn" data-copy="cmd-move-right-obstacle-clear">Copy</button></div>
+            <pre><code id="cmd-move-right-obstacle-clear">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_vla_obstacle_tool.py \
+  --side right --x -15.24 --y -5.54 --z 0.856 --yaw 0.0</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Hide obstacle without deleting it</span><button class="copy-btn" data-copy="cmd-hide-right-obstacle">Copy</button></div>
+            <pre><code id="cmd-hide-right-obstacle">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_vla_obstacle_tool.py \
+  --side right --x -14.18 --y -4.68 --z -5.0 --yaw 0.0</code></pre>
+          </div>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Run obstacle-aware scenarios</span><button class="copy-btn" data-copy="cmd-teleop-obstacle-params">Copy</button></div>
+          <pre><code id="cmd-teleop-obstacle-params">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m10
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m11
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m11 \
+  -p left_manual_obstacle_stop_before_m:=0.18</code></pre>
+        </div>
+
+        <div class="callout">
+          If the obstacle is within about <code>0.45</code> m of the rail path,
+          the scenario drives the shuttle on the exterior loop and sends
+          <code>OFF</code> when the shuttle is <code>manual_obstacle_stop_before_m</code>
+          before the obstacle. If the obstacle is farther away or below the
+          hidden-z threshold, the route stays clear and the shuttle completes one
+          exterior loop.
+        </div>
+      </section>
+
+      <section id="benchmark">
+        <h2>Benchmark Runner</h2>
+        <p>
+          The benchmark runner dispatches <code>route_template</code> tasks
+          automatically, watches success/failure through the supervisor status,
+          and writes JSONL plus summary metrics. Use it to collect and check
+          task-level episodes. The learned model itself should still output
+          event-level actions.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: launch VLA benchmark</span><button class="copy-btn" data-copy="cmd-launch-benchmark">Copy</button></div>
+          <pre><code id="cmd-launch-benchmark">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo \
+  enable_room315_vla_benchmark_runner:=true \
+  room315_vla_benchmark_tasks:=transport \
+  room315_vla_benchmark_report_dir:=~/room315_vla_benchmarks</code></pre>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: watch benchmark status</span><button class="copy-btn" data-copy="cmd-watch-benchmark">Copy</button></div>
+            <pre><code id="cmd-watch-benchmark">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/vla/benchmark_status std_msgs/msg/String</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Task selection examples</span><button class="copy-btn" data-copy="cmd-benchmark-tasks">Copy</button></div>
+            <pre><code id="cmd-benchmark-tasks">room315_vla_benchmark_tasks:=all
+room315_vla_benchmark_tasks:=transport
+room315_vla_benchmark_tasks:=loop_entry
+room315_vla_benchmark_tasks:=right_yaskawa_to_staubli,left_yaskawa_to_kuka</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="extract-eval">
+        <h2>Extract and Evaluate Data</h2>
+        <p>
+          After recording, extract event rows into one training file, then run
+          the baseline evaluator.
+        </p>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Extract events</span><button class="copy-btn" data-copy="cmd-extract-events">Copy</button></div>
+            <pre><code id="cmd-extract-events">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_vla_event_extractor.py \
+  ~/room315_smolvla_demo \
+  --output meta/training_events.jsonl</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Run baseline eval</span><button class="copy-btn" data-copy="cmd-baseline-eval">Copy</button></div>
+            <pre><code id="cmd-baseline-eval">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_vla_baseline_eval.py \
+  ~/room315_smolvla_demo \
+  --output-dir ~/room315_vla_baselines \
+  --holdout-fraction 0.2</code></pre>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>Output</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>baseline_metrics.json</code></td><td>Overall results for each baseline.</td></tr>
+            <tr><td><code>baseline_metrics.csv</code></td><td>The same results in CSV form.</td></tr>
+            <tr><td><code>baseline_task_family_metrics.csv</code></td><td>Metrics grouped by task family.</td></tr>
+            <tr><td><code>task_family_metrics.csv</code></td><td>Task/scenario family details.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="topics">
+        <h2>Useful Topics During Experiments</h2>
+        <table>
+          <thead>
+            <tr><th>Purpose</th><th>Command</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>VLA status</td><td><code>ros2 topic echo /room_315/vla/status std_msgs/msg/String</code></td></tr>
+            <tr><td>Recorder status</td><td><code>ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String</code></td></tr>
+            <tr><td>Benchmark status</td><td><code>ros2 topic echo /room_315/vla/benchmark_status std_msgs/msg/String</code></td></tr>
+            <tr><td>Agent status</td><td><code>ros2 topic echo /room_315/vla/agent_status std_msgs/msg/String</code></td></tr>
+            <tr><td>Right image rate</td><td><code>ros2 topic hz /room_315/vla/right_rail_rgbd/image</code></td></tr>
+            <tr><td>Left image rate</td><td><code>ros2 topic hz /room_315/vla/left_rail_rgbd/image</code></td></tr>
+            <tr><td>Right rail sensors</td><td><code>ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback</code></td></tr>
+            <tr><td>Left rail sensors</td><td><code>ros2 topic echo /room_315/rails/left/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback</code></td></tr>
+          </tbody>
+        </table>
+
+        <div class="command">
+          <div class="command-bar"><span>One terminal API check</span><button class="copy-btn" data-copy="cmd-vla-api-check">Copy</button></div>
+          <pre><code id="cmd-vla-api-check">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic list | grep /room_315/vla
+ros2 topic list | grep /room_315/rails
+ros2 interface show std_msgs/msg/String
+ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
+ros2 interface show mfja_rail_interfaces/msg/SensorFeedback</code></pre>
+        </div>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Quick Troubleshooting</h2>
+        <div class="grid">
+          <div class="tile">
+            <h3><code>route_template</code> rejected</h3>
+            <p>
+              Watch <code>/room_315/vla/status</code>. Usually no shuttle is on
+              the required source slots. For example,
+              <code>right_yaskawa_to_staubli</code> requires a shuttle on right
+              slot 1 or 2.
+            </p>
+          </div>
+          <div class="tile">
+            <h3>No images</h3>
+            <p>
+              Check that <code>enable_room315_vla:=true</code> and the camera
+              bridge are running. Try
+              <code>ros2 topic hz /room_315/vla/right_rail_rgbd/image</code>.
+            </p>
+          </div>
+          <div class="tile">
+            <h3>Recorder is not recording</h3>
+            <p>
+              Check <code>enable_room315_vla_dataset_recorder:=true</code>. Start
+              the teleop generator or publish <code>episode_control</code>
+              manually.
+            </p>
+          </div>
+          <div class="tile">
+            <h3>Agent does not respond</h3>
+            <p>
+              Check the HTTP endpoint. If no model server exists, send a
+              <code>route_template</code> directly to
+              <code>/room_315/vla/command</code> for testing only. A real model
+              should output an event-level command.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout warning">
+          Do not use exact Gazebo pose as model input. The policy should learn
+          from <code>language + overhead_images + last_command</code> only.
+          Privileged state remains for evaluation and auditing.
+        </div>
+      </section>
+
+      <section id="scenario-recording-walkthrough">
+        <h2>Scenario Recording Walkthrough</h2>
+        <p>
+          This is the complete practical recipe: launch the simulation with the
+          recorder, confirm cameras and recorder are alive, run one scenario,
+          then open the recorded episode, images, and event-level labels.
+        </p>
+
+        <div class="callout">
+          Use <code>room315_visual_debug_colors:=false</code> and
+          <code>room315_show_device_markers:=false</code> while recording. Reset
+          after the scenario is not recorded: the scenario stops the recorder
+          first and only then resets the shuttle.
+        </div>
+
+        <h3>Terminal 1: Launch Gazebo + VLA + Recorder</h3>
+        <div class="command">
+          <div class="command-bar"><span>Launch recorder setup</span><button class="copy-btn" data-copy="cmd-walkthrough-launch-record">Copy</button></div>
+          <pre><code id="cmd-walkthrough-launch-record">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo</code></pre>
+        </div>
+
+        <h3>Terminal 2: Watch Recorder and Camera Health</h3>
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Recorder status</span><button class="copy-btn" data-copy="cmd-walkthrough-recorder-status">Copy</button></div>
+            <pre><code id="cmd-walkthrough-recorder-status">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Camera rate check</span><button class="copy-btn" data-copy="cmd-walkthrough-camera-rate">Copy</button></div>
+            <pre><code id="cmd-walkthrough-camera-rate">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic hz /room_315/vla/right_rail_rgbd/image
+
+# Open another terminal, or stop with Ctrl+C and then check the left camera:
+ros2 topic hz /room_315/vla/left_rail_rgbd/image</code></pre>
+          </div>
+        </div>
+
+        <p>
+          Before running the scenario, the camera topics should publish frames.
+          When the scenario starts, recorder status should show an active
+          episode. When the scenario ends, it should show a stopped episode with
+          success or failure.
+        </p>
+
+        <h3>Terminal 3: Run One Scenario</h3>
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Run m10 obstacle scenario</span><button class="copy-btn" data-copy="cmd-walkthrough-run-m10">Copy</button></div>
+            <pre><code id="cmd-walkthrough-run-m10">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m10</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Run m11 obstacle scenario</span><button class="copy-btn" data-copy="cmd-walkthrough-run-m11">Copy</button></div>
+            <pre><code id="cmd-walkthrough-run-m11">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=m11</code></pre>
+          </div>
+        </div>
+
+        <p>
+          You can replace <code>m10</code> with another scenario such as
+          <code>r02</code> or <code>m08</code>. To run selected scenarios:
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Run selected scenarios</span><button class="copy-btn" data-copy="cmd-walkthrough-run-selected">Copy</button></div>
+          <pre><code id="cmd-walkthrough-run-selected">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
+  -p scenario_names:=r02,m08,m10</code></pre>
+        </div>
+
+        <h3>Terminal 4: Open the Latest Recorded Episode</h3>
+        <div class="command">
+          <div class="command-bar"><span>Find latest episode</span><button class="copy-btn" data-copy="cmd-walkthrough-find-latest">Copy</button></div>
+          <pre><code id="cmd-walkthrough-find-latest">DATASET="$HOME/room315_smolvla_demo"
+EPISODE="$(find "$DATASET/episodes" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+
+echo "DATASET=$DATASET"
+echo "EPISODE=$EPISODE"
+find "$EPISODE" -maxdepth 3 -type f | sort | sed "s|$DATASET/||"</code></pre>
+        </div>
+
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Open episode folder</span><button class="copy-btn" data-copy="cmd-walkthrough-open-folder">Copy</button></div>
+            <pre><code id="cmd-walkthrough-open-folder">DATASET="$HOME/room315_smolvla_demo"
+EPISODE="$(find "$DATASET/episodes" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+
+xdg-open "$EPISODE"</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Open one recorded image</span><button class="copy-btn" data-copy="cmd-walkthrough-open-image">Copy</button></div>
+            <pre><code id="cmd-walkthrough-open-image">DATASET="$HOME/room315_smolvla_demo"
+EPISODE="$(find "$DATASET/episodes" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+IMAGE="$(find "$EPISODE/images" -type f -name "*.jpg" | sort | head -n 1)"
+
+echo "$IMAGE"
+xdg-open "$IMAGE"</code></pre>
+          </div>
+        </div>
+
+        <h3>Inspect Recorded Files from the Terminal</h3>
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Episode summary</span><button class="copy-btn" data-copy="cmd-walkthrough-episode-summary">Copy</button></div>
+            <pre><code id="cmd-walkthrough-episode-summary">DATASET="$HOME/room315_smolvla_demo"
+EPISODE="$(find "$DATASET/episodes" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+
+python3 -m json.tool "$EPISODE/episode.json"
+wc -l "$EPISODE/events.jsonl" "$EPISODE/data.jsonl"
+find "$EPISODE/images" -type f -name "*.jpg" | wc -l</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Pretty print first event</span><button class="copy-btn" data-copy="cmd-walkthrough-first-event">Copy</button></div>
+            <pre><code id="cmd-walkthrough-first-event">DATASET="$HOME/room315_smolvla_demo"
+EPISODE="$(find "$DATASET/episodes" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+
+head -n 1 "$EPISODE/events.jsonl" | python3 -m json.tool</code></pre>
+          </div>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Show model_input and action_vector from events</span><button class="copy-btn" data-copy="cmd-walkthrough-event-fields">Copy</button></div>
+          <pre><code id="cmd-walkthrough-event-fields">DATASET="$HOME/room315_smolvla_demo"
+EPISODE="$(find "$DATASET/episodes" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+
+python3 - "$EPISODE/events.jsonl" &lt;&lt;'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+for index, line in enumerate(path.read_text(encoding='utf-8').splitlines()[:5]):
+    row = json.loads(line)
+    print(f"event {index}")
+    print("  task:", row.get("task"))
+    print("  event_type:", row.get("event_type"))
+    print("  model_input keys:", sorted((row.get("model_input") or {}).keys()))
+    print("  action primitive:", (row.get("action") or {}).get("primitive"))
+    print("  action_vector:", row.get("action_vector"))
+    print("  image refs:", row.get("image_frame_refs"))
+PY</code></pre>
+        </div>
+
+        <h3>What the Recorder Writes</h3>
+        <table>
+          <thead>
+            <tr><th>Path inside an episode</th><th>Meaning</th><th>Use for training?</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>episode.json</code></td>
+              <td>Episode summary: ID, task, frame count, event count, success/failure, and safety metrics.</td>
+              <td>No. Use for inspection and bookkeeping.</td>
+            </tr>
+            <tr>
+              <td><code>events.jsonl</code></td>
+              <td>Main training file. Each JSON line is a decision event: image/language/last_command before the decision, then <code>action</code> and <code>action_vector</code>.</td>
+              <td>Yes. This is the important training file.</td>
+            </tr>
+            <tr>
+              <td><code>data.jsonl</code></td>
+              <td>Framewise raw replay. It stores detailed frame state for audit and may repeat the same command over multiple frames.</td>
+              <td>No. Do not use as supervised labels.</td>
+            </tr>
+            <tr>
+              <td><code>images/right_rail_rgb/*.jpg</code></td>
+              <td>Right camera JPEG frames.</td>
+              <td>Yes, through references in <code>events.jsonl</code>.</td>
+            </tr>
+            <tr>
+              <td><code>images/left_rail_rgb/*.jpg</code></td>
+              <td>Left camera JPEG frames.</td>
+              <td>Yes, through references in <code>events.jsonl</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Important Fields in <code>events.jsonl</code></h3>
+        <table>
+          <thead>
+            <tr><th>Field</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>model_input_schema_version</code></td><td>Currently <code>3</code>.</td></tr>
+            <tr><td><code>model_input.language</code></td><td>The language goal or task text.</td></tr>
+            <tr><td><code>model_input.overhead_images</code></td><td>References to camera images allowed for the model.</td></tr>
+            <tr><td><code>model_input.last_command</code></td><td>The previous command; this is allowed model input.</td></tr>
+            <tr><td><code>action</code></td><td>Readable event-level symbolic command such as <code>SET_SWITCHES</code> or <code>SHUTTLE_ON</code>.</td></tr>
+            <tr><td><code>action_vector</code></td><td>The same command encoded as a vector using <code>action_space.yaml</code>. This is the preferred model output.</td></tr>
+            <tr><td><code>privileged_eval</code></td><td>Expert sensor/state data for evaluation and auditing only. Not model input.</td></tr>
+            <tr><td><code>observation.state</code></td><td>State vector for ablation/debug only. Do not use for the main visual policy input.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout warning">
+          Bottom line: train on <code>events.jsonl</code>, and make the model
+          output <code>action_vector</code> or direct primitive JSON. Do not train
+          on <code>data.jsonl</code>, and do not use <code>privileged_eval</code>
+          or <code>observation.state</code> as input for the main policy.
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    Open this file directly in a browser. Copy buttons use the Clipboard API; if
+    the browser blocks it, select the command text manually.
+  </footer>
+
+  <script>
+    const copyButtons = document.querySelectorAll("[data-copy]");
+
+    copyButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copy);
+        if (!target) {
+          return;
+        }
+
+        const text = target.innerText.replace(/\n$/, "");
+        const original = button.textContent;
+
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = "Copied";
+          setTimeout(() => {
+            button.textContent = original;
+          }, 1000);
+        } catch (error) {
+          button.textContent = "Select text";
+          setTimeout(() => {
+            button.textContent = original;
+          }, 1400);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

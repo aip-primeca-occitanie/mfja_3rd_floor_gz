@@ -1,11 +1,39 @@
 import os
+from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
+from launch.actions import LogInfo
+from launch.actions import OpaqueFunction
+from launch.actions import TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+
+
+def _as_launch_bool(value):
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _clear_vla_obstacle_pose_cache(context, *args, **kwargs):
+    clear_cache = LaunchConfiguration(
+        'room315_clear_vla_obstacle_pose_cache'
+    ).perform(context)
+    if not _as_launch_bool(clear_cache):
+        return []
+
+    pose_file = Path(
+        LaunchConfiguration('room315_vla_obstacle_pose_file').perform(context)
+    ).expanduser()
+    try:
+        pose_file.unlink(missing_ok=True)
+    except OSError as exc:
+        return [
+            LogInfo(msg=f'Could not clear VLA obstacle pose cache {pose_file}: {exc}')
+        ]
+    return [LogInfo(msg=f'Cleared VLA obstacle pose cache: {pose_file}')]
 
 
 def generate_launch_description():
@@ -57,6 +85,14 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description='Start Gazebo GUI client.',
+        ),
+        DeclareLaunchArgument(
+            'gui_config',
+            default_value='config/mfja_light.gui.config',
+            description=(
+                'Gazebo GUI config path. Relative paths are resolved inside '
+                'mfja_robot_control_config.'
+            ),
         ),
         DeclareLaunchArgument(
             'start_paused',
@@ -142,8 +178,19 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'room315_sensor_publish_rate_hz',
-            default_value='10.0',
+            default_value='30.0',
             description='Room 315 binary sensor feedback publish rate.',
+        ),
+        DeclareLaunchArgument(
+            'room315_sync_sensor_feedback_to_motion_tick',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Publish Room 315 sensor feedback from the same tick that updates shuttle motion.',
+        ),
+        DeclareLaunchArgument(
+            'room315_gazebo_set_pose_rate_hz',
+            default_value='30.0',
+            description='Room 315 visible shuttle pose update rate in Gazebo.',
         ),
         DeclareLaunchArgument(
             'room315_show_device_markers',
@@ -152,10 +199,29 @@ def generate_launch_description():
             description='Show Room 315 position sensor and stopper markers.',
         ),
         DeclareLaunchArgument(
+            'room315_sensor_marker_visual_hold_s',
+            default_value='0.35',
+            description='Minimum seconds a crossed Room 315 sensor marker stays green.',
+        ),
+        DeclareLaunchArgument(
             'enable_room315_vla',
             default_value='false',
             choices=['true', 'false'],
             description='Start the Room 315 VLA camera bridge and action supervisor.',
+        ),
+        DeclareLaunchArgument(
+            'room315_clear_vla_obstacle_pose_cache',
+            default_value='true',
+            choices=['true', 'false'],
+            description=(
+                'Clear the m10/m11 obstacle pose cache at simulation startup so '
+                'stale obstacle moves from a previous Gazebo run are not reused.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'room315_vla_obstacle_pose_file',
+            default_value='~/.ros/room315_vla_obstacles.json',
+            description='Pose cache written by room_315_vla_obstacle_tool.py.',
         ),
         DeclareLaunchArgument(
             'enable_room315_vla_camera_bridge',
@@ -221,6 +287,7 @@ def generate_launch_description():
             default_value='2.0',
             description='Seconds to wait between Room 315 VLA benchmark tasks.',
         ),
+        OpaqueFunction(function=_clear_vla_obstacle_pose_cache),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),
             launch_arguments={
@@ -230,6 +297,7 @@ def generate_launch_description():
                 'gz_partition': LaunchConfiguration('gz_partition'),
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
                 'gui': LaunchConfiguration('gui'),
+                'gui_config': LaunchConfiguration('gui_config'),
                 'start_paused': LaunchConfiguration('start_paused'),
                 'initial_loop_mode': LaunchConfiguration('initial_loop_mode'),
                 'pause_during_switch_update': LaunchConfiguration('pause_during_switch_update'),
@@ -260,8 +328,17 @@ def generate_launch_description():
                         'sensor_publish_rate_hz': LaunchConfiguration(
                             'room315_sensor_publish_rate_hz'
                         ),
+                        'sync_sensor_feedback_to_motion_tick': LaunchConfiguration(
+                            'room315_sync_sensor_feedback_to_motion_tick'
+                        ),
+                        'gazebo_set_pose_rate_hz': LaunchConfiguration(
+                            'room315_gazebo_set_pose_rate_hz'
+                        ),
                         'show_device_markers': LaunchConfiguration(
                             'room315_show_device_markers'
+                        ),
+                        'sensor_marker_visual_hold_s': LaunchConfiguration(
+                            'room315_sensor_marker_visual_hold_s'
                         ),
                         'visual_debug_colors': LaunchConfiguration(
                             'room315_visual_debug_colors'

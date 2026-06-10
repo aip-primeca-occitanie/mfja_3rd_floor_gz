@@ -289,6 +289,7 @@ def _empty_safety_metrics() -> dict[str, Any]:
         'accepted_actions': 0,
         'rejected_actions': 0,
         'illegal_proposal_rate': 0.0,
+        'rejected_action_rate': 0.0,
         'rejection_reasons': {},
     }
 
@@ -1663,6 +1664,7 @@ class Room315VlaSupervisor(Node):
         total = int(self.safety_metrics.get('total_proposed_actions') or 0)
         rejected = int(self.safety_metrics.get('rejected_actions') or 0)
         self.safety_metrics['illegal_proposal_rate'] = 0.0 if total == 0 else round(rejected / total, 4)
+        self.safety_metrics['rejected_action_rate'] = 0.0 if total == 0 else round(rejected / total, 4)
         self.last_safety_decision = entry
         self.safety_decisions.append(entry)
         if len(self.safety_decisions) > self.safety_decision_log_limit:

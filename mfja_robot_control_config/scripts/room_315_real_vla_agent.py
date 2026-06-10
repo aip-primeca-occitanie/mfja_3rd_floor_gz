@@ -30,6 +30,48 @@ ALLOWED_ACTIONS = (
     'clear_emergency_stop',
     'status',
 )
+MODEL_OUTPUT_ACTIONS = (
+    'switches',
+    'stoppers',
+    'shuttle',
+    'stop_all',
+    'emergency_stop',
+    'clear_emergency_stop',
+    'status',
+)
+EVENT_ACTION_VECTOR_FIELDS = (
+    'primitive_id',
+    'side_id',
+    'switch_mask_A1',
+    'switch_mask_A2',
+    'switch_mask_A3',
+    'switch_mask_A4',
+    'switch_value_A1',
+    'switch_value_A2',
+    'switch_value_A3',
+    'switch_value_A4',
+    'stopper_mask_A1',
+    'stopper_mask_A2',
+    'stopper_mask_A3',
+    'stopper_mask_A4',
+    'stopper_value_A1',
+    'stopper_value_A2',
+    'stopper_value_A3',
+    'stopper_value_A4',
+    'speed_mps',
+    'wait_condition_id',
+    'target_id',
+    'reason_id',
+)
+EVENT_PRIMITIVE_IDS = {
+    'WAIT': 0,
+    'DONE': 1,
+    'SET_SWITCHES': 2,
+    'SET_STOPPERS': 3,
+    'SHUTTLE_ON': 4,
+    'STOP_NOW': 5,
+    'EMERGENCY_STOP': 6,
+}
 SIDES = ('right', 'left')
 DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
 SENSOR_IDS_BY_SIDE = {
@@ -78,16 +120,11 @@ SENSOR_IDS_BY_SIDE = {
         'A4_STOPPER_SENSOR',
     ),
 }
-MODEL_INPUT_SCHEMA_VERSION = 2
+MODEL_INPUT_SCHEMA_VERSION = 3
 MODEL_INPUT_FIELDS = (
     'language',
     'overhead_images',
-    'binary_sensor_bits',
-    'switch_states',
-    'stopper_states',
     'last_command',
-    'shuttle_command_state',
-    'time_since_last_sensor_event',
 )
 OVERHEAD_IMAGE_NAMES = {'right_rail_rgb', 'left_rail_rgb'}
 
@@ -329,18 +366,11 @@ def _model_input_from_status(
     sensor_event_times: dict[str, float | None] | None = None,
     now_s: float | None = None,
 ) -> dict[str, Any]:
+    _ = status, sensor_event_times, now_s
     return {
         'language': str(language or ''),
         'overhead_images': _overhead_images(overhead_images),
-        'binary_sensor_bits': _binary_sensor_bits(status),
-        'switch_states': _switch_states(status),
-        'stopper_states': _stopper_states(status),
         'last_command': _normalize_last_command(last_command),
-        'shuttle_command_state': _shuttle_command_state(status),
-        'time_since_last_sensor_event': _time_since_last_sensor_event(
-            sensor_event_times,
-            now_s,
-        ),
     }
 
 
@@ -365,6 +395,16 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
     raise ValueError('model response did not contain output text')
 
 
+def _is_action_vector(raw: Any) -> bool:
+    if not isinstance(raw, list) or len(raw) != len(EVENT_ACTION_VECTOR_FIELDS):
+        return False
+    try:
+        [float(value) for value in raw]
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
 def _parse_command_payload(raw: Any) -> dict[str, Any]:
     if isinstance(raw, str):
         parsed = json.loads(raw)
@@ -374,8 +414,12 @@ def _parse_command_payload(raw: Any) -> dict[str, Any]:
         parsed = parsed['command']
         if isinstance(parsed, str):
             parsed = json.loads(parsed)
+    if _is_action_vector(parsed):
+        return {'action_vector': [float(value) for value in parsed]}
     if not isinstance(parsed, dict):
-        raise ValueError('VLA provider must return a JSON object command')
+        raise ValueError('VLA provider must return a JSON object command or action_vector')
+    if _is_action_vector(parsed.get('action_vector')):
+        return {'action_vector': [float(value) for value in parsed['action_vector']]}
     action = str(parsed.get('action', '')).strip()
     if action not in ALLOWED_ACTIONS:
         raise ValueError(f'unsupported VLA action {action!r}')
@@ -567,7 +611,11 @@ class Room315RealVlaAgent(Node):
                 'model_input_schema_version': MODEL_INPUT_SCHEMA_VERSION,
                 'model_input': model_input,
                 'model_input_fields': MODEL_INPUT_FIELDS,
-                'allowed_actions': ALLOWED_ACTIONS,
+                'allowed_actions': MODEL_OUTPUT_ACTIONS,
+                'preferred_model_output': 'action_vector',
+                'allowed_output_formats': ('action_vector', 'json_command'),
+                'event_action_vector_fields': EVENT_ACTION_VECTOR_FIELDS,
+                'event_primitive_ids': EVENT_PRIMITIVE_IDS,
             },
             headers={},
         )

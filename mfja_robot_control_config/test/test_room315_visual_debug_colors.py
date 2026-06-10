@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
+CONFIG_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config'
 LAUNCH_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'launch'
 BRINGUP_LAUNCH_DIR = REPO_ROOT / 'mfja_3rd_floor_bringup' / 'launch'
 
@@ -20,6 +21,36 @@ def _load_module(name: str, path: Path):
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+class _Logger:
+    def __init__(self):
+        self.warnings = []
+
+    def warn(self, message):
+        self.warnings.append(message)
+
+
+class _PendingFuture:
+    def done(self):
+        return False
+
+
+class _ReadySetPoseClient:
+    def __init__(self):
+        self.requests = []
+
+    def service_is_ready(self):
+        return True
+
+    def call_async(self, request):
+        self.requests.append(request)
+        return _PendingFuture()
+
+
+class _Clock:
+    def now(self):
+        return object()
 
 
 def test_shuttle_visual_debug_colors_can_keep_falling_shuttle_black():
@@ -74,6 +105,61 @@ def test_shuttle_on_command_speed_updates_existing_shuttle():
     assert shuttle.stopped_by is None
 
 
+def test_generated_room315_shuttle_visual_has_no_gazebo_contact_collisions():
+    shuttle_node = _load_module(
+        'room_315_kinematic_shuttle_node',
+        SCRIPTS_DIR / 'room_315_kinematic_shuttle_node.py',
+    )
+    node = object.__new__(shuttle_node.Room315KinematicShuttleNode)
+
+    sdf = node._shuttle_visual_sdf(
+        'room315_right_shuttle_1',
+        shuttle_node.SHUTTLE_VISUAL_NORMAL,
+    )
+
+    assert '<collide_bitmask>0x0000</collide_bitmask>' in sdf
+    assert '<collide_bitmask>0x0002</collide_bitmask>' not in sdf
+
+
+def test_stale_gazebo_set_pose_request_does_not_freeze_visual_updates(monkeypatch):
+    shuttle_node = _load_module(
+        'room_315_kinematic_shuttle_node',
+        SCRIPTS_DIR / 'room_315_kinematic_shuttle_node.py',
+    )
+    node = object.__new__(shuttle_node.Room315KinematicShuttleNode)
+    logger = _Logger()
+    client = _ReadySetPoseClient()
+    shuttle = SimpleNamespace(
+        entity_name='room315_right_shuttle_2',
+        pending_set_pose=_PendingFuture(),
+        pending_set_pose_wall_time=10.0,
+        last_gazebo_set_pose_time=None,
+        set_pose_timeout_warning_logged=False,
+    )
+    pose_message = shuttle_node.PoseStamped()
+    pose_message.pose.position.x = 1.0
+
+    node.enable_gazebo_set_pose = True
+    node.set_pose_client = client
+    node.gazebo_set_pose_timeout_s = 0.5
+    node.get_clock = lambda: _Clock()
+    node.get_logger = lambda: logger
+    monkeypatch.setattr(shuttle_node.time, 'monotonic', lambda: 10.75)
+
+    shuttle_node.Room315KinematicShuttleNode._send_gazebo_pose(
+        node,
+        shuttle,
+        pose_message,
+    )
+
+    assert len(client.requests) == 1
+    assert client.requests[0].entity.name == 'room315_right_shuttle_2'
+    assert shuttle.pending_set_pose is not None
+    assert shuttle.pending_set_pose_wall_time == 10.75
+    assert shuttle.set_pose_timeout_warning_logged is True
+    assert any('sending newest pose' in warning for warning in logger.warnings)
+
+
 def test_switch_visual_debug_colors_can_use_neutral_rail_color():
     controller = _load_module(
         'conveyor_loop_mode_controller',
@@ -101,3 +187,26 @@ def test_visual_debug_color_launch_argument_is_threaded_to_room315_nodes():
     for path in files:
         text = path.read_text(encoding='utf-8')
         assert 'visual_debug_colors' in text or 'room315_visual_debug_colors' in text
+
+
+def test_room315_sensor_and_visible_pose_rates_are_video_synchronized():
+    launch_files = [
+        LAUNCH_DIR / 'room_315_dual_kinematic_shuttles.launch.py',
+        BRINGUP_LAUNCH_DIR / 'room_315_only.launch.py',
+        BRINGUP_LAUNCH_DIR / 'full_floor.launch.py',
+    ]
+    for path in launch_files:
+        text = path.read_text(encoding='utf-8')
+        assert 'sync_sensor_feedback_to_motion_tick' in text
+        assert 'gazebo_set_pose_rate_hz' in text
+        assert 'sensor_marker_visual_hold_s' in text
+        assert "default_value='30.0'" in text
+
+
+def test_light_gui_keeps_entity_selection_inspection_tools():
+    text = (CONFIG_DIR / 'mfja_light.gui.config').read_text(encoding='utf-8')
+
+    assert 'SelectEntities' in text
+    assert 'EntityContextMenuPlugin' in text
+    assert 'ComponentInspector' in text
+    assert 'EntityTree' in text

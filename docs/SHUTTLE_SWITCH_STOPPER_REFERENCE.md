@@ -459,6 +459,8 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 | `gazebo_set_pose_rate_hz` | `10.0` | Rate for Gazebo `set_pose` calls. |
 | `sensor_publish_rate_hz` | `10.0` | Publish rate for binary `SensorFeedback` messages. |
 | `show_device_markers` | `true` | Spawn visual markers for position sensors and stoppers. Switch bodies are colored separately by switch state. |
+| `device_marker_dynamic_refresh` | `false` | If `true`, delete and respawn device markers when their active/inactive color changes. Disabled by default to avoid Gazebo `remove` errors for markers that have not been inserted yet. |
+| `device_marker_refresh_grace_period_s` | `0.5` | Minimum delay after a successful marker spawn before deleting/recreating it for a color refresh. This avoids Gazebo remove requests racing ahead of marker insertion. |
 | `path_backend` | `cubic_hermite` | Geometry sampler used by the shuttle core. Use `cubic_hermite` for normal continuous motion or `polyline` for direct CSV comparison. |
 | `arc_length_samples_per_edge` | `16` | Sub-samples per CSV edge used to parameterize the continuous path by arc length. |
 | `enable_collision_avoidance` | `true` | Stop before center-distance collision. |

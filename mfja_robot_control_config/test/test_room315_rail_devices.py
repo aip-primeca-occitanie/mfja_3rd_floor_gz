@@ -25,3 +25,13 @@ def test_right_da2er_is_on_exterior_incoming_branch():
     assert da2er['branch'] == 'E'
     assert da2er['segment'] == 'A12E'
     assert da2er['radius_m'] >= 0.08
+
+
+def test_left_da4l_covers_both_a4_connector_branches():
+    sensors = _sensor_by_name(KINEMATICS_DIR / 'rail_devices_left.yaml')
+    da4l = sensors['DA4L']
+
+    assert da4l['switch'] == 'A4'
+    assert da4l['radius_m'] >= 0.07
+    assert [point['segment'] for point in da4l['points']] == ['A2E', 'A2I']
+    assert all(point['s_ratio'] > 0.95 for point in da4l['points'])

@@ -57,7 +57,7 @@ def _status():
     }
 
 
-def test_agent_model_input_schema_v2_excludes_privileged_state():
+def test_agent_model_input_schema_v3_excludes_sensor_and_privileged_state():
     agent_module = _load_module()
 
     model_input = agent_module._model_input_from_status(
@@ -79,29 +79,28 @@ def test_agent_model_input_schema_v2_excludes_privileged_state():
         now_s=12.5,
     )
 
-    assert agent_module.MODEL_INPUT_SCHEMA_VERSION == 2
+    assert agent_module.MODEL_INPUT_SCHEMA_VERSION == 3
     assert set(model_input) == set(agent_module.MODEL_INPUT_FIELDS)
+    assert set(model_input) == {'language', 'overhead_images', 'last_command'}
     assert set(model_input['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
-    assert model_input['binary_sensor_bits']['right']['DZI2R'] == 1
-    assert model_input['binary_sensor_bits']['right']['DZI3R'] == 0
-    assert model_input['binary_sensor_bits']['left']['DA3IL'] == 1
-    assert model_input['switch_states']['right'] == {
-        'A1': 'EXTERIOR',
-        'A2': 'INTERIOR',
-        'A3': 'EXTERIOR',
-        'A4': 'INTERIOR',
-    }
-    assert model_input['switch_states']['left']['A4'] == 'EXTERIOR'
-    assert model_input['stopper_states']['right']['A2'] == 'closed'
     assert model_input['last_command'] == {
         'action': 'switches',
         'side': 'right',
         'switches': {'A3': 'INTERIOR'},
     }
-    assert model_input['shuttle_command_state']['right']['last_command'] == 'ON'
-    assert model_input['time_since_last_sensor_event']['right'] == 2.5
 
     serialized = json.dumps(model_input, sort_keys=True)
+    for sensor_shortcut in (
+        'binary_sensor_bits',
+        'switch_states',
+        'stopper_states',
+        'shuttle_command_state',
+        'time_since_last_sensor_event',
+        'DZI2R',
+        'DZI3R',
+        'DA3IL',
+    ):
+        assert sensor_shortcut not in serialized
     assert 'supervisor_status' not in serialized
     assert 'A12E' not in serialized
     assert 'distance_to_switch' not in serialized
@@ -110,7 +109,7 @@ def test_agent_model_input_schema_v2_excludes_privileged_state():
         assert privileged_key not in serialized
 
 
-def test_http_plan_sends_only_schema_v2_model_input_to_provider():
+def test_http_plan_sends_only_schema_v3_model_input_to_provider():
     agent_module = _load_module()
     agent = agent_module.Room315RealVlaAgent.__new__(agent_module.Room315RealVlaAgent)
     agent.latest_status = _status()
@@ -148,7 +147,35 @@ def test_http_plan_sends_only_schema_v2_model_input_to_provider():
     assert 'supervisor_status' not in payload
     assert 'image_jpeg_b64' not in payload
     assert 'images_jpeg_b64' not in payload
-    assert payload['model_input_schema_version'] == 2
+    assert payload['model_input_schema_version'] == 3
+    assert payload['allowed_actions'] == agent_module.MODEL_OUTPUT_ACTIONS
+    assert 'route_template' not in payload['allowed_actions']
+    assert payload['preferred_model_output'] == 'action_vector'
+    assert 'action_vector' in payload['allowed_output_formats']
+    assert payload['event_action_vector_fields'] == agent_module.EVENT_ACTION_VECTOR_FIELDS
+    assert payload['event_primitive_ids']['SET_SWITCHES'] == 2
     assert set(payload['model_input']) == set(agent_module.MODEL_INPUT_FIELDS)
     assert set(payload['model_input']['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
-    assert 'A12E' not in json.dumps(payload['model_input'], sort_keys=True)
+    serialized = json.dumps(payload['model_input'], sort_keys=True)
+    assert 'A12E' not in serialized
+    assert 'DZI2R' not in serialized
+    assert 'binary_sensor_bits' not in serialized
+
+
+def test_agent_accepts_event_level_action_vector_response():
+    agent_module = _load_module()
+    action_vector = [
+        2, 0,
+        0, 0, 1, 0,
+        0, 0, 2, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0.0, 1, 3, 8,
+    ]
+
+    assert agent_module._parse_command_payload(action_vector) == {
+        'action_vector': [float(value) for value in action_vector],
+    }
+    assert agent_module._parse_command_payload({'action_vector': action_vector}) == {
+        'action_vector': [float(value) for value in action_vector],
+    }
