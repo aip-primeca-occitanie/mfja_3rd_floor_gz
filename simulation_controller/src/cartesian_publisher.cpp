@@ -49,7 +49,6 @@ public:
     }
 
     void init(){
-
         //load urdf
         std::string pkg_path = ament_index_cpp::get_package_share_directory(
             "staubli_tx2_60l_moveit_config");

@@ -123,7 +123,7 @@ private:
         auto raw_pose = tf2::toMsg(relative_eigen);
         pose_msg.pose.position.x = raw_pose.position.z; //x and z might be inverted
         pose_msg.pose.position.y = raw_pose.position.y;
-        pose_msg.pose.position.z = raw_pose.position.x; //works without minus
+        pose_msg.pose.position.z = - raw_pose.position.x; //works without minus
         pose_msg.pose.orientation.x = raw_pose.orientation.z;
         pose_msg.pose.orientation.y = raw_pose.orientation.y;
         pose_msg.pose.orientation.z = - raw_pose.orientation.x;
@@ -154,7 +154,7 @@ private:
             vel_msg.twist.linear.z  = - v_cart(0);
             vel_msg.twist.angular.x = v_cart(5);
             vel_msg.twist.angular.y = v_cart(4);
-            vel_msg.twist.angular.z = v_cart(3);
+            vel_msg.twist.angular.z = - v_cart(3);
             pub_vel->publish(vel_msg);
         }
         prev_js = *msg;

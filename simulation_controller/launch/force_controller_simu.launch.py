@@ -89,11 +89,6 @@ def generate_launch_description():
         executable='force_simulation',
         name='force_simulation',
         output='screen',
-        parameters=[
-            {'z_contact': -0.1},
-            {'stiffness': 5000.0},
-            {'damping':   50.0},
-        ],
     )
 
     timer_action = TimerAction(
