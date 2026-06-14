@@ -43,6 +43,7 @@ def generate_launch_description():
             {
                 'rail_side': 'right',
                 'start_slot': LaunchConfiguration('right_start_slot'),
+                'start_slots': LaunchConfiguration('right_start_slots'),
                 'shuttle_count': LaunchConfiguration('right_shuttle_count'),
             },
         ],
@@ -60,6 +61,7 @@ def generate_launch_description():
             {
                 'rail_side': 'left',
                 'start_slot': LaunchConfiguration('left_start_slot'),
+                'start_slots': LaunchConfiguration('left_start_slots'),
                 'shuttle_count': LaunchConfiguration('left_shuttle_count'),
             },
         ],
@@ -142,6 +144,11 @@ def generate_launch_description():
             description='Startup slot for the right-rail shuttle.',
         ),
         DeclareLaunchArgument(
+            'right_start_slots',
+            default_value='',
+            description='Comma-separated startup slots for right-rail multi-shuttle mode.',
+        ),
+        DeclareLaunchArgument(
             'right_shuttle_count',
             default_value='0',
             description='Number of initial right-rail shuttles. Use 0 to start the rail with no shuttle.',
@@ -150,6 +157,11 @@ def generate_launch_description():
             'left_start_slot',
             default_value='2',
             description='Startup slot for the left-rail shuttle.',
+        ),
+        DeclareLaunchArgument(
+            'left_start_slots',
+            default_value='',
+            description='Comma-separated startup slots for left-rail multi-shuttle mode.',
         ),
         DeclareLaunchArgument(
             'left_shuttle_count',

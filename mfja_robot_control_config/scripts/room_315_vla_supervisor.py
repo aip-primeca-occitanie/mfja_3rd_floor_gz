@@ -4,6 +4,7 @@ import json
 import re
 import time
 from pathlib import Path
+import sys
 from typing import Any
 
 import rclpy
@@ -24,6 +25,22 @@ from mfja_rail_interfaces.msg import StopperState
 from mfja_rail_interfaces.msg import SwitchCommand
 from mfja_rail_interfaces.msg import SwitchState
 from mfja_rail_interfaces.srv import AddShuttle
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS as EVENT_ACTION_VECTOR_V3_FIELDS
+from room_315_multi_shuttle import ShuttleRegistry
+from room_315_multi_shuttle import decode_action_v3
+from room_315_multi_shuttle import empty_fleet_safety_metrics
+from room_315_multi_shuttle import fleet_safety_state_from_rails
+from room_315_multi_shuttle import gazebo_entity_name as multi_gazebo_entity_name
+from room_315_multi_shuttle import normalize_fleet_block_id
+from room_315_multi_shuttle import normalize_fleet_slot_id
+from room_315_multi_shuttle import normalize_shuttle_ref
+from room_315_multi_shuttle import validate_fleet_command
 
 
 SIDES = ('right', 'left')
@@ -284,7 +301,7 @@ def _normalize_safety_action(raw: Any) -> str:
 
 
 def _empty_safety_metrics() -> dict[str, Any]:
-    return {
+    metrics = {
         'total_proposed_actions': 0,
         'accepted_actions': 0,
         'rejected_actions': 0,
@@ -292,6 +309,8 @@ def _empty_safety_metrics() -> dict[str, Any]:
         'rejected_action_rate': 0.0,
         'rejection_reasons': {},
     }
+    metrics.update(empty_fleet_safety_metrics())
+    return metrics
 
 
 def _safety_decision(
@@ -624,6 +643,21 @@ def _is_all_switch_loop_transition(expanded: dict[str, str]) -> bool:
     return len(set(expanded.values())) == 1
 
 
+def _switch_assignments_are_noop(
+    rails: dict[str, Any],
+    side: str,
+    expanded: dict[str, str],
+) -> bool:
+    switches = _rail_snapshot(rails, side).get('switches', {})
+    if not isinstance(switches, dict) or not expanded:
+        return False
+    for switch_name, desired_state in expanded.items():
+        current_state = _canonical_switch_state(switches.get(switch_name))
+        if current_state != desired_state:
+            return False
+    return True
+
+
 def _gate_for_side(route_templates: dict[str, dict[str, Any]], side: str) -> str:
     for template in route_templates.values():
         if not isinstance(template, dict):
@@ -662,7 +696,10 @@ def _round_index(raw: Any) -> int:
 
 
 def _is_action_vector(raw: Any) -> bool:
-    if not isinstance(raw, list) or len(raw) != len(EVENT_ACTION_VECTOR_FIELDS):
+    if not isinstance(raw, list) or len(raw) not in {
+        len(EVENT_ACTION_VECTOR_FIELDS),
+        len(EVENT_ACTION_VECTOR_V3_FIELDS),
+    }:
         return False
     try:
         [float(value) for value in raw]
@@ -673,6 +710,8 @@ def _is_action_vector(raw: Any) -> bool:
 
 def _decode_event_action_vector(action_vector: Any) -> dict[str, Any]:
     values = [float(value) for value in list(action_vector)]
+    if len(values) == len(EVENT_ACTION_VECTOR_V3_FIELDS):
+        return decode_action_v3(values)
     if len(values) != len(EVENT_ACTION_VECTOR_FIELDS):
         raise ValueError(
             f'action_vector length {len(values)} does not match '
@@ -745,7 +784,11 @@ def _event_action_to_ros_command(
     side = _strict_side(event_action.get('side', 'right')) or 'right'
     target_id = _clean_token(event_action.get('target_id', 'none'))
     wait_condition = _clean_token(event_action.get('wait_condition', 'none'))
-    shuttle_name = default_shuttle_name_by_side.get(side, f'room315_{side}_shuttle_1')
+    shuttle_name = _event_action_shuttle_name(
+        event_action,
+        side=side,
+        default_shuttle_name_by_side=default_shuttle_name_by_side,
+    )
 
     if primitive in {'WAIT', 'DONE'}:
         return {'action': 'status'}, ''
@@ -762,7 +805,11 @@ def _event_action_to_ros_command(
         if wait_condition == 'none' or target_id == 'none':
             return None, 'unsafe shuttle ON: missing wait_condition or target_id'
         expected_target = f'{side}_shuttle'
-        if target_id not in {expected_target, 'MULTIPLE_DEVICES'}:
+        specific_targets = {
+            f'{side}_shuttle_{index}'
+            for index in range(1, 5)
+        }
+        if target_id not in {expected_target, 'MULTIPLE_DEVICES', *specific_targets}:
             return None, (
                 f'unsafe shuttle ON: target_id {target_id!r} does not match '
                 f'{expected_target!r}'
@@ -801,6 +848,35 @@ def _event_action_to_ros_command(
     return None, f'unsupported primitive {primitive!r}'
 
 
+def _event_action_shuttle_name(
+    event_action: dict[str, Any],
+    *,
+    side: str,
+    default_shuttle_name_by_side: dict[str, str],
+) -> str:
+    spec = normalize_shuttle_ref(
+        event_action.get('shuttle_id') or event_action.get('target_id'),
+        side=side,
+    )
+    if spec is None:
+        try:
+            shuttle_index = int(event_action.get('shuttle_index'))
+        except (TypeError, ValueError):
+            shuttle_index = -1
+        if shuttle_index >= 0:
+            return multi_gazebo_entity_name(side, shuttle_index + 1)
+    if spec is not None:
+        return spec.gazebo_entity_name
+    return default_shuttle_name_by_side.get(side, f'room315_{side}_shuttle_1')
+
+
+def _resolve_shuttle_command_name(raw: str, *, side: str) -> str:
+    spec = normalize_shuttle_ref(raw, side=side)
+    if spec is not None:
+        return spec.gazebo_entity_name
+    return _clean_token(raw)
+
+
 def decode_and_validate(
     action_vector: Any,
     *,
@@ -810,6 +886,9 @@ def decode_and_validate(
     active_tasks: dict[str, dict[str, Any]],
     slot_sensor_by_side: dict[str, dict[str, str]],
     default_shuttle_name_by_side: dict[str, str],
+    block_reservations: dict[str, str] | None = None,
+    station_slot_targets: dict[str, str] | None = None,
+    min_headway_blocks: int = 1,
 ) -> dict[str, Any]:
     raw_action = action_vector
     try:
@@ -846,7 +925,8 @@ def decode_and_validate(
             return _safety_decision(accepted=False, original_action=raw_action, reason=reason)
         expanded = _expanded_device_assignments(assignments)
         is_transition = _is_all_switch_loop_transition(expanded)
-        if is_transition:
+        assignments_are_noop = _switch_assignments_are_noop(rails, side, expanded)
+        if is_transition and not assignments_are_noop:
             if _rail_has_moving_shuttle(rails, side):
                 return _safety_decision(
                     accepted=False,
@@ -863,7 +943,7 @@ def decode_and_validate(
                         f'side-specific gate {gate} before switching loop mode'
                     ),
                 )
-        else:
+        elif not assignments_are_noop:
             for switch_name in expanded:
                 reason = _occupied_guarded_segment_reason(rails, side, switch_name)
                 if reason:
@@ -881,6 +961,9 @@ def decode_and_validate(
         active_tasks=active_tasks,
         slot_sensor_by_side=slot_sensor_by_side,
         default_shuttle_name_by_side=default_shuttle_name_by_side,
+        block_reservations=block_reservations,
+        station_slot_targets=station_slot_targets,
+        min_headway_blocks=min_headway_blocks,
     )
     decision['raw_action'] = raw_action
     decision['decoded_action'] = event_action
@@ -899,6 +982,9 @@ def _decode_room315_vla_action(
     active_tasks: dict[str, dict[str, Any]],
     slot_sensor_by_side: dict[str, dict[str, str]],
     default_shuttle_name_by_side: dict[str, str],
+    block_reservations: dict[str, str] | None = None,
+    station_slot_targets: dict[str, str] | None = None,
+    min_headway_blocks: int = 1,
 ) -> dict[str, Any]:
     if not isinstance(command, dict):
         return _safety_decision(
@@ -1017,16 +1103,22 @@ def _decode_room315_vla_action(
             )
         expanded = _expanded_device_assignments(assignments)
         side = corrected['side']
-        if _is_all_switch_loop_transition(expanded) and _rail_has_moving_shuttle(rails, side):
+        assignments_are_noop = _switch_assignments_are_noop(rails, side, expanded)
+        if (
+            _is_all_switch_loop_transition(expanded)
+            and not assignments_are_noop
+            and _rail_has_moving_shuttle(rails, side)
+        ):
             return _safety_decision(
                 accepted=False,
                 original_action=command,
                 reason=f'unsafe loop transition: {side} shuttle must be staged/stopped before changing all switches',
             )
-        for switch_name in expanded:
-            reason = _unsafe_switch_change_reason(rails, side, switch_name)
-            if reason:
-                return _safety_decision(accepted=False, original_action=command, reason=reason)
+        if not assignments_are_noop:
+            for switch_name in expanded:
+                reason = _unsafe_switch_change_reason(rails, side, switch_name)
+                if reason:
+                    return _safety_decision(accepted=False, original_action=command, reason=reason)
         corrected['switches'] = assignments
         return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
 
@@ -1065,9 +1157,31 @@ def _decode_room315_vla_action(
                 original_action=command,
                 reason=f'invalid shuttle command {command_name!r}',
             )
-        shuttle_name = _clean_token(
-            command.get('shuttle') or command.get('name') or default_shuttle_name_by_side.get(side, '')
+        registry = ShuttleRegistry.from_rails(rails)
+        fleet_state = fleet_safety_state_from_rails(
+            rails,
+            block_reservations=block_reservations,
+            station_slot_targets=station_slot_targets,
+            min_headway_blocks=min_headway_blocks,
         )
+        fleet_ok, fleet_reason = validate_fleet_command(
+            command,
+            registry=registry,
+            fleet_state=fleet_state,
+        )
+        if not fleet_ok:
+            return _safety_decision(
+                accepted=False,
+                original_action=command,
+                reason=fleet_reason,
+            )
+        shuttle_name = _clean_token(
+            command.get('shuttle')
+            or command.get('shuttle_id')
+            or command.get('name')
+            or default_shuttle_name_by_side.get(side, '')
+        )
+        shuttle_name = _resolve_shuttle_command_name(shuttle_name, side=side)
         if not shuttle_name:
             return _safety_decision(
                 accepted=False,
@@ -1225,6 +1339,9 @@ class Room315VlaSupervisor(Node):
         self.completed_tasks: list[dict[str, Any]] = []
         self.task_counter = 0
         self.safety_metrics = _empty_safety_metrics()
+        self.block_reservations: dict[str, str] = {}
+        self.station_slot_targets: dict[str, str] = {}
+        self.min_headway_blocks = int(self.defaults.get('min_headway_blocks', 1) or 1)
         self.last_safety_decision: dict[str, Any] | None = None
         self.safety_decisions: list[dict[str, Any]] = []
         self.safety_decision_log_limit = max(
@@ -1631,6 +1748,9 @@ class Room315VlaSupervisor(Node):
             active_tasks=self.active_tasks,
             slot_sensor_by_side=self.slot_sensor_by_side,
             default_shuttle_name_by_side=self._default_shuttle_names_by_side(),
+            block_reservations=getattr(self, 'block_reservations', {}),
+            station_slot_targets=getattr(self, 'station_slot_targets', {}),
+            min_headway_blocks=getattr(self, 'min_headway_blocks', 1),
         )
 
     def _safety_decode_command(self, command: Any) -> dict[str, Any]:
@@ -1646,6 +1766,9 @@ class Room315VlaSupervisor(Node):
             active_tasks=self.active_tasks,
             slot_sensor_by_side=self.slot_sensor_by_side,
             default_shuttle_name_by_side=self._default_shuttle_names_by_side(),
+            block_reservations=getattr(self, 'block_reservations', {}),
+            station_slot_targets=getattr(self, 'station_slot_targets', {}),
+            min_headway_blocks=getattr(self, 'min_headway_blocks', 1),
         )
 
     def _record_safety_decision(self, decision: dict[str, Any]) -> None:
@@ -1656,19 +1779,98 @@ class Room315VlaSupervisor(Node):
         self.safety_metrics['total_proposed_actions'] += 1
         if accepted:
             self.safety_metrics['accepted_actions'] += 1
+            self._update_runtime_fleet_safety(entry)
         else:
             self.safety_metrics['rejected_actions'] += 1
             reason = str(entry.get('reason') or 'unknown')
             reasons = self.safety_metrics.setdefault('rejection_reasons', {})
             reasons[reason] = int(reasons.get(reason, 0)) + 1
+            reason_text = reason.casefold()
+            if 'ambiguous' in reason_text or 'wrong shuttle' in reason_text:
+                wrong = int(self.safety_metrics.get('wrong_shuttle_command_count') or 0) + 1
+                self.safety_metrics['wrong_shuttle_command_count'] = wrong
+            if 'occupied' in reason_text:
+                self.safety_metrics['block_occupancy_violation_count'] = (
+                    int(self.safety_metrics.get('block_occupancy_violation_count') or 0) + 1
+                )
+            if 'reserved' in reason_text:
+                self.safety_metrics['block_reservation_rejection_count'] = (
+                    int(self.safety_metrics.get('block_reservation_rejection_count') or 0) + 1
+                )
+            if 'headway' in reason_text:
+                self.safety_metrics['headway_violation_count'] = (
+                    int(self.safety_metrics.get('headway_violation_count') or 0) + 1
+                )
+            if 'deadlock' in reason_text:
+                self.safety_metrics['deadlock_detected_count'] = (
+                    int(self.safety_metrics.get('deadlock_detected_count') or 0) + 1
+                )
         total = int(self.safety_metrics.get('total_proposed_actions') or 0)
         rejected = int(self.safety_metrics.get('rejected_actions') or 0)
         self.safety_metrics['illegal_proposal_rate'] = 0.0 if total == 0 else round(rejected / total, 4)
         self.safety_metrics['rejected_action_rate'] = 0.0 if total == 0 else round(rejected / total, 4)
+        wrong = int(self.safety_metrics.get('wrong_shuttle_command_count') or 0)
+        self.safety_metrics['wrong_shuttle_command_rate'] = (
+            0.0 if total == 0 else round(wrong / total, 4)
+        )
         self.last_safety_decision = entry
         self.safety_decisions.append(entry)
         if len(self.safety_decisions) > self.safety_decision_log_limit:
             self.safety_decisions = self.safety_decisions[-self.safety_decision_log_limit:]
+
+    def _update_runtime_fleet_safety(self, decision: dict[str, Any]) -> None:
+        corrected = decision.get('corrected_action')
+        if isinstance(corrected, list):
+            for item in corrected:
+                self._update_runtime_fleet_safety({'accepted': True, 'corrected_action': item})
+            return
+        if not isinstance(corrected, dict):
+            return
+        action = _normalize_safety_action(corrected.get('action'))
+        if action != 'shuttle':
+            return
+        side = _strict_side(corrected.get('side', 'right')) or 'right'
+        spec = normalize_shuttle_ref(
+            corrected.get('shuttle') or corrected.get('shuttle_id') or corrected.get('name'),
+            side=side,
+        )
+        if spec is None:
+            return
+        owner = spec.short_id
+        command_name = _clean_token(corrected.get('command', '')).upper()
+        if command_name == 'ON':
+            next_block = normalize_fleet_block_id(
+                corrected.get('next_block') or corrected.get('target_block') or '',
+                side=side,
+            )
+            if next_block:
+                previous_owner = self.block_reservations.get(next_block)
+                self.block_reservations[next_block] = owner
+                if previous_owner != owner:
+                    self.safety_metrics['block_reservation_success_count'] = (
+                        int(self.safety_metrics.get('block_reservation_success_count') or 0) + 1
+                    )
+            target_slot = normalize_fleet_slot_id(
+                corrected.get('target_slot') or corrected.get('slot') or '',
+                side=side,
+            )
+            if target_slot:
+                self.station_slot_targets[target_slot] = owner
+            return
+        if command_name in {'OFF', 'RESET', 'REMOVE'}:
+            self._release_runtime_fleet_owner(owner)
+
+    def _release_runtime_fleet_owner(self, owner: str) -> None:
+        self.block_reservations = {
+            block: reserved_owner
+            for block, reserved_owner in self.block_reservations.items()
+            if reserved_owner != owner
+        }
+        self.station_slot_targets = {
+            slot: reserved_owner
+            for slot, reserved_owner in self.station_slot_targets.items()
+            if reserved_owner != owner
+        }
 
     def _execute(self, command: dict[str, Any] | list[Any]) -> None:
         if isinstance(command, list):
@@ -2613,6 +2815,12 @@ class Room315VlaSupervisor(Node):
 
     def _snapshot(self) -> dict[str, Any]:
         now = time.monotonic()
+        fleet_state = fleet_safety_state_from_rails(
+            self.rails,
+            block_reservations=getattr(self, 'block_reservations', {}),
+            station_slot_targets=getattr(self, 'station_slot_targets', {}),
+            min_headway_blocks=getattr(self, 'min_headway_blocks', 1),
+        )
         image_age = None if self.last_image_time is None else round(now - self.last_image_time, 3)
         camera_info_age = (
             None
@@ -2650,6 +2858,14 @@ class Room315VlaSupervisor(Node):
                 'metrics': self.safety_metrics,
                 'last_decision': self.last_safety_decision,
                 'recent_decisions': list(self.safety_decisions),
+                'fleet_state': {
+                    'block_occupancy': fleet_state.block_occupancy,
+                    'block_reservations': dict(getattr(self, 'block_reservations', {})),
+                    'station_slot_targets': dict(getattr(self, 'station_slot_targets', {})),
+                    'shuttle_blocks': fleet_state.shuttle_blocks,
+                    'min_headway_blocks': getattr(self, 'min_headway_blocks', 1),
+                    'model_input_exposure': 'excluded',
+                },
             },
             'safety_decoder_metrics': self.safety_metrics,
             'vision': {

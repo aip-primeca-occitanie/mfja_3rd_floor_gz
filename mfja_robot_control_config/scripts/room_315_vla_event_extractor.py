@@ -9,6 +9,16 @@ from typing import Any
 
 MODEL_INPUT_FIELDS = ('language', 'overhead_images', 'last_command')
 START_LAST_COMMAND = {'action': 'START'}
+PLANNING_METADATA_FIELDS = (
+    'planning_source',
+    'pddl_domain',
+    'pddl_problem',
+    'pddl_goal',
+    'symbolic_plan',
+    'plan_step_index',
+    'generated_language',
+    'language_template_id',
+)
 
 
 def _json_dumps(data: Any) -> str:
@@ -94,6 +104,9 @@ def _training_row(
         training['action_vector'] = row.get('action_vector')
     if isinstance(row.get('auxiliary_targets'), dict):
         training['auxiliary_targets'] = deepcopy(row['auxiliary_targets'])
+    for field in PLANNING_METADATA_FIELDS:
+        if field in row and row[field] is not None:
+            training[field] = deepcopy(row[field])
     return training
 
 

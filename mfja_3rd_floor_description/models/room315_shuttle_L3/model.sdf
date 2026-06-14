@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="room315_shuttle_L3">
+    <static>false</static>
+    <link name="room315_shuttle_link">
+      <kinematic>true</kinematic><gravity>false</gravity><pose>0 0 0 0 0 0</pose>
+      <inertial><mass>0.1</mass><inertia><ixx>0.001</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.001</iyy><iyz>0</iyz><izz>0.001</izz></inertia></inertial>
+      <visual name="room315_shuttle_visual"><pose>-0.25 -0.100000024 -0.078499973 0 0 0</pose><geometry><mesh><uri>model://room315_shuttle/meshes/shuttle.STL</uri></mesh></geometry><material><ambient>0.01 0.01 0.01 1</ambient><diffuse>0.01 0.01 0.01 1</diffuse><specular>0.20 0.20 0.20 1</specular></material></visual>
+      <visual name="payload_keepout_center_L3"><pose>0 0 0.033 0 0 0</pose><geometry><box><size>0.160 0.110 0.003</size></box></geometry><material><ambient>0.04 0.04 0.04 0.35</ambient><diffuse>0.04 0.04 0.04 0.35</diffuse></material></visual>
+      <visual name="identity_region_front_left_label_L3_tag_221"><pose>0.125 0.082 0.050 0 0 0</pose><geometry><plane><normal>0 0 1</normal><size>0.075 0.045</size></plane></geometry><material><ambient>0.90 0.36 0.04 1</ambient><diffuse>0.90 0.36 0.04 1</diffuse><specular>0.10 0.10 0.10 1</specular></material></visual>
+      <visual name="identity_region_front_right_label_L3_tag_222"><pose>0.125 -0.082 0.050 0 0 0</pose><geometry><plane><normal>0 0 1</normal><size>0.075 0.045</size></plane></geometry><material><ambient>0.90 0.36 0.04 1</ambient><diffuse>0.90 0.36 0.04 1</diffuse><specular>0.10 0.10 0.10 1</specular></material></visual>
+      <visual name="identity_region_rear_left_label_L3_tag_223"><pose>-0.125 0.082 0.050 0 0 3.14159</pose><geometry><plane><normal>0 0 1</normal><size>0.075 0.045</size></plane></geometry><material><ambient>0.90 0.36 0.04 1</ambient><diffuse>0.90 0.36 0.04 1</diffuse><specular>0.10 0.10 0.10 1</specular></material></visual>
+      <visual name="identity_region_rear_right_label_L3_tag_224"><pose>-0.125 -0.082 0.050 0 0 3.14159</pose><geometry><plane><normal>0 0 1</normal><size>0.075 0.045</size></plane></geometry><material><ambient>0.90 0.36 0.04 1</ambient><diffuse>0.90 0.36 0.04 1</diffuse><specular>0.10 0.10 0.10 1</specular></material></visual>
+      <collision name="room315_shuttle_robot_collision"><pose>-0.078417048 0 0 0 0 0</pose><geometry><box><size>0.36 0.22 0.17</size></box></geometry><surface><contact><collide_bitmask>0x0000</collide_bitmask></contact></surface></collision>
+    </link>
+    <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher"><publish_model_pose>true</publish_model_pose><publish_link_pose>true</publish_link_pose><publish_collision_pose>false</publish_collision_pose><publish_visual_pose>false</publish_visual_pose><publish_nested_model_pose>false</publish_nested_model_pose><update_frequency>30</update_frequency></plugin>
+  </model>
+</sdf>

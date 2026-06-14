@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import sys
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -16,6 +18,18 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
+from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
+from room_315_multi_shuttle import COORDINATION_MODE_IDS
+from room_315_multi_shuttle import decode_action_v3 as _decode_action_v3
+from room_315_multi_shuttle import encode_action_v3 as _encode_action_v3
+from room_315_multi_shuttle import model_input_is_clean
 
 
 SIDES = ('right', 'left')
@@ -104,6 +118,8 @@ WAIT_CONDITION_IDS = {
     'task_phase_observed': 5,
     'terminal': 6,
     'target_sensor_active': 7,
+    'block_clearance': 8,
+    'headway_clearance': 9,
 }
 TARGET_IDS = {
     'none': 0,
@@ -134,6 +150,14 @@ TARGET_IDS = {
     'DZI4L': 25,
     'DA3IR': 26,
     'DA3IL': 27,
+    'right_shuttle_1': 28,
+    'right_shuttle_2': 29,
+    'right_shuttle_3': 30,
+    'right_shuttle_4': 31,
+    'left_shuttle_1': 32,
+    'left_shuttle_2': 33,
+    'left_shuttle_3': 34,
+    'left_shuttle_4': 35,
 }
 REASON_IDS = {
     'none': 0,
@@ -150,6 +174,14 @@ REASON_IDS = {
     'shuttle_stop': 11,
     'emergency': 12,
     'unsupported_command': 13,
+    'target_station_route': 14,
+    'wait_for_block_clearance': 15,
+    'maintain_headway': 16,
+    'avoid_collision': 17,
+    'avoid_deadlock': 18,
+    'obstacle_stop': 19,
+    'wrong_shuttle_rejected': 20,
+    'fleet_coordination': 21,
 }
 PRIMITIVE_IDS_BY_VALUE = {value: key for key, value in PRIMITIVE_IDS.items()}
 SIDE_IDS_BY_VALUE = {value: key for key, value in SIDE_IDS.items()}
@@ -220,7 +252,30 @@ PRIVILEGED_EVAL_FIELDS = [
     'raw_shuttle_states',
     'raw_active_sensor_readings',
     'visual_eval_labels',
+    'shuttle_identity_tracks',
 ]
+PLANNING_METADATA_FIELDS = [
+    'planning_source',
+    'pddl_domain',
+    'pddl_problem',
+    'pddl_goal',
+    'symbolic_plan',
+    'plan_step_index',
+    'generated_language',
+    'language_template_id',
+    'target_shuttle_id',
+    'involved_shuttles',
+    'reserved_blocks',
+    'payload_present',
+    'payload_type',
+    'visible_marker_count',
+    'identity_occlusion_level',
+    'expected_visible_ids',
+]
+PLANNING_METADATA_ALIASES = {
+    'language': 'generated_language',
+    'generated_language_template_id': 'language_template_id',
+}
 OVERHEAD_IMAGE_NAMES = {'right_rail_rgb', 'left_rail_rgb'}
 STATION_SENSOR_GROUPS = {
     'right': {
@@ -455,6 +510,18 @@ def _is_meaningful_event_action(next_action: dict[str, Any]) -> bool:
 
 def _action_vector_or_none(next_action: dict[str, Any]) -> list[float] | None:
     return _encode_action(next_action)
+
+
+def _action_schema_version_for_event(event_action: dict[str, Any]) -> int:
+    if _requests_action_schema_v3(event_action):
+        return ACTION_SCHEMA_VERSION
+    return 2
+
+
+def _action_schema_fields_for_event(event_action: dict[str, Any]) -> list[str]:
+    if _action_schema_version_for_event(event_action) == ACTION_SCHEMA_VERSION:
+        return ACTION_VECTOR_V3_FIELDS
+    return ACTION_VECTOR_FIELDS
 
 
 def _round_index(raw: Any) -> int:
@@ -746,7 +813,7 @@ def _event_action_v2_from_symbolic_action(
     if target_id == 'none' and primitive == 'DONE':
         target_id = 'terminal'
 
-    return {
+    event_action = {
         'primitive': primitive,
         'side': side,
         'switch_mask': switch_mask,
@@ -762,6 +829,52 @@ def _event_action_v2_from_symbolic_action(
             status_text=status_text,
         ),
     }
+    event_action.update(_multi_shuttle_event_fields(command_dict, side=side, target_id=target_id))
+    return event_action
+
+
+def _multi_shuttle_event_fields(command: dict[str, Any], *, side: str, target_id: str) -> dict[str, Any]:
+    if not _requests_action_schema_v3(command):
+        return {}
+    raw_index = command.get('shuttle_index')
+    if raw_index is None:
+        shuttle_text = str(
+            command.get('shuttle_id')
+            or command.get('shuttle')
+            or command.get('name')
+            or target_id
+            or ''
+        )
+        match = re.search(r'(?:^|_)([1-4])$', shuttle_text)
+        raw_index = int(match.group(1)) - 1 if match else -1
+    return {
+        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
+        'shuttle_id': str(
+            command.get('shuttle_id')
+            or command.get('shuttle')
+            or command.get('name')
+            or ''
+        ),
+        'shuttle_index': int(raw_index),
+        'coordination_mode': str(command.get('coordination_mode') or 'normal'),
+    }
+
+
+def _requests_action_schema_v3(command: dict[str, Any]) -> bool:
+    if _safe_int(
+        command.get('action_vector_schema_version')
+        or command.get('action_schema_version')
+        or 0
+    ) == 3:
+        return True
+    return any(key in command for key in ('shuttle_id', 'shuttle_index', 'coordination_mode'))
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _mask_value_dicts_from_event_action(
@@ -853,6 +966,9 @@ def _normalize_event_action_v2(action: Any) -> dict[str, Any]:
 
 
 def _encode_action(command: Any) -> list[float]:
+    command_dict = _as_command_dict(command)
+    if _requests_action_schema_v3(command_dict):
+        return _encode_action_v3(command_dict)
     action = _normalize_event_action_v2(command)
     switch_mask, switch_values = _mask_value_dicts_from_event_action(
         action,
@@ -903,6 +1019,8 @@ def _decode_device_assignments(
 
 def _decode_action(action_vector: Any) -> dict[str, Any]:
     values = [float(value) for value in list(action_vector)]
+    if len(values) == len(ACTION_VECTOR_V3_FIELDS):
+        return _decode_action_v3(values)
     if len(values) != len(ACTION_VECTOR_FIELDS):
         raise ValueError(
             f'action vector length {len(values)} does not match schema '
@@ -1451,6 +1569,38 @@ def _task_context_from_status(
     return {}
 
 
+def _planning_metadata_from_source(source: Any) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    if isinstance(source, list):
+        for item in source:
+            metadata.update(_planning_metadata_from_source(item))
+        return metadata
+    if not isinstance(source, dict):
+        return metadata
+
+    containers = [source]
+    for nested_key in ('planning_metadata', 'planning'):
+        nested = source.get(nested_key)
+        if isinstance(nested, dict):
+            containers.append(nested)
+
+    for container in containers:
+        for field in PLANNING_METADATA_FIELDS:
+            if field in container and container[field] is not None:
+                metadata[field] = deepcopy(container[field])
+        for alias, field in PLANNING_METADATA_ALIASES.items():
+            if field not in metadata and alias in container and container[alias] is not None:
+                metadata[field] = deepcopy(container[alias])
+    return metadata
+
+
+def _planning_metadata_from_sources(*sources: Any) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for source in sources:
+        metadata.update(_planning_metadata_from_source(source))
+    return metadata
+
+
 def _structured_rail_state(status: dict[str, Any]) -> dict[str, Any]:
     structured: dict[str, Any] = {
         'emergency_stop': bool(status.get('emergency_stop')),
@@ -1471,6 +1621,86 @@ def _structured_rail_state(status: dict[str, Any]) -> dict[str, Any]:
             },
         }
     return structured
+
+
+def _parse_identity_tracks_payload(raw: str) -> list[dict[str, Any]]:
+    try:
+        parsed = json.loads(raw or '{}')
+    except json.JSONDecodeError:
+        return []
+    if isinstance(parsed, list):
+        tracks = parsed
+    elif isinstance(parsed, dict):
+        tracks = parsed.get('tracks', [])
+    else:
+        tracks = []
+    if not isinstance(tracks, list):
+        return []
+    return [dict(track) for track in tracks if isinstance(track, dict)]
+
+
+def _short_shuttle_label(raw: Any) -> str:
+    text = str(raw or '').strip()
+    if not text:
+        return ''
+    match = re.fullmatch(r'([RL])([1-4])', text.upper())
+    if match:
+        return f'{match.group(1)}{match.group(2)}'
+    match = re.fullmatch(r'(?:room315_)?(right|left)_shuttle_?([1-4])', text.casefold())
+    if match:
+        return f'{"R" if match.group(1) == "right" else "L"}{match.group(2)}'
+    return ''
+
+
+def _identity_metadata_from_tracks(
+    tracks: list[dict[str, Any]],
+    *,
+    target_shuttle_id: Any = '',
+) -> dict[str, Any]:
+    if not tracks:
+        return {}
+    metadata: dict[str, Any] = {
+        'shuttle_identity_tracks': {
+            'tracks': deepcopy(tracks),
+            'track_count': len(tracks),
+            'model_input_exposure': 'excluded',
+        }
+    }
+    target_label = _short_shuttle_label(target_shuttle_id)
+    if target_label:
+        for track in tracks:
+            if _short_shuttle_label(track.get('shuttle_id')) != target_label:
+                continue
+            metadata.update({
+                'correct_target_shuttle': target_label,
+                'visible_marker_count_for_target': track.get('visible_marker_count'),
+                'identity_occlusion_level': _visibility_to_occlusion_level(
+                    track.get('visibility_state'),
+                ),
+                'expected_visible_ids': track.get('visible_marker_ids', []),
+            })
+            break
+    return metadata
+
+
+def _visibility_to_occlusion_level(raw: Any) -> str:
+    state = str(raw or '').strip().casefold()
+    if state == 'visible':
+        return 'visible'
+    if state in {'partially_occluded', 'partial'}:
+        return 'partial'
+    if state == 'lost':
+        return 'lost'
+    return ''
+
+
+def _validated_model_input(model_input: dict[str, Any]) -> dict[str, Any]:
+    if not model_input_is_clean(model_input):
+        raise ValueError(
+            'Room 315 VLA model_input boundary violation: expected only '
+            'language, overhead_images, and last_command without privileged fields'
+        )
+    return model_input
 
 
 def _event_signature(next_action: dict[str, Any]) -> str:
@@ -1521,6 +1751,8 @@ class Room315VlaDatasetRecorder(Node):
         self.declare_parameter('command_topic', '/room_315/vla/command')
         self.declare_parameter('control_topic', '/room_315/vla/episode_control')
         self.declare_parameter('recorder_status_topic', '/room_315/vla/dataset_status')
+        self.declare_parameter('identity_tracks_topic', '/room_315/vla/shuttle_identity_tracks')
+        self.declare_parameter('record_identity_tracks', True)
         self.declare_parameter('sample_period_s', 0.2)
         self.declare_parameter('auto_start_on_goal', True)
         self.declare_parameter('image_max_width', 640)
@@ -1547,6 +1779,7 @@ class Room315VlaDatasetRecorder(Node):
                 self.camera_topics[camera_name] = topic
         self.latest_images: dict[str, Image] = {}
         self.latest_status: dict[str, Any] = {}
+        self.latest_identity_tracks: list[dict[str, Any]] = []
         self.latest_goal = 'unspecified Room 315 rail task'
         self.latest_task_index = -1
         self.latest_command: Any = {'action': 'status'}
@@ -1605,6 +1838,14 @@ class Room315VlaDatasetRecorder(Node):
             self._on_control,
             10,
         )
+        identity_tracks_topic = str(self.get_parameter('identity_tracks_topic').value).strip()
+        if _as_bool(self.get_parameter('record_identity_tracks').value) and identity_tracks_topic:
+            self.create_subscription(
+                String,
+                identity_tracks_topic,
+                self._on_identity_tracks,
+                10,
+            )
 
         self._write_dataset_info()
         sample_period_s = max(float(self.get_parameter('sample_period_s').value), 0.05)
@@ -1636,6 +1877,9 @@ class Room315VlaDatasetRecorder(Node):
             self.latest_status = parsed
             self._update_sensor_event_tracking(parsed)
             self._record_status_events()
+
+    def _on_identity_tracks(self, msg: String) -> None:
+        self.latest_identity_tracks = _parse_identity_tracks_payload(msg.data)
 
     def _on_goal(self, msg: String) -> None:
         goal = msg.data.strip()
@@ -1839,6 +2083,20 @@ class Room315VlaDatasetRecorder(Node):
                 sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
                 now_s=time.monotonic(),
             )
+            _validated_model_input(model_input)
+            planning_metadata = _planning_metadata_from_sources(
+                task_context,
+                command,
+            )
+            privileged_eval = _privileged_eval_from_status(
+                self.latest_status,
+                sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
+                now_s=time.monotonic(),
+            )
+            privileged_eval.update(_identity_metadata_from_tracks(
+                getattr(self, 'latest_identity_tracks', []),
+                target_shuttle_id=planning_metadata.get('target_shuttle_id', ''),
+            ))
             row = {
                 'episode_index': self.episode_index,
                 'episode_id': self.episode_id,
@@ -1873,11 +2131,7 @@ class Room315VlaDatasetRecorder(Node):
                 'last_primitive_command': self.latest_status.get('last_primitive_command'),
                 'safety_decoder_metrics': self._safety_decoder_metrics(),
                 'event_generation_metrics': self._event_generation_metrics(),
-                'privileged_eval': _privileged_eval_from_status(
-                    self.latest_status,
-                    sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
-                    now_s=time.monotonic(),
-                ),
+                'privileged_eval': privileged_eval,
                 'debug': {
                     'supervisor_status': self.latest_status,
                     'observation_counts': _debug_observation_counts(self.latest_status),
@@ -2052,6 +2306,21 @@ class Room315VlaDatasetRecorder(Node):
             sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
             now_s=time.monotonic(),
         )
+        _validated_model_input(model_input)
+        planning_metadata = _planning_metadata_from_sources(
+            task_context,
+            original_command,
+            normalized_action,
+        )
+        privileged_eval = _privileged_eval_from_status(
+            self.latest_status,
+            sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
+            now_s=time.monotonic(),
+        )
+        privileged_eval.update(_identity_metadata_from_tracks(
+            getattr(self, 'latest_identity_tracks', []),
+            target_shuttle_id=planning_metadata.get('target_shuttle_id', ''),
+        ))
         row = {
             'episode_index': self.episode_index,
             'episode_id': self.episode_id,
@@ -2091,17 +2360,14 @@ class Room315VlaDatasetRecorder(Node):
             'legacy_next_action': normalized_action,
             'next_action': event_action,
             'action': event_action,
+            'action_vector_schema_version': _action_schema_version_for_event(event_action),
             'action_vector': _action_vector_or_none(event_action),
-            'action_schema': ACTION_VECTOR_FIELDS,
+            'action_schema': _action_schema_fields_for_event(event_action),
             'wait_condition': wait_condition,
             'minimal_recording': minimal_metadata,
             'safety_decoder_metrics': self._safety_decoder_metrics(),
             'event_generation_metrics': self._event_generation_metrics(),
-            'privileged_eval': _privileged_eval_from_status(
-                self.latest_status,
-                sensor_event_times=getattr(self, 'last_sensor_event_time_by_side', {}),
-                now_s=time.monotonic(),
-            ),
+            'privileged_eval': privileged_eval,
             'debug': {
                 'observation_counts': _debug_observation_counts(self.latest_status),
             },
@@ -2110,6 +2376,8 @@ class Room315VlaDatasetRecorder(Node):
                 'supervisor_last_result': self.latest_status.get('last_result', ''),
             },
         }
+        if planning_metadata:
+            row.update(planning_metadata)
         for camera_name, image_relpath in image_frame_refs.items():
             row[f'observation.images.{camera_name}'] = image_relpath
         self.event_stream.write(_json_dumps(row) + '\n')
@@ -2180,6 +2448,13 @@ class Room315VlaDatasetRecorder(Node):
                 'position values are excluded from policy input.'
             ),
             'privileged_eval_fields': PRIVILEGED_EVAL_FIELDS,
+            'planning_metadata_fields': PLANNING_METADATA_FIELDS,
+            'planning_metadata_note': (
+                'Optional PDDL/planning metadata may appear on event rows for '
+                'dry-run and future planned scenario provenance. These fields '
+                'are outside model_input and must not be fed to learned VLA '
+                'policies.'
+            ),
             'visual_eval_markers': VISUAL_EVAL_MARKERS,
             'visual_eval_note': (
                 'The model-facing scene keeps station/slot cues limited to slot '
@@ -2194,11 +2469,14 @@ class Room315VlaDatasetRecorder(Node):
                 for side, sensor_names in SENSOR_IDS_BY_SIDE.items()
             },
             'debug_observation_fields': DEBUG_OBSERVATION_FIELDS,
+            'action_schema_version': ACTION_SCHEMA_VERSION,
             'action_features': ACTION_VECTOR_FIELDS,
+            'action_v3_features': ACTION_VECTOR_V3_FIELDS,
             'symbolic_action_features': EVENT_ACTION_FIELDS,
             'action_encodings': {
                 'primitive_id': PRIMITIVE_IDS,
                 'side_id': SIDE_IDS,
+                'coordination_mode': COORDINATION_MODE_IDS,
                 'device_mask': {'unchanged': 0, 'selected': 1},
                 'switch_value': SWITCH_VALUE_IDS,
                 'stopper_value': STOPPER_VALUE_IDS,

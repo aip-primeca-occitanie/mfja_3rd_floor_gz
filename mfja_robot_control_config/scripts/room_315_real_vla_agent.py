@@ -4,9 +4,11 @@ import base64
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 import cv2
@@ -16,6 +18,20 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
+from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
+from room_315_multi_shuttle import COORDINATION_MODE_IDS
+from room_315_multi_shuttle import REASON_IDS
+from room_315_multi_shuttle import SIDE_IDS
+from room_315_multi_shuttle import TARGET_IDS
+from room_315_multi_shuttle import model_input_is_clean
+from room_315_multi_shuttle import shuttle_specs_for_side
 
 
 ALLOWED_ACTIONS = (
@@ -39,7 +55,7 @@ MODEL_OUTPUT_ACTIONS = (
     'clear_emergency_stop',
     'status',
 )
-EVENT_ACTION_VECTOR_FIELDS = (
+EVENT_ACTION_VECTOR_V2_FIELDS = (
     'primitive_id',
     'side_id',
     'switch_mask_A1',
@@ -63,6 +79,7 @@ EVENT_ACTION_VECTOR_FIELDS = (
     'target_id',
     'reason_id',
 )
+EVENT_ACTION_VECTOR_FIELDS = tuple(ACTION_VECTOR_V3_FIELDS)
 EVENT_PRIMITIVE_IDS = {
     'WAIT': 0,
     'DONE': 1,
@@ -367,11 +384,17 @@ def _model_input_from_status(
     now_s: float | None = None,
 ) -> dict[str, Any]:
     _ = status, sensor_event_times, now_s
-    return {
+    model_input = {
         'language': str(language or ''),
         'overhead_images': _overhead_images(overhead_images),
         'last_command': _normalize_last_command(last_command),
     }
+    if not model_input_is_clean(model_input):
+        raise ValueError(
+            'Room 315 VLA model_input boundary violation: only language, '
+            'overhead_images, and last_command may be sent to the model'
+        )
+    return model_input
 
 
 
@@ -395,34 +418,182 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
     raise ValueError('model response did not contain output text')
 
 
-def _is_action_vector(raw: Any) -> bool:
-    if not isinstance(raw, list) or len(raw) != len(EVENT_ACTION_VECTOR_FIELDS):
-        return False
+def _action_vector_schema_version(raw: Any) -> int | None:
+    if not isinstance(raw, list):
+        return None
+    if len(raw) == len(EVENT_ACTION_VECTOR_FIELDS):
+        version = ACTION_SCHEMA_VERSION
+    elif len(raw) == len(EVENT_ACTION_VECTOR_V2_FIELDS):
+        version = 2
+    else:
+        return None
     try:
         [float(value) for value in raw]
     except (TypeError, ValueError):
+        return None
+    return version
+
+
+def _is_action_vector(raw: Any) -> bool:
+    return _action_vector_schema_version(raw) is not None
+
+
+def _multi_shuttle_active(status: dict[str, Any]) -> bool:
+    rails = _rails_from_status(status)
+    for side in SIDES:
+        rail = rails.get(side, {}) if isinstance(rails.get(side), dict) else {}
+        shuttles = rail.get('shuttles', {})
+        if isinstance(shuttles, dict) and len(shuttles) > 1:
+            return True
+    return False
+
+
+def _preferred_action_schema_version(status: dict[str, Any]) -> int:
+    return ACTION_SCHEMA_VERSION if _multi_shuttle_active(status) else 2
+
+
+def _shuttle_index_mapping() -> dict[str, dict[str, int]]:
+    return {
+        side: {spec.short_id: spec.shuttle_index for spec in shuttle_specs_for_side(side, 4)}
+        for side in SIDES
+    }
+
+
+def _forbidden_output_keys() -> set[str]:
+    return {
+        'model_input',
+        'pddl_goal',
+        'pddl_problem',
+        'pddl_domain',
+        'symbolic_plan',
+        'plan_step_index',
+        'structured_rail_state',
+        'privileged_eval',
+        'shuttle_tracks',
+        'shuttle_identity_tracks',
+        'fiducial_detections',
+        'apriltag_detections',
+        'target_shuttle_id',
+        'rail_occupancy',
+        'block_reservations',
+        'gazebo_pose',
+        'gazebo_poses',
+    }
+
+
+def _contains_forbidden_output_key(raw: Any) -> str:
+    if isinstance(raw, dict):
+        for key, value in raw.items():
+            key_text = str(key).strip()
+            if key_text in _forbidden_output_keys():
+                return key_text
+            nested = _contains_forbidden_output_key(value)
+            if nested:
+                return nested
+    elif isinstance(raw, list):
+        for item in raw:
+            nested = _contains_forbidden_output_key(item)
+            if nested:
+                return nested
+    return ''
+
+
+def _movement_vector_missing_shuttle_index(action_vector: list[float]) -> bool:
+    if _action_vector_schema_version(action_vector) != ACTION_SCHEMA_VERSION:
         return False
-    return True
+    primitive_id = int(round(float(action_vector[0])))
+    if primitive_id not in {
+        EVENT_PRIMITIVE_IDS['SHUTTLE_ON'],
+        EVENT_PRIMITIVE_IDS['STOP_NOW'],
+    }:
+        return False
+    return int(round(float(action_vector[2]))) < 0
 
 
-def _parse_command_payload(raw: Any) -> dict[str, Any]:
+def _multi_shuttle_json_command_is_ambiguous(command: dict[str, Any]) -> bool:
+    action = str(command.get('action') or '').strip()
+    if action != 'shuttle':
+        return False
+    command_name = str(command.get('command') or '').strip().upper()
+    if command_name not in {'ON', 'OFF', 'RESET', 'REMOVE'}:
+        return False
+    return not any(
+        command.get(key) is not None
+        for key in ('shuttle', 'shuttle_id', 'name', 'shuttle_index')
+    )
+
+
+def _validate_provider_action_vector(
+    raw_vector: Any,
+    *,
+    declared_schema_version: Any = None,
+    multi_shuttle_active: bool = False,
+) -> dict[str, Any]:
+    version = _action_vector_schema_version(raw_vector)
+    if version is None:
+        raise ValueError('VLA provider returned an invalid action_vector length or value')
+    if declared_schema_version is not None:
+        try:
+            declared = int(declared_schema_version)
+        except (TypeError, ValueError):
+            raise ValueError('action_vector_schema_version must be 2 or 3') from None
+        if declared not in {2, ACTION_SCHEMA_VERSION}:
+            raise ValueError('action_vector_schema_version must be 2 or 3')
+        if declared != version:
+            raise ValueError(
+                f'action_vector_schema_version={declared} does not match vector length schema {version}'
+            )
+    if multi_shuttle_active and version != ACTION_SCHEMA_VERSION:
+        raise ValueError('multi-shuttle mode requires schema-v3 action_vector with shuttle_index')
+    values = [float(value) for value in raw_vector]
+    if multi_shuttle_active and _movement_vector_missing_shuttle_index(values):
+        raise ValueError('multi-shuttle movement action_vector requires shuttle_index')
+    payload = {'action_vector': values}
+    if version == ACTION_SCHEMA_VERSION:
+        payload['action_vector_schema_version'] = ACTION_SCHEMA_VERSION
+    return payload
+
+
+def _parse_command_payload(raw: Any, *, multi_shuttle_active: bool = False) -> dict[str, Any]:
+    forbidden = _contains_forbidden_output_key(raw)
+    if forbidden:
+        raise ValueError(f'VLA provider output included forbidden privileged field {forbidden!r}')
     if isinstance(raw, str):
         parsed = json.loads(raw)
     else:
         parsed = raw
-    if isinstance(parsed, dict) and isinstance(parsed.get('command'), (dict, str)):
+    forbidden = _contains_forbidden_output_key(parsed)
+    if forbidden:
+        raise ValueError(f'VLA provider output included forbidden privileged field {forbidden!r}')
+    if (
+        isinstance(parsed, dict)
+        and 'action' not in parsed
+        and isinstance(parsed.get('command'), (dict, str))
+    ):
         parsed = parsed['command']
         if isinstance(parsed, str):
             parsed = json.loads(parsed)
+        forbidden = _contains_forbidden_output_key(parsed)
+        if forbidden:
+            raise ValueError(f'VLA provider output included forbidden privileged field {forbidden!r}')
     if _is_action_vector(parsed):
-        return {'action_vector': [float(value) for value in parsed]}
+        return _validate_provider_action_vector(
+            parsed,
+            multi_shuttle_active=multi_shuttle_active,
+        )
     if not isinstance(parsed, dict):
         raise ValueError('VLA provider must return a JSON object command or action_vector')
     if _is_action_vector(parsed.get('action_vector')):
-        return {'action_vector': [float(value) for value in parsed['action_vector']]}
+        return _validate_provider_action_vector(
+            parsed['action_vector'],
+            declared_schema_version=parsed.get('action_vector_schema_version'),
+            multi_shuttle_active=multi_shuttle_active,
+        )
     action = str(parsed.get('action', '')).strip()
-    if action not in ALLOWED_ACTIONS:
-        raise ValueError(f'unsupported VLA action {action!r}')
+    if action not in MODEL_OUTPUT_ACTIONS:
+        raise ValueError(f'unsupported VLA action {action!r}; route_template is not a model output')
+    if multi_shuttle_active and _multi_shuttle_json_command_is_ambiguous(parsed):
+        raise ValueError('multi-shuttle primitive shuttle command requires shuttle_id/shuttle/name')
     return parsed
 
 
@@ -605,6 +776,7 @@ class Room315RealVlaAgent(Node):
             sensor_event_times=self.last_sensor_event_time_by_side,
             now_s=time.monotonic(),
         )
+        action_schema_version = _preferred_action_schema_version(self.latest_status)
         response = self._post_json(
             endpoint,
             {
@@ -613,13 +785,29 @@ class Room315RealVlaAgent(Node):
                 'model_input_fields': MODEL_INPUT_FIELDS,
                 'allowed_actions': MODEL_OUTPUT_ACTIONS,
                 'preferred_model_output': 'action_vector',
+                'action_vector_schema_version': action_schema_version,
                 'allowed_output_formats': ('action_vector', 'json_command'),
                 'event_action_vector_fields': EVENT_ACTION_VECTOR_FIELDS,
+                'event_action_vector_v2_fields': EVENT_ACTION_VECTOR_V2_FIELDS,
                 'event_primitive_ids': EVENT_PRIMITIVE_IDS,
+                'side_ids': SIDE_IDS,
+                'shuttle_index_mapping': _shuttle_index_mapping(),
+                'target_ids': TARGET_IDS,
+                'reason_ids': REASON_IDS,
+                'coordination_mode_ids': COORDINATION_MODE_IDS,
+                'multi_shuttle_active': action_schema_version == ACTION_SCHEMA_VERSION,
+                'contract_note': (
+                    'Return schema-v3 action_vector with shuttle_index for any '
+                    'multi-shuttle movement. Do not return route_template or '
+                    'privileged fields.'
+                ),
             },
             headers={},
         )
-        return _parse_command_payload(response)
+        return _parse_command_payload(
+            response,
+            multi_shuttle_active=action_schema_version == ACTION_SCHEMA_VERSION,
+        )
 
     def _post_json(self, url: str, payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
         data = json.dumps(payload).encode('utf-8')
@@ -671,6 +859,11 @@ class Room315RealVlaAgent(Node):
                 'last_error': self.last_error,
                 'latest_image_ages_s': image_ages,
                 'has_supervisor_status': bool(self.latest_status),
+                'action_vector_schema_version': _preferred_action_schema_version(
+                    self.latest_status,
+                ),
+                'event_action_vector_fields': EVENT_ACTION_VECTOR_FIELDS,
+                'multi_shuttle_active': _multi_shuttle_active(self.latest_status),
             }
         )
         self.agent_status_pub.publish(msg)

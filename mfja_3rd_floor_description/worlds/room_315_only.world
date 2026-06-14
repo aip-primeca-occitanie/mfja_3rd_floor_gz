@@ -116,7 +116,7 @@
 
     <!-- Room 315 shuttle. Adjust the pose values here: x y z roll pitch yaw. -->
     <include>
-      <uri>model://room315_shuttle</uri>
+      <uri>model://room315_shuttle_R1</uri>
       <name>room315_right_shuttle_1</name>
       <pose>0 0 -10 0 0 0</pose>
     </include>
@@ -125,26 +125,44 @@
          They start hidden below the floor and are moved to allowed start slots by
          room_315_kinematic_shuttle_node.py when shuttle_count > 1. -->
     <include>
-      <uri>model://room315_shuttle</uri>
+      <uri>model://room315_shuttle_R2</uri>
       <name>room315_right_shuttle_2</name>
       <pose>0 0 -10 0 0 0</pose>
     </include>
 
     <include>
-      <uri>model://room315_shuttle</uri>
+      <uri>model://room315_shuttle_R3</uri>
       <name>room315_right_shuttle_3</name>
       <pose>0 0 -10 0 0 0</pose>
     </include>
 
     <include>
-      <uri>model://room315_shuttle</uri>
+      <uri>model://room315_shuttle_R4</uri>
       <name>room315_right_shuttle_4</name>
       <pose>0 0 -10 0 0 0</pose>
     </include>
 
     <include>
-      <uri>model://room315_shuttle</uri>
+      <uri>model://room315_shuttle_L1</uri>
       <name>room315_left_shuttle_1</name>
+      <pose>0 0 -10 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://room315_shuttle_L2</uri>
+      <name>room315_left_shuttle_2</name>
+      <pose>0 0 -10 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://room315_shuttle_L3</uri>
+      <name>room315_left_shuttle_3</name>
+      <pose>0 0 -10 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://room315_shuttle_L4</uri>
+      <name>room315_left_shuttle_4</name>
       <pose>0 0 -10 0 0 0</pose>
     </include>
 

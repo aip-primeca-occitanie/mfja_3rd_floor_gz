@@ -133,9 +133,19 @@ def generate_launch_description():
             description='Startup slot for the Room 315 right rail shuttle.',
         ),
         DeclareLaunchArgument(
+            'room315_right_start_slots',
+            default_value='',
+            description='Comma-separated startup slots for Room 315 right rail shuttles.',
+        ),
+        DeclareLaunchArgument(
             'room315_left_start_slot',
             default_value='2',
             description='Startup slot for the Room 315 left rail shuttle.',
+        ),
+        DeclareLaunchArgument(
+            'room315_left_start_slots',
+            default_value='',
+            description='Comma-separated startup slots for Room 315 left rail shuttles.',
         ),
         DeclareLaunchArgument(
             'room315_shuttle_speed',
@@ -337,8 +347,14 @@ def generate_launch_description():
                         'right_start_slot': LaunchConfiguration(
                             'room315_right_start_slot'
                         ),
+                        'right_start_slots': LaunchConfiguration(
+                            'room315_right_start_slots'
+                        ),
                         'left_start_slot': LaunchConfiguration(
                             'room315_left_start_slot'
+                        ),
+                        'left_start_slots': LaunchConfiguration(
+                            'room315_left_start_slots'
                         ),
                         'right_shuttle_count': LaunchConfiguration(
                             'room315_right_shuttle_count'

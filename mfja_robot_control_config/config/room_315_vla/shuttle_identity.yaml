@@ -1,0 +1,119 @@
+version: 1
+description: Room 315 shuttle perimeter identity frame mapping.
+marker_family: tag36h11
+identity_design:
+  payload_zone: center
+  identity_safe_zones:
+    - front_left
+    - front_right
+    - rear_left
+    - rear_right
+  notes:
+    - Perimeter markers remain outside the normal centered payload zone.
+    - AprilTag/tracker detections are privileged metadata only and are not model_input.
+    - Large text labels are visual cues in the RGB image, not structured model input.
+shuttles:
+  - shuttle_id: right_shuttle_1
+    side: right
+    shuttle_index: 0
+    tag_ids: {front_left: 101, front_right: 102, rear_left: 103, rear_right: 104}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: R1
+    color_name: red
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: right_shuttle_2
+    side: right
+    shuttle_index: 1
+    tag_ids: {front_left: 111, front_right: 112, rear_left: 113, rear_right: 114}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: R2
+    color_name: blue
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: right_shuttle_3
+    side: right
+    shuttle_index: 2
+    tag_ids: {front_left: 121, front_right: 122, rear_left: 123, rear_right: 124}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: R3
+    color_name: green
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: right_shuttle_4
+    side: right
+    shuttle_index: 3
+    tag_ids: {front_left: 131, front_right: 132, rear_left: 133, rear_right: 134}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: R4
+    color_name: yellow
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: left_shuttle_1
+    side: left
+    shuttle_index: 0
+    tag_ids: {front_left: 201, front_right: 202, rear_left: 203, rear_right: 204}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: L1
+    color_name: cyan
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: left_shuttle_2
+    side: left
+    shuttle_index: 1
+    tag_ids: {front_left: 211, front_right: 212, rear_left: 213, rear_right: 214}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: L2
+    color_name: magenta
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: left_shuttle_3
+    side: left
+    shuttle_index: 2
+    tag_ids: {front_left: 221, front_right: 222, rear_left: 223, rear_right: 224}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: L3
+    color_name: orange
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}
+  - shuttle_id: left_shuttle_4
+    side: left
+    shuttle_index: 3
+    tag_ids: {front_left: 231, front_right: 232, rear_left: 233, rear_right: 234}
+    marker_roles: [front_left, front_right, rear_left, rear_right]
+    label_text: L4
+    color_name: white
+    expected_marker_locations_on_body:
+      front_left: {x: 0.12, y: 0.08, z: 0.03}
+      front_right: {x: 0.12, y: -0.08, z: 0.03}
+      rear_left: {x: -0.12, y: 0.08, z: 0.03}
+      rear_right: {x: -0.12, y: -0.08, z: 0.03}
+    payload_keepout_zone: {center_zone_m: {x_half_width: 0.08, y_half_width: 0.055}, identity_safe_perimeter_m: 0.025}

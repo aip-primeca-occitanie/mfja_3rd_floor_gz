@@ -154,7 +154,7 @@ RIGHT_ENTITY_DEFAULTS = {
 }
 
 LEFT_ENTITY_DEFAULTS = {
-    'preloaded_shuttle_count': 1,
+    'preloaded_shuttle_count': 4,
     'gazebo_entity_name': 'room315_left_shuttle_1',
     'entity_name_prefix': 'room315_left_shuttle_',
 }
@@ -1892,6 +1892,8 @@ class Room315KinematicShuttleNode(Node):
     ) -> list[tuple[str, str]]:
         if shuttle_count < 0:
             raise ValueError('shuttle_count must be greater than or equal to 0.')
+        if shuttle_count > 4:
+            raise ValueError('Room 315 supports at most 4 shuttles per rail side.')
         if shuttle_count == 0:
             return []
 
@@ -2196,7 +2198,7 @@ class Room315KinematicShuttleNode(Node):
         factory = EntityFactory()
         factory.name = shuttle.entity_name
         factory.allow_renaming = False
-        factory.sdf_filename = str(self.shuttle_model_sdf)
+        factory.sdf_filename = str(self._shuttle_model_sdf_for_entity(shuttle.entity_name))
         factory.relative_to = 'world'
         factory.pose.position.x = pose.x
         factory.pose.position.y = pose.y
@@ -2207,6 +2209,24 @@ class Room315KinematicShuttleNode(Node):
         factory.pose.orientation.z = qz
         factory.pose.orientation.w = qw
         return factory
+
+    def _shuttle_model_sdf_for_entity(self, entity_name: str) -> Path:
+        """Return the per-identity shuttle model when available.
+
+        The deployable VLA policy should learn shuttle identity from physical
+        RGB-visible perimeter labels. Dynamic Gazebo spawns therefore use the
+        R1..R4/L1..L4 shuttle models when the entity name follows the Room 315
+        convention, falling back to the configured generic model for custom
+        names.
+        """
+
+        match = re.fullmatch(r'room315_(right|left)_shuttle_([1-4])', entity_name)
+        if not match:
+            return self.shuttle_model_sdf
+        side, index = match.groups()
+        short_id = f'{"R" if side == "right" else "L"}{index}'
+        candidate = self.shuttle_model_sdf.parents[1] / f'room315_shuttle_{short_id}' / 'model.sdf'
+        return candidate if candidate.exists() else self.shuttle_model_sdf
 
     def _desired_shuttle_visual_state(self, shuttle: ManagedShuttle) -> str:
         if not self.visual_debug_colors:

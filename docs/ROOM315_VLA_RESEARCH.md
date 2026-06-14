@@ -13,6 +13,113 @@ partially observable routing and safety task from realistic rail-cell
 observations, while the supervisor remains responsible for deterministic
 execution and safety gating.
 
+## Focused Direction: PDDL / PlanSys Scenario Generation
+
+The current data-generation direction is to use PDDL with a real PlanSys2
+planner as the expert scenario layer for Room 315. The planner describes what
+task should happen, not what the learned policy sees. Runtime generation no
+longer uses a deterministic fallback planner or an external command adapter.
+
+The pipeline is:
+
+```text
+PDDL goal/problem
+  -> PlanSys2 /planner/get_plan
+  -> symbolic plan
+  -> primitive VLA commands
+  -> supervisor safety execution
+  -> events.jsonl rows
+  -> dataset coverage report
+```
+
+A goal such as `right_yaskawa_to_staubli` or a PDDL problem with
+`(task_done right_shuttle right_staubli)` becomes a symbolic plan such as:
+
+```text
+prepare_switches right yaskawa staubli
+open_stoppers right yaskawa staubli
+move_shuttle right right_shuttle yaskawa staubli speed=0.3
+stop_shuttle right right_shuttle
+finish_task right_shuttle staubli
+```
+
+The scenario generator calls PlanSys2, normalizes the returned timed plan into
+those symbolic steps, and translates them into the same primitive VLA commands
+that manual tools use: `switches`, `stoppers`, shuttle `ON/OFF`, and terminal
+`DONE`. In execution mode, those commands are published only to
+`/room_315/vla/command`, so the VLA supervisor and safety decoder remain in the
+loop. Dataset episodes are started and stopped through
+`/room_315/vla/episode_control`, and the recorder writes `events.jsonl`.
+
+This creates a clean comparison between manual scenarios and PDDL-generated
+scenarios. The `room_315_pddl_dataset_report.py` tool summarizes
+`dataset_source`, goal coverage, language variants, plan length, action
+primitive distribution, side distribution, speed distribution, rejected action
+rate, and task success.
+
+PDDL fields are metadata only. `pddl_goal`, `symbolic_plan`, `planning_source`,
+`structured_rail_state`, and `privileged_eval` may be used for generation,
+auditing, and evaluation, but they are not input to the learned model. The policy
+still learns:
+
+```text
+model_input.language + model_input.overhead_images + model_input.last_command
+  -> action_vector
+```
+
+## Multi-Shuttle Benchmark Direction
+
+The current scaffold extends Room 315 from one shuttle per rail side toward a
+multi-shuttle VLA benchmark with up to four shuttles on the right rail and four
+on the left rail:
+
+```text
+R1..R4 = right_shuttle_1..right_shuttle_4
+L1..L4 = left_shuttle_1..left_shuttle_4
+```
+
+The launch layer accepts `room315_right_shuttle_count`,
+`room315_left_shuttle_count`, `room315_right_start_slots`, and
+`room315_left_start_slots`. Existing one-shuttle scenarios remain valid. When a
+side has multiple shuttles, a shuttle motion command must specify the target
+identity; otherwise the fleet-aware supervisor rejects it as ambiguous.
+
+Action schema v3 keeps the event-level target contract but adds shuttle identity
+and coordination fields:
+
+```text
+primitive_id
+side_id
+shuttle_index
+switch/stopper masks and values
+speed_mps
+wait_condition_id
+target_id
+reason_id
+coordination_mode
+```
+
+This is still a direct primitive-action target, not a route template and not a
+PDDL action. The model-facing input remains exactly `language`,
+`overhead_images`, and `last_command`.
+
+## Visual Shuttle Identity Under Occlusion
+
+Shuttle identity is intended to be learned visually. The project now defines a
+perimeter identity mapping in
+`mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml`.
+Each shuttle has large text labels such as `R2`/`L3` plus multiple perimeter
+fiducial IDs. The center of the shuttle is treated as the payload zone, so a
+carried part can partially occlude the center without covering every identity
+cue.
+
+The optional `room_315_vla_shuttle_identity_tracker.py` node fuses privileged
+fiducial detections into `/room_315/vla/shuttle_identity_tracks` for safety,
+debugging, evaluation, and detector-assisted baselines. These tracks are never
+model input. They may appear in metadata or `privileged_eval` as labels such as
+`visible_marker_count`, `identity_occlusion_level`, `payload_present`, and
+`target_shuttle_id`.
+
 ## Model Input vs Privileged Eval
 
 Training and online inference must use only `model_input`. Its schema is version
@@ -151,6 +258,14 @@ VLA policies. `observation.state`, `structured_rail_state`, and
 `data.jsonl`, because it is framewise replay and can repeat the same command
 many times.
 
+For PDDL-generated datasets, planner metadata may appear beside the event row as
+`planning_source`, `pddl_goal`, `pddl_problem`, `symbolic_plan`,
+`plan_step_index`, `language_template_id`, `target_shuttle_id`,
+`visible_marker_count`, `payload_present`, `identity_occlusion_level`, and
+`expected_visible_ids`. These are provenance/evaluation fields. They must remain
+outside `model_input` and should be excluded from the learned policy input just
+like `privileged_eval` and `structured_rail_state`.
+
 ## Baselines
 
 Run the lightweight evaluator before training SmolVLA/LeRobot policies:
@@ -183,6 +298,102 @@ Report `task_success`, `action_accuracy`, `primitive_accuracy`,
 `illegal_proposal_rate`, and `rejected_action_rate` per task family. Also report
 `visual_target_success` and `obstacle_stop_success` for the perception-heavy
 families.
+
+For multi-shuttle PDDL datasets, also report shuttle identity and fleet metrics:
+`shuttle_id_accuracy`, `wrong_shuttle_command_rate`,
+`identity_grounding_accuracy`, `target_shuttle_selection_accuracy`,
+`visible_marker_count_distribution`, `identity_occlusion_level_distribution`,
+`partial_occlusion_success_rate`, `loaded_shuttle_success_rate`, `headway_violation_rate`,
+`block_reservation_success_rate`, `deadlock_rate`,
+`deadlock_avoidance_success_rate`, `fleet_throughput_tasks_per_minute`,
+`per_side_success_rate`, and `per_shuttle_success_rate`.
+
+## Identity-Aware Multi-Shuttle Milestone
+
+Room 315 now includes Gazebo-visible shuttle identity models:
+
+```text
+room315_shuttle_R1 ... room315_shuttle_R4
+room315_shuttle_L1 ... room315_shuttle_L4
+```
+
+The world files preload four right and four left shuttle entities with distinct
+R1-R4/L1-L4 models. Each model keeps the center as the payload zone and places
+four physical identity regions on the perimeter/corners:
+
+```text
+front_left
+front_right
+rear_left
+rear_right
+```
+
+Each region uses RGB-visible geometry/material colors and a fiducial-like
+placeholder. The labels are part of the shuttle body; they are not simulator
+overlays, do not use SVG albedo texture maps, and are not structured model
+input. The learned policy must infer the target shuttle from the overhead images
+plus task language.
+
+Payload models are available for identity occlusion experiments:
+
+```text
+room315_vla_payload_small_box
+room315_vla_payload_medium_box
+room315_vla_payload_tall_box
+room315_vla_payload_wide_box_within_keepout
+room315_vla_payload_partial_marker_occluder
+```
+
+Their metadata lives in
+`mfja_robot_control_config/config/room_315_vla/payload_scenarios.yaml`. Normal
+payloads stay inside the center keep-out zone and preserve all perimeter identity
+regions. The partial occluder is a controlled test case for one-corner
+occlusion.
+
+The deployable model input remains exactly:
+
+```text
+model_input.language
+model_input.overhead_images
+model_input.last_command
+```
+
+Payload type, visible marker count, expected visible IDs, `target_shuttle_id`,
+identity tracker state, rail occupancy, and block reservations are privileged
+metadata for safety/evaluation only. They may appear in top-level event metadata
+or `privileged_eval`, never inside `model_input`.
+
+## Schema-V3 Real VLA Agent Contract
+
+When multiple shuttles are active on a rail side, the real VLA HTTP agent asks
+for schema-v3 action vectors. Schema-v3 adds the explicit `shuttle_index` and
+coordination fields needed for identity-aware fleet control:
+
+```json
+{
+  "action_vector_schema_version": 3,
+  "action_vector": [4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 3, 29, 14, 1]
+}
+```
+
+The agent rejects multi-shuttle movement vectors that omit `shuttle_index`, and
+it rejects primitive JSON shuttle commands unless they include `shuttle_id`,
+`shuttle`, `name`, or `shuttle_index`. It also rejects model outputs containing
+privileged fields such as `structured_rail_state`, `target_shuttle_id`,
+`symbolic_plan`, `shuttle_identity_tracks`, or PDDL internals.
+
+## Fleet Safety Runtime State
+
+The VLA supervisor now builds runtime fleet-safety state from the rail shuttle
+status. It checks occupied blocks, reservations, station-slot target conflicts,
+and minimum headway before accepting shuttle motion. Accepted movement commands
+can reserve `next_block` and `target_slot`; stop/reset/remove releases the
+owner's reservations. Emergency stop and stop-all remain globally allowed.
+
+The supervisor status includes privileged fleet state under
+`safety_decoder.fleet_state` with `model_input_exposure: excluded`. Rejection
+metrics include block occupancy, reservation, headway, wrong-shuttle, and
+deadlock counters.
 
 ## Eval Commands
 

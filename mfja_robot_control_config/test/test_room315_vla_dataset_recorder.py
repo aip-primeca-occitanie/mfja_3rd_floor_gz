@@ -526,6 +526,12 @@ def test_action_space_observation_schema_matches_recorder():
     assert config['model_input_schema_version'] == recorder.MODEL_INPUT_SCHEMA_VERSION
     assert config['model_input_fields'] == recorder.MODEL_INPUT_FIELDS
     assert config['privileged_eval_fields'] == recorder.PRIVILEGED_EVAL_FIELDS
+    assert config['action_schema_version'] == recorder.ACTION_SCHEMA_VERSION
+    assert config['action_vector_v3_fields'] == recorder.ACTION_VECTOR_V3_FIELDS
+    assert 'shuttle_index' in config['action_vector_v3_fields']
+    assert config['target_ids']['right_shuttle_4'] >= 0
+    assert config['target_ids']['left_shuttle_4'] >= 0
+    assert config['coordination_mode_ids']['guarded_motion'] == 1
 
 
 def test_event_labels_do_not_repeat_long_shuttle_on_command():
@@ -609,6 +615,85 @@ def test_event_model_input_last_command_is_previous_event_not_current_label():
             '"s"',
         ):
             assert forbidden not in serialized_model_input
+
+
+def test_planned_event_metadata_stays_outside_model_input_and_keeps_target_vector():
+    recorder_module = _load_module()
+    recorder = _fake_recorder(recorder_module)
+    planned_command = {
+        'action': 'switches',
+        'side': 'right',
+        'switches': {'A3': 'INTERIOR'},
+        'planning_source': 'pddl',
+        'pddl_domain': 'domain_room315.pddl',
+        'pddl_problem': 'problem_right_yaskawa_to_staubli.pddl',
+        'pddl_goal': 'right_shuttle at staubli',
+        'symbolic_plan': [
+            'prepare_switches right yaskawa staubli',
+            'open_stoppers right yaskawa staubli',
+        ],
+        'plan_step_index': 0,
+        'generated_language': 'move the right shuttle from Yaskawa to Staubli',
+        'language_template_id': 'move_from_to',
+    }
+
+    recorder._record_command_event(planned_command)
+    rows = _jsonl_rows(recorder.event_stream)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row['planning_source'] == 'pddl'
+    assert row['pddl_domain'] == 'domain_room315.pddl'
+    assert row['pddl_problem'] == 'problem_right_yaskawa_to_staubli.pddl'
+    assert row['pddl_goal'] == 'right_shuttle at staubli'
+    assert row['symbolic_plan'] == planned_command['symbolic_plan']
+    assert row['plan_step_index'] == 0
+    assert row['generated_language'] == planned_command['generated_language']
+    assert row['language_template_id'] == 'move_from_to'
+
+    assert set(row['model_input']) == {'language', 'overhead_images', 'last_command'}
+    serialized_model_input = json.dumps(row['model_input'], sort_keys=True)
+    for forbidden in (
+        'pddl_domain',
+        'pddl_problem',
+        'pddl_goal',
+        'symbolic_plan',
+        'plan_step_index',
+    ):
+        assert forbidden not in row['model_input']
+        assert forbidden not in serialized_model_input
+
+    assert row['action']['primitive'] == 'SET_SWITCHES'
+    assert row['action']['switch_mask']['A3'] == 1
+    assert row['action']['switch_values']['A3'] == 'INTERIOR'
+    assert row['action_vector'] == recorder_module._encode_action(row['action'])
+    assert row['next_action'] == row['action']
+    assert row['legacy_next_action']['action'] == 'switches'
+    assert row['model_input']['last_command'] == {'action': 'START'}
+
+    for line in recorder.event_stream.getvalue().splitlines():
+        parsed = json.loads(line)
+        assert isinstance(parsed, dict)
+
+
+def test_planning_metadata_supports_scenario_generator_aliases():
+    recorder_module = _load_module()
+
+    metadata = recorder_module._planning_metadata_from_source({
+        'planning_metadata': {
+            'planning_source': 'pddl',
+            'pddl_problem': 'problem_left_yaskawa_to_kuka.pddl',
+            'language': 'move the left shuttle from Yaskawa to KUKA',
+            'generated_language_template_id': 'move_from_to',
+        }
+    })
+
+    assert metadata == {
+        'planning_source': 'pddl',
+        'pddl_problem': 'problem_left_yaskawa_to_kuka.pddl',
+        'generated_language': 'move the left shuttle from Yaskawa to KUKA',
+        'language_template_id': 'move_from_to',
+    }
 
 
 def test_switch_and_stopper_commands_create_separate_events():

@@ -412,6 +412,35 @@ def test_action_vector_loop_transition_requires_stop_and_side_specific_gate():
     }
 
 
+def test_action_vector_all_switch_noop_does_not_require_loop_gate_staging():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    action_vector = _event_vector(
+        module,
+        primitive='SET_SWITCHES',
+        side='right',
+        switch_values={
+            'A1': 'EXTERIOR',
+            'A2': 'EXTERIOR',
+            'A3': 'EXTERIOR',
+            'A4': 'EXTERIOR',
+        },
+        wait_condition='switch_state_match',
+        target_id='ALL_SWITCHES',
+        reason='switch_update',
+    )
+
+    decision = supervisor.decode_and_validate(action_vector)
+
+    assert decision['accepted'] is True
+    assert decision['executed_action']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+
+
 def test_action_vector_loop_transition_uses_left_gate():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)

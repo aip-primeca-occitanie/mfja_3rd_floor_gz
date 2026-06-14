@@ -1,4 +1,5 @@
 schema_version: 2
+action_schema_version: 3
 model_input_schema_version: 3
 description: >
   Event-level symbolic action representation used to adapt open-source VLA
@@ -29,6 +30,47 @@ action_vector_fields:
   - wait_condition_id
   - target_id
   - reason_id
+
+action_vector_v3_fields:
+  - primitive_id
+  - side_id
+  - shuttle_index
+  - switch_mask_A1
+  - switch_mask_A2
+  - switch_mask_A3
+  - switch_mask_A4
+  - switch_value_A1
+  - switch_value_A2
+  - switch_value_A3
+  - switch_value_A4
+  - stopper_mask_A1
+  - stopper_mask_A2
+  - stopper_mask_A3
+  - stopper_mask_A4
+  - stopper_value_A1
+  - stopper_value_A2
+  - stopper_value_A3
+  - stopper_value_A4
+  - speed_mps
+  - wait_condition_id
+  - target_id
+  - reason_id
+  - coordination_mode
+
+symbolic_action_v3_fields:
+  - primitive
+  - side
+  - shuttle_id
+  - shuttle_index
+  - switch_mask
+  - switch_values
+  - stopper_mask
+  - stopper_values
+  - speed_mps
+  - wait_condition
+  - target_id
+  - reason
+  - coordination_mode
 
 symbolic_action_fields:
   - primitive
@@ -78,6 +120,8 @@ wait_condition_ids:
   task_phase_observed: 5
   terminal: 6
   target_sensor_active: 7
+  block_clearance: 8
+  headway_clearance: 9
 
 target_ids:
   none: 0
@@ -108,6 +152,14 @@ target_ids:
   DZI4L: 25
   DA3IR: 26
   DA3IL: 27
+  right_shuttle_1: 28
+  right_shuttle_2: 29
+  right_shuttle_3: 30
+  right_shuttle_4: 31
+  left_shuttle_1: 32
+  left_shuttle_2: 33
+  left_shuttle_3: 34
+  left_shuttle_4: 35
 
 reason_ids:
   none: 0
@@ -124,6 +176,37 @@ reason_ids:
   shuttle_stop: 11
   emergency: 12
   unsupported_command: 13
+  target_station_route: 14
+  wait_for_block_clearance: 15
+  maintain_headway: 16
+  avoid_collision: 17
+  avoid_deadlock: 18
+  obstacle_stop: 19
+  wrong_shuttle_rejected: 20
+  fleet_coordination: 21
+
+coordination_mode_ids:
+  normal: 0
+  guarded_motion: 1
+  wait_for_clearance: 2
+  reservation_based_move: 3
+  fleet_coordination: 4
+  emergency: 5
+
+shuttle_identity:
+  max_shuttles_per_side: 4
+  stable_ids:
+    right: [right_shuttle_1, right_shuttle_2, right_shuttle_3, right_shuttle_4]
+    left: [left_shuttle_1, left_shuttle_2, left_shuttle_3, left_shuttle_4]
+  short_ids:
+    right: [R1, R2, R3, R4]
+    left: [L1, L2, L3, L4]
+  shuttle_index_encoding:
+    first_shuttle_on_side: 0
+    second_shuttle_on_side: 1
+    third_shuttle_on_side: 2
+    fourth_shuttle_on_side: 3
+    global_or_unassigned: -1
 
 observation_state_fields:
   - emergency_stop
@@ -204,6 +287,7 @@ privileged_eval_fields:
   - raw_shuttle_states
   - raw_active_sensor_readings
   - visual_eval_labels
+  - shuttle_identity_tracks
 
 sensor_ids_by_side:
   right:

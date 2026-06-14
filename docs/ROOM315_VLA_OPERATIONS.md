@@ -173,6 +173,24 @@ the learning target compact and reproducible: a policy predicts the next direct
 event-level symbolic action, then the supervisor decodes and safety-checks that
 action before publishing rail commands.
 
+For multi-shuttle experiments, launch up to four shuttles per rail side:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  room315_right_shuttle_count:=4 \
+  room315_right_start_slots:=1,2,3,4 \
+  room315_left_shuttle_count:=4 \
+  room315_left_start_slots:=1,2,3,4
+```
+
+Stable identities are `R1..R4` and `L1..L4`. If more than one shuttle exists on
+a side, the supervisor rejects shuttle-motion commands that do not identify the
+target shuttle. Use `shuttle_id: "R2"`, `shuttle: "right_shuttle_2"`, or the
+Gazebo entity name `room315_right_shuttle_2`.
+
 Action space schema v2 uses only these primitives: `WAIT`, `DONE`,
 `SET_SWITCHES`, `SET_STOPPERS`, `SHUTTLE_ON`, `STOP_NOW`, and
 `EMERGENCY_STOP`. The vector fields are `primitive_id`,
@@ -184,6 +202,17 @@ This represents partial decisions such as “set only A3 to INTERIOR” or “cl
 only A4” without accidentally changing A1/A2/A3/A4 together. Shuttle movement
 uses the `SHUTTLE_ON` primitive plus an explicit `speed_mps` value, so policies
 can request the actual shuttle speed in meters per second.
+
+Action schema v3 extends the same event-level representation for multi-shuttle
+targets by adding `shuttle_index` and `coordination_mode`, plus target IDs such
+as `right_shuttle_2` and `left_shuttle_3`. This is still the target label, not
+extra model input. The model-facing input remains:
+
+```text
+language
+overhead_images
+last_command
+```
 
 The same vector can be sent directly to the supervisor for guarded execution:
 
@@ -428,6 +457,66 @@ For another VLA server, use `room315_vla_agent_provider:=http` and provide
 the schema-v3 `model_input` object with language, overhead image JPEGs as
 base64, and last command. It does not receive binary sensor bits,
 switch/stopper states, exact Gazebo pose, or true segment state.
+
+## Multi-Shuttle Identity And Payload Runs
+
+Two-shuttle identity plus payload experiment:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_right_shuttle_count:=2 \
+  room315_right_start_slots:=1,3 \
+  room315_left_shuttle_count:=0 \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  room315_vla_dataset_dir:=~/room315_multi_shuttle_vla
+```
+
+The world preloads R1/R2 with physical perimeter identity frames. Use the
+payload models in `mfja_3rd_floor_description/models/room315_vla_payload_*` and
+the metadata definitions in
+`mfja_robot_control_config/config/room_315_vla/payload_scenarios.yaml` for
+controlled loaded/unloaded and partial-occlusion scenarios.
+
+Four-plus-four visual identity smoke test:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  room315_right_shuttle_count:=4 \
+  room315_right_start_slots:=1,2,3,4 \
+  room315_left_shuttle_count:=4 \
+  room315_left_start_slots:=1,2,3,4 \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false
+```
+
+Check that status registers all shuttles and that the visible labels are mounted
+on the shuttle bodies:
+
+```bash
+ros2 topic echo /room_315/vla/status std_msgs/msg/String
+```
+
+Fleet-safety rejection smoke test:
+
+```bash
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"shuttle\",\"side\":\"right\",\"shuttle_id\":\"R2\",\"command\":\"ON\",\"next_block\":\"A12E\",\"headway_blocks_ahead\":0}'}"
+```
+
+If another shuttle occupies or reserves the target block, the supervisor rejects
+the command and increments the relevant safety metric.
 
 Send a high-level route template:
 

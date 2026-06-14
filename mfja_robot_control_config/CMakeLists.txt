@@ -23,7 +23,16 @@ install(
 install(
   FILES
     config/room_315_vla/action_space.yaml
+    config/room_315_vla/pddl_scenario_batch.yaml
+    config/room_315_vla/payload_scenarios.yaml
+    config/room_315_vla/shuttle_identity.yaml
     config/room_315_vla/vla_supervisor.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_vla
+)
+
+install(
+  DIRECTORY
+    config/room_315_vla/pddl
   DESTINATION share/${PROJECT_NAME}/config/room_315_vla
 )
 
@@ -51,12 +60,18 @@ install(
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
+    scripts/room_315_multi_shuttle.py
+    scripts/room_315_pddl_dataset_report.py
+    scripts/room_315_pddl_language_generator.py
+    scripts/room_315_pddl_plan_translator.py
+    scripts/room_315_pddl_scenario_generator.py
     scripts/room_315_real_vla_agent.py
     scripts/room_315_vla_benchmark_runner.py
     scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
     scripts/room_315_vla_obstacle_tool.py
+    scripts/room_315_vla_shuttle_identity_tracker.py
     scripts/room_315_vla_supervisor.py
     scripts/vla_teleop_generator.py
   DESTINATION lib/${PROJECT_NAME}
@@ -82,6 +97,94 @@ if(BUILD_TESTING)
     test/test_room315_rail_devices.py
   )
   ament_add_pytest_test(
+    test_room315_pddl_planning
+    test/test_room315_pddl_planning.py
+  )
+  ament_add_pytest_test(
+    test_room315_pddl_language_generator
+    test/test_room315_pddl_language_generator.py
+  )
+  ament_add_pytest_test(
+    test_room315_pddl_dataset_report
+    test/test_room315_pddl_dataset_report.py
+  )
+  ament_add_pytest_test(
+    test_room315_pddl_plan_translator
+    test/test_room315_pddl_plan_translator.py
+  )
+  ament_add_pytest_test(
+    test_room315_pddl_planner_backend
+    test/test_room315_pddl_planner_backend.py
+  )
+  ament_add_pytest_test(
+    test_room315_pddl_scenario_generator
+    test/test_room315_pddl_scenario_generator.py
+  )
+  ament_add_pytest_test(
+    test_room315_action_schema_v3
+    test/test_room315_action_schema_v3.py
+  )
+  ament_add_pytest_test(
+    test_room315_multi_shuttle_registry
+    test/test_room315_multi_shuttle_registry.py
+  )
+  ament_add_pytest_test(
+    test_room315_fleet_supervisor_safety
+    test/test_room315_fleet_supervisor_safety.py
+  )
+  ament_add_pytest_test(
+    test_room315_block_reservation_runtime
+    test/test_room315_block_reservation_runtime.py
+  )
+  ament_add_pytest_test(
+    test_room315_headway_safety
+    test/test_room315_headway_safety.py
+  )
+  ament_add_pytest_test(
+    test_room315_shuttle_identity_config
+    test/test_room315_shuttle_identity_config.py
+  )
+  ament_add_pytest_test(
+    test_room315_shuttle_identity_visual_assets
+    test/test_room315_shuttle_identity_visual_assets.py
+  )
+  ament_add_pytest_test(
+    test_room315_shuttle_identity_tracker
+    test/test_room315_shuttle_identity_tracker.py
+  )
+  ament_add_pytest_test(
+    test_room315_multi_shuttle_dataset_recorder
+    test/test_room315_multi_shuttle_dataset_recorder.py
+  )
+  ament_add_pytest_test(
+    test_room315_payload_occlusion_metadata
+    test/test_room315_payload_occlusion_metadata.py
+  )
+  ament_add_pytest_test(
+    test_room315_payload_models
+    test/test_room315_payload_models.py
+  )
+  ament_add_pytest_test(
+    test_room315_identity_keepout_zones
+    test/test_room315_identity_keepout_zones.py
+  )
+  ament_add_pytest_test(
+    test_room315_multi_shuttle_pddl_planning
+    test/test_room315_multi_shuttle_pddl_planning.py
+  )
+  ament_add_pytest_test(
+    test_room315_multi_shuttle_dataset_report
+    test/test_room315_multi_shuttle_dataset_report.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_model_input_boundary
+    test/test_room315_vla_model_input_boundary.py
+  )
+  ament_add_pytest_test(
+    test_room315_multi_shuttle_launch_args
+    test/test_room315_multi_shuttle_launch_args.py
+  )
+  ament_add_pytest_test(
     test_room315_vla_benchmark_runner
     test/test_room315_vla_benchmark_runner.py
   )
@@ -96,6 +199,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_real_vla_agent
     test/test_room315_real_vla_agent.py
+  )
+  ament_add_pytest_test(
+    test_room315_real_vla_agent_schema_v3
+    test/test_room315_real_vla_agent_schema_v3.py
   )
   ament_add_pytest_test(
     test_room315_vla_event_extractor
