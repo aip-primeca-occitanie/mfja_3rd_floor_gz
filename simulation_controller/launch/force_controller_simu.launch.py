@@ -82,6 +82,12 @@ def generate_launch_description():
         executable='force_pid_controller',
         name='force_pid_controller',
         output='screen',
+        parameters=[{
+            "KP": 4.109e-4, #values found with matlab/simulnk
+            "KI": 9.207e-5,
+            "KD": 3.204e-5,
+            "MAX_OUTPUT": 0.05
+        }]
     )
 
     force_simulation_node = Node(
@@ -89,6 +95,11 @@ def generate_launch_description():
         executable='force_simulation',
         name='force_simulation',
         output='screen',
+        parameters=[{
+        "z_contact": -0.4, # m
+        "stiffness": 2408, # N/m
+        "damping": 50.0    # N.s/m
+        }]
     )
 
     timer_action = TimerAction(
