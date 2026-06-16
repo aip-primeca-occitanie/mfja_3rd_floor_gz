@@ -83,10 +83,11 @@ def generate_launch_description():
         name='force_pid_controller',
         output='screen',
         parameters=[{
-            "KP": 4.109e-4, #values found with matlab/simulnk
-            "KI": 9.207e-5,
-            "KD": 3.204e-5,
-            "MAX_OUTPUT": 0.05
+            "KP": 0.004153, #values found with matlab/simulnk
+            "KI": 0.00424,
+            "KD": 4.24e-5,
+            "MAX_OUTPUT": 0.05,
+            "TARGET": 300.0
         }]
     )
 
@@ -97,18 +98,18 @@ def generate_launch_description():
         output='screen',
         parameters=[{
         "z_contact": -0.4, # m
-        "stiffness": 2408, # N/m
+        "stiffness": 2408., # N/m
         "damping": 50.0    # N.s/m
         }]
     )
 
     timer_action = TimerAction(
-        period=5.0,
+        period=10.0,
         actions=[cartesian_publisher_node,cartesian_converter_node,force_simulation_node] #10 might not be sufficient, to improve
     )
 
     force_pid_controller_delayed = TimerAction(
-        period=10.0,
+        period=15.0,
         actions=[force_pid_controller_node]
     )
 

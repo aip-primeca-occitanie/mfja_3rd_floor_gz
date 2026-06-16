@@ -37,9 +37,9 @@ private:
             std_msgs::msg::Float64 fz_msg;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub_pose;
 
-    double z_contact{0.0}; // [m] altitude de la surface dans ref_frame
-    double k{5000.0}; // [N/m]
-    double c{50.0}; // [N.s/m]
+    double z_contact; // [m] altitude de la surface dans ref_frame
+    double k; // [N/m]
+    double c; // [N.s/m]
 
     double prev_delta{0.0};
     rclcpp::Time prev_time{0, 0, RCL_ROS_TIME};
