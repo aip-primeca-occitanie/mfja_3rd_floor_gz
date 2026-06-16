@@ -21,10 +21,12 @@ public:
         this->declare_parameter<double>("KD", 2e-3); // N.s/m
         this->declare_parameter<double>("MAX_OUTPUT", 0.05); // 0.5 cm max par frame
         this->declare_parameter<double>("TARGET", 300); // N
+        this->declare_parameter<double>("FREQ", 300); // Hz
         const double KP = this->get_parameter("KP").as_double();
         const double KD = this->get_parameter("KD").as_double();
         const double KI = this->get_parameter("KI").as_double();
         const double MAX_OUTPUT = this->get_parameter("MAX_OUTPUT").as_double();
+        int rate_hz = this->get_parameter("FREQ").as_double();
 
         target_force = this->get_parameter("TARGET").as_double();
 
@@ -50,7 +52,6 @@ public:
         pub_cartesian_target = this->create_publisher<geometry_msgs::msg::PoseStamped>(
             "/cartesian_target", 10);
 
-        int rate_hz = 250;
         auto period = std::chrono::milliseconds(1000 / rate_hz);
         control_timer = this->create_wall_timer(period, std::bind(&ForcePIDController::controlLoop, this));
         last_time = this->now();

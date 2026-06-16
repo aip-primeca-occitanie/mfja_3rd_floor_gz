@@ -78,9 +78,6 @@ t_command = np.array(t_command)
 command_values = np.array(command_values)
 command_values = command_values*100 #cm
 
-print(len(t_z))
-print(len(t_command))
-
 if len(t_z) == 0:
     raise RuntimeError(f"Aucune donnée trouvée sur {POSITION_TOPIC}")
 
@@ -118,6 +115,8 @@ plt.ylabel("z_cmd - z [cm]")
 plt.title("Commande cartésienne")
 plt.grid(True)
 
-print("freq = ",len(t_freq)/(t_freq[-1]-t_freq[0])," Hz.")
+print("freq_data = ",len(t_z)/(t_z[-1]-t_z[0])," Hz.")
+print("freq_pid= ",len(t_command)/(t_command[-1]-t_command[0])," Hz.")
+print("freq_ctrl = ",len(t_freq)/(t_freq[-1]-t_freq[0])," Hz.")
 
 plt.show()

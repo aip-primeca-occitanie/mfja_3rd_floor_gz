@@ -94,11 +94,12 @@ def generate_launch_description():
         name='force_pid_controller',
         output='screen',
         parameters=[{
-            "KP": 0.004153e-1, #values found with matlab/simulnk
+            "KP": 0.004153e-1, #0.004153 values found with matlab/simulnk
             "KI": 0.00424e-1, #0.00424,
             "KD": 4.24e-6, #4.24e-5,
             "MAX_OUTPUT": 0.05,
-            "TARGET": 300.0
+            "TARGET": 300.0,
+            "FREQ": 250
             }]
         )
 
