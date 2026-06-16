@@ -14,7 +14,9 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
     auto mz_pub = node->create_publisher<std_msgs::msg::Float64>("/Mz", 100);
 
     // Create a rate
-    rclcpp::Rate rate(100);//100 Hz, reading too slowly might make the node crash
+    //this->declare_parameter<int>("FREQ", 250); // Hz
+    //int freq = this->get_parameter("FREQ").as_int(); //convert to class
+    rclcpp::Rate rate(250);//reading too slowly might make the node crash
 
     /*--------------------------
     Paramétrage DAQmx :
@@ -56,7 +58,7 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
         std_msgs::msg::Float64 fz_msg, mz_msg;
         //vérification sur les paramètres de config sur WITIS, Fz correspond à AI7 et Mz à AI6
         fz_msg.data = data[0] * 20.864489; //N = k * V, k was computed with samplings
-        mz_msg.data = data[1];
+        mz_msg.data = data[1]; //coeff to be determined
 
         fz_pub->publish(fz_msg);
         mz_pub->publish(mz_msg);

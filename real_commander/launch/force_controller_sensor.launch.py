@@ -2,6 +2,7 @@ import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
+from launch.actions import TimerAction
 from ament_index_python.packages import get_package_share_directory
 from moveit_configs_utils import MoveItConfigsBuilder
 import xacro
@@ -22,26 +23,27 @@ def generate_launch_description():
             get_package_share_directory("staubli_tx2_60l_moveit_config"),
             "config",
             "staubli_tx2_60l_controllers.yaml",
+            )
         )
-    )
     moveit_controllers = {
         "moveit_simple_controller_manager": controllers_yaml,
         "moveit_controller_manager": "moveit_simple_controller_manager/MoveItSimpleControllerManager",
-    }
+        }
+    
     trajectory_execution = {
         "moveit_manage_controllers": False,
         "trajectory_execution.execution_duration_monitoring": False,
         "trajectory_execution.allowed_execution_duration_scaling": 100.0,
         "trajectory_execution.allowed_goal_duration_margin": 0.5,
         "trajectory_execution.allowed_start_tolerance": 0.01,
-    }
+        }
 
     planning_scene_monitor_parameters = {
         "publish_planning_scene": True,
         "publish_geometry_updates": True,
         "publish_state_updates": True,
         "publish_transforms_updates": True,
-    }
+        }
 
     # Start the actual move_group node/action server
     move_group_node = Node(
@@ -53,7 +55,7 @@ def generate_launch_description():
                     moveit_controllers,
                     planning_scene_monitor_parameters],
         arguments=["--ros-args", "--log-level", "info"],
-    )
+        )
 
     static_tf_node = Node(
         package="tf2_ros",
@@ -62,7 +64,7 @@ def generate_launch_description():
         output="log",
         arguments=["--frame-id", "map",
                    "--child-frame-id", "base_link"],
-    )
+        )
 
     robot_state_publisher = Node(
         package="robot_state_publisher",
@@ -70,44 +72,61 @@ def generate_launch_description():
         name="robot_state_publisher",
         output="log",
         parameters=[moveit_config.robot_description],
-    )
+        )
+    
+    cartesian_publisher_node = Node(
+        package='real_commander',
+        executable='cartesian_publisher',
+        name='cartesian_publisher',
+        output='screen',
+        )
 
-    cartesian_publisher = Node(
-        package="real_commander",
-        executable="cartesian_publisher",
-        name="cartesian_publisher",
-        output="screen",
-    )
+    cartesian_converter_node = Node(
+        package='real_commander',
+        executable='cartesian_converter',
+        name='cartesian_converter',
+        output='screen',
+        )
 
-    cartesian_converter = Node(
-        package="real_commander",
-        executable="cartesian_converter",
-        name="cartesian_converter",
-        output="screen",
-    )
+    force_pid_controller_node = Node(
+        package='real_commander',
+        executable='force_pid_controller',
+        name='force_pid_controller',
+        output='screen',
+        parameters=[{
+            "KP": 0.004153e-1, #0.004153 values found with matlab/simulnk
+            "KI": 0.00424e-1, #0.00424,
+            "KD": 4.24e-6, #4.24e-5,
+            "MAX_OUTPUT": 0.05,
+            "TARGET": 300.0,
+            "FREQ": 250
+            }]
+        )
 
-    sensor = Node(
-        package="real_commander",
-        executable="sensor",
-        name="sensor",
-        output="screen",
-    )
+    sensor_node = Node(
+        package='real_commander',
+        executable='sensor',
+        name='sensor',
+        output='screen',
+        parameters=[{"FREQ" : 250}]
+        )
 
-    force_pid_controller = Node(
-        package="real_commander",
-        executable="force_pid_controller",
-        name="force_pid_controller",
-        output="screen",
-    )
+    timer_action = TimerAction(
+        period=5.0,
+        actions=[cartesian_publisher_node,cartesian_converter_node,sensor_node] #10 might not be sufficient, to improve
+        )
+
+    force_pid_controller_delayed = TimerAction(
+        period=15.0,
+        actions=[force_pid_controller_node]
+        )
 
     return LaunchDescription(
         [
-            static_tf_node,
-            robot_state_publisher,
-            move_group_node,
-            cartesian_publisher,
-            cartesian_converter,
-            sensor,
-            force_pid_controller,
+        static_tf_node,
+        robot_state_publisher,
+        move_group_node,
+        timer_action,
+        force_pid_controller_delayed
         ]
     )
