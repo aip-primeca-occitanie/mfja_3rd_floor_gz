@@ -55,7 +55,7 @@ int main(int argc, char **argv) //argv and argc are how command line arguments a
 
         std_msgs::msg::Float64 fz_msg, mz_msg;
         //vérification sur les paramètres de config sur WITIS, Fz correspond à AI7 et Mz à AI6
-        fz_msg.data = data[0];
+        fz_msg.data = data[0] * 20.864489; //N = k * V, k was computed with samplings
         mz_msg.data = data[1];
 
         fz_pub->publish(fz_msg);

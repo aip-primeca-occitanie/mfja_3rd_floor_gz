@@ -121,10 +121,17 @@ private:
         pose_msg.header.stamp    = msg->header.stamp;
         pose_msg.header.frame_id = "tool_ref_frame";
         auto raw_pose = tf2::toMsg(relative_eigen);
-        pose_msg.pose.position.x = raw_pose.position.x; //x and z might be inverted
+        pose_msg.pose.position.x = raw_pose.position.z; //x and z might be inverted
         pose_msg.pose.position.y = raw_pose.position.y;
-        pose_msg.pose.position.z = raw_pose.position.z;
-        //pose_msg.pose.orientation = raw_pose.orientation;
+        pose_msg.pose.position.z = - raw_pose.position.x; //works without minus
+        pose_msg.pose.orientation.x = raw_pose.orientation.z;
+        pose_msg.pose.orientation.y = raw_pose.orientation.y;
+        pose_msg.pose.orientation.z = - raw_pose.orientation.x;
+        pose_msg.pose.orientation.w = raw_pose.orientation.w;
+
+        if (std::abs(pose_msg.pose.orientation.x*pose_msg.pose.orientation.x + pose_msg.pose.orientation.y*pose_msg.pose.orientation.y + pose_msg.pose.orientation.z*pose_msg.pose.orientation.z + pose_msg.pose.orientation.w *pose_msg.pose.orientation.w ) < 0.1) {
+            pose_msg.pose.orientation.x  = 0.0; pose_msg.pose.orientation.y  = 0.0; pose_msg.pose.orientation.z  = 0.0; pose_msg.pose.orientation.w  = 1.0;
+        }
         pub_pose->publish(pose_msg);
 
         // velocities
@@ -142,12 +149,12 @@ private:
             geometry_msgs::msg::TwistStamped vel_msg;
             vel_msg.header.stamp    = msg->header.stamp;
             vel_msg.header.frame_id = "base_link";
-            vel_msg.twist.linear.x  = v_cart(0);
+            vel_msg.twist.linear.x  = v_cart(2);
             vel_msg.twist.linear.y  = v_cart(1);
-            vel_msg.twist.linear.z  = v_cart(2);
-            vel_msg.twist.angular.x = v_cart(3);
+            vel_msg.twist.linear.z  = - v_cart(0);
+            vel_msg.twist.angular.x = v_cart(5);
             vel_msg.twist.angular.y = v_cart(4);
-            vel_msg.twist.angular.z = v_cart(5);
+            vel_msg.twist.angular.z = - v_cart(3);
             pub_vel->publish(vel_msg);
         }
         prev_js = *msg;

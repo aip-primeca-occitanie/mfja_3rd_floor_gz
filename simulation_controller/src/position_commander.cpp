@@ -20,7 +20,7 @@ public:
     PositionCommander() : rclcpp::Node("position_commander")
     {
         pub = this->create_publisher<trajectory_msgs::msg::JointTrajectory>(
-            "/joint_path_command", 10);
+            "/joint_path_command", 10); //wrong topic but node was not while testing !
  
         sub_js = this->create_subscription<sensor_msgs::msg::JointState>(
             "/joint_states", 10,
