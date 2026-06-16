@@ -10,11 +10,11 @@ from rosbags.highlevel import AnyReader
 # CONFIGURATION
 # ==========================
 
-BAG_PATH = "rosbag2_2026_06_16-12_40_33"
+BAG_PATH = "rosbag2_2026_06_16-14_33_11"
 
 POSITION_TOPIC = "/cartesian_state"
 FORCE_TOPIC = "/Fz"
-COMMAND_TOPIC = "/joint_path_command"
+COMMAND_TOPIC = "/cartesian_target"
 
 # ==========================
 # LECTURE DU BAG
@@ -38,7 +38,7 @@ with AnyReader([Path(BAG_PATH)]) as reader:
             t = timestamp * 1e-9  # ns -> s
 
             # Première valeur du tableau
-            z = msg.pose.position.x
+            z = msg.pose.position.z
 
             t_z.append(t)
             z_values.append(z)
@@ -56,13 +56,13 @@ with AnyReader([Path(BAG_PATH)]) as reader:
 
             t = timestamp * 1e-9  # ns -> s
 
-            fz = msg.data
+            com = msg.pose.position.z
 
-            t_f.append(t)
-            fz_values.append(fz)
+            t_command.append(t)
+            command_values.append(com)
 
 t_z = np.array(t_z)
-z_values = np.array(z_values)-z_values[0]
+z_values = np.array(z_values)
 z_values = z_values*100 #cm
 
 t_f = np.array(t_f)
@@ -72,6 +72,9 @@ t_command = np.array(t_command)
 command_values = np.array(command_values)
 command_values = command_values*100 #cm
 
+print(len(t_z))
+print(len(t_command))
+
 if len(t_z) == 0:
     raise RuntimeError(f"Aucune donnée trouvée sur {POSITION_TOPIC}")
 
@@ -79,7 +82,7 @@ if len(t_f) == 0:
     raise RuntimeError(f"Aucune donnée trouvée sur {FORCE_TOPIC}")
 
 if len(t_command) == 0:
-    raise RuntimeError(f"Aucune donnée trouvée sur {FORCE_TOPIC}")
+    raise RuntimeError(f"Aucune donnée trouvée sur {COMMAND_TOPIC}")
 
 t0 = t_z[0]
 t_z -= t0
@@ -107,4 +110,16 @@ plt.ylabel("Commande [cm]")
 plt.title("commande calculée")
 plt.grid(True)
 
+z_interp = np.interp(t_command, t_z, z_values)
+
+plt.figure(figsize=(12,5))
+plt.plot(t_command, command_values + z_interp)
+
+plt.xlabel("Temps [s]")
+plt.ylabel("z_cmd - z [cm]")
+plt.title("Erreur de suivi cartésienne en Z")
+plt.grid(True)
+
 print("freq = ",len(t_command)/(t_command[-1]-t_command[0])," Hz.")
+
+plt.show()

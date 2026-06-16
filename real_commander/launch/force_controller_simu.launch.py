@@ -95,7 +95,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             "KP": 0.004153, #values found with matlab/simulnk
-            "KI": 0.00424,
+            "KI": 0., #0.00424,
             "KD": 0., #4.24e-5,
             "MAX_OUTPUT": 0.05,
             "TARGET": 300.0

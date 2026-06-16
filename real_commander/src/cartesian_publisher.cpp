@@ -169,7 +169,7 @@ private:
             Eigen::VectorXd dq = dq_task; //+ dq_null;
             q = pinocchio::integrate(model, q, IK_DT * dq);
         }
-        return false;   // did not converge
+        return false; // did not converge
     }
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
