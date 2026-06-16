@@ -10,11 +10,12 @@ from rosbags.highlevel import AnyReader
 # CONFIGURATION
 # ==========================
 
-BAG_PATH = "rosbag2_2026_06_16-14_33_11"
+BAG_PATH = "rosbag2_2026_06_16-15_48_06"
 
 POSITION_TOPIC = "/cartesian_state"
 FORCE_TOPIC = "/Fz"
 COMMAND_TOPIC = "/cartesian_target"
+COMMAND_TOPIC_TRUE = "/joint_path_command"
 
 # ==========================
 # LECTURE DU BAG
@@ -26,6 +27,7 @@ t_f = []
 fz_values = []
 t_command = []
 command_values = []
+t_freq = []
 
 with AnyReader([Path(BAG_PATH)]) as reader:
 
@@ -60,6 +62,10 @@ with AnyReader([Path(BAG_PATH)]) as reader:
 
             t_command.append(t)
             command_values.append(com)
+
+        elif connection.topic == COMMAND_TOPIC_TRUE:
+            t = timestamp * 1e-9 
+            t_freq.append(t)
 
 t_z = np.array(t_z)
 z_values = np.array(z_values)
@@ -103,23 +109,15 @@ plt.ylabel("Fz simulée [N]")
 plt.title("Mesure force")
 plt.grid(True)
 
-plt.figure(figsize=(12,5))
-plt.plot(t_command, command_values)
-plt.xlabel("Temps [s]")
-plt.ylabel("Commande [cm]")
-plt.title("commande calculée")
-plt.grid(True)
-
 z_interp = np.interp(t_command, t_z, z_values)
-
 plt.figure(figsize=(12,5))
 plt.plot(t_command, command_values + z_interp)
 
 plt.xlabel("Temps [s]")
 plt.ylabel("z_cmd - z [cm]")
-plt.title("Erreur de suivi cartésienne en Z")
+plt.title("Commande cartésienne")
 plt.grid(True)
 
-print("freq = ",len(t_command)/(t_command[-1]-t_command[0])," Hz.")
+print("freq = ",len(t_freq)/(t_freq[-1]-t_freq[0])," Hz.")
 
 plt.show()
