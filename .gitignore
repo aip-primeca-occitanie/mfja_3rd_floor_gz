@@ -6,6 +6,7 @@ log/
 .codex
 __pycache__/
 *.pyc
+*.egg-info/
 *.aux
 *.log
 *.out
@@ -24,6 +25,7 @@ room315_shuttle_rail_report_ar.pdf
 /mfja_robot_control_config/config/room_315_kinematics/report_figures.zip
 /multi_robot_usage_guide.*
 /rail_switch_integration_report.*
+/mfja_staubli_demos/scripts/room315_local_env.sh
 
 # Local explanation exports
 *_explanation_ar.html

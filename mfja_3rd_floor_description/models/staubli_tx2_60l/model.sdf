@@ -402,63 +402,66 @@
     <plugin
       filename="gz-sim-joint-trajectory-controller-system"
       name="gz::sim::systems::JointTrajectoryController">
+      <!-- Integral limits must exceed the gravity torque of each joint,
+           otherwise the arm sags below the commanded trajectory
+           (~0.13 rad on joint_2, i.e. ~12 cm at the tool). -->
       <joint_name>joint_1</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>170.0</position_p_gain>
-      <position_i_gain>0.12</position_i_gain>
-      <position_d_gain>24.0</position_d_gain>
-      <position_i_min>-2.0</position_i_min>
-      <position_i_max>2.0</position_i_max>
+      <position_p_gain>400.0</position_p_gain>
+      <position_i_gain>10.0</position_i_gain>
+      <position_d_gain>50.0</position_d_gain>
+      <position_i_min>-50.0</position_i_min>
+      <position_i_max>50.0</position_i_max>
       <position_cmd_min>-320.0</position_cmd_min>
       <position_cmd_max>320.0</position_cmd_max>
 
       <joint_name>joint_2</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>190.0</position_p_gain>
-      <position_i_gain>0.12</position_i_gain>
-      <position_d_gain>28.0</position_d_gain>
-      <position_i_min>-2.0</position_i_min>
-      <position_i_max>2.0</position_i_max>
+      <position_p_gain>600.0</position_p_gain>
+      <position_i_gain>20.0</position_i_gain>
+      <position_d_gain>60.0</position_d_gain>
+      <position_i_min>-100.0</position_i_min>
+      <position_i_max>100.0</position_i_max>
       <position_cmd_min>-340.0</position_cmd_min>
       <position_cmd_max>340.0</position_cmd_max>
 
       <joint_name>joint_3</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>120.0</position_p_gain>
-      <position_i_gain>0.08</position_i_gain>
-      <position_d_gain>18.0</position_d_gain>
-      <position_i_min>-1.5</position_i_min>
-      <position_i_max>1.5</position_i_max>
+      <position_p_gain>400.0</position_p_gain>
+      <position_i_gain>15.0</position_i_gain>
+      <position_d_gain>40.0</position_d_gain>
+      <position_i_min>-60.0</position_i_min>
+      <position_i_max>60.0</position_i_max>
       <position_cmd_min>-220.0</position_cmd_min>
       <position_cmd_max>220.0</position_cmd_max>
 
       <joint_name>joint_4</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>45.0</position_p_gain>
-      <position_i_gain>0.05</position_i_gain>
-      <position_d_gain>8.0</position_d_gain>
-      <position_i_min>-0.8</position_i_min>
-      <position_i_max>0.8</position_i_max>
+      <position_p_gain>120.0</position_p_gain>
+      <position_i_gain>4.0</position_i_gain>
+      <position_d_gain>16.0</position_d_gain>
+      <position_i_min>-20.0</position_i_min>
+      <position_i_max>20.0</position_i_max>
       <position_cmd_min>-90.0</position_cmd_min>
       <position_cmd_max>90.0</position_cmd_max>
 
       <joint_name>joint_5</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>35.0</position_p_gain>
-      <position_i_gain>0.04</position_i_gain>
-      <position_d_gain>6.0</position_d_gain>
-      <position_i_min>-0.6</position_i_min>
-      <position_i_max>0.6</position_i_max>
+      <position_p_gain>100.0</position_p_gain>
+      <position_i_gain>4.0</position_i_gain>
+      <position_d_gain>12.0</position_d_gain>
+      <position_i_min>-20.0</position_i_min>
+      <position_i_max>20.0</position_i_max>
       <position_cmd_min>-70.0</position_cmd_min>
       <position_cmd_max>70.0</position_cmd_max>
 
       <joint_name>joint_6</joint_name>
       <initial_position>0.0</initial_position>
-      <position_p_gain>30.0</position_p_gain>
-      <position_i_gain>0.03</position_i_gain>
-      <position_d_gain>5.0</position_d_gain>
-      <position_i_min>-0.5</position_i_min>
-      <position_i_max>0.5</position_i_max>
+      <position_p_gain>80.0</position_p_gain>
+      <position_i_gain>2.0</position_i_gain>
+      <position_d_gain>10.0</position_d_gain>
+      <position_i_min>-10.0</position_i_min>
+      <position_i_max>10.0</position_i_max>
       <position_cmd_min>-60.0</position_cmd_min>
       <position_cmd_max>60.0</position_cmd_max>
     </plugin>
