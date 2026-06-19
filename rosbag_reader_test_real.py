@@ -10,7 +10,7 @@ from rosbags.highlevel import AnyReader
 # CONFIGURATION
 # ==========================
 
-BAG_PATH = "rosbag2_2026_06_16-15_48_06"
+BAG_PATH = "rosbag2_2026_06_16-16_34_37"
 
 POSITION_TOPIC = "/cartesian_state"
 FORCE_TOPIC = "/Fz"

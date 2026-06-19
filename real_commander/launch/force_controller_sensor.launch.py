@@ -98,7 +98,7 @@ def generate_launch_description():
             "KI": 0.00424e-1, #0.00424,
             "KD": 4.24e-6, #4.24e-5,
             "MAX_OUTPUT": 0.05,
-            "TARGET": 300.0,
+            "TARGET": 50.0,
             "FREQ": 250
             }]
         )
