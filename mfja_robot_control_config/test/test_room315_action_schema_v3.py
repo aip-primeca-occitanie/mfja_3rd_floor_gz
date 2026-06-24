@@ -28,9 +28,10 @@ def test_action_schema_v3_contains_shuttle_and_coordination_fields():
     config = yaml.safe_load(ACTION_SPACE_PATH.read_text(encoding='utf-8'))
 
     assert multi.ACTION_SCHEMA_VERSION == 3
+    assert config['schema_version'] == 3
     assert config['action_schema_version'] == 3
     assert config['model_input_schema_version'] == multi.MODEL_INPUT_SCHEMA_VERSION
-    assert config['action_vector_v3_fields'] == multi.ACTION_VECTOR_V3_FIELDS
+    assert config['action_vector_fields'] == multi.ACTION_VECTOR_V3_FIELDS
     assert 'shuttle_index' in multi.ACTION_VECTOR_V3_FIELDS
     assert 'coordination_mode' in multi.ACTION_VECTOR_V3_FIELDS
     assert config['target_ids']['right_shuttle_2'] == multi.TARGET_IDS['right_shuttle_2']

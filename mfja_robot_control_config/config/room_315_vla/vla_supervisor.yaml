@@ -2,7 +2,7 @@ schema_version: 3
 description: >
   High-level task templates for expert demos, manual checks, and benchmarks in
   Room 315. The learned VLA policy is expected to output event-level direct
-  symbolic commands, preferably schema-v2 action_vector values, not these
+  symbolic commands, preferably schema-v3 action_vector values, not these
   templates as its final action interface. The supervisor still accepts
   route_template commands so demos and benchmarks can expand them into
   deterministic primitive rail commands while keeping emergency-stop gating in

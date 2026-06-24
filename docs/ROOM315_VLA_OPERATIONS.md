@@ -4,7 +4,7 @@
 
 The VLA experiment layer adds independent right-rail and left-rail RGB-D
 cameras and a ROS action supervisor. The learned VLA policy is intended to
-output event-level direct symbolic commands: preferably a schema-v2
+output event-level direct symbolic commands: preferably a schema-v3
 `action_vector`, or an equivalent JSON primitive command such as `switches`,
 `stoppers`, `shuttle`, `stop_all`, or `emergency_stop`. `route_template` tasks
 such as `right_yaskawa_to_staubli` are still supported for expert
@@ -18,7 +18,7 @@ switch, stopper, emergency, and falling state, and then either returns an
 accepted `corrected_action` or rejects the proposal with a clear reason. Safe
 corrections are limited to explicit normalization such as `switch` ->
 `switches` or `I` -> `INTERIOR`; unsafe actions are not silently modified.
-For schema-v2 model outputs, the supervisor also accepts an `action_vector`,
+For schema-v3 model outputs, the supervisor also accepts an `action_vector`,
 decodes it to an event-level symbolic action, validates it, and only then
 produces the executable ROS command. The validator rejects switch changes near
 occupied guarded switch segments, rejects loop transitions unless the shuttle is
@@ -191,22 +191,24 @@ a side, the supervisor rejects shuttle-motion commands that do not identify the
 target shuttle. Use `shuttle_id: "R2"`, `shuttle: "right_shuttle_2"`, or the
 Gazebo entity name `room315_right_shuttle_2`.
 
-Action space schema v2 uses only these primitives: `WAIT`, `DONE`,
+Action space schema v3 uses only these primitives: `WAIT`, `DONE`,
 `SET_SWITCHES`, `SET_STOPPERS`, `SHUTTLE_ON`, `STOP_NOW`, and
 `EMERGENCY_STOP`. The vector fields are `primitive_id`,
-`side_id`, per-device `switch_mask_A1..A4`/`switch_value_A1..A4`,
+`side_id`, `shuttle_index`, per-device
+`switch_mask_A1..A4`/`switch_value_A1..A4`,
 per-device `stopper_mask_A1..A4`/`stopper_value_A1..A4`,
-`speed_mps`, `wait_condition_id`, `target_id`, and `reason_id`. A mask value of `0` means
+`speed_mps`, `wait_condition_id`, `target_id`, `reason_id`, and
+`coordination_mode`. A mask value of `0` means
 `UNCHANGED`; only devices with mask `1` are decoded as selected devices.
 This represents partial decisions such as “set only A3 to INTERIOR” or “close
 only A4” without accidentally changing A1/A2/A3/A4 together. Shuttle movement
 uses the `SHUTTLE_ON` primitive plus an explicit `speed_mps` value, so policies
 can request the actual shuttle speed in meters per second.
 
-Action schema v3 extends the same event-level representation for multi-shuttle
-targets by adding `shuttle_index` and `coordination_mode`, plus target IDs such
-as `right_shuttle_2` and `left_shuttle_3`. This is still the target label, not
-extra model input. The model-facing input remains:
+Multi-shuttle targets use the same schema-v3 event-level representation with
+`shuttle_index`, `coordination_mode`, and target IDs such as
+`right_shuttle_2` and `left_shuttle_3`. These are target labels, not extra
+model input. The model-facing input remains:
 
 ```text
 language
@@ -218,7 +220,7 @@ The same vector can be sent directly to the supervisor for guarded execution:
 
 ```bash
 ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
-  "{data: '{\"action_vector\":[2,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0.0,1,3,8]}'}"
+  "{data: '{\"action_vector_schema_version\":3,\"action_vector\":[2,0,-1,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0.0,1,3,8,0]}'}"
 ```
 
 That example decodes to `SET_SWITCHES` on the right rail, selecting only A3 and
@@ -230,7 +232,7 @@ Each episode now has two JSONL files:
 - `events.jsonl`: the training file. Each row is one decision event:
   `observation_before_decision -> next_symbolic_action`. Even when demos are
   triggered by `route_template`, the trainable `action` and `action_vector` are
-  normalized into the schema-v2 event-level primitive set. The learned model
+  normalized into the schema-v3 event-level primitive set. The learned model
   should emit this event-level action, not repeat the route template.
 - `data.jsonl`: raw framewise replay. It keeps camera references, structured
   status, and the latest command for auditing and temporal reconstruction, but
@@ -239,8 +241,8 @@ Each episode now has two JSONL files:
 
 Use `events.jsonl` for model training. Each event row includes `episode_id`,
 `step_index`, `task`, flattened `observation.images.*`, `observation.state`,
-schema-v2 `action`, and `privileged_eval`. The richer event rows still retain
-debug fields such as `legacy_next_action`, `original_command`, `action_vector`,
+schema-v3 `action`, and `privileged_eval`. The richer event rows still retain
+debug fields such as `symbolic_next_action`, `original_command`, `action_vector`,
 and `wait_condition`, but those are not repeated frame labels. Episode summaries
 and raw/event rows also include the current safety-decoder metrics so datasets
 can report how many model proposals were rejected by the execution guard.

@@ -158,7 +158,7 @@ This is why the project evaluates at least two policy families:
 The expected research signal is the gap between these two policies on tasks
 where binary sensors alone are under-informative.
 
-## Event-Level Action Schema V2
+## Event-Level Action Schema V3
 
 Training labels are event-level direct decisions, not high-level route templates
 and not repeated framewise commands. Each training row represents:
@@ -167,7 +167,7 @@ and not repeated framewise commands. Each training row represents:
 observation_before_decision -> next_direct_symbolic_event_action
 ```
 
-The schema-v2 primitive set is:
+The schema-v3 primitive set is:
 
 ```text
 WAIT
@@ -240,9 +240,15 @@ ros2 run mfja_robot_control_config room_315_vla_event_extractor.py \
   --output meta/training_events.jsonl
 ```
 
+For PDDL/PlanSys2 episodes, `meta/training_events.jsonl` includes only episodes
+whose `episodes/<episode_id>/validation.json` is approved for training. Failed
+or unvalidated episodes are skipped unless an explicit debug flag such as
+`--include-failed` is used.
+
 The dataset layout is:
 
 ```text
+episodes/<episode_id>/validation.json # scenario approval gate
 episodes/<episode_id>/events.jsonl     # training labels
 episodes/<episode_id>/data.jsonl       # raw replay/debug only
 episodes/<episode_id>/images/...       # overhead camera frames
@@ -338,6 +344,7 @@ Payload models are available for identity occlusion experiments:
 
 ```text
 room315_vla_payload_small_box
+room315_vla_payload_small_box as carried_box
 room315_vla_payload_medium_box
 room315_vla_payload_tall_box
 room315_vla_payload_wide_box_within_keepout
@@ -350,6 +357,43 @@ payloads stay inside the center keep-out zone and preserve all perimeter identit
 regions. The partial occluder is a controlled test case for one-corner
 occlusion.
 
+Room 315 shuttles can also carry a visual payload box during normal shuttle
+motion. The kinematic shuttle node spawns `room315_vla_payload_small_box` as a
+separate Gazebo model named `<shuttle_entity>_payload`, keeps it pose-synced
+with the shuttle, and publishes a privileged payload-state JSON topic:
+
+```text
+/room_315/rails/right/shuttles/payload_state
+/room_315/rails/left/shuttles/payload_state
+```
+
+Initial loaded shuttles are launch-configurable:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_enable_payload_visuals:=true \
+  room315_right_shuttle_count:=4 \
+  room315_left_shuttle_count:=4 \
+  room315_right_loaded_shuttles:=R2 \
+  room315_left_loaded_shuttles:=L2
+```
+
+Payload state can be changed while a scenario is running:
+
+```bash
+ros2 topic pub --once /room_315/rails/right/shuttles/payload_command \
+  std_msgs/msg/String \
+  "{data: '{\"shuttle\":\"R2\",\"loaded\":true,\"payload_type\":\"box\"}'}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/payload_command \
+  std_msgs/msg/String \
+  "{data: '{\"shuttle\":\"R2\",\"loaded\":false}'}"
+```
+
 The deployable model input remains exactly:
 
 ```text
@@ -358,21 +402,21 @@ model_input.overhead_images
 model_input.last_command
 ```
 
-Payload type, visible marker count, expected visible IDs, `target_shuttle_id`,
-identity tracker state, rail occupancy, and block reservations are privileged
-metadata for safety/evaluation only. They may appear in top-level event metadata
-or `privileged_eval`, never inside `model_input`.
+Payload state, payload type, visible marker count, expected visible IDs,
+`target_shuttle_id`, identity tracker state, rail occupancy, and block
+reservations are privileged metadata for safety/evaluation only. They may appear
+in top-level event metadata or `privileged_eval`, never inside `model_input`.
 
-## Schema-V3 Real VLA Agent Contract
+## Real VLA Agent Contract
 
-When multiple shuttles are active on a rail side, the real VLA HTTP agent asks
-for schema-v3 action vectors. Schema-v3 adds the explicit `shuttle_index` and
-coordination fields needed for identity-aware fleet control:
+The real VLA HTTP agent asks for schema-v3 action vectors. Schema-v3 includes
+the explicit `shuttle_index` and coordination fields needed for
+identity-aware fleet control:
 
 ```json
 {
   "action_vector_schema_version": 3,
-  "action_vector": [4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 3, 29, 14, 1]
+  "action_vector": [4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 3, 29, 14, 1]
 }
 ```
 
@@ -446,7 +490,7 @@ Left slots 3-4: KUKA KR6
 A realistic extension path is:
 
 1. Keep the rail-only policy as the low-level logistics layer and preserve the
-   same schema-v2 action interface.
+   same schema-v3 action interface.
 2. Add robot availability and station readiness as sparse binary inputs, not as
    privileged robot poses.
 3. Add task templates such as "deliver part to KUKA, wait for robot done, return

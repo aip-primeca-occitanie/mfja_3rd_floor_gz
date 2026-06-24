@@ -99,12 +99,32 @@ def _manual_row(episode_id='episode_manual', side='left'):
     }
 
 
-def _write_events(dataset_dir, episode_id, rows):
+def _write_events(dataset_dir, episode_id, rows, *, approved=True, failure_reason=''):
     event_dir = dataset_dir / 'episodes' / episode_id
     event_dir.mkdir(parents=True)
     event_file = event_dir / 'events.jsonl'
     event_file.write_text(
         ''.join(json.dumps(row) + '\n' for row in rows),
+        encoding='utf-8',
+    )
+    validation = {
+        'scenario_id': episode_id,
+        'goal_id': episode_id,
+        'source': 'pddl_plansys',
+        'validation_status': 'approved' if approved else 'failed',
+        'approved_for_training': approved,
+        'failure_reason': '' if approved else (failure_reason or 'test failure'),
+        'task_success': approved,
+        'rejected_action_rate': 0.0 if approved else 1.0,
+        'wrong_shuttle_command_count': 0,
+        'headway_violation_count': 0,
+        'block_occupancy_violation_count': 0,
+        'block_reservation_rejection_count': 0,
+        'deadlock_detected_count': 0,
+        'deadlock_avoided_count': 0,
+    }
+    (event_dir / 'validation.json').write_text(
+        json.dumps(validation) + '\n',
         encoding='utf-8',
     )
     return event_file
@@ -161,6 +181,30 @@ def test_report_counts_goals(tmp_path):
     assert report['speed_distribution'] == {'0.3': 2}
     assert report['rejected_action_rate'] == 0.1
     assert report['task_success']['success_rate'] == 1.0
+
+
+def test_report_separates_approved_and_failed_episodes(tmp_path):
+    reporter = _load_module()
+    dataset = tmp_path / 'dataset'
+    _write_events(dataset, 'episode_approved', [_pddl_row(episode_id='episode_approved')])
+    _write_events(
+        dataset,
+        'episode_failed',
+        [_pddl_row(episode_id='episode_failed', goal='left_shuttle at kuka')],
+        approved=False,
+        failure_reason='arrival timeout',
+    )
+
+    report = reporter.build_dataset_report(dataset)
+
+    assert report['total_episodes'] == 2
+    assert report['approved_episodes'] == 1
+    assert report['failed_episodes'] == 1
+    assert report['approval_rate'] == 0.5
+    assert report['approved_event_count'] == 1
+    assert report['skipped_event_count'] == 1
+    assert report['failure_reasons_distribution'] == {'arrival timeout': 1}
+    assert report['goals_covered'] == ['right_shuttle at staubli']
 
 
 def test_report_handles_datasets_without_pddl_metadata(tmp_path):

@@ -97,6 +97,10 @@ if(BUILD_TESTING)
     test/test_room315_rail_devices.py
   )
   ament_add_pytest_test(
+    test_room315_kinematic_shuttle_core
+    test/test_room315_kinematic_shuttle_core.py
+  )
+  ament_add_pytest_test(
     test_room315_pddl_planning
     test/test_room315_pddl_planning.py
   )
@@ -163,6 +167,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_payload_models
     test/test_room315_payload_models.py
+  )
+  ament_add_pytest_test(
+    test_room315_shuttle_payload_visuals
+    test/test_room315_shuttle_payload_visuals.py
   )
   ament_add_pytest_test(
     test_room315_identity_keepout_zones

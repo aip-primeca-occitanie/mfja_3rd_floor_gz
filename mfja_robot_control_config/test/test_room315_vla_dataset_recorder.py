@@ -105,9 +105,11 @@ def _action_value(module, action_vector, field):
 
 
 def _blank_event_action(module, *, primitive='WAIT', side='right', wait_condition='none', target_id='none', reason='none'):
-    return {
+    action = {
         'primitive': primitive,
         'side': side,
+        'shuttle_id': '',
+        'shuttle_index': -1,
         'switch_mask': {name: 0 for name in module.DEVICE_NAMES},
         'switch_values': {name: 'UNCHANGED' for name in module.DEVICE_NAMES},
         'stopper_mask': {name: 0 for name in module.DEVICE_NAMES},
@@ -116,10 +118,17 @@ def _blank_event_action(module, *, primitive='WAIT', side='right', wait_conditio
         'wait_condition': wait_condition,
         'target_id': target_id,
         'reason': reason,
+        'coordination_mode': 'normal',
     }
+    if primitive in {'SHUTTLE_ON', 'STOP_NOW'}:
+        action['shuttle_index'] = 0
+        action['shuttle_id'] = 'R1' if side == 'right' else 'L1'
+        if target_id in {'right_shuttle', 'left_shuttle', 'none'}:
+            action['target_id'] = f'{side}_shuttle_1'
+    return action
 
 
-def test_event_action_v2_switch_json_vector_roundtrip():
+def test_event_action_v3_switch_json_vector_roundtrip():
     recorder = _load_module()
     action = _blank_event_action(
         recorder,
@@ -135,7 +144,7 @@ def test_event_action_v2_switch_json_vector_roundtrip():
     encoded = recorder._encode_action(action)
     decoded = recorder._decode_action(encoded)
 
-    assert recorder.ACTION_VECTOR_FIELDS[:2] == ['primitive_id', 'side_id']
+    assert recorder.ACTION_VECTOR_FIELDS[:3] == ['primitive_id', 'side_id', 'shuttle_index']
     assert encoded[0] == recorder.PRIMITIVE_IDS['SET_SWITCHES']
     assert encoded[1] == recorder.SIDE_IDS['right']
     assert _action_value(recorder, encoded, 'switch_mask_A1') == 0.0
@@ -146,7 +155,7 @@ def test_event_action_v2_switch_json_vector_roundtrip():
     assert decoded == action
 
 
-def test_event_action_v2_stopper_json_vector_roundtrip():
+def test_event_action_v3_stopper_json_vector_roundtrip():
     recorder = _load_module()
     action = _blank_event_action(
         recorder,
@@ -169,7 +178,7 @@ def test_event_action_v2_stopper_json_vector_roundtrip():
     assert decoded == action
 
 
-def test_event_action_v2_shuttle_wait_done_roundtrips():
+def test_event_action_v3_shuttle_wait_done_roundtrips():
     recorder = _load_module()
     actions = [
         _blank_event_action(
@@ -248,7 +257,7 @@ def test_unmasked_device_values_do_not_decode_to_changes():
     try:
         recorder._decode_action(encoded)
     except ValueError as exc:
-        assert 'switch_mask_A2 selected but value is UNCHANGED' in str(exc)
+        assert 'switch_mask_A2 selected but switch_value_A2 is UNCHANGED' in str(exc)
     else:
         raise AssertionError('expected selected UNCHANGED switch value to be rejected')
 
@@ -327,6 +336,17 @@ def test_switch_state_encoder_normalizes_short_and_long_values():
 def test_model_input_schema_v3_is_visual_policy_input_only():
     recorder = _load_module()
     status = _status()
+    status['payload_state'] = {
+        'shuttles': [
+            {
+                'shuttle_id': 'right_shuttle_2',
+                'side': 'right',
+                'loaded': True,
+                'payload_type': 'box',
+            }
+        ],
+        'model_input_exposure': 'excluded',
+    }
     status['rails']['right']['switches'] = {
         'A1': 'E',
         'A2': 'I',
@@ -385,6 +405,8 @@ def test_model_input_schema_v3_is_visual_policy_input_only():
         'stopper_states',
         'shuttle_command_state',
         'time_since_last_sensor_event',
+        'payload_state',
+        'payload_type',
         'DZI2R',
         'DZI3R',
     ):
@@ -415,6 +437,7 @@ def test_model_input_schema_v3_is_visual_policy_input_only():
     assert expert_state['time_since_last_sensor_event']['left'] is None
     assert expert_state['model_input_exposure'] == 'excluded'
     assert privileged['raw_shuttle_states']['right']['room315_right_shuttle_1']['segment'] == 'A12E'
+    assert privileged['payload_state']['shuttles'][0]['loaded'] is True
 
 
 def test_visual_eval_markers_are_privileged_labels_not_observation_features():
@@ -506,7 +529,7 @@ def test_action_space_observation_schema_matches_recorder():
     recorder = _load_module()
     config = yaml.safe_load(ACTION_SPACE_PATH.read_text(encoding='utf-8'))
 
-    assert config['schema_version'] == 2
+    assert config['schema_version'] == 3
     assert config['action_vector_fields'] == recorder.ACTION_VECTOR_FIELDS
     assert config['symbolic_action_fields'] == recorder.EVENT_ACTION_FIELDS
     assert config['observation_state_fields'] == recorder.OBSERVATION_STATE_FIELDS
@@ -518,6 +541,8 @@ def test_action_space_observation_schema_matches_recorder():
     assert 'template_ids' not in config
     assert 'switch_all_state_id' not in config['action_vector_fields']
     assert 'switch_mask_A3' in config['action_vector_fields']
+    assert 'shuttle_index' in config['action_vector_fields']
+    assert 'coordination_mode' in config['action_vector_fields']
     assert 'stopper_value_A4' in config['action_vector_fields']
     assert 'speed_mps' in config['action_vector_fields']
     assert 'right_sensor_DZI2R' in config['observation_state_fields']
@@ -527,8 +552,6 @@ def test_action_space_observation_schema_matches_recorder():
     assert config['model_input_fields'] == recorder.MODEL_INPUT_FIELDS
     assert config['privileged_eval_fields'] == recorder.PRIVILEGED_EVAL_FIELDS
     assert config['action_schema_version'] == recorder.ACTION_SCHEMA_VERSION
-    assert config['action_vector_v3_fields'] == recorder.ACTION_VECTOR_V3_FIELDS
-    assert 'shuttle_index' in config['action_vector_v3_fields']
     assert config['target_ids']['right_shuttle_4'] >= 0
     assert config['target_ids']['left_shuttle_4'] >= 0
     assert config['coordination_mode_ids']['guarded_motion'] == 1
@@ -550,7 +573,7 @@ def test_event_labels_do_not_repeat_long_shuttle_on_command():
 
     rows = _jsonl_rows(recorder.event_stream)
     assert len(rows) == 1
-    assert rows[0]['legacy_next_action']['command'] == 'ON'
+    assert rows[0]['symbolic_next_action']['command'] == 'ON'
     assert rows[0]['next_action']['primitive'] == 'SHUTTLE_ON'
     assert rows[0]['next_action']['speed_mps'] == 0.2
     assert rows[0]['next_action']['reason'] == 'shuttle_start'
@@ -558,7 +581,7 @@ def test_event_labels_do_not_repeat_long_shuttle_on_command():
     recorder._record_command_event({**on_command, 'command': 'OFF'})
     rows = _jsonl_rows(recorder.event_stream)
     assert len(rows) == 2
-    assert rows[1]['legacy_next_action']['command'] == 'OFF'
+    assert rows[1]['symbolic_next_action']['command'] == 'OFF'
     assert rows[1]['next_action']['primitive'] == 'STOP_NOW'
 
 
@@ -593,14 +616,14 @@ def test_event_model_input_last_command_is_previous_event_not_current_label():
         'DONE',
     ]
     assert rows[0]['model_input']['last_command'] == {'action': 'START'}
-    assert rows[1]['model_input']['last_command'] == rows[0]['action']
-    assert rows[2]['model_input']['last_command'] == rows[1]['action']
-    assert rows[3]['model_input']['last_command'] == rows[2]['action']
-    assert rows[4]['model_input']['last_command'] == rows[3]['action']
-    assert rows[5]['model_input']['last_command'] == rows[4]['action']
+    assert rows[1]['model_input']['last_command'] == recorder_module._normalize_model_last_command(rows[0]['action'])
+    assert rows[2]['model_input']['last_command'] == recorder_module._normalize_model_last_command(rows[1]['action'])
+    assert rows[3]['model_input']['last_command'] == recorder_module._normalize_model_last_command(rows[2]['action'])
+    assert rows[4]['model_input']['last_command'] == recorder_module._normalize_model_last_command(rows[3]['action'])
+    assert rows[5]['model_input']['last_command'] == recorder_module._normalize_model_last_command(rows[4]['action'])
     for row in rows:
         assert set(row['model_input']) == set(recorder_module.MODEL_INPUT_FIELDS)
-        assert row['model_input']['last_command'] != row['legacy_next_action']
+        assert row['model_input']['last_command'] != row['symbolic_next_action']
         assert row['model_input']['last_command'] != row['action']
         assert row['action_vector'] == recorder_module._encode_action(row['action'])
         serialized_model_input = json.dumps(row['model_input'], sort_keys=True)
@@ -668,7 +691,7 @@ def test_planned_event_metadata_stays_outside_model_input_and_keeps_target_vecto
     assert row['action']['switch_values']['A3'] == 'INTERIOR'
     assert row['action_vector'] == recorder_module._encode_action(row['action'])
     assert row['next_action'] == row['action']
-    assert row['legacy_next_action']['action'] == 'switches'
+    assert row['symbolic_next_action']['action'] == 'switches'
     assert row['model_input']['last_command'] == {'action': 'START'}
 
     for line in recorder.event_stream.getvalue().splitlines():
@@ -712,7 +735,7 @@ def test_switch_and_stopper_commands_create_separate_events():
     })
 
     rows = _jsonl_rows(recorder.event_stream)
-    assert [row['legacy_next_action']['action'] for row in rows] == ['switches', 'stoppers']
+    assert [row['symbolic_next_action']['action'] for row in rows] == ['switches', 'stoppers']
     assert [row['next_action']['primitive'] for row in rows] == ['SET_SWITCHES', 'SET_STOPPERS']
     assert rows[0]['next_action']['switch_mask']['A1'] == 1
     assert rows[1]['next_action']['stopper_mask']['A1'] == 1
@@ -755,7 +778,7 @@ def test_switch_event_records_only_devices_that_need_changes():
     rows = _jsonl_rows(recorder.event_stream)
     assert len(rows) == 1
     row = rows[0]
-    assert row['legacy_next_action']['switches'] == {'A3': 'EXTERIOR'}
+    assert row['symbolic_next_action']['switches'] == {'A3': 'EXTERIOR'}
     assert row['action']['primitive'] == 'SET_SWITCHES'
     assert row['action']['switch_mask'] == {'A1': 0, 'A2': 0, 'A3': 1, 'A4': 0}
     assert row['action']['switch_values']['A3'] == 'EXTERIOR'
@@ -802,7 +825,7 @@ def test_stopper_events_use_same_minimal_recording_logic():
     rows = _jsonl_rows(recorder.event_stream)
     assert len(rows) == 1
     row = rows[0]
-    assert row['legacy_next_action']['stoppers'] == {'A2': 'open'}
+    assert row['symbolic_next_action']['stoppers'] == {'A2': 'open'}
     assert row['action']['primitive'] == 'SET_STOPPERS'
     assert row['action']['stopper_mask'] == {'A1': 0, 'A2': 1, 'A3': 0, 'A4': 0}
     assert row['action']['stopper_values']['A2'] == 'open'
@@ -829,8 +852,8 @@ def test_route_template_phase_change_creates_one_event_per_phase():
 
     rows = _jsonl_rows(recorder.event_stream)
     assert len(rows) == 1
-    assert rows[0]['legacy_next_action']['action'] == 'route_template_phase'
-    assert rows[0]['legacy_next_action']['phase'] == 'wait_target'
+    assert rows[0]['symbolic_next_action']['action'] == 'route_template_phase'
+    assert rows[0]['symbolic_next_action']['phase'] == 'wait_target'
     assert rows[0]['next_action']['primitive'] == 'WAIT'
     assert rows[0]['next_action']['wait_condition'] == 'task_phase_observed'
     assert rows[0]['next_action']['target_id'] == 'task_phase'

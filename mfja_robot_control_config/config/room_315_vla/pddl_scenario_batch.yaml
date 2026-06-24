@@ -1,8 +1,7 @@
 # Default dry-run batch for Room 315 PDDL-based VLA scenario generation.
 #
 # The first milestone keeps this to simple shuttle station-to-station routes.
-# Later goals are listed for planning, but are not enabled until their PDDL and
-# supervisor translations are implemented.
+# Optional goals are listed for ad-hoc runs without changing the default batch.
 
 batch_id: room315_pddl_station_shuttles
 
@@ -13,6 +12,11 @@ goals:
   - left_kuka_to_yaskawa
 
 optional_later_goals:
+  - right_loaded_r2_to_staubli
+  - right_loaded_to_slot3
+  - right_loaded_to_slot3_clear_blocker
+  - right_empty_r1_to_yaskawa
+  - left_loaded_l2_to_kuka
   - right_full_exterior_loop
   - left_full_exterior_loop
   - emergency_stop_all

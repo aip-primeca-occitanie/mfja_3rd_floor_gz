@@ -126,6 +126,20 @@ def test_action_sequence_can_generate_future_slot_sequence_language():
     assert 'pddl' not in json.dumps({'language': generated.language}).casefold()
 
 
+def test_loaded_slot_language_stays_in_task_language_boundary():
+    generator = _load_module()
+
+    generated = generator.generate_language(
+        action_sequence='move the loaded right shuttle to slot 3',
+        template_id='loaded_shuttle_to_slot',
+    )
+
+    assert generated.language == 'move the loaded right shuttle to slot 3'
+    assert generated.metadata['payload_condition'] == 'loaded'
+    assert generated.metadata['target_slot'] == '3'
+    assert 'pddl' not in json.dumps({'language': generated.language}).casefold()
+
+
 def test_identity_aware_language_templates_use_visual_shuttle_labels():
     generator = _load_module()
 
@@ -155,3 +169,46 @@ def test_relational_language_remains_task_language_only():
     assert generated.language == 'move R4 to Staubli even though it is carrying a part'
     assert generated.metadata['generated_language_template_id'] == 'loaded_id_to_station'
     assert 'symbolic_plan' not in generated.language
+
+
+def test_payload_language_templates_parse_loaded_and_empty_tasks():
+    generator = _load_module()
+
+    loaded = generator.generate_language(
+        action_sequence='move R2 carrying a part to Staubli',
+        template_id='carrying_part_id_to_station',
+    )
+    empty = generator.generate_language(
+        action_sequence='move the empty shuttle to Yaskawa',
+        template_id='empty_shuttle_to_station',
+    )
+
+    assert loaded.language == 'move R2 carrying a part to Staubli'
+    assert loaded.metadata['payload_condition'] == 'loaded'
+    assert empty.language == 'move the empty right shuttle to Yaskawa'
+    assert empty.metadata['payload_condition'] == 'empty'
+
+
+def test_payload_pddl_goal_generates_loaded_shuttle_language():
+    generator = _load_module()
+
+    generated = generator.generate_language(
+        pddl_goal='(:goal (and (loaded right_shuttle_2) (task_done right_shuttle_2 right_staubli)))',
+        template_id='loaded_shuttle_to_station',
+    )
+
+    assert generated.language == 'move the loaded right shuttle to Staubli'
+    assert generated.metadata['payload_condition'] == 'loaded'
+
+
+def test_payload_condition_from_pddl_goal_enriches_symbolic_plan_language():
+    generator = _load_module()
+
+    generated = generator.generate_language(
+        pddl_goal='(:goal (and (loaded right_shuttle_2) (task_done right_shuttle_2 right_staubli)))',
+        symbolic_plan=['move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3'],
+        template_id='loaded_shuttle_to_station',
+    )
+
+    assert generated.language == 'move the loaded right shuttle to Staubli'
+    assert generated.metadata['payload_condition'] == 'loaded'

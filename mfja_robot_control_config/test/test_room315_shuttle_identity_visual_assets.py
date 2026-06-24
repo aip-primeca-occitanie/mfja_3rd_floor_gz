@@ -26,6 +26,12 @@ IDENTITY_COLORS = {
     'L3': '0.90 0.36 0.04',
     'L4': '0.90 0.90 0.90',
 }
+IDENTITY_POSES = {
+    'front_left': '0.02 0.075 0.0790 0 0 0',
+    'front_right': '0.02 -0.075 0.0790 0 0 0',
+    'rear_left': '-0.2 0.075 0.0790 0 0 3.14159',
+    'rear_right': '-0.2 -0.075 0.0790 0 0 3.14159',
+}
 
 
 def _short_id(entry):
@@ -44,7 +50,7 @@ def test_every_shuttle_has_physical_perimeter_identity_model():
 
         assert model_dir.exists()
         assert (model_dir / 'model.config').exists()
-        assert f'payload_keepout_center_{short_id}' in text
+        assert f'payload_keepout_center_{short_id}' not in text
         assert 'model://room315_shuttle/meshes/shuttle.STL' in text
         assert '<albedo_map>' not in text
         assert '<pbr>' not in text
@@ -54,6 +60,11 @@ def test_every_shuttle_has_physical_perimeter_identity_model():
 
         for role, tag_id in entry['tag_ids'].items():
             assert f'identity_region_{role}_label_{short_id}_tag_{tag_id}' in text
+            pose_pattern = (
+                rf'<visual name="identity_region_{role}_label_{short_id}_tag_{tag_id}">'
+                rf'\s*<pose>{re.escape(IDENTITY_POSES[role])}</pose>'
+            )
+            assert re.search(pose_pattern, text)
 
 
 def test_worlds_preload_eight_distinct_identity_models():

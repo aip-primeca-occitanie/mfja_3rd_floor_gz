@@ -307,11 +307,17 @@ class RailNetwork:
 
 
 class KinematicShuttleCore:
-    def __init__(self, network: RailNetwork, initial_state: ShuttleState) -> None:
+    def __init__(
+        self,
+        network: RailNetwork,
+        initial_state: ShuttleState,
+        falling_stop_offset_m: float = 0.0,
+    ) -> None:
         if initial_state.current_segment not in network.segments:
             raise ValueError(f'Unknown initial segment: {initial_state.current_segment}')
         self.network = network
         self.state = initial_state
+        self.falling_stop_offset_m = max(0.0, float(falling_stop_offset_m))
 
     def pose(self) -> ShuttlePose:
         segment = self.network.segments[self.state.current_segment]
@@ -355,6 +361,8 @@ class KinematicShuttleCore:
             self.state.s = segment.length
             successor = self.network.resolve_successor(self.state.current_segment, switch_states)
             if successor is None or successor not in self.network.segments:
+                if self.falling_stop_offset_m > 0.0:
+                    self.state.s = max(0.0, segment.length - self.falling_stop_offset_m)
                 self.state.mode = FALLING
                 break
 

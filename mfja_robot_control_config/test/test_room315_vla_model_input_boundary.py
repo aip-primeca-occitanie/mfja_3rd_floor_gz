@@ -37,6 +37,18 @@ def test_model_input_boundary_allows_only_language_images_and_last_command():
     assert multi.model_input_is_clean(clean) is True
 
 
+def test_model_input_boundary_allows_payload_words_only_in_language():
+    multi = _load_module()
+
+    clean = {
+        'language': 'move the loaded shuttle to Staubli and send the empty shuttle to Yaskawa',
+        'overhead_images': {'right_rail_rgb': 'right.jpg', 'left_rail_rgb': 'left.jpg'},
+        'last_command': {'action': 'START'},
+    }
+
+    assert multi.model_input_is_clean(clean) is True
+
+
 def test_model_input_boundary_rejects_privileged_shortcuts():
     multi = _load_module()
 
@@ -52,6 +64,12 @@ def test_model_input_boundary_rejects_privileged_shortcuts():
         'last_command': {'action': 'START'},
         'structured_rail_state': {'right_sensor_DZI2R': 1},
     }
+    payload_polluted = {
+        'language': 'move the loaded right shuttle',
+        'overhead_images': {'right_rail_rgb': 'right.jpg', 'left_rail_rgb': 'left.jpg'},
+        'last_command': {'action': 'START', 'payload_state': {'R2': 'loaded'}},
+    }
 
     assert multi.model_input_is_clean(polluted) is False
     assert multi.model_input_is_clean(sensor_polluted) is False
+    assert multi.model_input_is_clean(payload_polluted) is False

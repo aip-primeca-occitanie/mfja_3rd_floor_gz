@@ -509,6 +509,26 @@ def decode_action_v3(action_vector: Any) -> dict[str, Any]:
 
     side = SIDE_BY_ID.get(round_int(field('side_id')), 'right')
     shuttle_index = round_int(field('shuttle_index'))
+    switch_mask = {name: int(field(f'switch_mask_{name}') >= 0.5) for name in DEVICE_NAMES}
+    switch_values = {
+        name: SWITCH_VALUE_BY_ID.get(round_int(field(f'switch_value_{name}')), 'UNCHANGED')
+        for name in DEVICE_NAMES
+    }
+    stopper_mask = {name: int(field(f'stopper_mask_{name}') >= 0.5) for name in DEVICE_NAMES}
+    stopper_values = {
+        name: STOPPER_VALUE_BY_ID.get(round_int(field(f'stopper_value_{name}')), 'UNCHANGED')
+        for name in DEVICE_NAMES
+    }
+    for name in DEVICE_NAMES:
+        if not switch_mask[name]:
+            switch_values[name] = 'UNCHANGED'
+        elif switch_values[name] == 'UNCHANGED':
+            raise ValueError(f'switch_mask_{name} selected but switch_value_{name} is UNCHANGED')
+        if not stopper_mask[name]:
+            stopper_values[name] = 'UNCHANGED'
+        elif stopper_values[name] == 'UNCHANGED':
+            raise ValueError(f'stopper_mask_{name} selected but stopper_value_{name} is UNCHANGED')
+
     return {
         'primitive': PRIMITIVE_BY_ID.get(round_int(field('primitive_id')), 'WAIT'),
         'side': side,
@@ -518,16 +538,10 @@ def decode_action_v3(action_vector: Any) -> dict[str, Any]:
             else ''
         ),
         'shuttle_index': shuttle_index,
-        'switch_mask': {name: int(field(f'switch_mask_{name}') >= 0.5) for name in DEVICE_NAMES},
-        'switch_values': {
-            name: SWITCH_VALUE_BY_ID.get(round_int(field(f'switch_value_{name}')), 'UNCHANGED')
-            for name in DEVICE_NAMES
-        },
-        'stopper_mask': {name: int(field(f'stopper_mask_{name}') >= 0.5) for name in DEVICE_NAMES},
-        'stopper_values': {
-            name: STOPPER_VALUE_BY_ID.get(round_int(field(f'stopper_value_{name}')), 'UNCHANGED')
-            for name in DEVICE_NAMES
-        },
+        'switch_mask': switch_mask,
+        'switch_values': switch_values,
+        'stopper_mask': stopper_mask,
+        'stopper_values': stopper_values,
         'speed_mps': round(float(field('speed_mps')), 4),
         'wait_condition': WAIT_CONDITION_BY_ID.get(round_int(field('wait_condition_id')), 'none'),
         'target_id': TARGET_BY_ID.get(round_int(field('target_id')), 'none'),
@@ -748,6 +762,16 @@ def identity_tracks_from_marker_detections(
 def model_input_is_clean(model_input: dict[str, Any]) -> bool:
     if set(model_input) != {'language', 'overhead_images', 'last_command'}:
         return False
+    forbidden_keys = {
+        'loaded',
+        'payload',
+        'payload_condition',
+        'payload_present',
+        'payload_state',
+        'payload_type',
+    }
+    if _contains_forbidden_model_input_key(model_input, forbidden_keys):
+        return False
     serialized = json.dumps(model_input, sort_keys=True)
     forbidden = (
         'pddl',
@@ -764,6 +788,18 @@ def model_input_is_clean(model_input: dict[str, Any]) -> bool:
         'arc_length',
     )
     return not any(token in serialized for token in forbidden)
+
+
+def _contains_forbidden_model_input_key(value: Any, forbidden_keys: set[str]) -> bool:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if str(key).strip().casefold() in forbidden_keys:
+                return True
+            if _contains_forbidden_model_input_key(child, forbidden_keys):
+                return True
+    elif isinstance(value, list):
+        return any(_contains_forbidden_model_input_key(item, forbidden_keys) for item in value)
+    return False
 
 
 def round_int(value: Any) -> int:

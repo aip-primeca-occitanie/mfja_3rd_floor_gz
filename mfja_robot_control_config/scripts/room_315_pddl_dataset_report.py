@@ -4,9 +4,18 @@
 import argparse
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_pddl_validation_gate import load_validation_result
+from room_315_pddl_validation_gate import validation_approves_training
 
 
 def _json_dumps(data: Any) -> str:
@@ -58,83 +67,154 @@ def load_event_rows(input_path: Path | str) -> tuple[list[dict[str, Any]], Path,
     return rows, dataset_root, [str(path) for path in event_files]
 
 
+def load_validation_results(dataset_root: Path | str) -> dict[str, dict[str, Any]]:
+    root = Path(dataset_root).expanduser().resolve()
+    validations: dict[str, dict[str, Any]] = {}
+    for validation_path in sorted((root / 'episodes').glob('episode_*/validation.json')):
+        validation = load_validation_result(validation_path.parent)
+        if not isinstance(validation, dict):
+            continue
+        episode_id = str(validation.get('episode_id') or validation_path.parent.name)
+        validations[episode_id] = validation
+    return validations
+
+
 def build_dataset_report(input_path: Path | str) -> dict[str, Any]:
     rows, dataset_root, event_files = load_event_rows(input_path)
+    validations = load_validation_results(dataset_root)
     episode_ids = sorted({
         str(row.get('episode_id') or '')
         for row in rows
         if str(row.get('episode_id') or '')
-    })
-    dataset_source_by_event = [_dataset_source(row) for row in rows]
+    } | set(validations))
+    approved_episode_ids = sorted(
+        episode_id
+        for episode_id in episode_ids
+        if validation_approves_training(validations.get(episode_id))
+    )
+    approved_episode_set = set(approved_episode_ids)
+    failed_episode_ids = sorted(set(episode_ids) - approved_episode_set)
+    approved_rows = [
+        row
+        for row in rows
+        if str(row.get('episode_id') or '') in approved_episode_set
+    ]
+    skipped_event_count = len(rows) - len(approved_rows)
+    dataset_source_by_event = [_dataset_source(row) for row in approved_rows]
     source_counts = Counter(dataset_source_by_event)
-    episode_summaries = _episode_summaries(rows)
+    episode_summaries = _episode_summaries(rows, validations)
     plan_lengths = [
         summary['symbolic_plan_length']
         for summary in episode_summaries
+        if summary.get('approved_for_training') is True
         if summary['symbolic_plan_length'] > 0
     ]
-    task_success = _task_success_summary(rows)
+    task_success = _task_success_summary(approved_rows)
     report = {
         'dataset_root': str(dataset_root),
         'event_files': event_files,
         'dataset_source': _overall_dataset_source(source_counts),
         'dataset_source_distribution': dict(sorted(source_counts.items())),
         'number_of_episodes': len(episode_ids),
+        'total_episodes': len(episode_ids),
+        'approved_episodes': len(approved_episode_ids),
+        'failed_episodes': len(failed_episode_ids),
+        'approval_rate': (
+            None if not episode_ids else round(len(approved_episode_ids) / len(episode_ids), 6)
+        ),
+        'failure_reasons_distribution': _failure_reasons_distribution(
+            episode_ids,
+            validations,
+        ),
         'number_of_events': len(rows),
-        'goals_covered': _goals_covered(rows),
-        'language_variants_count': len(_language_variants(rows)),
-        'generated_language_template_ids': sorted(_language_template_ids(rows)),
+        'approved_event_count': len(approved_rows),
+        'skipped_event_count': skipped_event_count,
+        'goals_covered': _goals_covered(approved_rows),
+        'language_variants_count': len(_language_variants(approved_rows)),
+        'generated_language_template_ids': sorted(_language_template_ids(approved_rows)),
         'average_plan_length': (
             0.0 if not plan_lengths else round(sum(plan_lengths) / len(plan_lengths), 4)
         ),
-        'action_primitive_distribution': dict(sorted(_action_primitive_distribution(rows).items())),
-        'side_distribution': dict(sorted(_side_distribution(rows).items())),
-        'speed_distribution': dict(sorted(_speed_distribution(rows).items())),
-        'shuttle_id_accuracy': _shuttle_id_accuracy(rows),
-        'wrong_shuttle_command_rate': _wrong_shuttle_command_rate(rows),
-        'identity_grounding_accuracy': _shuttle_id_accuracy(rows),
-        'target_shuttle_selection_accuracy': _shuttle_id_accuracy(rows),
-        'target_shuttle_distribution': dict(sorted(_target_shuttle_distribution(rows).items())),
+        'action_primitive_distribution': dict(
+            sorted(_action_primitive_distribution(approved_rows).items())
+        ),
+        'side_distribution': dict(sorted(_side_distribution(approved_rows).items())),
+        'speed_distribution': dict(sorted(_speed_distribution(approved_rows).items())),
+        'shuttle_id_accuracy': _shuttle_id_accuracy(approved_rows),
+        'wrong_shuttle_command_rate': _wrong_shuttle_command_rate(approved_rows),
+        'identity_grounding_accuracy': _shuttle_id_accuracy(approved_rows),
+        'target_shuttle_selection_accuracy': _shuttle_id_accuracy(approved_rows),
+        'target_shuttle_distribution': dict(
+            sorted(_target_shuttle_distribution(approved_rows).items())
+        ),
         'visible_marker_count_distribution': dict(
-            sorted(_visible_marker_count_distribution(rows).items())
+            sorted(_visible_marker_count_distribution(approved_rows).items())
         ),
         'identity_occlusion_level_distribution': dict(
-            sorted(_identity_occlusion_level_distribution(rows).items())
+            sorted(_identity_occlusion_level_distribution(approved_rows).items())
         ),
         'occluded_identity_success_rate': _success_rate_for_rows(
-            rows,
+            approved_rows,
             lambda row: _identity_occlusion_level(row) not in {'', 'none', 'visible'},
         ),
         'partial_occlusion_success_rate': _success_rate_for_rows(
-            rows,
+            approved_rows,
             lambda row: _identity_occlusion_level(row) == 'partial',
         ),
         'loaded_shuttle_success_rate': _success_rate_for_rows(
-            rows,
+            approved_rows,
             lambda row: _payload_present(row) is True,
         ),
         'unloaded_shuttle_success_rate': _success_rate_for_rows(
-            rows,
+            approved_rows,
             lambda row: _payload_present(row) is False,
         ),
         'collision_or_near_collision_count': _numeric_metric(
-            rows,
+            approved_rows,
             'collision_or_near_collision_count',
             default=0,
         ),
-        'headway_violation_rate': _metric_rate_from_count(rows, 'headway_violation_count'),
-        'block_reservation_success_rate': _block_reservation_success_rate(rows),
-        'deadlock_rate': _metric_rate_from_count(rows, 'deadlock_detected_count'),
-        'deadlock_avoidance_success_rate': _deadlock_avoidance_success_rate(rows),
-        'average_wait_time': _average_wait_time(rows),
+        'headway_violation_count': _validation_sum(validations, episode_ids, 'headway_violation_count'),
+        'block_occupancy_violation_count': _validation_sum(
+            validations,
+            episode_ids,
+            'block_occupancy_violation_count',
+        ),
+        'block_reservation_rejection_count': _validation_sum(
+            validations,
+            episode_ids,
+            'block_reservation_rejection_count',
+        ),
+        'deadlock_detected_count': _validation_sum(validations, episode_ids, 'deadlock_detected_count'),
+        'deadlock_avoided_count': _validation_sum(validations, episode_ids, 'deadlock_avoided_count'),
+        'wrong_shuttle_command_count': _validation_sum(
+            validations,
+            episode_ids,
+            'wrong_shuttle_command_count',
+        ),
+        'headway_violation_rate': _metric_rate_from_count(approved_rows, 'headway_violation_count'),
+        'block_reservation_success_rate': _block_reservation_success_rate(approved_rows),
+        'deadlock_rate': _metric_rate_from_count(approved_rows, 'deadlock_detected_count'),
+        'deadlock_avoidance_success_rate': _deadlock_avoidance_success_rate(approved_rows),
+        'average_wait_time': _average_wait_time(approved_rows),
         'fleet_throughput_tasks_per_minute': _numeric_metric(
-            rows,
+            approved_rows,
             'fleet_throughput_tasks_per_minute',
         ),
-        'per_side_success_rate': _per_group_success_rate(rows, _row_side),
-        'per_shuttle_success_rate': _per_group_success_rate(rows, _target_shuttle),
-        'illegal_proposal_rate': _numeric_metric(rows, 'illegal_proposal_rate'),
-        'rejected_action_rate': _rejected_action_rate(rows),
+        'per_side_success_rate': _per_group_success_rate(approved_rows, _row_side),
+        'per_shuttle_success_rate': _per_group_success_rate(approved_rows, _target_shuttle),
+        'illegal_proposal_rate': _numeric_metric(approved_rows, 'illegal_proposal_rate'),
+        'rejected_action_rate': _rejected_action_rate(approved_rows),
+        'task_success_rate_for_approved_episodes': _validation_bool_rate(
+            validations,
+            approved_episode_ids,
+            'task_success',
+        ),
+        'rejected_action_rate_for_approved_episodes': _validation_average(
+            validations,
+            approved_episode_ids,
+            'rejected_action_rate',
+        ),
         'task_success': task_success,
         'episodes': episode_summaries,
     }
@@ -173,21 +253,31 @@ def _overall_dataset_source(counts: Counter) -> str:
     return 'mixed'
 
 
-def _episode_summaries(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _episode_summaries(
+    rows: list[dict[str, Any]],
+    validations: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    validations = validations or {}
     by_episode: dict[str, list[dict[str, Any]]] = {}
     for index, row in enumerate(rows):
         episode_id = str(row.get('episode_id') or f'episode_{index:06d}')
         by_episode.setdefault(episode_id, []).append(row)
+    for episode_id in validations:
+        by_episode.setdefault(episode_id, [])
 
     summaries = []
     for episode_id in sorted(by_episode):
         episode_rows = by_episode[episode_id]
-        first = episode_rows[0]
+        first = episode_rows[0] if episode_rows else {}
+        validation = validations.get(episode_id, {})
         source_counts = Counter(_dataset_source(row) for row in episode_rows)
         symbolic_plan = _first_non_empty(_symbolic_plan(row) for row in episode_rows)
         plan_length = _symbolic_plan_length(symbolic_plan, episode_rows)
         summaries.append({
             'episode_id': episode_id,
+            'validation_status': str(validation.get('validation_status') or 'missing'),
+            'approved_for_training': validation_approves_training(validation),
+            'failure_reason': str(validation.get('failure_reason') or ''),
             'dataset_source': _overall_dataset_source(source_counts),
             'number_of_events': len(episode_rows),
             'pddl_goal': _first_non_empty(_pddl_goal(row) for row in episode_rows),
@@ -197,7 +287,11 @@ def _episode_summaries(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 _language_template_id(row) for row in episode_rows
             ),
             'language': _language(first),
-            'task_success': _episode_task_success(episode_rows),
+            'task_success': (
+                validation.get('task_success')
+                if isinstance(validation.get('task_success'), bool)
+                else _episode_task_success(episode_rows)
+            ),
         })
     return summaries
 
@@ -603,6 +697,73 @@ def _episode_task_success(rows: list[dict[str, Any]]) -> bool | None:
             ):
                 outcome = False
     return outcome
+
+
+def _failure_reasons_distribution(
+    episode_ids: list[str],
+    validations: dict[str, dict[str, Any]],
+) -> dict[str, int]:
+    counts: Counter = Counter()
+    for episode_id in episode_ids:
+        validation = validations.get(episode_id)
+        if validation_approves_training(validation):
+            continue
+        if not isinstance(validation, dict):
+            counts['unvalidated_episode'] += 1
+            continue
+        reason = str(
+            validation.get('failure_reason')
+            or validation.get('validation_status')
+            or 'failed_validation'
+        ).strip()
+        counts[reason or 'failed_validation'] += 1
+    return dict(sorted(counts.items()))
+
+
+def _validation_sum(
+    validations: dict[str, dict[str, Any]],
+    episode_ids: list[str],
+    key: str,
+) -> int:
+    total = 0
+    for episode_id in episode_ids:
+        validation = validations.get(episode_id, {})
+        parsed = _safe_int_or_none(validation.get(key)) if isinstance(validation, dict) else None
+        total += parsed or 0
+    return total
+
+
+def _validation_average(
+    validations: dict[str, dict[str, Any]],
+    episode_ids: list[str],
+    key: str,
+) -> float | None:
+    values = []
+    for episode_id in episode_ids:
+        validation = validations.get(episode_id, {})
+        if not isinstance(validation, dict):
+            continue
+        parsed = _safe_float(validation.get(key))
+        if parsed is not None:
+            values.append(parsed)
+    if not values:
+        return None
+    return round(sum(values) / len(values), 6)
+
+
+def _validation_bool_rate(
+    validations: dict[str, dict[str, Any]],
+    episode_ids: list[str],
+    key: str,
+) -> float | None:
+    values = []
+    for episode_id in episode_ids:
+        validation = validations.get(episode_id, {})
+        if isinstance(validation, dict) and isinstance(validation.get(key), bool):
+            values.append(validation[key])
+    if not values:
+        return None
+    return round(sum(1 for value in values if value) / len(values), 6)
 
 
 def _rows_by_episode(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:

@@ -192,18 +192,7 @@ EVENT_REASON_BY_ID = {
     12: 'emergency',
     13: 'unsupported_command',
 }
-EVENT_ACTION_VECTOR_FIELDS = [
-    'primitive_id',
-    'side_id',
-    *[f'switch_mask_{name}' for name in SWITCHES],
-    *[f'switch_value_{name}' for name in SWITCHES],
-    *[f'stopper_mask_{name}' for name in SWITCHES],
-    *[f'stopper_value_{name}' for name in SWITCHES],
-    'speed_mps',
-    'wait_condition_id',
-    'target_id',
-    'reason_id',
-]
+EVENT_ACTION_VECTOR_FIELDS = EVENT_ACTION_VECTOR_V3_FIELDS
 
 
 
@@ -514,8 +503,24 @@ def _find_source_shuttle_for_slots(
     side: str,
     slots: list[str],
 ) -> tuple[str, str]:
+    matches = _find_source_shuttles_for_slots(
+        rails,
+        slot_sensor_by_side,
+        side,
+        slots,
+    )
+    return matches[0] if matches else ('', '')
+
+
+def _find_source_shuttles_for_slots(
+    rails: dict[str, Any],
+    slot_sensor_by_side: dict[str, dict[str, str]],
+    side: str,
+    slots: list[str],
+) -> list[tuple[str, str]]:
     rail = _rail_snapshot(rails, side)
     readings = _active_sensor_readings_from_rail(rail)
+    matches: list[tuple[str, str]] = []
     for slot in slots:
         wanted_sensor = _sensor_for_slot(slot_sensor_by_side, side, str(slot)).casefold()
         if not wanted_sensor:
@@ -524,9 +529,71 @@ def _find_source_shuttle_for_slots(
             if str(reading.get('name', '')).casefold() != wanted_sensor:
                 continue
             shuttle = _clean_token(reading.get('shuttle', ''))
-            if shuttle:
-                return shuttle, str(slot)
-    return '', ''
+            if shuttle and (shuttle, str(slot)) not in matches:
+                matches.append((shuttle, str(slot)))
+    return matches
+
+
+def _payload_condition_from_command(command: dict[str, Any]) -> str:
+    raw_condition = (
+        command.get('payload_condition')
+        or command.get('payload_state')
+        or command.get('payload')
+        or ''
+    )
+    if raw_condition == '' and 'loaded' in command:
+        raw_condition = 'loaded' if bool(command.get('loaded')) else 'empty'
+    text = _clean_token(raw_condition).casefold()
+    if text in {'loaded', 'load', 'with_payload', 'with payload', 'carrying', 'part', 'box'}:
+        return 'loaded'
+    if text in {'empty', 'unloaded', 'without_payload', 'without payload', 'none', 'no_payload'}:
+        return 'empty'
+    return ''
+
+
+def _payloads_for_side(rails: dict[str, Any], side: str) -> dict[str, Any]:
+    rail = _rail_snapshot(rails, side)
+    payloads = rail.get('payloads', {})
+    return payloads if isinstance(payloads, dict) else {}
+
+
+def _payload_loaded_for_shuttle(rails: dict[str, Any], side: str, shuttle_name: str) -> bool:
+    payloads = _payloads_for_side(rails, side)
+    entry = payloads.get(shuttle_name, {})
+    if not isinstance(entry, dict):
+        return False
+    return bool(entry.get('loaded', False))
+
+
+def _payload_condition_matches(
+    rails: dict[str, Any],
+    side: str,
+    shuttle_name: str,
+    condition: str,
+) -> bool:
+    if not condition:
+        return True
+    loaded = _payload_loaded_for_shuttle(rails, side, shuttle_name)
+    return loaded if condition == 'loaded' else not loaded
+
+
+def _source_shuttles_matching_payload(
+    rails: dict[str, Any],
+    slot_sensor_by_side: dict[str, dict[str, str]],
+    side: str,
+    source_slots: list[str],
+    condition: str,
+) -> list[tuple[str, str]]:
+    return [
+        (shuttle, slot)
+        for shuttle, slot in _find_source_shuttles_for_slots(
+            rails,
+            slot_sensor_by_side,
+            side,
+            source_slots,
+        )
+        if _payload_condition_matches(rails, side, shuttle, condition)
+    ]
 
 
 def _mask_assignments_from_command(
@@ -695,11 +762,15 @@ def _round_index(raw: Any) -> int:
         return 0
 
 
+def _safe_int(raw: Any, default: int = 0) -> int:
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 def _is_action_vector(raw: Any) -> bool:
-    if not isinstance(raw, list) or len(raw) not in {
-        len(EVENT_ACTION_VECTOR_FIELDS),
-        len(EVENT_ACTION_VECTOR_V3_FIELDS),
-    }:
+    if not isinstance(raw, list) or len(raw) != len(EVENT_ACTION_VECTOR_FIELDS):
         return False
     try:
         [float(value) for value in raw]
@@ -710,51 +781,12 @@ def _is_action_vector(raw: Any) -> bool:
 
 def _decode_event_action_vector(action_vector: Any) -> dict[str, Any]:
     values = [float(value) for value in list(action_vector)]
-    if len(values) == len(EVENT_ACTION_VECTOR_V3_FIELDS):
-        return decode_action_v3(values)
     if len(values) != len(EVENT_ACTION_VECTOR_FIELDS):
         raise ValueError(
-            f'action_vector length {len(values)} does not match '
+            f'action_vector length {len(values)} does not match schema v3 length '
             f'{len(EVENT_ACTION_VECTOR_FIELDS)}'
         )
-
-    def field(name: str) -> float:
-        return values[EVENT_ACTION_VECTOR_FIELDS.index(name)]
-
-    switch_mask: dict[str, int] = {}
-    switch_values: dict[str, str] = {}
-    stopper_mask: dict[str, int] = {}
-    stopper_values: dict[str, str] = {}
-    for name in SWITCHES:
-        switch_selected = int(field(f'switch_mask_{name}') >= 0.5)
-        switch_value_id = _round_index(field(f'switch_value_{name}'))
-        switch_mask[name] = switch_selected
-        switch_values[name] = SWITCH_VALUE_BY_ID.get(switch_value_id, 'UNCHANGED')
-        if switch_selected and switch_values[name] == 'UNCHANGED':
-            raise ValueError(f'switch_mask_{name} selected but switch_value_{name} is UNCHANGED')
-
-        stopper_selected = int(field(f'stopper_mask_{name}') >= 0.5)
-        stopper_value_id = _round_index(field(f'stopper_value_{name}'))
-        stopper_mask[name] = stopper_selected
-        stopper_values[name] = STOPPER_VALUE_BY_ID.get(stopper_value_id, 'UNCHANGED')
-        if stopper_selected and stopper_values[name] == 'UNCHANGED':
-            raise ValueError(f'stopper_mask_{name} selected but stopper_value_{name} is UNCHANGED')
-
-    return {
-        'primitive': EVENT_PRIMITIVE_BY_ID.get(_round_index(field('primitive_id')), 'WAIT'),
-        'side': EVENT_SIDE_BY_ID.get(_round_index(field('side_id')), 'right'),
-        'switch_mask': switch_mask,
-        'switch_values': switch_values,
-        'stopper_mask': stopper_mask,
-        'stopper_values': stopper_values,
-        'speed_mps': round(float(field('speed_mps')), 4),
-        'wait_condition': EVENT_WAIT_CONDITION_BY_ID.get(
-            _round_index(field('wait_condition_id')),
-            'none',
-        ),
-        'target_id': EVENT_TARGET_BY_ID.get(_round_index(field('target_id')), 'none'),
-        'reason': EVENT_REASON_BY_ID.get(_round_index(field('reason_id')), 'none'),
-    }
+    return decode_action_v3(values)
 
 
 def _selected_assignments_from_event_action(
@@ -1063,22 +1095,82 @@ def _decode_room315_vla_action(
                     reason=f'active task {active_task.get("task_id")} already controls {side} rail',
                 )
         source_slots = [str(slot) for slot in template.get('source_slots', [])]
-        shuttle, source_slot = _find_source_shuttle_for_slots(
+        payload_condition = _payload_condition_from_command(command)
+        explicit_shuttle = _clean_token(
+            command.get('shuttle') or command.get('shuttle_id') or ''
+        )
+        explicit_shuttle_name = (
+            _resolve_shuttle_command_name(explicit_shuttle, side=side)
+            if explicit_shuttle
+            else ''
+        )
+        source_matches = _find_source_shuttles_for_slots(
             rails,
             slot_sensor_by_side,
             side,
             source_slots,
         )
+        if explicit_shuttle_name:
+            source_matches = [
+                (shuttle_name, slot)
+                for shuttle_name, slot in source_matches
+                if shuttle_name == explicit_shuttle_name
+            ]
+            if not source_matches:
+                return _safety_decision(
+                    accepted=False,
+                    original_action=command,
+                    reason=(
+                        f'shuttle {explicit_shuttle_name!r} is not detected in '
+                        f'{side}-rail source slots {source_slots}'
+                    ),
+                )
+        if payload_condition:
+            payload_matches = [
+                (shuttle_name, slot)
+                for shuttle_name, slot in source_matches
+                if _payload_condition_matches(
+                    rails,
+                    side,
+                    shuttle_name,
+                    payload_condition,
+                )
+            ]
+            if explicit_shuttle_name and not payload_matches:
+                return _safety_decision(
+                    accepted=False,
+                    original_action=command,
+                    reason=(
+                        f'shuttle {explicit_shuttle_name!r} does not match '
+                        f'payload condition {payload_condition!r}'
+                    ),
+                )
+            if not explicit_shuttle_name and len(payload_matches) > 1:
+                names = ', '.join(shuttle_name for shuttle_name, _slot in payload_matches)
+                return _safety_decision(
+                    accepted=False,
+                    original_action=command,
+                    reason=(
+                        f'ambiguous payload command: multiple {payload_condition} '
+                        f'{side}-rail shuttles match source slots {source_slots}: {names}'
+                    ),
+                )
+            source_matches = payload_matches
+        shuttle, source_slot = source_matches[0] if source_matches else ('', '')
         if not shuttle:
+            qualifier = f'{payload_condition} ' if payload_condition else ''
             return _safety_decision(
                 accepted=False,
                 original_action=command,
-                reason=f'no {side}-rail shuttle detected in source slots {source_slots}',
+                reason=f'no {qualifier}{side}-rail shuttle detected in source slots {source_slots}',
             )
         corrected['template'] = template_name
         corrected['side'] = side
         corrected['validated_source_slot'] = source_slot
         corrected['validated_shuttle'] = shuttle
+        corrected['shuttle'] = shuttle
+        if payload_condition:
+            corrected['payload_condition'] = payload_condition
         return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
 
     if action in {'route_shuttle', 'switches', 'stoppers', 'shuttle', 'add_shuttle'}:
@@ -1361,6 +1453,7 @@ class Room315VlaSupervisor(Node):
                 'shuttles': {},
                 'switches': {},
                 'stoppers': {},
+                'payloads': {},
                 'active_sensors': [],
                 'active_position_sensors': [],
             }
@@ -1463,6 +1556,12 @@ class Room315VlaSupervisor(Node):
                 ),
                 10,
             )
+            self.create_subscription(
+                String,
+                f'{prefix}/shuttles/payload_state',
+                lambda msg, rail_side=side: self._on_payload_state(rail_side, msg),
+                10,
+            )
 
         period_s = max(float(self.get_parameter('publish_status_period_s').value), 0.1)
         self.create_timer(period_s, self._on_status_timer)
@@ -1526,6 +1625,86 @@ class Room315VlaSupervisor(Node):
             'yaw': round(float(msg.yaw), 4),
             'speed': round(float(msg.speed), 4),
         }
+
+    def _on_payload_state(self, side: str, msg: String) -> None:
+        try:
+            parsed = json.loads(msg.data or '{}')
+        except json.JSONDecodeError:
+            return
+        payloads = self._payload_entries_from_status_message(side, parsed)
+        if payloads:
+            self.rails[side]['payloads'] = payloads
+
+    def _payload_entries_from_status_message(
+        self,
+        side: str,
+        parsed: Any,
+    ) -> dict[str, dict[str, Any]]:
+        if isinstance(parsed, list):
+            raw_entries = parsed
+        elif isinstance(parsed, dict):
+            raw_entries = parsed.get('shuttles', [])
+            if not raw_entries and isinstance(parsed.get('by_shuttle'), dict):
+                raw_entries = list(parsed['by_shuttle'].values())
+        else:
+            raw_entries = []
+        if not isinstance(raw_entries, list):
+            return {}
+
+        entries: dict[str, dict[str, Any]] = {}
+        for raw_entry in raw_entries:
+            if not isinstance(raw_entry, dict):
+                continue
+            try:
+                entry_side = _normalize_side(raw_entry.get('side', side))
+            except ValueError:
+                continue
+            if entry_side != side:
+                continue
+            entity_name = _clean_token(
+                raw_entry.get('entity_name')
+                or raw_entry.get('name')
+                or raw_entry.get('shuttle')
+                or ''
+            )
+            if not entity_name:
+                spec = normalize_shuttle_ref(raw_entry.get('shuttle_id'), side=side)
+                entity_name = spec.gazebo_entity_name if spec is not None else ''
+            if not entity_name:
+                continue
+            loaded = bool(raw_entry.get('loaded', False))
+            spec = normalize_shuttle_ref(entity_name, side=side)
+            try:
+                fallback_index = int(raw_entry.get('shuttle_index', -1))
+            except (TypeError, ValueError):
+                fallback_index = -1
+            entries[entity_name] = {
+                'shuttle_id': (
+                    spec.shuttle_id
+                    if spec is not None
+                    else str(raw_entry.get('shuttle_id') or entity_name)
+                ),
+                'short_id': (
+                    spec.short_id
+                    if spec is not None
+                    else str(raw_entry.get('short_id') or '')
+                ),
+                'side': side,
+                'shuttle_index': (
+                    spec.shuttle_index
+                    if spec is not None
+                    else fallback_index
+                ),
+                'entity_name': entity_name,
+                'loaded': loaded,
+                'payload_type': (
+                    str(raw_entry.get('payload_type') or 'box').strip()
+                    if loaded
+                    else 'none'
+                ),
+                'model_input_exposure': 'excluded',
+            }
+        return entries
 
     def _on_switch_state(self, side: str, msg: SwitchState) -> None:
         self.rails[side]['switches'] = {
@@ -1596,6 +1775,10 @@ class Room315VlaSupervisor(Node):
         if template_name:
             return {'action': 'route_template', 'template': template_name}
 
+        payload_route = self._payload_route_command_from_text(text)
+        if payload_route:
+            return payload_route
+
         side = self._infer_side(text)
         slot = self._infer_slot(text)
         loop = self._infer_loop(text)
@@ -1650,6 +1833,147 @@ class Room315VlaSupervisor(Node):
             }
 
         return {'action': 'status'}
+
+    def _payload_route_command_from_text(self, text: str) -> dict[str, Any] | None:
+        payload_condition = self._payload_condition_from_text(text)
+        explicit_shuttle = self._shuttle_ref_from_text(text)
+        if not payload_condition and not explicit_shuttle:
+            return None
+
+        target_station = self._station_from_text(text)
+        if not target_station:
+            return None
+        explicit_side = self._side_from_shuttle_ref(explicit_shuttle) if explicit_shuttle else ''
+        if not explicit_side and any(token in text for token in ('left', 'gauche')):
+            explicit_side = 'left'
+        if not explicit_side and any(token in text for token in ('right', 'droit', 'droite')):
+            explicit_side = 'right'
+
+        candidates = self._route_templates_for_target(
+            target_station,
+            side=explicit_side,
+        )
+        if not candidates:
+            return None
+        if len(candidates) > 1:
+            candidates = self._payload_matching_template_candidates(
+                candidates,
+                payload_condition,
+                explicit_shuttle,
+            )
+        if len(candidates) > 1:
+            names = ', '.join(name for name, _template in candidates)
+            raise ValueError(
+                f'ambiguous payload command: target {target_station} matches multiple templates: {names}'
+            )
+        if not candidates:
+            qualifier = f'{payload_condition} ' if payload_condition else ''
+            raise ValueError(
+                f'no {qualifier}shuttle matches target {target_station}'
+            )
+
+        template_name, template = candidates[0]
+        command = {
+            'action': 'route_template',
+            'template': template_name,
+            'side': template['side'],
+        }
+        if payload_condition:
+            command['payload_condition'] = payload_condition
+        if explicit_shuttle:
+            command['shuttle'] = explicit_shuttle
+        return command
+
+    @staticmethod
+    def _payload_condition_from_text(text: str) -> str:
+        if any(token in text for token in ('loaded', 'carrying', 'with a part', 'with payload')):
+            return 'loaded'
+        if any(token in text for token in ('empty', 'unloaded', 'without payload', 'no payload')):
+            return 'empty'
+        return ''
+
+    @staticmethod
+    def _shuttle_ref_from_text(text: str) -> str:
+        match = re.search(r'\b([rl][1-4])\b', text, re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
+        match = re.search(
+            r'\b((?:right|left)_shuttle_?[1-4])\b',
+            text,
+            re.IGNORECASE,
+        )
+        return match.group(1) if match else ''
+
+    @staticmethod
+    def _side_from_shuttle_ref(shuttle_ref: str) -> str:
+        text = str(shuttle_ref or '').casefold()
+        if re.fullmatch(r'r[1-4]', text) or text.startswith('right'):
+            return 'right'
+        if re.fullmatch(r'l[1-4]', text) or text.startswith('left'):
+            return 'left'
+        return ''
+
+    @staticmethod
+    def _station_from_text(text: str) -> str:
+        if 'staubli' in text:
+            return 'staubli'
+        if 'kuka' in text:
+            return 'kuka'
+        if 'yaskawa' in text:
+            return 'yaskawa'
+        return ''
+
+    def _route_templates_for_target(
+        self,
+        target_station: str,
+        *,
+        side: str = '',
+    ) -> list[tuple[str, dict[str, Any]]]:
+        target = target_station.casefold()
+        candidates: list[tuple[str, dict[str, Any]]] = []
+        station_slots = {
+            ('right', 'yaskawa'): {'1', '2'},
+            ('right', 'staubli'): {'3', '4'},
+            ('left', 'yaskawa'): {'1', '2'},
+            ('left', 'kuka'): {'3', '4'},
+        }
+        for template_name, template in self.route_templates.items():
+            template_side = str(template.get('side') or '').casefold()
+            if side and template_side != side:
+                continue
+            target_slots = {str(slot) for slot in template.get('target_slots', [])}
+            if target_slots == station_slots.get((template_side, target), set()):
+                candidates.append((template_name, template))
+        return candidates
+
+    def _payload_matching_template_candidates(
+        self,
+        candidates: list[tuple[str, dict[str, Any]]],
+        payload_condition: str,
+        explicit_shuttle: str,
+    ) -> list[tuple[str, dict[str, Any]]]:
+        if explicit_shuttle:
+            side = self._side_from_shuttle_ref(explicit_shuttle)
+            return [
+                (name, template)
+                for name, template in candidates
+                if not side or template.get('side') == side
+            ]
+        if not payload_condition:
+            return candidates
+        matched: list[tuple[str, dict[str, Any]]] = []
+        for name, template in candidates:
+            side = str(template.get('side') or '')
+            source_slots = [str(slot) for slot in template.get('source_slots', [])]
+            if _source_shuttles_matching_payload(
+                self.rails,
+                self.slot_sensor_by_side,
+                side,
+                source_slots,
+                payload_condition,
+            ):
+                matched.append((name, template))
+        return matched
 
     def _template_from_text(self, text: str) -> str:
         normalized_text = ' '.join(text.casefold().replace('_', ' ').split())
@@ -2024,14 +2348,24 @@ class Room315VlaSupervisor(Node):
         template = task['template_config']
 
         if phase == 'validate':
-            shuttle, source_slot, _sensor = self._find_shuttle_in_slots(
-                side,
-                list(task.get('source_slots') or []),
-            )
+            requested_shuttle = str(task.get('shuttle') or '').strip()
+            source_slots = list(task.get('source_slots') or [])
+            if requested_shuttle:
+                shuttle, source_slot, _sensor = self._find_specific_shuttle_in_slots(
+                    side,
+                    source_slots,
+                    requested_shuttle,
+                )
+            else:
+                shuttle, source_slot, _sensor = self._find_shuttle_in_slots(
+                    side,
+                    source_slots,
+                )
             if not shuttle:
+                qualifier = f' {requested_shuttle}' if requested_shuttle else ''
                 self._fail_task(
                     task,
-                    f'no {side}-rail shuttle detected in source slots {task.get("source_slots")}',
+                    f'no {side}-rail shuttle{qualifier} detected in source slots {source_slots}',
                     rejected=True,
                 )
                 return
@@ -2125,14 +2459,24 @@ class Room315VlaSupervisor(Node):
             return
 
         if phase == 'validate':
-            shuttle, source_slot, _sensor = self._find_shuttle_in_slots(
-                side,
-                list(task.get('source_slots') or []),
-            )
+            requested_shuttle = str(task.get('shuttle') or '').strip()
+            source_slots = list(task.get('source_slots') or [])
+            if requested_shuttle:
+                shuttle, source_slot, _sensor = self._find_specific_shuttle_in_slots(
+                    side,
+                    source_slots,
+                    requested_shuttle,
+                )
+            else:
+                shuttle, source_slot, _sensor = self._find_shuttle_in_slots(
+                    side,
+                    source_slots,
+                )
             if not shuttle:
+                qualifier = f' {requested_shuttle}' if requested_shuttle else ''
                 self._fail_task(
                     task,
-                    f'no {side}-rail shuttle detected in source slots {task.get("source_slots")}',
+                    f'no {side}-rail shuttle{qualifier} detected in source slots {source_slots}',
                     rejected=True,
                 )
                 return
@@ -2535,6 +2879,24 @@ class Room315VlaSupervisor(Node):
                 return shuttle_name, slot, sensor_name
         return '', '', ''
 
+    def _find_specific_shuttle_in_slots(
+        self,
+        side: str,
+        slots: list[str],
+        shuttle_name: str,
+    ) -> tuple[str, str, str]:
+        name = str(shuttle_name or '').strip()
+        if not name:
+            return '', '', ''
+        for slot in slots:
+            sensor_name = self._slot_sensor_name(side, slot)
+            if not sensor_name:
+                continue
+            reading = self._active_sensor_reading(side, sensor_name, name)
+            if reading:
+                return name, slot, sensor_name
+        return '', '', ''
+
     def _active_slot_for_shuttle(
         self,
         side: str,
@@ -2868,6 +3230,7 @@ class Room315VlaSupervisor(Node):
                 },
             },
             'safety_decoder_metrics': self.safety_metrics,
+            'payload_state': self._payload_state_snapshot(),
             'vision': {
                 'image_frames': self.image_frame_count,
                 'last_image_age_s': image_age,
@@ -2876,6 +3239,35 @@ class Room315VlaSupervisor(Node):
                 'cameras': cameras,
             },
             'rails': self.rails,
+        }
+
+    def _payload_state_snapshot(self) -> dict[str, Any]:
+        shuttles = []
+        by_shuttle: dict[str, dict[str, Any]] = {}
+        for side in SIDES:
+            for entity_name, entry in (self.rails.get(side, {}).get('payloads', {}) or {}).items():
+                if not isinstance(entry, dict):
+                    continue
+                item = {
+                    'shuttle_id': str(entry.get('shuttle_id') or entity_name),
+                    'short_id': str(entry.get('short_id') or ''),
+                    'side': side,
+                    'shuttle_index': _safe_int(entry.get('shuttle_index'), -1),
+                    'entity_name': entity_name,
+                    'loaded': bool(entry.get('loaded', False)),
+                    'payload_type': (
+                        str(entry.get('payload_type') or 'box')
+                        if bool(entry.get('loaded', False))
+                        else 'none'
+                    ),
+                    'model_input_exposure': 'excluded',
+                }
+                shuttles.append(item)
+                by_shuttle[entity_name] = item
+        return {
+            'shuttles': sorted(shuttles, key=lambda item: (item['side'], item['shuttle_index'])),
+            'by_shuttle': by_shuttle,
+            'model_input_exposure': 'excluded',
         }
 
 

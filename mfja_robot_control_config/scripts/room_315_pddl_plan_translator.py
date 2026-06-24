@@ -23,6 +23,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
 from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
+from room_315_multi_shuttle import EVENT_ACTION_V3_FIELDS
 from room_315_multi_shuttle import encode_action_v3
 from room_315_multi_shuttle import normalize_shuttle_ref
 
@@ -82,6 +83,9 @@ TARGET_IDS = {
     'DA3IR': 26,
     'DA3IL': 27,
 }
+for _side in SIDES:
+    for _index in range(1, 5):
+        TARGET_IDS[f'{_side}_shuttle_{_index}'] = len(TARGET_IDS)
 REASON_IDS = {
     'none': 0,
     'command_event': 1,
@@ -99,32 +103,8 @@ REASON_IDS = {
     'unsupported_command': 13,
 }
 
-ACTION_VECTOR_FIELDS = [
-    'primitive_id',
-    'side_id',
-    *[f'switch_mask_{name}' for name in DEVICE_NAMES],
-    *[f'switch_value_{name}' for name in DEVICE_NAMES],
-    *[f'stopper_mask_{name}' for name in DEVICE_NAMES],
-    *[f'stopper_value_{name}' for name in DEVICE_NAMES],
-    'speed_mps',
-    'wait_condition_id',
-    'target_id',
-    'reason_id',
-]
-ACTION_SCHEMA_VERSION_V3 = ACTION_SCHEMA_VERSION
-
-EVENT_ACTION_FIELDS = [
-    'primitive',
-    'side',
-    'switch_mask',
-    'switch_values',
-    'stopper_mask',
-    'stopper_values',
-    'speed_mps',
-    'wait_condition',
-    'target_id',
-    'reason',
-]
+ACTION_VECTOR_FIELDS = list(ACTION_VECTOR_V3_FIELDS)
+EVENT_ACTION_FIELDS = list(EVENT_ACTION_V3_FIELDS)
 
 
 @dataclass(frozen=True)
@@ -237,42 +217,9 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
 
 
 def encode_event_action(action: dict[str, Any]) -> list[float]:
-    """Encode a Room 315 event action into v2 or multi-shuttle v3 vector shape."""
+    """Encode a Room 315 event action into the canonical schema-v3 vector."""
 
-    if _uses_action_schema_v3(action):
-        return encode_action_v3(action)
-
-    normalized = _normalize_event_action(action)
-    return [
-        float(PRIMITIVE_IDS[normalized['primitive']]),
-        float(SIDE_IDS[normalized['side']]),
-        *[
-            float(1 if normalized['switch_mask'].get(name) else 0)
-            for name in DEVICE_NAMES
-        ],
-        *[
-            float(SWITCH_VALUE_IDS[_normalize_switch_value(normalized['switch_values'].get(name))])
-            for name in DEVICE_NAMES
-        ],
-        *[
-            float(1 if normalized['stopper_mask'].get(name) else 0)
-            for name in DEVICE_NAMES
-        ],
-        *[
-            float(STOPPER_VALUE_IDS[_normalize_stopper_value(normalized['stopper_values'].get(name))])
-            for name in DEVICE_NAMES
-        ],
-        float(normalized['speed_mps']),
-        float(WAIT_CONDITION_IDS[normalized['wait_condition']]),
-        float(TARGET_IDS[normalized['target_id']]),
-        float(REASON_IDS[normalized['reason']]),
-    ]
-
-
-def _uses_action_schema_v3(action: dict[str, Any]) -> bool:
-    if _safe_int(action.get('action_vector_schema_version') or action.get('action_schema_version') or 0) == 3:
-        return True
-    return any(key in action for key in ('shuttle_id', 'shuttle_index', 'coordination_mode'))
+    return encode_action_v3(_normalize_event_action(action))
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -365,7 +312,14 @@ def _translate_stop_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[st
 def _multi_shuttle_fields(*, side: str, shuttle: str) -> dict[str, Any]:
     spec = normalize_shuttle_ref(shuttle, side=side)
     if spec is None or shuttle == f'{side}_shuttle':
-        return {}
+        shuttle_index = 0
+        return {
+            'action_vector_schema_version': ACTION_SCHEMA_VERSION,
+            'shuttle_id': f'{"R" if side == "right" else "L"}{shuttle_index + 1}',
+            'shuttle_index': shuttle_index,
+            'target_id': f'{side}_shuttle_{shuttle_index + 1}',
+            'coordination_mode': 'guarded_motion',
+        }
     return {
         'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'shuttle_id': spec.short_id,
@@ -407,8 +361,11 @@ def _blank_event_action(
     reason: str = 'none',
 ) -> dict[str, Any]:
     return {
+        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'primitive': primitive,
         'side': side,
+        'shuttle_id': '',
+        'shuttle_index': -1,
         'switch_mask': {name: 0 for name in DEVICE_NAMES},
         'switch_values': {name: 'UNCHANGED' for name in DEVICE_NAMES},
         'stopper_mask': {name: 0 for name in DEVICE_NAMES},
@@ -417,13 +374,17 @@ def _blank_event_action(
         'wait_condition': wait_condition,
         'target_id': target_id,
         'reason': reason,
+        'coordination_mode': 'normal',
     }
 
 
 def _normalize_event_action(action: dict[str, Any]) -> dict[str, Any]:
     normalized = {
+        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'primitive': str(action.get('primitive') or 'WAIT').strip().upper(),
         'side': _normalize_side(action.get('side')),
+        'shuttle_id': str(action.get('shuttle_id') or '').strip(),
+        'shuttle_index': int(action.get('shuttle_index', -1)),
         'switch_mask': _device_map(action.get('switch_mask'), default=0),
         'switch_values': _device_map(action.get('switch_values'), default='UNCHANGED'),
         'stopper_mask': _device_map(action.get('stopper_mask'), default=0),
@@ -432,6 +393,7 @@ def _normalize_event_action(action: dict[str, Any]) -> dict[str, Any]:
         'wait_condition': str(action.get('wait_condition') or 'none').strip(),
         'target_id': str(action.get('target_id') or 'none').strip(),
         'reason': str(action.get('reason') or 'none').strip(),
+        'coordination_mode': str(action.get('coordination_mode') or 'normal').strip(),
     }
     if normalized['primitive'] not in PRIMITIVE_IDS:
         raise ValueError(f'unknown primitive {normalized["primitive"]!r}')
@@ -456,6 +418,15 @@ def _normalize_event_action(action: dict[str, Any]) -> dict[str, Any]:
             normalized['stopper_values'][name] = value
         else:
             normalized['stopper_values'][name] = 'UNCHANGED'
+    if normalized['primitive'] in {'SHUTTLE_ON', 'STOP_NOW'} and normalized['shuttle_index'] < 0:
+        normalized['shuttle_index'] = 0
+        normalized['shuttle_id'] = f'{"R" if normalized["side"] == "right" else "L"}1'
+    if normalized['primitive'] in {'SHUTTLE_ON', 'STOP_NOW'} and normalized['target_id'] in {
+        'right_shuttle',
+        'left_shuttle',
+        'none',
+    }:
+        normalized['target_id'] = f'{normalized["side"]}_shuttle_{normalized["shuttle_index"] + 1}'
     return normalized
 
 

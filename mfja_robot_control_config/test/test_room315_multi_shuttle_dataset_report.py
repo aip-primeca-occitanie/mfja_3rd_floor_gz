@@ -61,11 +61,36 @@ def _event(target='R2', chosen='R2', success=True, marker_count=2, payload=True)
 
 
 def _write_events(dataset_dir, rows):
-    event_dir = dataset_dir / 'episodes' / 'episode_multi'
-    event_dir.mkdir(parents=True)
-    event_file = event_dir / 'events.jsonl'
-    event_file.write_text(''.join(json.dumps(row) + '\n' for row in rows), encoding='utf-8')
-    return event_file
+    event_files = []
+    for row in rows:
+        episode_id = row['episode_id']
+        event_dir = dataset_dir / 'episodes' / episode_id
+        event_dir.mkdir(parents=True)
+        event_file = event_dir / 'events.jsonl'
+        event_file.write_text(json.dumps(row) + '\n', encoding='utf-8')
+        validation = {
+            'episode_id': episode_id,
+            'scenario_id': episode_id,
+            'goal_id': episode_id,
+            'source': 'pddl_plansys',
+            'validation_status': 'approved',
+            'approved_for_training': True,
+            'failure_reason': '',
+            'task_success': True,
+            'rejected_action_rate': 0.0,
+            'wrong_shuttle_command_count': 0,
+            'headway_violation_count': 0,
+            'block_occupancy_violation_count': 0,
+            'block_reservation_rejection_count': 0,
+            'deadlock_detected_count': 0,
+            'deadlock_avoided_count': 0,
+        }
+        (event_dir / 'validation.json').write_text(
+            json.dumps(validation) + '\n',
+            encoding='utf-8',
+        )
+        event_files.append(event_file)
+    return event_files
 
 
 def test_multi_shuttle_report_counts_identity_safety_and_occlusion_metrics(tmp_path):

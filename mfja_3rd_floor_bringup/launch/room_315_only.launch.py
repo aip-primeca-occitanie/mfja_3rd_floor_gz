@@ -88,9 +88,12 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'start_paused',
-            default_value='true',
+            default_value='false',
             choices=['true', 'false'],
-            description='Start Gazebo paused so the user can press play manually.',
+            description=(
+                'Start Gazebo paused so the user can press play manually. '
+                'Room 315 defaults to running so shuttle timers publish visible poses.'
+            ),
         ),
         DeclareLaunchArgument(
             'initial_loop_mode',
@@ -153,6 +156,16 @@ def generate_launch_description():
             description='Common Room 315 shuttle speed in meters per second.',
         ),
         DeclareLaunchArgument(
+            'room315_falling_stop_offset_m',
+            default_value='0.0',
+            description='Distance before an invalid route endpoint where Room 315 shuttles enter FALLING.',
+        ),
+        DeclareLaunchArgument(
+            'room315_shuttle_collision_distance_m',
+            default_value='0.33',
+            description='Minimum separation between Room 315 shuttles before collision avoidance stops motion.',
+        ),
+        DeclareLaunchArgument(
             'room315_shuttles_start_enabled',
             default_value='false',
             choices=['true', 'false'],
@@ -199,6 +212,27 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description='Show Room 315 position sensor and stopper markers.',
+        ),
+        DeclareLaunchArgument(
+            'room315_enable_payload_visuals',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Spawn carried payload boxes for loaded Room 315 shuttles.',
+        ),
+        DeclareLaunchArgument(
+            'room315_payload_pose_x_offset_m',
+            default_value='-0.08',
+            description='Additional x offset for carried Room 315 payload boxes.',
+        ),
+        DeclareLaunchArgument(
+            'room315_right_loaded_shuttles',
+            default_value='',
+            description='Comma-separated loaded right shuttles at startup, e.g. R2,4,all.',
+        ),
+        DeclareLaunchArgument(
+            'room315_left_loaded_shuttles',
+            default_value='',
+            description='Comma-separated loaded left shuttles at startup, e.g. L1,L4,all.',
         ),
         DeclareLaunchArgument(
             'room315_sensor_marker_visual_hold_s',
@@ -317,6 +351,12 @@ def generate_launch_description():
                         'gazebo_world_name': LaunchConfiguration('world_name'),
                         'use_sim_time': LaunchConfiguration('use_sim_time'),
                         'speed': LaunchConfiguration('room315_shuttle_speed'),
+                        'falling_stop_offset_m': LaunchConfiguration(
+                            'room315_falling_stop_offset_m'
+                        ),
+                        'shuttle_collision_distance_m': LaunchConfiguration(
+                            'room315_shuttle_collision_distance_m'
+                        ),
                         'start_enabled': LaunchConfiguration(
                             'room315_shuttles_start_enabled'
                         ),
@@ -343,6 +383,18 @@ def generate_launch_description():
                         ),
                         'visual_debug_colors': LaunchConfiguration(
                             'room315_visual_debug_colors'
+                        ),
+                        'enable_payload_visuals': LaunchConfiguration(
+                            'room315_enable_payload_visuals'
+                        ),
+                        'payload_pose_x_offset_m': LaunchConfiguration(
+                            'room315_payload_pose_x_offset_m'
+                        ),
+                        'right_loaded_shuttles': LaunchConfiguration(
+                            'room315_right_loaded_shuttles'
+                        ),
+                        'left_loaded_shuttles': LaunchConfiguration(
+                            'room315_left_loaded_shuttles'
                         ),
                         'right_start_slot': LaunchConfiguration(
                             'room315_right_start_slot'

@@ -97,6 +97,26 @@ def _default_shuttle_model_sdf_path() -> Path:
         )
 
 
+def _default_payload_model_sdf_path() -> Path:
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return (
+            Path(get_package_share_directory('mfja_3rd_floor_description'))
+            / 'models'
+            / 'room315_vla_payload_small_box'
+            / 'model.sdf'
+        )
+    except Exception:
+        return (
+            Path(__file__).resolve().parents[2]
+            / 'mfja_3rd_floor_description'
+            / 'models'
+            / 'room315_vla_payload_small_box'
+            / 'model.sdf'
+        )
+
+
 def _yaw_to_quaternion(yaw: float) -> tuple[float, float, float, float]:
     half_yaw = 0.5 * yaw
     return 0.0, 0.0, math.sin(half_yaw), math.cos(half_yaw)
@@ -131,6 +151,8 @@ RIGHT_TOPIC_DEFAULTS = {
     'stopper_state_topic': '/room_315/rails/right/stoppers/state',
     'sensor_feedback_topic': '/room_315/rails/right/sensors/feedback',
     'pose_offset_command_topic': '/room_315/rails/right/shuttles/pose_offset_command',
+    'payload_state_topic': '/room_315/rails/right/shuttles/payload_state',
+    'payload_command_topic': '/room_315/rails/right/shuttles/payload_command',
 }
 
 LEFT_TOPIC_DEFAULTS = {
@@ -145,6 +167,8 @@ LEFT_TOPIC_DEFAULTS = {
     'stopper_state_topic': '/room_315/rails/left/stoppers/state',
     'sensor_feedback_topic': '/room_315/rails/left/sensors/feedback',
     'pose_offset_command_topic': '/room_315/rails/left/shuttles/pose_offset_command',
+    'payload_state_topic': '/room_315/rails/left/shuttles/payload_state',
+    'payload_command_topic': '/room_315/rails/left/shuttles/payload_command',
 }
 
 RIGHT_ENTITY_DEFAULTS = {
@@ -767,6 +791,19 @@ class ManagedShuttle:
     next_visual_refresh_time: float = 0.0
     visual_refresh_failure_logged: bool = False
     sensor_markers_armed: bool = False
+    payload_loaded: bool = False
+    payload_type: str = 'none'
+    payload_entity_name: str = ''
+    payload_gazebo_spawned: bool = False
+    pending_payload_spawn: object | None = None
+    pending_payload_delete: object | None = None
+    pending_payload_set_pose: object | None = None
+    pending_payload_set_pose_wall_time: float | None = None
+    last_payload_gazebo_set_pose_time: object | None = None
+    payload_spawn_failure_logged: bool = False
+    payload_delete_warning_logged: bool = False
+    payload_set_pose_warning_logged: bool = False
+    payload_set_pose_timeout_warning_logged: bool = False
 
 
 @dataclass
@@ -823,6 +860,7 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('initial_segment', 'A23')
         self.declare_parameter('initial_s', 0.0)
         self.declare_parameter('speed', 0.25)
+        self.declare_parameter('falling_stop_offset_m', 0.0)
         self.declare_parameter('update_rate_hz', 30.0)
         self.declare_parameter('sensor_publish_rate_hz', 10.0)
         self.declare_parameter('sync_sensor_feedback_to_motion_tick', True)
@@ -881,6 +919,14 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('sensor_marker_visual_hold_s', 0.35)
         self.declare_parameter('visual_debug_colors', True)
         self.declare_parameter('shuttle_model_sdf', str(_default_shuttle_model_sdf_path()))
+        self.declare_parameter('enable_payload_visuals', True)
+        self.declare_parameter('payload_model_sdf', str(_default_payload_model_sdf_path()))
+        self.declare_parameter('payload_type', 'box')
+        self.declare_parameter('loaded_shuttles', '')
+        self.declare_parameter('payload_pose_x_offset_m', -0.08)
+        self.declare_parameter('payload_pose_z_offset_m', 0.0)
+        self.declare_parameter('payload_state_topic', RIGHT_TOPIC_DEFAULTS['payload_state_topic'])
+        self.declare_parameter('payload_command_topic', RIGHT_TOPIC_DEFAULTS['payload_command_topic'])
         self.declare_parameter('preloaded_shuttle_count', 4)
         self.declare_parameter('reject_occupied_start_slots', True)
         self.declare_parameter('start_slot_occupancy_radius_m', 0.33)
@@ -943,6 +989,10 @@ class Room315KinematicShuttleNode(Node):
         initial_segment = str(self.get_parameter('initial_segment').value)
         initial_s = float(self.get_parameter('initial_s').value)
         speed = float(self.get_parameter('speed').value)
+        self.falling_stop_offset_m = max(
+            0.0,
+            float(self.get_parameter('falling_stop_offset_m').value),
+        )
         update_rate_hz = float(self.get_parameter('update_rate_hz').value)
         sensor_publish_rate_hz = float(self.get_parameter('sensor_publish_rate_hz').value)
         if sensor_publish_rate_hz <= 0.0:
@@ -1105,6 +1155,35 @@ class Room315KinematicShuttleNode(Node):
         )
         self.visual_debug_colors = bool(self.get_parameter('visual_debug_colors').value)
         self.shuttle_model_sdf = Path(str(self.get_parameter('shuttle_model_sdf').value))
+        self.enable_payload_visuals = bool(self.get_parameter('enable_payload_visuals').value)
+        self.payload_model_sdf = Path(str(self.get_parameter('payload_model_sdf').value))
+        self.payload_type = (
+            str(self.get_parameter('payload_type').value).strip() or 'box'
+        )
+        self.initial_loaded_shuttle_refs = {
+            token.casefold()
+            for token in self._split_list_parameter(
+                str(self.get_parameter('loaded_shuttles').value)
+            )
+        }
+        self.payload_pose_x_offset_m = float(
+            self.get_parameter('payload_pose_x_offset_m').value
+        )
+        self.payload_pose_z_offset_m = float(
+            self.get_parameter('payload_pose_z_offset_m').value
+        )
+        payload_state_topic = self._side_default_string(
+            str(self.get_parameter('payload_state_topic').value),
+            'payload_state_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        )
+        payload_command_topic = self._side_default_string(
+            str(self.get_parameter('payload_command_topic').value),
+            'payload_command_topic',
+            right_defaults=RIGHT_TOPIC_DEFAULTS,
+            left_defaults=LEFT_TOPIC_DEFAULTS,
+        )
         self.preloaded_shuttle_count = int(
             self._side_default_numeric(
                 int(self.get_parameter('preloaded_shuttle_count').value),
@@ -1343,6 +1422,8 @@ class Room315KinematicShuttleNode(Node):
         self.shuttle_state_topic = shuttle_state_topic
         self.add_shuttle_service = add_shuttle_service
         self.shuttle_control_command_topic = shuttle_control_command_topic
+        self.payload_state_topic = payload_state_topic
+        self.payload_command_topic = payload_command_topic
         self.switch_command_topic = switch_command_topic
         self.switch_state_topic = switch_state_topic
         self.stopper_command_topic = stopper_command_topic
@@ -1395,6 +1476,11 @@ class Room315KinematicShuttleNode(Node):
             visual_switch_command_topic,
             10,
         )
+        self.payload_state_publisher = self.create_publisher(
+            String,
+            payload_state_topic,
+            10,
+        )
         self.switch_subscription = self.create_subscription(
             SwitchCommand,
             switch_command_topic,
@@ -1416,6 +1502,12 @@ class Room315KinematicShuttleNode(Node):
             RailShuttleCommand,
             shuttle_control_command_topic,
             self._on_shuttle_control_command,
+            10,
+        )
+        self.payload_command_subscription = self.create_subscription(
+            String,
+            payload_command_topic,
+            self._on_payload_command,
             10,
         )
         self.visual_switch_state_subscription = None
@@ -1466,6 +1558,8 @@ class Room315KinematicShuttleNode(Node):
             f'add_shuttle_service={add_shuttle_service}, '
             f'shuttle_control_topic={shuttle_control_command_topic}, '
             f'shuttle_state_topic={shuttle_state_topic}, '
+            f'payload_state_topic={payload_state_topic}, '
+            f'payload_command_topic={payload_command_topic}, '
             f'switch_command_topic={switch_command_topic}, '
             f'switch_state_topic={switch_state_topic}, '
             f'stopper_command_topic={stopper_command_topic}, '
@@ -1481,6 +1575,8 @@ class Room315KinematicShuttleNode(Node):
             f'entity_prefix={self.entity_name_prefix}, '
             f'spawn_service={gazebo_spawn_service}, '
             f'delete_service={gazebo_delete_service}, '
+            f'payload_visuals={self.enable_payload_visuals}, '
+            f'loaded_shuttles={sorted(self.initial_loaded_shuttle_refs)}, '
             f'device_markers={len(self.device_markers)}, '
             f'shuttles={self._shuttle_summary()}'
         )
@@ -1968,6 +2064,7 @@ class Room315KinematicShuttleNode(Node):
         speed: float,
         enabled: bool = True,
         deployed: bool = True,
+        payload_loaded: bool | None = None,
         pose_topic_override: str | None = None,
     ) -> ManagedShuttle:
         (
@@ -1983,6 +2080,11 @@ class Room315KinematicShuttleNode(Node):
             else f'{self.pose_topic_prefix}/{self._topic_safe_name(entity_name)}/pose_cmd'
         )
         gazebo_spawned = self._is_preloaded_shuttle_entity(entity_name)
+        loaded = (
+            self._initial_payload_loaded_for_entity(entity_name)
+            if payload_loaded is None
+            else bool(payload_loaded)
+        )
         if not deployed:
             initial_stopped_by = 'NOT_DEPLOYED'
             initial_stopper_distance_m = 0.0
@@ -2010,6 +2112,7 @@ class Room315KinematicShuttleNode(Node):
                     speed=speed,
                     mode=MOVING if enabled and deployed and speed > 0.0 else WAITING,
                 ),
+                falling_stop_offset_m=self.falling_stop_offset_m,
             ),
             pose_publisher=self.create_publisher(PoseStamped, pose_topic, 10),
             last_gazebo_set_pose_time=self.get_clock().now(),
@@ -2018,6 +2121,9 @@ class Room315KinematicShuttleNode(Node):
             enabled=enabled,
             stopped_by=initial_stopped_by,
             stopper_distance_m=initial_stopper_distance_m,
+            payload_loaded=loaded,
+            payload_type=self.payload_type if loaded else 'none',
+            payload_entity_name=self._payload_entity_name_for_shuttle(entity_name),
             spawned_visual_state=(
                 SHUTTLE_VISUAL_NORMAL
                 if gazebo_spawned
@@ -2153,6 +2259,175 @@ class Room315KinematicShuttleNode(Node):
     def _auto_entity_name(self, index: int) -> str:
         return f'{self.entity_name_prefix}{index}'
 
+    @staticmethod
+    def _payload_entity_name_for_shuttle(entity_name: str) -> str:
+        return f'{entity_name}_payload'
+
+    def _initial_payload_loaded_for_entity(self, entity_name: str) -> bool:
+        refs = getattr(self, 'initial_loaded_shuttle_refs', set())
+        if not refs or 'none' in refs:
+            return False
+        if 'all' in refs:
+            return True
+        return bool(refs & self._payload_reference_tokens(entity_name))
+
+    def _payload_reference_tokens(self, entity_name: str) -> set[str]:
+        lowered = str(entity_name or '').strip().casefold()
+        tokens = {lowered}
+        match = re.fullmatch(r'room315_(right|left)_shuttle_([1-4])', lowered)
+        if match:
+            side, index = match.groups()
+            short_id = f'{"r" if side == "right" else "l"}{index}'
+            tokens.update({
+                f'{side}_shuttle_{index}',
+                f'{side}{index}',
+                short_id,
+            })
+            if side == self.rail_side:
+                tokens.add(index)
+        return tokens
+
+    @staticmethod
+    def _normalize_payload_loaded(raw_value) -> bool:
+        if isinstance(raw_value, bool):
+            return raw_value
+        value = str(raw_value or '').strip().casefold()
+        if value in {'1', 'true', 'yes', 'on', 'load', 'loaded', 'box', 'payload'}:
+            return True
+        if value in {'0', 'false', 'no', 'off', 'empty', 'none', 'unload', 'unloaded'}:
+            return False
+        raise ValueError(
+            f'Unknown payload state {raw_value!r}; use loaded/empty or true/false.'
+        )
+
+    def _payload_state_payload(self) -> dict:
+        shuttles = []
+        for shuttle in self.shuttles:
+            shuttle_id, short_id, index = self._public_shuttle_ids(shuttle.entity_name)
+            loaded = bool(shuttle.payload_loaded)
+            shuttles.append({
+                'shuttle_id': shuttle_id,
+                'short_id': short_id,
+                'side': self.rail_side,
+                'shuttle_index': index,
+                'entity_name': shuttle.entity_name,
+                'payload_entity_name': shuttle.payload_entity_name,
+                'loaded': loaded,
+                'payload_type': shuttle.payload_type if loaded else 'none',
+                'model_input_exposure': 'excluded',
+            })
+        return {
+            'side': self.rail_side,
+            'payload_model': str(self.payload_model_sdf),
+            'payload_state_topic': self.payload_state_topic,
+            'model_input_exposure': 'excluded',
+            'shuttles': shuttles,
+        }
+
+    def _publish_payload_state(self) -> None:
+        if not hasattr(self, 'payload_state_publisher'):
+            return
+        message = String()
+        message.data = json.dumps(self._payload_state_payload(), sort_keys=True)
+        self.payload_state_publisher.publish(message)
+
+    def _public_shuttle_ids(self, entity_name: str) -> tuple[str, str, int]:
+        match = re.fullmatch(r'room315_(right|left)_shuttle_([1-4])', entity_name)
+        if not match:
+            return entity_name, '', -1
+        side, index_text = match.groups()
+        index = int(index_text) - 1
+        short_id = f'{"R" if side == "right" else "L"}{index_text}'
+        return f'{side}_shuttle_{index_text}', short_id, index
+
+    def _on_payload_command(self, message: String) -> None:
+        raw = str(message.data or '').strip()
+        if not raw:
+            return
+        try:
+            selector, loaded, payload_type = self._parse_payload_command(raw)
+            targets = self._resolve_payload_command_targets(selector)
+            for shuttle in targets:
+                self._set_shuttle_payload_loaded(
+                    shuttle,
+                    loaded,
+                    payload_type=payload_type,
+                )
+            self._publish_payload_state()
+        except ValueError as error:
+            self.get_logger().error(f'Payload command rejected: {error}')
+
+    def _parse_payload_command(self, raw: str) -> tuple[str, bool, str | None]:
+        if raw.startswith('{'):
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                raise ValueError('payload command JSON must be an object')
+            selector = str(
+                parsed.get('shuttle')
+                or parsed.get('shuttle_id')
+                or parsed.get('name')
+                or parsed.get('entity_name')
+                or ''
+            ).strip()
+            state_value = (
+                parsed.get('loaded')
+                if 'loaded' in parsed
+                else parsed.get('state', parsed.get('payload_state', parsed.get('payload_type')))
+            )
+            loaded = self._normalize_payload_loaded(state_value)
+            payload_type = str(parsed.get('payload_type') or '').strip() or None
+            return selector, loaded, payload_type
+
+        tokens = raw.split()
+        if not tokens:
+            raise ValueError('empty payload command')
+        selector = ''
+        state_token = tokens[-1]
+        if len(tokens) > 1:
+            selector = tokens[0]
+        elif len(self.shuttles) == 1:
+            selector = self.shuttles[0].entity_name
+        loaded = self._normalize_payload_loaded(state_token)
+        return selector, loaded, None
+
+    def _resolve_payload_command_targets(self, selector: str) -> list[ManagedShuttle]:
+        token = str(selector or '').strip().casefold()
+        if not token:
+            if len(self.shuttles) == 1:
+                return [self.shuttles[0]]
+            raise ValueError('payload command must name a shuttle or use ALL')
+        if token == 'all':
+            return list(self.shuttles)
+        matches = [
+            shuttle
+            for shuttle in self.shuttles
+            if token in self._payload_reference_tokens(shuttle.entity_name)
+        ]
+        if not matches:
+            raise ValueError(f'unknown payload shuttle selector {selector!r}')
+        return matches
+
+    def _set_shuttle_payload_loaded(
+        self,
+        shuttle: ManagedShuttle,
+        loaded: bool,
+        *,
+        payload_type: str | None = None,
+    ) -> None:
+        shuttle.payload_loaded = bool(loaded)
+        shuttle.payload_type = (
+            (payload_type or self.payload_type or 'box')
+            if shuttle.payload_loaded
+            else 'none'
+        )
+        if shuttle.payload_loaded:
+            shuttle.payload_delete_warning_logged = False
+            self._request_payload_spawn_if_needed(shuttle)
+        else:
+            self._request_payload_delete_if_needed(shuttle)
+        state = 'loaded' if shuttle.payload_loaded else 'empty'
+        self.get_logger().info(f'Shuttle {shuttle.entity_name} payload state is now {state}.')
+
     def _request_spawn_if_needed(self, shuttle: ManagedShuttle) -> None:
         if not shuttle.deployed:
             return
@@ -2209,6 +2484,42 @@ class Room315KinematicShuttleNode(Node):
         factory.pose.orientation.z = qz
         factory.pose.orientation.w = qw
         return factory
+
+    def _make_payload_spawn_entity_factory(
+        self,
+        shuttle: ManagedShuttle,
+        pose: ShuttlePose | None = None,
+    ) -> EntityFactory:
+        gazebo_pose = pose if pose is not None else self._to_gazebo_pose(shuttle.core.pose())
+        payload_pose = self._payload_pose_from_shuttle_pose(gazebo_pose)
+        factory = EntityFactory()
+        factory.name = shuttle.payload_entity_name
+        factory.allow_renaming = False
+        factory.sdf_filename = str(self.payload_model_sdf)
+        factory.relative_to = 'world'
+        factory.pose.position.x = payload_pose.x
+        factory.pose.position.y = payload_pose.y
+        factory.pose.position.z = payload_pose.z
+        qx, qy, qz, qw = _yaw_to_quaternion(payload_pose.yaw)
+        factory.pose.orientation.x = qx
+        factory.pose.orientation.y = qy
+        factory.pose.orientation.z = qz
+        factory.pose.orientation.w = qw
+        return factory
+
+    def _payload_pose_from_shuttle_pose(self, pose: ShuttlePose) -> ShuttlePose:
+        local_x_offset = self.payload_pose_x_offset_m
+        world_x_offset = local_x_offset * math.cos(pose.yaw)
+        world_y_offset = local_x_offset * math.sin(pose.yaw)
+        return ShuttlePose(
+            x=pose.x + world_x_offset,
+            y=pose.y + world_y_offset,
+            z=pose.z + self.payload_pose_z_offset_m,
+            yaw=pose.yaw,
+            current_segment=pose.current_segment,
+            s=pose.s,
+            mode=pose.mode,
+        )
 
     def _shuttle_model_sdf_for_entity(self, entity_name: str) -> Path:
         """Return the per-identity shuttle model when available.
@@ -3244,6 +3555,195 @@ class Room315KinematicShuttleNode(Node):
         self.get_logger().info(f'Gazebo spawned {shuttle.entity_name}')
         return True
 
+    def _update_payload_visual(
+        self,
+        shuttle: ManagedShuttle,
+        gazebo_pose: ShuttlePose | None = None,
+    ) -> None:
+        self._process_payload_futures(shuttle)
+        if not self.enable_payload_visuals:
+            return
+        if not shuttle.deployed or not shuttle.payload_loaded:
+            self._request_payload_delete_if_needed(shuttle)
+            return
+        self._request_payload_spawn_if_needed(shuttle, gazebo_pose)
+        if shuttle.payload_gazebo_spawned and gazebo_pose is not None:
+            self._send_payload_gazebo_pose(shuttle, gazebo_pose)
+
+    def _process_payload_futures(self, shuttle: ManagedShuttle) -> None:
+        if shuttle.pending_payload_spawn is not None and shuttle.pending_payload_spawn.done():
+            try:
+                response = shuttle.pending_payload_spawn.result()
+            except Exception as error:
+                if not shuttle.payload_spawn_failure_logged:
+                    self.get_logger().error(
+                        f'Gazebo payload spawn request for {shuttle.payload_entity_name} '
+                        f'failed: {error}'
+                    )
+                    shuttle.payload_spawn_failure_logged = True
+                shuttle.pending_payload_spawn = None
+            else:
+                shuttle.pending_payload_spawn = None
+                if bool(getattr(response, 'success', False)):
+                    shuttle.payload_gazebo_spawned = True
+                    shuttle.payload_spawn_failure_logged = False
+                    self.get_logger().info(f'Gazebo spawned {shuttle.payload_entity_name}')
+                elif not shuttle.payload_spawn_failure_logged:
+                    self.get_logger().error(
+                        f'Gazebo spawn service rejected {shuttle.payload_entity_name}.'
+                    )
+                    shuttle.payload_spawn_failure_logged = True
+
+        if shuttle.pending_payload_delete is not None and shuttle.pending_payload_delete.done():
+            try:
+                response = shuttle.pending_payload_delete.result()
+            except Exception as error:
+                self.get_logger().error(
+                    f'Gazebo payload delete request for {shuttle.payload_entity_name} '
+                    f'failed: {error}'
+                )
+            else:
+                if bool(getattr(response, 'success', False)):
+                    shuttle.payload_gazebo_spawned = False
+                    shuttle.pending_payload_set_pose = None
+                    self.get_logger().info(f'Gazebo removed {shuttle.payload_entity_name}')
+                else:
+                    self.get_logger().error(
+                        f'Gazebo delete service rejected {shuttle.payload_entity_name}; '
+                        'the payload may still be visible.'
+                    )
+            shuttle.pending_payload_delete = None
+
+        if (
+            shuttle.pending_payload_set_pose is not None
+            and shuttle.pending_payload_set_pose.done()
+        ):
+            shuttle.pending_payload_set_pose = None
+            shuttle.pending_payload_set_pose_wall_time = None
+            shuttle.payload_set_pose_timeout_warning_logged = False
+
+    def _request_payload_spawn_if_needed(
+        self,
+        shuttle: ManagedShuttle,
+        gazebo_pose: ShuttlePose | None = None,
+    ) -> None:
+        if not self.enable_payload_visuals or not shuttle.payload_loaded or not shuttle.deployed:
+            return
+        if self.spawn_client is None or not self.enable_gazebo_spawn:
+            return
+        if shuttle.payload_gazebo_spawned or shuttle.pending_payload_spawn is not None:
+            return
+        if shuttle.pending_payload_delete is not None:
+            return
+        if not self.spawn_client.service_is_ready():
+            if not shuttle.payload_spawn_failure_logged:
+                self.get_logger().warn(
+                    'Gazebo spawn service is not ready yet. Loaded shuttle '
+                    f'{shuttle.entity_name} will publish payload state, but the '
+                    'payload box is not visible yet.'
+                )
+                shuttle.payload_spawn_failure_logged = True
+            return
+
+        request = SpawnEntity.Request()
+        request.entity_factory = self._make_payload_spawn_entity_factory(
+            shuttle,
+            gazebo_pose,
+        )
+        shuttle.pending_payload_spawn = self.spawn_client.call_async(request)
+        self.get_logger().info(f'Requested Gazebo payload spawn for {shuttle.entity_name}')
+
+    def _request_payload_delete_if_needed(self, shuttle: ManagedShuttle) -> None:
+        if shuttle.pending_payload_spawn is not None:
+            return
+        if shuttle.pending_payload_delete is not None:
+            return
+        if not shuttle.payload_gazebo_spawned:
+            return
+        if self.delete_client is None or not self.enable_gazebo_delete:
+            if not shuttle.payload_delete_warning_logged:
+                self.get_logger().warn(
+                    f'Cannot remove payload {shuttle.payload_entity_name}: '
+                    'Gazebo delete support is disabled.'
+                )
+                shuttle.payload_delete_warning_logged = True
+            return
+        if not self.delete_client.service_is_ready():
+            if not shuttle.payload_delete_warning_logged:
+                self.get_logger().warn(
+                    f'Cannot remove payload {shuttle.payload_entity_name}: '
+                    'Gazebo delete service is not ready.'
+                )
+                shuttle.payload_delete_warning_logged = True
+            return
+
+        request = DeleteEntity.Request()
+        request.entity.name = shuttle.payload_entity_name
+        request.entity.type = Entity.MODEL
+        shuttle.pending_payload_delete = self.delete_client.call_async(request)
+        self.get_logger().info(f'Requested Gazebo payload removal for {shuttle.entity_name}.')
+
+    def _send_payload_gazebo_pose(
+        self,
+        shuttle: ManagedShuttle,
+        shuttle_pose: ShuttlePose,
+    ) -> None:
+        if not self.enable_gazebo_set_pose or self.set_pose_client is None:
+            return
+        if not shuttle.payload_gazebo_spawned:
+            return
+        now = self.get_clock().now()
+        last_sent = shuttle.last_payload_gazebo_set_pose_time
+        if last_sent is not None:
+            elapsed = (now - last_sent).nanoseconds / 1e9
+            if elapsed < self.gazebo_set_pose_period:
+                return
+        if shuttle.pending_payload_set_pose is not None:
+            if shuttle.pending_payload_set_pose.done():
+                shuttle.pending_payload_set_pose = None
+                shuttle.pending_payload_set_pose_wall_time = None
+                shuttle.payload_set_pose_timeout_warning_logged = False
+            else:
+                pending_since = shuttle.pending_payload_set_pose_wall_time
+                pending_age_s = (
+                    time.monotonic() - pending_since
+                    if pending_since is not None
+                    else 0.0
+                )
+                if pending_age_s < self.gazebo_set_pose_timeout_s:
+                    return
+                if not shuttle.payload_set_pose_timeout_warning_logged:
+                    self.get_logger().warn(
+                        f'Gazebo set_pose request for {shuttle.payload_entity_name} '
+                        f'was pending for {pending_age_s:.2f}s; sending newest pose.'
+                    )
+                    shuttle.payload_set_pose_timeout_warning_logged = True
+                shuttle.pending_payload_set_pose = None
+                shuttle.pending_payload_set_pose_wall_time = None
+        if not self.set_pose_client.service_is_ready():
+            if not shuttle.payload_set_pose_warning_logged:
+                self.get_logger().warn(
+                    'Gazebo set_pose service is not ready yet; still publishing payload state.'
+                )
+                shuttle.payload_set_pose_warning_logged = True
+            return
+
+        payload_pose = self._payload_pose_from_shuttle_pose(shuttle_pose)
+        request = SetEntityPose.Request()
+        request.entity.name = shuttle.payload_entity_name
+        request.entity.type = Entity.MODEL
+        request.pose.position.x = payload_pose.x
+        request.pose.position.y = payload_pose.y
+        request.pose.position.z = payload_pose.z
+        qx, qy, qz, qw = _yaw_to_quaternion(payload_pose.yaw)
+        request.pose.orientation.x = qx
+        request.pose.orientation.y = qy
+        request.pose.orientation.z = qz
+        request.pose.orientation.w = qw
+        shuttle.pending_payload_set_pose = self.set_pose_client.call_async(request)
+        shuttle.pending_payload_set_pose_wall_time = time.monotonic()
+        shuttle.last_payload_gazebo_set_pose_time = now
+
     def _resolve_allowed_start_slot(
         self,
         raw_slot: str,
@@ -3864,6 +4364,10 @@ class Room315KinematicShuttleNode(Node):
         shuttle.pending_set_pose_wall_time = None
         shuttle.last_gazebo_set_pose_time = None
         shuttle.set_pose_timeout_warning_logged = False
+        shuttle.pending_payload_set_pose = None
+        shuttle.pending_payload_set_pose_wall_time = None
+        shuttle.last_payload_gazebo_set_pose_time = None
+        shuttle.payload_set_pose_timeout_warning_logged = False
         if shuttle.enabled:
             shuttle.stopped_by = None
             shuttle.stopper_distance_m = None
@@ -3881,9 +4385,19 @@ class Room315KinematicShuttleNode(Node):
             raise ValueError(
                 f'Cannot remove {shuttle.entity_name} while its Gazebo spawn request is still in flight.'
             )
+        if (
+            shuttle.pending_payload_spawn is not None
+            and not shuttle.pending_payload_spawn.done()
+        ):
+            raise ValueError(
+                f'Cannot remove {shuttle.entity_name} while its payload spawn request is still in flight.'
+            )
 
         if self._find_shuttle(shuttle.entity_name) is None:
             return
+
+        if shuttle.payload_gazebo_spawned:
+            self._request_payload_delete_if_needed(shuttle)
 
         should_delete_entity = shuttle.gazebo_spawned or self._is_preloaded_shuttle_entity(
             shuttle.entity_name
@@ -4389,6 +4903,7 @@ class Room315KinematicShuttleNode(Node):
 
         if not self.shuttles:
             self._publish_state([], [])
+            self._publish_payload_state()
             self._publish_switch_state()
             self._publish_stopper_state()
             if self.sync_sensor_feedback_to_motion_tick:
@@ -4410,7 +4925,9 @@ class Room315KinematicShuttleNode(Node):
                 shuttle.stopped_by = 'NOT_DEPLOYED'
                 shuttle.stopper_distance_m = 0.0
                 raw_poses.append(shuttle.core.pose())
-                gazebo_poses.append(self._hidden_gazebo_pose(shuttle))
+                hidden_pose = self._hidden_gazebo_pose(shuttle)
+                gazebo_poses.append(hidden_pose)
+                self._update_payload_visual(shuttle, hidden_pose)
                 continue
 
             if not self._spawn_ready_for_motion(shuttle):
@@ -4419,6 +4936,7 @@ class Room315KinematicShuttleNode(Node):
                 occupied_poses[shuttle.entity_name] = gazebo_pose
                 raw_poses.append(pose)
                 gazebo_poses.append(gazebo_pose)
+                self._update_payload_visual(shuttle, gazebo_pose)
                 continue
 
             pose = self._step_with_motion_guards(
@@ -4429,6 +4947,7 @@ class Room315KinematicShuttleNode(Node):
             gazebo_pose = self._to_gazebo_pose(pose)
             pose_message = self._publish_pose(shuttle, gazebo_pose)
             self._send_gazebo_pose(shuttle, pose_message)
+            self._update_payload_visual(shuttle, gazebo_pose)
             occupied_poses[shuttle.entity_name] = gazebo_pose
             raw_poses.append(pose)
             gazebo_poses.append(gazebo_pose)
@@ -4440,6 +4959,7 @@ class Room315KinematicShuttleNode(Node):
                 )
 
         self._publish_state(raw_poses, gazebo_poses)
+        self._publish_payload_state()
         self._publish_switch_state()
         self._publish_stopper_state()
         if self.sync_sensor_feedback_to_motion_tick:
@@ -4846,45 +5366,52 @@ class Room315KinematicShuttleNode(Node):
         raw_poses: list[ShuttlePose],
         gazebo_poses: list[ShuttlePose],
     ) -> None:
-        primary_payload = {
-            'current_segment': None,
-            'entity_name': None,
-            'gazebo_pose': None,
-            'mode': None,
-            's': None,
-            'speed': None,
-            'start_slot': None,
-            'start_snap_distance_m': None,
-            'x': None,
-            'y': None,
-            'yaw': None,
-            'z': None,
-        }
-        if self.shuttles and raw_poses and gazebo_poses:
-            first_shuttle = self.shuttles[0]
-            first_pose = raw_poses[0]
-            first_gazebo_pose = gazebo_poses[0]
-            first_pose_payload = asdict(first_pose)
-            first_pose_payload['current_segment'] = self._public_segment_name(
-                first_pose.current_segment
+        if not self.shuttles:
+            self.state_publisher.publish(self._make_shuttle_state_message({}))
+            return
+
+        published_count = 0
+        for shuttle, raw_pose, gazebo_pose in zip(self.shuttles, raw_poses, gazebo_poses):
+            pose_payload = asdict(raw_pose)
+            pose_payload['current_segment'] = self._public_segment_name(
+                raw_pose.current_segment
             )
-            first_gazebo_pose_payload = asdict(first_gazebo_pose)
-            first_gazebo_pose_payload['current_segment'] = self._public_segment_name(
-                first_gazebo_pose.current_segment
+            gazebo_pose_payload = asdict(gazebo_pose)
+            gazebo_pose_payload['current_segment'] = self._public_segment_name(
+                gazebo_pose.current_segment
             )
-            primary_payload.update(first_pose_payload)
-            primary_payload.update(
+            pose_payload.update(
                 {
-                    'entity_name': first_shuttle.entity_name,
-                    'gazebo_pose': first_gazebo_pose_payload,
-                    'speed': first_shuttle.core.state.speed,
-                    'start_slot': first_shuttle.start_slot,
-                    'start_snap_distance_m': first_shuttle.start_snap_distance_m,
+                    'entity_name': shuttle.entity_name,
+                    'gazebo_pose': gazebo_pose_payload,
+                    'speed': shuttle.core.state.speed,
+                    'start_slot': shuttle.start_slot,
+                    'start_snap_distance_m': shuttle.start_snap_distance_m,
                 }
             )
+            self.state_publisher.publish(self._make_shuttle_state_message(pose_payload))
+            published_count += 1
 
-        state_message = self._make_shuttle_state_message(primary_payload)
-        self.state_publisher.publish(state_message)
+        if published_count >= len(self.shuttles):
+            return
+
+        for shuttle in self.shuttles[published_count:]:
+            fallback_pose = shuttle.core.pose()
+            fallback_payload = {
+                'current_segment': self._public_segment_name(fallback_pose.current_segment),
+                'entity_name': shuttle.entity_name,
+                'gazebo_pose': None,
+                'mode': fallback_pose.mode,
+                's': fallback_pose.s,
+                'speed': shuttle.core.state.speed,
+                'start_slot': shuttle.start_slot,
+                'start_snap_distance_m': shuttle.start_snap_distance_m,
+                'x': fallback_pose.x,
+                'y': fallback_pose.y,
+                'yaw': fallback_pose.yaw,
+                'z': fallback_pose.z,
+            }
+            self.state_publisher.publish(self._make_shuttle_state_message(fallback_payload))
 
     def _make_shuttle_state_message(self, payload: dict) -> RailShuttleState:
         message = RailShuttleState()

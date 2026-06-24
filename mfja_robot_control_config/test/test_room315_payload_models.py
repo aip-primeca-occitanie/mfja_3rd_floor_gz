@@ -16,7 +16,14 @@ def test_payload_models_exist_for_configured_variants():
     config = yaml.safe_load(PAYLOAD_CONFIG.read_text(encoding='utf-8'))
     variants = config['variants']
 
-    for name in ('small_box', 'medium_box', 'tall_box', 'wide_box_within_keepout', 'partial_marker_occluder'):
+    for name in (
+        'small_box',
+        'carried_box',
+        'medium_box',
+        'tall_box',
+        'wide_box_within_keepout',
+        'partial_marker_occluder',
+    ):
         model_uri = variants[name]['model_uri']
         assert model_uri.startswith('model://room315_vla_payload_')
         model_dir = MODELS_DIR / model_uri.removeprefix('model://')
@@ -51,5 +58,19 @@ def test_partial_marker_occluder_is_explicitly_controlled_metadata():
     assert variant['identity_occlusion_level'] == 'partial'
     assert variant['visible_marker_count'] == 3
     assert variant['occluded_regions'] == ['front_left']
+    assert 'loaded' in config['metadata_fields_outside_model_input']
+    assert 'payload_condition' in config['metadata_fields_outside_model_input']
     assert 'payload_present' in config['metadata_fields_outside_model_input']
     assert 'target_shuttle_id' in config['metadata_fields_outside_model_input']
+
+
+def test_carried_box_is_the_default_loaded_shuttle_payload():
+    config = yaml.safe_load(PAYLOAD_CONFIG.read_text(encoding='utf-8'))
+    variant = config['variants']['carried_box']
+
+    assert variant['model_uri'] == 'model://room315_vla_payload_small_box'
+    assert variant['loaded'] is True
+    assert variant['payload_state'] == 'loaded'
+    assert variant['payload_type'] == 'box'
+    assert variant['identity_occlusion_level'] == 'none'
+    assert variant['visible_marker_count'] == 4

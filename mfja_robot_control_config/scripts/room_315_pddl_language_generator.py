@@ -14,6 +14,7 @@ import re
 import shlex
 from copy import deepcopy
 from dataclasses import dataclass
+from dataclasses import replace
 from typing import Any
 
 
@@ -47,11 +48,24 @@ IDENTITY_ROUTE_TEMPLATES = {
 RELATIONAL_ROUTE_TEMPLATES = {
     'front_shuttle_to_station': 'move the front {side} shuttle to {to_station}',
     'rear_shuttle_to_station': 'move the rear shuttle on the {side} rail to {to_station}',
+}
+PAYLOAD_ROUTE_TEMPLATES = {
     'loaded_shuttle_to_station': 'move the loaded {side} shuttle to {to_station}',
+    'empty_shuttle_to_station': 'move the empty {side} shuttle to {to_station}',
+    'carrying_part_id_to_station': 'move {shuttle_label} carrying a part to {to_station}',
 }
 SLOT_SEQUENCE_TEMPLATES = {
     'send_slot_sequence': 'send the {side} shuttle to slot {first_slot} and then to slot {last_slot}',
     'move_slot_sequence': 'move the {side} shuttle from slot {first_slot} to slot {last_slot}',
+}
+SLOT_TARGET_TEMPLATES = {
+    'send_to_slot': 'send the {side} shuttle to slot {slot}',
+    'move_to_slot': 'move the {side} shuttle to slot {slot}',
+}
+PAYLOAD_SLOT_TEMPLATES = {
+    'loaded_shuttle_to_slot': 'move the loaded {side} shuttle to slot {slot}',
+    'empty_shuttle_to_slot': 'move the empty {side} shuttle to slot {slot}',
+    'carrying_part_id_to_slot': 'move {shuttle_label} carrying a part to slot {slot}',
 }
 
 
@@ -62,6 +76,7 @@ class LanguageGoal:
     target_station: str = ''
     source_station: str = ''
     slot_sequence: tuple[str, ...] = ()
+    payload_condition: str = ''
     raw_goal: str = ''
 
 
@@ -100,6 +115,10 @@ def generate_language(
         'generated_language_template_id': chosen_template_id,
         'symbolic_plan': plan,
     }
+    if goal.payload_condition:
+        metadata['payload_condition'] = goal.payload_condition
+    if goal.slot_sequence:
+        metadata['target_slot'] = goal.slot_sequence[-1]
     return GeneratedLanguage(
         language=language,
         template_id=chosen_template_id,
@@ -160,13 +179,16 @@ def _language_goal_from_inputs(
     symbolic_plan: list[str],
     action_sequence: str,
 ) -> LanguageGoal:
+    parsed_goal = _parse_pddl_goal(pddl_goal)
+    payload_hint = parsed_goal.payload_condition if parsed_goal is not None else ''
     for parser_input in (action_sequence, *symbolic_plan):
         if not str(parser_input or '').strip():
             continue
         parsed = _parse_action_sequence(parser_input)
         if parsed is not None:
+            if payload_hint and not parsed.payload_condition:
+                return replace(parsed, payload_condition=payload_hint)
             return parsed
-    parsed_goal = _parse_pddl_goal(pddl_goal)
     if parsed_goal is not None:
         return parsed_goal
     raise ValueError('could not infer a Room 315 language goal')
@@ -174,6 +196,24 @@ def _language_goal_from_inputs(
 
 def _parse_action_sequence(text: str) -> LanguageGoal | None:
     normalized = _normalize_text(text)
+    payload_condition = _payload_condition_from_text(normalized)
+    identity_to_slot = re.search(
+        r'\b(?:move|send|route|bring)\s+(?:the\s+shuttle\s+labeled\s+)?'
+        r'(?P<shuttle>[rl][1-4]|(?:right|left)_shuttle_[1-4])\b.*?'
+        r'\b(?:to|back\s+to)\s+slot\s*(?P<slot>[1-4])\b',
+        normalized,
+    )
+    if identity_to_slot:
+        shuttle = _clean_symbol(identity_to_slot.group('shuttle'))
+        side = _infer_side(shuttle)
+        return LanguageGoal(
+            side=side,
+            shuttle=shuttle,
+            slot_sequence=(identity_to_slot.group('slot'),),
+            payload_condition=payload_condition,
+            raw_goal=text,
+        )
+
     identity_to_station = re.search(
         r'\b(?:move|send|route|bring)\s+(?:the\s+shuttle\s+labeled\s+)?'
         r'(?P<shuttle>[rl][1-4]|(?:right|left)_shuttle_[1-4])\b.*?\b(?:to|back\s+to)\s+'
@@ -189,6 +229,7 @@ def _parse_action_sequence(text: str) -> LanguageGoal | None:
             shuttle=shuttle,
             source=_infer_source(side, target),
             target=target,
+            payload_condition=payload_condition,
             raw_goal=text,
         )
 
@@ -206,6 +247,22 @@ def _parse_action_sequence(text: str) -> LanguageGoal | None:
             raw_goal=text,
         )
 
+    single_slot_match = re.search(
+        r'\b(?:move|send|route|bring)\s+(?:the\s+)?'
+        r'(?:(?:loaded|empty|unloaded)\s+)?(?:(?P<side>right|left)\s+)?'
+        r'shuttle\b.*?\b(?:to|back\s+to)\s+slot\s*(?P<slot>[1-4])\b',
+        normalized,
+    )
+    if single_slot_match:
+        side = single_slot_match.group('side') or 'right'
+        return LanguageGoal(
+            side=side,
+            shuttle=f'{side}_shuttle',
+            slot_sequence=(single_slot_match.group('slot'),),
+            payload_condition=payload_condition,
+            raw_goal=text,
+        )
+
     route_match = re.search(
         r'\b(?P<side>right|left)\s+shuttle\b.*?\bfrom\s+'
         r'(?P<source>[a-z0-9_]+)\s+to\s+(?P<target>[a-z0-9_]+)\b',
@@ -218,6 +275,25 @@ def _parse_action_sequence(text: str) -> LanguageGoal | None:
             shuttle=f'{side}_shuttle',
             source=route_match.group('source'),
             target=route_match.group('target'),
+            payload_condition=payload_condition,
+            raw_goal=text,
+        )
+
+    to_station_match = re.search(
+        r'\b(?:move|send|route|bring)\s+(?:the\s+)?'
+        r'(?:(?:loaded|empty|unloaded)\s+)?(?:(?P<side>right|left)\s+)?shuttle\b.*?'
+        r'\b(?:to|back\s+to)\s+(?P<target>[a-z0-9_]+)\b',
+        normalized,
+    )
+    if to_station_match and payload_condition:
+        target = to_station_match.group('target')
+        side = to_station_match.group('side') or _infer_side_from_target(target)
+        return _route_goal(
+            side=side,
+            shuttle=f'{side}_shuttle',
+            source=_infer_source(side, target),
+            target=target,
+            payload_condition=payload_condition,
             raw_goal=text,
         )
 
@@ -232,6 +308,7 @@ def _parse_action_sequence(text: str) -> LanguageGoal | None:
             shuttle=shuttle,
             source=source,
             target=target,
+            payload_condition=payload_condition,
             raw_goal=text,
         )
     if action in {'go_to_slot', 'move_to_slot', 'visit_slot'}:
@@ -261,6 +338,7 @@ def _parse_pddl_goal(text: str) -> LanguageGoal | None:
             shuttle=shuttle,
             source=source,
             target=target,
+            payload_condition=_payload_condition_for_shuttle(normalized, shuttle),
             raw_goal=text,
         )
 
@@ -279,6 +357,7 @@ def _parse_pddl_goal(text: str) -> LanguageGoal | None:
             shuttle=shuttle,
             source=source,
             target=target,
+            payload_condition=_payload_condition_for_shuttle(normalized, shuttle),
             raw_goal=text,
         )
     return None
@@ -291,6 +370,7 @@ def _route_goal(
     source: str,
     target: str,
     raw_goal: str,
+    payload_condition: str = '',
 ) -> LanguageGoal:
     normalized_side = _normalize_side(side)
     target_station = _station_symbol(target)
@@ -302,6 +382,7 @@ def _route_goal(
         shuttle=_clean_symbol(shuttle) or f'{normalized_side}_shuttle',
         source_station=source_station,
         target_station=target_station,
+        payload_condition=_normalize_payload_condition(payload_condition),
         raw_goal=raw_goal,
     )
 
@@ -315,10 +396,25 @@ def _choose_template_id(goal: LanguageGoal, *, seed: int | None) -> str:
 def _template_ids_for_goal(goal: LanguageGoal) -> list[str]:
     if len(goal.slot_sequence) >= 2:
         return list(SLOT_SEQUENCE_TEMPLATES)
+    if len(goal.slot_sequence) == 1:
+        template_ids = list(SLOT_TARGET_TEMPLATES)
+        if goal.payload_condition == 'loaded':
+            template_ids.append('loaded_shuttle_to_slot')
+            if _shuttle_label(goal.shuttle):
+                template_ids.append('carrying_part_id_to_slot')
+        elif goal.payload_condition == 'empty':
+            template_ids.append('empty_shuttle_to_slot')
+        return template_ids
     template_ids = list(ROUTE_TEMPLATES)
     if _shuttle_label(goal.shuttle):
         template_ids.extend(IDENTITY_ROUTE_TEMPLATES)
     template_ids.extend(RELATIONAL_ROUTE_TEMPLATES)
+    if goal.payload_condition == 'loaded':
+        template_ids.append('loaded_shuttle_to_station')
+        if _shuttle_label(goal.shuttle):
+            template_ids.append('carrying_part_id_to_station')
+    elif goal.payload_condition == 'empty':
+        template_ids.append('empty_shuttle_to_station')
     return template_ids
 
 
@@ -332,16 +428,34 @@ def _render_template(goal: LanguageGoal, template_id: str) -> str:
             first_slot=goal.slot_sequence[0],
             last_slot=goal.slot_sequence[-1],
         )
+    slot_templates = {
+        **SLOT_TARGET_TEMPLATES,
+        **PAYLOAD_SLOT_TEMPLATES,
+    }
+    if template_id in slot_templates:
+        if len(goal.slot_sequence) < 1:
+            raise ValueError(f'template {template_id!r} needs a target slot')
+        shuttle_label = _shuttle_label(goal.shuttle)
+        if template_id == 'carrying_part_id_to_slot' and not shuttle_label:
+            raise ValueError(f'template {template_id!r} needs a specific shuttle identity')
+        return slot_templates[template_id].format(
+            side=goal.side,
+            shuttle_label=shuttle_label or f'{goal.side} shuttle',
+            slot=goal.slot_sequence[-1],
+        )
     route_templates = {
         **ROUTE_TEMPLATES,
         **IDENTITY_ROUTE_TEMPLATES,
         **RELATIONAL_ROUTE_TEMPLATES,
+        **PAYLOAD_ROUTE_TEMPLATES,
     }
     if template_id not in route_templates:
-        allowed = ', '.join([*route_templates, *SLOT_SEQUENCE_TEMPLATES])
+        allowed = ', '.join([*route_templates, *SLOT_SEQUENCE_TEMPLATES, *slot_templates])
         raise ValueError(f'unknown language template {template_id!r}; allowed: {allowed}')
     shuttle_label = _shuttle_label(goal.shuttle)
     if template_id in IDENTITY_ROUTE_TEMPLATES and not shuttle_label:
+        raise ValueError(f'template {template_id!r} needs a specific shuttle identity')
+    if template_id == 'carrying_part_id_to_station' and not shuttle_label:
         raise ValueError(f'template {template_id!r} needs a specific shuttle identity')
     template = route_templates[template_id]
     return template.format(
@@ -417,6 +531,54 @@ def _slot_symbol(value: str) -> str:
 
 def _infer_source(side: str, target: str) -> str:
     return DEFAULT_SOURCE_BY_SIDE_AND_TARGET.get((_normalize_side(side), _station_symbol(target)), '')
+
+
+def _infer_side_from_target(target: str) -> str:
+    station = _station_symbol(target)
+    if station == 'kuka':
+        return 'left'
+    if station == 'staubli':
+        return 'right'
+    return 'right'
+
+
+def _normalize_payload_condition(raw: str) -> str:
+    text = str(raw or '').strip().casefold().replace('-', '_')
+    if text in {'loaded', 'load', 'with_payload', 'carrying', 'part', 'box'}:
+        return 'loaded'
+    if text in {'empty', 'unloaded', 'without_payload', 'no_payload', 'none'}:
+        return 'empty'
+    return ''
+
+
+def _payload_condition_from_text(text: str) -> str:
+    normalized = str(text or '').casefold().replace('-', '_')
+    if any(token in normalized for token in ('loaded', 'carrying', 'with a part', 'with payload')):
+        return 'loaded'
+    if any(token in normalized for token in ('empty', 'unloaded', 'without payload', 'no payload')):
+        return 'empty'
+    return ''
+
+
+def _payload_condition_for_shuttle(normalized_text: str, shuttle: str) -> str:
+    aliases = _payload_shuttle_aliases(shuttle)
+    for alias in aliases:
+        if re.search(rf'\bloaded\s+{re.escape(alias)}\b', normalized_text):
+            return 'loaded'
+        if re.search(rf'\bempty\s+{re.escape(alias)}\b', normalized_text):
+            return 'empty'
+    return _payload_condition_from_text(normalized_text)
+
+
+def _payload_shuttle_aliases(shuttle: str) -> set[str]:
+    text = _clean_symbol(shuttle).lower()
+    aliases = {text} if text else set()
+    label = _shuttle_label(text)
+    if label:
+        aliases.add(label.casefold())
+        side = 'right' if label.startswith('R') else 'left'
+        aliases.add(f'{side}_shuttle_{label[1:]}')
+    return aliases
 
 
 def _infer_side(*values: str) -> str:

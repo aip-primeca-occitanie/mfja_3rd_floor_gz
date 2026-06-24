@@ -9,6 +9,8 @@ def generate_launch_description():
     common_parameters = {
         'path_backend': LaunchConfiguration('path_backend'),
         'speed': LaunchConfiguration('speed'),
+        'falling_stop_offset_m': LaunchConfiguration('falling_stop_offset_m'),
+        'shuttle_collision_distance_m': LaunchConfiguration('shuttle_collision_distance_m'),
         'start_enabled': LaunchConfiguration('start_enabled'),
         'gazebo_world_name': LaunchConfiguration('gazebo_world_name'),
         'enable_gazebo_set_pose': True,
@@ -28,6 +30,10 @@ def generate_launch_description():
             'sensor_marker_visual_hold_s'
         ),
         'visual_debug_colors': LaunchConfiguration('visual_debug_colors'),
+        'enable_payload_visuals': LaunchConfiguration('enable_payload_visuals'),
+        'payload_type': LaunchConfiguration('payload_type'),
+        'payload_pose_x_offset_m': LaunchConfiguration('payload_pose_x_offset_m'),
+        'payload_pose_z_offset_m': LaunchConfiguration('payload_pose_z_offset_m'),
         'use_sim_time': LaunchConfiguration('use_sim_time'),
     }
 
@@ -45,6 +51,7 @@ def generate_launch_description():
                 'start_slot': LaunchConfiguration('right_start_slot'),
                 'start_slots': LaunchConfiguration('right_start_slots'),
                 'shuttle_count': LaunchConfiguration('right_shuttle_count'),
+                'loaded_shuttles': LaunchConfiguration('right_loaded_shuttles'),
             },
         ],
     )
@@ -63,6 +70,7 @@ def generate_launch_description():
                 'start_slot': LaunchConfiguration('left_start_slot'),
                 'start_slots': LaunchConfiguration('left_start_slots'),
                 'shuttle_count': LaunchConfiguration('left_shuttle_count'),
+                'loaded_shuttles': LaunchConfiguration('left_loaded_shuttles'),
             },
         ],
     )
@@ -88,6 +96,16 @@ def generate_launch_description():
             'speed',
             default_value='0.2',
             description='Common shuttle speed for both rails in meters per second.',
+        ),
+        DeclareLaunchArgument(
+            'falling_stop_offset_m',
+            default_value='0.0',
+            description='Distance before an invalid route endpoint where FALLING mode is latched.',
+        ),
+        DeclareLaunchArgument(
+            'shuttle_collision_distance_m',
+            default_value='0.33',
+            description='Minimum separation between Room 315 shuttles before collision avoidance stops motion.',
         ),
         DeclareLaunchArgument(
             'start_enabled',
@@ -139,6 +157,27 @@ def generate_launch_description():
             description='Use debug colors for shuttle mode; false keeps shuttles black.',
         ),
         DeclareLaunchArgument(
+            'enable_payload_visuals',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Spawn carried payload boxes for loaded Room 315 shuttles.',
+        ),
+        DeclareLaunchArgument(
+            'payload_type',
+            default_value='box',
+            description='Structured payload type used for loaded shuttles.',
+        ),
+        DeclareLaunchArgument(
+            'payload_pose_x_offset_m',
+            default_value='-0.08',
+            description='Additional x offset applied to carried payload model poses.',
+        ),
+        DeclareLaunchArgument(
+            'payload_pose_z_offset_m',
+            default_value='0.0',
+            description='Additional z offset applied to carried payload model poses.',
+        ),
+        DeclareLaunchArgument(
             'right_start_slot',
             default_value='2',
             description='Startup slot for the right-rail shuttle.',
@@ -154,6 +193,11 @@ def generate_launch_description():
             description='Number of initial right-rail shuttles. Use 0 to start the rail with no shuttle.',
         ),
         DeclareLaunchArgument(
+            'right_loaded_shuttles',
+            default_value='',
+            description='Comma-separated loaded right shuttles at startup, e.g. R2,4,all.',
+        ),
+        DeclareLaunchArgument(
             'left_start_slot',
             default_value='2',
             description='Startup slot for the left-rail shuttle.',
@@ -167,6 +211,11 @@ def generate_launch_description():
             'left_shuttle_count',
             default_value='0',
             description='Number of initial left-rail shuttles. Use 0 to start the rail with no shuttle.',
+        ),
+        DeclareLaunchArgument(
+            'left_loaded_shuttles',
+            default_value='',
+            description='Comma-separated loaded left shuttles at startup, e.g. L1,L4,all.',
         ),
         DeclareLaunchArgument(
             'enable_right',

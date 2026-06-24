@@ -46,10 +46,30 @@ class FakeTransport:
             return self.decisions.pop(0)
         return {'accepted': True, 'reason': ''}
 
+    def shutdown(self):
+        pass
+
 
 class NotReadyTransport(FakeTransport):
     def wait_until_ready(self, *, timeout_s):
         return {'ready': False, 'reason': 'no supervisor subscriber on /room_315/vla/command'}
+
+
+class InitialStateTransport(FakeTransport):
+    def __init__(self, initial_state):
+        super().__init__()
+        self.initial_state = dict(initial_state)
+
+    def wait_until_ready(self, *, timeout_s):
+        return {'ready': True, 'reason': ''}
+
+    def wait_for_initial_scenario_state(self, *, scenario, timeout_s):
+        return dict(self.initial_state)
+
+
+class TimeoutTransport(FakeTransport):
+    def wait_for_supervisor_decision(self, *, previous_count, timeout_s):
+        return None
 
 
 class ArrivalTrackingTransport(FakeTransport):
@@ -72,6 +92,20 @@ class ArrivalTrackingTransport(FakeTransport):
         })
         self.event_order.append(('arrival_wait', list(target_sensors)))
         return dict(self.arrival_result)
+
+
+class RecorderAckTransport(FakeTransport):
+    def __init__(self):
+        super().__init__()
+        self.recorder_waits = []
+
+    def wait_for_episode_started(self, *, goal, timeout_s):
+        self.recorder_waits.append(('started', goal, timeout_s))
+        return {'ready': True, 'reason': '', 'observed': True}
+
+    def wait_for_episode_stopped(self, *, timeout_s):
+        self.recorder_waits.append(('stopped', timeout_s))
+        return {'ready': True, 'reason': '', 'observed': True}
 
 
 class FakePlanSysBackend:
@@ -131,6 +165,56 @@ def _load_module():
     return module
 
 
+class _Endpoint:
+    def __init__(self, node_name):
+        self.node_name = node_name
+
+
+class _FakePublisher:
+    def __init__(self, subscription_count):
+        self.subscription_count = subscription_count
+
+    def get_subscription_count(self):
+        return self.subscription_count
+
+
+class _FakeRclpy:
+    def spin_once(self, node, timeout_sec=0.0):
+        return None
+
+
+class _FakeNode:
+    def __init__(self, endpoints, publisher_endpoints=None):
+        self.endpoints = list(endpoints)
+        self.publisher_endpoints = list(publisher_endpoints or [])
+
+    def get_subscriptions_info_by_topic(self, topic):
+        return list(self.endpoints)
+
+    def get_publishers_info_by_topic(self, topic):
+        return list(self.publisher_endpoints)
+
+
+def _ros_transport_shell(
+    generator,
+    *,
+    endpoints,
+    subscription_count=1,
+    latest_status=None,
+    publisher_endpoints=None,
+):
+    transport = generator.RosScenarioTransport.__new__(generator.RosScenarioTransport)
+    transport.command_topic = '/room_315/vla/command'
+    transport.dataset_status_topic = '/room_315/vla/dataset_status'
+    transport.status_topic = '/room_315/vla/status'
+    transport.command_pub = _FakePublisher(subscription_count)
+    transport.rclpy = _FakeRclpy()
+    transport.node = _FakeNode(endpoints, publisher_endpoints=publisher_endpoints)
+    transport.latest_status = latest_status or {'last_result': 'initialized'}
+    transport.latest_dataset_status = {}
+    return transport
+
+
 def test_dry_run_right_yaskawa_to_staubli_produces_ordered_plan():
     generator = _load_module()
 
@@ -158,6 +242,250 @@ def test_dry_run_right_yaskawa_to_staubli_produces_ordered_plan():
     ]
 
 
+def test_loaded_payload_goal_selects_r2_and_records_metadata_outside_model_input():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        goal='right_loaded_r2_to_staubli',
+        language_template_id='carrying_part_id_to_station',
+        planner=_fake_backend(),
+    )
+
+    assert scenario['scenario_id'] == 'right_loaded_r2_to_staubli'
+    assert scenario['pddl_goal'] == 'loaded right_shuttle_2 at staubli'
+    assert scenario['payload_condition'] == 'loaded'
+    assert scenario['target_shuttle_id'] == 'right_shuttle_2'
+    assert scenario['symbolic_plan'][2] == (
+        'move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3'
+    )
+    assert scenario['primitive_commands'][2]['shuttle'] == 'right_shuttle_2'
+    assert scenario['expected_event_targets'][2]['target_id'] == 'right_shuttle_2'
+    assert scenario['expected_event_targets'][2]['shuttle_id'] == 'R2'
+    assert scenario['expected_event_targets'][2]['shuttle_index'] == 1
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['loaded'] is True
+    assert scenario['payload_state']['model_input_exposure'] == 'excluded'
+    assert 'model_input' not in scenario
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['payload_condition'] == 'loaded'
+    assert payloads[2]['payload_present'] is True
+    assert payloads[2]['payload_type'] == 'box'
+    assert payloads[2]['target_shuttle_id'] == 'right_shuttle_2'
+
+
+def test_nearest_loaded_slot_goal_selects_closest_loaded_shuttle():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        goal='right_loaded_to_slot3',
+        planner=_fake_backend(),
+    )
+
+    assert scenario['scenario_id'] == 'right_loaded_to_slot3'
+    assert scenario['language'] == 'move the loaded right shuttle to slot 3'
+    assert scenario['generated_language_template_id'] == 'loaded_shuttle_to_slot'
+    assert scenario['target_slot'] == '3'
+    assert scenario['target_shuttle_id'] == 'right_shuttle_2'
+    assert scenario['pddl_goal'] == 'loaded right_shuttle_2 at staubli'
+    assert scenario['symbolic_plan'][2] == (
+        'move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3'
+    )
+
+    candidates = scenario['selection_candidates']
+    assert [candidate['shuttle_id'] for candidate in candidates] == [
+        'right_shuttle_2',
+        'right_shuttle_1',
+    ]
+    assert candidates[0]['selected'] is True
+    assert candidates[0]['distance_to_target_slot'] == 1
+    assert candidates[1]['distance_to_target_slot'] == 2
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_1']['loaded'] is True
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['loaded'] is True
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_1']['start_slot'] == '1'
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['start_slot'] == '2'
+    assert scenario['payload_state']['model_input_exposure'] == 'excluded'
+    assert 'model_input' not in scenario
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['target_slot'] == '3'
+    assert payloads[2]['selection_policy'] == 'nearest_loaded_to_target_slot_then_lowest_id'
+    assert payloads[2]['selection_candidates'][0]['shuttle_id'] == 'right_shuttle_2'
+    assert 'model_input' not in payloads[2]
+
+
+def test_nearest_loaded_slot_goal_waits_for_slot_sensor_only():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_to_slot3',
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=17.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [{
+        'side': 'right',
+        'target_sensors': ['DZI3R'],
+        'shuttle': 'right_shuttle_2',
+        'timeout_s': 17.0,
+    }]
+
+
+def test_blocker_clear_goal_moves_empty_blocker_before_loaded_shuttle():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        goal='right_loaded_to_slot3_clear_blocker',
+        planner=_fake_backend(),
+    )
+
+    assert scenario['scenario_id'] == 'right_loaded_to_slot3_clear_blocker'
+    assert scenario['language'] == 'move the loaded right shuttle to slot 3'
+    assert scenario['target_shuttle_id'] == 'right_shuttle_2'
+    assert scenario['target_slot'] == '3'
+    assert scenario['blocker_clearance'] == {
+        'strategy': 'clear_blocker_move_loaded_then_restore_blocker_to_free_slot',
+        'phase': 'clear_blocker_move_selected_restore_blocker',
+        'blocker_shuttle_id': 'right_shuttle_1',
+        'blocker_start_slot': '3',
+        'blocker_clear_slot': '1',
+        'blocker_restore_slot': '2',
+        'blocker_final_slot': '2',
+        'blocker_restore_policy': 'selected_source_slot_then_nearest_free_slot',
+        'blocker_restore_slot_source': 'selected_source_slot',
+        'blocker_restore_candidate_slots': ['2', '1', '3', '4'],
+        'selected_shuttle_id': 'right_shuttle_2',
+        'selected_target_slot': '3',
+        'restore_deferred': False,
+        'model_input_exposure': 'excluded',
+    }
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches right staubli yaskawa',
+        'open_stoppers right staubli yaskawa',
+        'move_shuttle right right_shuttle_1 staubli yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_1',
+        'prepare_switches right yaskawa staubli',
+        'open_stoppers right yaskawa staubli',
+        'move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa',
+        'open_stoppers right yaskawa yaskawa',
+        'move_shuttle right right_shuttle_1 yaskawa yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_2 staubli',
+    ]
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_1']['loaded'] is False
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['loaded'] is True
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_1']['start_slot'] == '3'
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['start_slot'] == '2'
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['shuttle'] == 'right_shuttle_1'
+    assert payloads[2]['coordination_phase'] == 'clear_blocker'
+    assert payloads[2]['target_slot'] == '1'
+    assert payloads[2]['payload_condition'] == 'empty'
+    assert payloads[2]['payload_present'] is False
+    assert payloads[6]['shuttle'] == 'right_shuttle_2'
+    assert payloads[6]['coordination_phase'] == 'move_selected_loaded'
+    assert payloads[6]['target_slot'] == '3'
+    assert payloads[6]['payload_condition'] == 'loaded'
+    assert payloads[6]['payload_present'] is True
+    assert payloads[10]['shuttle'] == 'right_shuttle_1'
+    assert payloads[10]['coordination_phase'] == 'restore_blocker'
+    assert payloads[10]['target_slot'] == '2'
+    assert payloads[10]['payload_condition'] == 'empty'
+    assert payloads[10]['payload_present'] is False
+    assert payloads[10]['blocker_clearance']['blocker_restore_policy'] == (
+        'selected_source_slot_then_nearest_free_slot'
+    )
+    assert payloads[10]['blocker_clearance']['blocker_restore_slot_source'] == (
+        'selected_source_slot'
+    )
+    assert 'model_input' not in scenario
+    assert all('model_input' not in payload for payload in payloads)
+
+
+def test_blocker_restore_policy_falls_back_to_nearest_free_slot():
+    generator = _load_module()
+
+    restore = generator._resolve_blocker_restore_slot(
+        side='right',
+        selected_shuttle='right_shuttle_2',
+        selected_start_slot='1',
+        target_slot='3',
+        start_slots_by_shuttle={
+            'right_shuttle_1': '3',
+            'right_shuttle_2': '1',
+            'right_shuttle_3': '2',
+        },
+        data={
+            'blocker_shuttle': 'right_shuttle_1',
+            'blocker_clear_slot': '1',
+            'blocker_restore_slot': 'auto',
+            'blocker_restore_policy': 'selected_source_slot_then_nearest_free_slot',
+        },
+    )
+
+    assert restore['blocker_restore_slot'] == '4'
+    assert restore['blocker_restore_slot_source'] == 'nearest_free_slot'
+    assert restore['blocker_restore_candidate_slots'] == ('1', '2', '3', '4')
+
+
+def test_blocker_clear_goal_waits_for_blocker_slot_then_loaded_target_slot():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_to_slot3_clear_blocker',
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=19.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [
+        {
+            'side': 'right',
+            'target_sensors': ['DZI1R'],
+            'shuttle': 'right_shuttle_1',
+            'timeout_s': 19.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI3R'],
+            'shuttle': 'right_shuttle_2',
+            'timeout_s': 19.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI2R'],
+            'shuttle': 'right_shuttle_1',
+            'timeout_s': 19.0,
+        },
+    ]
+
+
+def test_payload_problem_file_round_trips_to_specific_goal_spec():
+    generator = _load_module()
+
+    spec = generator.scenario_spec_from_problem(PDDL_DIR / 'problem_right_loaded_r2_to_staubli.pddl')
+    problem_text = generator._problem_text_from_goal_spec(spec)
+
+    assert spec.goal_id == 'right_loaded_r2_to_staubli'
+    assert spec.shuttle == 'right_shuttle_2'
+    assert spec.payload_condition == 'loaded'
+    assert '(loaded right_shuttle_2)' in problem_text
+    assert '(carrying_payload right_shuttle_2)' in problem_text
+
+
 def test_dry_run_left_yaskawa_to_kuka_produces_left_side_commands():
     generator = _load_module()
 
@@ -175,7 +503,9 @@ def test_dry_run_left_yaskawa_to_kuka_produces_left_side_commands():
         if command['action'] != 'DONE'
     )
     assert scenario['primitive_commands'][2]['shuttle'] == 'left_shuttle'
-    assert scenario['expected_event_targets'][2]['target_id'] == 'left_shuttle'
+    assert scenario['expected_event_targets'][2]['target_id'] == 'left_shuttle_1'
+    assert scenario['expected_event_targets'][2]['shuttle_id'] == 'L1'
+    assert scenario['expected_event_targets'][2]['shuttle_index'] == 0
 
 
 def test_generated_plan_includes_language():
@@ -261,6 +591,115 @@ def test_dry_run_imports_ros_lazily_and_can_use_mocked_plansys():
     assert scenario['primitive_commands'][0]['action'] == 'switches'
 
 
+def test_ros_ready_requires_the_supervisor_command_subscriber():
+    generator = _load_module()
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+        subscription_count=1,
+    )
+
+    result = generator.RosScenarioTransport.wait_until_ready(transport, timeout_s=0.01)
+
+    assert result['ready'] is False
+    assert 'no room_315_vla_supervisor subscriber' in result['reason']
+    assert '1 total subscriber' in result['reason']
+
+
+def test_ros_ready_accepts_the_supervisor_command_subscriber():
+    generator = _load_module()
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[
+            _Endpoint('room_315_vla_dataset_recorder'),
+            _Endpoint('room_315_vla_supervisor'),
+        ],
+        subscription_count=2,
+    )
+
+    result = generator.RosScenarioTransport.wait_until_ready(transport, timeout_s=0.01)
+
+    assert result == {'ready': True, 'reason': ''}
+
+
+def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_r2_to_staubli',
+        planner=_fake_backend(),
+    )
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[_Endpoint('room_315_vla_supervisor')],
+        latest_status={
+            'rails': {
+                'right': {
+                    'shuttles': {
+                        'room315_right_shuttle_2': {'mode': 'STOPPED'},
+                    },
+                    'payloads': {
+                        'room315_right_shuttle_2': {
+                            'loaded': True,
+                            'payload_type': 'box',
+                        },
+                    },
+                },
+            },
+            'payload_state': {
+                'by_shuttle': {
+                    'room315_right_shuttle_2': {
+                        'loaded': True,
+                        'payload_type': 'box',
+                    },
+                },
+            },
+        },
+    )
+
+    result = generator.RosScenarioTransport.wait_for_initial_scenario_state(
+        transport,
+        scenario=scenario,
+        timeout_s=0.01,
+    )
+
+    assert result['ready'] is True
+    assert result['target_shuttle'] == 'room315_right_shuttle_2'
+    assert result['payload_condition'] == 'loaded'
+
+
+def test_ros_initial_state_wait_reports_missing_target_shuttle_before_execute():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_r2_to_staubli',
+        planner=_fake_backend(),
+    )
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[_Endpoint('room_315_vla_supervisor')],
+        latest_status={
+            'rails': {
+                'right': {
+                    'shuttles': {
+                        'room315_right_shuttle_1': {'mode': 'STOPPED'},
+                    },
+                    'payloads': {},
+                },
+            },
+            'payload_state': {'by_shuttle': {}},
+        },
+    )
+
+    result = generator.RosScenarioTransport.wait_for_initial_scenario_state(
+        transport,
+        scenario=scenario,
+        timeout_s=0.01,
+    )
+
+    assert result['ready'] is False
+    assert "missing shuttle 'room315_right_shuttle_2' on right rail" in result['reason']
+    assert 'wait for preflight READY' in result['reason']
+
+
 def test_dry_run_does_not_modify_files_unless_output_is_provided(tmp_path):
     before = sorted(path.name for path in tmp_path.iterdir())
     generator = _load_module()
@@ -297,6 +736,34 @@ def test_execute_mode_publishes_episode_start():
 
     assert result['success'] is True
     assert transport.episode_controls[0] == 'start move the right shuttle from Yaskawa to Staubli'
+
+
+def test_execute_mode_waits_for_recorder_start_and_stop_ack():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_yaskawa_to_staubli',
+        language_template_id='move_from_to',
+        planner=_fake_backend(),
+    )
+    transport = RecorderAckTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        command_timeout_s=7.0,
+    )
+
+    assert result['success'] is True
+    assert transport.recorder_waits[0] == (
+        'started',
+        'move the right shuttle from Yaskawa to Staubli',
+        7.0,
+    )
+    assert transport.recorder_waits[-1] == ('stopped', 7.0)
+    assert transport.episode_controls == [
+        'start move the right shuttle from Yaskawa to Staubli',
+        'stop success',
+    ]
 
 
 def test_execute_mode_publishes_commands_in_plan_order():
@@ -423,6 +890,99 @@ def test_execute_mode_fails_clearly_when_supervisor_not_ready():
     assert 'no supervisor subscriber' in result['failure_reason']
     assert transport.episode_controls == []
     assert transport.command_messages == []
+
+
+def test_preflight_mode_reports_ready_line_without_publishing_commands():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_r2_to_staubli',
+        planner=_fake_backend(),
+    )
+    transport = InitialStateTransport({
+        'ready': True,
+        'side': 'right',
+        'target_shuttle': 'room315_right_shuttle_2',
+        'payload_condition': 'loaded',
+    })
+
+    scenario['preflight'] = generator.preflight_scenario(scenario, transport)
+
+    assert scenario['preflight']['ready'] is True
+    assert generator._preflight_ready_line(scenario) == (
+        'READY room315_right_shuttle_2 loaded on right rail'
+    )
+    assert transport.episode_controls == []
+    assert transport.command_messages == []
+
+
+def test_preflight_mode_reports_missing_initial_state():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_r2_to_staubli',
+        planner=_fake_backend(),
+    )
+    transport = InitialStateTransport({
+        'ready': False,
+        'reason': (
+            "initial scenario state is not ready: missing shuttle "
+            "'room315_right_shuttle_2' on right rail; available: room315_right_shuttle_1. "
+            "Restart the Room 315 launch with the matching right_shuttle_count/start_slots "
+            "and wait for preflight READY."
+        ),
+    })
+
+    scenario['preflight'] = generator.preflight_scenario(scenario, transport)
+
+    assert scenario['preflight']['ready'] is False
+    assert generator._preflight_ready_line(scenario) == (
+        "NOT READY: initial scenario state is not ready: missing shuttle "
+        "'room315_right_shuttle_2' on right rail; available: room315_right_shuttle_1. "
+        "Restart the Room 315 launch with the matching right_shuttle_count/start_slots "
+        "and wait for preflight READY."
+    )
+
+
+def test_main_execute_returns_nonzero_when_execution_fails(monkeypatch, capsys):
+    generator = _load_module()
+    transport = TimeoutTransport()
+    monkeypatch.setattr(generator, 'create_planner_backend', lambda *args, **kwargs: _fake_backend())
+    monkeypatch.setattr(generator, 'RosScenarioTransport', lambda **kwargs: transport)
+
+    rc = generator.main(['--goal', 'right_yaskawa_to_staubli', '--execute'])
+    captured = capsys.readouterr()
+
+    assert rc == 1
+    assert '"success": false' in captured.out
+    assert transport.episode_controls[-1] == 'stop failure'
+
+
+def test_main_execute_quiet_suppresses_success_json(monkeypatch, capsys):
+    generator = _load_module()
+    transport = FakeTransport()
+    monkeypatch.setattr(generator, 'create_planner_backend', lambda *args, **kwargs: _fake_backend())
+    monkeypatch.setattr(generator, 'RosScenarioTransport', lambda **kwargs: transport)
+
+    rc = generator.main(['--goal', 'right_yaskawa_to_staubli', '--execute', '--quiet'])
+    captured = capsys.readouterr()
+
+    assert rc == 0
+    assert captured.out == ''
+    assert captured.err == ''
+    assert transport.episode_controls[-1] == 'stop success'
+
+
+def test_main_execute_quiet_reports_compact_failure(monkeypatch, capsys):
+    generator = _load_module()
+    transport = TimeoutTransport()
+    monkeypatch.setattr(generator, 'create_planner_backend', lambda *args, **kwargs: _fake_backend())
+    monkeypatch.setattr(generator, 'RosScenarioTransport', lambda **kwargs: transport)
+
+    rc = generator.main(['--goal', 'right_yaskawa_to_staubli', '--execute', '--quiet'])
+    captured = capsys.readouterr()
+
+    assert rc == 1
+    assert captured.out == ''
+    assert 'FAILED: timeout waiting for supervisor decision at plan step 0' in captured.err
 
 
 def test_success_path_stops_episode_with_success():

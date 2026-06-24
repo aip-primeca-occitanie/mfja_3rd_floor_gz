@@ -2,9 +2,19 @@
 
 import argparse
 import json
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_pddl_validation_gate import load_validation_result
+from room_315_pddl_validation_gate import privileged_model_input_paths
+from room_315_pddl_validation_gate import validation_approves_training
 
 
 MODEL_INPUT_FIELDS = ('language', 'overhead_images', 'last_command')
@@ -18,6 +28,9 @@ PLANNING_METADATA_FIELDS = (
     'plan_step_index',
     'generated_language',
     'language_template_id',
+    'payload_condition',
+    'payload_present',
+    'payload_type',
 )
 
 
@@ -110,20 +123,60 @@ def _training_row(
     return training
 
 
-def extract_event_dataset(dataset_dir: Path, output_path: Path) -> dict[str, Any]:
+def extract_event_dataset(
+    dataset_dir: Path,
+    output_path: Path,
+    *,
+    include_failed: bool = False,
+    allow_unvalidated: bool = False,
+) -> dict[str, Any]:
     dataset_dir = dataset_dir.expanduser().resolve()
     output_path = output_path.expanduser()
     if not output_path.is_absolute():
         output_path = (dataset_dir / output_path).resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    include_unapproved = bool(include_failed or allow_unvalidated)
     event_files = sorted((dataset_dir / 'episodes').glob('episode_*/events.jsonl'))
     rows_written = 0
+    skipped_rows = 0
+    skipped_episodes = 0
+    approved_episodes = 0
+    included_unapproved_episodes = 0
+    skip_reasons: dict[str, int] = {}
     episodes_seen: set[str] = set()
     with output_path.open('w', encoding='utf-8') as output:
         for event_file in event_files:
+            episode_dir = event_file.parent
+            validation = load_validation_result(episode_dir)
+            approved = validation_approves_training(validation)
+            event_rows = list(_iter_jsonl(event_file))
+            privileged_paths = _privileged_model_input_paths_for_rows(event_rows)
+            skip_reason = ''
+            if not approved:
+                if validation is None:
+                    skip_reason = 'unvalidated_episode'
+                else:
+                    skip_reason = str(
+                        validation.get('failure_reason')
+                        or validation.get('validation_status')
+                        or 'failed_validation'
+                    )
+            if privileged_paths:
+                skip_reason = f'privileged_model_input:{privileged_paths[0]}'
+
+            if skip_reason and not include_unapproved:
+                skipped_episodes += 1
+                skipped_rows += len(event_rows)
+                skip_reasons[skip_reason] = skip_reasons.get(skip_reason, 0) + 1
+                continue
+            if approved:
+                approved_episodes += 1
+            else:
+                included_unapproved_episodes += 1
+
             previous_command: Any = deepcopy(START_LAST_COMMAND)
-            for fallback_step_index, event_row in enumerate(_iter_jsonl(event_file)):
+            for fallback_step_index, event_row in enumerate(event_rows):
                 training_row = _training_row(
                     event_row,
                     fallback_step_index,
@@ -142,6 +195,13 @@ def extract_event_dataset(dataset_dir: Path, output_path: Path) -> dict[str, Any
         'episodes': len(episodes_seen),
         'event_files': len(event_files),
         'rows': rows_written,
+        'approved_episodes': approved_episodes,
+        'skipped_episodes': skipped_episodes,
+        'skipped_rows': skipped_rows,
+        'included_unapproved_episodes': included_unapproved_episodes,
+        'skip_reasons': dict(sorted(skip_reasons.items())),
+        'include_failed': bool(include_failed),
+        'allow_unvalidated': bool(allow_unvalidated),
         'source': 'episodes/*/events.jsonl',
         'ignored_source': 'episodes/*/data.jsonl',
     }
@@ -150,6 +210,14 @@ def extract_event_dataset(dataset_dir: Path, output_path: Path) -> dict[str, Any
         json.dump(summary, stream, ensure_ascii=False, indent=2, sort_keys=True)
     summary['summary_path'] = str(summary_path)
     return summary
+
+
+def _privileged_model_input_paths_for_rows(rows: list[dict[str, Any]]) -> list[str]:
+    paths: list[str] = []
+    for index, row in enumerate(rows):
+        for path in privileged_model_input_paths(row):
+            paths.append(f'row[{index}]{path.removeprefix("$")}')
+    return paths
 
 
 def main() -> None:
@@ -167,8 +235,23 @@ def main() -> None:
         default=Path('meta/training_events.jsonl'),
         help='Output JSONL path. Relative paths are resolved inside dataset_dir.',
     )
+    parser.add_argument(
+        '--include-failed',
+        action='store_true',
+        help='Debug only: include failed or unvalidated episodes in the flat export.',
+    )
+    parser.add_argument(
+        '--allow-unvalidated',
+        action='store_true',
+        help='Debug only: include episodes missing validation.json.',
+    )
     args = parser.parse_args()
-    summary = extract_event_dataset(args.dataset_dir, args.output)
+    summary = extract_event_dataset(
+        args.dataset_dir,
+        args.output,
+        include_failed=args.include_failed,
+        allow_unvalidated=args.allow_unvalidated,
+    )
     print(_json_dumps(summary))
 
 

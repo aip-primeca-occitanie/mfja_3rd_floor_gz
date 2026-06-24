@@ -165,17 +165,17 @@ def test_http_plan_sends_only_schema_v3_model_input_to_provider():
 def test_agent_accepts_event_level_action_vector_response():
     agent_module = _load_module()
     action_vector = [
-        2, 0,
+        2, 0, -1,
         0, 0, 1, 0,
         0, 0, 2, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
-        0.0, 1, 3, 8,
+        0.0, 1, 3, 8, 0,
     ]
+    expected = {
+        'action_vector': [float(value) for value in action_vector],
+        'action_vector_schema_version': 3,
+    }
 
-    assert agent_module._parse_command_payload(action_vector) == {
-        'action_vector': [float(value) for value in action_vector],
-    }
-    assert agent_module._parse_command_payload({'action_vector': action_vector}) == {
-        'action_vector': [float(value) for value in action_vector],
-    }
+    assert agent_module._parse_command_payload(action_vector) == expected
+    assert agent_module._parse_command_payload({'action_vector': action_vector}) == expected

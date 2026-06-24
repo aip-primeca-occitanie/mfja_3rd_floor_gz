@@ -25,6 +25,21 @@ def _rows(path: Path):
     ]
 
 
+def _write_validation(episode_dir: Path, *, approved: bool = True, reason: str = ''):
+    validation = {
+        'scenario_id': episode_dir.name,
+        'goal_id': episode_dir.name,
+        'source': 'pddl_plansys',
+        'validation_status': 'approved' if approved else 'failed',
+        'approved_for_training': approved,
+        'failure_reason': '' if approved else (reason or 'test failure'),
+    }
+    (episode_dir / 'validation.json').write_text(
+        json.dumps(validation) + '\n',
+        encoding='utf-8',
+    )
+
+
 def _action(primitive: str, *, side: str = 'right') -> dict:
     return {
         'primitive': primitive,
@@ -95,6 +110,7 @@ def test_event_extractor_writes_minimal_training_rows_and_ignores_raw_frames(tmp
         },
     }
     (episode_dir / 'events.jsonl').write_text(json.dumps(event_row) + '\n', encoding='utf-8')
+    _write_validation(episode_dir)
     (episode_dir / 'data.jsonl').write_text(
         json.dumps({
             'episode_id': 'episode_000001_test',
@@ -175,6 +191,7 @@ def test_event_extractor_falls_back_to_next_action_and_step_index(tmp_path):
         }) + '\n',
         encoding='utf-8',
     )
+    _write_validation(episode_dir)
 
     output = dataset_dir / 'flat.jsonl'
     extractor.extract_event_dataset(dataset_dir, output)
@@ -232,7 +249,7 @@ def test_event_extractor_rebuilds_previous_command_and_ignores_leaking_input(tmp
             'observation.state': [1.0, 2.0, 3.0],
             'privileged_eval': {'raw_shuttle_states': {'right': {'s': 0.4}}},
             'auxiliary_targets': {'switch_states': {'right': {'A3': 'EXTERIOR'}}},
-            'legacy_next_action': {'action': action['primitive']},
+            'symbolic_next_action': {'action': action['primitive']},
             'action': action,
             'action_vector': [float(index), float(index + 1)],
         })
@@ -240,13 +257,14 @@ def test_event_extractor_rebuilds_previous_command_and_ignores_leaking_input(tmp
         ''.join(json.dumps(row) + '\n' for row in leaking_rows),
         encoding='utf-8',
     )
+    _write_validation(episode_dir, approved=False, reason='privileged model_input leak')
     (episode_dir / 'data.jsonl').write_text(
         json.dumps({'model_input': {'last_command': {'action': 'SHOULD_NOT_APPEAR'}}}) + '\n',
         encoding='utf-8',
     )
 
     output = dataset_dir / 'meta' / 'training_events.jsonl'
-    summary = extractor.extract_event_dataset(dataset_dir, output)
+    summary = extractor.extract_event_dataset(dataset_dir, output, include_failed=True)
     rows = _rows(output)
 
     assert summary['source'] == 'episodes/*/events.jsonl'

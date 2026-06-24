@@ -113,19 +113,33 @@ Execution never bypasses the Room 315 VLA supervisor. In `--execute` mode the
 generator:
 
 1. Generates or loads a symbolic plan.
-2. Generates deterministic task language.
-3. Publishes `start <language>` to `/room_315/vla/episode_control`.
-4. Publishes each primitive command to `/room_315/vla/command`.
-5. Waits for `/room_315/vla/status` safety-decoder feedback.
-6. For shuttle motion steps, waits for the target station sensor before
+2. Runs static validation on the symbolic plan, primitive commands, schema-v3
+   action vectors, shuttle identity, and model-input boundary.
+3. Generates deterministic task language.
+4. Publishes `start <language>` to `/room_315/vla/episode_control`.
+5. Publishes each primitive command to `/room_315/vla/command`.
+6. Waits for `/room_315/vla/status` safety-decoder feedback.
+7. For shuttle motion steps, waits for the target station sensor before
    publishing the following `stop_shuttle` / `shuttle OFF` command.
-7. Stops immediately with `stop failure` if the supervisor rejects a command or
-   if the target station sensor is not reached before the arrival timeout.
+8. Stops immediately with `stop failure` if the supervisor rejects a command,
+   if the target station sensor is not reached before the arrival timeout, or
+   if fleet safety metrics report wrong-shuttle, headway, block, deadlock, or
+   emergency-stop violations.
 
 For example, `right_yaskawa_to_staubli` waits for `DZI3R` or `DZI4R` before
 publishing `shuttle OFF`. This keeps the PDDL plan symbolic while the runtime
 still uses real supervisor status to decide when to stop the moving shuttle.
-8. Publishes `stop success` after all planned steps complete.
+9. Verifies the final goal from runtime status and publishes `stop success`
+   only after all planned steps complete.
+
+Every generated scenario is a candidate until the validation gate writes:
+
+```text
+episodes/<episode_id>/validation.json
+```
+
+Only `validation_status: approved` with `approved_for_training: true` may enter
+the default flat training export. Failed episodes remain on disk for debug.
 
 The supervisor remains responsible for safety decoding and conversion to rail
 switch, stopper, and shuttle commands. Reset is not recorded as part of the task.
@@ -240,6 +254,10 @@ room315_right_shuttle_count:=0..4
 room315_left_shuttle_count:=0..4
 room315_right_start_slots:=1,2,3,4
 room315_left_start_slots:=1,2,3,4
+room315_enable_payload_visuals:=true
+room315_payload_pose_x_offset_m:=-0.08  # optional; default centers the payload
+room315_right_loaded_shuttles:=R2
+room315_left_loaded_shuttles:=L2
 ```
 
 When more than one shuttle exists on a side, motion commands must identify the
@@ -247,8 +265,8 @@ target shuttle. Ambiguous commands such as “turn on the right shuttle” are
 rejected by the fleet-aware safety layer. Explicit commands can name `R2`,
 `right_shuttle_2`, or `room315_right_shuttle_2`.
 
-The multi-shuttle event target is action schema v3. It keeps the same primitive
-action idea as v2 but adds:
+The multi-shuttle event target is action schema v3. It uses the canonical
+event-level primitive action format with:
 
 ```text
 shuttle_index
@@ -264,6 +282,49 @@ language
 overhead_images
 last_command
 ```
+
+Payload state is represented symbolically outside `model_input` with predicates
+such as:
+
+```lisp
+(loaded right_shuttle_2)
+(empty right_shuttle_1)
+```
+
+The scenario generator includes payload-specific goals such as
+`right_loaded_r2_to_staubli`, `right_loaded_to_slot3`,
+`right_loaded_to_slot3_clear_blocker`, `right_empty_r1_to_yaskawa`, and
+`left_loaded_l2_to_kuka`. Generated route commands still use schema v3 with
+the selected `shuttle_index`/`target_id`, for example R2 maps to
+`shuttle_index=1` and `target_id=right_shuttle_2`.
+
+`right_loaded_to_slot3` is the first deterministic multi-match payload policy:
+R1 starts loaded in slot 1, R2 starts loaded in slot 2, and the target is slot
+3. When the language says “move the loaded right shuttle to slot 3”, the
+scenario generator selects the loaded shuttle nearest to the target slot, with
+lowest shuttle ID as the tie-breaker. The selected task still executes through
+the supervisor/schema-v3 path, while `selection_policy`,
+`selection_candidates`, `target_slot`, and payload state remain outside
+`model_input`.
+
+The supervisor accepts task language such as “move the loaded shuttle to
+Staubli”, “move the empty shuttle to Yaskawa”, or “move R2 carrying a part to
+Staubli”. If more than one source shuttle matches the requested loaded/empty
+condition and no shuttle ID is given, the command is rejected as ambiguous and
+the failed episode is not approved for training export by default.
+
+`right_loaded_to_slot3_clear_blocker` is the blocked visual payload training
+scenario. It starts R1 empty in slot 3 as the blocker and R2 loaded in slot 2
+as the selected shuttle. The generated primitive plan first moves R1 from
+Staubli to Yaskawa slot 1, moves the loaded R2 to slot 3, then restores R1 to
+the newly free slot 2. The restore slot is selected by
+`selected_source_slot_then_nearest_free_slot`: first use the slot freed by the
+selected shuttle, then fall back to the nearest unoccupied slot. Per-step
+metadata records `coordination_phase`, `plan_step_target_shuttle_id`,
+`target_slot`, and `blocker_clearance` outside `model_input`.
+
+Current scope: blocker restoration uses free station slots. General restoration
+to the interior loop is the next planning phase.
 
 ## Visual Identity And Payload Occlusion
 
@@ -423,8 +484,14 @@ The report compares manual and PDDL-generated data with:
 
 ```text
 dataset_source
-number_of_episodes
+total_episodes
+approved_episodes
+failed_episodes
+approval_rate
+failure_reasons_distribution
 number_of_events
+approved_event_count
+skipped_event_count
 goals_covered
 language_variants_count
 average_plan_length

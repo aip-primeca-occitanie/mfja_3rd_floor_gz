@@ -55,30 +55,6 @@ MODEL_OUTPUT_ACTIONS = (
     'clear_emergency_stop',
     'status',
 )
-EVENT_ACTION_VECTOR_V2_FIELDS = (
-    'primitive_id',
-    'side_id',
-    'switch_mask_A1',
-    'switch_mask_A2',
-    'switch_mask_A3',
-    'switch_mask_A4',
-    'switch_value_A1',
-    'switch_value_A2',
-    'switch_value_A3',
-    'switch_value_A4',
-    'stopper_mask_A1',
-    'stopper_mask_A2',
-    'stopper_mask_A3',
-    'stopper_mask_A4',
-    'stopper_value_A1',
-    'stopper_value_A2',
-    'stopper_value_A3',
-    'stopper_value_A4',
-    'speed_mps',
-    'wait_condition_id',
-    'target_id',
-    'reason_id',
-)
 EVENT_ACTION_VECTOR_FIELDS = tuple(ACTION_VECTOR_V3_FIELDS)
 EVENT_PRIMITIVE_IDS = {
     'WAIT': 0,
@@ -423,8 +399,6 @@ def _action_vector_schema_version(raw: Any) -> int | None:
         return None
     if len(raw) == len(EVENT_ACTION_VECTOR_FIELDS):
         version = ACTION_SCHEMA_VERSION
-    elif len(raw) == len(EVENT_ACTION_VECTOR_V2_FIELDS):
-        version = 2
     else:
         return None
     try:
@@ -449,7 +423,8 @@ def _multi_shuttle_active(status: dict[str, Any]) -> bool:
 
 
 def _preferred_action_schema_version(status: dict[str, Any]) -> int:
-    return ACTION_SCHEMA_VERSION if _multi_shuttle_active(status) else 2
+    _ = status
+    return ACTION_SCHEMA_VERSION
 
 
 def _shuttle_index_mapping() -> dict[str, dict[str, int]]:
@@ -478,6 +453,12 @@ def _forbidden_output_keys() -> set[str]:
         'block_reservations',
         'gazebo_pose',
         'gazebo_poses',
+        'loaded',
+        'payload',
+        'payload_condition',
+        'payload_present',
+        'payload_state',
+        'payload_type',
     }
 
 
@@ -536,21 +517,20 @@ def _validate_provider_action_vector(
         try:
             declared = int(declared_schema_version)
         except (TypeError, ValueError):
-            raise ValueError('action_vector_schema_version must be 2 or 3') from None
-        if declared not in {2, ACTION_SCHEMA_VERSION}:
-            raise ValueError('action_vector_schema_version must be 2 or 3')
+            raise ValueError('action_vector_schema_version must be 3') from None
+        if declared != ACTION_SCHEMA_VERSION:
+            raise ValueError('action_vector_schema_version must be 3')
         if declared != version:
             raise ValueError(
                 f'action_vector_schema_version={declared} does not match vector length schema {version}'
             )
-    if multi_shuttle_active and version != ACTION_SCHEMA_VERSION:
-        raise ValueError('multi-shuttle mode requires schema-v3 action_vector with shuttle_index')
     values = [float(value) for value in raw_vector]
-    if multi_shuttle_active and _movement_vector_missing_shuttle_index(values):
-        raise ValueError('multi-shuttle movement action_vector requires shuttle_index')
-    payload = {'action_vector': values}
-    if version == ACTION_SCHEMA_VERSION:
-        payload['action_vector_schema_version'] = ACTION_SCHEMA_VERSION
+    if _movement_vector_missing_shuttle_index(values):
+        raise ValueError('schema-v3 movement action_vector requires shuttle_index')
+    payload = {
+        'action_vector': values,
+        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
+    }
     return payload
 
 
@@ -581,6 +561,8 @@ def _parse_command_payload(raw: Any, *, multi_shuttle_active: bool = False) -> d
             parsed,
             multi_shuttle_active=multi_shuttle_active,
         )
+    if isinstance(parsed, list):
+        raise ValueError('VLA provider returned an invalid action_vector length or value')
     if not isinstance(parsed, dict):
         raise ValueError('VLA provider must return a JSON object command or action_vector')
     if _is_action_vector(parsed.get('action_vector')):
@@ -592,8 +574,8 @@ def _parse_command_payload(raw: Any, *, multi_shuttle_active: bool = False) -> d
     action = str(parsed.get('action', '')).strip()
     if action not in MODEL_OUTPUT_ACTIONS:
         raise ValueError(f'unsupported VLA action {action!r}; route_template is not a model output')
-    if multi_shuttle_active and _multi_shuttle_json_command_is_ambiguous(parsed):
-        raise ValueError('multi-shuttle primitive shuttle command requires shuttle_id/shuttle/name')
+    if _multi_shuttle_json_command_is_ambiguous(parsed):
+        raise ValueError('schema-v3 primitive shuttle command requires shuttle_id/shuttle/name')
     return parsed
 
 
@@ -788,25 +770,23 @@ class Room315RealVlaAgent(Node):
                 'action_vector_schema_version': action_schema_version,
                 'allowed_output_formats': ('action_vector', 'json_command'),
                 'event_action_vector_fields': EVENT_ACTION_VECTOR_FIELDS,
-                'event_action_vector_v2_fields': EVENT_ACTION_VECTOR_V2_FIELDS,
                 'event_primitive_ids': EVENT_PRIMITIVE_IDS,
                 'side_ids': SIDE_IDS,
                 'shuttle_index_mapping': _shuttle_index_mapping(),
                 'target_ids': TARGET_IDS,
                 'reason_ids': REASON_IDS,
                 'coordination_mode_ids': COORDINATION_MODE_IDS,
-                'multi_shuttle_active': action_schema_version == ACTION_SCHEMA_VERSION,
+                'multi_shuttle_active': _multi_shuttle_active(self.latest_status),
                 'contract_note': (
-                    'Return schema-v3 action_vector with shuttle_index for any '
-                    'multi-shuttle movement. Do not return route_template or '
-                    'privileged fields.'
+                    'Return schema-v3 action_vector. Movement actions must include '
+                    'shuttle_index. Do not return route_template or privileged fields.'
                 ),
             },
             headers={},
         )
         return _parse_command_payload(
             response,
-            multi_shuttle_active=action_schema_version == ACTION_SCHEMA_VERSION,
+            multi_shuttle_active=_multi_shuttle_active(self.latest_status),
         )
 
     def _post_json(self, url: str, payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:

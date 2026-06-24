@@ -360,6 +360,25 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_shuttle_speed:=0.08
 ```
 
+To start with visual payload boxes on selected shuttles, add:
+
+```bash
+  room315_enable_payload_visuals:=true \
+  room315_right_loaded_shuttles:=R2 \
+  room315_left_loaded_shuttles:=L2
+```
+
+The payload local X offset defaults to `-0.08`, which centers the cube on the
+shuttle. Override `room315_payload_pose_x_offset_m` only when intentionally
+moving the box forward or backward relative to the shuttle.
+
+Loaded shuttles publish privileged payload state on
+`/room_315/rails/<side>/shuttles/payload_state`; change it at runtime with
+`/room_315/rails/<side>/shuttles/payload_command`, for example
+`{"shuttle":"R2","loaded":false}`. Payload state is for supervisor/debug and
+dataset metadata only; VLA `model_input` still contains only language, overhead
+images, and last command.
+
 In a command terminal, sweep the switches through exterior and interior routes:
 
 ```bash

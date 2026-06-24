@@ -102,10 +102,11 @@ and [docs/ROOM315_RAIL_REFERENCE.md](docs/ROOM315_RAIL_REFERENCE.md).
 ## Rail-only VLA Layer
 
 The Room 315 VLA layer treats the rail cell as a sparse-sensing research task:
-language plus overhead images plus binary rail state predicts event-level
-symbolic actions. Exact Gazebo pose, true shuttle segment, distance-to-switch,
-and normalized rail position stay out of `model_input`; those values are kept
-only in `privileged_eval` for reset, auditing, and evaluation.
+language plus overhead images plus the previous command predicts event-level
+symbolic actions. Binary rail state, exact Gazebo pose, true shuttle segment,
+distance-to-switch, and normalized rail position stay out of `model_input`;
+those values are kept only in `privileged_eval` for reset, auditing, and
+evaluation.
 
 The VLA stack includes:
 
@@ -115,7 +116,8 @@ The VLA stack includes:
 - Primitive debugging commands for switches, stoppers, shuttles, stop-all, and
   emergency stop.
 - A safety decoder between model actions and rail execution.
-- Event-level symbolic action schema v2 with switch/stopper masks and values.
+- Event-level symbolic action schema v3 with switch/stopper masks, shuttle
+  identity, and coordination mode values.
 - Dataset recording and benchmark/evaluator tools.
 
 Canonical station mapping:
@@ -168,6 +170,11 @@ ros2 run mfja_robot_control_config room_315_vla_event_extractor.py \
   ~/room315_smolvla_demo \
   --output meta/training_events.jsonl
 ```
+
+For PDDL/PlanSys2 generated scenarios, the extractor is fail-closed: by default
+it includes only episodes with `episodes/<episode_id>/validation.json` marked
+`approved_for_training: true`. Use `--include-failed` or `--allow-unvalidated`
+only for explicit debug exports.
 
 To run the lightweight baseline evaluator:
 

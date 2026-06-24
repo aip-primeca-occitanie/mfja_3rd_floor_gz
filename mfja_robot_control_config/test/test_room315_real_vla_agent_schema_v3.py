@@ -80,12 +80,12 @@ def test_agent_rejects_multi_shuttle_vector_missing_shuttle_index():
         )
 
 
-def test_agent_rejects_v2_vector_when_multi_shuttle_active():
+def test_agent_rejects_legacy_short_vector():
     agent = _load_module()
-    vector = [0.0] * len(agent.EVENT_ACTION_VECTOR_V2_FIELDS)
-    vector[agent.EVENT_ACTION_VECTOR_V2_FIELDS.index('primitive_id')] = 4
+    vector = [0.0] * 22
+    vector[0] = 4
 
-    with pytest.raises(ValueError, match='schema-v3'):
+    with pytest.raises(ValueError, match='invalid action_vector length'):
         agent._parse_command_payload(vector, multi_shuttle_active=True)
 
 

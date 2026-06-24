@@ -1,4 +1,4 @@
-schema_version: 2
+schema_version: 3
 action_schema_version: 3
 model_input_schema_version: 3
 description: >
@@ -8,30 +8,6 @@ description: >
   framewise commands, and not raw Gazebo controls.
 
 action_vector_fields:
-  - primitive_id
-  - side_id
-  - switch_mask_A1
-  - switch_mask_A2
-  - switch_mask_A3
-  - switch_mask_A4
-  - switch_value_A1
-  - switch_value_A2
-  - switch_value_A3
-  - switch_value_A4
-  - stopper_mask_A1
-  - stopper_mask_A2
-  - stopper_mask_A3
-  - stopper_mask_A4
-  - stopper_value_A1
-  - stopper_value_A2
-  - stopper_value_A3
-  - stopper_value_A4
-  - speed_mps
-  - wait_condition_id
-  - target_id
-  - reason_id
-
-action_vector_v3_fields:
   - primitive_id
   - side_id
   - shuttle_index
@@ -57,7 +33,7 @@ action_vector_v3_fields:
   - reason_id
   - coordination_mode
 
-symbolic_action_v3_fields:
+symbolic_action_fields:
   - primitive
   - side
   - shuttle_id
@@ -71,18 +47,6 @@ symbolic_action_v3_fields:
   - target_id
   - reason
   - coordination_mode
-
-symbolic_action_fields:
-  - primitive
-  - side
-  - switch_mask
-  - switch_values
-  - stopper_mask
-  - stopper_values
-  - speed_mps
-  - wait_condition
-  - target_id
-  - reason
 
 primitive_ids:
   WAIT: 0
@@ -288,6 +252,7 @@ privileged_eval_fields:
   - raw_active_sensor_readings
   - visual_eval_labels
   - shuttle_identity_tracks
+  - payload_state
 
 sensor_ids_by_side:
   right:

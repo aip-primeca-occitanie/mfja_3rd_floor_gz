@@ -91,10 +91,26 @@ def test_move_shuttle_translates_to_shuttle_on_with_speed():
     assert translated.event_action['primitive'] == 'SHUTTLE_ON'
     assert translated.event_action['speed_mps'] == 0.3
     assert translated.event_action['wait_condition'] == 'shuttle_command_applied'
-    assert translated.event_action['target_id'] == 'right_shuttle'
+    assert translated.event_action['target_id'] == 'right_shuttle_1'
+    assert translated.event_action['shuttle_id'] == 'R1'
+    assert translated.event_action['shuttle_index'] == 0
     assert translated.event_action['reason'] == 'shuttle_start'
     assert _action_value(translator, translated.action_vector, 'primitive_id') == 4.0
     assert _action_value(translator, translated.action_vector, 'speed_mps') == 0.3
+
+
+def test_move_shuttle_with_payload_selected_identity_maps_to_r2_schema_fields():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        'move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3'
+    )
+
+    assert translated.command['shuttle'] == 'right_shuttle_2'
+    assert translated.event_action['target_id'] == 'right_shuttle_2'
+    assert translated.event_action['shuttle_id'] == 'R2'
+    assert translated.event_action['shuttle_index'] == 1
+    assert _action_value(translator, translated.action_vector, 'shuttle_index') == 1.0
 
 
 def test_stop_shuttle_translates_to_stop_now():
@@ -109,7 +125,9 @@ def test_stop_shuttle_translates_to_stop_now():
         'command': 'OFF',
     }
     assert translated.event_action['primitive'] == 'STOP_NOW'
-    assert translated.event_action['target_id'] == 'right_shuttle'
+    assert translated.event_action['target_id'] == 'right_shuttle_1'
+    assert translated.event_action['shuttle_id'] == 'R1'
+    assert translated.event_action['shuttle_index'] == 0
     assert translated.event_action['reason'] == 'shuttle_stop'
     assert _action_value(translator, translated.action_vector, 'primitive_id') == 5.0
 

@@ -41,6 +41,7 @@ def _fake_supervisor(module):
             },
             'switches': {'A1': 'E', 'A2': 'E', 'A3': 'E', 'A4': 'E'},
             'stoppers': {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'},
+            'payloads': {},
             'active_sensors': [],
             'active_position_sensors': [
                 {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
@@ -50,6 +51,7 @@ def _fake_supervisor(module):
             'shuttles': {},
             'switches': {'A1': 'E', 'A2': 'E', 'A3': 'E', 'A4': 'E'},
             'stoppers': {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'},
+            'payloads': {},
             'active_sensors': [],
             'active_position_sensors': [],
         },
@@ -157,6 +159,106 @@ def test_supervisor_config_loads_canonical_route_templates():
         supervisor._template_from_text('move the right shuttle from Yaskawa to Staubli')
         == 'right_yaskawa_to_staubli'
     )
+
+
+def test_supervisor_ingests_payload_state_as_privileged_snapshot():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    message = module.String()
+    message.data = (
+        '{"shuttles": ['
+        '{"entity_name": "room315_right_shuttle_2", "shuttle_id": "right_shuttle_2", '
+        '"side": "right", "loaded": true, "payload_type": "box"}'
+        ']}'
+    )
+
+    supervisor._on_payload_state('right', message)
+
+    payloads = supervisor.rails['right']['payloads']
+    assert payloads['room315_right_shuttle_2']['loaded'] is True
+    assert payloads['room315_right_shuttle_2']['payload_type'] == 'box'
+    snapshot = supervisor._payload_state_snapshot()
+    assert snapshot['by_shuttle']['room315_right_shuttle_2']['model_input_exposure'] == 'excluded'
+
+
+def test_route_template_rejects_ambiguous_loaded_shuttle_command():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['active_position_sensors'] = [
+        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
+        {'name': 'DZI2R', 'shuttle': 'room315_right_shuttle_2'},
+    ]
+    supervisor.rails['right']['payloads'] = {
+        'room315_right_shuttle_1': {'loaded': True, 'payload_type': 'box'},
+        'room315_right_shuttle_2': {'loaded': True, 'payload_type': 'box'},
+    }
+
+    decision = supervisor._safety_decode_command({
+        'action': 'route_template',
+        'template': 'right_yaskawa_to_staubli',
+        'payload_condition': 'loaded',
+    })
+
+    assert decision['accepted'] is False
+    assert 'ambiguous payload command' in decision['reason']
+
+
+def test_route_template_selects_single_loaded_shuttle():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['active_position_sensors'] = [
+        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
+        {'name': 'DZI2R', 'shuttle': 'room315_right_shuttle_2'},
+    ]
+    supervisor.rails['right']['payloads'] = {
+        'room315_right_shuttle_1': {'loaded': False, 'payload_type': 'none'},
+        'room315_right_shuttle_2': {'loaded': True, 'payload_type': 'box'},
+    }
+
+    decision = supervisor._safety_decode_command({
+        'action': 'route_template',
+        'template': 'right_yaskawa_to_staubli',
+        'payload_condition': 'loaded',
+    })
+
+    assert decision['accepted'] is True
+    corrected = decision['corrected_action']
+    assert corrected['shuttle'] == 'room315_right_shuttle_2'
+    assert corrected['validated_source_slot'] == '2'
+    assert corrected['payload_condition'] == 'loaded'
+
+
+def test_transport_task_validation_preserves_selected_shuttle():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['active_position_sensors'] = [
+        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
+        {'name': 'DZI2R', 'shuttle': 'room315_right_shuttle_2'},
+    ]
+    template = supervisor.route_templates['right_yaskawa_to_staubli']
+    task = supervisor._new_task(
+        'right_yaskawa_to_staubli',
+        template,
+        {'shuttle': 'room315_right_shuttle_2'},
+    )
+
+    supervisor._advance_transport_task(task)
+
+    assert task['phase'] == 'prepare'
+    assert task['shuttle'] == 'room315_right_shuttle_2'
+    assert task['source_slot'] == '2'
+
+
+def test_payload_language_command_selects_explicit_shuttle_and_template():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+
+    command = supervisor._parse_text_command('move R2 carrying a part to Staubli')
+
+    assert command['action'] == 'route_template'
+    assert command['template'] == 'right_yaskawa_to_staubli'
+    assert command['shuttle'] == 'R2'
+    assert command['payload_condition'] == 'loaded'
 
 
 def test_supervisor_primitive_commands_remain_backward_compatible():

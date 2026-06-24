@@ -131,9 +131,11 @@ def _jsonl_rows(stream):
 
 
 def _blank_action(module, primitive: str, side: str = 'right') -> dict:
-    return {
+    action = {
         'primitive': primitive,
         'side': side,
+        'shuttle_id': '',
+        'shuttle_index': -1,
         'switch_mask': {name: 0 for name in module.DEVICE_NAMES},
         'switch_values': {name: 'UNCHANGED' for name in module.DEVICE_NAMES},
         'stopper_mask': {name: 0 for name in module.DEVICE_NAMES},
@@ -142,7 +144,13 @@ def _blank_action(module, primitive: str, side: str = 'right') -> dict:
         'wait_condition': 'none',
         'target_id': 'none',
         'reason': 'none',
+        'coordination_mode': 'normal',
     }
+    if primitive in {'SHUTTLE_ON', 'STOP_NOW'}:
+        action['shuttle_index'] = 0
+        action['shuttle_id'] = 'R1' if side == 'right' else 'L1'
+        action['target_id'] = f'{side}_shuttle_1'
+    return action
 
 
 def _event_vector(
@@ -346,7 +354,7 @@ def test_smoke_event_row_includes_images_binary_state_and_action():
     assert row['action_vector'] == recorder_module._encode_action(row['action'])
 
 
-def test_smoke_action_json_vector_roundtrip_for_event_v2_primitives():
+def test_smoke_action_json_vector_roundtrip_for_schema_v3_primitives():
     recorder = _load_recorder()
     actions = [
         _blank_action(recorder, 'WAIT'),
@@ -368,7 +376,7 @@ def test_smoke_action_json_vector_roundtrip_for_event_v2_primitives():
     actions[5]['speed_mps'] = 0.12
     for action in actions[3:6]:
         action['wait_condition'] = 'shuttle_command_applied'
-        action['target_id'] = f'{action["side"]}_shuttle'
+        action['target_id'] = f'{action["side"]}_shuttle_1'
         action['reason'] = 'shuttle_start' if action['primitive'].startswith('SHUTTLE_ON') else 'shuttle_stop'
     actions[6]['switch_mask']['A3'] = 1
     actions[6]['switch_values']['A3'] = 'INTERIOR'

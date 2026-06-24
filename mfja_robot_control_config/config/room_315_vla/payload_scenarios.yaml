@@ -28,6 +28,18 @@ variants:
     visible_marker_count: 4
     expected_visible_regions: [front_left, front_right, rear_left, rear_right]
     normal_payload: true
+  carried_box:
+    model_uri: model://room315_vla_payload_small_box
+    payload_present: true
+    payload_type: box
+    payload_state: loaded
+    loaded: true
+    payload_height_class: low
+    size_m: {x: 0.09, y: 0.06, z: 0.06}
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
   medium_box:
     model_uri: model://room315_vla_payload_medium_box
     payload_present: true
@@ -70,6 +82,11 @@ variants:
     expected_visible_regions: [front_right, rear_left, rear_right]
     normal_payload: false
 metadata_fields_outside_model_input:
+  - shuttle_id
+  - side
+  - loaded
+  - payload_state
+  - payload_condition
   - payload_present
   - payload_type
   - payload_height_class

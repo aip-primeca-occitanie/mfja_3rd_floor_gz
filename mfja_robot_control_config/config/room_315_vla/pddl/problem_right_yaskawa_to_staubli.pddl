@@ -14,6 +14,8 @@
   (:init
     (shuttle_at right_shuttle right_yaskawa)
     (shuttle_stopped_at right_shuttle right_yaskawa)
+    (shuttle_on_side right_shuttle right)
+    (empty right_shuttle)
     (connected right right_yaskawa right_staubli)
   )
 

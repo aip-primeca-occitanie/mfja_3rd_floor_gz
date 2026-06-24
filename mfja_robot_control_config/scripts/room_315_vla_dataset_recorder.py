@@ -27,6 +27,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
 from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
 from room_315_multi_shuttle import COORDINATION_MODE_IDS
+from room_315_multi_shuttle import EVENT_ACTION_V3_FIELDS
 from room_315_multi_shuttle import decode_action_v3 as _decode_action_v3
 from room_315_multi_shuttle import encode_action_v3 as _encode_action_v3
 from room_315_multi_shuttle import model_input_is_clean
@@ -191,30 +192,8 @@ WAIT_CONDITION_IDS_BY_VALUE = {value: key for key, value in WAIT_CONDITION_IDS.i
 TARGET_IDS_BY_VALUE = {value: key for key, value in TARGET_IDS.items()}
 REASON_IDS_BY_VALUE = {value: key for key, value in REASON_IDS.items()}
 
-ACTION_VECTOR_FIELDS = [
-    'primitive_id',
-    'side_id',
-    *[f'switch_mask_{name}' for name in DEVICE_NAMES],
-    *[f'switch_value_{name}' for name in DEVICE_NAMES],
-    *[f'stopper_mask_{name}' for name in DEVICE_NAMES],
-    *[f'stopper_value_{name}' for name in DEVICE_NAMES],
-    'speed_mps',
-    'wait_condition_id',
-    'target_id',
-    'reason_id',
-]
-EVENT_ACTION_FIELDS = [
-    'primitive',
-    'side',
-    'switch_mask',
-    'switch_values',
-    'stopper_mask',
-    'stopper_values',
-    'speed_mps',
-    'wait_condition',
-    'target_id',
-    'reason',
-]
+ACTION_VECTOR_FIELDS = list(ACTION_VECTOR_V3_FIELDS)
+EVENT_ACTION_FIELDS = list(EVENT_ACTION_V3_FIELDS)
 
 OBSERVATION_STATE_FIELDS = [
     'emergency_stop',
@@ -253,6 +232,7 @@ PRIVILEGED_EVAL_FIELDS = [
     'raw_active_sensor_readings',
     'visual_eval_labels',
     'shuttle_identity_tracks',
+    'payload_state',
 ]
 PLANNING_METADATA_FIELDS = [
     'planning_source',
@@ -266,6 +246,7 @@ PLANNING_METADATA_FIELDS = [
     'target_shuttle_id',
     'involved_shuttles',
     'reserved_blocks',
+    'payload_condition',
     'payload_present',
     'payload_type',
     'visible_marker_count',
@@ -513,14 +494,12 @@ def _action_vector_or_none(next_action: dict[str, Any]) -> list[float] | None:
 
 
 def _action_schema_version_for_event(event_action: dict[str, Any]) -> int:
-    if _requests_action_schema_v3(event_action):
-        return ACTION_SCHEMA_VERSION
-    return 2
+    _ = event_action
+    return ACTION_SCHEMA_VERSION
 
 
 def _action_schema_fields_for_event(event_action: dict[str, Any]) -> list[str]:
-    if _action_schema_version_for_event(event_action) == ACTION_SCHEMA_VERSION:
-        return ACTION_VECTOR_V3_FIELDS
+    _ = event_action
     return ACTION_VECTOR_FIELDS
 
 
@@ -734,7 +713,7 @@ def _reason_for_action(
     return 'none'
 
 
-def _event_action_v2_from_symbolic_action(
+def _event_action_from_symbolic_action(
     command: Any,
     *,
     wait_condition: dict[str, Any] | None = None,
@@ -829,45 +808,57 @@ def _event_action_v2_from_symbolic_action(
             status_text=status_text,
         ),
     }
-    event_action.update(_multi_shuttle_event_fields(command_dict, side=side, target_id=target_id))
+    event_action.update(_schema_v3_event_fields(
+        command_dict,
+        primitive=primitive,
+        side=side,
+        target_id=target_id,
+    ))
     return event_action
 
 
-def _multi_shuttle_event_fields(command: dict[str, Any], *, side: str, target_id: str) -> dict[str, Any]:
-    if not _requests_action_schema_v3(command):
-        return {}
+def _schema_v3_event_fields(
+    command: dict[str, Any],
+    *,
+    primitive: str,
+    side: str,
+    target_id: str,
+) -> dict[str, Any]:
     raw_index = command.get('shuttle_index')
+    shuttle_text = str(
+        command.get('shuttle_id')
+        or command.get('shuttle')
+        or command.get('name')
+        or target_id
+        or ''
+    )
     if raw_index is None:
-        shuttle_text = str(
-            command.get('shuttle_id')
-            or command.get('shuttle')
-            or command.get('name')
-            or target_id
-            or ''
-        )
         match = re.search(r'(?:^|_)([1-4])$', shuttle_text)
-        raw_index = int(match.group(1)) - 1 if match else -1
+        if match:
+            raw_index = int(match.group(1)) - 1
+        elif primitive in {'SHUTTLE_ON', 'STOP_NOW'}:
+            raw_index = 0
+        else:
+            raw_index = -1
+    shuttle_index = int(raw_index)
+    shuttle_id = str(command.get('shuttle_id') or command.get('shuttle') or command.get('name') or '')
+    if primitive in {'SHUTTLE_ON', 'STOP_NOW'} and not shuttle_id:
+        shuttle_id = f'{"R" if side == "right" else "L"}{shuttle_index + 1}'
+    normalized_target = _normalize_target_id(target_id)
+    if primitive in {'SHUTTLE_ON', 'STOP_NOW'} and normalized_target in {'right_shuttle', 'left_shuttle', 'none'}:
+        normalized_target = f'{side}_shuttle_{shuttle_index + 1}'
     return {
         'action_vector_schema_version': ACTION_SCHEMA_VERSION,
-        'shuttle_id': str(
-            command.get('shuttle_id')
-            or command.get('shuttle')
-            or command.get('name')
-            or ''
-        ),
-        'shuttle_index': int(raw_index),
+        'shuttle_id': shuttle_id,
+        'shuttle_index': shuttle_index,
+        'target_id': normalized_target,
         'coordination_mode': str(command.get('coordination_mode') or 'normal'),
     }
 
 
 def _requests_action_schema_v3(command: dict[str, Any]) -> bool:
-    if _safe_int(
-        command.get('action_vector_schema_version')
-        or command.get('action_schema_version')
-        or 0
-    ) == 3:
-        return True
-    return any(key in command for key in ('shuttle_id', 'shuttle_index', 'coordination_mode'))
+    _ = command
+    return True
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -909,10 +900,10 @@ def _mask_value_dicts_from_event_action(
     return masks, values
 
 
-def _normalize_event_action_v2(action: Any) -> dict[str, Any]:
+def _normalize_event_action(action: Any) -> dict[str, Any]:
     action_dict = _as_command_dict(action)
     if 'primitive' not in action_dict:
-        return _event_action_v2_from_symbolic_action(action_dict)
+        return _event_action_from_symbolic_action(action_dict)
     primitive = str(action_dict.get('primitive') or 'WAIT').strip().upper()
     if primitive not in PRIMITIVE_IDS:
         primitive = 'WAIT'
@@ -951,7 +942,7 @@ def _normalize_event_action_v2(action: Any) -> dict[str, Any]:
         speed_mps = float(action_dict.get('speed_mps', action_dict.get('speed', 0.0)) or 0.0)
     except (TypeError, ValueError):
         speed_mps = 0.0
-    return {
+    normalized = {
         'primitive': primitive,
         'side': side,
         'switch_mask': switch_mask_dict,
@@ -963,37 +954,17 @@ def _normalize_event_action_v2(action: Any) -> dict[str, Any]:
         'target_id': _normalize_target_id(action_dict.get('target_id')),
         'reason': _normalize_reason(action_dict.get('reason')),
     }
+    normalized.update(_schema_v3_event_fields(
+        action_dict,
+        primitive=primitive,
+        side=side,
+        target_id=normalized['target_id'],
+    ))
+    return normalized
 
 
 def _encode_action(command: Any) -> list[float]:
-    command_dict = _as_command_dict(command)
-    if _requests_action_schema_v3(command_dict):
-        return _encode_action_v3(command_dict)
-    action = _normalize_event_action_v2(command)
-    switch_mask, switch_values = _mask_value_dicts_from_event_action(
-        action,
-        mask_key='switch_mask',
-        value_key='switch_values',
-        value_kind='switch',
-    )
-    stopper_mask, stopper_values = _mask_value_dicts_from_event_action(
-        action,
-        mask_key='stopper_mask',
-        value_key='stopper_values',
-        value_kind='stopper',
-    )
-    return [
-        float(PRIMITIVE_IDS[action['primitive']]),
-        float(SIDE_IDS[action['side']]),
-        *switch_mask,
-        *switch_values,
-        *stopper_mask,
-        *stopper_values,
-        float(action['speed_mps']),
-        float(WAIT_CONDITION_IDS[action['wait_condition']]),
-        float(TARGET_IDS[action['target_id']]),
-        float(REASON_IDS[action['reason']]),
-    ]
+    return _encode_action_v3(_normalize_event_action(command))
 
 
 def _decode_device_assignments(
@@ -1019,55 +990,12 @@ def _decode_device_assignments(
 
 def _decode_action(action_vector: Any) -> dict[str, Any]:
     values = [float(value) for value in list(action_vector)]
-    if len(values) == len(ACTION_VECTOR_V3_FIELDS):
-        return _decode_action_v3(values)
     if len(values) != len(ACTION_VECTOR_FIELDS):
         raise ValueError(
-            f'action vector length {len(values)} does not match schema '
+            f'action vector length {len(values)} does not match schema v3 '
             f'length {len(ACTION_VECTOR_FIELDS)}'
         )
-
-    def field(name: str) -> float:
-        return values[ACTION_VECTOR_FIELDS.index(name)]
-
-    switch_assignments = _decode_device_assignments(
-        values,
-        'switch_mask',
-        'switch_value',
-        SWITCH_VALUE_IDS_BY_VALUE,
-    )
-    stopper_assignments = _decode_device_assignments(
-        values,
-        'stopper_mask',
-        'stopper_value',
-        STOPPER_VALUE_IDS_BY_VALUE,
-    )
-    switch_mask = _ordered_device_dict(0)
-    switch_values = _ordered_device_dict('UNCHANGED')
-    stopper_mask = _ordered_device_dict(0)
-    stopper_values = _ordered_device_dict('UNCHANGED')
-    for name, value in switch_assignments.items():
-        switch_mask[name] = 1
-        switch_values[name] = value
-    for name, value in stopper_assignments.items():
-        stopper_mask[name] = 1
-        stopper_values[name] = value
-
-    return {
-        'primitive': PRIMITIVE_IDS_BY_VALUE.get(_round_index(field('primitive_id')), 'WAIT'),
-        'side': _side_from_id(field('side_id')),
-        'switch_mask': switch_mask,
-        'switch_values': switch_values,
-        'stopper_mask': stopper_mask,
-        'stopper_values': stopper_values,
-        'speed_mps': round(float(field('speed_mps')), 4),
-        'wait_condition': WAIT_CONDITION_IDS_BY_VALUE.get(
-            _round_index(field('wait_condition_id')),
-            'none',
-        ),
-        'target_id': TARGET_IDS_BY_VALUE.get(_round_index(field('target_id')), 'none'),
-        'reason': REASON_IDS_BY_VALUE.get(_round_index(field('reason_id')), 'none'),
-    }
+    return _decode_action_v3(values)
 
 
 def _normalize_switch_state(raw: Any) -> str:
@@ -1432,6 +1360,11 @@ def _privileged_eval_from_status(
             }
             for side in SIDES
         },
+        'payload_state': (
+            status.get('payload_state', {})
+            if isinstance(status.get('payload_state'), dict)
+            else {}
+        ),
         'visual_eval_labels': _visual_eval_labels_from_status(status),
     }
 
@@ -1988,7 +1921,7 @@ class Room315VlaDatasetRecorder(Node):
             'events': self.event_index,
             'success': success,
             'discarded': discarded,
-            'format': 'room315_vla_event_labeled_jsonl_v2',
+            'format': 'room315_vla_event_labeled_jsonl_v3',
             'training_labels': 'events.jsonl',
             'raw_replay': 'data.jsonl',
             'safety_decoder_metrics': self._safety_decoder_metrics(),
@@ -2270,7 +2203,7 @@ class Room315VlaDatasetRecorder(Node):
         normalized_action = minimal_action
         task_context = task_context or _task_context_from_status(self.latest_status, original_command)
         wait_condition = _wait_condition_for_action(normalized_action, task_context)
-        event_action = _event_action_v2_from_symbolic_action(
+        event_action = _event_action_from_symbolic_action(
             normalized_action,
             wait_condition=wait_condition,
             task_context=task_context,
@@ -2357,7 +2290,7 @@ class Room315VlaDatasetRecorder(Node):
                 task_context,
             ),
             'original_command': original_command,
-            'legacy_next_action': normalized_action,
+            'symbolic_next_action': normalized_action,
             'next_action': event_action,
             'action': event_action,
             'action_vector_schema_version': _action_schema_version_for_event(event_action),
@@ -2414,7 +2347,7 @@ class Room315VlaDatasetRecorder(Node):
 
     def _write_dataset_info(self) -> None:
         info = {
-            'format': 'room315_vla_event_labeled_jsonl_v2',
+            'format': 'room315_vla_event_labeled_jsonl_v3',
             'model_input_schema_version': MODEL_INPUT_SCHEMA_VERSION,
             'created_or_updated_at': _utc_now(),
             'description': (
@@ -2471,7 +2404,6 @@ class Room315VlaDatasetRecorder(Node):
             'debug_observation_fields': DEBUG_OBSERVATION_FIELDS,
             'action_schema_version': ACTION_SCHEMA_VERSION,
             'action_features': ACTION_VECTOR_FIELDS,
-            'action_v3_features': ACTION_VECTOR_V3_FIELDS,
             'symbolic_action_features': EVENT_ACTION_FIELDS,
             'action_encodings': {
                 'primitive_id': PRIMITIVE_IDS,
