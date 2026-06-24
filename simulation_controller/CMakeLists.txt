@@ -28,8 +28,11 @@ ament_target_dependencies(position_commander rclcpp sensor_msgs trajectory_msgs)
 add_executable(target_force_publisher src/target_force_publisher.cpp)
 ament_target_dependencies(target_force_publisher rclcpp std_msgs)
 
-add_executable(force_pid_controller src/force_pid_controller.cpp)
+add_executable(force_pid_controller src/spring_force_pid_controller.cpp)
 ament_target_dependencies(force_pid_controller rclcpp geometry_msgs std_msgs staubli_tx2_60l_controller)
+
+add_executable(drill_controller src/drill_controller.cpp)
+ament_target_dependencies(drill_controller rclcpp geometry_msgs std_msgs staubli_tx2_60l_controller)
 
 # ---- Other Nodes ---- 
 add_executable(cartesian_converter src/cartesian_converter.cpp)
@@ -40,8 +43,11 @@ add_executable(cartesian_publisher src/cartesian_publisher.cpp)
 ament_target_dependencies(cartesian_publisher rclcpp sensor_msgs geometry_msgs trajectory_msgs tf2_eigen ament_index_cpp)
 target_link_libraries(cartesian_publisher pinocchio::pinocchio)
 
-add_executable(force_simulation src/force_simulation.cpp)
+add_executable(force_simulation src/spring_force_simulation.cpp)
 ament_target_dependencies(force_simulation rclcpp geometry_msgs std_msgs)
+
+add_executable(drill_force_simulation src/drill_force_simulation.cpp)
+ament_target_dependencies(drill_force_simulation rclcpp geometry_msgs std_msgs)
 
 # ---- exe ---- 
 install(TARGETS
@@ -51,6 +57,8 @@ install(TARGETS
   force_simulation
   force_pid_controller
   target_force_publisher
+  drill_force_simulation
+  drill_controller
   DESTINATION lib/${PROJECT_NAME} )  
   
 # ---- Ressources ---- 
