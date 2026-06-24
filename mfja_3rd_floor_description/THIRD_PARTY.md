@@ -23,8 +23,12 @@ Excluded from third-party attribution because they are MFJA-local work:
 ## Current Status
 
 - `kuka_kr6r900sixx` uses assets confirmed by the local project contributor as coming from `ros-industrial/kuka_experimental`
+- the KUKA gripper extension uses user-provided SCHUNK KGG 140-60 CAD/STL assets from CADENAS
 - `staubli_tx2_60l` uses assets confirmed by the local project contributor as coming from `ros-industrial/staubli_experimental`
+- the Staubli gripper extension uses user-provided SCHUNK PGN-plus-P 40 CAD/STL assets
 - `yaskawa_hc10` and `yaskawa_hc10dt` use assets confirmed by the local project contributor as coming from `ros-industrial/motoman`
+- the Yaskawa HC10 gripper extension uses user-provided Zimmer Group GEH6040IL CAD/STL assets from CADENAS
+- the Yaskawa HC10DT gripper extension uses user-provided Zimmer Group LWR50L CAD/STL assets from CADENAS
 - `tiago` uses assets confirmed by the local project contributor as coming from the `Tiago-Harmonic` repository family
 - `model.sdf`, `model.config`, launch integration, and package-local path rewrites are MFJA-local integration work
 - non-robot environment meshes, room geometry, building geometry, furniture, and other scene assets used by `worlds/` are MFJA-local work unless explicitly documented otherwise
@@ -62,6 +66,29 @@ Local modifications in this repository:
 - Gazebo `model.sdf` and `model.config` wrappers were added
 - local visual meshes under `models/kuka_kr6r900sixx/meshes/converted_visual/` were converted for local use
 
+### KUKA SCHUNK KGG 140-60 Gripper Extension
+
+Local files:
+
+- `models/kuka_kr6r900sixx/meshes/gripper/schunk_kgg_140_60_011l5_mss_22_01.stl`
+- `models/kuka_kr6r900sixx/cad/SCHUNK-0303070_KGG_140-60_011L5_MSS_22_01.stp`
+- `models/kuka_kr6r900sixx/cad/license_schunk.txt`
+- `models/kuka_kr6r900sixx/cad/readme-and-terms-of-use-3d-cad-models.txt`
+
+Known source metadata:
+
+- user-provided CAD/STL files for the KUKA gripper integration
+- STEP header name: `SCHUNK-0303070 KGG 140-60 _011L5_MSS_22_01`
+- STEP header author field: `License CC BY-ND 4.0`
+- STEP header organization: `CADENAS`
+- STEP header originating system: `PARTsolutions`
+
+Local modifications in this repository:
+
+- source filenames were normalized for package-local mesh paths
+- STL mesh is scaled from millimeters to meters in the KUKA URDF/SDF
+- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
+
 ### Staeubli TX2-60L
 
 Local files:
@@ -90,6 +117,27 @@ Local modifications in this repository:
 - support-package mesh paths were rewritten to local package paths
 - a package-local URDF was materialized for MFJA use
 - Gazebo `model.sdf` and `model.config` wrappers were added
+
+### Staubli SCHUNK Gripper Extension
+
+Local files:
+
+- `models/staubli_tx2_60l/meshes/gripper/schunk_edited.stl`
+- `models/staubli_tx2_60l/cad/SCHUNK-edited.stp`
+
+Known source metadata:
+
+- user-provided CAD/STL files for the Staubli robot gripper integration
+- STEP header name: `SCHUNK-edited.stp`
+- STEP header author field: `LEGION`
+- STEP header originating system: `Autodesk Inventor 2021`
+- STEP product metadata includes `SCHUNK-0318448 PGN-plus-P 40, 000`
+
+Local modifications in this repository:
+
+- source filenames were normalized for package-local mesh paths
+- the STL mesh is used at native meter scale in the Staubli URDF/SDF
+- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
 
 ### Yaskawa HC10 and HC10DT
 
@@ -123,6 +171,51 @@ Local modifications in this repository:
 - upstream package paths were rewritten to local package paths
 - package-local URDF files were materialized for MFJA use
 - Gazebo `model.sdf` and `model.config` wrappers were added
+
+### Yaskawa HC10 Zimmer GEH6040IL Gripper Extension
+
+Local files:
+
+- `models/yaskawa_hc10/meshes/gripper/geh6040il_03_b01geh6000il.stl`
+- `models/yaskawa_hc10/cad/GEH6040IL-03-B01GEH6000IL.stp`
+- `models/yaskawa_hc10/cad/readme-and-terms-of-use-3d-cad-models.txt`
+
+Known source metadata:
+
+- user-provided CAD/STL files for the Yaskawa HC10 gripper integration
+- STEP header name: `GEH6040IL-03-B01GEH6000IL`
+- STEP header author field: `License CC BY-ND 4.0`
+- STEP header organization: `CADENAS`
+- STEP header originating system: `PARTsolutions`
+
+Local modifications in this repository:
+
+- source filenames were normalized for package-local mesh paths
+- STL mesh is scaled from millimeters to meters in the Yaskawa HC10 URDF/SDF
+- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
+- simple local jaw geometry was added as primitive boxes and is MFJA-local integration work
+
+### Yaskawa HC10DT Zimmer LWR50L Gripper Extension
+
+Local files:
+
+- `models/yaskawa_hc10dt/meshes/gripper/lwr50l_03_00001_a_000.stl`
+- `models/yaskawa_hc10dt/cad/LWR50L-03-00001-A_000.stp`
+- `models/yaskawa_hc10dt/cad/readme-and-terms-of-use-3d-cad-models.txt`
+
+Known source metadata:
+
+- user-provided CAD/STL files for the Yaskawa HC10DT gripper integration
+- STEP header name: `LWR50L-03-00001-A(000)`
+- STEP header author field: `License CC BY-ND 4.0`
+- STEP header organization: `CADENAS`
+- STEP header originating system: `PARTsolutions`
+
+Local modifications in this repository:
+
+- source filenames were normalized for package-local mesh paths
+- STL mesh is scaled from millimeters to meters in the Yaskawa HC10DT URDF/SDF
+- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
 
 ### TIAGo
 
