@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot name="room315_shuttle_deck">
+  <contact name="top_surface">
+    <link name="deck_link"/>
+    <point>-0.2584 -0.11 0.085   -0.2584 0.11 0.085   0.1016 0.11 0.085   0.1016 -0.11 0.085</point>
+    <shape>4 0 3 2 1</shape>
+  </contact>
+</robot>

@@ -323,9 +323,21 @@ def _get_world_entity_name(world_path):
     return world_element.attrib.get('name', 'default')
 
 
-def _resolve_robot_assets(description_pkg_path, model_name):
-    model_sdf = os.path.join(description_pkg_path, 'models', model_name, 'model.sdf')
-    urdf_path = os.path.join(description_pkg_path, 'urdf', f'{model_name}.urdf')
+def _robot_asset_package(robot):
+    return str(robot.get('asset_package', DESCRIPTION_PACKAGE)).strip() or DESCRIPTION_PACKAGE
+
+
+def _robot_asset_package_path(robot, description_pkg_path):
+    asset_package = _robot_asset_package(robot)
+    if asset_package == DESCRIPTION_PACKAGE:
+        return description_pkg_path
+    return get_package_share_directory(asset_package)
+
+
+def _resolve_robot_assets(robot, description_pkg_path, model_name):
+    asset_pkg_path = _robot_asset_package_path(robot, description_pkg_path)
+    model_sdf = os.path.join(asset_pkg_path, 'models', model_name, 'model.sdf')
+    urdf_path = os.path.join(asset_pkg_path, 'urdf', f'{model_name}.urdf')
 
     if not os.path.exists(model_sdf):
         raise RuntimeError(
@@ -371,7 +383,16 @@ def _launch_setup(context, *args, **kwargs):
         robot_config = os.path.join(control_pkg_path, robot_config)
 
     robots = _load_robots(robot_config, selected_robots)
-    model_path = os.path.join(description_pkg_path, 'models')
+    model_paths = [os.path.join(description_pkg_path, 'models')]
+    for robot in robots:
+        asset_model_path = os.path.join(
+            _robot_asset_package_path(robot, description_pkg_path),
+            'models',
+        )
+        if asset_model_path not in model_paths:
+            model_paths.append(asset_model_path)
+
+    model_path = pathsep.join(model_paths)
     resource_path = model_path
 
     if 'GZ_SIM_MODEL_PATH' in environ:
@@ -465,7 +486,9 @@ def _launch_setup(context, *args, **kwargs):
         y_pose = float(robot.get('y_pose', 0.0))
         z_pose = float(robot.get('z_pose', 0.0))
         yaw = float(robot.get('yaw', 0.0))
-        model_sdf, urdf_path = _resolve_robot_assets(description_pkg_path, model_name)
+        model_sdf, urdf_path = _resolve_robot_assets(
+            robot, description_pkg_path, model_name
+        )
         spawn_sdf = model_sdf
         frame_prefix = '' if model_name in MOBILE_MODELS else f'{robot_name}/'
 

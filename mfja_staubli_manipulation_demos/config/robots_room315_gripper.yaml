@@ -1,0 +1,9 @@
+robots:
+  - name: staubli1
+    model: staubli_tx2_60l_gripper
+    asset_package: mfja_staubli_manipulation_demos
+    x_pose: -15.1622
+    y_pose: -6.0
+    z_pose: 1.0
+    yaw: 1.57
+    enabled: true

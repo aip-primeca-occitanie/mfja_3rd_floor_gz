@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="room315_payload_box">
+  <handle name="top_handle" clearance="0.04" approaching_direction="0 0 1">
+    <position xyz="0 0 0.03" xyzw="0 1 0 0"/>
+    <link name="base_link"/>
+  </handle>
+  <contact name="bottom_surface">
+    <link name="base_link"/>
+    <point>-0.035 -0.025 -0.03   -0.035 0.025 -0.03   0.035 0.025 -0.03   0.035 -0.025 -0.03</point>
+    <shape>4 0 1 2 3</shape>
+  </contact>
+</robot>

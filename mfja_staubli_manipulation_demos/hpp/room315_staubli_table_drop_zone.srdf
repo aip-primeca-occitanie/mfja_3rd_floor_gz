@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot name="room315_staubli_table_drop_zone">
+  <contact name="drop_zone">
+    <link name="drop_zone_link"/>
+    <point>-0.18 -0.12 0   -0.18 0.12 0   0.18 0.12 0   0.18 -0.12 0</point>
+    <shape>4 0 3 2 1</shape>
+  </contact>
+</robot>
