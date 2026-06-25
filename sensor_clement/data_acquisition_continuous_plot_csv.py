@@ -5,6 +5,8 @@ import matplotlib.animation as animation
 import csv
 import time
 from collections import deque
+import numpy as np
+from scipy import stats as sp_stats
 
 print("start")
 system = nidaqmx.system.System.local()
@@ -27,7 +29,7 @@ mz_data = deque(maxlen=buffer_size)
 # --- Préparation du fichier CSV ---
 csv_file = open(csv_filename, mode='w', newline='')
 csv_writer = csv.writer(csv_file)
-csv_writer.writerow(['Timestamp', 'Fz (V)', 'Mz (V)'])
+csv_writer.writerow(['Timestamp', 'Fz (N)', 'Mz (V)'])
 
 # --- Initialisation de la tâche NI-DAQ ---
 task = nidaqmx.Task()
@@ -60,7 +62,7 @@ def update(frame):
 
     for i in range(samples_to_read):
         t = time.time() - start_time #Attention, approche simplifiée
-        fz = fz_values[i]
+        fz = fz_values[i] * 20.864489
         mz = mz_values[i]
 
         # Stockage en mémoire
@@ -81,11 +83,11 @@ def update(frame):
 
 # --- Création de la figure matplotlib ---
 fig, ax = plt.subplots()
-line1, = ax.plot([], [], label="Fz (V)")
+line1, = ax.plot([], [], label="Fz (N)")
 line2, = ax.plot([], [], label="Mz (V)")
 ax.set_title("Lecture en temps réel")
 ax.set_xlabel("Temps (s)")
-ax.set_ylabel("Tension (V)")
+ax.set_ylabel("Tension/Force (N)")
 ax.legend()
 ax.grid()
 
@@ -103,3 +105,20 @@ task.stop()
 task.close()
 csv_file.close()
 print("Acquisition terminée et fichier CSV sauvegardé.")
+
+# --- Analyse statistique du bruit ---
+if len(fz_data) > 10:
+    fz_arr = np.array(list(fz_data))
+    mu, sigma = np.mean(fz_arr), np.std(fz_arr)
+    R = sigma ** 2
+    diffs = np.diff(fz_arr)
+    Q = max(np.var(diffs) / 2.0 - R, R / 100.0)
+    spike_rate = np.sum(np.abs(fz_arr - np.median(fz_arr)) > 3*sigma) / (len(fz_arr) / sample_rate)
+    p_norm = sp_stats.normaltest(fz_arr)[1]
+    print(f"\n=== Paramètres Kalman ===")
+    print(f"μ = {mu:.4f} N")
+    print(f"σ = {sigma:.4f} N")
+    print(f"R = {R:.6f}  (variance mesure)")
+    print(f"Q = {Q:.6f}  (bruit processus estimé)")
+    print(f"Spikes = {spike_rate:.1f}")
+    print(f"p_norm = {p_norm:.4f}")

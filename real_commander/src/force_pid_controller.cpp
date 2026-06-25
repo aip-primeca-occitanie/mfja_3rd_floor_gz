@@ -27,7 +27,6 @@ public:
         const double KI = this->get_parameter("KI").as_double();
         const double MAX_OUTPUT = this->get_parameter("MAX_OUTPUT").as_double();
         int rate_hz = this->get_parameter("FREQ").as_int();
-
         target_force = this->get_parameter("TARGET").as_double();
 
         PIDGains g;

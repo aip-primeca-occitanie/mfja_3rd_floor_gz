@@ -27,7 +27,7 @@ public:
             "Outil  : Dc=%.4f m  n=%.1f tr/min  κr=%.2f°  γ0=%.2f°",
             Dc, n, kr * 180.0 / M_PI, g0 * 180.0 / M_PI);
 
-        this->declare_parameter<double>("mat_Kc1", 600.0); 
+        this->declare_parameter<double>("mat_Kc1", 800.0); 
         this->declare_parameter<double>("mat_m0", 0.20);
         this->declare_parameter<double>("mat_z0", -0.2);
         this->declare_parameter<double>("mat_zf", -0.4);
@@ -96,7 +96,7 @@ private:
         const double corr_rake = 1.0 - g0 * 180.0 / M_PI / 100.0; // Correction angle de coupe, terme empirique Sandvik : (1 - γ0 / 100), γ0 en degrés
         const double chip_thickness = fz * std::sin(kr);  // épaisseur copeau effective [m]
 
-        const double Kc = Kc1 * std::pow(chip_thickness, -m0) * corr_rake; // Pression spécifique de coupe Kc [N/m²]
+        const double Kc = Kc1 * 1e6 * std::pow(chip_thickness, -m0) * corr_rake; // Pression spécifique de coupe Kc [N/m²], vérifier unités !!!
         // Kc = Kc1 * (fz * sin(κr))^(-m0) * (1 * γ0°/100)
 
         const double vc = M_PI * Dc * n / 60.; // [m/s] Vitesse de coupe

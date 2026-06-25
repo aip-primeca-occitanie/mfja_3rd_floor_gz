@@ -27,7 +27,7 @@ def generate_launch_description():
         executable='staubli_controller',
         name='staubli_controller',
         output='screen',
-    )
+        )
 
     robot_state_publisher_node = Node(
         package="robot_state_publisher",
@@ -35,7 +35,7 @@ def generate_launch_description():
         name="robot_state_publisher",
         output="both",
         parameters=[robot_description],
-    )
+        )
 
     rviz = Node(
         package="rviz2",
@@ -43,7 +43,7 @@ def generate_launch_description():
         name="rviz2",
         output="log",
         arguments=["-d", rviz_config_file],
-    )
+        )
 
     spawner_jsb = Node(
         package='controller_manager',
@@ -51,8 +51,8 @@ def generate_launch_description():
         arguments=[
             'joint_state_broadcaster',
             '--controller-manager', '/controller_manager',
-        ],
-    )
+            ],
+        )
 
     spawner_pos = Node(
         package='controller_manager',
@@ -60,22 +60,22 @@ def generate_launch_description():
         arguments=[
             'position_controller',
             '--controller-manager', '/controller_manager',
-        ],
-    )
+            ],
+        )
 
     cartesian_converter_node = Node(
         package='simulation_controller',
         executable='cartesian_converter',
         name='cartesian_converter',
         output='screen',
-    )
+        )
 
     cartesian_publisher_node = Node(
         package='simulation_controller',
         executable='cartesian_publisher',
         name='cartesian_publisher',
         output='screen',
-    )
+        )
 
     force_pid_controller_node = Node(
         package='simulation_controller',
@@ -88,8 +88,8 @@ def generate_launch_description():
             "KD": 4.24e-5,
             "MAX_OUTPUT": 0.05,
             "TARGET": 300.0
-        }]
-    )
+            }]
+        )
 
     force_simulation_node = Node(
         package='simulation_controller',
@@ -97,21 +97,21 @@ def generate_launch_description():
         name='force_simulation',
         output='screen',
         parameters=[{
-        "z_contact": -0.4, # m
-        "stiffness": 2408., # N/m
-        "damping": 50.0    # N.s/m
-        }]
-    )
+            "z_contact": -0.4, # m
+            "stiffness": 2408., # N/m
+            "damping": 50.0 # N.s/m
+            }]
+        )
 
     timer_action = TimerAction(
         period=10.0,
         actions=[cartesian_publisher_node,cartesian_converter_node,force_simulation_node] #10 might not be sufficient, to improve
-    )
+        )
 
     force_pid_controller_delayed = TimerAction(
         period=15.0,
         actions=[force_pid_controller_node]
-    )
+        )
 
     return LaunchDescription([
         controller_manager,
@@ -122,4 +122,4 @@ def generate_launch_description():
         controller_node,
         timer_action,
         force_pid_controller_delayed,
-    ])
+        ])

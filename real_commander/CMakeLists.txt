@@ -47,6 +47,9 @@ add_executable(sensor src/daq_publisher.cpp)
 ament_target_dependencies(sensor rclcpp std_msgs)
 target_link_libraries(sensor ${NIDAQMX_LIB})
 
+add_executable(sensor_filter src/force_filter.cpp)
+ament_target_dependencies(sensor_filter rclcpp  std_msgs)
+
 # ---- exe ---- 
 install(TARGETS
   position_commander
@@ -56,6 +59,7 @@ install(TARGETS
   force_pid_controller
   target_force_publisher
   sensor
+  sensor_filter
   DESTINATION lib/${PROJECT_NAME} )  
   
 # ---- Ressources ---- 

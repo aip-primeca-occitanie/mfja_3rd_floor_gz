@@ -16,10 +16,8 @@ public:
         : rclcpp::Node("daq_publisher_node")
         {
         // Create a ROS publisher
-        auto fz_pub_local = this->create_publisher<std_msgs::msg::Float64>("/Fz", 100);
-        auto mz_pub_local = this->create_publisher<std_msgs::msg::Float64>("/Mz", 100);
-        fz_pub = fz_pub_local;
-        mz_pub = mz_pub_local;
+        fz_pub = this->create_publisher<std_msgs::msg::Float64>("/Fz_raw", 100);
+        mz_pub = this->create_publisher<std_msgs::msg::Float64>("/Mz_raw", 100);
 
             // Create a rate
         this->declare_parameter<int>("FREQ", 250); // Hz
