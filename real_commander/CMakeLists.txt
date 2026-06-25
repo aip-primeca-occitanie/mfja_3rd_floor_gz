@@ -60,11 +60,16 @@ install(TARGETS
   target_force_publisher
   sensor
   sensor_filter
-  DESTINATION lib/${PROJECT_NAME} )  
+  DESTINATION lib/${PROJECT_NAME} )
+
+install(PROGRAMS
+  src/realtime_plotter_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
   
 # ---- Ressources ---- 
 install(DIRECTORY
   launch
-  DESTINATION share/${PROJECT_NAME} )  
+  DESTINATION share/${PROJECT_NAME} )
 
 ament_package()

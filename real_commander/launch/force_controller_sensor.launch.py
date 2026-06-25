@@ -117,6 +117,13 @@ def generate_launch_description():
         name='sensor_filter',
         output='screen'
         )
+    
+    visu_node = Node(
+        package='real_commander',
+        executable='realtime_plotter_node.py',
+        name='realtime_plotter',
+        output='screen'
+        ),
 
     timer_action = TimerAction(
         period=5.0,
@@ -125,7 +132,7 @@ def generate_launch_description():
 
     force_pid_controller_delayed = TimerAction(
         period=8.0,
-        actions=[filter_node, force_pid_controller_node]
+        actions=[filter_node, force_pid_controller_node, visu_node]
         )
 
     return LaunchDescription(
