@@ -5,6 +5,8 @@ from collections import Counter
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +16,18 @@ SCRIPT_PATH = (
     / 'scripts'
     / 'room_315_pddl_scenario_generator.py'
 )
+REVIEW_SCRIPT_PATH = (
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'scripts'
+    / 'room_315_payload_case_review.py'
+)
+BATCH_RUNNER_SCRIPT_PATH = (
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'scripts'
+    / 'room_315_payload_case_batch_runner.py'
+)
 PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'pddl'
 BATCH_CONFIG_PATH = (
     REPO_ROOT
@@ -21,6 +35,13 @@ BATCH_CONFIG_PATH = (
     / 'config'
     / 'room_315_vla'
     / 'pddl_scenario_batch.yaml'
+)
+PAYLOAD_CASE_CONFIG_PATH = (
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'config'
+    / 'room_315_vla'
+    / 'payload_training_cases.yaml'
 )
 
 
@@ -83,15 +104,51 @@ class ArrivalTrackingTransport(FakeTransport):
         super().publish_command(command)
         self.event_order.append(('command', command.get('action'), command.get('command')))
 
-    def wait_for_target_arrival(self, *, side, target_sensors, shuttle, timeout_s):
-        self.arrival_waits.append({
+    def wait_for_target_arrival(
+        self,
+        *,
+        side,
+        target_sensors,
+        shuttle,
+        timeout_s,
+        target_slot='',
+        target_station='',
+        target_segment='',
+        target_s=None,
+        target_tolerance_m=None,
+    ):
+        record = {
             'side': side,
             'target_sensors': list(target_sensors),
             'shuttle': shuttle,
+            'target_slot': target_slot,
+            'target_station': target_station,
             'timeout_s': timeout_s,
-        })
+        }
+        if target_segment:
+            record['target_segment'] = target_segment
+        if target_s is not None:
+            record['target_s'] = target_s
+        if target_tolerance_m is not None:
+            record['target_tolerance_m'] = target_tolerance_m
+        self.arrival_waits.append(record)
         self.event_order.append(('arrival_wait', list(target_sensors)))
         return dict(self.arrival_result)
+
+
+class StopWaitTrackingTransport(ArrivalTrackingTransport):
+    def __init__(self):
+        super().__init__()
+        self.stop_waits = []
+
+    def wait_for_shuttle_stopped(self, *, side, shuttle, timeout_s):
+        self.stop_waits.append({
+            'side': side,
+            'shuttle': shuttle,
+            'timeout_s': timeout_s,
+        })
+        self.event_order.append(('stop_wait', shuttle))
+        return {'ready': True, 'reason': ''}
 
 
 class RecorderAckTransport(FakeTransport):
@@ -170,12 +227,29 @@ class _Endpoint:
         self.node_name = node_name
 
 
+class _FakeString:
+    def __init__(self):
+        self.data = ''
+
+
 class _FakePublisher:
     def __init__(self, subscription_count):
         self.subscription_count = subscription_count
 
     def get_subscription_count(self):
         return self.subscription_count
+
+
+class _RecordingPublisher(_FakePublisher):
+    def __init__(self, subscription_count, on_publish=None):
+        super().__init__(subscription_count)
+        self.on_publish = on_publish
+        self.messages = []
+
+    def publish(self, message):
+        self.messages.append(message.data)
+        if self.on_publish is not None:
+            self.on_publish(message.data)
 
 
 class _FakeRclpy:
@@ -307,9 +381,13 @@ def test_nearest_loaded_slot_goal_selects_closest_loaded_shuttle():
     assert 'model_input' not in scenario
 
     payloads = generator.command_payloads_for_execution(scenario)
+    assert 'target_slot' not in payloads[0]
+    assert 'target_slot' not in payloads[1]
     assert payloads[2]['target_slot'] == '3'
     assert payloads[2]['selection_policy'] == 'nearest_loaded_to_target_slot_then_lowest_id'
     assert payloads[2]['selection_candidates'][0]['shuttle_id'] == 'right_shuttle_2'
+    assert payloads[3]['target_slot'] == '3'
+    assert 'target_slot' not in payloads[4]
     assert 'model_input' not in payloads[2]
 
 
@@ -332,8 +410,133 @@ def test_nearest_loaded_slot_goal_waits_for_slot_sensor_only():
         'side': 'right',
         'target_sensors': ['DZI3R'],
         'shuttle': 'right_shuttle_2',
+        'target_slot': '3',
+        'target_station': 'staubli',
         'timeout_s': 17.0,
     }]
+
+
+def test_target_arrival_pose_fallback_matches_r2_at_slot3_without_active_sensor():
+    generator = _load_module()
+    status = {
+        'rails': {
+            'right': {
+                'active_position_sensors': [],
+                'active_sensors': [],
+                'shuttles': {
+                    'room315_right_shuttle_1': {
+                        'segment': 'A12E',
+                        's': 0.9172,
+                    },
+                    'room315_right_shuttle_2': {
+                        'segment': 'A34E',
+                        's': 0.99,
+                    },
+                },
+            },
+        },
+    }
+
+    result = generator._target_slot_pose_match_from_status(
+        status,
+        side='right',
+        target_slot='3',
+        shuttle='right_shuttle_2',
+    )
+
+    assert result['arrived'] is True
+    assert result['target_slot'] == '3'
+    assert result['current_segment'] == 'A34E'
+    assert result['overshot'] is False
+
+
+def test_left_target_arrival_pose_fallback_uses_published_segment_names():
+    generator = _load_module()
+    status = {
+        'rails': {
+            'left': {
+                'active_position_sensors': [],
+                'active_sensors': [],
+                'shuttles': {
+                    'room315_left_shuttle_1': {
+                        'segment': 'A12E',
+                        's': 0.954,
+                    },
+                },
+            },
+        },
+    }
+
+    slot_1 = generator._target_slot_pose_match_from_status(
+        status,
+        side='left',
+        target_slot='1',
+        shuttle='left_shuttle_1',
+    )
+    slot_3 = generator._target_slot_pose_match_from_status(
+        status,
+        side='left',
+        target_slot='3',
+        shuttle='left_shuttle_1',
+    )
+
+    assert slot_1['arrived'] is True
+    assert slot_1['current_segment'] == 'A12E'
+    assert slot_3['arrived'] is False
+    assert slot_3['expected_segment'] == 'A34E'
+    assert slot_3['current_segment'] == 'A12E'
+
+
+def test_slot_pose_fallback_does_not_treat_overshot_as_arrived():
+    generator = _load_module()
+    status = {
+        'rails': {
+            'left': {
+                'active_position_sensors': [],
+                'active_sensors': [],
+                'shuttles': {
+                    'room315_left_shuttle_1': {
+                        'segment': 'A34E',
+                        's': 1.168,
+                    },
+                },
+            },
+        },
+    }
+
+    result = generator._target_slot_pose_match_from_status(
+        status,
+        side='left',
+        target_slot='3',
+        shuttle='left_shuttle_1',
+    )
+
+    assert result['arrived'] is False
+    assert result['overshot'] is True
+    assert result['reason'] == ''
+
+
+def test_target_arrival_sensor_match_requires_target_shuttle_identity():
+    generator = _load_module()
+    status = {
+        'rails': {
+            'right': {
+                'active_position_sensors': [
+                    {'name': 'DZI3R', 'shuttle': 'room315_right_shuttle_1'},
+                ],
+                'active_sensors': [],
+            },
+        },
+    }
+
+    matched = generator._matched_target_sensor_names_from_status(
+        status,
+        side='right',
+        wanted={'DZI3R'},
+        shuttle='right_shuttle_2',
+    )
+
+    assert matched == []
 
 
 def test_blocker_clear_goal_moves_empty_blocker_before_loaded_shuttle():
@@ -349,34 +552,34 @@ def test_blocker_clear_goal_moves_empty_blocker_before_loaded_shuttle():
     assert scenario['target_shuttle_id'] == 'right_shuttle_2'
     assert scenario['target_slot'] == '3'
     assert scenario['blocker_clearance'] == {
-        'strategy': 'clear_blocker_move_loaded_then_restore_blocker_to_free_slot',
-        'phase': 'clear_blocker_move_selected_restore_blocker',
+        'strategy': 'clear_blocker_to_a4_stopper_then_move_loaded',
+        'phase': 'clear_blocker_then_move_selected',
         'blocker_shuttle_id': 'right_shuttle_1',
         'blocker_start_slot': '3',
-        'blocker_clear_slot': '1',
-        'blocker_restore_slot': '2',
-        'blocker_final_slot': '2',
-        'blocker_restore_policy': 'selected_source_slot_then_nearest_free_slot',
-        'blocker_restore_slot_source': 'selected_source_slot',
-        'blocker_restore_candidate_slots': ['2', '1', '3', '4'],
+        'blocker_clear_slot': '4',
+        'blocker_clear_target': '',
+        'blocker_clear_sensor': 'A4_STOPPER_SENSOR',
+        'blocker_clear_stopper': 'A4',
+        'blocker_restore_slot': '',
+        'blocker_final_slot': '4',
+        'blocker_final_target': '4',
+        'blocker_restore_policy': 'none',
+        'blocker_restore_slot_source': 'not_requested',
+        'blocker_restore_candidate_slots': [],
         'selected_shuttle_id': 'right_shuttle_2',
         'selected_target_slot': '3',
         'restore_deferred': False,
         'model_input_exposure': 'excluded',
     }
     assert scenario['symbolic_plan'] == [
-        'prepare_switches right staubli yaskawa',
-        'open_stoppers right staubli yaskawa',
-        'move_shuttle right right_shuttle_1 staubli yaskawa speed=0.3',
+        'prepare_switches right staubli staubli',
+        'set_stoppers right A4 closed',
+        'move_shuttle right right_shuttle_1 staubli staubli speed=0.3 target_stopper=A4',
         'stop_shuttle right right_shuttle_1',
         'prepare_switches right yaskawa staubli',
         'open_stoppers right yaskawa staubli',
         'move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3',
         'stop_shuttle right right_shuttle_2',
-        'prepare_switches right yaskawa yaskawa',
-        'open_stoppers right yaskawa yaskawa',
-        'move_shuttle right right_shuttle_1 yaskawa yaskawa speed=0.3',
-        'stop_shuttle right right_shuttle_1',
         'finish_task right_shuttle_2 staubli',
     ]
     assert scenario['payload_state']['by_shuttle']['right_shuttle_1']['loaded'] is False
@@ -385,27 +588,28 @@ def test_blocker_clear_goal_moves_empty_blocker_before_loaded_shuttle():
     assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['start_slot'] == '2'
 
     payloads = generator.command_payloads_for_execution(scenario)
+    assert 'target_slot' not in payloads[0]
+    assert 'target_slot' not in payloads[1]
     assert payloads[2]['shuttle'] == 'right_shuttle_1'
     assert payloads[2]['coordination_phase'] == 'clear_blocker'
-    assert payloads[2]['target_slot'] == '1'
+    assert 'target_slot' not in payloads[2]
+    assert payloads[2]['target_sensors'] == ['A4_STOPPER_SENSOR']
+    assert payloads[2]['target_stopper'] == 'A4'
     assert payloads[2]['payload_condition'] == 'empty'
     assert payloads[2]['payload_present'] is False
+    assert 'target_slot' not in payloads[3]
+    assert payloads[3]['target_sensors'] == ['A4_STOPPER_SENSOR']
+    assert 'target_slot' not in payloads[4]
+    assert 'target_slot' not in payloads[5]
     assert payloads[6]['shuttle'] == 'right_shuttle_2'
     assert payloads[6]['coordination_phase'] == 'move_selected_loaded'
     assert payloads[6]['target_slot'] == '3'
     assert payloads[6]['payload_condition'] == 'loaded'
     assert payloads[6]['payload_present'] is True
-    assert payloads[10]['shuttle'] == 'right_shuttle_1'
-    assert payloads[10]['coordination_phase'] == 'restore_blocker'
-    assert payloads[10]['target_slot'] == '2'
-    assert payloads[10]['payload_condition'] == 'empty'
-    assert payloads[10]['payload_present'] is False
-    assert payloads[10]['blocker_clearance']['blocker_restore_policy'] == (
-        'selected_source_slot_then_nearest_free_slot'
-    )
-    assert payloads[10]['blocker_clearance']['blocker_restore_slot_source'] == (
-        'selected_source_slot'
-    )
+    assert payloads[7]['target_slot'] == '3'
+    assert 'target_slot' not in payloads[8]
+    assert payloads[2]['blocker_clearance']['blocker_restore_policy'] == 'none'
+    assert payloads[2]['blocker_clearance']['blocker_restore_slot_source'] == 'not_requested'
     assert 'model_input' not in scenario
     assert all('model_input' not in payload for payload in payloads)
 
@@ -454,23 +658,667 @@ def test_blocker_clear_goal_waits_for_blocker_slot_then_loaded_target_slot():
     assert transport.arrival_waits == [
         {
             'side': 'right',
-            'target_sensors': ['DZI1R'],
+            'target_sensors': ['A4_STOPPER_SENSOR'],
             'shuttle': 'right_shuttle_1',
+            'target_slot': '',
+            'target_station': 'staubli',
             'timeout_s': 19.0,
         },
         {
             'side': 'right',
             'target_sensors': ['DZI3R'],
             'shuttle': 'right_shuttle_2',
+            'target_slot': '3',
+            'target_station': 'staubli',
             'timeout_s': 19.0,
+        },
+    ]
+
+
+def test_four_shuttle_interior_loop_case_clears_blocker_before_loaded_move():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['target_shuttle_id'] == 'right_shuttle_1'
+    assert scenario['target_slot'] == '3'
+    assert scenario['blocker_clearance']['blocker_shuttle_id'] == 'right_shuttle_2'
+    assert scenario['blocker_clearance']['blocker_clear_target'] == 'interior_loop'
+    assert scenario['blocker_clearance']['blocker_final_target'] == 'interior_loop'
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers right A3 closed',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers right yaskawa yaskawa',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa staubli switch=A3 state=EXTERIOR',
+        'open_stoppers right yaskawa staubli',
+        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.3',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_1 staubli',
+    ]
+    assert scenario['primitive_commands'][4]['switches'] == {'A3': 'INTERIOR'}
+    assert scenario['primitive_commands'][8]['switches'] == {'A3': 'EXTERIOR'}
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['shuttle'] == 'right_shuttle_2'
+    assert payloads[2]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[2]['target_stopper'] == 'A3'
+    assert payloads[6]['shuttle'] == 'right_shuttle_2'
+    assert 'target_sensors' not in payloads[6]
+    assert payloads[6]['target_station'] == 'interior_loop'
+    assert payloads[6]['target_segment'] == 'A34I'
+    assert payloads[6]['target_s'] == 0.7083
+    assert payloads[10]['shuttle'] == 'right_shuttle_1'
+    assert payloads[10]['target_slot'] == '3'
+    assert 'model_input' not in scenario
+    assert all('model_input' not in payload for payload in payloads)
+
+
+def test_four_shuttle_interior_loop_case_waits_for_gate_then_loop_then_target():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        case_id='right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=23.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [
+        {
+            'side': 'right',
+            'target_sensors': ['A3_STOPPER_SENSOR'],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'yaskawa',
+            'timeout_s': 23.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': [],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'interior_loop',
+            'target_segment': 'A34I',
+            'target_s': 0.7083,
+            'target_tolerance_m': 0.08,
+            'timeout_s': 23.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI3R'],
+            'shuttle': 'right_shuttle_1',
+            'target_slot': '3',
+            'target_station': 'staubli',
+            'timeout_s': 23.0,
+        },
+    ]
+
+
+def test_four_shuttle_interior_loop_case_waits_for_blocker_stop_before_switching_interior():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        case_id='right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+    transport = StopWaitTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        command_timeout_s=11.0,
+    )
+
+    assert result['success'] is True
+    assert transport.stop_waits[0] == {
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'timeout_s': 11.0,
+    }
+    blocker_off_index = next(
+        index
+        for index, event in enumerate(transport.event_order)
+        if event == ('command', 'shuttle', 'OFF')
+    )
+    stop_wait_index = next(
+        index
+        for index, event in enumerate(transport.event_order)
+        if event == ('stop_wait', 'right_shuttle_2')
+    )
+    interior_switch_index = None
+    command_index = -1
+    for index, event in enumerate(transport.event_order):
+        if event[0] != 'command':
+            continue
+        command_index += 1
+        if (
+            event[1] == 'switches'
+            and transport.command_messages[command_index].get('switches') == {'A3': 'INTERIOR'}
+        ):
+            interior_switch_index = index
+            break
+    assert interior_switch_index is not None
+    assert blocker_off_index < stop_wait_index < interior_switch_index
+
+
+def test_four_right_shuttle_multi_blocker_case_clears_target_then_moves_loaded():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['target_shuttle_id'] == 'right_shuttle_4'
+    assert scenario['target_slot'] == '1'
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_4']['loaded'] is True
+    assert scenario['payload_state']['by_shuttle']['right_shuttle_2']['loaded'] is False
+    assert scenario['blocker_clearance']['clearance_step_count'] == 2
+    assert scenario['blocker_clearance']['clearance_steps'][0] == {
+        'step_index': 1,
+        'blocker_shuttle_id': 'right_shuttle_2',
+        'blocker_start_slot': '2',
+        'blocker_clear_slot': '',
+        'blocker_clear_target': 'interior_loop',
+        'blocker_clear_sensor': 'DA3IR',
+        'blocker_clear_stopper': 'A3',
+        'blocker_final_slot': '',
+        'blocker_final_target': 'interior_loop',
+    }
+    assert scenario['blocker_clearance']['clearance_steps'][1]['blocker_shuttle_id'] == (
+        'right_shuttle_1'
+    )
+    assert scenario['blocker_clearance']['clearance_steps'][1]['blocker_final_slot'] == '2'
+    assert scenario['symbolic_plan'][0:9] == [
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers right A3 closed',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers right yaskawa yaskawa',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+    ]
+    assert scenario['symbolic_plan'][9:18] == [
+        'prepare_switches right yaskawa yaskawa',
+        'open_stoppers right yaskawa yaskawa',
+        'move_shuttle right right_shuttle_1 yaskawa yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_1',
+        'prepare_switches right staubli yaskawa',
+        'open_stoppers right staubli yaskawa',
+        'move_shuttle right right_shuttle_4 staubli yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_4',
+        'finish_task right_shuttle_4 yaskawa',
+    ]
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert len(payloads) == len(scenario['symbolic_plan'])
+    assert payloads[2]['shuttle'] == 'right_shuttle_2'
+    assert payloads[2]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[6]['target_station'] == 'interior_loop'
+    assert payloads[6]['target_segment'] == 'A34I'
+    assert payloads[11]['shuttle'] == 'right_shuttle_1'
+    assert payloads[11]['target_slot'] == '2'
+    assert payloads[15]['shuttle'] == 'right_shuttle_4'
+    assert payloads[15]['target_slot'] == '1'
+    assert all('model_input' not in payload for payload in payloads)
+
+
+def test_four_right_shuttle_multi_blocker_case_waits_for_each_clearance_move():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        case_id='right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=29.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [
+        {
+            'side': 'right',
+            'target_sensors': ['A3_STOPPER_SENSOR'],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'yaskawa',
+            'timeout_s': 29.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': [],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'interior_loop',
+            'target_segment': 'A34I',
+            'target_s': 0.7083,
+            'target_tolerance_m': 0.08,
+            'timeout_s': 29.0,
         },
         {
             'side': 'right',
             'target_sensors': ['DZI2R'],
             'shuttle': 'right_shuttle_1',
-            'timeout_s': 19.0,
+            'target_slot': '2',
+            'target_station': 'yaskawa',
+            'timeout_s': 29.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI1R'],
+            'shuttle': 'right_shuttle_4',
+            'target_slot': '1',
+            'target_station': 'yaskawa',
+            'timeout_s': 29.0,
         },
     ]
+
+
+def test_four_right_shuttle_slot3_case_clears_three_blockers_then_moves_loaded():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['target_shuttle_id'] == 'right_shuttle_1'
+    assert scenario['target_slot'] == '3'
+    assert scenario['blocker_clearance']['clearance_step_count'] == 3
+    assert [
+        step['blocker_shuttle_id']
+        for step in scenario['blocker_clearance']['clearance_steps']
+    ] == ['right_shuttle_4', 'right_shuttle_3', 'right_shuttle_2']
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches right staubli staubli',
+        'set_stoppers right A4 closed',
+        'move_shuttle right right_shuttle_4 staubli staubli speed=0.3 target_stopper=A4',
+        'stop_shuttle right right_shuttle_4',
+        'prepare_switches right staubli staubli',
+        'open_stoppers right staubli staubli',
+        'move_shuttle right right_shuttle_3 staubli staubli speed=0.3',
+        'stop_shuttle right right_shuttle_3',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers right A3 closed',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers right yaskawa yaskawa',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'prepare_switches right yaskawa staubli',
+        'open_stoppers right yaskawa staubli',
+        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.3',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_1 staubli',
+    ]
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['shuttle'] == 'right_shuttle_4'
+    assert payloads[2]['target_sensors'] == ['A4_STOPPER_SENSOR']
+    assert payloads[2]['target_stopper'] == 'A4'
+    assert payloads[6]['shuttle'] == 'right_shuttle_3'
+    assert payloads[6]['target_slot'] == '4'
+    assert payloads[10]['shuttle'] == 'right_shuttle_2'
+    assert payloads[10]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[14]['target_station'] == 'interior_loop'
+    assert payloads[14]['target_segment'] == 'A34I'
+    assert payloads[19]['shuttle'] == 'right_shuttle_1'
+    assert payloads[19]['target_slot'] == '3'
+    assert all('model_input' not in payload for payload in payloads)
+
+
+def test_four_right_shuttle_slot3_case_waits_for_three_blockers_and_target():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        case_id='right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=31.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [
+        {
+            'side': 'right',
+            'target_sensors': ['A4_STOPPER_SENSOR'],
+            'shuttle': 'right_shuttle_4',
+            'target_slot': '',
+            'target_station': 'staubli',
+            'timeout_s': 31.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI4R'],
+            'shuttle': 'right_shuttle_3',
+            'target_slot': '4',
+            'target_station': 'staubli',
+            'timeout_s': 31.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['A3_STOPPER_SENSOR'],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'yaskawa',
+            'timeout_s': 31.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': [],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'interior_loop',
+            'target_segment': 'A34I',
+            'target_s': 0.7083,
+            'target_tolerance_m': 0.08,
+            'timeout_s': 31.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI3R'],
+            'shuttle': 'right_shuttle_1',
+            'target_slot': '3',
+            'target_station': 'staubli',
+            'timeout_s': 31.0,
+        },
+    ]
+
+
+def test_four_left_shuttle_slot3_case_clears_three_blockers_then_moves_loaded():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['target_shuttle_id'] == 'left_shuttle_1'
+    assert scenario['target_slot'] == '3'
+    assert scenario['blocker_clearance']['clearance_step_count'] == 3
+    assert [
+        step['blocker_shuttle_id']
+        for step in scenario['blocker_clearance']['clearance_steps']
+    ] == ['left_shuttle_4', 'left_shuttle_3', 'left_shuttle_2']
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches left kuka kuka',
+        'set_stoppers left A4 closed',
+        'move_shuttle left left_shuttle_4 kuka kuka speed=0.3 target_stopper=A4',
+        'stop_shuttle left left_shuttle_4',
+        'prepare_switches left kuka kuka',
+        'open_stoppers left kuka kuka',
+        'move_shuttle left left_shuttle_3 kuka kuka speed=0.3',
+        'stop_shuttle left left_shuttle_3',
+        'prepare_switches left yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers left A3 closed',
+        'move_shuttle left left_shuttle_2 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle left left_shuttle_2',
+        'prepare_switches left yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers left yaskawa yaskawa',
+        'move_shuttle left left_shuttle_2 yaskawa yaskawa speed=0.3',
+        'stop_shuttle left left_shuttle_2',
+        'prepare_switches left yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'prepare_switches left yaskawa kuka',
+        'open_stoppers left yaskawa kuka',
+        'move_shuttle left left_shuttle_1 yaskawa kuka speed=0.3',
+        'stop_shuttle left left_shuttle_1',
+        'finish_task left_shuttle_1 kuka',
+    ]
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['shuttle'] == 'left_shuttle_4'
+    assert payloads[2]['target_sensors'] == ['A4_STOPPER_SENSOR']
+    assert payloads[2]['target_stopper'] == 'A4'
+    assert payloads[6]['shuttle'] == 'left_shuttle_3'
+    assert payloads[6]['target_slot'] == '4'
+    assert payloads[10]['shuttle'] == 'left_shuttle_2'
+    assert payloads[10]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[14]['target_station'] == 'interior_loop'
+    assert payloads[14]['target_segment'] == 'A34I'
+    assert payloads[19]['shuttle'] == 'left_shuttle_1'
+    assert payloads[19]['target_slot'] == '3'
+    assert all('model_input' not in payload for payload in payloads)
+
+
+def test_left_single_blocker_interior_case_uses_a3_gate():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches left yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers left A3 closed',
+        'move_shuttle left left_shuttle_2 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle left left_shuttle_2',
+        'prepare_switches left yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers left yaskawa yaskawa',
+        'move_shuttle left left_shuttle_2 yaskawa yaskawa speed=0.3',
+        'stop_shuttle left left_shuttle_2',
+        'prepare_switches left yaskawa kuka switch=A3 state=EXTERIOR',
+        'open_stoppers left yaskawa kuka',
+        'move_shuttle left left_shuttle_1 yaskawa kuka speed=0.3',
+        'stop_shuttle left left_shuttle_1',
+        'finish_task left_shuttle_1 kuka',
+    ]
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[2]['target_stopper'] == 'A3'
+    assert payloads[6]['target_station'] == 'interior_loop'
+    assert payloads[6]['target_segment'] == 'A34I'
+    assert payloads[10]['target_slot'] == '3'
+
+
+def test_four_left_shuttle_slot3_case_waits_for_three_blockers_and_target():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        case_id='left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=37.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [
+        {
+            'side': 'left',
+            'target_sensors': ['A4_STOPPER_SENSOR'],
+            'shuttle': 'left_shuttle_4',
+            'target_slot': '',
+            'target_station': 'kuka',
+            'timeout_s': 37.0,
+        },
+        {
+            'side': 'left',
+            'target_sensors': ['DZI4L'],
+            'shuttle': 'left_shuttle_3',
+            'target_slot': '4',
+            'target_station': 'kuka',
+            'timeout_s': 37.0,
+        },
+        {
+            'side': 'left',
+            'target_sensors': ['A3_STOPPER_SENSOR'],
+            'shuttle': 'left_shuttle_2',
+            'target_slot': '',
+            'target_station': 'yaskawa',
+            'timeout_s': 37.0,
+        },
+        {
+            'side': 'left',
+            'target_sensors': [],
+            'shuttle': 'left_shuttle_2',
+            'target_slot': '',
+            'target_station': 'interior_loop',
+            'target_segment': 'A34I',
+            'target_s': 0.7083,
+            'target_tolerance_m': 0.08,
+            'timeout_s': 37.0,
+        },
+        {
+            'side': 'left',
+            'target_sensors': ['DZI3L'],
+            'shuttle': 'left_shuttle_1',
+            'target_slot': '3',
+            'target_station': 'kuka',
+            'timeout_s': 37.0,
+        },
+    ]
+
+
+def test_four_right_shuttle_slot2_case_clears_a3_then_moves_loaded():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['target_shuttle_id'] == 'right_shuttle_4'
+    assert scenario['target_slot'] == '2'
+    assert scenario['blocker_clearance']['clearance_step_count'] == 2
+    assert [
+        step['blocker_shuttle_id']
+        for step in scenario['blocker_clearance']['clearance_steps']
+    ] == ['right_shuttle_2', 'right_shuttle_1']
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers right A3 closed',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers right yaskawa yaskawa',
+        'move_shuttle right right_shuttle_2 yaskawa yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_2',
+        'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'prepare_switches right yaskawa yaskawa',
+        'set_stoppers right A3 closed',
+        'move_shuttle right right_shuttle_1 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle right right_shuttle_1',
+        'prepare_switches right staubli yaskawa',
+        'open_stoppers right staubli yaskawa',
+        'move_shuttle right right_shuttle_4 staubli yaskawa speed=0.3',
+        'stop_shuttle right right_shuttle_4',
+        'finish_task right_shuttle_4 yaskawa',
+    ]
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['shuttle'] == 'right_shuttle_2'
+    assert payloads[2]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[6]['target_station'] == 'interior_loop'
+    assert payloads[11]['shuttle'] == 'right_shuttle_1'
+    assert payloads[11]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[11]['target_stopper'] == 'A3'
+    assert 'target_slot' not in payloads[11]
+    assert payloads[15]['shuttle'] == 'right_shuttle_4'
+    assert payloads[15]['target_slot'] == '2'
+    assert all('model_input' not in payload for payload in payloads)
+
+
+def test_four_right_shuttle_slot2_case_waits_for_blockers_and_target():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        case_id='right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+    transport = ArrivalTrackingTransport()
+
+    result = generator.execute_scenario(
+        scenario,
+        transport,
+        arrival_timeout_s=33.0,
+    )
+
+    assert result['success'] is True
+    assert transport.arrival_waits == [
+        {
+            'side': 'right',
+            'target_sensors': ['A3_STOPPER_SENSOR'],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'yaskawa',
+            'timeout_s': 33.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': [],
+            'shuttle': 'right_shuttle_2',
+            'target_slot': '',
+            'target_station': 'interior_loop',
+            'target_segment': 'A34I',
+            'target_s': 0.7083,
+            'target_tolerance_m': 0.08,
+            'timeout_s': 33.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['A3_STOPPER_SENSOR'],
+            'shuttle': 'right_shuttle_1',
+            'target_slot': '',
+            'target_station': 'yaskawa',
+            'timeout_s': 33.0,
+        },
+        {
+            'side': 'right',
+            'target_sensors': ['DZI2R'],
+            'shuttle': 'right_shuttle_4',
+            'target_slot': '2',
+            'target_station': 'yaskawa',
+            'timeout_s': 33.0,
+        },
+    ]
+
+
+def test_waiting_mode_counts_as_stopped_even_when_speed_field_is_stale():
+    generator = _load_module()
+
+    assert generator._shuttle_state_is_stopped({
+        'mode': 'WAITING',
+        'speed': 0.08,
+        'segment': 'A23',
+    }) is True
 
 
 def test_payload_problem_file_round_trips_to_specific_goal_spec():
@@ -622,6 +1470,37 @@ def test_ros_ready_accepts_the_supervisor_command_subscriber():
     assert result == {'ready': True, 'reason': ''}
 
 
+def test_ros_episode_start_republishes_until_dataset_ack():
+    generator = _load_module()
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+        publisher_endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+    )
+    transport.String = _FakeString
+
+    def on_publish(message):
+        transport.latest_dataset_status = {
+            'active': True,
+            'task': 'move the loaded right shuttle to slot 3',
+            'episode_id': 'episode_000005_move_the_loaded_right_shuttle_to_slot_3',
+        }
+
+    transport.episode_control_pub = _RecordingPublisher(1, on_publish=on_publish)
+
+    result = generator.RosScenarioTransport.publish_episode_start_and_wait(
+        transport,
+        goal='move the loaded right shuttle to slot 3',
+        timeout_s=1.0,
+    )
+
+    assert result['ready'] is True
+    assert result['observed'] is True
+    assert transport.episode_control_pub.messages == [
+        'start move the loaded right shuttle to slot 3',
+    ]
+
+
 def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
     generator = _load_module()
     scenario = generator.generate_scenario(
@@ -665,6 +1544,341 @@ def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
     assert result['ready'] is True
     assert result['target_shuttle'] == 'room315_right_shuttle_2'
     assert result['payload_condition'] == 'loaded'
+
+
+def test_blocker_clear_preflight_checks_selected_loaded_shuttle_not_blocker():
+    generator = _load_module()
+    scenario = generator.generate_scenario(
+        goal='right_loaded_to_slot3_clear_blocker',
+        planner=_fake_backend(),
+    )
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[_Endpoint('room_315_vla_supervisor')],
+        latest_status={
+            'rails': {
+                'right': {
+                    'shuttles': {
+                        'room315_right_shuttle_1': {'mode': 'STOPPED'},
+                        'room315_right_shuttle_2': {'mode': 'STOPPED'},
+                    },
+                    'payloads': {
+                        'room315_right_shuttle_1': {
+                            'loaded': False,
+                            'payload_type': 'none',
+                        },
+                        'room315_right_shuttle_2': {
+                            'loaded': True,
+                            'payload_type': 'box',
+                        },
+                    },
+                },
+            },
+            'payload_state': {
+                'by_shuttle': {
+                    'room315_right_shuttle_1': {
+                        'loaded': False,
+                        'payload_type': 'none',
+                    },
+                    'room315_right_shuttle_2': {
+                        'loaded': True,
+                        'payload_type': 'box',
+                    },
+                },
+            },
+        },
+    )
+
+    result = generator.RosScenarioTransport.wait_for_initial_scenario_state(
+        transport,
+        scenario=scenario,
+        timeout_s=0.01,
+    )
+
+    assert result['ready'] is True
+    assert result['target_shuttle'] == 'room315_right_shuttle_2'
+    assert result['payload_condition'] == 'loaded'
+
+
+def test_payload_training_case_matrix_generates_reviewable_scenarios():
+    generator = _load_module()
+    config = generator.load_payload_training_case_config(PAYLOAD_CASE_CONFIG_PATH)
+    first_twenty_case_ids = [case['case_id'] for case in config['cases'][:20]]
+
+    assert first_twenty_case_ids == [
+        'right_loaded_r1_s1_to_slot3_no_blocker',
+        'right_loaded_r1_s2_to_slot3_no_blocker',
+        'right_loaded_r2_s2_to_slot3_no_blocker',
+        'right_loaded_r1_s1_r2_s2_select_r2_to_slot3',
+        'right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3',
+        'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3',
+        'right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3',
+        'right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3',
+        'right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2',
+        'right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2',
+        'right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2',
+        'right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2',
+        'right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior',
+        'right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior',
+        'right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior',
+        'right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior',
+        'right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3',
+        'right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3',
+        'right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3',
+        'right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3',
+    ]
+    left_case_ids = [case['case_id'] for case in config['cases'][20:40]]
+    assert left_case_ids == [
+        'left_loaded_l1_s1_to_slot3_no_blocker',
+        'left_loaded_l1_s2_to_slot3_no_blocker',
+        'left_loaded_l2_s2_to_slot3_no_blocker',
+        'left_loaded_l1_s1_l2_s2_select_l2_to_slot3',
+        'left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3',
+        'left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3',
+        'left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3',
+        'left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3',
+        'left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2',
+        'left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2',
+        'left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2',
+        'left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2',
+        'left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior',
+        'left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior',
+        'left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior',
+        'left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior',
+        'left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a1',
+        'left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a1',
+        'left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a1',
+        'left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a1',
+    ]
+    assert config['cases'][20]['speed'] == 0.08
+
+    assert len(config['cases']) >= 40
+    for case in config['cases']:
+        launch = dict(case.get('launch') or {})
+        if case.get('side') == 'right':
+            assert launch.get('disable_opposite_rail') is not False
+            assert not any(str(key).startswith('left_') for key in launch)
+        if case.get('side') == 'left':
+            assert launch.get('disable_opposite_rail') is not False
+            assert not any(str(key).startswith('right_') for key in launch)
+
+        scenario = generator.generate_scenario(
+            case_id=case['case_id'],
+            case_config=PAYLOAD_CASE_CONFIG_PATH,
+            planner=_fake_backend(),
+        )
+        expected = case['expected']
+
+        assert scenario['scenario_id'] == case['case_id']
+        assert scenario['target_shuttle_id'] == expected['selected_shuttle']
+        assert scenario['target_slot'] == expected['selected_target_slot']
+        assert scenario['payload_state']['model_input_exposure'] == 'excluded'
+        assert 'model_input' not in scenario
+
+        payloads = generator.command_payloads_for_execution(scenario)
+        assert all('model_input' not in payload for payload in payloads)
+
+        blocker_clear_slot = str(expected.get('blocker_clear_slot') or '')
+        blocker_clear_target = str(expected.get('blocker_clear_target') or '')
+        clearance_step_count = int(expected.get('clearance_step_count') or 0)
+        if clearance_step_count:
+            blocker_clearance = scenario['blocker_clearance']
+            clearance_steps = blocker_clearance['clearance_steps']
+            assert blocker_clearance['clearance_step_count'] == clearance_step_count
+            assert len(clearance_steps) == clearance_step_count
+            assert blocker_clearance['blocker_restore_policy'] == 'none'
+            final_clear_slot = str(expected.get('final_clear_slot') or '')
+            if final_clear_slot:
+                assert clearance_steps[-1]['blocker_final_slot'] == final_clear_slot
+            final_clear_target = str(expected.get('final_clear_target') or '')
+            if final_clear_target:
+                assert clearance_steps[-1]['blocker_final_target'] == final_clear_target
+        elif blocker_clear_slot or blocker_clear_target:
+            blocker_clearance = scenario['blocker_clearance']
+            if blocker_clear_slot:
+                assert blocker_clearance['blocker_clear_slot'] == blocker_clear_slot
+                assert blocker_clearance['blocker_final_slot'] == blocker_clear_slot
+            if blocker_clear_target:
+                assert blocker_clearance['blocker_clear_target'] == blocker_clear_target
+                assert blocker_clearance['blocker_final_target'] == blocker_clear_target
+            assert scenario['blocker_clearance']['blocker_restore_policy'] == 'none'
+        else:
+            assert 'blocker_clearance' not in scenario
+
+
+def test_payload_case_speed_defaults_to_yaml_value():
+    generator = _load_module()
+
+    speed = generator.speed_for_payload_training_case(
+        'left_loaded_l1_s1_to_slot3_no_blocker',
+        PAYLOAD_CASE_CONFIG_PATH,
+    )
+
+    assert speed == 0.08
+
+
+def test_payload_case_review_pack_writes_review_files(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REVIEW_SCRIPT_PATH),
+            '--case-config',
+            str(PAYLOAD_CASE_CONFIG_PATH),
+            '--review-dir',
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert 'Wrote ' in result.stdout
+    summary = json.loads((tmp_path / 'review_summary.json').read_text(encoding='utf-8'))
+    index_text = (tmp_path / 'review_index.md').read_text(encoding='utf-8')
+
+    assert summary['case_count'] >= 6
+    assert summary['case_count'] == len(summary['records'])
+    assert 'Model input boundary' in index_text
+    assert 'Batch rule' in index_text
+    assert sorted(path.name for path in tmp_path.iterdir()) == [
+        'review_index.md',
+        'review_summary.json',
+        'scenarios',
+    ]
+
+    scenario_path = (
+        tmp_path
+        / 'scenarios'
+        / 'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3.json'
+    )
+    scenario = json.loads(scenario_path.read_text(encoding='utf-8'))
+    assert scenario['target_shuttle_id'] == 'right_shuttle_2'
+    assert scenario['blocker_clearance']['blocker_shuttle_id'] == 'right_shuttle_1'
+    assert scenario['blocker_clearance']['blocker_clear_slot'] == '4'
+    assert scenario['blocker_clearance']['blocker_clear_sensor'] == 'A4_STOPPER_SENSOR'
+    assert scenario['review_context']['curation_method'] == (
+        'automatic_accept_successful_batch_runs'
+    )
+    assert 'model_input' not in scenario
+
+
+def test_payload_case_review_accepts_workspace_root_relative_case_config(tmp_path):
+    workspace_root = REPO_ROOT.parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REVIEW_SCRIPT_PATH),
+            '--case-config',
+            'mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml',
+            '--review-dir',
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        cwd=workspace_root,
+    )
+
+    summary = json.loads((tmp_path / 'review_summary.json').read_text(encoding='utf-8'))
+
+    assert 'Wrote ' in result.stdout
+    assert summary['case_count'] >= 6
+    assert summary['case_config_path'].endswith(
+        'mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml'
+    )
+
+
+def test_payload_case_review_prints_case_commands():
+    case_id = 'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3'
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REVIEW_SCRIPT_PATH),
+            '--case-config',
+            str(PAYLOAD_CASE_CONFIG_PATH),
+            '--case-id',
+            case_id,
+            '--print-launch-command',
+            '--print-execute-command',
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert 'room315_right_shuttle_count:=2' in result.stdout
+    assert 'room315_right_start_slots:="\'3,2\'"' in result.stdout
+    assert 'room315_right_loaded_shuttles:="\'R2\'"' in result.stdout
+    assert f'--case-id {case_id}' in result.stdout
+    assert '--preflight-only' in result.stdout
+    assert '--execute' in result.stdout
+
+
+def test_payload_case_batch_runner_dry_run_lists_all_cases(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BATCH_RUNNER_SCRIPT_PATH),
+            '--case-config',
+            str(PAYLOAD_CASE_CONFIG_PATH),
+            '--results-dir',
+            str(tmp_path),
+            '--dataset-dir',
+            str(tmp_path / 'dataset'),
+            '--dry-run',
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    summary = json.loads(result.stdout)
+    disk_summary = json.loads(
+        (tmp_path / 'payload_case_batch_summary.json').read_text(encoding='utf-8')
+    )
+
+    assert summary['dry_run'] is True
+    assert summary['case_count'] >= 6
+    assert summary['case_count'] == len(summary['results'])
+    assert disk_summary['case_count'] == summary['case_count']
+    assert summary['results'][0]['case_number'] == 1
+    assert summary['results'][0]['case_id'] == 'right_loaded_r1_s1_to_slot3_no_blocker'
+    assert "room315_right_start_slots:='1'" in summary['results'][0]['launch_args']
+    assert 'room315_right_start_slots:=1' not in summary['results'][0]['launch_args']
+    assert "room315_right_loaded_shuttles:='R1'" in summary['results'][0]['launch_args']
+    assert any(
+        arg == 'room315_vla_dataset_dir:=' + str(tmp_path / 'dataset')
+        for arg in summary['results'][0]['launch_args']
+    )
+
+
+def test_payload_case_batch_runner_dry_run_can_select_case_range(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BATCH_RUNNER_SCRIPT_PATH),
+            '--case-config',
+            str(PAYLOAD_CASE_CONFIG_PATH),
+            '--results-dir',
+            str(tmp_path),
+            '--dataset-dir',
+            str(tmp_path / 'dataset'),
+            '--start-at',
+            '6',
+            '--stop-after',
+            '6',
+            '--dry-run',
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    summary = json.loads(result.stdout)
+
+    assert summary['case_count'] == 1
+    assert summary['results'][0]['case_number'] == 6
+    assert summary['results'][0]['case_id'] == 'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3'
 
 
 def test_ros_initial_state_wait_reports_missing_target_shuttle_before_execute():
@@ -810,6 +2024,8 @@ def test_execute_mode_waits_for_target_sensor_before_stop_command():
         'side': 'right',
         'target_sensors': ['DZI3R', 'DZI4R'],
         'shuttle': 'right_shuttle',
+        'target_slot': '',
+        'target_station': 'staubli',
         'timeout_s': 17.0,
     }]
     on_index = next(

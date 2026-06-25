@@ -30,10 +30,13 @@
 
     html {
       scroll-behavior: smooth;
+      overflow-x: hidden;
     }
 
     body {
       margin: 0;
+      min-width: 0;
+      overflow-x: hidden;
       background: var(--bg);
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -55,7 +58,8 @@
     }
 
     .header-inner {
-      max-width: 1180px;
+      width: min(1180px, 100%);
+      max-width: 100%;
       margin: 0 auto;
       padding: 34px 22px 24px;
     }
@@ -87,9 +91,19 @@
       display: grid;
       grid-template-columns: 285px minmax(0, 1fr);
       gap: 24px;
-      max-width: 1180px;
+      width: min(1180px, 100%);
+      max-width: 100%;
       margin: 0 auto;
       padding: 24px 22px 48px;
+    }
+
+    .layout > *,
+    main,
+    section,
+    .grid > *,
+    details,
+    .details-body {
+      min-width: 0;
     }
 
     nav {
@@ -124,9 +138,11 @@
     main {
       display: grid;
       gap: 20px;
+      max-width: 100%;
     }
 
     section {
+      max-width: 100%;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -159,6 +175,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
       margin: 12px 0 18px;
       font-size: 0.92rem;
     }
@@ -169,6 +186,7 @@
       border-bottom: 1px solid var(--line);
       text-align: start;
       vertical-align: top;
+      overflow-wrap: anywhere;
     }
 
     th {
@@ -244,6 +262,8 @@
     }
 
     .command {
+      max-width: 100%;
+      min-width: 0;
       margin: 12px 0 18px;
       border: 1px solid #263747;
       border-radius: var(--radius);
@@ -266,7 +286,13 @@
       font-weight: 700;
     }
 
+    .command-bar span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
     .copy-btn {
+      flex: 0 0 auto;
       border: 1px solid #476174;
       border-radius: 6px;
       background: #233444;
@@ -283,6 +309,8 @@
     }
 
     pre {
+      max-width: 100%;
+      min-width: 0;
       margin: 0;
       padding: 14px;
       overflow-x: auto;
@@ -293,6 +321,7 @@
       tab-size: 2;
       text-align: left;
       direction: ltr;
+      -webkit-overflow-scrolling: touch;
     }
 
     code {
@@ -301,12 +330,20 @@
       unicode-bidi: embed;
     }
 
+    pre code {
+      display: block;
+      width: max-content;
+      min-width: 100%;
+      max-width: none;
+    }
+
     :not(pre) > code {
       padding: 2px 5px;
       border-radius: 5px;
       background: var(--surface-soft);
       color: #1f3d4a;
       font-size: 0.92em;
+      overflow-wrap: anywhere;
     }
 
     details {
@@ -328,7 +365,8 @@
     }
 
     footer {
-      max-width: 1180px;
+      width: min(1180px, 100%);
+      max-width: 100%;
       margin: 0 auto;
       padding: 0 22px 32px;
       color: var(--muted);
@@ -349,6 +387,36 @@
         grid-template-columns: 1fr;
       }
     }
+
+    @media (max-width: 640px) {
+      .header-inner,
+      .layout,
+      footer {
+        padding-inline: 14px;
+      }
+
+      section {
+        padding: 16px;
+      }
+
+      nav {
+        box-shadow: none;
+      }
+
+      table {
+        font-size: 0.86rem;
+      }
+
+      th,
+      td {
+        padding: 8px;
+      }
+
+      pre {
+        padding: 12px;
+        font-size: 0.82rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -358,8 +426,8 @@
       <h1>Room 315 VLA Runbook</h1>
       <p class="subtitle">
         This runbook covers the Room 315 VLA layer: launching the world,
-        supervisor, cameras, recorder, teleop scenarios, obstacle workflows,
-        benchmark runner, agent integration, dataset inspection, and evaluation.
+        supervisor, cameras, recorder, teleop scenarios, optional obstacle
+        workflows, benchmark runner, agent integration, dataset inspection, and evaluation.
         Each section shows what to run in each terminal.
       </p>
     </div>
@@ -369,7 +437,7 @@
     <nav aria-label="Page navigation">
       <h2>Sections</h2>
       <a href="#setup">Terminal Setup</a>
-      <a href="#run-after-updates">تشغيل النظام بعد التحديثات</a>
+      <a href="#run-after-updates">Run After Updates</a>
       <a href="#map">VLA Map</a>
       <a href="#launch-basic">Basic VLA Launch</a>
       <a href="#commands">Supervisor Commands</a>
@@ -383,6 +451,7 @@
       <a href="#extract-eval">Extract and Evaluate</a>
       <a href="#topics">Useful Topics</a>
       <a href="#scenario-recording-walkthrough">Scenario Recording Walkthrough</a>
+      <a href="#multi-shuttle-update">Identity/Payload Update</a>
     </nav>
 
     <main>
@@ -418,30 +487,31 @@ source install/setup.bash</code></pre>
         </div>
       </section>
 
-      <section id="run-after-updates" dir="rtl">
-        <h2>تشغيل سيناريوهات Room 315 PDDL خطوة بخطوة</h2>
+      <section id="run-after-updates">
+        <h2>Run Room 315 PDDL Scenarios Step by Step</h2>
         <p>
-          افتح terminals منفصلة ونفذ الأوامر التالية كما هي. الهدف من هذه
-          الصفحة أن ترى السيناريو في Gazebo، وتعرف من خرج المولد ومن
-          <code>events.jsonl</code> هل التنفيذ نجح أم لا.
+          Open separate terminals and run the commands below as written. The
+          goal of this section is to see each scenario in Gazebo, then verify
+          from the scenario-generator output and <code>events.jsonl</code>
+          whether execution succeeded.
         </p>
 
         <table>
           <thead>
-            <tr><th>السيناريو</th><th>الحركة المتوقعة</th><th>بعده شغل</th></tr>
+            <tr><th>Scenario</th><th>Expected motion</th><th>Run next</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>right_yaskawa_to_staubli</code></td><td>الشاتل اليمين من Yaskawa إلى Staubli ويتوقف عند <code>DZI3R/DZI4R</code>.</td><td><code>right_staubli_to_yaskawa</code></td></tr>
-            <tr><td><code>right_staubli_to_yaskawa</code></td><td>الشاتل اليمين يرجع من Staubli إلى Yaskawa ويتوقف عند <code>DZI1R/DZI2R</code>.</td><td><code>right_yaskawa_to_staubli</code></td></tr>
-            <tr><td><code>left_yaskawa_to_kuka</code></td><td>الشاتل اليسار من Yaskawa إلى KUKA ويتوقف عند <code>DZI3L/DZI4L</code>.</td><td><code>left_kuka_to_yaskawa</code></td></tr>
-            <tr><td><code>left_kuka_to_yaskawa</code></td><td>الشاتل اليسار يرجع من KUKA إلى Yaskawa ويتوقف عند <code>DZI1L/DZI2L</code>.</td><td><code>left_yaskawa_to_kuka</code></td></tr>
+            <tr><td><code>right_yaskawa_to_staubli</code></td><td>The right shuttle moves from Yaskawa to Staubli and stops at <code>DZI3R/DZI4R</code>.</td><td><code>right_staubli_to_yaskawa</code></td></tr>
+            <tr><td><code>right_staubli_to_yaskawa</code></td><td>The right shuttle returns from Staubli to Yaskawa and stops at <code>DZI1R/DZI2R</code>.</td><td><code>right_yaskawa_to_staubli</code></td></tr>
+            <tr><td><code>left_yaskawa_to_kuka</code></td><td>The left shuttle moves from Yaskawa to KUKA and stops at <code>DZI3L/DZI4L</code>.</td><td><code>left_kuka_to_yaskawa</code></td></tr>
+            <tr><td><code>left_kuka_to_yaskawa</code></td><td>The left shuttle returns from KUKA to Yaskawa and stops at <code>DZI1L/DZI2L</code>.</td><td><code>left_yaskawa_to_kuka</code></td></tr>
           </tbody>
         </table>
 
-        <h3>Terminal 0: build مرة واحدة</h3>
+        <h3>Terminal 0: Build Once</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 0: build</span><button class="copy-btn" data-copy="cmd-ar-clean-build">Copy</button></div>
-          <pre><code id="cmd-ar-clean-build">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 0: build</span><button class="copy-btn" data-copy="cmd-clean-build">Copy</button></div>
+          <pre><code id="cmd-clean-build">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 
 colcon build --symlink-install
@@ -449,10 +519,10 @@ colcon build --symlink-install
 source install/setup.bash</code></pre>
         </div>
 
-        <h3>Terminal 1: شغل Gazebo + supervisor + recorder</h3>
+        <h3>Terminal 1: Launch Gazebo, Supervisor, and Recorder</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 1: Room 315 runtime</span><button class="copy-btn" data-copy="cmd-ar-clean-launch-room315">Copy</button></div>
-          <pre><code id="cmd-ar-clean-launch-room315">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 1: Room 315 runtime</span><button class="copy-btn" data-copy="cmd-clean-launch-room315">Copy</button></div>
+          <pre><code id="cmd-clean-launch-room315">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -473,10 +543,10 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_vla_dataset_dir:=~/room315_smolvla_demo</code></pre>
         </div>
 
-        <h3>Terminal 2: شغل PlanSys2 planner</h3>
+        <h3>Terminal 2: Start the PlanSys2 Planner</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 2: PlanSys2 planner</span><button class="copy-btn" data-copy="cmd-ar-clean-plansys">Copy</button></div>
-          <pre><code id="cmd-ar-clean-plansys">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 2: PlanSys2 planner</span><button class="copy-btn" data-copy="cmd-clean-plansys">Copy</button></div>
+          <pre><code id="cmd-clean-plansys">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -484,10 +554,10 @@ ros2 launch plansys2_planner planner_launch.py \
   params_file:=/opt/ros/jazzy/share/plansys2_bringup/params/plansys2_params.yaml</code></pre>
         </div>
 
-        <h3>Terminal 2B: فعّل PlanSys2 planner service</h3>
+        <h3>Terminal 2B: Activate the PlanSys2 Planner Service</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 2B: activate planner</span><button class="copy-btn" data-copy="cmd-ar-clean-activate-plansys">Copy</button></div>
-          <pre><code id="cmd-ar-clean-activate-plansys">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 2B: activate planner</span><button class="copy-btn" data-copy="cmd-clean-activate-plansys">Copy</button></div>
+          <pre><code id="cmd-clean-activate-plansys">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -499,44 +569,45 @@ ros2 lifecycle get /planner
 ros2 service list | grep '^/planner/get_plan$'</code></pre>
         </div>
         <p>
-          بعد هذه الخطوة يبقى Terminal 2 شغال، ويجب أن يطبع Terminal 2B خدمة
-          <code>/planner/get_plan</code>. مولد السيناريو يستخدم هذه الخدمة في
-          dry-run وexecute.
+          After this step, keep Terminal 2 running. Terminal 2B should print
+          the <code>/planner/get_plan</code> service. The scenario generator
+          uses that service in both dry-run and execution modes.
         </p>
 
-        <h3>Terminal 3: راقب supervisor status</h3>
+        <h3>Terminal 3: Watch Supervisor Status</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 3: supervisor status</span><button class="copy-btn" data-copy="cmd-ar-clean-watch-status">Copy</button></div>
-          <pre><code id="cmd-ar-clean-watch-status">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 3: supervisor status</span><button class="copy-btn" data-copy="cmd-clean-watch-status">Copy</button></div>
+          <pre><code id="cmd-clean-watch-status">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 ros2 topic echo /room_315/vla/status std_msgs/msg/String</code></pre>
         </div>
         <p>
-          أثناء التنفيذ راقب في هذا terminal حقول <code>last_decision</code>،
-          <code>accepted</code>، <code>active_position_sensors</code>، و
-          <code>active_tasks</code>. قبول الأوامر وظهور حساس الهدف يعني أن
-          السيناريو يتقدم بشكل صحيح.
+          During execution, watch <code>last_decision</code>,
+          <code>accepted</code>, <code>active_position_sensors</code>, and
+          <code>active_tasks</code>. Accepted commands plus the target sensor
+          becoming active indicate that the scenario is progressing correctly.
         </p>
 
-        <h3>Terminal 4: راقب dataset recorder</h3>
+        <h3>Terminal 4: Watch the Dataset Recorder</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 4: dataset status</span><button class="copy-btn" data-copy="cmd-ar-clean-watch-dataset">Copy</button></div>
-          <pre><code id="cmd-ar-clean-watch-dataset">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 4: dataset status</span><button class="copy-btn" data-copy="cmd-clean-watch-dataset">Copy</button></div>
+          <pre><code id="cmd-clean-watch-dataset">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String</code></pre>
         </div>
         <p>
-          هذا terminal يوضح بداية الحلقة ونهايتها ومجلد التسجيل المستخدم.
+          This terminal shows episode start/stop events and the dataset
+          directory used by the recorder.
         </p>
 
-        <h3>Terminal 5: dry-run لأول سيناريو</h3>
+        <h3>Terminal 5: Dry-Run the First Scenario</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 5: dry-run first goal</span><button class="copy-btn" data-copy="cmd-ar-clean-dry-run-first">Copy</button></div>
-          <pre><code id="cmd-ar-clean-dry-run-first">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 5: dry-run first goal</span><button class="copy-btn" data-copy="cmd-clean-dry-run-first">Copy</button></div>
+          <pre><code id="cmd-clean-dry-run-first">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -548,16 +619,16 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --dry-run</code></pre>
         </div>
         <p>
-          في الخرج يجب أن ترى <code>symbolic_plan</code> يحتوي:
-          <code>prepare_switches</code>، <code>open_stoppers</code>،
-          <code>move_shuttle</code>، <code>stop_shuttle</code>،
+          The output should include a <code>symbolic_plan</code> with
+          <code>prepare_switches</code>, <code>open_stoppers</code>,
+          <code>move_shuttle</code>, <code>stop_shuttle</code>, and
           <code>finish_task</code>.
         </p>
 
-        <h3>Terminal 6: نفذ أول سيناريو في Gazebo</h3>
+        <h3>Terminal 6: Execute the First Scenario in Gazebo</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 6: execute first goal</span><button class="copy-btn" data-copy="cmd-ar-clean-execute-first">Copy</button></div>
-          <pre><code id="cmd-ar-clean-execute-first">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 6: execute first goal</span><button class="copy-btn" data-copy="cmd-clean-execute-first">Copy</button></div>
+          <pre><code id="cmd-clean-execute-first">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -571,21 +642,21 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --execute</code></pre>
         </div>
         <p>
-          النتيجة الصحيحة: الشاتل اليمين يتحرك من Yaskawa إلى Staubli، ثم
-          يتوقف. خرج الأمر يحتوي <code>"success": true</code> داخل
-          <code>execution</code>، و<code>published_commands</code> يحتوي
-          <code>shuttle ON</code> ثم <code>shuttle OFF</code> ثم
-          <code>DONE</code>.
+          The expected result is that the right shuttle moves from Yaskawa to
+          Staubli and then stops. The command output should contain
+          <code>"success": true</code> under <code>execution</code>, and
+          <code>published_commands</code> should include <code>shuttle ON</code>,
+          then <code>shuttle OFF</code>, then <code>DONE</code>.
         </p>
 
-        <h3>Terminal 6 نفسه: نفذ سيناريو مختلف بعد الأول</h3>
+        <h3>Terminal 6 Again: Execute the Return Scenario</h3>
         <p>
-          بعد انتهاء <code>right_yaskawa_to_staubli</code> يصبح الشاتل اليمين
-          عند Staubli. لذلك شغل سيناريو الرجوع:
+          After <code>right_yaskawa_to_staubli</code> finishes, the right
+          shuttle is at Staubli. Run the return scenario next:
         </p>
         <div class="command">
-          <div class="command-bar"><span>Terminal 6: execute return goal</span><button class="copy-btn" data-copy="cmd-ar-clean-execute-return">Copy</button></div>
-          <pre><code id="cmd-ar-clean-execute-return">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 6: execute return goal</span><button class="copy-btn" data-copy="cmd-clean-execute-return">Copy</button></div>
+          <pre><code id="cmd-clean-execute-return">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -599,15 +670,15 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --execute</code></pre>
         </div>
         <p>
-          بعدها تستطيع تكرار الذهاب والرجوع على اليمين بتبديل
-          <code>--goal</code> بين <code>right_yaskawa_to_staubli</code> و
+          You can then repeat the right-side round trip by alternating
+          <code>--goal</code> between <code>right_yaskawa_to_staubli</code> and
           <code>right_staubli_to_yaskawa</code>.
         </p>
 
-        <h3>Terminal 7: نفذ سيناريوهات اليسار</h3>
+        <h3>Terminal 7: Execute the Left-Side Scenarios</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 7: left Yaskawa to KUKA</span><button class="copy-btn" data-copy="cmd-ar-clean-left-out">Copy</button></div>
-          <pre><code id="cmd-ar-clean-left-out">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 7: left Yaskawa to KUKA</span><button class="copy-btn" data-copy="cmd-clean-left-out">Copy</button></div>
+          <pre><code id="cmd-clean-left-out">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -621,8 +692,8 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --execute</code></pre>
         </div>
         <div class="command">
-          <div class="command-bar"><span>Terminal 7: left KUKA to Yaskawa</span><button class="copy-btn" data-copy="cmd-ar-clean-left-back">Copy</button></div>
-          <pre><code id="cmd-ar-clean-left-back">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 7: left KUKA to Yaskawa</span><button class="copy-btn" data-copy="cmd-clean-left-back">Copy</button></div>
+          <pre><code id="cmd-clean-left-back">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -636,14 +707,15 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --execute</code></pre>
         </div>
 
-        <h3>Terminal 8: شغل تسلسل كامل من أربعة سيناريوهات</h3>
+        <h3>Terminal 8: Run a Full Four-Scenario Sequence</h3>
         <p>
-          شغل هذا التسلسل من الحالة الابتدائية بعد Terminal 1، أو بعد أن يكون
-          الشاتل اليمين واليسار راجعين إلى Yaskawa.
+          Run this sequence from the initial state after Terminal 1, or after
+          both the right and left shuttles have returned to their Yaskawa
+          stations.
         </p>
         <div class="command">
-          <div class="command-bar"><span>Terminal 8: execute four-goal sequence</span><button class="copy-btn" data-copy="cmd-ar-clean-four-goals">Copy</button></div>
-          <pre><code id="cmd-ar-clean-four-goals">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 8: execute four-goal sequence</span><button class="copy-btn" data-copy="cmd-clean-four-goals">Copy</button></div>
+          <pre><code id="cmd-clean-four-goals">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -654,7 +726,7 @@ for GOAL in \
   left_kuka_to_yaskawa
 do
   echo "=== executing ${GOAL} ==="
-  ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  if ! ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
     --goal "${GOAL}" \
     --planner-backend plansys \
     --planner-service /planner/get_plan \
@@ -662,17 +734,23 @@ do
     --command-timeout-s 10 \
     --arrival-timeout-s 120 \
     --execute
+  then
+    echo "FAILED: ${GOAL}"
+    break
+  fi
 done</code></pre>
         </div>
         <p>
-          هذا التسلسل يحافظ على مكان الشاتل: كل حركة ذهاب يتبعها رجوع مناسب.
-          راقب Gazebo وTerminal 3 وTerminal 4 أثناء التشغيل.
+          This sequence keeps shuttle locations consistent: every outbound move
+          is followed by its matching return move. It stops at the first failed
+          scenario so the next task does not hide the real failure. Watch
+          Gazebo, Terminal 3, and Terminal 4 while it runs.
         </p>
 
-        <h3>Terminal 9: افتح آخر event مسجل</h3>
+        <h3>Terminal 9: Inspect the Latest Recorded Event</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 9: inspect latest event</span><button class="copy-btn" data-copy="cmd-ar-clean-inspect-event">Copy</button></div>
-          <pre><code id="cmd-ar-clean-inspect-event">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 9: inspect latest event</span><button class="copy-btn" data-copy="cmd-clean-inspect-event">Copy</button></div>
+          <pre><code id="cmd-clean-inspect-event">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 
 LATEST_EVENT_FILE="$(find ~/room315_smolvla_demo -path '*/events.jsonl' | sort -V | tail -n 1)"
 echo "$LATEST_EVENT_FILE"
@@ -680,16 +758,17 @@ echo "$LATEST_EVENT_FILE"
 tail -n 1 "$LATEST_EVENT_FILE" | python3 -m json.tool</code></pre>
         </div>
         <p>
-          داخل الحدث المسجل يجب أن يبقى <code>model_input</code> محصوراً في
-          <code>language</code> و<code>overhead_images</code> و
-          <code>last_command</code>. حقول PDDL مثل <code>pddl_goal</code> و
-          <code>symbolic_plan</code> تبقى metadata خارج دخل النموذج.
+          In the recorded event, <code>model_input</code> should remain limited
+          to <code>language</code>, <code>overhead_images</code>, and
+          <code>last_command</code>. PDDL fields such as
+          <code>pddl_goal</code> and <code>symbolic_plan</code> should remain
+          metadata outside the model input.
         </p>
 
-        <h3>Terminal 10: اعمل تقرير للتنفيذ</h3>
+        <h3>Terminal 10: Generate an Execution Report</h3>
         <div class="command">
-          <div class="command-bar"><span>Terminal 10: dataset report</span><button class="copy-btn" data-copy="cmd-ar-clean-report">Copy</button></div>
-          <pre><code id="cmd-ar-clean-report">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+          <div class="command-bar"><span>Terminal 10: dataset report</span><button class="copy-btn" data-copy="cmd-clean-report">Copy</button></div>
+          <pre><code id="cmd-clean-report">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -762,7 +841,8 @@ python3 -m json.tool ~/room315_pddl_report.json</code></pre>
         <h2>Basic VLA Launch</h2>
         <p>
           This is the smallest useful VLA setup: Room 315, kinematic shuttles,
-          the VLA camera bridge, and the VLA supervisor. Shuttles start stopped.
+          the VLA camera bridge, and the VLA supervisor. Shuttles start stopped,
+          and VLA removable obstacle markers are not loaded by default.
         </p>
 
         <div class="command">
@@ -818,7 +898,7 @@ ros2 topic hz /room_315/vla/left_rail_rgbd/image</code></pre>
         <h2>Send Commands to the VLA Supervisor</h2>
         <p>
           The model should output an event-level direct command: either a
-          schema-v2 <code>action_vector</code>, or an equivalent primitive JSON
+          schema-v3 <code>action_vector</code>, or an equivalent primitive JSON
           command such as <code>switches</code>, <code>stoppers</code>, or
           <code>shuttle</code>. <code>route_template</code> remains useful for
           manual checks, demo generation, and benchmarks, but it is not the final
@@ -1410,6 +1490,37 @@ ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
         </p>
 
         <div class="callout">
+          Room 315 launches without these obstacle markers by default. For this
+          section, restart the Room 315 launch with
+          <code>enable_room315_vla_obstacles:=true</code> before running the
+          obstacle tool or the <code>m10/m11</code> obstacle-aware scenarios.
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Launch with VLA obstacles enabled</span><button class="copy-btn" data-copy="cmd-launch-with-obstacles">Copy</button></div>
+          <pre><code id="cmd-launch-with-obstacles">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  enable_room315_vla_obstacles:=true \
+  room315_vla_dataset_dir:=~/room315_smolvla_demo</code></pre>
+        </div>
+
+        <div class="callout">
           To move objects with the mouse or see poses in Gazebo, use the full GUI:
           <code>gui_config:=config/mfja_default.gui.config</code>. The light GUI
           <code>gui_config:=config/mfja_light.gui.config</code> is better for
@@ -1419,7 +1530,7 @@ ros2 run mfja_robot_control_config vla_teleop_generator.py --ros-args \
           <code>m10/m11</code> should react to the new pose. At a fresh Gazebo
           startup, <code>room_315_only.launch.py</code> and
           <code>full_floor.launch.py</code> clear this cache by default because the
-          world resets the obstacles to their default world-file poses.
+          obstacle markers, when enabled, reset to their default world-file poses.
         </div>
 
         <div class="grid">
@@ -1863,32 +1974,80 @@ PY</code></pre>
         </div>
       </section>
 
-      <section id="arabic-multi-shuttle-update" dir="rtl" lang="ar">
-        <h2>تشغيل التحديثات الجديدة: هوية الشَتلات والحمولات وSchema-v3</h2>
+      <section id="multi-shuttle-update">
+        <h2>Run Object Payload Scenarios and Record Data</h2>
 
         <p>
-          التحديث الحالي نقل تجربة Room 315 من شَتلة واحدة إلى تجربة متعددة
-          الشَتلات. كل شَتلة صار لها موديل Gazebo خاص يحمل label واضح على
-          الأطراف عبر ألوان ومواد هندسية ثابتة، وليس عبر SVG texture:
-          R1 إلى R4 على السكة اليمنى وL1 إلى L4 على السكة اليسرى.
-          وسط الشَتلة بقي منطقة حمولة، لذلك حتى لو وضعت صندوقاً في الوسط تبقى
-          علامات الهوية على الزوايا مرئية من كاميرات RGB العلوية.
+          This section is only for testing the payload box carried by a shuttle
+          and recording data. The box is attached relative to the shuttle and is
+          centered on top by default. The default
+          <code>payload_pose_x_offset_m</code> value is <code>-0.08</code> as a
+          local offset in the shuttle frame, so it rotates and moves with the
+          shuttle instead of sliding during turns. The model input remains only
+          <code>language</code>, <code>overhead_images</code>, and
+          <code>last_command</code>; the <code>loaded/empty</code> state stays as
+          metadata for evaluation and recording.
         </p>
 
-        <div class="callout">
-          المهم بحثياً: النموذج المتعلم لا يرى أي جدول هوية أو PlanSys أو
-          rail state. دخل النموذج ما زال فقط:
-          <code>language</code>، <code>overhead_images</code>،
-          <code>last_command</code>. أما <code>target_shuttle_id</code>،
-          <code>visible_marker_count</code>، <code>payload_type</code>،
-          <code>structured_rail_state</code>، و<code>symbolic_plan</code>
-          فهي metadata خارج <code>model_input</code>.
+        <div class="callout warning">
+          Before changing scenarios, stop the previous launch terminal with
+          <code>Ctrl+C</code>. Do not run execute before preflight prints
+          <code>READY</code>. If the shuttle starts moving unexpectedly, an old
+          launch is probably still running; the Terminal 3A/3B/3C/3D/3E commands
+          clean up stale Room 315 processes before starting the next scenario.
         </div>
 
-        <h3>Terminal 1: تشغيل تجربة شَتلتين R1 وR2</h3>
-        <pre id="cmd-ar-two-shuttle"><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+        <h3>Terminal 0: Build Once</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 0</span><button class="copy-btn" data-copy="cmd-object-build">Copy</button></div>
+          <pre><code id="cmd-object-build">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash</code></pre>
+        </div>
+
+        <h3>Terminal 1: PlanSys2 Planner</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1</span><button class="copy-btn" data-copy="cmd-object-plansys">Copy</button></div>
+          <pre><code id="cmd-object-plansys">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
+
+ros2 launch plansys2_planner planner_launch.py \
+  params_file:=/opt/ros/jazzy/share/plansys2_bringup/params/plansys2_params.yaml</code></pre>
+        </div>
+
+        <h3>Terminal 2: Activate Planner</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 2</span><button class="copy-btn" data-copy="cmd-object-activate-planner">Copy</button></div>
+          <pre><code id="cmd-object-activate-planner">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 lifecycle set /planner configure || true
+ros2 lifecycle set /planner activate || true
+ros2 service list | grep '^/planner/get_plan$'</code></pre>
+        </div>
+
+        <h3>Scenario A: Loaded R2 to Staubli</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3A: launch</span><button class="copy-btn" data-copy="cmd-object-launch-a">Copy</button></div>
+          <pre><code id="cmd-object-launch-a">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+pkill -f "room_315_only.launch.py" || true
+pkill -f "room_315_kinematic_shuttle_node.py" || true
+pkill -f "room_315_vla_supervisor.py" || true
+pkill -f "room_315_vla_dataset_recorder.py" || true
+pkill -f "room315_vla_camera_bridge" || true
+pkill -f "room315_world_service_bridge" || true
+pkill -f "conveyor_loop_mode_controller.py.*room_315_only" || true
+pkill -f "parameter_bridge /clock@rosgraph_msgs/msg/Clock" || true
+pkill -f "parameter_bridge.*room_315_only" || true
+pkill -f "gz sim.*room_315_only" || true
+ros2 daemon stop || true
+ros2 daemon start
 
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
@@ -1897,38 +2056,70 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_vla:=true \
   enable_room315_vla_dataset_recorder:=true \
+  room315_enable_payload_visuals:=true \
   room315_right_shuttle_count:=2 \
-  room315_right_start_slots:=1,3 \
-  room315_left_shuttle_count:=0 \
+  room315_right_start_slots:=1,2 \
+  room315_right_loaded_shuttles:=R2 \
+  enable_room315_left_rail:=false \
+  room315_shuttles_start_enabled:=false \
   room315_visual_debug_colors:=false \
   room315_show_device_markers:=false \
-  room315_vla_dataset_dir:=~/room315_multi_shuttle_vla</code></pre>
-        <button data-copy="cmd-ar-two-shuttle">Copy</button>
+  room315_vla_dataset_dir:=~/room315_payload_scenarios</code></pre>
+        </div>
 
+        <div class="command">
+          <div class="command-bar"><span>Terminal 4A: preflight and execute</span><button class="copy-btn" data-copy="cmd-object-execute-a">Copy</button></div>
+          <pre><code id="cmd-object-execute-a">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+set -e
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_loaded_r2_to_staubli \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id carrying_part_id_to_station \
+  --command-timeout-s 60 \
+  --preflight-only \
+  --ready-line
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_loaded_r2_to_staubli \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id carrying_part_id_to_station \
+  --command-timeout-s 30 \
+  --arrival-timeout-s 120 \
+  --output /tmp/right_loaded_r2_to_staubli_execute.json \
+  --quiet \
+  --execute
+
+python3 -c "import json; s=json.load(open('/tmp/right_loaded_r2_to_staubli_execute.json')); assert s['execution']['success'] is True; print('OK loaded R2 to Staubli')"</code></pre>
+        </div>
+
+        <h3>Scenario B: Empty R1 to Yaskawa</h3>
         <p>
-          بعد التشغيل، تأكد من نافذة Gazebo أن R1 وR2 ظاهرتان كعلامات مركبة
-          على جسم الشَتلة نفسها، وليست overlay. عند تشغيل payload لاحقاً،
-          يغطي الوسط فقط وتبقى الزوايا مرئية.
+          R1 starts in slot 4 and R2 starts behind it in slot 3. This keeps the
+          loaded R2 from blocking the empty R1 with the headway/collision guard.
         </p>
-
-        <h3>Terminal 2: مراقبة حالة supervisor والسلامة</h3>
-        <pre id="cmd-ar-status"><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3B: launch</span><button class="copy-btn" data-copy="cmd-object-launch-b">Copy</button></div>
+          <pre><code id="cmd-object-launch-b">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic echo /room_315/vla/status std_msgs/msg/String</code></pre>
-        <button data-copy="cmd-ar-status">Copy</button>
-
-        <p>
-          في status ستجد <code>safety_decoder.metrics</code> و
-          <code>safety_decoder.fleet_state</code>. هذه معلومات privileged
-          للسلامة والتقييم فقط. لا تدخل إلى <code>model_input</code>.
-        </p>
-
-        <h3>Terminal 3: اختبار 4+4 شَتلات</h3>
-        <pre id="cmd-ar-four-four"><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+pkill -f "room_315_only.launch.py" || true
+pkill -f "room_315_kinematic_shuttle_node.py" || true
+pkill -f "room_315_vla_supervisor.py" || true
+pkill -f "room_315_vla_dataset_recorder.py" || true
+pkill -f "room315_vla_camera_bridge" || true
+pkill -f "room315_world_service_bridge" || true
+pkill -f "conveyor_loop_mode_controller.py.*room_315_only" || true
+pkill -f "parameter_bridge /clock@rosgraph_msgs/msg/Clock" || true
+pkill -f "parameter_bridge.*room_315_only" || true
+pkill -f "gz sim.*room_315_only" || true
+ros2 daemon stop || true
+ros2 daemon start
 
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
@@ -1936,67 +2127,343 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui:=true \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_vla:=true \
-  room315_right_shuttle_count:=4 \
-  room315_right_start_slots:=1,2,3,4 \
-  room315_left_shuttle_count:=4 \
-  room315_left_start_slots:=1,2,3,4 \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_enable_payload_visuals:=true \
+  room315_right_shuttle_count:=2 \
+  room315_right_start_slots:=4,3 \
+  room315_right_loaded_shuttles:=R2 \
+  enable_room315_left_rail:=false \
+  room315_shuttles_start_enabled:=false \
   room315_visual_debug_colors:=false \
-  room315_show_device_markers:=false</code></pre>
-        <button data-copy="cmd-ar-four-four">Copy</button>
+  room315_show_device_markers:=false \
+  room315_vla_dataset_dir:=~/room315_payload_scenarios</code></pre>
+        </div>
 
-        <p>
-          هذا smoke test بصري: يجب أن ترى R1/R2/R3/R4 وL1/L2/L3/L4. ملفات
-          العالم الآن تحمّل موديلات مميزة لكل شَتلة، والـ kinematic node
-          يستخدم نفس الموديلات عند spawn الديناميكي.
-        </p>
-
-        <h3>Terminal 4: اختبار رفض سلامة fleet</h3>
-        <pre id="cmd-ar-safety-reject"><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+        <div class="command">
+          <div class="command-bar"><span>Terminal 4B: preflight and execute</span><button class="copy-btn" data-copy="cmd-object-execute-b">Copy</button></div>
+          <pre><code id="cmd-object-execute-b">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-
-ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
-  "{data: '{\"action\":\"shuttle\",\"side\":\"right\",\"shuttle_id\":\"R2\",\"command\":\"ON\",\"next_block\":\"A12E\",\"headway_blocks_ahead\":0}'}"</code></pre>
-        <button data-copy="cmd-ar-safety-reject">Copy</button>
-
-        <p>
-          النتيجة المقصودة هنا هي رفض أمر لا يحترم headway أو block
-          reservation. كل أوامر التنفيذ تمر عبر supervisor حتى يبقى safety
-          decoder فعالاً.
-        </p>
-
-        <h3>Terminal 5: تشغيل PlanSys2 dry-run</h3>
-        <pre id="cmd-ar-plansys-check"><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+set -e
 
 ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
-  --goal right_yaskawa_to_staubli \
+  --goal right_empty_r1_to_yaskawa \
   --planner-backend plansys \
   --planner-service /planner/get_plan \
-  --language-seed 42 \
-  --dry-run</code></pre>
-        <button data-copy="cmd-ar-plansys-check">Copy</button>
+  --language-template-id empty_shuttle_to_station \
+  --command-timeout-s 60 \
+  --preflight-only \
+  --ready-line
 
-        <h3>Terminal 6: تقرير dataset بعد التسجيل</h3>
-        <pre id="cmd-ar-report"><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_empty_r1_to_yaskawa \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id empty_shuttle_to_station \
+  --command-timeout-s 30 \
+  --arrival-timeout-s 120 \
+  --output /tmp/right_empty_r1_to_yaskawa_execute.json \
+  --quiet \
+  --execute
+
+python3 -c "import json; s=json.load(open('/tmp/right_empty_r1_to_yaskawa_execute.json')); assert s['execution']['success'] is True; print('OK empty R1 to Yaskawa')"</code></pre>
+        </div>
+
+        <h3>Scenario C: Loaded L2 to KUKA</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3C: launch</span><button class="copy-btn" data-copy="cmd-object-launch-c">Copy</button></div>
+          <pre><code id="cmd-object-launch-c">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+pkill -f "room_315_only.launch.py" || true
+pkill -f "room_315_kinematic_shuttle_node.py" || true
+pkill -f "room_315_vla_supervisor.py" || true
+pkill -f "room_315_vla_dataset_recorder.py" || true
+pkill -f "room315_vla_camera_bridge" || true
+pkill -f "room315_world_service_bridge" || true
+pkill -f "conveyor_loop_mode_controller.py.*room_315_only" || true
+pkill -f "parameter_bridge /clock@rosgraph_msgs/msg/Clock" || true
+pkill -f "parameter_bridge.*room_315_only" || true
+pkill -f "gz sim.*room_315_only" || true
+ros2 daemon stop || true
+ros2 daemon start
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_enable_payload_visuals:=true \
+  enable_room315_right_rail:=false \
+  room315_left_shuttle_count:=2 \
+  room315_left_start_slots:=1,2 \
+  room315_left_loaded_shuttles:=L2 \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  room315_vla_dataset_dir:=~/room315_payload_scenarios</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 4C: preflight and execute</span><button class="copy-btn" data-copy="cmd-object-execute-c">Copy</button></div>
+          <pre><code id="cmd-object-execute-c">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+set -e
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal left_loaded_l2_to_kuka \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id carrying_part_id_to_station \
+  --command-timeout-s 60 \
+  --preflight-only \
+  --ready-line
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal left_loaded_l2_to_kuka \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id carrying_part_id_to_station \
+  --command-timeout-s 30 \
+  --arrival-timeout-s 120 \
+  --output /tmp/left_loaded_l2_to_kuka_execute.json \
+  --quiet \
+  --execute
+
+python3 -c "import json; s=json.load(open('/tmp/left_loaded_l2_to_kuka_execute.json')); assert s['execution']['success'] is True; print('OK loaded L2 to KUKA')"</code></pre>
+        </div>
+
+        <h3>Scenario D: Nearest Loaded Shuttle to Slot 3</h3>
+        <p>
+          R1 starts loaded in slot 1 and R2 starts loaded in slot 2. The
+          scenario command is “move the loaded right shuttle to slot 3”; when
+          more than one loaded shuttle matches, this phase selects the loaded
+          shuttle nearest to slot 3, so R2 is selected. The dry-run below
+          confirms the selected shuttle before Gazebo execution starts.
+        </p>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3D: launch</span><button class="copy-btn" data-copy="cmd-object-launch-d">Copy</button></div>
+          <pre><code id="cmd-object-launch-d">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+pkill -f "room_315_only.launch.py" || true
+pkill -f "room_315_kinematic_shuttle_node.py" || true
+pkill -f "room_315_vla_supervisor.py" || true
+pkill -f "room_315_vla_dataset_recorder.py" || true
+pkill -f "room315_vla_camera_bridge" || true
+pkill -f "room315_world_service_bridge" || true
+pkill -f "conveyor_loop_mode_controller.py.*room_315_only" || true
+pkill -f "parameter_bridge /clock@rosgraph_msgs/msg/Clock" || true
+pkill -f "parameter_bridge.*room_315_only" || true
+pkill -f "gz sim.*room_315_only" || true
+ros2 daemon stop || true
+ros2 daemon start
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_enable_payload_visuals:=true \
+  room315_right_shuttle_count:=2 \
+  room315_right_start_slots:=1,2 \
+  room315_right_loaded_shuttles:=R1,R2 \
+  enable_room315_left_rail:=false \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  room315_vla_dataset_dir:=~/room315_payload_scenarios</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 4D: preflight and execute</span><button class="copy-btn" data-copy="cmd-object-execute-d">Copy</button></div>
+          <pre><code id="cmd-object-execute-d">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+set -e
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_loaded_to_slot3 \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id loaded_shuttle_to_slot \
+  --output /tmp/right_loaded_to_slot3_dry_run.json \
+  --quiet \
+  --dry-run
+
+python3 -c "import json; s=json.load(open('/tmp/right_loaded_to_slot3_dry_run.json')); assert s['target_shuttle_id'] == 'right_shuttle_2'; assert s['target_slot'] == '3'; assert s['symbolic_plan'][2] == 'move_shuttle right right_shuttle_2 yaskawa staubli speed=0.3'; print('OK dry-run selects R2 for slot 3')"
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_loaded_to_slot3 \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id loaded_shuttle_to_slot \
+  --command-timeout-s 60 \
+  --preflight-only \
+  --ready-line
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_loaded_to_slot3 \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --language-template-id loaded_shuttle_to_slot \
+  --command-timeout-s 30 \
+  --arrival-timeout-s 120 \
+  --output /tmp/right_loaded_to_slot3_execute.json \
+  --quiet \
+  --execute
+
+python3 -c "import json; s=json.load(open('/tmp/right_loaded_to_slot3_execute.json')); cmds=s['execution']['published_commands']; assert s['target_shuttle_id'] == 'right_shuttle_2'; assert s['target_slot'] == '3'; assert cmds[2]['shuttle'] == 'right_shuttle_2'; assert cmds[2]['target_slot'] == '3'; assert cmds[3]['target_slot'] == '3'; assert 'target_slot' not in cmds[0]; assert 'target_slot' not in cmds[1]; assert s['execution']['success'] is True; print('OK nearest loaded R2 to slot 3')"</code></pre>
+        </div>
+
+        <h3>Scenario E: Clear Blocker, Then Move Loaded Shuttle to Slot 3</h3>
+        <p>
+          R1 starts empty in slot 3 and blocks the target. R2 starts loaded in
+          slot 2. The generated plan moves R1 forward only as far as the A4
+          stopper clearance point, then moves the loaded R2 to slot 3. This
+          clears the loaded shuttle path without sending the blocker around a
+          long loop.
+        </p>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3E: launch</span><button class="copy-btn" data-copy="cmd-object-launch-e">Copy</button></div>
+          <pre><code id="cmd-object-launch-e">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+pkill -f "room_315_only.launch.py" || true
+pkill -f "room_315_kinematic_shuttle_node.py" || true
+pkill -f "room_315_vla_supervisor.py" || true
+pkill -f "room_315_vla_dataset_recorder.py" || true
+pkill -f "room315_vla_camera_bridge" || true
+pkill -f "room315_world_service_bridge" || true
+pkill -f "conveyor_loop_mode_controller.py.*room_315_only" || true
+pkill -f "parameter_bridge /clock@rosgraph_msgs/msg/Clock" || true
+pkill -f "parameter_bridge.*room_315_only" || true
+pkill -f "gz sim.*room_315_only" || true
+ros2 daemon stop || true
+ros2 daemon start
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_dataset_recorder:=true \
+  room315_enable_payload_visuals:=true \
+  room315_right_shuttle_count:=2 \
+  room315_right_start_slots:=3,2 \
+  room315_right_loaded_shuttles:=R2 \
+  enable_room315_left_rail:=false \
+  room315_shuttles_start_enabled:=false \
+  room315_visual_debug_colors:=false \
+  room315_show_device_markers:=false \
+  room315_vla_dataset_dir:=~/room315_payload_scenarios</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 4E: preflight and execute</span><button class="copy-btn" data-copy="cmd-object-execute-e">Copy</button></div>
+          <pre><code id="cmd-object-execute-e">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+LOG=/tmp/room315_scenario_e_terminal4e.log
+: &gt; "$LOG"
+exec &gt; &gt;(tee -a "$LOG") 2&gt;&amp;1
+trap 'rc=$?; echo; echo "Terminal 4E finished with exit code $rc"; echo "Log saved at: $LOG"; if [ -t 0 ]; then read -r -p "Press Enter to close this terminal..." _; fi' EXIT
+set -Eeuo pipefail
+
+echo "1/3 DRY-RUN: verify Scenario E plan only; Gazebo will not move yet."
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py   --goal right_loaded_to_slot3_clear_blocker   --planner-backend plansys   --planner-service /planner/get_plan   --language-template-id loaded_shuttle_to_slot   --output /tmp/right_loaded_to_slot3_clear_blocker_dry_run.json   --quiet   --dry-run
+
+python3 -c 'import json; s=json.load(open("/tmp/right_loaded_to_slot3_clear_blocker_dry_run.json")); print("Dry-run blocker_clearance:", s["blocker_clearance"]); print("Dry-run symbolic_plan:"); [print(i, step) for i, step in enumerate(s["symbolic_plan"])]'
+
+echo "2/3 PREFLIGHT: wait up to 8 seconds for Scenario E initial state."
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py   --goal right_loaded_to_slot3_clear_blocker   --planner-backend plansys   --planner-service /planner/get_plan   --language-template-id loaded_shuttle_to_slot   --command-timeout-s 8   --preflight-only   --ready-line
+
+echo "3/3 EXECUTE: this is the step that moves the shuttles in Gazebo."
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py   --goal right_loaded_to_slot3_clear_blocker   --planner-backend plansys   --planner-service /planner/get_plan   --language-template-id loaded_shuttle_to_slot   --command-timeout-s 30   --arrival-timeout-s 120   --output /tmp/right_loaded_to_slot3_clear_blocker_execute.json   --quiet   --execute
+
+python3 -c 'import json; s=json.load(open("/tmp/right_loaded_to_slot3_clear_blocker_execute.json")); print("Execution success:", s.get("execution", {}).get("success")); print("Published commands:"); [print(i, c.get("action"), c.get("shuttle"), c.get("command"), c.get("target_slot"), c.get("target_sensors"), c.get("target_stopper")) for i, c in enumerate(s.get("execution", {}).get("published_commands", []))]'
+</code></pre>
+        </div>
+
+        <h3>Run All Payload Cases for Training</h3>
+        <p>
+          Use this for the training matrix. One command runs all payload cases
+          in order. Before each case, the runner restarts Room 315 with the
+          correct shuttle count, start slots, and loaded shuttles from
+          <code>payload_training_cases.yaml</code>. Every successful run is
+          exported into the training dataset. If a case looks wrong in Gazebo,
+          note the printed case number and report that number.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal R0: run all payload cases</span><button class="copy-btn" data-copy="cmd-object-run-all-payload-cases">Copy</button></div>
+          <pre><code id="cmd-object-run-all-payload-cases">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select mfja_robot_control_config --allow-overriding mfja_robot_control_config
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_review.py --review-dir /tmp/room315_payload_case_review
+
+sed -n '1,260p' /tmp/room315_payload_case_review/review_index.md
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --dataset-dir ~/room315_payload_all_cases \
+  --results-dir /tmp/room315_payload_case_batch \
+  --reset-dataset \
+  --gui true
+
+sed -n '1,260p' /tmp/room315_payload_case_batch/payload_case_batch_summary.json</code></pre>
+        </div>
+
+        <h3>Run Four-Shuttle Interior-Loop Payload Cases Only</h3>
+        <p>
+          Use this when reviewing the new four-shuttle cases where the blocker
+          enters the interior loop before the loaded shuttle moves to slot 2.
+          These are Case 7 and Case 8 in <code>payload_training_cases.yaml</code>.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal R1: run interior-loop cases</span><button class="copy-btn" data-copy="cmd-object-run-interior-loop-payload-cases">Copy</button></div>
+          <pre><code id="cmd-object-run-interior-loop-payload-cases">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select mfja_robot_control_config --allow-overriding mfja_robot_control_config
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --dataset-dir ~/room315_payload_interior_loop_cases \
+  --results-dir /tmp/room315_payload_interior_loop_cases \
+  --reset-dataset \
+  --gui true \
+  --start-at 7 \
+  --stop-after 8 \
+  --launch-wait-s 10 \
+  --preflight-timeout-s 30 \
+  --command-timeout-s 30 \
+  --arrival-timeout-s 180
+
+sed -n '1,260p' /tmp/room315_payload_interior_loop_cases/payload_case_batch_summary.json</code></pre>
+        </div>
+
+        <h3>Terminal 5: Dataset Report</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 5</span><button class="copy-btn" data-copy="cmd-object-report">Copy</button></div>
+          <pre><code id="cmd-object-report">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 ros2 run mfja_robot_control_config room_315_pddl_dataset_report.py \
-  ~/room315_multi_shuttle_vla \
-  --output ~/room315_multi_shuttle_report.json</code></pre>
-        <button data-copy="cmd-ar-report">Copy</button>
-
-        <p>
-          التقرير يحسب الآن مقاييس مثل
-          <code>visible_marker_count_distribution</code>،
-          <code>identity_occlusion_level_distribution</code>،
-          <code>target_shuttle_distribution</code>،
-          <code>wrong_shuttle_command_rate</code>،
-          <code>headway_violation_rate</code>، و
-          <code>block_reservation_success_rate</code>.
-        </p>
+  ~/room315_payload_all_cases \
+  --output ~/room315_payload_all_cases_report.json</code></pre>
+        </div>
       </section>
     </main>
   </div>

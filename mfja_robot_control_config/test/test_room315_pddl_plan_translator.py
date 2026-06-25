@@ -50,6 +50,32 @@ def test_prepare_switches_translates_to_set_switches_compatible_command():
     assert _action_value(translator, translated.action_vector, 'switch_value_A3') == 1.0
 
 
+def test_prepare_switches_can_target_one_switch():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        'prepare_switches right yaskawa yaskawa switch=A3 state=INTERIOR'
+    )
+
+    assert translated.command == {
+        'action': 'switches',
+        'side': 'right',
+        'switches': {'A3': 'INTERIOR'},
+    }
+    assert translated.event_action['target_id'] == 'A3'
+    assert translated.event_action['switch_mask'] == {
+        'A1': 0,
+        'A2': 0,
+        'A3': 1,
+        'A4': 0,
+    }
+    assert translated.event_action['switch_values']['A1'] == 'UNCHANGED'
+    assert translated.event_action['switch_values']['A3'] == 'INTERIOR'
+    assert _action_value(translator, translated.action_vector, 'switch_mask_A3') == 1.0
+    assert _action_value(translator, translated.action_vector, 'switch_mask_A4') == 0.0
+    assert _action_value(translator, translated.action_vector, 'switch_value_A3') == 2.0
+
+
 def test_open_stoppers_translates_to_set_stoppers_compatible_command():
     translator = _load_module()
 
@@ -72,6 +98,35 @@ def test_open_stoppers_translates_to_set_stoppers_compatible_command():
     assert _action_value(translator, translated.action_vector, 'primitive_id') == 3.0
     assert _action_value(translator, translated.action_vector, 'stopper_mask_A4') == 1.0
     assert _action_value(translator, translated.action_vector, 'stopper_value_A4') == 1.0
+
+
+def test_set_stoppers_can_close_single_stopper_and_open_the_rest():
+    translator = _load_module()
+
+    translated = translator.translate_step('set_stoppers right A4 closed')
+
+    assert translated.command == {
+        'action': 'stoppers',
+        'side': 'right',
+        'stoppers': {'ALL': '0', 'A4': '1'},
+    }
+    assert translated.event_action['primitive'] == 'SET_STOPPERS'
+    assert translated.event_action['target_id'] == 'A4'
+    assert translated.event_action['stopper_mask'] == {
+        'A1': 1,
+        'A2': 1,
+        'A3': 1,
+        'A4': 1,
+    }
+    assert translated.event_action['stopper_values'] == {
+        'A1': 'open',
+        'A2': 'open',
+        'A3': 'open',
+        'A4': 'closed',
+    }
+    assert _action_value(translator, translated.action_vector, 'primitive_id') == 3.0
+    assert _action_value(translator, translated.action_vector, 'target_id') == 4.0
+    assert _action_value(translator, translated.action_vector, 'stopper_value_A4') == 2.0
 
 
 def test_move_shuttle_translates_to_shuttle_on_with_speed():
@@ -111,6 +166,25 @@ def test_move_shuttle_with_payload_selected_identity_maps_to_r2_schema_fields():
     assert translated.event_action['shuttle_id'] == 'R2'
     assert translated.event_action['shuttle_index'] == 1
     assert _action_value(translator, translated.action_vector, 'shuttle_index') == 1.0
+
+
+def test_move_shuttle_preserves_target_stopper_for_guarded_stopper_motion():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        'move_shuttle right right_shuttle_2 staubli staubli speed=0.3 target_stopper=A4'
+    )
+
+    assert translated.command == {
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'command': 'ON',
+        'speed': 0.3,
+        'target_stopper': 'A4',
+    }
+    assert translated.event_action['primitive'] == 'SHUTTLE_ON'
+    assert translated.event_action['target_id'] == 'right_shuttle_2'
 
 
 def test_stop_shuttle_translates_to_stop_now():

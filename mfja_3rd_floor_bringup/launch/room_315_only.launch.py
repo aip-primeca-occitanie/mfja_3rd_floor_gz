@@ -113,6 +113,15 @@ def generate_launch_description():
             description='Use switch/shuttle debug colors; false keeps rail-like colors for VLA data.',
         ),
         DeclareLaunchArgument(
+            'enable_room315_vla_obstacles',
+            default_value='false',
+            choices=['true', 'false'],
+            description=(
+                'Load Room 315 VLA removable obstacle markers. Defaults to false '
+                'so Gazebo starts without obstacles unless explicitly requested.'
+            ),
+        ),
+        DeclareLaunchArgument(
             'enable_room315_kinematic_shuttles',
             default_value='true',
             choices=['true', 'false'],
@@ -337,6 +346,9 @@ def generate_launch_description():
                 'initial_loop_mode': LaunchConfiguration('initial_loop_mode'),
                 'pause_during_switch_update': LaunchConfiguration('pause_during_switch_update'),
                 'visual_debug_colors': LaunchConfiguration('room315_visual_debug_colors'),
+                'enable_room315_vla_obstacles': LaunchConfiguration(
+                    'enable_room315_vla_obstacles'
+                ),
             }.items(),
         ),
         TimerAction(

@@ -114,14 +114,14 @@ route_templates:
 
   left_enter_interior_loop:
     type: loop_entry
-    description: Stop a left-rail shuttle from source slots 1/2 before A1, switch all turnouts to INTERIOR, then release it into the interior loop.
+    description: Stop a left-rail shuttle from source slots 1/2 before A3, switch all turnouts to INTERIOR, then release it into the interior loop.
     side: left
     source_slots: ["1", "2"]
-    gate_stopper: A1
+    gate_stopper: A3
     approach_switch_state: EXTERIOR
     target_switch_state: INTERIOR
-    completion_sensors: [DA1IL]
-    completion_segments: [A12I]
+    completion_sensors: [DA3IL]
+    completion_segments: [A34I]
     timeout_s: 120.0
     aliases:
       - make the left shuttle circulate on the interior loop

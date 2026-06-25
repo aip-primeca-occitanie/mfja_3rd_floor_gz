@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+import importlib.util
+import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+MULTI_SIM_LAUNCH = REPO_ROOT / 'mfja_robot_control_config' / 'launch' / 'multi_robot_sim.launch.py'
 CONTROL_LAUNCH = (
     REPO_ROOT
     / 'mfja_robot_control_config'
@@ -15,6 +19,21 @@ FULL_FLOOR_LAUNCH = REPO_ROOT / 'mfja_3rd_floor_bringup' / 'launch' / 'full_floo
 KINEMATIC_NODE = (
     REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_kinematic_shuttle_node.py'
 )
+ROOM315_WORLD = REPO_ROOT / 'mfja_3rd_floor_description' / 'worlds' / 'room_315_only.world'
+
+
+def _load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _launch_argument_block(text: str, argument_name: str) -> str:
+    start = text.index(f"DeclareLaunchArgument(\n            '{argument_name}'")
+    return text[start:text.index('),', start)]
 
 
 def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
@@ -61,6 +80,40 @@ def test_payload_x_offset_defaults_center_the_payload():
     assert "'payload_pose_x_offset_m',\n            default_value='-0.08'" in control
     assert "'room315_payload_pose_x_offset_m',\n            default_value='-0.08'" in room_only
     assert "'room315_payload_pose_x_offset_m',\n            default_value='-0.08'" in full_floor
+
+
+def test_room315_vla_obstacle_launch_argument_defaults_disabled_and_is_forwarded():
+    multi_sim = MULTI_SIM_LAUNCH.read_text(encoding='utf-8')
+    room_only = ROOM_ONLY_LAUNCH.read_text(encoding='utf-8')
+    full_floor = FULL_FLOOR_LAUNCH.read_text(encoding='utf-8')
+
+    for text in (multi_sim, room_only, full_floor):
+        block = _launch_argument_block(text, 'enable_room315_vla_obstacles')
+        assert "default_value='false'" in block
+        assert "choices=['true', 'false']" in block
+        assert 'without obstacles unless explicitly requested' in block
+
+    assert "'enable_room315_vla_obstacles': LaunchConfiguration" in room_only
+    assert "'enable_room315_vla_obstacles': LaunchConfiguration" in full_floor
+    assert 'LaunchConfiguration(\'enable_room315_vla_obstacles\').perform(context)' in multi_sim
+
+
+def test_room315_vla_obstacle_world_materializer_removes_only_obstacle_markers():
+    launch_module = _load_module('multi_robot_sim_launch', MULTI_SIM_LAUNCH)
+    materialized_world = Path(
+        launch_module._materialize_world_without_room315_vla_obstacles(str(ROOM315_WORLD))
+    )
+
+    assert materialized_world != ROOM315_WORLD
+    root = ET.parse(materialized_world).getroot()
+    includes = {
+        include.findtext('name', default='').strip(): include.findtext('uri', default='').strip()
+        for include in root.findall('.//include')
+    }
+
+    assert 'room315_vla_right_obstacle_marker' not in includes
+    assert 'room315_vla_left_obstacle_marker' not in includes
+    assert includes['room315_vla_overhead_devices_1'] == 'model://room315_vla_overhead_devices'
 
 
 def test_room315_only_starts_unpaused_by_default_for_visible_shuttles():

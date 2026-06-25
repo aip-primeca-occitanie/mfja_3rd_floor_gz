@@ -200,6 +200,8 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
         command, event_action = _translate_prepare_switches(parsed)
     elif parsed.name == 'open_stoppers':
         command, event_action = _translate_open_stoppers(parsed)
+    elif parsed.name == 'set_stoppers':
+        command, event_action = _translate_set_stoppers(parsed)
     elif parsed.name == 'move_shuttle':
         command, event_action = _translate_move_shuttle(parsed)
     elif parsed.name == 'stop_shuttle':
@@ -232,21 +234,39 @@ def _safe_int(value: Any, default: int = 0) -> int:
 def _translate_prepare_switches(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
     side = _side_from_args(step.args)
     state = _normalize_switch_value(step.kwargs.get('state') or step.kwargs.get('switch_state') or 'EXTERIOR')
+    switch_name = _switch_target_from_step(step)
+    switches = {switch_name: state} if switch_name else {'ALL': state}
     command = {
         'action': 'switches',
         'side': side,
-        'switches': {'ALL': state},
+        'switches': switches,
     }
     event_action = _blank_event_action(
         primitive='SET_SWITCHES',
         side=side,
         wait_condition='switch_state_match',
-        target_id='ALL_SWITCHES',
+        target_id=switch_name or 'ALL_SWITCHES',
         reason='switch_update',
     )
-    event_action['switch_mask'] = {name: 1 for name in DEVICE_NAMES}
-    event_action['switch_values'] = {name: state for name in DEVICE_NAMES}
+    event_action['switch_mask'] = {
+        name: 1 if not switch_name or name == switch_name else 0
+        for name in DEVICE_NAMES
+    }
+    event_action['switch_values'] = {
+        name: state if not switch_name or name == switch_name else 'UNCHANGED'
+        for name in DEVICE_NAMES
+    }
     return command, event_action
+
+
+def _switch_target_from_step(step: PddlPlanStep) -> str:
+    raw = (
+        step.kwargs.get('switch')
+        or step.kwargs.get('switch_name')
+        or step.kwargs.get('target_switch')
+    )
+    text = str(raw or '').strip().upper()
+    return text if text in DEVICE_NAMES else ''
 
 
 def _translate_open_stoppers(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -268,6 +288,45 @@ def _translate_open_stoppers(step: PddlPlanStep) -> tuple[dict[str, Any], dict[s
     return command, event_action
 
 
+def _translate_set_stoppers(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
+    side = _side_from_args(step.args)
+    stopper = _stopper_from_args(step.args)
+    state = _stopper_state_from_step(step)
+    command_state = '1' if state == 'closed' else '0'
+    if stopper == 'ALL':
+        assignments = {'ALL': command_state}
+        event_values = {name: state for name in DEVICE_NAMES}
+        target_id = 'ALL_STOPPERS'
+    elif state == 'closed':
+        assignments = {'ALL': '0', stopper: '1'}
+        event_values = {name: 'open' for name in DEVICE_NAMES}
+        event_values[stopper] = 'closed'
+        target_id = stopper
+    else:
+        assignments = {stopper: '0'}
+        event_values = {name: 'UNCHANGED' for name in DEVICE_NAMES}
+        event_values[stopper] = 'open'
+        target_id = stopper
+
+    command = {
+        'action': 'stoppers',
+        'side': side,
+        'stoppers': assignments,
+    }
+    event_action = _blank_event_action(
+        primitive='SET_STOPPERS',
+        side=side,
+        wait_condition='stopper_state_match',
+        target_id=target_id,
+        reason='stopper_update',
+    )
+    event_action['stopper_mask'] = {
+        name: int(event_values[name] != 'UNCHANGED') for name in DEVICE_NAMES
+    }
+    event_action['stopper_values'] = event_values
+    return command, event_action
+
+
 def _translate_move_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
     side, shuttle = _side_and_shuttle_from_args(step.args)
     speed = _float_kwarg(step.kwargs, 'speed', 'speed_mps', default=0.3)
@@ -278,6 +337,11 @@ def _translate_move_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[st
         'command': 'ON',
         'speed': speed,
     }
+    target_stopper = _stopper_or_empty(
+        step.kwargs.get('target_stopper') or step.kwargs.get('stopper_target')
+    )
+    if target_stopper:
+        command['target_stopper'] = target_stopper
     event_action = _blank_event_action(
         primitive='SHUTTLE_ON',
         side=side,
@@ -464,6 +528,37 @@ def _side_from_args(args: tuple[str, ...]) -> str:
         if side:
             return side
     raise ValueError('PDDL step needs a right or left rail side')
+
+
+def _stopper_from_args(args: tuple[str, ...]) -> str:
+    for arg in args:
+        stopper = _stopper_or_empty(arg)
+        if stopper:
+            return stopper
+    raise ValueError('set_stoppers needs stopper target A1-A4 or ALL')
+
+
+def _stopper_or_empty(value: Any) -> str:
+    text = str(value or '').strip().upper()
+    if text in {'ALL', *DEVICE_NAMES}:
+        return text
+    return ''
+
+
+def _stopper_state_from_step(step: PddlPlanStep) -> str:
+    for key in ('state', 'stopper_state', 'value'):
+        if key in step.kwargs:
+            return _normalize_stopper_value(step.kwargs[key])
+    for arg in step.args:
+        if _normalize_side_or_empty(arg) or _stopper_or_empty(arg):
+            continue
+        try:
+            state = _normalize_stopper_value(arg)
+        except ValueError:
+            continue
+        if state != 'UNCHANGED':
+            return state
+    raise ValueError('set_stoppers needs state open/closed')
 
 
 def _infer_side(value: Any, default: str = 'right') -> str:

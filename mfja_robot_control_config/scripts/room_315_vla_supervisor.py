@@ -115,6 +115,7 @@ SWITCH_SENSOR_PREFIX_BY_SIDE = {
         'A4': ('DZI4L', 'DA4L', 'DA4EL', 'DA4IL', 'A4_STOPPER_SENSOR'),
     },
 }
+SWITCH_CLEAR_DISTANCE_M = 0.35
 SWITCH_VALUE_BY_ID = {
     1: 'EXTERIOR',
     2: 'INTERIOR',
@@ -387,8 +388,24 @@ def _shuttle_near_switch(shuttle_state: dict[str, Any], switch_name: str) -> boo
     segment = _clean_token(shuttle_state.get('segment', '')).upper()
     if not segment:
         return False
+    if _shuttle_segment_cleared_switch(shuttle_state, switch_name, segment):
+        return False
     near_segments = SWITCH_NEAR_SEGMENTS.get(switch_name, set())
     return segment in near_segments or any(segment.startswith(prefix) for prefix in near_segments)
+
+
+def _shuttle_segment_cleared_switch(
+    shuttle_state: dict[str, Any],
+    switch_name: str,
+    segment: str,
+) -> bool:
+    try:
+        s = float(shuttle_state.get('s'))
+    except (TypeError, ValueError):
+        return False
+    if switch_name == 'A3' and segment in {'A34E', 'A34I'}:
+        return s > SWITCH_CLEAR_DISTANCE_M
+    return False
 
 
 def _active_sensor_near_switch(rail: dict[str, Any], side: str, switch_name: str) -> bool:
@@ -710,6 +727,41 @@ def _is_all_switch_loop_transition(expanded: dict[str, str]) -> bool:
     return len(set(expanded.values())) == 1
 
 
+def _single_gate_switch_change_is_staged(
+    expanded: dict[str, str],
+    *,
+    rails: dict[str, Any],
+    side: str,
+    route_templates: dict[str, dict[str, Any]],
+) -> bool:
+    if len(expanded) != 1:
+        return False
+    switch_name = next(iter(expanded))
+    if switch_name != _gate_for_side(route_templates, side):
+        return False
+    if _rail_has_moving_shuttle(rails, side):
+        return False
+    return _rail_stopped_on_gate_approach(rails, side, switch_name)
+
+
+def _rail_stopped_on_gate_approach(rails: dict[str, Any], side: str, gate: str) -> bool:
+    approach_segments = {
+        ('right', 'A3'): {'A23'},
+        ('left', 'A1'): {'A14'},
+        ('left', 'A3'): {'A23'},
+    }.get((side, gate), set())
+    for shuttle_state in _rail_shuttles(rails, side).values():
+        if _shuttle_is_moving(shuttle_state) or _shuttle_is_falling(shuttle_state):
+            continue
+        segment = _clean_token(shuttle_state.get('segment', '')).upper()
+        if segment in approach_segments:
+            return True
+    rail = _rail_snapshot(rails, side)
+    active_names = _active_sensor_names(rail)
+    gate_sensor = f'{gate}_STOPPER_SENSOR'
+    return gate_sensor in active_names
+
+
 def _switch_assignments_are_noop(
     rails: dict[str, Any],
     side: str,
@@ -976,14 +1028,20 @@ def decode_and_validate(
                     ),
                 )
         elif not assignments_are_noop:
-            for switch_name in expanded:
-                reason = _occupied_guarded_segment_reason(rails, side, switch_name)
-                if reason:
-                    return _safety_decision(
-                        accepted=False,
-                        original_action=raw_action,
-                        reason=reason,
-                    )
+            if not _single_gate_switch_change_is_staged(
+                expanded,
+                rails=rails,
+                side=side,
+                route_templates=route_templates,
+            ):
+                for switch_name in expanded:
+                    reason = _occupied_guarded_segment_reason(rails, side, switch_name)
+                    if reason:
+                        return _safety_decision(
+                            accepted=False,
+                            original_action=raw_action,
+                            reason=reason,
+                        )
 
     decision = _decode_room315_vla_action(
         ros_command,
@@ -2024,8 +2082,27 @@ class Room315VlaSupervisor(Node):
             self._record_safety_decision(decision)
             return decision
         if isinstance(command, dict) and 'action_vector' in command:
-            decision = self.decode_and_validate(command.get('action_vector'))
-            decision['raw_action'] = command.get('action_vector')
+            target_stopper = (
+                command.get('target_stopper')
+                or command.get('stopper_target')
+                or command.get('target')
+            )
+            if (
+                str(command.get('action') or '').casefold() == 'shuttle'
+                and str(command.get('command') or '').upper() == 'ON'
+                and target_stopper
+            ):
+                command_for_safety = dict(command)
+                raw_action = command_for_safety.pop('action_vector')
+                decision = self._safety_decode_command(command_for_safety)
+                decision['raw_action'] = raw_action
+                decision['executed_action'] = (
+                    decision.get('corrected_action') if decision.get('accepted') else None
+                )
+                decision['illegal_proposal'] = not bool(decision.get('accepted'))
+            else:
+                decision = self.decode_and_validate(command.get('action_vector'))
+                decision['raw_action'] = command.get('action_vector')
             decision['original_action'] = command
             if not decision.get('accepted'):
                 decision['rejected_action'] = command.get('action_vector')

@@ -36,9 +36,17 @@ from room_315_pddl_validation_gate import write_validation_result
 REPO_ROOT = SCRIPT_DIR.parents[1]
 PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'pddl'
 PDDL_DOMAIN_PATH = PDDL_DIR / 'domain_room315.pddl'
+DEFAULT_PAYLOAD_TRAINING_CASES_PATH = (
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'config'
+    / 'room_315_vla'
+    / 'payload_training_cases.yaml'
+)
 DEFAULT_PLANSYS_GET_PLAN_SERVICE = '/planner/get_plan'
 DEFAULT_PLANSYS_TIMEOUT_S = 10.0
 DEFAULT_SUPERVISOR_NODE_NAME = 'room_315_vla_supervisor'
+DEFAULT_SHUTTLE_SPEED_MPS = 0.3
 
 SUPPORTED_GOALS = {
     'right_yaskawa_to_staubli': {
@@ -106,10 +114,12 @@ SUPPORTED_GOALS = {
         },
         'blocker_shuttle': 'right_shuttle_1',
         'blocker_start_slot': '3',
-        'blocker_clear_slot': '1',
-        'blocker_restore_slot': 'auto',
-        'blocker_restore_policy': 'selected_source_slot_then_nearest_free_slot',
-        'clearance_strategy': 'clear_blocker_move_loaded_then_restore_blocker_to_free_slot',
+        'blocker_clear_slot': '4',
+        'blocker_clear_sensor': 'A4_STOPPER_SENSOR',
+        'blocker_clear_stopper': 'A4',
+        'blocker_restore_slot': '',
+        'blocker_restore_policy': 'none',
+        'clearance_strategy': 'clear_blocker_to_a4_stopper_then_move_loaded',
         'problem_name': 'room315-right-loaded-to-slot3-clear-blocker',
     },
     'right_empty_r1_to_yaskawa': {
@@ -140,6 +150,7 @@ LANGUAGE_TEMPLATE_SEQUENCE = (
 SUPPORTED_SYMBOLIC_ACTIONS = {
     'prepare_switches',
     'open_stoppers',
+    'set_stoppers',
     'move_shuttle',
     'stop_shuttle',
     'finish_task',
@@ -170,6 +181,23 @@ SLOT_SENSOR_BY_SIDE_AND_SLOT = {
     ('left', '3'): 'DZI3L',
     ('left', '4'): 'DZI4L',
 }
+SLOT_POSE_BY_SIDE_AND_SLOT = {
+    ('right', '1'): ('A12E', 0.9172),
+    ('right', '2'): ('A12E', 1.4544),
+    ('right', '3'): ('A34E', 0.9960),
+    ('right', '4'): ('A34E', 1.5219),
+    ('left', '1'): ('A12E', 0.9534),
+    ('left', '2'): ('A12E', 1.5011),
+    ('left', '3'): ('A34E', 0.9522),
+    ('left', '4'): ('A34E', 1.4886),
+}
+SLOT_POSE_ARRIVAL_TOLERANCE_M = 0.08
+INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE = {
+    ('right', 'A3'): ('A34I', 0.7083),
+    ('left', 'A1'): ('A12I', 0.7083),
+    ('left', 'A3'): ('A34I', 0.7083),
+}
+INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M = 0.08
 
 
 @dataclass(frozen=True)
@@ -191,11 +219,15 @@ class ScenarioSpec:
     blocker_shuttle: str = ''
     blocker_start_slot: str = ''
     blocker_clear_slot: str = ''
+    blocker_clear_target: str = ''
+    blocker_clear_sensor: str = ''
+    blocker_clear_stopper: str = ''
     blocker_restore_slot: str = ''
     blocker_restore_policy: str = ''
     blocker_restore_slot_source: str = ''
     blocker_restore_candidate_slots: tuple[str, ...] = ()
     clearance_strategy: str = ''
+    clearance_steps: tuple[dict[str, Any], ...] = ()
 
 
 class BasePlannerBackend:
@@ -369,8 +401,40 @@ class ScenarioTransport:
         target_sensors: list[str],
         shuttle: str,
         timeout_s: float,
+        target_slot: str = '',
+        target_station: str = '',
+        target_segment: str = '',
+        target_s: float | None = None,
+        target_tolerance_m: float | None = None,
     ) -> dict[str, Any]:
         return {'arrived': True, 'reason': ''}
+
+    def wait_for_stopper_state(
+        self,
+        *,
+        side: str,
+        stoppers: dict[str, Any],
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        return {'ready': True, 'reason': ''}
+
+    def wait_for_switch_state(
+        self,
+        *,
+        side: str,
+        switches: dict[str, Any],
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        return {'ready': True, 'reason': ''}
+
+    def wait_for_shuttle_stopped(
+        self,
+        *,
+        side: str,
+        shuttle: str,
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        return {'ready': True, 'reason': ''}
 
 
 class RosScenarioTransport(ScenarioTransport):
@@ -542,6 +606,46 @@ class RosScenarioTransport(ScenarioTransport):
         msg.data = str(command)
         self.episode_control_pub.publish(msg)
 
+    def publish_episode_start_and_wait(self, *, goal: str, timeout_s: float) -> dict[str, Any]:
+        if not self._dataset_status_publisher_count():
+            return {'ready': True, 'reason': '', 'observed': False}
+        deadline = time.monotonic() + max(float(timeout_s), 0.0)
+        wanted_goal = str(goal or '').strip()
+        start_command = f'start {wanted_goal}' if wanted_goal else 'start'
+        latest: dict[str, Any] = {}
+        last_publish_s = 0.0
+        episode_control_subscribers: int | None = None
+        while time.monotonic() <= deadline:
+            self.rclpy.spin_once(self.node, timeout_sec=0.05)
+            latest = dict(self.latest_dataset_status)
+            if self._dataset_status_matches_started_episode(latest, wanted_goal):
+                return {
+                    'ready': True,
+                    'reason': '',
+                    'observed': True,
+                    'latest_dataset_status': latest,
+                }
+
+            episode_control_subscribers = self._episode_control_subscriber_count()
+            if episode_control_subscribers == 0:
+                continue
+
+            now_s = time.monotonic()
+            if now_s - last_publish_s >= 0.5:
+                self.publish_episode_control(start_command)
+                last_publish_s = now_s
+
+        return {
+            'ready': False,
+            'reason': (
+                'dataset recorder did not acknowledge episode start'
+                + (f' for {wanted_goal!r}' if wanted_goal else '')
+            ),
+            'latest_dataset_status': latest,
+            'episode_control_subscribers': episode_control_subscribers,
+            'observed': True,
+        }
+
     def wait_for_episode_started(self, *, goal: str, timeout_s: float) -> dict[str, Any]:
         if not self._dataset_status_publisher_count():
             return {'ready': True, 'reason': '', 'observed': False}
@@ -551,11 +655,7 @@ class RosScenarioTransport(ScenarioTransport):
         while time.monotonic() <= deadline:
             self.rclpy.spin_once(self.node, timeout_sec=0.05)
             latest = dict(self.latest_dataset_status)
-            if not bool(latest.get('active', False)):
-                continue
-            if wanted_goal and str(latest.get('task') or '').strip() != wanted_goal:
-                continue
-            if str(latest.get('episode_id') or '').strip():
+            if self._dataset_status_matches_started_episode(latest, wanted_goal):
                 return {'ready': True, 'reason': '', 'observed': True}
         return {
             'ready': False,
@@ -593,6 +693,41 @@ class RosScenarioTransport(ScenarioTransport):
         except Exception:
             return None
 
+    def _episode_control_subscriber_count(self) -> int | None:
+        endpoint_info = getattr(self.node, 'get_subscriptions_info_by_topic', None)
+        if callable(endpoint_info):
+            try:
+                infos = endpoint_info(self.episode_control_topic)
+            except Exception:
+                infos = []
+            recorder_count = 0
+            for info in infos:
+                node_name = str(getattr(info, 'node_name', '') or '').strip().lstrip('/')
+                if node_name == 'room_315_vla_dataset_recorder':
+                    recorder_count += 1
+            if recorder_count:
+                return recorder_count
+            if infos:
+                return len(infos)
+        count_fn = getattr(self.episode_control_pub, 'get_subscription_count', None)
+        if callable(count_fn):
+            try:
+                return int(count_fn())
+            except Exception:
+                return None
+        return None
+
+    @staticmethod
+    def _dataset_status_matches_started_episode(
+        latest: dict[str, Any],
+        wanted_goal: str,
+    ) -> bool:
+        if not bool(latest.get('active', False)):
+            return False
+        if wanted_goal and str(latest.get('task') or '').strip() != wanted_goal:
+            return False
+        return bool(str(latest.get('episode_id') or '').strip())
+
     def publish_command(self, command: dict[str, Any]) -> None:
         msg = self.String()
         msg.data = _json_dumps(command)
@@ -618,6 +753,106 @@ class RosScenarioTransport(ScenarioTransport):
                 return {'accepted': True, 'reason': 'supervisor decision observed'}
         return None
 
+    def wait_for_stopper_state(
+        self,
+        *,
+        side: str,
+        stoppers: dict[str, Any],
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        deadline = time.monotonic() + max(float(timeout_s), 0.0)
+        expected = _expanded_stopper_assignments(stoppers)
+        while time.monotonic() <= deadline:
+            self.rclpy.spin_once(self.node, timeout_sec=0.05)
+            if _stoppers_match_status(self.latest_status, side, expected):
+                return {
+                    'ready': True,
+                    'reason': '',
+                    'side': side,
+                    'stoppers': expected,
+                }
+        return {
+            'ready': False,
+            'reason': (
+                f'timeout waiting for {side} stopper state '
+                f'{_json_dumps(expected)}'
+            ),
+            'side': side,
+            'stoppers': expected,
+        }
+
+    def wait_for_switch_state(
+        self,
+        *,
+        side: str,
+        switches: dict[str, Any],
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        deadline = time.monotonic() + max(float(timeout_s), 0.0)
+        expected = _expanded_switch_assignments(switches)
+        while time.monotonic() <= deadline:
+            self.rclpy.spin_once(self.node, timeout_sec=0.05)
+            if _switches_match_status(self.latest_status, side, expected):
+                return {
+                    'ready': True,
+                    'reason': '',
+                    'side': side,
+                    'switches': expected,
+                }
+        return {
+            'ready': False,
+            'reason': (
+                f'timeout waiting for {side} switch state '
+                f'{_json_dumps(expected)}'
+            ),
+            'side': side,
+            'switches': expected,
+        }
+
+    def wait_for_shuttle_stopped(
+        self,
+        *,
+        side: str,
+        shuttle: str,
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        deadline = time.monotonic() + max(float(timeout_s), 0.0)
+        last_state: dict[str, Any] = {}
+        while time.monotonic() <= deadline:
+            self.rclpy.spin_once(self.node, timeout_sec=0.05)
+            last_state = _shuttle_state_from_status(
+                self.latest_status,
+                side=side,
+                shuttle=shuttle,
+            )
+            if _shuttle_state_is_stopped(last_state):
+                return {
+                    'ready': True,
+                    'reason': '',
+                    'side': side,
+                    'shuttle': shuttle,
+                    'mode': str(last_state.get('mode') or '').strip(),
+                    'speed': last_state.get('speed'),
+                }
+            if _shuttle_state_is_falling(last_state):
+                return {
+                    'ready': False,
+                    'reason': f'{side} shuttle {shuttle} is in falling mode',
+                    'side': side,
+                    'shuttle': shuttle,
+                    'last_state': last_state,
+                }
+        return {
+            'ready': False,
+            'reason': (
+                f'timeout waiting for {side} shuttle {shuttle} to stop '
+                f'after OFF command'
+            ),
+            'side': side,
+            'shuttle': shuttle,
+            'last_state': last_state,
+        }
+
     def wait_for_target_arrival(
         self,
         *,
@@ -625,44 +860,113 @@ class RosScenarioTransport(ScenarioTransport):
         target_sensors: list[str],
         shuttle: str,
         timeout_s: float,
+        target_slot: str = '',
+        target_station: str = '',
+        target_segment: str = '',
+        target_s: float | None = None,
+        target_tolerance_m: float | None = None,
     ) -> dict[str, Any]:
         wanted = {
             str(sensor or '').strip().upper()
             for sensor in target_sensors
             if str(sensor or '').strip()
         }
-        if not wanted:
+        has_pose_target = bool(str(target_segment or '').strip()) and target_s is not None
+        if not wanted and not has_pose_target:
             return {
                 'arrived': False,
-                'reason': 'no target sensors were configured for this PDDL move_shuttle step',
+                'reason': (
+                    'no target sensors or target pose were configured for this '
+                    'PDDL move_shuttle step'
+                ),
             }
 
         deadline = time.monotonic() + max(float(timeout_s), 0.0)
         active: set[str] = set()
+        last_slot_match: dict[str, Any] = {}
+        last_pose_match: dict[str, Any] = {}
         while time.monotonic() <= deadline:
             self.rclpy.spin_once(self.node, timeout_sec=0.05)
             active = _active_sensor_names_from_status(self.latest_status, side)
-            matched = sorted(active & wanted)
-            if matched:
+            if wanted:
+                matched = _matched_target_sensor_names_from_status(
+                    self.latest_status,
+                    side=side,
+                    wanted=wanted,
+                    shuttle=shuttle,
+                )
+                if matched:
+                    return {
+                        'arrived': True,
+                        'reason': '',
+                        'matched_sensors': matched,
+                        'target_sensors': sorted(wanted),
+                        'side': side,
+                        'shuttle': shuttle,
+                        'target_slot': target_slot,
+                        'target_station': target_station,
+                    }
+            if has_pose_target:
+                last_pose_match = _target_pose_match_from_status(
+                    self.latest_status,
+                    side=side,
+                    shuttle=shuttle,
+                    target_segment=target_segment,
+                    target_s=float(target_s),
+                    tolerance_m=target_tolerance_m,
+                )
+                if bool(last_pose_match.get('arrived', False)):
+                    return {
+                        'arrived': True,
+                        'reason': str(last_pose_match.get('reason') or ''),
+                        'matched_sensors': [],
+                        'target_sensors': sorted(wanted),
+                        'side': side,
+                        'shuttle': shuttle,
+                        'target_slot': target_slot,
+                        'target_station': target_station,
+                        'target_segment': target_segment,
+                        'target_s': target_s,
+                        'matched_by': 'shuttle_pose',
+                        'slot_pose': last_pose_match,
+                    }
+            last_slot_match = _target_slot_pose_match_from_status(
+                self.latest_status,
+                side=side,
+                target_slot=target_slot,
+                shuttle=shuttle,
+            )
+            if bool(last_slot_match.get('arrived', False)):
                 return {
                     'arrived': True,
-                    'reason': '',
-                    'matched_sensors': matched,
+                    'reason': str(last_slot_match.get('reason') or ''),
+                    'matched_sensors': [],
                     'target_sensors': sorted(wanted),
                     'side': side,
                     'shuttle': shuttle,
+                    'target_slot': target_slot,
+                    'target_station': target_station,
+                    'matched_by': 'shuttle_pose',
+                    'slot_pose': last_slot_match,
                 }
 
+        wanted_text = ', '.join(sorted(wanted)) if wanted else 'none'
         return {
             'arrived': False,
             'reason': (
                 f'timeout waiting for {shuttle or "shuttle"} on {side} target '
-                f'sensor(s): {", ".join(sorted(wanted))}'
+                f'sensor(s): {wanted_text}'
             ),
             'active_sensors': sorted(active),
             'target_sensors': sorted(wanted),
             'side': side,
             'shuttle': shuttle,
+            'target_slot': target_slot,
+            'target_station': target_station,
+            'target_segment': target_segment,
+            'target_s': target_s,
+            'last_slot_pose': last_slot_match,
+            'last_target_pose': last_pose_match,
         }
 
     def verify_final_goal(self, *, scenario: dict[str, Any], timeout_s: float) -> dict[str, Any]:
@@ -746,6 +1050,8 @@ def generate_scenario(
     *,
     goal: str = '',
     problem: Path | str | None = None,
+    case_id: str = '',
+    case_config: Path | str | None = None,
     language_seed: int | None = None,
     language_template_id: str = '',
     speed: float = 0.3,
@@ -753,9 +1059,18 @@ def generate_scenario(
 ) -> dict[str, Any]:
     """Build a dry-run planned episode structure."""
 
-    spec = scenario_spec_from_inputs(goal=goal, problem=problem)
-    if spec.blocker_shuttle:
+    spec = scenario_spec_from_inputs(
+        goal=goal,
+        problem=problem,
+        case_id=case_id,
+        case_config=case_config,
+    )
+    if spec.clearance_steps:
+        plan = _multi_blocker_clear_symbolic_plan_for_spec(spec, speed=float(speed))
+    elif spec.blocker_shuttle:
         plan = _blocker_clear_symbolic_plan_for_spec(spec, speed=float(speed))
+    elif spec.target_slot and spec.selection_policy:
+        plan = _station_route_symbolic_plan_for_spec(spec, speed=float(speed))
     else:
         planner = planner or PlanSysPlannerBackend()
         plan = planner.plan(spec, speed=float(speed))
@@ -792,6 +1107,11 @@ def generate_scenario(
     if spec.selection_policy:
         scenario['selection_policy'] = spec.selection_policy
         scenario['selection_candidates'] = [dict(item) for item in spec.selection_candidates]
+    if spec.target_slot and not spec.blocker_shuttle and not spec.clearance_steps:
+        scenario['plan_step_metadata'] = _slot_target_plan_step_metadata(spec, plan)
+    if spec.clearance_steps:
+        scenario['blocker_clearance'] = _multi_blocker_clearance_metadata_for_spec(spec)
+        scenario['plan_step_metadata'] = _multi_blocker_clear_plan_step_metadata(spec)
     if spec.blocker_shuttle:
         scenario['blocker_clearance'] = _blocker_clearance_metadata_for_spec(spec)
         scenario['plan_step_metadata'] = _blocker_clear_plan_step_metadata(spec)
@@ -851,8 +1171,7 @@ def execute_scenario(
             })
 
     language = str(scenario.get('language') or scenario.get('scenario_id') or 'Room 315 PDDL task')
-    transport.publish_episode_control(f'start {language}')
-    episode_started = _wait_for_episode_started(
+    episode_started = _publish_episode_start_and_wait(
         transport,
         goal=language,
         timeout_s=command_timeout_s,
@@ -909,6 +1228,81 @@ def execute_scenario(
                 'executed_command_count': len(published_commands),
             })
 
+        switch_wait = _switch_state_wait_for_payload(payload)
+        wait_for_switches = getattr(transport, 'wait_for_switch_state', None)
+        if switch_wait is not None and callable(wait_for_switches):
+            switch_result = wait_for_switches(
+                side=switch_wait['side'],
+                switches=switch_wait['switches'],
+                timeout_s=command_timeout_s,
+            )
+            if not bool(switch_result.get('ready', False)):
+                reason = str(switch_result.get('reason') or 'switch state wait failed')
+                _publish_episode_stop_and_wait(
+                    transport,
+                    'stop failure',
+                    timeout_s=command_timeout_s,
+                )
+                return _finalize_execution_result(scenario, transport, {
+                    'success': False,
+                    'failed_step_index': step_index,
+                    'failure_reason': reason,
+                    'switch_wait': switch_result,
+                    'published_commands': published_commands,
+                    'executed_command_count': len(published_commands),
+                })
+
+        stopper_wait = _stopper_state_wait_for_payload(payload)
+        wait_for_stoppers = getattr(transport, 'wait_for_stopper_state', None)
+        if stopper_wait is not None and callable(wait_for_stoppers):
+            stopper_result = wait_for_stoppers(
+                side=stopper_wait['side'],
+                stoppers=stopper_wait['stoppers'],
+                timeout_s=command_timeout_s,
+            )
+            if not bool(stopper_result.get('ready', False)):
+                reason = str(stopper_result.get('reason') or 'stopper state wait failed')
+                _publish_episode_stop_and_wait(
+                    transport,
+                    'stop failure',
+                    timeout_s=command_timeout_s,
+                )
+                return _finalize_execution_result(scenario, transport, {
+                    'success': False,
+                    'failed_step_index': step_index,
+                    'failure_reason': reason,
+                    'stopper_wait': stopper_result,
+                    'published_commands': published_commands,
+                    'executed_command_count': len(published_commands),
+                })
+
+        shuttle_stop_wait = _shuttle_stop_wait_for_payload(payload)
+        wait_for_shuttle_stopped = getattr(transport, 'wait_for_shuttle_stopped', None)
+        if shuttle_stop_wait is not None and callable(wait_for_shuttle_stopped):
+            shuttle_stop_result = wait_for_shuttle_stopped(
+                side=shuttle_stop_wait['side'],
+                shuttle=shuttle_stop_wait['shuttle'],
+                timeout_s=command_timeout_s,
+            )
+            if not bool(shuttle_stop_result.get('ready', False)):
+                reason = str(
+                    shuttle_stop_result.get('reason')
+                    or 'shuttle stop wait failed'
+                )
+                _publish_episode_stop_and_wait(
+                    transport,
+                    'stop failure',
+                    timeout_s=command_timeout_s,
+                )
+                return _finalize_execution_result(scenario, transport, {
+                    'success': False,
+                    'failed_step_index': step_index,
+                    'failure_reason': reason,
+                    'shuttle_stop_wait': shuttle_stop_result,
+                    'published_commands': published_commands,
+                    'executed_command_count': len(published_commands),
+                })
+
         runtime_failure = _runtime_failure_from_transport(transport)
         if runtime_failure:
             _publish_episode_stop_and_wait(
@@ -931,6 +1325,11 @@ def execute_scenario(
                 side=arrival_wait['side'],
                 target_sensors=arrival_wait['target_sensors'],
                 shuttle=arrival_wait['shuttle'],
+                target_slot=arrival_wait.get('target_slot', ''),
+                target_station=arrival_wait.get('target_station', ''),
+                target_segment=arrival_wait.get('target_segment', ''),
+                target_s=arrival_wait.get('target_s'),
+                target_tolerance_m=arrival_wait.get('target_tolerance_m'),
                 timeout_s=arrival_timeout_s,
             )
             if not bool(arrival_result.get('arrived', False)):
@@ -1071,6 +1470,24 @@ def _wait_for_episode_started(
     return {'ready': True, 'reason': '', 'observed': False}
 
 
+def _publish_episode_start_and_wait(
+    transport: ScenarioTransport,
+    *,
+    goal: str,
+    timeout_s: float,
+) -> dict[str, Any]:
+    start_and_wait = getattr(transport, 'publish_episode_start_and_wait', None)
+    if callable(start_and_wait):
+        return start_and_wait(goal=goal, timeout_s=timeout_s)
+    start_command = f'start {goal}' if str(goal or '').strip() else 'start'
+    transport.publish_episode_control(start_command)
+    return _wait_for_episode_started(
+        transport,
+        goal=goal,
+        timeout_s=timeout_s,
+    )
+
+
 def _publish_episode_stop_and_wait(
     transport: ScenarioTransport,
     command: str,
@@ -1123,20 +1540,73 @@ def _target_arrival_wait_for_payload(
 
     step = parsed_steps[0]
     side = _side_from_symbols(step.args, default=str(payload.get('side') or 'right'))
-    target = _target_station_from_move_step(step, scenario)
-    target_slot = _slot_symbol_or_empty(payload.get('target_slot')) or _target_slot_from_scenario(scenario)
-    sensors = _target_sensors_for_scenario(
-        scenario,
-        side=side,
-        target_station=target,
-        target_slot=target_slot,
-    )
+    target = str(payload.get('target_station') or '').strip()
+    if not target:
+        target = _target_station_from_move_step(step, scenario)
+    sensors = _as_string_list(payload.get('target_sensors'))
+    target_slot = _slot_symbol_or_empty(payload.get('target_slot'))
+    target_segment = str(payload.get('target_segment') or '').strip().upper()
+    target_s = _optional_float(payload.get('target_s'))
+    target_tolerance_m = _optional_float(payload.get('target_tolerance_m'))
+    if not sensors and not target_slot and not target_segment:
+        target_slot = _target_slot_from_scenario(scenario)
+    if not sensors and not target_segment:
+        sensors = _target_sensors_for_scenario(
+            scenario,
+            side=side,
+            target_station=target,
+            target_slot=target_slot,
+        )
     return {
         'side': side,
         'target_station': target,
         'target_slot': target_slot,
         'target_sensors': sensors,
+        'target_segment': target_segment,
+        'target_s': target_s,
+        'target_tolerance_m': target_tolerance_m,
         'shuttle': str(payload.get('shuttle') or ''),
+    }
+
+
+def _stopper_state_wait_for_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    if str(payload.get('action') or '').casefold() != 'stoppers':
+        return None
+    stoppers = payload.get('stoppers')
+    if not isinstance(stoppers, dict) or not stoppers:
+        return None
+    side = _side_from_symbols((), default=str(payload.get('side') or 'right'))
+    return {
+        'side': side,
+        'stoppers': dict(stoppers),
+    }
+
+
+def _switch_state_wait_for_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    if str(payload.get('action') or '').casefold() != 'switches':
+        return None
+    switches = payload.get('switches')
+    if not isinstance(switches, dict) or not switches:
+        return None
+    side = _side_from_symbols((), default=str(payload.get('side') or 'right'))
+    return {
+        'side': side,
+        'switches': dict(switches),
+    }
+
+
+def _shuttle_stop_wait_for_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    if str(payload.get('action') or '').casefold() != 'shuttle':
+        return None
+    if str(payload.get('command') or '').casefold() != 'off':
+        return None
+    side = _side_from_symbols((), default=str(payload.get('side') or 'right'))
+    shuttle = str(payload.get('shuttle') or payload.get('shuttle_id') or '').strip()
+    if not shuttle:
+        return None
+    return {
+        'side': side,
+        'shuttle': shuttle,
     }
 
 
@@ -1193,17 +1663,29 @@ def _language_action_sequence_for_spec(spec: ScenarioSpec) -> str:
 def _blocker_clear_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -> list[str]:
     if not spec.blocker_shuttle:
         return []
+    if _blocker_enters_interior_loop(spec):
+        return _interior_loop_clear_symbolic_plan_for_spec(spec, speed=speed)
     blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
     blocker_target = _station_for_slot(spec.side, spec.blocker_clear_slot)
     selected_source = spec.source
     selected_target = spec.target
     speed_text = f'{float(speed):.4g}'
+    blocker_move_kwargs = f'speed={speed_text}'
+    if spec.blocker_clear_stopper:
+        blocker_move_kwargs = (
+            f'{blocker_move_kwargs} target_stopper={spec.blocker_clear_stopper}'
+        )
     plan = [
         f'prepare_switches {spec.side} {blocker_source} {blocker_target}',
-        f'open_stoppers {spec.side} {blocker_source} {blocker_target}',
+    ]
+    if spec.blocker_clear_stopper:
+        plan.append(f'set_stoppers {spec.side} {spec.blocker_clear_stopper} closed')
+    else:
+        plan.append(f'open_stoppers {spec.side} {blocker_source} {blocker_target}')
+    plan.extend([
         (
             f'move_shuttle {spec.side} {spec.blocker_shuttle} '
-            f'{blocker_source} {blocker_target} speed={speed_text}'
+            f'{blocker_source} {blocker_target} {blocker_move_kwargs}'
         ),
         f'stop_shuttle {spec.side} {spec.blocker_shuttle}',
         f'prepare_switches {spec.side} {selected_source} {selected_target}',
@@ -1213,7 +1695,7 @@ def _blocker_clear_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -
             f'{selected_source} {selected_target} speed={speed_text}'
         ),
         f'stop_shuttle {spec.side} {spec.shuttle}',
-    ]
+    ])
     if spec.blocker_restore_slot:
         restore_source = _station_for_slot(spec.side, spec.blocker_clear_slot)
         restore_target = _station_for_slot(spec.side, spec.blocker_restore_slot)
@@ -1230,7 +1712,300 @@ def _blocker_clear_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -
     return plan
 
 
+def _blocker_enters_interior_loop(spec: ScenarioSpec) -> bool:
+    return (
+        str(spec.blocker_clear_target or '').strip().casefold() == 'interior_loop'
+        or str(spec.clearance_strategy or '').strip().casefold()
+        == 'clear_blocker_to_interior_loop_then_move_loaded'
+    )
+
+
+def _clearance_step_enters_interior_loop(step: dict[str, Any]) -> bool:
+    return str(step.get('clear_target') or step.get('target') or '').strip().casefold() in {
+        'interior_loop',
+        'interior',
+        'loop',
+    }
+
+
+def _clearance_step_shuttle(step: dict[str, Any]) -> str:
+    shuttle = _clean_symbol(step.get('shuttle') or step.get('blocker_shuttle')).lower()
+    _require_clearance_step_value(shuttle, step=step, field='shuttle')
+    return shuttle
+
+
+def _clearance_step_start_slot(
+    spec: ScenarioSpec,
+    step: dict[str, Any],
+    *,
+    shuttle: str,
+) -> str:
+    raw_slot = step.get('start_slot') or step.get('blocker_start_slot')
+    slot = _slot_symbol_or_empty(raw_slot)
+    if slot:
+        return slot
+    start_slots = {
+        _clean_symbol(raw_shuttle).lower(): _slot_symbol_or_empty(raw_start_slot)
+        for raw_shuttle, raw_start_slot in spec.start_slots_by_shuttle
+    }
+    slot = start_slots.get(shuttle, '')
+    _require_clearance_step_value(slot, step=step, field='start_slot')
+    return slot
+
+
+def _clearance_step_gate_stopper(spec: ScenarioSpec, step: dict[str, Any]) -> str:
+    return (
+        _stopper_symbol_or_empty(step.get('clear_stopper') or step.get('gate_stopper'))
+        or 'A3'
+    )
+
+
+def _clearance_step_clear_sensor(spec: ScenarioSpec, step: dict[str, Any]) -> str:
+    return str(
+        step.get('clear_sensor')
+        or ('DA3IR' if spec.side == 'right' else 'DA3IL')
+    ).strip()
+
+
+def _require_clearance_step_value(
+    value: Any,
+    *,
+    step: dict[str, Any],
+    field: str,
+    message: str = '',
+) -> None:
+    if str(value or '').strip():
+        return
+    shuttle = step.get('shuttle') or step.get('blocker_shuttle') or '<unknown>'
+    detail = message or f'missing required clearance step field {field!r}'
+    raise ValueError(f'clearance step for {shuttle!r}: {detail}')
+
+
+def _interior_loop_clear_symbolic_plan_for_spec(
+    spec: ScenarioSpec,
+    *,
+    speed: float,
+) -> list[str]:
+    blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
+    selected_source = spec.source
+    selected_target = spec.target
+    gate_stopper = spec.blocker_clear_stopper or 'A3'
+    speed_text = f'{float(speed):.4g}'
+    return [
+        (
+            f'prepare_switches {spec.side} {blocker_source} {blocker_source} '
+            f'switch={gate_stopper} state=EXTERIOR'
+        ),
+        f'set_stoppers {spec.side} {gate_stopper} closed',
+        (
+            f'move_shuttle {spec.side} {spec.blocker_shuttle} '
+            f'{blocker_source} {blocker_source} speed={speed_text} '
+            f'target_stopper={gate_stopper}'
+        ),
+        f'stop_shuttle {spec.side} {spec.blocker_shuttle}',
+        (
+            f'prepare_switches {spec.side} {blocker_source} {blocker_source} '
+            f'switch={gate_stopper} state=INTERIOR'
+        ),
+        f'open_stoppers {spec.side} {blocker_source} {blocker_source}',
+        (
+            f'move_shuttle {spec.side} {spec.blocker_shuttle} '
+            f'{blocker_source} {blocker_source} speed={speed_text}'
+        ),
+        f'stop_shuttle {spec.side} {spec.blocker_shuttle}',
+        (
+            f'prepare_switches {spec.side} {selected_source} {selected_target} '
+            f'switch={gate_stopper} state=EXTERIOR'
+        ),
+        f'open_stoppers {spec.side} {selected_source} {selected_target}',
+        (
+            f'move_shuttle {spec.side} {spec.shuttle} '
+            f'{selected_source} {selected_target} speed={speed_text}'
+        ),
+        f'stop_shuttle {spec.side} {spec.shuttle}',
+        f'finish_task {spec.shuttle} {selected_target}',
+    ]
+
+
+def _multi_blocker_clear_symbolic_plan_for_spec(
+    spec: ScenarioSpec,
+    *,
+    speed: float,
+) -> list[str]:
+    if not spec.clearance_steps:
+        return []
+    speed_text = f'{float(speed):.4g}'
+    plan: list[str] = []
+    for step in spec.clearance_steps:
+        if _clearance_step_enters_interior_loop(step):
+            plan.extend(
+                _interior_loop_clear_symbolic_steps_for_clearance_step(
+                    spec,
+                    step,
+                    speed_text=speed_text,
+                )
+            )
+            continue
+        plan.extend(
+            _slot_clear_symbolic_steps_for_clearance_step(
+                spec,
+                step,
+                speed_text=speed_text,
+            )
+        )
+
+    plan.extend([
+        f'prepare_switches {spec.side} {spec.source} {spec.target}',
+        f'open_stoppers {spec.side} {spec.source} {spec.target}',
+        (
+            f'move_shuttle {spec.side} {spec.shuttle} '
+            f'{spec.source} {spec.target} speed={speed_text}'
+        ),
+        f'stop_shuttle {spec.side} {spec.shuttle}',
+        f'finish_task {spec.shuttle} {spec.target}',
+    ])
+    return plan
+
+
+def _interior_loop_clear_symbolic_steps_for_clearance_step(
+    spec: ScenarioSpec,
+    step: dict[str, Any],
+    *,
+    speed_text: str,
+) -> list[str]:
+    shuttle = _clearance_step_shuttle(step)
+    source_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
+    source = _station_for_slot(spec.side, source_slot)
+    gate_stopper = _clearance_step_gate_stopper(spec, step)
+    _require_clearance_step_value(
+        source,
+        step=step,
+        field='start_slot',
+        message=f'could not map slot {source_slot!r} to a station on {spec.side!r} rail',
+    )
+    return [
+        (
+            f'prepare_switches {spec.side} {source} {source} '
+            f'switch={gate_stopper} state=EXTERIOR'
+        ),
+        f'set_stoppers {spec.side} {gate_stopper} closed',
+        (
+            f'move_shuttle {spec.side} {shuttle} {source} {source} '
+            f'speed={speed_text} target_stopper={gate_stopper}'
+        ),
+        f'stop_shuttle {spec.side} {shuttle}',
+        (
+            f'prepare_switches {spec.side} {source} {source} '
+            f'switch={gate_stopper} state=INTERIOR'
+        ),
+        f'open_stoppers {spec.side} {source} {source}',
+        f'move_shuttle {spec.side} {shuttle} {source} {source} speed={speed_text}',
+        f'stop_shuttle {spec.side} {shuttle}',
+        (
+            f'prepare_switches {spec.side} {source} {source} '
+            f'switch={gate_stopper} state=EXTERIOR'
+        ),
+    ]
+
+
+def _slot_clear_symbolic_steps_for_clearance_step(
+    spec: ScenarioSpec,
+    step: dict[str, Any],
+    *,
+    speed_text: str,
+) -> list[str]:
+    shuttle = _clearance_step_shuttle(step)
+    source_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
+    clear_slot = _slot_symbol_or_empty(step.get('clear_slot') or step.get('target_slot'))
+    _require_clearance_step_value(clear_slot, step=step, field='clear_slot')
+    source = _station_for_slot(spec.side, source_slot)
+    target = _station_for_slot(spec.side, clear_slot)
+    _require_clearance_step_value(
+        source,
+        step=step,
+        field='start_slot',
+        message=f'could not map slot {source_slot!r} to a station on {spec.side!r} rail',
+    )
+    _require_clearance_step_value(
+        target,
+        step=step,
+        field='clear_slot',
+        message=f'could not map slot {clear_slot!r} to a station on {spec.side!r} rail',
+    )
+    target_stopper = _stopper_symbol_or_empty(step.get('clear_stopper'))
+    move_kwargs = f'speed={speed_text}'
+    if target_stopper:
+        move_kwargs = f'{move_kwargs} target_stopper={target_stopper}'
+        stopper_step = f'set_stoppers {spec.side} {target_stopper} closed'
+    else:
+        stopper_step = f'open_stoppers {spec.side} {source} {target}'
+    return [
+        f'prepare_switches {spec.side} {source} {target}',
+        stopper_step,
+        f'move_shuttle {spec.side} {shuttle} {source} {target} {move_kwargs}',
+        f'stop_shuttle {spec.side} {shuttle}',
+    ]
+
+
+def _station_route_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -> list[str]:
+    speed_text = f'{float(speed):.4g}'
+    return [
+        f'prepare_switches {spec.side} {spec.source} {spec.target}',
+        f'open_stoppers {spec.side} {spec.source} {spec.target}',
+        (
+            f'move_shuttle {spec.side} {spec.shuttle} '
+            f'{spec.source} {spec.target} speed={speed_text}'
+        ),
+        f'stop_shuttle {spec.side} {spec.shuttle}',
+        f'finish_task {spec.shuttle} {spec.target}',
+    ]
+
+
+def _slot_target_plan_step_metadata(spec: ScenarioSpec, plan: list[str]) -> list[dict[str, Any]]:
+    metadata = []
+    for step in plan:
+        text = str(step or '').strip().casefold()
+        if text.startswith('move_shuttle '):
+            metadata.append({
+                'coordination_phase': 'move_selected_loaded',
+                'plan_step_target_shuttle_id': spec.shuttle,
+                'selected_shuttle_id': spec.shuttle,
+                'target_slot': spec.target_slot,
+                'target_station': spec.target,
+                'selection_policy': spec.selection_policy,
+            })
+        elif text.startswith('stop_shuttle '):
+            metadata.append({
+                'coordination_phase': 'stop_selected_loaded',
+                'plan_step_target_shuttle_id': spec.shuttle,
+                'selected_shuttle_id': spec.shuttle,
+                'target_slot': spec.target_slot,
+                'target_station': spec.target,
+                'selection_policy': spec.selection_policy,
+            })
+        else:
+            metadata.append({
+                'coordination_phase': 'prepare_selected_loaded'
+                if not text.startswith('finish_task ')
+                else 'complete_selected_loaded_task',
+                'plan_step_target_shuttle_id': spec.shuttle,
+                'selected_shuttle_id': spec.shuttle,
+                'target_station': spec.target,
+                'selection_policy': spec.selection_policy,
+            })
+    return metadata
+
+
 def _blocker_clearance_metadata_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
+    restore_requested = spec.blocker_restore_policy not in {
+        'none',
+        'no_restore',
+        'skip_restore',
+        'clear_only',
+    }
+    blocker_clear_target = spec.blocker_clear_target
+    if _blocker_enters_interior_loop(spec):
+        blocker_clear_target = blocker_clear_target or 'interior_loop'
     return {
         'strategy': spec.clearance_strategy,
         'phase': (
@@ -1241,69 +2016,325 @@ def _blocker_clearance_metadata_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
         'blocker_shuttle_id': spec.blocker_shuttle,
         'blocker_start_slot': spec.blocker_start_slot,
         'blocker_clear_slot': spec.blocker_clear_slot,
+        'blocker_clear_target': blocker_clear_target,
+        'blocker_clear_sensor': spec.blocker_clear_sensor,
+        'blocker_clear_stopper': spec.blocker_clear_stopper,
         'blocker_restore_slot': spec.blocker_restore_slot,
         'blocker_final_slot': spec.blocker_restore_slot or spec.blocker_clear_slot,
+        'blocker_final_target': (
+            spec.blocker_restore_slot
+            or spec.blocker_clear_slot
+            or blocker_clear_target
+        ),
         'blocker_restore_policy': spec.blocker_restore_policy,
         'blocker_restore_slot_source': spec.blocker_restore_slot_source,
         'blocker_restore_candidate_slots': list(spec.blocker_restore_candidate_slots),
         'selected_shuttle_id': spec.shuttle,
         'selected_target_slot': spec.target_slot,
-        'restore_deferred': not bool(spec.blocker_restore_slot),
+        'restore_deferred': restore_requested and not bool(spec.blocker_restore_slot),
         'model_input_exposure': 'excluded',
     }
 
 
 def _blocker_clear_plan_step_metadata(spec: ScenarioSpec) -> list[dict[str, Any]]:
-    blocker_route = {
+    if _blocker_enters_interior_loop(spec):
+        return _interior_loop_clear_plan_step_metadata(spec)
+
+    blocker_prepare = {
         'coordination_phase': 'clear_blocker',
         'plan_step_target_shuttle_id': spec.blocker_shuttle,
         'blocker_shuttle_id': spec.blocker_shuttle,
-        'target_slot': spec.blocker_clear_slot,
         'target_station': _station_for_slot(spec.side, spec.blocker_clear_slot),
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    if spec.blocker_clear_sensor:
+        blocker_prepare['target_sensors'] = [spec.blocker_clear_sensor]
+    if spec.blocker_clear_stopper:
+        blocker_prepare['target_stopper'] = spec.blocker_clear_stopper
+    blocker_move = dict(blocker_prepare)
+    if not spec.blocker_clear_sensor:
+        blocker_move['target_slot'] = spec.blocker_clear_slot
+    selected_route = {
+        'coordination_phase': 'move_selected_loaded',
+        'plan_step_target_shuttle_id': spec.shuttle,
+        'selected_shuttle_id': spec.shuttle,
+        'target_station': spec.target,
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    selected_move = dict(selected_route)
+    selected_move['target_slot'] = spec.target_slot
+    steps = [
+        dict(blocker_prepare),
+        dict(blocker_prepare),
+        dict(blocker_move),
+        dict(blocker_move),
+        dict(selected_route),
+        dict(selected_route),
+        dict(selected_move),
+        dict(selected_move),
+    ]
+    if spec.blocker_restore_slot:
+        restore_prepare = {
+            'coordination_phase': 'restore_blocker',
+            'plan_step_target_shuttle_id': spec.blocker_shuttle,
+            'blocker_shuttle_id': spec.blocker_shuttle,
+            'target_station': _station_for_slot(spec.side, spec.blocker_restore_slot),
+            'clearance_strategy': spec.clearance_strategy,
+        }
+        restore_move = dict(restore_prepare)
+        restore_move['target_slot'] = spec.blocker_restore_slot
+        steps.extend([
+            dict(restore_prepare),
+            dict(restore_prepare),
+            dict(restore_move),
+            dict(restore_move),
+        ])
+    steps.append({
+        'coordination_phase': 'complete_selected_loaded_task',
+        'plan_step_target_shuttle_id': spec.shuttle,
+        'selected_shuttle_id': spec.shuttle,
+        'target_station': spec.target,
+        'clearance_strategy': spec.clearance_strategy,
+    })
+    return steps
+
+
+def _interior_loop_clear_plan_step_metadata(spec: ScenarioSpec) -> list[dict[str, Any]]:
+    gate_stopper = spec.blocker_clear_stopper or 'A3'
+    gate_sensor = f'{gate_stopper}_STOPPER_SENSOR'
+    interior_sensor = spec.blocker_clear_sensor or ('DA3IR' if spec.side == 'right' else 'DA3IL')
+    blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
+    clear_segment, clear_s = INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE.get(
+        (spec.side, gate_stopper),
+        ('A34I' if spec.side == 'right' else 'A12I', 0.7083),
+    )
+    gate_route = {
+        'coordination_phase': 'clear_blocker_to_gate',
+        'plan_step_target_shuttle_id': spec.blocker_shuttle,
+        'blocker_shuttle_id': spec.blocker_shuttle,
+        'target_station': blocker_source,
+        'target_sensors': [gate_sensor],
+        'target_stopper': gate_stopper,
+        'blocker_clear_target': 'interior_loop',
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    interior_route = {
+        'coordination_phase': 'clear_blocker_to_interior_loop',
+        'plan_step_target_shuttle_id': spec.blocker_shuttle,
+        'blocker_shuttle_id': spec.blocker_shuttle,
+        'target_station': 'interior_loop',
+        'target_segment': clear_segment,
+        'target_s': clear_s,
+        'target_tolerance_m': INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M,
+        'entry_sensor': interior_sensor,
+        'blocker_clear_target': 'interior_loop',
         'clearance_strategy': spec.clearance_strategy,
     }
     selected_route = {
         'coordination_phase': 'move_selected_loaded',
         'plan_step_target_shuttle_id': spec.shuttle,
         'selected_shuttle_id': spec.shuttle,
-        'target_slot': spec.target_slot,
         'target_station': spec.target,
         'clearance_strategy': spec.clearance_strategy,
     }
-    steps = [
-        dict(blocker_route),
-        dict(blocker_route),
-        dict(blocker_route),
-        dict(blocker_route),
+    selected_move = dict(selected_route)
+    selected_move['target_slot'] = spec.target_slot
+    return [
+        dict(gate_route),
+        dict(gate_route),
+        dict(gate_route),
+        dict(gate_route),
+        dict(interior_route),
+        dict(interior_route),
+        dict(interior_route),
+        dict(interior_route),
         dict(selected_route),
         dict(selected_route),
-        dict(selected_route),
-        dict(selected_route),
-    ]
-    if spec.blocker_restore_slot:
-        restore_route = {
-            'coordination_phase': 'restore_blocker',
-            'plan_step_target_shuttle_id': spec.blocker_shuttle,
-            'blocker_shuttle_id': spec.blocker_shuttle,
-            'target_slot': spec.blocker_restore_slot,
-            'target_station': _station_for_slot(spec.side, spec.blocker_restore_slot),
+        dict(selected_move),
+        dict(selected_move),
+        {
+            'coordination_phase': 'complete_selected_loaded_task',
+            'plan_step_target_shuttle_id': spec.shuttle,
+            'selected_shuttle_id': spec.shuttle,
+            'target_station': spec.target,
             'clearance_strategy': spec.clearance_strategy,
-        }
-        steps.extend([
-            dict(restore_route),
-            dict(restore_route),
-            dict(restore_route),
-            dict(restore_route),
-        ])
-    steps.append({
-        'coordination_phase': 'complete_selected_loaded_task',
+        },
+    ]
+
+
+def _multi_blocker_clearance_metadata_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
+    clearance_steps = []
+    for index, step in enumerate(spec.clearance_steps, start=1):
+        shuttle = _clearance_step_shuttle(step)
+        start_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
+        if _clearance_step_enters_interior_loop(step):
+            clear_target = 'interior_loop'
+            clear_slot = ''
+            final_target = clear_target
+            final_slot = ''
+            clear_stopper = _clearance_step_gate_stopper(spec, step)
+            clear_sensor = _clearance_step_clear_sensor(spec, step)
+        else:
+            clear_target = ''
+            clear_slot = _slot_symbol_or_empty(step.get('clear_slot') or step.get('target_slot'))
+            final_target = clear_slot
+            final_slot = clear_slot
+            clear_stopper = _stopper_symbol_or_empty(step.get('clear_stopper'))
+            clear_sensor = str(step.get('clear_sensor') or '').strip()
+        clearance_steps.append({
+            'step_index': index,
+            'blocker_shuttle_id': shuttle,
+            'blocker_start_slot': start_slot,
+            'blocker_clear_slot': clear_slot,
+            'blocker_clear_target': clear_target,
+            'blocker_clear_sensor': clear_sensor,
+            'blocker_clear_stopper': clear_stopper,
+            'blocker_final_slot': final_slot,
+            'blocker_final_target': final_target,
+        })
+
+    return {
+        'strategy': spec.clearance_strategy,
+        'phase': 'clear_multiple_blockers_then_move_selected',
+        'clearance_step_count': len(clearance_steps),
+        'clearance_steps': clearance_steps,
+        'selected_shuttle_id': spec.shuttle,
+        'selected_target_slot': spec.target_slot,
+        'blocker_restore_policy': 'none',
+        'model_input_exposure': 'excluded',
+    }
+
+
+def _multi_blocker_clear_plan_step_metadata(spec: ScenarioSpec) -> list[dict[str, Any]]:
+    steps: list[dict[str, Any]] = []
+    for index, step in enumerate(spec.clearance_steps, start=1):
+        if _clearance_step_enters_interior_loop(step):
+            steps.extend(_multi_interior_step_metadata(spec, step, step_index=index))
+        else:
+            steps.extend(_multi_slot_clear_step_metadata(spec, step, step_index=index))
+
+    selected_route = {
+        'coordination_phase': 'move_selected_loaded',
         'plan_step_target_shuttle_id': spec.shuttle,
         'selected_shuttle_id': spec.shuttle,
-        'target_slot': spec.target_slot,
         'target_station': spec.target,
         'clearance_strategy': spec.clearance_strategy,
-    })
+    }
+    selected_move = dict(selected_route)
+    selected_move['target_slot'] = spec.target_slot
+    steps.extend([
+        dict(selected_route),
+        dict(selected_route),
+        dict(selected_move),
+        dict(selected_move),
+        {
+            'coordination_phase': 'complete_selected_loaded_task',
+            'plan_step_target_shuttle_id': spec.shuttle,
+            'selected_shuttle_id': spec.shuttle,
+            'target_station': spec.target,
+            'clearance_strategy': spec.clearance_strategy,
+        },
+    ])
     return steps
+
+
+def _multi_interior_step_metadata(
+    spec: ScenarioSpec,
+    step: dict[str, Any],
+    *,
+    step_index: int,
+) -> list[dict[str, Any]]:
+    shuttle = _clearance_step_shuttle(step)
+    source_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
+    source = _station_for_slot(spec.side, source_slot)
+    gate_stopper = _clearance_step_gate_stopper(spec, step)
+    gate_sensor = f'{gate_stopper}_STOPPER_SENSOR'
+    interior_sensor = _clearance_step_clear_sensor(spec, step)
+    clear_segment, clear_s = INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE.get(
+        (spec.side, gate_stopper),
+        ('A34I' if spec.side == 'right' else 'A12I', 0.7083),
+    )
+    gate_route = {
+        'coordination_phase': 'clear_blocker_to_gate',
+        'clearance_step_index': step_index,
+        'plan_step_target_shuttle_id': shuttle,
+        'blocker_shuttle_id': shuttle,
+        'blocker_start_slot': source_slot,
+        'target_station': source,
+        'target_sensors': [gate_sensor],
+        'target_stopper': gate_stopper,
+        'blocker_clear_target': 'interior_loop',
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    interior_route = {
+        'coordination_phase': 'clear_blocker_to_interior_loop',
+        'clearance_step_index': step_index,
+        'plan_step_target_shuttle_id': shuttle,
+        'blocker_shuttle_id': shuttle,
+        'blocker_start_slot': source_slot,
+        'target_station': 'interior_loop',
+        'target_segment': clear_segment,
+        'target_s': clear_s,
+        'target_tolerance_m': INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M,
+        'entry_sensor': interior_sensor,
+        'blocker_clear_target': 'interior_loop',
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    reset_switch = {
+        'coordination_phase': 'restore_switch_after_interior_clear',
+        'clearance_step_index': step_index,
+        'plan_step_target_shuttle_id': shuttle,
+        'blocker_shuttle_id': shuttle,
+        'target_station': source,
+        'blocker_clear_target': 'interior_loop',
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    return [
+        dict(gate_route),
+        dict(gate_route),
+        dict(gate_route),
+        dict(gate_route),
+        dict(interior_route),
+        dict(interior_route),
+        dict(interior_route),
+        dict(interior_route),
+        reset_switch,
+    ]
+
+
+def _multi_slot_clear_step_metadata(
+    spec: ScenarioSpec,
+    step: dict[str, Any],
+    *,
+    step_index: int,
+) -> list[dict[str, Any]]:
+    shuttle = _clearance_step_shuttle(step)
+    source_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
+    clear_slot = _slot_symbol_or_empty(step.get('clear_slot') or step.get('target_slot'))
+    prepare = {
+        'coordination_phase': 'clear_blocker_to_slot',
+        'clearance_step_index': step_index,
+        'plan_step_target_shuttle_id': shuttle,
+        'blocker_shuttle_id': shuttle,
+        'blocker_start_slot': source_slot,
+        'target_station': _station_for_slot(spec.side, clear_slot),
+        'clearance_strategy': spec.clearance_strategy,
+    }
+    clear_sensor = str(step.get('clear_sensor') or '').strip()
+    clear_stopper = _stopper_symbol_or_empty(step.get('clear_stopper'))
+    if clear_sensor:
+        prepare['target_sensors'] = [clear_sensor]
+    if clear_stopper:
+        prepare['target_stopper'] = clear_stopper
+    move = dict(prepare)
+    if not clear_sensor:
+        move['target_slot'] = clear_slot
+    return [
+        dict(prepare),
+        dict(prepare),
+        dict(move),
+        dict(move),
+    ]
 
 
 def load_batch_config(path: Path | str) -> dict[str, Any]:
@@ -1500,6 +2531,11 @@ def _canonical_symbolic_step(raw_action: Any, *, spec: ScenarioSpec, speed: floa
     step = parsed_steps[0]
     if step.name not in SUPPORTED_SYMBOLIC_ACTIONS:
         return ''
+    if step.name == 'set_stoppers':
+        side = _side_from_symbols(step.args, default=spec.side)
+        stopper = _stopper_from_symbols(step.args, default='ALL')
+        state = _stopper_state_from_step(step)
+        return f'set_stoppers {side} {stopper} {state}'
     side, shuttle, source, target = _route_parts_from_step(step, spec)
     if step.name == 'prepare_switches':
         return f'prepare_switches {side} {source} {target}'
@@ -1508,7 +2544,11 @@ def _canonical_symbolic_step(raw_action: Any, *, spec: ScenarioSpec, speed: floa
     if step.name == 'move_shuttle':
         step_speed = step.kwargs.get('speed') or step.kwargs.get('speed_mps')
         speed_text = step_speed if step_speed is not None else f'{float(speed):.4g}'
-        return f'move_shuttle {side} {shuttle} {source} {target} speed={speed_text}'
+        target_stopper = _stopper_symbol_or_empty(
+            step.kwargs.get('target_stopper') or step.kwargs.get('stopper_target')
+        )
+        stopper_text = f' target_stopper={target_stopper}' if target_stopper else ''
+        return f'move_shuttle {side} {shuttle} {source} {target} speed={speed_text}{stopper_text}'
     if step.name == 'stop_shuttle':
         return f'stop_shuttle {side} {shuttle}'
     if step.name == 'finish_task':
@@ -1526,6 +2566,27 @@ def _route_parts_from_step(step: Any, spec: ScenarioSpec) -> tuple[str, str, str
         source = spec.source
         target = stations[0]
     return side, shuttle, source, target
+
+
+def _stopper_from_symbols(symbols: tuple[str, ...], *, default: str) -> str:
+    for symbol in symbols:
+        stopper = _stopper_symbol_or_empty(symbol)
+        if stopper:
+            return stopper
+    return default
+
+
+def _stopper_state_from_step(step: Any) -> str:
+    for key in ('state', 'stopper_state', 'value'):
+        if key in step.kwargs:
+            return _stopper_state_symbol(step.kwargs[key])
+    for symbol in step.args:
+        if _side_from_symbols((symbol,), default='') or _stopper_symbol_or_empty(symbol):
+            continue
+        state = _stopper_state_symbol(symbol, default='')
+        if state:
+            return state
+    return 'open'
 
 
 def _side_from_symbols(symbols: tuple[str, ...], *, default: str) -> str:
@@ -1758,6 +2819,15 @@ def _as_bool(value: Any) -> bool:
     return str(value).strip().casefold() in {'1', 'true', 'yes', 'on'}
 
 
+def _optional_float(value: Any) -> float | None:
+    if value is None or str(value).strip() == '':
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _batch_execute_enabled(args: argparse.Namespace, config: dict[str, Any]) -> bool:
     if bool(getattr(args, 'execute', False)):
         return True
@@ -1791,7 +2861,12 @@ def _planning_metadata_for_step(scenario: dict[str, Any], step_index: int) -> di
         metadata['payload_condition'] = 'loaded' if step_loaded else 'empty'
         metadata['payload_present'] = step_loaded
         metadata['payload_type'] = 'box' if step_loaded else 'none'
-    target_slot = str(step_metadata.get('target_slot') or scenario.get('target_slot') or '')
+    has_step_metadata = bool(scenario.get('plan_step_metadata'))
+    target_slot = str(
+        step_metadata.get('target_slot')
+        or ('' if has_step_metadata else scenario.get('target_slot'))
+        or ''
+    )
     if target_slot:
         metadata['target_slot'] = target_slot
     if scenario.get('selection_policy'):
@@ -1941,9 +3016,9 @@ def _resolve_nearest_loaded_goal_data(goal_id: str, data: dict[str, Any]) -> dic
             f'goal {goal_id!r} could not map slots {selected_slot!r}->{target_slot!r} '
             f'on {side!r} rail to stations'
         )
-    if source == target:
+    if selected_slot == target_slot:
         raise ValueError(
-            f'goal {goal_id!r} selected {selected_shuttle!r} already in target station '
+            f'goal {goal_id!r} selected {selected_shuttle!r} already in target slot '
             f'for slot {target_slot}'
         )
 
@@ -1998,6 +3073,13 @@ def _resolve_blocker_restore_slot(
         return {}
     policy = str(data.get('blocker_restore_policy') or '').strip()
     raw_restore_slot = str(data.get('blocker_restore_slot') or '').strip()
+    if policy in {'none', 'no_restore', 'skip_restore', 'clear_only'}:
+        return {
+            'blocker_restore_slot': '',
+            'blocker_restore_policy': policy,
+            'blocker_restore_slot_source': 'not_requested',
+            'blocker_restore_candidate_slots': (),
+        }
     if raw_restore_slot and raw_restore_slot != 'auto':
         return {
             'blocker_restore_slot': _slot_symbol_or_empty(raw_restore_slot),
@@ -2067,12 +3149,20 @@ def _station_for_slot(side: str, slot: str) -> str:
     return SLOT_STATION_BY_SIDE_AND_SLOT.get((side, _slot_symbol_or_empty(slot)), '')
 
 
-def scenario_spec_from_inputs(*, goal: str = '', problem: Path | str | None = None) -> ScenarioSpec:
+def scenario_spec_from_inputs(
+    *,
+    goal: str = '',
+    problem: Path | str | None = None,
+    case_id: str = '',
+    case_config: Path | str | None = None,
+) -> ScenarioSpec:
+    if case_id:
+        return scenario_spec_from_case(case_id, case_config=case_config)
     if problem:
         return scenario_spec_from_problem(Path(problem))
     if goal:
         return scenario_spec_from_goal(goal)
-    raise ValueError('provide --goal or --problem')
+    raise ValueError('provide --goal, --problem, or --case-id')
 
 
 def scenario_spec_from_goal(goal: str) -> ScenarioSpec:
@@ -2081,6 +3171,142 @@ def scenario_spec_from_goal(goal: str) -> ScenarioSpec:
         allowed = ', '.join(sorted(SUPPORTED_GOALS))
         raise ValueError(f'unsupported Room 315 PDDL goal {goal!r}; allowed: {allowed}')
     data = _resolved_goal_data(goal_id)
+    return _scenario_spec_from_goal_data(goal_id, data)
+
+
+def scenario_spec_from_case(
+    case_id: str,
+    *,
+    case_config: Path | str | None = None,
+) -> ScenarioSpec:
+    raw_case_id = str(case_id or '').strip()
+    if not raw_case_id:
+        raise ValueError('case_id must not be empty')
+    config = load_payload_training_case_config(case_config)
+    cases = config.get('cases', [])
+    if not isinstance(cases, list):
+        raise ValueError('payload training case config needs a cases list')
+    by_id = {
+        str(case.get('case_id') or '').strip(): case
+        for case in cases
+        if isinstance(case, dict)
+    }
+    if raw_case_id not in by_id:
+        allowed = ', '.join(sorted(case_id for case_id in by_id if case_id))
+        raise ValueError(f'unknown payload training case {raw_case_id!r}; allowed: {allowed}')
+
+    data = dict(by_id[raw_case_id])
+    data.setdefault('payload_condition', 'loaded')
+    data.setdefault('selection_policy', 'nearest_loaded_to_target_slot_then_lowest_id')
+    data.setdefault('problem_name', f'room315-{_clean_symbol(raw_case_id)}')
+    if data.get('selection_policy'):
+        data = _resolve_nearest_loaded_goal_data(raw_case_id, data)
+    return _scenario_spec_from_goal_data(raw_case_id, data)
+
+
+def load_payload_training_case_config(path: Path | str | None = None) -> dict[str, Any]:
+    config_path = _resolve_payload_training_case_config_path(path)
+    loaded = yaml.safe_load(config_path.read_text(encoding='utf-8')) or {}
+    if not isinstance(loaded, dict):
+        raise ValueError(f'payload training case config {config_path} must be a YAML mapping')
+    loaded.setdefault('case_config_path', str(config_path))
+    return loaded
+
+
+def speed_for_payload_training_case(
+    case_id: str,
+    case_config: Path | str | None = None,
+    *,
+    fallback: float = DEFAULT_SHUTTLE_SPEED_MPS,
+) -> float:
+    raw_case_id = str(case_id or '').strip()
+    if not raw_case_id:
+        return float(fallback)
+    config = load_payload_training_case_config(case_config)
+    cases = config.get('cases', [])
+    if not isinstance(cases, list):
+        return float(fallback)
+    for case in cases:
+        if not isinstance(case, dict):
+            continue
+        if str(case.get('case_id') or '').strip() != raw_case_id:
+            continue
+        case_speed = _optional_float(case.get('speed', case.get('speed_mps')))
+        return float(case_speed if case_speed is not None else fallback)
+    return float(fallback)
+
+
+def _resolve_payload_training_case_config_path(path: Path | str | None = None) -> Path:
+    raw_path = Path(path).expanduser() if path else DEFAULT_PAYLOAD_TRAINING_CASES_PATH
+    candidates = [raw_path]
+    if not raw_path.is_absolute():
+        candidates.extend([
+            Path.cwd() / raw_path,
+            REPO_ROOT / raw_path,
+            Path.cwd() / 'src' / 'mfja_3rd_floor_gz' / raw_path,
+        ])
+    candidates.extend([
+        REPO_ROOT
+        / 'mfja_robot_control_config'
+        / 'config'
+        / 'room_315_vla'
+        / raw_path.name,
+        SCRIPT_DIR.parents[1]
+        / 'share'
+        / 'mfja_robot_control_config'
+        / 'config'
+        / 'room_315_vla'
+        / raw_path.name,
+    ])
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.exists():
+            return candidate
+    return raw_path
+
+
+def _normalize_clearance_steps(value: Any) -> tuple[dict[str, Any], ...]:
+    if value is None or value == '':
+        return ()
+    if not isinstance(value, (list, tuple)):
+        raise ValueError('clearance_steps must be a list of mappings')
+    normalized = []
+    for index, raw_step in enumerate(value, start=1):
+        if not isinstance(raw_step, dict):
+            raise ValueError(f'clearance_steps[{index}] must be a mapping')
+        step = dict(raw_step)
+        if step.get('shuttle') or step.get('blocker_shuttle'):
+            step['shuttle'] = _clean_symbol(
+                step.get('shuttle') or step.get('blocker_shuttle')
+            ).lower()
+        if step.get('start_slot') or step.get('blocker_start_slot'):
+            step['start_slot'] = _slot_symbol_or_empty(
+                step.get('start_slot') or step.get('blocker_start_slot')
+            )
+        if step.get('clear_slot') or step.get('target_slot'):
+            step['clear_slot'] = _slot_symbol_or_empty(
+                step.get('clear_slot') or step.get('target_slot')
+            )
+        if step.get('clear_target') or step.get('target'):
+            step['clear_target'] = str(
+                step.get('clear_target') or step.get('target')
+            ).strip()
+        if step.get('clear_stopper') or step.get('gate_stopper'):
+            step['clear_stopper'] = _stopper_symbol_or_empty(
+                step.get('clear_stopper') or step.get('gate_stopper')
+            )
+        if step.get('clear_sensor'):
+            step['clear_sensor'] = str(step.get('clear_sensor') or '').strip()
+        normalized.append(step)
+    return tuple(normalized)
+
+
+def _scenario_spec_from_goal_data(goal_id: str, data: dict[str, Any]) -> ScenarioSpec:
     payload_condition = str(data.get('payload_condition') or '')
     pddl_goal = f'{data["shuttle"]} at {data["target"]}'
     if payload_condition:
@@ -2107,11 +3333,15 @@ def scenario_spec_from_goal(goal: str) -> ScenarioSpec:
         blocker_shuttle=str(data.get('blocker_shuttle') or ''),
         blocker_start_slot=str(data.get('blocker_start_slot') or ''),
         blocker_clear_slot=str(data.get('blocker_clear_slot') or ''),
+        blocker_clear_target=str(data.get('blocker_clear_target') or ''),
+        blocker_clear_sensor=str(data.get('blocker_clear_sensor') or ''),
+        blocker_clear_stopper=_stopper_symbol_or_empty(data.get('blocker_clear_stopper')),
         blocker_restore_slot=str(data.get('blocker_restore_slot') or ''),
         blocker_restore_policy=str(data.get('blocker_restore_policy') or ''),
         blocker_restore_slot_source=str(data.get('blocker_restore_slot_source') or ''),
         blocker_restore_candidate_slots=tuple(data.get('blocker_restore_candidate_slots') or ()),
         clearance_strategy=str(data.get('clearance_strategy') or ''),
+        clearance_steps=_normalize_clearance_steps(data.get('clearance_steps') or ()),
     )
 
 
@@ -2216,6 +3446,24 @@ def _station_symbol(value: str) -> str:
 def _slot_symbol_or_empty(value: Any) -> str:
     match = re.search(r'[1-4]', str(value or ''))
     return match.group(0) if match else ''
+
+
+def _stopper_symbol_or_empty(value: Any) -> str:
+    text = _clean_symbol(str(value or '')).upper()
+    if text in {'A1', 'A2', 'A3', 'A4'}:
+        return text
+    return ''
+
+
+def _stopper_state_symbol(value: Any, *, default: str = 'open') -> str:
+    text = str(value or '').strip().casefold()
+    if text in {'0', 'open', 'opened', 'release', 'released', 'off', 'false'}:
+        return 'open'
+    if text in {'1', 'closed', 'close', 'stop', 'blocked', 'on', 'true'}:
+        return 'closed'
+    if default:
+        return default
+    raise ValueError(f'invalid stopper state {value!r}; expected open or closed')
 
 
 def _clean_symbol(value: str) -> str:
@@ -2409,6 +3657,95 @@ def _rail_shuttles_from_status(status: dict[str, Any], side: str) -> dict[str, A
     return shuttles if isinstance(shuttles, dict) else {}
 
 
+def _rail_stoppers_from_status(status: dict[str, Any], side: str) -> dict[str, Any]:
+    rails = status.get('rails', {}) if isinstance(status, dict) else {}
+    rail = rails.get(side, {}) if isinstance(rails, dict) else {}
+    stoppers = rail.get('stoppers', {}) if isinstance(rail, dict) else {}
+    if not isinstance(stoppers, dict):
+        return {}
+    return {str(name).strip().upper(): value for name, value in stoppers.items()}
+
+
+def _rail_switches_from_status(status: dict[str, Any], side: str) -> dict[str, Any]:
+    rails = status.get('rails', {}) if isinstance(status, dict) else {}
+    rail = rails.get(side, {}) if isinstance(rails, dict) else {}
+    switches = rail.get('switches', {}) if isinstance(rail, dict) else {}
+    if not isinstance(switches, dict):
+        return {}
+    return {str(name).strip().upper(): value for name, value in switches.items()}
+
+
+def _switches_match_status(
+    status: dict[str, Any],
+    side: str,
+    expected: dict[str, str],
+) -> bool:
+    if not expected:
+        return True
+    actual = _rail_switches_from_status(status, side)
+    for name, expected_state in expected.items():
+        if name not in actual:
+            return False
+        if _switch_state_value(actual.get(name)) != expected_state:
+            return False
+    return True
+
+
+def _stoppers_match_status(
+    status: dict[str, Any],
+    side: str,
+    expected: dict[str, str],
+) -> bool:
+    if not expected:
+        return True
+    actual = _rail_stoppers_from_status(status, side)
+    for name, expected_state in expected.items():
+        if name not in actual:
+            return False
+        if _stopper_state_value(actual.get(name)) != expected_state:
+            return False
+    return True
+
+
+def _expanded_switch_assignments(assignments: dict[str, Any]) -> dict[str, str]:
+    expanded: dict[str, str] = {}
+    for raw_name, raw_state in assignments.items():
+        name = str(raw_name or '').strip().upper()
+        state = _switch_state_value(raw_state)
+        if name == 'ALL':
+            for switch_name in ('A1', 'A2', 'A3', 'A4'):
+                expanded[switch_name] = state
+        elif name in {'A1', 'A2', 'A3', 'A4'}:
+            expanded[name] = state
+    return expanded
+
+
+def _expanded_stopper_assignments(assignments: dict[str, Any]) -> dict[str, str]:
+    expanded: dict[str, str] = {}
+    for raw_name, raw_state in assignments.items():
+        name = str(raw_name or '').strip().upper()
+        state = _stopper_state_value(raw_state)
+        if name == 'ALL':
+            for stopper_name in ('A1', 'A2', 'A3', 'A4'):
+                expanded[stopper_name] = state
+        elif name in {'A1', 'A2', 'A3', 'A4'}:
+            expanded[name] = state
+    return expanded
+
+
+def _switch_state_value(value: Any) -> str:
+    text = str(value or '').strip().upper()
+    if text in {'1', 'E', 'EXTERIOR'}:
+        return 'EXTERIOR'
+    if text in {'2', 'I', 'INTERIOR'}:
+        return 'INTERIOR'
+    return text
+
+
+def _stopper_state_value(value: Any) -> str:
+    return '1' if _stopper_state_symbol(value, default='open') == 'closed' else '0'
+
+
 def _payload_entry_from_status(
     status: dict[str, Any],
     side: str,
@@ -2502,6 +3839,197 @@ def _active_sensor_names_from_status(status: dict[str, Any], side: str) -> set[s
     return names
 
 
+def _matched_target_sensor_names_from_status(
+    status: dict[str, Any],
+    *,
+    side: str,
+    wanted: set[str],
+    shuttle: str,
+) -> list[str]:
+    matched_readings = _active_sensor_readings_for_names(status, side, wanted)
+    if not matched_readings:
+        return []
+    target_shuttle = _shuttle_entity_name(shuttle, side)
+    if not target_shuttle:
+        return sorted({
+            _sensor_name_from_reading(reading).upper()
+            for reading in matched_readings
+            if _sensor_name_from_reading(reading)
+        })
+    readings_with_identity = [
+        reading
+        for reading in matched_readings
+        if str(reading.get('shuttle') or '').strip()
+    ]
+    if not readings_with_identity:
+        return sorted({
+            _sensor_name_from_reading(reading).upper()
+            for reading in matched_readings
+            if _sensor_name_from_reading(reading)
+        })
+    return sorted({
+        _sensor_name_from_reading(reading).upper()
+        for reading in readings_with_identity
+        if (
+            _sensor_name_from_reading(reading)
+            and _shuttle_entity_name(reading.get('shuttle'), side) == target_shuttle
+        )
+    })
+
+
+def _target_slot_pose_match_from_status(
+    status: dict[str, Any],
+    *,
+    side: str,
+    target_slot: str,
+    shuttle: str,
+) -> dict[str, Any]:
+    slot = _slot_symbol_or_empty(target_slot)
+    if not slot:
+        return {}
+    expected = SLOT_POSE_BY_SIDE_AND_SLOT.get((side, slot))
+    if expected is None:
+        return {}
+    target_segment, target_s = expected
+    result = _target_pose_match_from_status(
+        status,
+        side=side,
+        shuttle=shuttle,
+        target_segment=target_segment,
+        target_s=target_s,
+        tolerance_m=SLOT_POSE_ARRIVAL_TOLERANCE_M,
+        allow_overshot=False,
+    )
+    if result:
+        result['target_slot'] = slot
+    return result
+
+
+def _target_pose_match_from_status(
+    status: dict[str, Any],
+    *,
+    side: str,
+    shuttle: str,
+    target_segment: str,
+    target_s: float,
+    tolerance_m: float | None = None,
+    allow_overshot: bool = True,
+) -> dict[str, Any]:
+    target_segment = str(target_segment or '').strip().upper()
+    if not target_segment:
+        return {}
+    tolerance = (
+        float(tolerance_m)
+        if tolerance_m is not None
+        else SLOT_POSE_ARRIVAL_TOLERANCE_M
+    )
+    state = _shuttle_state_from_status(status, side=side, shuttle=shuttle)
+    if not state:
+        return {}
+    segment = str(
+        state.get('segment')
+        or state.get('current_segment')
+        or state.get('block')
+        or ''
+    ).strip().upper()
+    if segment != str(target_segment).upper():
+        return {
+            'arrived': False,
+            'reason': '',
+            'expected_segment': target_segment,
+            'current_segment': segment,
+        }
+    try:
+        current_s = float(state.get('s'))
+    except (TypeError, ValueError):
+        return {
+            'arrived': False,
+            'reason': '',
+            'expected_segment': target_segment,
+            'current_segment': segment,
+        }
+    distance_m = abs(current_s - float(target_s))
+    arrived = distance_m <= tolerance
+    overshot = current_s > float(target_s) + tolerance
+    return {
+        'arrived': arrived or (overshot and allow_overshot),
+        'reason': (
+            'target slot pose matched'
+            if arrived
+            else ('target slot pose overshot' if overshot and allow_overshot else '')
+        ),
+        'expected_segment': target_segment,
+        'expected_s': round(float(target_s), 4),
+        'current_segment': segment,
+        'current_s': round(current_s, 4),
+        'distance_m': round(distance_m, 4),
+        'tolerance_m': tolerance,
+        'overshot': overshot,
+    }
+
+
+def _shuttle_state_from_status(
+    status: dict[str, Any],
+    *,
+    side: str,
+    shuttle: str,
+) -> dict[str, Any]:
+    rails = status.get('rails', {}) if isinstance(status, dict) else {}
+    rail = rails.get(side, {}) if isinstance(rails, dict) else {}
+    shuttles = rail.get('shuttles', {}) if isinstance(rail, dict) else {}
+    if not isinstance(shuttles, dict):
+        return {}
+    target = _shuttle_entity_name(shuttle, side)
+    if not target:
+        return {}
+    if target and isinstance(shuttles.get(target), dict):
+        return dict(shuttles[target])
+    for key, value in shuttles.items():
+        if not isinstance(value, dict):
+            continue
+        candidates = [
+            key,
+            value.get('entity_name'),
+            value.get('name'),
+            value.get('shuttle'),
+            value.get('shuttle_id'),
+            value.get('short_id'),
+        ]
+        if any(_shuttle_entity_name(candidate, side) == target for candidate in candidates):
+                return dict(value)
+    return {}
+
+
+def _shuttle_state_mode(state: dict[str, Any]) -> str:
+    if not isinstance(state, dict):
+        return ''
+    return str(state.get('mode') or '').strip().upper()
+
+
+def _shuttle_state_speed(state: dict[str, Any]) -> float:
+    if not isinstance(state, dict):
+        return 0.0
+    try:
+        return float(state.get('speed', 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _shuttle_state_is_falling(state: dict[str, Any]) -> bool:
+    return _shuttle_state_mode(state) in {'FALLING', 'FALLEN'}
+
+
+def _shuttle_state_is_stopped(state: dict[str, Any]) -> bool:
+    if not isinstance(state, dict) or not state:
+        return False
+    mode = _shuttle_state_mode(state)
+    if _shuttle_state_is_falling(state):
+        return False
+    if mode in {'', 'STOPPED', 'WAITING', 'DISABLED', 'OFF', 'IDLE'}:
+        return True
+    return abs(_shuttle_state_speed(state)) <= 0.001
+
+
 def _active_sensor_readings_for_names(
     status: dict[str, Any],
     side: str,
@@ -2559,6 +4087,9 @@ def _target_station_from_scenario(scenario: dict[str, Any]) -> str:
 
 
 def _target_shuttle_entity_from_scenario(scenario: dict[str, Any], side: str) -> str:
+    explicit_target = _shuttle_entity_name(scenario.get('target_shuttle_id'), side)
+    if explicit_target:
+        return explicit_target
     for target in scenario.get('expected_event_targets') or []:
         if not isinstance(target, dict):
             continue
@@ -2609,7 +4140,14 @@ def main(argv: list[str] | None = None) -> int:
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument('--problem', type=Path, help='PDDL problem file to generate.')
     input_group.add_argument('--goal', help='Supported symbolic goal id.')
+    input_group.add_argument('--case-id', help='Payload training case id from --case-config.')
     input_group.add_argument('--batch-config', type=Path, help='YAML batch scenario config.')
+    parser.add_argument(
+        '--case-config',
+        type=Path,
+        default=DEFAULT_PAYLOAD_TRAINING_CASES_PATH,
+        help='YAML payload training case matrix for --case-id.',
+    )
     parser.add_argument(
         '--language-seed',
         type=int,
@@ -2638,7 +4176,15 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_PLANSYS_TIMEOUT_S,
         help='Timeout for PlanSys2 planner service availability and responses.',
     )
-    parser.add_argument('--speed', type=float, default=0.3, help='move_shuttle speed annotation.')
+    parser.add_argument(
+        '--speed',
+        type=float,
+        default=None,
+        help=(
+            'move_shuttle speed annotation. With --case-id, defaults to the '
+            'case YAML speed when present; otherwise defaults to 0.3.'
+        ),
+    )
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
         '--dry-run',
@@ -2726,12 +4272,23 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         return 0
 
+    scenario_speed = (
+        float(args.speed)
+        if args.speed is not None
+        else (
+            speed_for_payload_training_case(args.case_id, args.case_config)
+            if args.case_id
+            else DEFAULT_SHUTTLE_SPEED_MPS
+        )
+    )
     scenario = generate_scenario(
         goal=args.goal or '',
         problem=args.problem,
+        case_id=args.case_id or '',
+        case_config=args.case_config,
         language_seed=args.language_seed,
         language_template_id=args.language_template_id,
-        speed=args.speed,
+        speed=scenario_speed,
         planner=planner,
     )
     if args.preflight_only or args.execute:

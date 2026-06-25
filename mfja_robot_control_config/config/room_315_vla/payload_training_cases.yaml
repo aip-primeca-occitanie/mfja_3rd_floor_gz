@@ -1,0 +1,1260 @@
+schema_version: 1
+description: >
+  Reviewable Room 315 payload training cases. Each case is intended to be
+  launched, visually inspected in Gazebo, validated, and only then exported into
+  training_events.jsonl.
+
+review_gate:
+  training_export_default: validated_batch_dataset
+  bad_cases_action: report_case_number_and_fix_case_definition
+  curation_method: automatic_accept_successful_batch_runs
+  model_input_boundary:
+    - model_input.language
+    - model_input.overhead_images
+    - model_input.last_command
+
+cases:
+  - case_id: right_loaded_r1_s1_to_slot3_no_blocker
+    title: Loaded R1 from slot 1 to slot 3, no blocker
+    side: right
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+    launch:
+      right_shuttle_count: 1
+      right_start_slots: "1"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: right_loaded_r1_s2_to_slot3_no_blocker
+    title: Loaded R1 from slot 2 to slot 3, no blocker
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "2"
+    launch:
+      right_shuttle_count: 1
+      right_start_slots: "2"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: right_loaded_r2_s2_to_slot3_no_blocker
+    title: Loaded R2 from slot 2 to slot 3, no blocker
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+    launch:
+      right_shuttle_count: 2
+      right_start_slots: "1,2"
+      right_loaded_shuttles: "R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3
+    title: R1 and R2 loaded; nearest loaded R2 goes to slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1, right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+    launch:
+      right_shuttle_count: 2
+      right_start_slots: "1,2"
+      right_loaded_shuttles: "R1,R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3
+    title: Loaded R1 from slot 2 to slot 3, R2 blocker clears forward near A4
+    side: right
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "2"
+      right_shuttle_2: "3"
+    blocker_shuttle: right_shuttle_2
+    blocker_start_slot: "3"
+    blocker_clear_slot: "4"
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+    blocker_clear_stopper: A4
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+    launch:
+      right_shuttle_count: 2
+      right_start_slots: "2,3"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "3"
+      blocker_shuttle: right_shuttle_2
+      blocker_clear_slot: "4"
+      blocker_clear_sensor: A4_STOPPER_SENSOR
+
+  - case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3
+    title: Loaded R2 from slot 2 to slot 3, R1 blocker clears forward near A4
+    side: right
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "3"
+      right_shuttle_2: "2"
+    blocker_shuttle: right_shuttle_1
+    blocker_start_slot: "3"
+    blocker_clear_slot: "4"
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+    blocker_clear_stopper: A4
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+    launch:
+      right_shuttle_count: 2
+      right_start_slots: "3,2"
+      right_loaded_shuttles: "R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "3"
+      blocker_shuttle: right_shuttle_1
+      blocker_clear_slot: "4"
+      blocker_clear_sensor: A4_STOPPER_SENSOR
+
+  - case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3
+    title: Right-rail scene; R2 blocker enters the interior loop so loaded R1 reaches slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+    blocker_shuttle: right_shuttle_2
+    blocker_start_slot: "2"
+    blocker_clear_slot: ""
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+    blocker_clear_stopper: A3
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+    launch:
+      right_shuttle_count: 2
+      right_start_slots: "1,2"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "3"
+      blocker_shuttle: right_shuttle_2
+      blocker_clear_target: interior_loop
+      blocker_clear_sensor: DA3IR
+
+  - case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3
+    title: Right-rail scene; R3 blocker enters the interior loop so loaded R2 reaches slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "4"
+      right_shuttle_2: "1"
+      right_shuttle_3: "2"
+    blocker_shuttle: right_shuttle_3
+    blocker_start_slot: "2"
+    blocker_clear_slot: ""
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+    blocker_clear_stopper: A3
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+    launch:
+      right_shuttle_count: 3
+      right_start_slots: "4,1,2"
+      right_loaded_shuttles: "R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "3"
+      blocker_shuttle: right_shuttle_3
+      blocker_clear_target: interior_loop
+      blocker_clear_sensor: DA3IR
+
+  - case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2
+    title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R4 reaches slot 1
+    side: right
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_4]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+      right_shuttle_3: "3"
+      right_shuttle_4: "4"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,2,3,4"
+      right_loaded_shuttles: "R4"
+    expected:
+      selected_shuttle: right_shuttle_4
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2
+    title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R3 reaches slot 1
+    side: right
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_3]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+      right_shuttle_3: "4"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,2,4,3"
+      right_loaded_shuttles: "R3"
+    expected:
+      selected_shuttle: right_shuttle_3
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2
+    title: Four right shuttles; R3 enters the interior loop and R1 clears slot 1 so loaded R2 reaches slot 1
+    side: right
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "4"
+      right_shuttle_3: "2"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,4,2,3"
+      right_loaded_shuttles: "R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2
+    title: Four right shuttles; R3 enters the interior loop and R2 clears slot 1 so loaded R1 reaches slot 1
+    side: right
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "4"
+      right_shuttle_2: "1"
+      right_shuttle_3: "2"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_2
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "4,1,2,3"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior
+    title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded R1 reaches slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+      right_shuttle_3: "3"
+      right_shuttle_4: "4"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_4
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: right_shuttle_3
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,2,3,4"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior
+    title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded R2 reaches slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "4"
+      right_shuttle_2: "1"
+      right_shuttle_3: "2"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_1
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: right_shuttle_4
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: right_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "4,1,2,3"
+      right_loaded_shuttles: "R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior
+    title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded R3 reaches slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_3]
+    start_slots_by_shuttle:
+      right_shuttle_1: "4"
+      right_shuttle_2: "2"
+      right_shuttle_3: "1"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_1
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: right_shuttle_4
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "4,2,1,3"
+      right_loaded_shuttles: "R3"
+    expected:
+      selected_shuttle: right_shuttle_3
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior
+    title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded R4 reaches slot 3
+    side: right
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_4]
+    start_slots_by_shuttle:
+      right_shuttle_1: "4"
+      right_shuttle_2: "2"
+      right_shuttle_3: "3"
+      right_shuttle_4: "1"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_1
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: right_shuttle_3
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "4,2,3,1"
+      right_loaded_shuttles: "R4"
+    expected:
+      selected_shuttle: right_shuttle_4
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3
+    title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R4 reaches slot 2
+    side: right
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_4]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+      right_shuttle_3: "3"
+      right_shuttle_4: "4"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A3_STOPPER_SENSOR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,2,3,4"
+      right_loaded_shuttles: "R4"
+    expected:
+      selected_shuttle: right_shuttle_4
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3
+    title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R3 reaches slot 2
+    side: right
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_3]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "2"
+      right_shuttle_3: "4"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A3_STOPPER_SENSOR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,2,4,3"
+      right_loaded_shuttles: "R3"
+    expected:
+      selected_shuttle: right_shuttle_3
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3
+    title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R2 reaches slot 2
+    side: right
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_2]
+    start_slots_by_shuttle:
+      right_shuttle_1: "1"
+      right_shuttle_2: "4"
+      right_shuttle_3: "2"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A3_STOPPER_SENSOR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "1,4,2,3"
+      right_loaded_shuttles: "R2"
+    expected:
+      selected_shuttle: right_shuttle_2
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3
+    title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R1 reaches slot 2
+    side: right
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [right_shuttle_1]
+    start_slots_by_shuttle:
+      right_shuttle_1: "4"
+      right_shuttle_2: "1"
+      right_shuttle_3: "2"
+      right_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: right_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IR
+        clear_stopper: A3
+      - shuttle: right_shuttle_2
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A3_STOPPER_SENSOR
+        clear_stopper: A3
+    launch:
+      right_shuttle_count: 4
+      right_start_slots: "4,1,2,3"
+      right_loaded_shuttles: "R1"
+    expected:
+      selected_shuttle: right_shuttle_1
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_loaded_l1_s1_to_slot3_no_blocker
+    title: Loaded L1 from slot 1 to slot 3, no blocker
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+    launch:
+      left_shuttle_count: 1
+      left_start_slots: "1"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: left_loaded_l1_s2_to_slot3_no_blocker
+    title: Loaded L1 from slot 2 to slot 3, no blocker
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "2"
+    launch:
+      left_shuttle_count: 1
+      left_start_slots: "2"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: left_loaded_l2_s2_to_slot3_no_blocker
+    title: Loaded L2 from slot 2 to slot 3, no blocker
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+    launch:
+      left_shuttle_count: 2
+      left_start_slots: "1,2"
+      left_loaded_shuttles: "L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3
+    title: L1 and L2 loaded; nearest loaded L2 goes to slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1, left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+    launch:
+      left_shuttle_count: 2
+      left_start_slots: "1,2"
+      left_loaded_shuttles: "L1,L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "3"
+      blocker_clear_slot: ""
+
+  - case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3
+    title: Loaded L1 from slot 2 to slot 3, L2 blocker clears forward near A4
+    side: left
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "2"
+      left_shuttle_2: "3"
+    blocker_shuttle: left_shuttle_2
+    blocker_start_slot: "3"
+    blocker_clear_slot: "4"
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+    blocker_clear_stopper: A4
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+    launch:
+      left_shuttle_count: 2
+      left_start_slots: "2,3"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "3"
+      blocker_shuttle: left_shuttle_2
+      blocker_clear_slot: "4"
+      blocker_clear_sensor: A4_STOPPER_SENSOR
+
+  - case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3
+    title: Loaded L2 from slot 2 to slot 3, L1 blocker clears forward near A4
+    side: left
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "3"
+      left_shuttle_2: "2"
+    blocker_shuttle: left_shuttle_1
+    blocker_start_slot: "3"
+    blocker_clear_slot: "4"
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+    blocker_clear_stopper: A4
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+    launch:
+      left_shuttle_count: 2
+      left_start_slots: "3,2"
+      left_loaded_shuttles: "L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "3"
+      blocker_shuttle: left_shuttle_1
+      blocker_clear_slot: "4"
+      blocker_clear_sensor: A4_STOPPER_SENSOR
+
+  - case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3
+    title: Left-rail scene; L2 blocker enters the interior loop so loaded L1 reaches slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+    blocker_shuttle: left_shuttle_2
+    blocker_start_slot: "2"
+    blocker_clear_slot: ""
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+    blocker_clear_stopper: A3
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+    launch:
+      left_shuttle_count: 2
+      left_start_slots: "1,2"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "3"
+      blocker_shuttle: left_shuttle_2
+      blocker_clear_target: interior_loop
+      blocker_clear_sensor: DA3IL
+
+  - case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3
+    title: Left-rail scene; L3 blocker enters the interior loop so loaded L2 reaches slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "4"
+      left_shuttle_2: "1"
+      left_shuttle_3: "2"
+    blocker_shuttle: left_shuttle_3
+    blocker_start_slot: "2"
+    blocker_clear_slot: ""
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+    blocker_clear_stopper: A3
+    blocker_restore_slot: ""
+    blocker_restore_policy: none
+    clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+    launch:
+      left_shuttle_count: 3
+      left_start_slots: "4,1,2"
+      left_loaded_shuttles: "L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "3"
+      blocker_shuttle: left_shuttle_3
+      blocker_clear_target: interior_loop
+      blocker_clear_sensor: DA3IL
+
+  - case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2
+    title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L4 reaches slot 1
+    side: left
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_4]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+      left_shuttle_3: "3"
+      left_shuttle_4: "4"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,2,3,4"
+      left_loaded_shuttles: "L4"
+    expected:
+      selected_shuttle: left_shuttle_4
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2
+    title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L3 reaches slot 1
+    side: left
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_3]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+      left_shuttle_3: "4"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,2,4,3"
+      left_loaded_shuttles: "L3"
+    expected:
+      selected_shuttle: left_shuttle_3
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2
+    title: Four left shuttles; L3 enters the interior loop and L1 clears slot 1 so loaded L2 reaches slot 1
+    side: left
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "4"
+      left_shuttle_3: "2"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,4,2,3"
+      left_loaded_shuttles: "L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2
+    title: Four left shuttles; L3 enters the interior loop and L2 clears slot 1 so loaded L1 reaches slot 1
+    side: left
+    speed: 0.08
+    target_slot: "1"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "4"
+      left_shuttle_2: "1"
+      left_shuttle_3: "2"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_2
+        start_slot: "1"
+        clear_slot: "2"
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "4,1,2,3"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "1"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior
+    title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded L1 reaches slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+      left_shuttle_3: "3"
+      left_shuttle_4: "4"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_4
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: left_shuttle_3
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,2,3,4"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior
+    title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded L2 reaches slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "4"
+      left_shuttle_2: "1"
+      left_shuttle_3: "2"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_1
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: left_shuttle_4
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: left_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "4,1,2,3"
+      left_loaded_shuttles: "L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior
+    title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded L3 reaches slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_3]
+    start_slots_by_shuttle:
+      left_shuttle_1: "4"
+      left_shuttle_2: "2"
+      left_shuttle_3: "1"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_1
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: left_shuttle_4
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "4,2,1,3"
+      left_loaded_shuttles: "L3"
+    expected:
+      selected_shuttle: left_shuttle_3
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior
+    title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker inside so loaded L4 reaches slot 3
+    side: left
+    speed: 0.08
+    target_slot: "3"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_4]
+    start_slots_by_shuttle:
+      left_shuttle_1: "4"
+      left_shuttle_2: "2"
+      left_shuttle_3: "3"
+      left_shuttle_4: "1"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_1
+        start_slot: "4"
+        clear_slot: "4"
+        clear_sensor: A4_STOPPER_SENSOR
+        clear_stopper: A4
+      - shuttle: left_shuttle_3
+        start_slot: "3"
+        clear_slot: "4"
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "4,2,3,1"
+      left_loaded_shuttles: "L4"
+    expected:
+      selected_shuttle: left_shuttle_4
+      selected_target_slot: "3"
+      clearance_step_count: 3
+      final_clear_target: interior_loop
+
+  - case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a1
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L4 reaches slot 2
+    side: left
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_4]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+      left_shuttle_3: "3"
+      left_shuttle_4: "4"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A1_STOPPER_SENSOR
+        clear_stopper: A1
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,2,3,4"
+      left_loaded_shuttles: "L4"
+    expected:
+      selected_shuttle: left_shuttle_4
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a1
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L3 reaches slot 2
+    side: left
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_3]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "2"
+      left_shuttle_3: "4"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_2
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A1_STOPPER_SENSOR
+        clear_stopper: A1
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,2,4,3"
+      left_loaded_shuttles: "L3"
+    expected:
+      selected_shuttle: left_shuttle_3
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a1
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L2 reaches slot 2
+    side: left
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_2]
+    start_slots_by_shuttle:
+      left_shuttle_1: "1"
+      left_shuttle_2: "4"
+      left_shuttle_3: "2"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_1
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A1_STOPPER_SENSOR
+        clear_stopper: A1
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "1,4,2,3"
+      left_loaded_shuttles: "L2"
+    expected:
+      selected_shuttle: left_shuttle_2
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"
+
+  - case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a1
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L1 reaches slot 2
+    side: left
+    speed: 0.08
+    target_slot: "2"
+    payload_condition: loaded
+    selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+    loaded_shuttles: [left_shuttle_1]
+    start_slots_by_shuttle:
+      left_shuttle_1: "4"
+      left_shuttle_2: "1"
+      left_shuttle_3: "2"
+      left_shuttle_4: "3"
+    clearance_strategy: multi_blocker_clear_then_move_loaded
+    clearance_steps:
+      - shuttle: left_shuttle_3
+        start_slot: "2"
+        clear_target: interior_loop
+        clear_sensor: DA3IL
+        clear_stopper: A3
+      - shuttle: left_shuttle_2
+        start_slot: "1"
+        clear_slot: "2"
+        clear_sensor: A1_STOPPER_SENSOR
+        clear_stopper: A1
+    launch:
+      left_shuttle_count: 4
+      left_start_slots: "4,1,2,3"
+      left_loaded_shuttles: "L1"
+    expected:
+      selected_shuttle: left_shuttle_1
+      selected_target_slot: "2"
+      clearance_step_count: 2
+      final_clear_slot: "2"

@@ -32,6 +32,7 @@ from room_315_multi_shuttle import decode_action_v3
 SUPPORTED_SYMBOLIC_ACTIONS = {
     'prepare_switches',
     'open_stoppers',
+    'set_stoppers',
     'move_shuttle',
     'stop_shuttle',
     'finish_task',

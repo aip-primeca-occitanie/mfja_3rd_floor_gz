@@ -9,6 +9,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    LogInfo,
     OpaqueFunction,
     SetEnvironmentVariable,
     TimerAction,
@@ -26,6 +27,15 @@ MODEL_ALIASES = {
 MOBILE_MODELS = {'tiago', 'tiago_base'}
 DESCRIPTION_PACKAGE = 'mfja_3rd_floor_description'
 CONTROL_CONFIG_PACKAGE = 'mfja_robot_control_config'
+ROOM315_VLA_OBSTACLE_MODEL_URI = 'model://room315_vla_removable_obstacle_marker'
+ROOM315_VLA_OBSTACLE_ENTITY_NAMES = {
+    'room315_vla_right_obstacle_marker',
+    'room315_vla_left_obstacle_marker',
+}
+
+
+def _as_launch_bool(value):
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
 def _canonical_model_name(model_name):
@@ -323,6 +333,41 @@ def _get_world_entity_name(world_path):
     return world_element.attrib.get('name', 'default')
 
 
+def _include_is_room315_vla_obstacle(include_element):
+    uri = include_element.findtext('uri', default='').strip()
+    name = include_element.findtext('name', default='').strip()
+    return (
+        uri == ROOM315_VLA_OBSTACLE_MODEL_URI
+        or name in ROOM315_VLA_OBSTACLE_ENTITY_NAMES
+    )
+
+
+def _materialize_world_without_room315_vla_obstacles(world_path):
+    tree = ET.parse(world_path)
+    root = tree.getroot()
+    world_element = root.find('world')
+    if world_element is None:
+        raise RuntimeError(f'No <world> element found in: {world_path}')
+
+    removed_count = 0
+    for include_element in list(world_element.findall('include')):
+        if _include_is_room315_vla_obstacle(include_element):
+            world_element.remove(include_element)
+            removed_count += 1
+
+    if removed_count == 0:
+        return world_path
+
+    world_base = os.path.splitext(os.path.basename(world_path))[0]
+    output_path = os.path.join(
+        tempfile.gettempdir(),
+        f'{world_base}_without_room315_vla_obstacles_{os.getpid()}.world',
+    )
+    ET.indent(tree, space='  ')
+    tree.write(output_path, encoding='utf-8', xml_declaration=True)
+    return output_path
+
+
 def _resolve_robot_assets(description_pkg_path, model_name):
     model_sdf = os.path.join(description_pkg_path, 'models', model_name, 'model.sdf')
     urdf_path = os.path.join(description_pkg_path, 'urdf', f'{model_name}.urdf')
@@ -346,6 +391,11 @@ def _launch_setup(context, *args, **kwargs):
     control_pkg_path = get_package_share_directory(CONTROL_CONFIG_PACKAGE)
     world_file_name = LaunchConfiguration('world_name').perform(context)
     world = os.path.join(description_pkg_path, 'worlds', world_file_name + '.world')
+    enable_room315_vla_obstacles = _as_launch_bool(
+        LaunchConfiguration('enable_room315_vla_obstacles').perform(context)
+    )
+    if not enable_room315_vla_obstacles:
+        world = _materialize_world_without_room315_vla_obstacles(world)
     world_entity_name = _get_world_entity_name(world)
     gui_config_file = LaunchConfiguration('gui_config').perform(context).strip()
     if not os.path.isabs(gui_config_file):
@@ -397,6 +447,12 @@ def _launch_setup(context, *args, **kwargs):
     gz_server_args = f'-s {world}' if start_paused else f'-r -s {world}'
 
     actions = [
+        LogInfo(
+            msg=(
+                'Room 315 VLA obstacle markers: '
+                f'{"enabled" if enable_room315_vla_obstacles else "disabled"}'
+            )
+        ),
         SetEnvironmentVariable('GZ_PARTITION', gz_partition),
         SetEnvironmentVariable('GZ_SIM_MODEL_PATH', model_path),
         SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH', resource_path),
@@ -592,6 +648,15 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description='Use debug colors for switch states; false keeps switches rail-colored.',
+        ),
+        DeclareLaunchArgument(
+            'enable_room315_vla_obstacles',
+            default_value='false',
+            choices=['true', 'false'],
+            description=(
+                'Load Room 315 VLA removable obstacle markers. Defaults to false '
+                'so Gazebo starts without obstacles unless explicitly requested.'
+            ),
         ),
         OpaqueFunction(function=_launch_setup),
     ])

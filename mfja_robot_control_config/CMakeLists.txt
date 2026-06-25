@@ -24,6 +24,7 @@ install(
   FILES
     config/room_315_vla/action_space.yaml
     config/room_315_vla/pddl_scenario_batch.yaml
+    config/room_315_vla/payload_training_cases.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
     config/room_315_vla/vla_supervisor.yaml
@@ -65,6 +66,8 @@ install(
     scripts/room_315_pddl_language_generator.py
     scripts/room_315_pddl_plan_translator.py
     scripts/room_315_pddl_scenario_generator.py
+    scripts/room_315_payload_case_batch_runner.py
+    scripts/room_315_payload_case_review.py
     scripts/room_315_real_vla_agent.py
     scripts/room_315_vla_benchmark_runner.py
     scripts/room_315_vla_baseline_eval.py

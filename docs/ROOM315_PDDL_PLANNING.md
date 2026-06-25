@@ -315,13 +315,11 @@ the failed episode is not approved for training export by default.
 
 `right_loaded_to_slot3_clear_blocker` is the blocked visual payload training
 scenario. It starts R1 empty in slot 3 as the blocker and R2 loaded in slot 2
-as the selected shuttle. The generated primitive plan first moves R1 from
-Staubli to Yaskawa slot 1, moves the loaded R2 to slot 3, then restores R1 to
-the newly free slot 2. The restore slot is selected by
-`selected_source_slot_then_nearest_free_slot`: first use the slot freed by the
-selected shuttle, then fall back to the nearest unoccupied slot. Per-step
-metadata records `coordination_phase`, `plan_step_target_shuttle_id`,
-`target_slot`, and `blocker_clearance` outside `model_input`.
+as the selected shuttle. The generated primitive plan closes A4, moves R1
+forward only to the A4 stopper clearance point, opens the stoppers again, then
+moves the loaded R2 to slot 3. Per-step metadata records `coordination_phase`,
+`plan_step_target_shuttle_id`, `target_slot`, `target_sensors`, and
+`blocker_clearance` outside `model_input`.
 
 Current scope: blocker restoration uses free station slots. General restoration
 to the interior loop is the next planning phase.
