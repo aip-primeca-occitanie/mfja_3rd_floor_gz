@@ -15,6 +15,7 @@
   <exec_depend>mfja_rail_interfaces</exec_depend>
   <exec_depend>mfja_robot_control_config</exec_depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>ros_gz_interfaces</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>

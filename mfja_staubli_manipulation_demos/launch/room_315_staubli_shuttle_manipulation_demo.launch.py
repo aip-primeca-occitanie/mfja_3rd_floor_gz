@@ -57,8 +57,8 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "right_start_slot",
-                default_value="3",
-                description="Initial right-rail shuttle slot near the Staubli.",
+                default_value="1",
+                description="Initial right-rail shuttle slot upstream of DZI3R.",
             ),
             DeclareLaunchArgument(
                 "shuttle_speed",

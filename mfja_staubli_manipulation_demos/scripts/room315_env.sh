@@ -22,6 +22,7 @@ LOCAL_ENV="$SCRIPT_DIR/room315_local_env.sh"
 if [[ -f "$LOCAL_ENV" ]]; then
   source "$LOCAL_ENV"
 fi
+export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-7}
 ROS_SETUP=${ROS_SETUP:-/opt/ros/jazzy/setup.bash}
 if [[ -z "${MFJA_SETUP:-}" ]]; then
   for setup in \

@@ -26,6 +26,7 @@ room315_shuttle_rail_report_ar.pdf
 /multi_robot_usage_guide.*
 /rail_switch_integration_report.*
 /mfja_staubli_demos/scripts/room315_local_env.sh
+/mfja_staubli_manipulation_demos/scripts/room315_local_env.sh
 
 # Local explanation exports
 *_explanation_ar.html

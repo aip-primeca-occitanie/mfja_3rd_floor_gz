@@ -10,8 +10,9 @@ setup(
     packages=[],
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
-        (f"share/{package_name}", ["package.xml"]),
+        (f"share/{package_name}", ["package.xml", "README.md"]),
         (f"share/{package_name}/config", glob("config/*.yaml")),
+        (f"share/{package_name}/docs", glob("docs/*.md")),
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
         (f"share/{package_name}/hpp", [path for path in glob("hpp/*") if isfile(path)]),
         (
@@ -28,6 +29,9 @@ setup(
     zip_safe=True,
     maintainer="Paul Sardin",
     maintainer_email="paulsardin123@gmail.com",
-    description="HPP manipulation demos for the Room 315 Staubli with the kinematic shuttle system.",
+    description=(
+        "HPP manipulation demos for the Room 315 Staubli with the kinematic "
+        "shuttle system."
+    ),
     license="Apache License 2.0",
 )

@@ -7,16 +7,36 @@ The package contains one shared HPP problem and small target-specific execution
 outputs. Keep planning geometry, contact surfaces, and manipulation graph common
 between Gazebo and the real robot; switch only the launch/output layer.
 
+For the full call order, ROS interfaces, Gazebo controllers, and file-by-file
+explanation, see
+[`docs/room315_pick_place_walkthrough.md`](docs/room315_pick_place_walkthrough.md).
+
+The commands below are written from the repository root:
+
+```bash
+cd "$MFJA_WS/src/mfja_3rd_floor_gz"
+source "$MFJA_WS/install/setup.bash"
+```
+
+The demo scripts default to `ROS_DOMAIN_ID=7` and pass the same domain to
+`hpp-exec`. Set `ROS_DOMAIN_ID` before running the scripts if your classroom
+setup uses another domain.
+
 ## Layout
 
 - `launch/room_315_staubli_shuttle_manipulation_demo.launch.py`: Gazebo Room 315
   scene with `staubli1` and the right shuttle rail.
-- `hpp/room315_shuttle_manipulation.py`: HPP planning, phase sampling, and
-  execution output adapters.
+- `hpp/room315_shuttle_manipulation.py`: command-line entry point for one HPP
+  manipulation cycle.
+- `hpp/room315_problem.py`: HPP model constants, pose helpers, and problem/graph
+  construction.
+- `hpp/room315_planning.py`: pick target selection, transition planning, and
+  phase sampling.
+- `hpp/room315_execution.py`: ROS, Gazebo payload, and gripper execution outputs.
 - `hpp/*.urdf`, `hpp/*.srdf`: HPP robot/object/environment models and semantic
   surfaces.
 - `models/staubli_tx2_60l_gripper`, `urdf/staubli_tx2_60l_gripper.urdf`: Gazebo
-  and ROS description for the Staubli with the passive open gripper geometry.
+  and ROS/HPP descriptions for the Staubli with placeholder gripper geometry.
 - `scripts/room315_demo.sh`: launch the Gazebo scene.
 - `scripts/room315_hpp_manipulation.sh`: run the HPP problem in `hpp-exec`.
 - `scripts/room315_moving_shuttle_demo.sh`: orchestrate the two-shuttle sequence.
@@ -29,16 +49,17 @@ Launch the scene:
 mfja_staubli_manipulation_demos/scripts/room315_demo.sh
 ```
 
-For the moving-shuttle setup, start the pickup shuttle away from the robot:
+For the moving-shuttle setup, the pickup shuttle starts upstream of the robot by
+default:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_demo.sh gui:=false right_start_slot:=1
+mfja_staubli_manipulation_demos/scripts/room315_demo.sh gui:=false
 ```
 
 Run the default two-shuttle sequence:
 
 ```bash
-HPP_EXEC_DIR=/home/psardin/devel/nix-hpp/src/hpp-exec \
+HPP_EXEC_DIR=$HOME/devel/nix-hpp/src/hpp-exec \
   mfja_staubli_manipulation_demos/scripts/room315_moving_shuttle_demo.sh --replace-box
 ```
 
@@ -53,11 +74,13 @@ Gazebo execution uses:
 - gripper output: `/staubli1/gripper_joint_trajectory` in the moving-shuttle
   helper; direct HPP execution can enable it with
   `--gripper-output joint-trajectory`
+- gripper stroke: the Gazebo finger joints use the SCHUNK PGN-plus-P 40
+  2.5 mm per-jaw stroke (`0.028` open, `0.0255` closed)
 - payload output: Gazebo spawn/set-pose/remove services
 
-The fixed gripper geometry must leave room around the payload during the
-approach. Closing belongs to the semantic grasp action; do not hide a bad
-approach by disabling payload/gripper collisions.
+HPP keeps the gripper geometry fixed and conservative; Gazebo animates small
+finger joints for visual timing. Closing belongs to the semantic grasp action;
+do not hide a bad approach by disabling payload/gripper collisions.
 
 The Gazebo grasp is intentionally kinematic. The fingers open and close for
 visual and timing feedback, while the payload is attached by following the HPP
@@ -95,29 +118,41 @@ mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --execute \
 
 ## Real Robot
 
-Use the same HPP problem and phase sampling, but disable Gazebo-only outputs and
-select the real gripper output:
+Use the same HPP problem and phase sampling, but disable Gazebo-only outputs.
+The Staubli gripper is a SCHUNK PGN-plus-P 40 pneumatic gripper. With the
+current Staubli ROS 2 driver, command the valve through the VAL3 IO service:
 
 ```bash
 mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --execute \
   --payload-output none \
-  --gripper-output joint-trajectory \
-  --gripper-trajectory-topic /staubli1/gripper_joint_trajectory \
-  --gripper-joints gripper_finger_joint
+  --gripper-output staubli-io \
+  --staubli-io-pin PIN_TO_CONFIRM
 ```
 
-For a digital open/close gripper:
+By default this uses `/io_interface/write_single_io`, module
+`staubli_msgs/msg/IOModule.VALVE_OUT`, `state=True` for close, and
+`state=False` for open. Add `--staubli-io-inverted` if the valve wiring uses the
+opposite polarity.
+
+For the full moving-shuttle sequence, pass the same gripper options and forward
+real-robot-only HPP options such as `--payload-output none`:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --execute \
-  --payload-output none \
-  --gripper-output bool \
-  --gripper-command-topic /staubli1/gripper/command
+mfja_staubli_manipulation_demos/scripts/room315_moving_shuttle_demo.sh \
+  --gripper-output staubli-io \
+  --staubli-io-pin PIN_TO_CONFIRM \
+  --payload-output none
 ```
 
 Before sending motion to hardware, run `--plan-only`, check the real current
-joint seed with `--q-start` when needed, and confirm the measured gripper TCP,
-finger geometry, opening width, speeds, and clearances.
+joint seed with `--q-start` when needed, and confirm the arm execution topic or
+action, measured gripper TCP, finger geometry, opening width, speeds, and
+clearances.
+
+If the real arm bridge accepts `trajectory_msgs/msg/JointTrajectory` on a topic,
+select it with `--trajectory-topic` and `--joint-state-topic`. If it only exposes
+a `FollowJointTrajectory` action, add an action adapter before running on
+hardware.
 
 ## Current Surfaces
 
