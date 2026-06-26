@@ -1119,8 +1119,8 @@ cases:
       clearance_step_count: 3
       final_clear_target: interior_loop
 
-  - case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a1
-    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L4 reaches slot 2
+  - case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L4 reaches slot 2
     side: left
     speed: 0.08
     target_slot: "2"
@@ -1142,8 +1142,8 @@ cases:
       - shuttle: left_shuttle_1
         start_slot: "1"
         clear_slot: "2"
-        clear_sensor: A1_STOPPER_SENSOR
-        clear_stopper: A1
+        clear_sensor: A2_STOPPER_SENSOR
+        clear_stopper: A2
     launch:
       left_shuttle_count: 4
       left_start_slots: "1,2,3,4"
@@ -1154,8 +1154,8 @@ cases:
       clearance_step_count: 2
       final_clear_slot: "2"
 
-  - case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a1
-    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L3 reaches slot 2
+  - case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L3 reaches slot 2
     side: left
     speed: 0.08
     target_slot: "2"
@@ -1177,8 +1177,8 @@ cases:
       - shuttle: left_shuttle_1
         start_slot: "1"
         clear_slot: "2"
-        clear_sensor: A1_STOPPER_SENSOR
-        clear_stopper: A1
+        clear_sensor: A2_STOPPER_SENSOR
+        clear_stopper: A2
     launch:
       left_shuttle_count: 4
       left_start_slots: "1,2,4,3"
@@ -1189,8 +1189,8 @@ cases:
       clearance_step_count: 2
       final_clear_slot: "2"
 
-  - case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a1
-    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L2 reaches slot 2
+  - case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L2 reaches slot 2
     side: left
     speed: 0.08
     target_slot: "2"
@@ -1212,8 +1212,8 @@ cases:
       - shuttle: left_shuttle_1
         start_slot: "1"
         clear_slot: "2"
-        clear_sensor: A1_STOPPER_SENSOR
-        clear_stopper: A1
+        clear_sensor: A2_STOPPER_SENSOR
+        clear_stopper: A2
     launch:
       left_shuttle_count: 4
       left_start_slots: "1,4,2,3"
@@ -1224,8 +1224,8 @@ cases:
       clearance_step_count: 2
       final_clear_slot: "2"
 
-  - case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a1
-    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A1 so loaded L1 reaches slot 2
+  - case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2
+    title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L1 reaches slot 2
     side: left
     speed: 0.08
     target_slot: "2"
@@ -1247,8 +1247,8 @@ cases:
       - shuttle: left_shuttle_2
         start_slot: "1"
         clear_slot: "2"
-        clear_sensor: A1_STOPPER_SENSOR
-        clear_stopper: A1
+        clear_sensor: A2_STOPPER_SENSOR
+        clear_stopper: A2
     launch:
       left_shuttle_count: 4
       left_start_slots: "4,1,2,3"

@@ -1256,6 +1256,57 @@ def test_four_right_shuttle_slot2_case_clears_a3_then_moves_loaded():
     assert all('model_input' not in payload for payload in payloads)
 
 
+def test_four_left_shuttle_slot2_case_holds_slot1_blocker_at_a2():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id='left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2',
+        case_config=PAYLOAD_CASE_CONFIG_PATH,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['target_shuttle_id'] == 'left_shuttle_2'
+    assert scenario['target_slot'] == '2'
+    assert scenario['blocker_clearance']['clearance_step_count'] == 2
+    assert [
+        step['blocker_shuttle_id']
+        for step in scenario['blocker_clearance']['clearance_steps']
+    ] == ['left_shuttle_3', 'left_shuttle_1']
+    assert 'A1_STOPPER_SENSOR' not in '\n'.join(scenario['symbolic_plan'])
+    assert scenario['symbolic_plan'] == [
+        'prepare_switches left yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'set_stoppers left A3 closed',
+        'move_shuttle left left_shuttle_3 yaskawa yaskawa speed=0.3 target_stopper=A3',
+        'stop_shuttle left left_shuttle_3',
+        'prepare_switches left yaskawa yaskawa switch=A3 state=INTERIOR',
+        'open_stoppers left yaskawa yaskawa',
+        'move_shuttle left left_shuttle_3 yaskawa yaskawa speed=0.3',
+        'stop_shuttle left left_shuttle_3',
+        'prepare_switches left yaskawa yaskawa switch=A3 state=EXTERIOR',
+        'prepare_switches left yaskawa yaskawa',
+        'set_stoppers left A2 closed',
+        'move_shuttle left left_shuttle_1 yaskawa yaskawa speed=0.3 target_stopper=A2',
+        'stop_shuttle left left_shuttle_1',
+        'prepare_switches left kuka yaskawa',
+        'open_stoppers left kuka yaskawa',
+        'move_shuttle left left_shuttle_2 kuka yaskawa speed=0.3',
+        'stop_shuttle left left_shuttle_2',
+        'finish_task left_shuttle_2 yaskawa',
+    ]
+
+    payloads = generator.command_payloads_for_execution(scenario)
+    assert payloads[2]['shuttle'] == 'left_shuttle_3'
+    assert payloads[2]['target_sensors'] == ['A3_STOPPER_SENSOR']
+    assert payloads[6]['target_station'] == 'interior_loop'
+    assert payloads[11]['shuttle'] == 'left_shuttle_1'
+    assert payloads[11]['target_sensors'] == ['A2_STOPPER_SENSOR']
+    assert payloads[11]['target_stopper'] == 'A2'
+    assert 'target_slot' not in payloads[11]
+    assert payloads[15]['shuttle'] == 'left_shuttle_2'
+    assert payloads[15]['target_slot'] == '2'
+    assert all('model_input' not in payload for payload in payloads)
+
+
 def test_four_right_shuttle_slot2_case_waits_for_blockers_and_target():
     generator = _load_module()
     scenario = generator.generate_scenario(
@@ -1645,10 +1696,10 @@ def test_payload_training_case_matrix_generates_reviewable_scenarios():
         'left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior',
         'left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior',
         'left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior',
-        'left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a1',
-        'left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a1',
-        'left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a1',
-        'left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a1',
+        'left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2',
+        'left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2',
+        'left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2',
+        'left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2',
     ]
     assert config['cases'][20]['speed'] == 0.08
 
