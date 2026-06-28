@@ -34,7 +34,11 @@ reports/
 
 # Local notes and generated HTML exports
 memory.md
+*_AR.*
+*_ar.*
+*arabic*
+*Arabic*
+*[اأإآء-ي]*
 *.html
 !runbook.html
 !runbookvla.html
-!docs/ROOM315_PLANSYS_PDDL_TRAINING_AR.html
