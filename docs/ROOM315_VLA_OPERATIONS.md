@@ -273,13 +273,14 @@ Each extracted row has the training shape:
 
 The model-facing observation is `model_input_schema_version: 3`. Train and serve
 learned VLA policies from the `model_input` object only. Its fields are
-intentionally limited to `language`, `overhead_images`, and `last_command`.
-Binary sensor bits, switch/stopper states, shuttle command state,
+`language`, `overhead_images`, `last_command`, and `observable_state`.
+`observable_state` is limited to real deploy-time signals: binary sensor bits
+plus current switch and stopper states. Shuttle command state,
 time-since-last-sensor-event, exact Gazebo pose, true shuttle segment,
-distance-to-switch, and normalized-position values are excluded from
-`model_input`; when needed for expert execution, offline analysis, or debugging
-they live under `privileged_eval`, `structured_rail_state`, `observation.state`,
-or debug fields, not in the policy input.
+distance-to-switch, normalized-position values, payload labels, and planner
+metadata are excluded from `model_input`; when needed for expert execution,
+offline analysis, or debugging they live under `privileged_eval`,
+`structured_rail_state`, `observation.state`, or debug fields.
 
 The raw event rows still retain an identity-aware `observation.state` vector for
 auditing and state-only ablations. It contains stable multi-hot features for each
@@ -297,8 +298,9 @@ unknown-position recovery, stopper-only visual obstacle stops, and sensor-dropou
 cases are intentionally excluded from the research scenario set because they do
 not add a clear model-facing visual question. Expert-side sensors and Gazebo
 state may still be used by the generator for safe reset/recovery and by the
-recorder under `privileged_eval`, but the policy input remains limited to
-schema-v3 `model_input`: language, overhead images, and last command.
+recorder under `privileged_eval`, but the policy input remains deployable-only
+schema-v3 `model_input`: language, overhead images, last command, and
+observable binary sensor/switch/stopper state.
 
 The overhead-camera scene keeps station cues minimal: slot fiducials remain
 visible, while dedicated colored station strips, green inspection disks, and

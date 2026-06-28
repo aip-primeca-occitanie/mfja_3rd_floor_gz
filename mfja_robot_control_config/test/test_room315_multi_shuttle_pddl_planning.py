@@ -35,23 +35,28 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
     for required in (
         'shuttle_on_side',
         'shuttle_at_slot',
-        'block_free',
-        'block_reserved_by',
         'slot_reserved_by',
-        'carrying_payload',
         'front_of',
         'waiting_for_clearance',
         'assign_task',
-        'reserve_next_block',
-        'release_block',
         'prepare_switches_for_shuttle',
         'open_stoppers_for_shuttle',
-        'move_shuttle_to_block',
         'stop_shuttle_at_slot',
         'wait_for_clearance',
-        'transfer_payload_if_applicable',
     ):
         assert required in text
+    for removed in (
+        'block_free',
+        'block_reserved_by',
+        'shuttle_at_block',
+        'reserve_next_block',
+        'release_block',
+        'move_shuttle_to_block',
+        'carrying_payload',
+        'payload_on_shuttle',
+        'transfer_payload_if_applicable',
+    ):
+        assert removed not in text
 
 
 def test_multi_shuttle_plan_step_translates_to_schema_v3_target():

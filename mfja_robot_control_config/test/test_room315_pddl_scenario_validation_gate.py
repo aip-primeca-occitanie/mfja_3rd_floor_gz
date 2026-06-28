@@ -292,6 +292,31 @@ def test_privileged_model_input_causes_validation_failure():
     assert 'privileged field inside model_input' in validation['failure_reason']
 
 
+def test_observable_state_is_allowed_but_exact_pose_is_rejected():
+    gate = _load_script('room_315_pddl_validation_gate')
+    clean = {
+        'model_input': {
+            'language': 'move',
+            'overhead_images': {},
+            'last_command': {'action': 'START'},
+            'observable_state': {
+                'right': {
+                    'sensors': {'DZI2R': 1, 'DZI3R': 0},
+                    'switches': {'A1': 'EXTERIOR'},
+                    'stoppers': {'A1': 'open'},
+                },
+            },
+        },
+    }
+    polluted = copy.deepcopy(clean)
+    polluted['model_input']['observable_state']['right']['s'] = 0.42
+
+    assert gate.privileged_model_input_paths(clean) == []
+    assert gate.privileged_model_input_paths(polluted) == [
+        '$.model_input.observable_state.right.s'
+    ]
+
+
 def test_dataset_report_separates_approved_and_failed_episodes(tmp_path):
     reporter = _load_script('room_315_pddl_dataset_report')
     dataset = tmp_path / 'dataset'

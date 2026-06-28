@@ -37,6 +37,7 @@ def test_payload_config_matches_identity_keepout_boundary():
         'language',
         'overhead_images',
         'last_command',
+        'observable_state',
     ]
     assert (
         payload['model_input_boundary']['payload_and_identity_metadata_exposure']

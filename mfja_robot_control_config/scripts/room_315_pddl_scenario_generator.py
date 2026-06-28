@@ -55,7 +55,6 @@ SUPPORTED_GOALS = {
         'source': 'yaskawa',
         'target': 'staubli',
         'problem_name': 'room315-right-yaskawa-to-staubli',
-        'problem_file': 'problem_right_yaskawa_to_staubli.pddl',
     },
     'right_staubli_to_yaskawa': {
         'side': 'right',
@@ -63,7 +62,6 @@ SUPPORTED_GOALS = {
         'source': 'staubli',
         'target': 'yaskawa',
         'problem_name': 'room315-right-staubli-to-yaskawa',
-        'problem_file': 'problem_right_staubli_to_yaskawa.pddl',
     },
     'left_yaskawa_to_kuka': {
         'side': 'left',
@@ -71,7 +69,6 @@ SUPPORTED_GOALS = {
         'source': 'yaskawa',
         'target': 'kuka',
         'problem_name': 'room315-left-yaskawa-to-kuka',
-        'problem_file': 'problem_left_yaskawa_to_kuka.pddl',
     },
     'left_kuka_to_yaskawa': {
         'side': 'left',
@@ -79,7 +76,6 @@ SUPPORTED_GOALS = {
         'source': 'kuka',
         'target': 'yaskawa',
         'problem_name': 'room315-left-kuka-to-yaskawa',
-        'problem_file': 'problem_left_kuka_to_yaskawa.pddl',
     },
     'right_loaded_r2_to_staubli': {
         'side': 'right',
@@ -88,7 +84,6 @@ SUPPORTED_GOALS = {
         'target': 'staubli',
         'payload_condition': 'loaded',
         'problem_name': 'room315-right-loaded-r2-to-staubli',
-        'problem_file': 'problem_right_loaded_r2_to_staubli.pddl',
     },
     'right_loaded_to_slot3': {
         'side': 'right',
@@ -129,7 +124,6 @@ SUPPORTED_GOALS = {
         'target': 'yaskawa',
         'payload_condition': 'empty',
         'problem_name': 'room315-right-empty-r1-to-yaskawa',
-        'problem_file': 'problem_right_empty_r1_to_yaskawa.pddl',
     },
     'left_loaded_l2_to_kuka': {
         'side': 'left',
@@ -138,7 +132,6 @@ SUPPORTED_GOALS = {
         'target': 'kuka',
         'payload_condition': 'loaded',
         'problem_name': 'room315-left-loaded-l2-to-kuka',
-        'problem_file': 'problem_left_loaded_l2_to_kuka.pddl',
     },
 }
 LANGUAGE_TEMPLATE_SEQUENCE = (
@@ -209,7 +202,6 @@ class ScenarioSpec:
     target: str
     pddl_problem: str = ''
     pddl_goal: str = ''
-    pddl_problem_file: str = ''
     payload_condition: str = ''
     target_slot: str = ''
     selection_policy: str = ''
@@ -448,11 +440,13 @@ class RosScenarioTransport(ScenarioTransport):
         status_topic: str,
         dataset_status_topic: str,
         ros_args: list[str] | None = None,
+        require_dataset_recorder: bool = False,
     ) -> None:
         self.command_topic = command_topic
         self.episode_control_topic = episode_control_topic
         self.status_topic = status_topic
         self.dataset_status_topic = dataset_status_topic
+        self.require_dataset_recorder = bool(require_dataset_recorder)
         self.rclpy = importlib.import_module('rclpy')
         std_msgs = importlib.import_module('std_msgs.msg')
         self.String = std_msgs.String
@@ -607,18 +601,29 @@ class RosScenarioTransport(ScenarioTransport):
         self.episode_control_pub.publish(msg)
 
     def publish_episode_start_and_wait(self, *, goal: str, timeout_s: float) -> dict[str, Any]:
-        if not self._dataset_status_publisher_count():
+        if not self.require_dataset_recorder and not self._dataset_status_publisher_count():
             return {'ready': True, 'reason': '', 'observed': False}
         deadline = time.monotonic() + max(float(timeout_s), 0.0)
         wanted_goal = str(goal or '').strip()
         start_command = f'start {wanted_goal}' if wanted_goal else 'start'
         latest: dict[str, Any] = {}
+        ignored_episode_ids = self._current_dataset_episode_ids()
         last_publish_s = 0.0
+        published_start = False
+        dataset_status_publishers: int | None = None
         episode_control_subscribers: int | None = None
         while time.monotonic() <= deadline:
             self.rclpy.spin_once(self.node, timeout_sec=0.05)
             latest = dict(self.latest_dataset_status)
-            if self._dataset_status_matches_started_episode(latest, wanted_goal):
+            if not published_start:
+                episode_id = str(latest.get('episode_id') or '').strip()
+                if episode_id:
+                    ignored_episode_ids.add(episode_id)
+            if published_start and self._dataset_status_matches_started_episode(
+                latest,
+                wanted_goal,
+                ignored_episode_ids=ignored_episode_ids,
+            ):
                 return {
                     'ready': True,
                     'reason': '',
@@ -626,6 +631,7 @@ class RosScenarioTransport(ScenarioTransport):
                     'latest_dataset_status': latest,
                 }
 
+            dataset_status_publishers = self._dataset_status_publisher_count()
             episode_control_subscribers = self._episode_control_subscriber_count()
             if episode_control_subscribers == 0:
                 continue
@@ -634,6 +640,7 @@ class RosScenarioTransport(ScenarioTransport):
             if now_s - last_publish_s >= 0.5:
                 self.publish_episode_control(start_command)
                 last_publish_s = now_s
+                published_start = True
 
         return {
             'ready': False,
@@ -642,12 +649,13 @@ class RosScenarioTransport(ScenarioTransport):
                 + (f' for {wanted_goal!r}' if wanted_goal else '')
             ),
             'latest_dataset_status': latest,
+            'dataset_status_publishers': dataset_status_publishers,
             'episode_control_subscribers': episode_control_subscribers,
             'observed': True,
         }
 
     def wait_for_episode_started(self, *, goal: str, timeout_s: float) -> dict[str, Any]:
-        if not self._dataset_status_publisher_count():
+        if not self.require_dataset_recorder and not self._dataset_status_publisher_count():
             return {'ready': True, 'reason': '', 'observed': False}
         deadline = time.monotonic() + max(float(timeout_s), 0.0)
         wanted_goal = str(goal or '').strip()
@@ -668,7 +676,7 @@ class RosScenarioTransport(ScenarioTransport):
         }
 
     def wait_for_episode_stopped(self, *, timeout_s: float) -> dict[str, Any]:
-        if not self._dataset_status_publisher_count():
+        if not self.require_dataset_recorder and not self._dataset_status_publisher_count():
             return {'ready': True, 'reason': '', 'observed': False}
         deadline = time.monotonic() + max(float(timeout_s), 0.0)
         latest: dict[str, Any] = {}
@@ -721,12 +729,26 @@ class RosScenarioTransport(ScenarioTransport):
     def _dataset_status_matches_started_episode(
         latest: dict[str, Any],
         wanted_goal: str,
+        *,
+        ignored_episode_ids: set[str] | None = None,
     ) -> bool:
         if not bool(latest.get('active', False)):
             return False
         if wanted_goal and str(latest.get('task') or '').strip() != wanted_goal:
             return False
-        return bool(str(latest.get('episode_id') or '').strip())
+        episode_id = str(latest.get('episode_id') or '').strip()
+        if not episode_id:
+            return False
+        return episode_id not in (ignored_episode_ids or set())
+
+    def _current_dataset_episode_ids(self) -> set[str]:
+        episode_ids = set()
+        latest = self.latest_dataset_status if isinstance(self.latest_dataset_status, dict) else {}
+        for episode_id in (self.last_episode_id, latest.get('episode_id')):
+            normalized = str(episode_id or '').strip()
+            if normalized:
+                episode_ids.add(normalized)
+        return episode_ids
 
     def publish_command(self, command: dict[str, Any]) -> None:
         msg = self.String()
@@ -1049,7 +1071,6 @@ class RosScenarioTransport(ScenarioTransport):
 def generate_scenario(
     *,
     goal: str = '',
-    problem: Path | str | None = None,
     case_id: str = '',
     case_config: Path | str | None = None,
     language_seed: int | None = None,
@@ -1061,7 +1082,6 @@ def generate_scenario(
 
     spec = scenario_spec_from_inputs(
         goal=goal,
-        problem=problem,
         case_id=case_id,
         case_config=case_config,
     )
@@ -2672,57 +2692,13 @@ def _payload_state_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
 def _payload_init_facts_for_spec(spec: ScenarioSpec) -> str:
     if spec.loaded_shuttles:
         if spec.shuttle in set(spec.loaded_shuttles):
-            return (
-                f'    (loaded {spec.shuttle})\n'
-                f'    (carrying_payload {spec.shuttle})'
-            )
+            return f'    (loaded {spec.shuttle})'
         return f'    (empty {spec.shuttle})'
     if spec.payload_condition == 'loaded':
-        return (
-            f'    (loaded {spec.shuttle})\n'
-            f'    (carrying_payload {spec.shuttle})'
-        )
+        return f'    (loaded {spec.shuttle})'
     if spec.payload_condition == 'empty':
         return f'    (empty {spec.shuttle})'
     return f'    (empty {spec.shuttle})'
-
-
-def _payload_condition_for_problem(text: str, shuttle: str) -> str:
-    shuttle_symbol = re.escape(_clean_symbol(shuttle).lower())
-    normalized = text.casefold().replace('-', '_')
-    if re.search(rf'\(loaded\s+{shuttle_symbol}\)', normalized):
-        return 'loaded'
-    if re.search(rf'\(empty\s+{shuttle_symbol}\)', normalized):
-        return 'empty'
-    if re.search(rf'\(carrying_payload\s+{shuttle_symbol}\)', normalized):
-        return 'loaded'
-    return ''
-
-
-def _payload_goal_id(
-    *,
-    side: str,
-    shuttle: str,
-    target: str,
-    payload_condition: str,
-) -> str:
-    if payload_condition not in {'loaded', 'empty'}:
-        return ''
-    token = _short_shuttle_token(shuttle)
-    if not token:
-        return ''
-    return f'{side}_{payload_condition}_{token}_to_{target}'
-
-
-def _short_shuttle_token(shuttle: str) -> str:
-    text = _clean_symbol(shuttle).lower()
-    match = re.fullmatch(r'([rl])([1-4])', text)
-    if match:
-        return f'{match.group(1)}{match.group(2)}'
-    match = re.fullmatch(r'(right|left)_shuttle_([1-4])', text)
-    if match:
-        return f'{"r" if match.group(1) == "right" else "l"}{match.group(2)}'
-    return ''
 
 
 def _shuttle_sort_key(shuttle: Any) -> tuple[int, int, str]:
@@ -2910,14 +2886,6 @@ def _payload_loaded_for_shuttle(scenario: dict[str, Any], shuttle_id: str) -> bo
 
 
 def _problem_text_for_spec(spec: ScenarioSpec) -> str:
-    if spec.pddl_problem_file:
-        problem_path = Path(spec.pddl_problem_file).expanduser()
-        if problem_path.exists():
-            return problem_path.read_text(encoding='utf-8')
-    problem_filename = SUPPORTED_GOALS.get(spec.goal_id, {}).get('problem_file', '')
-    candidate = PDDL_DIR / problem_filename if problem_filename else Path()
-    if problem_filename and candidate.exists():
-        return candidate.read_text(encoding='utf-8')
     return _problem_text_from_goal_spec(spec)
 
 
@@ -3152,17 +3120,14 @@ def _station_for_slot(side: str, slot: str) -> str:
 def scenario_spec_from_inputs(
     *,
     goal: str = '',
-    problem: Path | str | None = None,
     case_id: str = '',
     case_config: Path | str | None = None,
 ) -> ScenarioSpec:
     if case_id:
         return scenario_spec_from_case(case_id, case_config=case_config)
-    if problem:
-        return scenario_spec_from_problem(Path(problem))
     if goal:
         return scenario_spec_from_goal(goal)
-    raise ValueError('provide --goal, --problem, or --case-id')
+    raise ValueError('provide --goal or --case-id')
 
 
 def scenario_spec_from_goal(goal: str) -> ScenarioSpec:
@@ -3311,7 +3276,6 @@ def _scenario_spec_from_goal_data(goal_id: str, data: dict[str, Any]) -> Scenari
     pddl_goal = f'{data["shuttle"]} at {data["target"]}'
     if payload_condition:
         pddl_goal = f'{payload_condition} {pddl_goal}'
-    problem_file = str(data.get('problem_file') or '')
     return ScenarioSpec(
         goal_id=goal_id,
         side=data['side'],
@@ -3320,7 +3284,6 @@ def _scenario_spec_from_goal_data(goal_id: str, data: dict[str, Any]) -> Scenari
         target=data['target'],
         pddl_problem=data['problem_name'],
         pddl_goal=pddl_goal,
-        pddl_problem_file=str(PDDL_DIR / problem_file) if problem_file else '',
         payload_condition=payload_condition,
         target_slot=str(data.get('target_slot') or ''),
         selection_policy=str(data.get('selection_policy') or ''),
@@ -3345,61 +3308,9 @@ def _scenario_spec_from_goal_data(goal_id: str, data: dict[str, Any]) -> Scenari
     )
 
 
-def scenario_spec_from_problem(path: Path) -> ScenarioSpec:
-    problem_path = path.expanduser()
-    text = problem_path.read_text(encoding='utf-8')
-    problem_name = _match_first(r'\(problem\s+([^) \t\n]+)', text)
-    shuttle, source = _parse_shuttle_at(text)
-    goal_shuttle, target = _parse_task_done_goal(text)
-    shuttle = goal_shuttle or shuttle
-    side = _infer_side(shuttle, source, target)
-    payload_condition = _payload_condition_for_problem(text, shuttle)
-    base_goal_id = _goal_id(side=side, source=source, target=target)
-    goal_id = _payload_goal_id(
-        side=side,
-        shuttle=shuttle,
-        target=target,
-        payload_condition=payload_condition,
-    )
-    if goal_id not in SUPPORTED_GOALS:
-        goal_id = base_goal_id
-    if goal_id not in SUPPORTED_GOALS:
-        allowed = ', '.join(sorted(SUPPORTED_GOALS))
-        raise ValueError(f'unsupported Room 315 PDDL problem route {goal_id!r}; allowed: {allowed}')
-    data = SUPPORTED_GOALS[goal_id]
-    pddl_goal = f'{shuttle} at {target}'
-    if payload_condition:
-        pddl_goal = f'{payload_condition} {pddl_goal}'
-    return ScenarioSpec(
-        goal_id=goal_id,
-        side=data['side'],
-        shuttle=shuttle,
-        source=data['source'],
-        target=data['target'],
-        pddl_problem=str(problem_path),
-        pddl_goal=pddl_goal,
-        pddl_problem_file=str(problem_path),
-        payload_condition=payload_condition,
-    )
-
-
 def write_scenario(path: Path, scenario: dict[str, Any]) -> None:
     path.expanduser().parent.mkdir(parents=True, exist_ok=True)
     path.expanduser().write_text(_json_dumps(scenario) + '\n', encoding='utf-8')
-
-
-def _parse_shuttle_at(text: str) -> tuple[str, str]:
-    match = re.search(r'\(shuttle_at\s+([^) \t\n]+)\s+([^) \t\n]+)\)', text, re.IGNORECASE)
-    if not match:
-        raise ValueError('PDDL problem is missing initial shuttle_at fact')
-    return _clean_symbol(match.group(1)), _station_symbol(match.group(2))
-
-
-def _parse_task_done_goal(text: str) -> tuple[str, str]:
-    match = re.search(r'\(task_done\s+([^) \t\n]+)\s+([^) \t\n]+)\)', text, re.IGNORECASE)
-    if not match:
-        raise ValueError('PDDL problem is missing task_done goal')
-    return _clean_symbol(match.group(1)), _station_symbol(match.group(2))
 
 
 def _canonical_goal_id(goal: str) -> str:
@@ -3418,20 +3329,6 @@ def _canonical_goal_id(goal: str) -> str:
         'loaded_right_shuttle_to_slot3_clear_blocker': 'right_loaded_to_slot3_clear_blocker',
     }
     return aliases.get(text, text)
-
-
-def _goal_id(*, side: str, source: str, target: str) -> str:
-    return f'{side}_{source}_to_{target}'
-
-
-def _infer_side(*values: str) -> str:
-    for value in values:
-        text = str(value or '').casefold()
-        if text.startswith('right') or '_right_' in text:
-            return 'right'
-        if text.startswith('left') or '_left_' in text:
-            return 'left'
-    raise ValueError(f'could not infer side from {values!r}')
 
 
 def _station_symbol(value: str) -> str:
@@ -3468,11 +3365,6 @@ def _stopper_state_symbol(value: Any, *, default: str = 'open') -> str:
 
 def _clean_symbol(value: str) -> str:
     return str(value or '').strip().strip('()[]{}:,').replace('-', '_')
-
-
-def _match_first(pattern: str, text: str) -> str:
-    match = re.search(pattern, text, re.IGNORECASE)
-    return _clean_symbol(match.group(1)) if match else ''
 
 
 def _json_dumps(data: Any) -> str:
@@ -4138,7 +4030,6 @@ def main(argv: list[str] | None = None) -> int:
         description='Generate or execute Room 315 PDDL-style VLA scenarios.'
     )
     input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument('--problem', type=Path, help='PDDL problem file to generate.')
     input_group.add_argument('--goal', help='Supported symbolic goal id.')
     input_group.add_argument('--case-id', help='Payload training case id from --case-config.')
     input_group.add_argument('--batch-config', type=Path, help='YAML batch scenario config.')
@@ -4212,6 +4103,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--episode-control-topic', default='/room_315/vla/episode_control')
     parser.add_argument('--status-topic', default='/room_315/vla/status')
     parser.add_argument('--dataset-status-topic', default='/room_315/vla/dataset_status')
+    parser.add_argument(
+        '--require-dataset-recorder',
+        action='store_true',
+        help='Fail execute mode unless the dataset recorder acknowledges episode start/stop.',
+    )
     parser.add_argument('--command-timeout-s', type=float, default=5.0)
     parser.add_argument(
         '--arrival-timeout-s',
@@ -4248,6 +4144,7 @@ def main(argv: list[str] | None = None) -> int:
                 status_topic=args.status_topic,
                 dataset_status_topic=args.dataset_status_topic,
                 ros_args=ros_argv or None,
+                require_dataset_recorder=args.require_dataset_recorder,
             )
             try:
                 batch['execution'] = execute_batch_scenarios(
@@ -4283,7 +4180,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     scenario = generate_scenario(
         goal=args.goal or '',
-        problem=args.problem,
         case_id=args.case_id or '',
         case_config=args.case_config,
         language_seed=args.language_seed,
@@ -4298,6 +4194,7 @@ def main(argv: list[str] | None = None) -> int:
             status_topic=args.status_topic,
             dataset_status_topic=args.dataset_status_topic,
             ros_args=ros_argv or None,
+            require_dataset_recorder=args.require_dataset_recorder,
         )
         try:
             if args.preflight_only:

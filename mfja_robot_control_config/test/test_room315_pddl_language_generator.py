@@ -80,7 +80,7 @@ def test_language_can_be_attached_to_planned_scenario_metadata_object():
     generator = _load_module()
     generated = generator.generate_language(
         pddl_goal='right_shuttle at staubli',
-        pddl_problem='problem_right_yaskawa_to_staubli',
+        pddl_problem='room315-right-yaskawa-to-staubli',
         symbolic_plan=[
             'prepare_switches right yaskawa staubli',
             'open_stoppers right',
@@ -95,6 +95,7 @@ def test_language_can_be_attached_to_planned_scenario_metadata_object():
         'model_input': {
             'overhead_images': {},
             'last_command': {'action': 'START'},
+            'observable_state': {},
         },
     }
 
@@ -102,14 +103,19 @@ def test_language_can_be_attached_to_planned_scenario_metadata_object():
 
     assert updated['model_input']['language'] == 'move the right shuttle from Yaskawa to Staubli'
     assert updated['pddl_goal'] == 'right_shuttle at staubli'
-    assert updated['pddl_problem'] == 'problem_right_yaskawa_to_staubli'
+    assert updated['pddl_problem'] == 'room315-right-yaskawa-to-staubli'
     assert updated['generated_language_template_id'] == 'move_from_to'
     assert updated['symbolic_plan'][2].startswith('move_shuttle right')
     assert 'pddl_goal' not in updated['model_input']
     assert 'pddl_problem' not in updated['model_input']
     assert 'generated_language_template_id' not in updated['model_input']
     assert 'symbolic_plan' not in updated['model_input']
-    assert set(updated['model_input']) == {'language', 'overhead_images', 'last_command'}
+    assert set(updated['model_input']) == {
+        'language',
+        'overhead_images',
+        'last_command',
+        'observable_state',
+    }
 
 
 def test_action_sequence_can_generate_future_slot_sequence_language():

@@ -294,16 +294,15 @@ def test_smoke_model_input_has_no_sensor_or_exact_pose_leaks():
     serialized = json.dumps(model_input, sort_keys=True)
 
     assert set(model_input) == set(recorder.MODEL_INPUT_FIELDS)
+    assert model_input['observable_state']['right']['sensors']['DZI2R'] == 1
+    assert model_input['observable_state']['left']['sensors']['DA3IL'] == 1
+    assert model_input['observable_state']['right']['switches']['A2'] == 'INTERIOR'
     for forbidden in (
         'binary_sensor_bits',
         'switch_states',
         'stopper_states',
         'shuttle_command_state',
         'time_since_last_sensor_event',
-        'DZI2R',
-        'DA3IL',
-        'EXTERIOR',
-        'INTERIOR',
         'A12E',
         'segment',
         '"x"',

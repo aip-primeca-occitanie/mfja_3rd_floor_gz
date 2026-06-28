@@ -3,7 +3,7 @@
 This document describes the focused Room 315 VLA research pipeline:
 
 ```text
-PDDL goal/problem
+PDDL goal / generated problem text
   -> symbolic plan
   -> primitive VLA commands
   -> supervisor safety execution
@@ -38,14 +38,16 @@ future extensions.
 
 ## How Goals Become Symbolic Plans
 
-Each PDDL problem defines initial station state and a goal such as:
+For each supported symbolic goal, the scenario generator builds PDDL problem
+text with the initial station state and a goal such as:
 
 ```lisp
 (task_done right_shuttle right_staubli)
 ```
 
-The scenario generator accepts either a problem file or a supported symbolic
-goal ID:
+The scenario generator accepts supported symbolic goal IDs, payload training
+case IDs, and batch configs. Separate static PDDL problem definitions are not
+part of the runtime path anymore:
 
 ```text
 right_yaskawa_to_staubli
@@ -67,7 +69,7 @@ plansys
 ```
 
 `plansys` calls the PlanSys2 `planner/get_plan` service with the Room 315 PDDL
-domain and the selected PDDL problem text. The returned PlanSys2 timed plan is
+domain and generated PDDL problem text. The returned PlanSys2 timed plan is
 normalized into the internal symbolic plan format used by the existing
 translator. If PlanSys2 packages are not installed or `/planner/get_plan` is not
 available, generation fails clearly. There is no silent fallback planner.
@@ -166,6 +168,7 @@ The learned model input remains exactly:
 model_input.language
 model_input.overhead_images
 model_input.last_command
+model_input.observable_state
 ```
 
 The learned model target remains:
@@ -211,6 +214,13 @@ Example event shape:
     },
     "last_command": {
       "action": "START"
+    },
+    "observable_state": {
+      "right": {
+        "sensors": {"DZI1R": 0, "DZI2R": 1},
+        "switches": {"A1": "EXTERIOR", "A2": "INTERIOR"},
+        "stoppers": {"A1": "open", "A2": "closed"}
+      }
     }
   },
   "action": {
@@ -221,7 +231,7 @@ Example event shape:
   },
   "action_vector": [2.0, 0.0],
   "planning_source": "pddl",
-  "pddl_problem": "problem_right_yaskawa_to_staubli.pddl",
+  "pddl_problem": "room315-right-yaskawa-to-staubli",
   "pddl_goal": "right_shuttle at staubli",
   "symbolic_plan": [
     "prepare_switches right yaskawa staubli",
@@ -275,16 +285,18 @@ coordination_mode
 fleet-oriented reason IDs
 ```
 
-The model input schema remains version 3 and is unchanged:
+The model input schema remains version 3 and is deployable-only:
 
 ```text
 language
 overhead_images
 last_command
+observable_state
 ```
 
-Payload state is represented symbolically outside `model_input` with predicates
-such as:
+`observable_state` is limited to real binary sensor bits plus current switch and
+stopper states. Payload state is represented symbolically outside `model_input`
+with predicates such as:
 
 ```lisp
 (loaded right_shuttle_2)
@@ -380,15 +392,6 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --goal right_yaskawa_to_staubli \
   --planner-backend plansys \
   --language-seed 42 \
-  --dry-run
-```
-
-Using a problem file:
-
-```bash
-ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
-  --problem mfja_robot_control_config/config/room_315_vla/pddl/problem_right_yaskawa_to_staubli.pddl \
-  --planner-backend plansys \
   --dry-run
 ```
 

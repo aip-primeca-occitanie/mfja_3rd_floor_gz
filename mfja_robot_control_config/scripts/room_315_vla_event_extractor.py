@@ -17,7 +17,55 @@ from room_315_pddl_validation_gate import privileged_model_input_paths
 from room_315_pddl_validation_gate import validation_approves_training
 
 
-MODEL_INPUT_FIELDS = ('language', 'overhead_images', 'last_command')
+SIDES = ('right', 'left')
+DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
+SENSOR_IDS_BY_SIDE = {
+    'right': (
+        'DZI1R',
+        'DZI2R',
+        'DZI3R',
+        'DZI4R',
+        'DA1R',
+        'DA1ER',
+        'DA1IR',
+        'DA2R',
+        'DA2ER',
+        'DA2IR',
+        'DA3R',
+        'DA3ER',
+        'DA3IR',
+        'DA4R',
+        'DA4ER',
+        'DA4IR',
+        'A1_STOPPER_SENSOR',
+        'A2_STOPPER_SENSOR',
+        'A3_STOPPER_SENSOR',
+        'A4_STOPPER_SENSOR',
+    ),
+    'left': (
+        'DZI1L',
+        'DZI2L',
+        'DZI3L',
+        'DZI4L',
+        'DA1L',
+        'DA1EL',
+        'DA1IL',
+        'DA2L',
+        'DA2EL',
+        'DA2IL',
+        'DA3L',
+        'DA3EL',
+        'DA3IL',
+        'DA4L',
+        'DA4EL',
+        'DA4IL',
+        'A1_STOPPER_SENSOR',
+        'A2_STOPPER_SENSOR',
+        'A3_STOPPER_SENSOR',
+        'A4_STOPPER_SENSOR',
+    ),
+}
+MODEL_INPUT_FIELDS = ('language', 'overhead_images', 'last_command', 'observable_state')
 START_LAST_COMMAND = {'action': 'START'}
 PLANNING_METADATA_FIELDS = (
     'planning_source',
@@ -79,6 +127,78 @@ def _overhead_images(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _empty_observable_state() -> dict[str, dict[str, dict[str, Any]]]:
+    return {
+        side: {
+            'sensors': {sensor_name: 0 for sensor_name in SENSOR_IDS_BY_SIDE[side]},
+            'switches': {name: 'UNKNOWN' for name in DEVICE_NAMES},
+            'stoppers': {name: 'unknown' for name in DEVICE_NAMES},
+        }
+        for side in SIDES
+    }
+
+
+def _switch_value_from_observation(raw: Any) -> str:
+    try:
+        value = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return 'UNKNOWN'
+    if value == 1:
+        return 'EXTERIOR'
+    if value == 2:
+        return 'INTERIOR'
+    return 'UNKNOWN'
+
+
+def _stopper_value_from_observation(raw: Any) -> str:
+    try:
+        value = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return 'unknown'
+    if value == 1:
+        return 'open'
+    if value == 2:
+        return 'closed'
+    return 'unknown'
+
+
+def _observable_state_from_observation(row: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
+    schema = row.get('observation.state_schema')
+    values = row.get('observation.state')
+    if not isinstance(schema, list) or not isinstance(values, list):
+        return _empty_observable_state()
+    state_by_name = {
+        str(name): values[index]
+        for index, name in enumerate(schema)
+        if index < len(values)
+    }
+    observable = _empty_observable_state()
+    for side in SIDES:
+        for sensor_name in SENSOR_IDS_BY_SIDE[side]:
+            field = f'{side}_sensor_{sensor_name}'
+            try:
+                observable[side]['sensors'][sensor_name] = (
+                    1 if float(state_by_name.get(field, 0.0)) >= 0.5 else 0
+                )
+            except (TypeError, ValueError):
+                observable[side]['sensors'][sensor_name] = 0
+        for name in DEVICE_NAMES:
+            observable[side]['switches'][name] = _switch_value_from_observation(
+                state_by_name.get(f'{side}_switch_{name}')
+            )
+            observable[side]['stoppers'][name] = _stopper_value_from_observation(
+                state_by_name.get(f'{side}_stopper_{name}')
+            )
+    return observable
+
+
+def _observable_state(row: dict[str, Any]) -> dict[str, Any]:
+    model_input = row.get('model_input')
+    if isinstance(model_input, dict) and isinstance(model_input.get('observable_state'), dict):
+        return deepcopy(model_input['observable_state'])
+    return _observable_state_from_observation(row)
+
+
 def _model_input(row: dict[str, Any], previous_command: Any) -> dict[str, Any]:
     model_input = row.get('model_input')
     language = ''
@@ -88,6 +208,7 @@ def _model_input(row: dict[str, Any], previous_command: Any) -> dict[str, Any]:
         'language': language or str(row.get('task') or ''),
         'overhead_images': _overhead_images(row),
         'last_command': deepcopy(previous_command),
+        'observable_state': _observable_state(row),
     }
 
 
@@ -215,7 +336,10 @@ def extract_event_dataset(
 def _privileged_model_input_paths_for_rows(rows: list[dict[str, Any]]) -> list[str]:
     paths: list[str] = []
     for index, row in enumerate(rows):
-        for path in privileged_model_input_paths(row):
+        model_input = row.get('model_input')
+        if not isinstance(model_input, dict):
+            continue
+        for path in privileged_model_input_paths(model_input, root='$.model_input'):
             paths.append(f'row[{index}]{path.removeprefix("$")}')
     return paths
 

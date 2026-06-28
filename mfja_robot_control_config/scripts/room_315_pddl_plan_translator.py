@@ -4,8 +4,8 @@
 This module is an expert/data-generation bridge. It does not call PlanSys, does
 not execute ROS commands, and does not define learned-model inputs. Symbolic PDDL
 state may be used here to produce scenario events, but model_input remains owned
-by the dataset recorder and stays limited to language, overhead_images, and
-last_command.
+by the dataset recorder and stays limited to deployable language,
+overhead_images, last_command, and observable_state.
 """
 
 import json

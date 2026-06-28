@@ -28,7 +28,6 @@ BATCH_RUNNER_SCRIPT_PATH = (
     / 'scripts'
     / 'room_315_payload_case_batch_runner.py'
 )
-PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'pddl'
 BATCH_CONFIG_PATH = (
     REPO_ROOT
     / 'mfja_robot_control_config'
@@ -222,6 +221,17 @@ def _load_module():
     return module
 
 
+def _load_batch_runner_module():
+    spec = importlib.util.spec_from_file_location(
+        'room_315_payload_case_batch_runner',
+        BATCH_RUNNER_SCRIPT_PATH,
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 class _Endpoint:
     def __init__(self, node_name):
         self.node_name = node_name
@@ -281,11 +291,14 @@ def _ros_transport_shell(
     transport.command_topic = '/room_315/vla/command'
     transport.dataset_status_topic = '/room_315/vla/dataset_status'
     transport.status_topic = '/room_315/vla/status'
+    transport.require_dataset_recorder = False
     transport.command_pub = _FakePublisher(subscription_count)
     transport.rclpy = _FakeRclpy()
     transport.node = _FakeNode(endpoints, publisher_endpoints=publisher_endpoints)
     transport.latest_status = latest_status or {'last_result': 'initialized'}
     transport.latest_dataset_status = {}
+    transport.last_dataset_dir = ''
+    transport.last_episode_id = ''
     return transport
 
 
@@ -1372,30 +1385,30 @@ def test_waiting_mode_counts_as_stopped_even_when_speed_field_is_stale():
     }) is True
 
 
-def test_payload_problem_file_round_trips_to_specific_goal_spec():
+def test_payload_goal_spec_generates_payload_problem_text():
     generator = _load_module()
 
-    spec = generator.scenario_spec_from_problem(PDDL_DIR / 'problem_right_loaded_r2_to_staubli.pddl')
-    problem_text = generator._problem_text_from_goal_spec(spec)
+    spec = generator.scenario_spec_from_goal('right_loaded_r2_to_staubli')
+    problem_text = generator._problem_text_for_spec(spec)
 
     assert spec.goal_id == 'right_loaded_r2_to_staubli'
     assert spec.shuttle == 'right_shuttle_2'
     assert spec.payload_condition == 'loaded'
     assert '(loaded right_shuttle_2)' in problem_text
-    assert '(carrying_payload right_shuttle_2)' in problem_text
+    assert 'carrying_payload' not in problem_text
 
 
 def test_dry_run_left_yaskawa_to_kuka_produces_left_side_commands():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        problem=PDDL_DIR / 'problem_left_yaskawa_to_kuka.pddl',
+        goal='left_yaskawa_to_kuka',
         language_seed=1,
         planner=_fake_backend(),
     )
 
     assert scenario['scenario_id'] == 'left_yaskawa_to_kuka'
-    assert 'problem_left_yaskawa_to_kuka.pddl' in scenario['pddl_problem']
+    assert scenario['pddl_problem'] == 'room315-left-yaskawa-to-kuka'
     assert all(
         command.get('side') == 'left'
         for command in scenario['primitive_commands']
@@ -1549,6 +1562,68 @@ def test_ros_episode_start_republishes_until_dataset_ack():
     assert result['observed'] is True
     assert transport.episode_control_pub.messages == [
         'start move the loaded right shuttle to slot 3',
+    ]
+
+
+def test_ros_episode_start_required_recorder_fails_without_ack():
+    generator = _load_module()
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[],
+        publisher_endpoints=[],
+    )
+    transport.require_dataset_recorder = True
+    transport.String = _FakeString
+    transport.episode_control_pub = _RecordingPublisher(0)
+
+    result = generator.RosScenarioTransport.publish_episode_start_and_wait(
+        transport,
+        goal='move the loaded left shuttle to slot 2',
+        timeout_s=0.01,
+    )
+
+    assert result['ready'] is False
+    assert 'dataset recorder did not acknowledge episode start' in result['reason']
+    assert transport.episode_control_pub.messages == []
+
+
+def test_ros_episode_start_requires_fresh_episode_after_start_publish():
+    generator = _load_module()
+    stale_episode_id = 'episode_000002_move_the_loaded_left_shuttle_to_slot_2'
+    fresh_episode_id = 'episode_000003_move_the_loaded_left_shuttle_to_slot_2'
+    transport = _ros_transport_shell(
+        generator,
+        endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+        publisher_endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+    )
+    transport.require_dataset_recorder = True
+    transport.String = _FakeString
+    transport.last_episode_id = stale_episode_id
+    transport.latest_dataset_status = {
+        'active': True,
+        'task': 'move the loaded left shuttle to slot 2',
+        'episode_id': stale_episode_id,
+    }
+
+    def on_publish(message):
+        transport.latest_dataset_status = {
+            'active': True,
+            'task': 'move the loaded left shuttle to slot 2',
+            'episode_id': fresh_episode_id,
+        }
+
+    transport.episode_control_pub = _RecordingPublisher(1, on_publish=on_publish)
+
+    result = generator.RosScenarioTransport.publish_episode_start_and_wait(
+        transport,
+        goal='move the loaded left shuttle to slot 2',
+        timeout_s=1.0,
+    )
+
+    assert result['ready'] is True
+    assert result['latest_dataset_status']['episode_id'] == fresh_episode_id
+    assert transport.episode_control_pub.messages == [
+        'start move the loaded left shuttle to slot 2',
     ]
 
 
@@ -1930,6 +2005,73 @@ def test_payload_case_batch_runner_dry_run_can_select_case_range(tmp_path):
     assert summary['case_count'] == 1
     assert summary['results'][0]['case_number'] == 6
     assert summary['results'][0]['case_id'] == 'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3'
+
+
+def test_payload_case_batch_runner_detects_missing_episode_after_success(tmp_path):
+    batch_runner = _load_batch_runner_module()
+    dataset_dir = tmp_path / 'dataset'
+    before = batch_runner._episode_event_files(dataset_dir)
+
+    missing = batch_runner._wait_for_new_episode(
+        dataset_dir,
+        before,
+        timeout_s=0.0,
+    )
+
+    assert missing['ready'] is False
+    assert 'did not write a complete episode' in missing['reason']
+
+    episode_dir = dataset_dir / 'episodes' / 'episode_000000_test'
+    episode_dir.mkdir(parents=True)
+    event_file = episode_dir / 'events.jsonl'
+    event_file.write_text('{}\n', encoding='utf-8')
+    (episode_dir / 'episode.json').write_text('{}\n', encoding='utf-8')
+    (episode_dir / 'validation.json').write_text('{}\n', encoding='utf-8')
+
+    ready = batch_runner._wait_for_new_episode(
+        dataset_dir,
+        before,
+        timeout_s=0.0,
+    )
+
+    assert ready['ready'] is True
+    assert ready['episode_id'] == 'episode_000000_test'
+    assert ready['events_jsonl'] == str(event_file)
+
+
+def test_payload_case_batch_runner_can_scale_case_speed():
+    batch_runner = _load_batch_runner_module()
+
+    assert batch_runner._case_speed(
+        {'speed': 0.08},
+        default_speed=0.3,
+        speed_scale=1.25,
+    ) == 0.1
+    assert batch_runner._case_speed(
+        {},
+        default_speed=0.3,
+        speed_scale=0.5,
+    ) == 0.15
+
+
+def test_payload_case_batch_runner_rejects_nonpositive_speed_scale():
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BATCH_RUNNER_SCRIPT_PATH),
+            '--case-config',
+            str(PAYLOAD_CASE_CONFIG_PATH),
+            '--speed-scale',
+            '0',
+            '--dry-run',
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert 'expected a positive number' in result.stderr
 
 
 def test_ros_initial_state_wait_reports_missing_target_shuttle_before_execute():
@@ -2369,8 +2511,14 @@ def test_batch_keeps_model_input_free_of_speed_and_pddl_internals():
             'language': episode['language'],
             'overhead_images': {},
             'last_command': {'action': 'START'},
+            'observable_state': {},
         }
-        assert set(model_input) == {'language', 'overhead_images', 'last_command'}
+        assert set(model_input) == {
+            'language',
+            'overhead_images',
+            'last_command',
+            'observable_state',
+        }
         serialized_model_input = json.dumps(model_input, sort_keys=True)
         for field in forbidden:
             assert field not in model_input

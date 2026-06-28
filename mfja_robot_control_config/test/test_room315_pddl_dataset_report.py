@@ -63,7 +63,7 @@ def _pddl_row(episode_id='episode_000001', step_index=0, goal='right_shuttle at 
         'event_type': 'command',
         'task': 'move the right shuttle from Yaskawa to Staubli',
         'planning_source': 'pddl',
-        'pddl_problem': 'problem_right_yaskawa_to_staubli.pddl',
+        'pddl_problem': 'room315-right-yaskawa-to-staubli',
         'pddl_goal': goal,
         'symbolic_plan': plan,
         'plan_step_index': step_index,
@@ -153,7 +153,7 @@ def test_report_detects_pddl_generated_metadata(tmp_path):
     assert report['dataset_source'] == 'pddl'
     assert report['dataset_source_distribution'] == {'pddl': 1}
     assert report['episodes'][0]['pddl_goal'] == 'right_shuttle at staubli'
-    assert report['episodes'][0]['pddl_problem'] == 'problem_right_yaskawa_to_staubli.pddl'
+    assert report['episodes'][0]['pddl_problem'] == 'room315-right-yaskawa-to-staubli'
     assert report['episodes'][0]['symbolic_plan_length'] == 5
     assert report['episodes'][0]['generated_language_template_id'] == 'move_from_to'
 

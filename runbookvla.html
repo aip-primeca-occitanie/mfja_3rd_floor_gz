@@ -1176,12 +1176,14 @@ ros2 topic pub --once /room_315/vla/episode_control std_msgs/msg/String \
           supervised labels.
         </div>
         <div class="callout">
-          The scenario expert may use sensors internally to stop in the correct
-          place and create correct labels. The model should train only from
-          <code>model_input_schema_version: 3</code>: <code>language</code>,
-          <code>overhead_images</code>, and <code>last_command</code>. Sensor and
-          switch/stopper state belongs under <code>privileged_eval</code> for
-          evaluation and auditing, not policy input.
+          The scenario expert may use hidden planning metadata internally, but
+          the model should train only from <code>model_input_schema_version:
+          3</code>: <code>language</code>, <code>overhead_images</code>,
+          <code>last_command</code>, and <code>observable_state</code>.
+          <code>observable_state</code> contains only real deploy-time signals:
+          binary sensor bits plus current switch and stopper states. Exact
+          shuttle pose, payload metadata, PDDL facts, and selected-shuttle
+          labels stay outside model input.
         </div>
       </section>
 
@@ -1209,7 +1211,7 @@ ros2 topic pub --once /room_315/vla/episode_control std_msgs/msg/String \
             <tr><th>Category</th><th>Fields</th><th>Policy use</th></tr>
           </thead>
           <tbody>
-            <tr><td>Model input</td><td><code>language</code>, <code>overhead_images</code>, <code>last_command</code></td><td>Allowed input to the learned VLA policy.</td></tr>
+            <tr><td>Model input</td><td><code>language</code>, <code>overhead_images</code>, <code>last_command</code>, <code>observable_state</code></td><td>Allowed input to the learned VLA policy. Observable state is binary sensors plus switch/stopper states only.</td></tr>
             <tr><td>Target</td><td><code>action_vector</code></td><td>Preferred event-level model output.</td></tr>
             <tr><td>PDDL / identity metadata</td><td><code>planning_source</code>, <code>pddl_goal</code>, <code>pddl_problem</code>, <code>symbolic_plan</code>, <code>plan_step_index</code>, <code>target_shuttle_id</code>, <code>visible_marker_count</code>, <code>payload_present</code></td><td>Generation and evaluation provenance only. Not model input.</td></tr>
             <tr><td>Privileged state</td><td><code>privileged_eval</code>, <code>structured_rail_state</code>, <code>observation.state</code></td><td>Audits, ablations, and evaluation only.</td></tr>
@@ -1956,6 +1958,7 @@ PY</code></pre>
             <tr><td><code>model_input.language</code></td><td>The language goal or task text.</td></tr>
             <tr><td><code>model_input.overhead_images</code></td><td>References to camera images allowed for the model.</td></tr>
             <tr><td><code>model_input.last_command</code></td><td>The previous command; this is allowed model input.</td></tr>
+            <tr><td><code>model_input.observable_state</code></td><td>Deployable binary sensors and current switch/stopper states only. No exact shuttle coordinates or payload labels.</td></tr>
             <tr><td><code>action</code></td><td>Readable event-level symbolic command such as <code>SET_SWITCHES</code> or <code>SHUTTLE_ON</code>.</td></tr>
             <tr><td><code>action_vector</code></td><td>The same command encoded as a vector using <code>action_space.yaml</code>. This is the preferred model output.</td></tr>
             <tr><td><code>planning_source</code>, <code>pddl_goal</code>, <code>symbolic_plan</code>, <code>target_shuttle_id</code>, <code>visible_marker_count</code>, <code>payload_present</code></td><td>PDDL and identity/occlusion provenance. Useful for reports and replay, not model input.</td></tr>
@@ -1970,7 +1973,9 @@ PY</code></pre>
           output <code>action_vector</code> or direct primitive JSON. Do not train
           on <code>data.jsonl</code>, and do not use <code>privileged_eval</code>
           or <code>structured_rail_state</code>, PDDL metadata, or
-          <code>observation.state</code> as input for the main policy.
+          <code>observation.state</code> as input for the main policy. Use
+          <code>model_input.observable_state</code> for the real binary sensor
+          and switch/stopper signals.
         </div>
       </section>
 
@@ -1983,10 +1988,11 @@ PY</code></pre>
           centered on top by default. The default
           <code>payload_pose_x_offset_m</code> value is <code>-0.08</code> as a
           local offset in the shuttle frame, so it rotates and moves with the
-          shuttle instead of sliding during turns. The model input remains only
-          <code>language</code>, <code>overhead_images</code>, and
-          <code>last_command</code>; the <code>loaded/empty</code> state stays as
-          metadata for evaluation and recording.
+          shuttle instead of sliding during turns. The model input remains
+          deployable-only: <code>language</code>, <code>overhead_images</code>,
+          <code>last_command</code>, and <code>observable_state</code>. The
+          <code>loaded/empty</code> state stays as metadata for evaluation and
+          recording, so the model must infer it from camera images.
         </p>
 
         <div class="callout warning">
@@ -2396,12 +2402,11 @@ python3 -c 'import json; s=json.load(open("/tmp/right_loaded_to_slot3_clear_bloc
 
         <h3>Run All Payload Cases for Training</h3>
         <p>
-          Use this for the training matrix. One command runs all payload cases
-          in order. Before each case, the runner restarts Room 315 with the
-          correct shuttle count, start slots, and loaded shuttles from
-          <code>payload_training_cases.yaml</code>. Every successful run is
-          exported into the training dataset. If a case looks wrong in Gazebo,
-          note the printed case number and report that number.
+          Use this after the cases have been visually checked. One command runs
+          all payload cases in order, restarts Room 315 before each case, and
+          writes only complete recorded episodes into the training dataset.
+          <code>--gui false</code> and <code>--speed-scale 1.25</code> make the
+          final dataset pass faster while keeping the same case logic.
         </p>
 
         <div class="command">
@@ -2416,12 +2421,14 @@ ros2 run mfja_robot_control_config room_315_payload_case_review.py --review-dir 
 sed -n '1,260p' /tmp/room315_payload_case_review/review_index.md
 
 ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --dataset-dir ~/room315_payload_all_cases \
-  --results-dir /tmp/room315_payload_case_batch \
+  --dataset-dir ~/room315_payload_cases_1_40_golden \
+  --results-dir /tmp/room315_payload_cases_1_40_golden \
   --reset-dataset \
-  --gui true
+  --gui false \
+  --launch-wait-s 8 \
+  --speed-scale 1.25
 
-sed -n '1,260p' /tmp/room315_payload_case_batch/payload_case_batch_summary.json</code></pre>
+sed -n '1,260p' /tmp/room315_payload_cases_1_40_golden/payload_case_batch_summary.json</code></pre>
         </div>
 
         <h3>Run Four-Shuttle Interior-Loop Payload Cases Only</h3>

@@ -394,9 +394,18 @@ def test_model_input_schema_v3_is_visual_policy_input_only():
         'language',
         'overhead_images',
         'last_command',
+        'observable_state',
     }
     assert set(model_input['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
     assert model_input['last_command']['action'] == 'switches'
+    assert model_input['observable_state']['right']['sensors']['DZI2R'] == 1
+    assert model_input['observable_state']['right']['sensors']['DZI3R'] == 0
+    assert model_input['observable_state']['right']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'INTERIOR',
+    }
 
     serialized = json.dumps(model_input, sort_keys=True)
     for expert_shortcut in (
@@ -407,8 +416,6 @@ def test_model_input_schema_v3_is_visual_policy_input_only():
         'time_since_last_sensor_event',
         'payload_state',
         'payload_type',
-        'DZI2R',
-        'DZI3R',
     ):
         assert expert_shortcut not in serialized
     assert 'A12E' not in serialized
@@ -649,7 +656,7 @@ def test_planned_event_metadata_stays_outside_model_input_and_keeps_target_vecto
         'switches': {'A3': 'INTERIOR'},
         'planning_source': 'pddl',
         'pddl_domain': 'domain_room315.pddl',
-        'pddl_problem': 'problem_right_yaskawa_to_staubli.pddl',
+        'pddl_problem': 'room315-right-yaskawa-to-staubli',
         'pddl_goal': 'right_shuttle at staubli',
         'symbolic_plan': [
             'prepare_switches right yaskawa staubli',
@@ -667,14 +674,19 @@ def test_planned_event_metadata_stays_outside_model_input_and_keeps_target_vecto
     row = rows[0]
     assert row['planning_source'] == 'pddl'
     assert row['pddl_domain'] == 'domain_room315.pddl'
-    assert row['pddl_problem'] == 'problem_right_yaskawa_to_staubli.pddl'
+    assert row['pddl_problem'] == 'room315-right-yaskawa-to-staubli'
     assert row['pddl_goal'] == 'right_shuttle at staubli'
     assert row['symbolic_plan'] == planned_command['symbolic_plan']
     assert row['plan_step_index'] == 0
     assert row['generated_language'] == planned_command['generated_language']
     assert row['language_template_id'] == 'move_from_to'
 
-    assert set(row['model_input']) == {'language', 'overhead_images', 'last_command'}
+    assert set(row['model_input']) == {
+        'language',
+        'overhead_images',
+        'last_command',
+        'observable_state',
+    }
     serialized_model_input = json.dumps(row['model_input'], sort_keys=True)
     for forbidden in (
         'pddl_domain',
@@ -705,7 +717,7 @@ def test_planning_metadata_supports_scenario_generator_aliases():
     metadata = recorder_module._planning_metadata_from_source({
         'planning_metadata': {
             'planning_source': 'pddl',
-            'pddl_problem': 'problem_left_yaskawa_to_kuka.pddl',
+            'pddl_problem': 'room315-left-yaskawa-to-kuka',
             'language': 'move the left shuttle from Yaskawa to KUKA',
             'generated_language_template_id': 'move_from_to',
         }
@@ -713,7 +725,7 @@ def test_planning_metadata_supports_scenario_generator_aliases():
 
     assert metadata == {
         'planning_source': 'pddl',
-        'pddl_problem': 'problem_left_yaskawa_to_kuka.pddl',
+        'pddl_problem': 'room315-left-yaskawa-to-kuka',
         'generated_language': 'move the left shuttle from Yaskawa to KUKA',
         'language_template_id': 'move_from_to',
     }
@@ -832,7 +844,13 @@ def test_stopper_events_use_same_minimal_recording_logic():
     assert row['action_vector'] == recorder_module._encode_action(row['action'])
     assert row['model_input']['last_command'] == {'action': 'START'}
     assert row['auxiliary_targets']['stopper_states']['right']['A2'] == 'closed'
-    assert set(row['model_input']) == {'language', 'overhead_images', 'last_command'}
+    assert set(row['model_input']) == {
+        'language',
+        'overhead_images',
+        'last_command',
+        'observable_state',
+    }
+    assert row['model_input']['observable_state']['right']['stoppers']['A2'] == 'closed'
 
 
 def test_route_template_phase_change_creates_one_event_per_phase():

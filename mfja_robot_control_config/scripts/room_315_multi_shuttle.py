@@ -760,15 +760,41 @@ def identity_tracks_from_marker_detections(
 
 
 def model_input_is_clean(model_input: dict[str, Any]) -> bool:
-    if set(model_input) != {'language', 'overhead_images', 'last_command'}:
+    if set(model_input) != {'language', 'overhead_images', 'last_command', 'observable_state'}:
+        return False
+    if not _observable_state_is_clean(model_input.get('observable_state')):
         return False
     forbidden_keys = {
+        'active_position_sensors',
+        'active_sensors',
+        'binary_sensor_bits',
+        'current_segment',
+        'distance_to_switch',
+        'expert_sensor_state',
+        'gazebo_pose',
         'loaded',
+        'normalized_position',
+        'normalized_rail_position',
         'payload',
         'payload_condition',
         'payload_present',
         'payload_state',
         'payload_type',
+        'raw_shuttle_states',
+        's',
+        'segment',
+        'shuttle_identity_tracks',
+        'status',
+        'stopper_states',
+        'structured_rail_state',
+        'supervisor_status',
+        'switch_states',
+        'target_shuttle_id',
+        'true_shuttle_segment',
+        'x',
+        'y',
+        'yaw',
+        'z',
     }
     if _contains_forbidden_model_input_key(model_input, forbidden_keys):
         return False
@@ -788,6 +814,40 @@ def model_input_is_clean(model_input: dict[str, Any]) -> bool:
         'arc_length',
     )
     return not any(token in serialized for token in forbidden)
+
+
+def _observable_state_is_clean(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    for side, side_state in value.items():
+        if str(side) not in SIDES or not isinstance(side_state, dict):
+            return False
+        if set(side_state) != {'sensors', 'switches', 'stoppers'}:
+            return False
+        sensors = side_state.get('sensors')
+        switches = side_state.get('switches')
+        stoppers = side_state.get('stoppers')
+        if (
+            not isinstance(sensors, dict)
+            or not isinstance(switches, dict)
+            or not isinstance(stoppers, dict)
+        ):
+            return False
+        for sensor_name, sensor_value in sensors.items():
+            if not isinstance(sensor_name, str):
+                return False
+            try:
+                if int(sensor_value) not in {0, 1}:
+                    return False
+            except (TypeError, ValueError):
+                return False
+        if set(switches) - set(DEVICE_NAMES) or set(stoppers) - set(DEVICE_NAMES):
+            return False
+        if any(value not in {'EXTERIOR', 'INTERIOR', 'UNKNOWN'} for value in switches.values()):
+            return False
+        if any(value not in {'open', 'closed', 'unknown'} for value in stoppers.values()):
+            return False
+    return True
 
 
 def _contains_forbidden_model_input_key(value: Any, forbidden_keys: set[str]) -> bool:

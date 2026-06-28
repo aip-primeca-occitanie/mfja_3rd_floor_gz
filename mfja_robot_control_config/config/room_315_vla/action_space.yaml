@@ -244,6 +244,7 @@ model_input_fields:
   - language
   - overhead_images
   - last_command
+  - observable_state
 
 privileged_eval_fields:
   - supervisor_status

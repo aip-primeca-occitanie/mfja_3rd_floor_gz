@@ -37,6 +37,7 @@ def test_payload_occlusion_fields_are_planning_metadata_not_model_input():
             'language': 'move L3 to KUKA even though it is carrying a part',
             'overhead_images': {'right_rail_rgb': 'right.jpg', 'left_rail_rgb': 'left.jpg'},
             'last_command': {'action': 'START'},
+            'observable_state': {},
         },
     }
 
@@ -47,7 +48,7 @@ def test_payload_occlusion_fields_are_planning_metadata_not_model_input():
     assert metadata['payload_present'] is True
     assert metadata['visible_marker_count'] == 2
     assert metadata['expected_visible_ids'] == [221, 222]
-    assert set(model_input) == {'language', 'overhead_images', 'last_command'}
+    assert set(model_input) == {'language', 'overhead_images', 'last_command', 'observable_state'}
 
     serialized = json.dumps(model_input, sort_keys=True)
     for forbidden in (

@@ -1,0 +1,2048 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>شرح PlanSys2 و PDDL لتوليد وتدريب سيناريوهات Room 315 VLA</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --soft: #eef3f7;
+      --ink: #17212b;
+      --muted: #5c6977;
+      --line: #d8e1e8;
+      --accent: #0f6f74;
+      --accent-soft: #dff3f4;
+      --warning: #8a5600;
+      --warning-soft: #fff3da;
+      --ok: #24704b;
+      --code-bg: #101820;
+      --code-ink: #e8eef4;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      line-height: 1.85;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      width: min(1160px, 100%);
+      margin: 0 auto;
+      padding: 28px 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+    }
+
+    h2 {
+      margin: 42px 0 14px;
+      padding-top: 4px;
+      font-size: 1.65rem;
+      border-top: 1px solid var(--line);
+    }
+
+    h3 {
+      margin: 28px 0 10px;
+      font-size: 1.22rem;
+    }
+
+    h4 {
+      margin: 22px 0 8px;
+      font-size: 1.05rem;
+      color: var(--accent);
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      direction: ltr;
+      unicode-bidi: isolate;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 0.05rem 0.35rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.94em;
+    }
+
+    pre {
+      direction: ltr;
+      text-align: left;
+      overflow-x: auto;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: var(--radius);
+      padding: 16px;
+      line-height: 1.55;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      color: inherit;
+      padding: 0;
+      font-size: 0.92rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 26px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    th, td {
+      vertical-align: top;
+      text-align: right;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: var(--soft);
+      font-weight: 800;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    ul, ol {
+      padding-right: 1.4rem;
+      margin: 0 0 16px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 1.08rem;
+      max-width: 980px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 16px 0;
+    }
+
+    .callout {
+      background: var(--accent-soft);
+      border: 1px solid #afdfe2;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+
+    .warning {
+      background: var(--warning-soft);
+      border-color: #f0d49b;
+      color: #3d2b10;
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 800;
+    }
+
+    .ltr {
+      direction: ltr;
+      text-align: left;
+      unicode-bidi: isolate;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 8px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc a {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.05rem 0.55rem;
+      margin: 0 0.15rem 0.25rem;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <p class="eyebrow">Room 315 VLA Training Reference</p>
+      <h1>شرح PlanSys2 و PDDL لتوليد سيناريوهات كثيرة وتدريب المودل</h1>
+      <p class="lead">
+        هذا الملف يشرح الفكرة العلمية والعملية وراء استخدام <code>PDDL</code> و
+        <code>PlanSys2</code> داخل مشروع Room 315، وكيف تتحول الأهداف الرمزية إلى
+        سيناريوهات Gazebo مسجلة، وكيف نستفيد من الحالات الأربعين الحالية لبناء
+        <code>dataset</code> نظيف لتدريب نموذج <code>VLA</code>.
+      </p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>جدول المحتويات</h2>
+      <ul class="toc">
+        <li><a href="#quick-answer">الجواب المباشر: متى أستخدم PDDL/PlanSys2؟</a></li>
+        <li><a href="#why-use-planner">ليش استفدنا من PDDL/PlanSys2 بدل الشغل اليدوي؟</a></li>
+        <li><a href="#big-picture">الفكرة العامة</a></li>
+        <li><a href="#pddl">ما هو PDDL؟</a></li>
+        <li><a href="#pddl-rules-files">قوانين PDDL وملفاته المهمة</a></li>
+        <li><a href="#plansys">ما هو PlanSys2؟</a></li>
+        <li><a href="#pipeline">كيف يتحول الهدف إلى Dataset؟</a></li>
+        <li><a href="#files">الملفات المهمة في المشروع</a></li>
+        <li><a href="#forty-cases">كيف نستفيد من الحالات 1-40؟</a></li>
+        <li><a href="#automatic-generation">توليد سيناريوهات كثيرة تلقائياً</a></li>
+        <li><a href="#commands">أوامر التشغيل خطوة خطوة</a></li>
+        <li><a href="#training">كيف أدرّب المودل؟</a></li>
+        <li><a href="#validation">كيف أتأكد أن البيانات صحيحة؟</a></li>
+        <li><a href="#extend">كيف أضيف حالات جديدة؟</a></li>
+      </ul>
+    </section>
+
+    <section id="quick-answer">
+      <h2>الجواب المباشر: متى أستخدم PDDL/PlanSys2؟</h2>
+      <div class="callout">
+        الجواب المختصر: تستخدم طبقة <code>PDDL-style scenario generation</code> أثناء
+        <strong>توليد السيناريوهات والـ dataset</strong>، وليس أثناء تدريب المودل نفسه.
+        في الكود الحالي، الحالات 1-40 لا تعتمد على ملفات problem منفصلة ولا تطلب خطة من
+        PlanSys2؛ هي تدخل من <code>payload_training_cases.yaml</code> عبر <code>--case-id</code>
+        وتولد خطواتها داخلياً من slot policy و blocker/clearance metadata. بعد ذلك training
+        يأخذ فقط <code>training_events.jsonl</code>.
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>المرحلة</th>
+            <th>هل أستخدم PDDL/PlanSys2؟</th>
+            <th>ما دوره؟</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>تعريف الحالات</td>
+            <td>لا تحتاج PlanSys2</td>
+            <td>
+              أنت تكتب الحالات في <code>payload_training_cases.yaml</code>: أي shuttle loaded،
+              أين يبدأ، ما الهدف، وما خطوات clearance إذا في blocker.
+            </td>
+          </tr>
+          <tr>
+            <td>تشغيل الـ 40 حالة</td>
+            <td>لا، ليس للـ 40 الحالية</td>
+            <td>
+              كل case يمر عبر <code>room_315_pddl_scenario_generator.py</code>.
+              لكن كل الحالات الأربعين الحالية فيها <code>target_slot</code> و
+              <code>selection_policy</code> أو blocker/clearance data، لذلك يولد السكربت
+              <code>symbolic_plan</code> داخلياً من YAML ولا يستدعي <code>/planner/get_plan</code>.
+              بعدها تمر بنفس translator/supervisor/validation pipeline.
+            </td>
+          </tr>
+          <tr>
+            <td>تسجيل البيانات</td>
+            <td>لا للـ 40 الحالية</td>
+            <td>
+              الـ generator ينتج خطة expert، ثم Gazebo ينفذها، ثم recorder
+              يسجل الصور واللغة والحساسات والأوامر داخل episode.
+            </td>
+          </tr>
+          <tr>
+            <td>تدريب المودل</td>
+            <td>لا</td>
+            <td>
+              التدريب لا يشغل PlanSys2. التدريب يقرأ <code>training_events.jsonl</code>
+              فقط ويتعلم من <code>model_input</code> المسموح.
+            </td>
+          </tr>
+          <tr>
+            <td>تشغيل المودل بعد التدريب</td>
+            <td>لا</td>
+            <td>
+              الهدف أن المودل يتصرف من الصور واللغة والحساسات الثنائية. PlanSys2 ليس runtime
+              fallback حالياً؛ يمكن لاحقاً استخدامه كأداة debug أو evaluator إذا توسعنا بذلك.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>تشبيه سريع</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>العنصر</th>
+            <th>تشبيهه</th>
+            <th>في مشروع Room 315</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>payload_training_cases.yaml</code></td>
+            <td>قائمة المسائل</td>
+            <td>Case 1، Case 2، ...، Case 40: ترتيب shuttles، أي واحد loaded، والهدف.</td>
+          </tr>
+          <tr>
+            <td><code>PDDL domain</code></td>
+            <td>قانون اللعبة</td>
+            <td>ما هي الأشياء المسموحة؟ ما معنى loaded؟ ما معنى move؟ ما الشروط؟</td>
+          </tr>
+          <tr>
+            <td><code>PlanSys2</code></td>
+            <td>الحلّال أو الخبير</td>
+            <td>يعطي خطة رمزية لمسار <code>--goal</code> أو batch أهداف PDDL البسيطة، وليس للـ 40 payload cases الحالية.</td>
+          </tr>
+          <tr>
+            <td><code>scenario_generator</code></td>
+            <td>المترجم العملي</td>
+            <td>يبني خطة داخلية للـ <code>--case-id</code> أو يأخذ خطة PlanSys لمسار <code>--goal</code>، ثم يحولها إلى أوامر supervisor.</td>
+          </tr>
+          <tr>
+            <td><code>Gazebo + recorder</code></td>
+            <td>تصوير الحل الصحيح</td>
+            <td>ينفذ السيناريو ويسجل images/sensors/actions في episode.</td>
+          </tr>
+          <tr>
+            <td><code>VLA model training</code></td>
+            <td>الطالب</td>
+            <td>يتعلم من التسجيلات، وليس من PDDL مباشرة.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>يعني ماذا يحدث عندما أشغل batch الحالات 1-40؟</h3>
+      <pre><code>case 1  -> build/choose plan steps -> execute in Gazebo -> record episode
+case 2  -> build/choose plan steps -> execute in Gazebo -> record episode
+case 3  -> build/choose plan steps -> execute in Gazebo -> record episode
+...
+case 40 -> build/choose plan steps -> execute in Gazebo -> record episode
+
+then:
+episodes/* -> event extractor -> meta/training_events.jsonl -> model training</code></pre>
+
+      <p>
+        لذلك عند تشغيل batch الحالات الأربعين أنت لا تشغل PlanSys2 لكل حالة؛ أنت تشغل
+        pipeline توليد/تنفيذ/تسجيل لكل case. مسار PlanSys2 يبقى موجوداً للأهداف الرمزية
+        البسيطة مثل <code>right_yaskawa_to_staubli</code> أو <code>pddl_scenario_batch.yaml</code>.
+        بعد ما يطلع عندك dataset نهائي، التدريب نفسه لا يحتاج PlanSys2 ولا PDDL.
+      </p>
+
+      <div class="warning callout">
+        مهم: <code>PDDL/PlanSys2</code> لا يدخلان داخل <code>model_input</code>.
+        المودل لا يرى <code>symbolic plan</code> ولا <code>loaded=true</code> كـ label مخفي.
+        المودل يرى الأشياء المتاحة في النظام الحقيقي: اللغة، صور overhead RGB،
+        آخر أمر، وحالة الحساسات/switches الثنائية التي أضفناها.
+      </div>
+    </section>
+
+    <section id="why-use-planner">
+      <h2>ليش استفدنا من PDDL/PlanSys2 بدل الشغل اليدوي؟</h2>
+      <p>
+        نعم، كان ممكن تعمل بعض الحالات يدوياً: تفتح Gazebo، ترتب الشاتلات، تحرك
+        shuttle، توقفه، تغير switch، وتسجل episode. هذا ينفع لو عندك 3 أو 5
+        demonstrations فقط. لكن هدفنا ليس demo واحد. هدفنا بناء <strong>expert dataset</strong>
+        قابل للتكرار والتوسيع والتدقيق، وفيه حالات كثيرة: loaded/empty، عدة مواقع
+        بداية، blockers، interior loop، right rail، left rail، واختيار أقرب shuttle
+        للهدف.
+      </p>
+
+      <div class="callout">
+        الفائدة الأساسية: <code>PDDL-style scenario pipeline</code> يحول عملية توليد البيانات من
+        "أنا أحرك يدوياً وأتمنى أن التسجيل صحيح" إلى "أنا أعرّف goal/rules/case،
+        والنظام يولد expert steps، ينفذها، يتحقق منها، ثم يسجلها". PlanSys2 جزء من
+        هذا النظام لمسار الأهداف الرمزية البسيطة، أما الـ 40 payload cases الحالية
+        فتعتمد على YAML والـ generator الداخلي.
+      </div>
+
+      <h3>أين ظهرت الفائدة فعلياً في مشروعنا؟</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>الفائدة</th>
+            <th>لو عملناها يدوياً</th>
+            <th>ما الذي أعطانا إياه scenario pipeline؟</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>تحويل goal عالي المستوى إلى خطوات</td>
+            <td>
+              لازم تكتب أوامر switches/stoppers/shuttle لكل case بنفسك، ومع كل تعديل
+              تعيد التفكير بالترتيب.
+            </td>
+            <td>
+              تكتب goal مثل <code>move loaded shuttle to slot 3</code> أو case في YAML،
+              والـ generator يحوله إلى symbolic steps ثم schema-v3 commands.
+            </td>
+          </tr>
+          <tr>
+            <td>تجنب الأخطاء المتكررة في shuttle_id و shuttle_index</td>
+            <td>
+              ممكن تحرك R1 بدل R2 أو L2 بدل L3، خصوصاً لما تتشابه الحالات.
+            </td>
+            <td>
+              الـ case يحدد <code>selected_shuttle</code> و <code>expected</code>،
+              والـ translator يطلع الأمر بالـ <code>shuttle_id/shuttle_index</code> الصحيح.
+            </td>
+          </tr>
+          <tr>
+            <td>اختيار أقرب loaded shuttle</td>
+            <td>
+              لازم أنت تقرر بكل حالة من هو الأقرب، وقد تنسى tie-break rule أو تعملها
+              بشكل غير ثابت.
+            </td>
+            <td>
+              صار عندنا policy مثل
+              <code>nearest_loaded_to_target_slot_then_lowest_id</code>، فيصير الاختيار
+              deterministic وقابل للاختبار.
+            </td>
+          </tr>
+          <tr>
+            <td>كشف الحالات الخاطئة قبل تدريب المودل عليها</td>
+            <td>
+              ممكن تسجل episode وفيه اصطدام أو توقف بمكان غلط، ثم يدخل التدريب ويسمم
+              الداتا.
+            </td>
+            <td>
+              الأخطاء ظهرت كرسائل واضحة مثل unsafe switch change، final sensor mismatch،
+              أو timeout. هذا سمح لنا نصلح Case 7/27/37-40 قبل اعتبارها golden data.
+            </td>
+          </tr>
+          <tr>
+            <td>إعادة تشغيل نفس dataset بعد الإصلاح</td>
+            <td>
+              إذا عملت demonstrations بيدك، صعب تعيد نفس الـ 40 حالة بنفس الترتيب
+              ونفس السرعة ونفس الشروط.
+            </td>
+            <td>
+              نفس <code>payload_training_cases.yaml</code> يشغل نفس الحالات مرة ثانية
+              ويولد <code>room315_payload_cases_1_40_golden</code> بشكل reproducible.
+            </td>
+          </tr>
+          <tr>
+            <td>توسيع الحالات من 40 إلى 80 أو 200</td>
+            <td>
+              كتابة كل حالة وتشغيلها يدوياً يصير بطيء جداً، واحتمال الخطأ يزيد.
+            </td>
+            <td>
+              نضيف rows جديدة أو generator أعلى من YAML، ونستخدم نفس planning/validation
+              pipeline بدل اختراع طريقة جديدة لكل مجموعة.
+            </td>
+          </tr>
+          <tr>
+            <td>فصل expert metadata عن model_input</td>
+            <td>
+              في التسجيل اليدوي قد تختلط labels مثل loaded أو target_shuttle داخل input
+              بدون قصد.
+            </td>
+            <td>
+              pipeline يسجل metadata للتقييم/debug خارج <code>model_input</code> ويحافظ
+              أن المودل يرى فقط ما هو متاح في النظام الحقيقي.
+            </td>
+          </tr>
+          <tr>
+            <td>Dry-run قبل تحريك Gazebo</td>
+            <td>
+              غالباً لا تعرف أن الخطة غلط إلا بعد ما يتحرك الشاتل ويصطدم أو يعلق.
+            </td>
+            <td>
+              يمكن تشغيل case بـ <code>--dry-run</code> لرؤية plan/commands قبل التنفيذ
+              الفعلي.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>هل كان ممكن الاستغناء عنه والعمل يدوياً؟</h3>
+      <p>
+        ممكن، لكن هذا مناسب فقط لمرحلة proof-of-concept صغيرة. المشكلة ليست أن
+        الشغل اليدوي مستحيل، المشكلة أنه لا يعطيك ضمانات كافية عندما يصبح هدفك
+        تدريب مودل. أي خطأ صغير في demonstration قد يعلم المودل سلوكاً خاطئاً:
+        shuttle يصطدم، blocker يتحرك أكثر من اللازم، switch يبقى بوضع غلط، أو الحالة
+        المسجلة لا تطابق اللغة.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>عدد الحالات</th>
+            <th>العمل اليدوي</th>
+            <th>Scenario pipeline</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1-5 حالات</td>
+            <td>مقبول للتجربة السريعة.</td>
+            <td>مفيد، لكن ليس ضرورياً جداً.</td>
+          </tr>
+          <tr>
+            <td>40 حالة مثل الآن</td>
+            <td>ممكن، لكنه بطيء ومعرض للأخطاء وصعب تعيده بنفس الشكل.</td>
+            <td>أفضل لأنه يعطيك batch، validation، logs، وdataset reproducible.</td>
+          </tr>
+          <tr>
+            <td>100+ حالة</td>
+            <td>يصير عملياً غير مناسب للتدريب الجدي.</td>
+            <td>هنا تظهر القوة الأساسية: توليد وتحقق وتوسيع بشكل منظم.</td>
+          </tr>
+          <tr>
+            <td>تشغيل على robot حقيقي</td>
+            <td>الخطر أكبر لأن الأخطاء قد تسبب حركة غير آمنة.</td>
+            <td>المسار الحالي يعتمد على supervisor كطبقة safety؛ planner fallback فكرة مستقبلية وليست مفعلة الآن.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>كيف يمكن أن نستفيد منه أكثر لاحقاً؟</h3>
+      <ol>
+        <li>
+          <strong>توليد حالات أكثر تلقائياً:</strong>
+          بدل كتابة كل case بيدك، نكتب generator ينتج combinations: loaded shuttle،
+          target slot، blocker positions، switch choices، right/left.
+        </li>
+        <li>
+          <strong>توسيع PDDL domain:</strong>
+          المقصود هنا ليس تغيير التدريب الحالي. المقصود أن منطق إزالة العوائق
+          الموجود حالياً في <code>payload_training_cases.yaml</code> يمكن لاحقاً
+          أن يصبح جزءاً من قوانين <code>PDDL</code> نفسها.
+        </li>
+        <li>
+          <strong>بناء validation set أصعب:</strong>
+          نولد حالات لم يرها المودل أثناء التدريب ونقارن هل قراره يطابق expert plan.
+        </li>
+        <li>
+          <strong>مقارنة المودل مع expert:</strong>
+          عند اختبار المودل، نقارن قراره مع expert metadata والخطة الرمزية المسجلة.
+          إذا توسع PDDL لاحقاً يمكن أن تكون المقارنة مع PlanSys2 مباشرة.
+        </li>
+        <li>
+          <strong>استخدامه كـ fallback مستقبلي:</strong>
+          هذا غير مفعّل في الكود الحالي. الفكرة المستقبلية أن planner لا يستبدل
+          المودل دائماً، بل يقدم خطة إنقاذ اختيارية إذا كان قرار المودل ضعيفاً أو
+          رفضه <code>VLA Supervisor</code> لأنه غير آمن.
+        </li>
+        <li>
+          <strong>شرح أخطاء المودل:</strong>
+          إذا فشل المودل، expert plan يوضح ما كان يجب أن يحدث، وهذا يساعدنا نعرف
+        هل المشكلة في perception، اختيار shuttle، switch reasoning، أو timing.
+      </li>
+      </ol>
+
+      <h4>شرح أوضح: ماذا يعني توسيع PDDL domain؟</h4>
+      <p>
+        حالياً في الحالات الصعبة مثل blocker و interior loop، نحن نكتب خطوات
+        التفريغ بشكل مباشر داخل <code>payload_training_cases.yaml</code>. يعني case
+        تقول تقريباً: حرّك blocker إلى stopper معين، افتح/أغلق switch معين، أدخله
+        إلى interior loop، أعد switch، ثم حرّك الشاتل loaded. هذه طريقة عملية لأنها
+        دقيقة ومضمونة للحالات الأربعين الحالية.
+      </p>
+      <p>
+        لكن في المستقبل يمكن أن نجعل <code>domain_room315.pddl</code> أذكى. بدل أن
+        نكتب الخطوات يدوياً في YAML، نضيف predicates و actions جديدة مثل:
+      </p>
+      <pre><code>(blocking right_shuttle_2 right_shuttle_1)
+(interior_loop_free right)
+(can_enter_interior_via right A3)
+
+(:action move_blocker_to_interior_loop ...)
+(:action restore_switch_after_clearance ...)
+(:action move_loaded_after_route_clear ...)</code></pre>
+      <p>
+        عندها نكتب فقط الهدف: <code>move loaded shuttle to slot 3</code>، وPlanSys2
+        يحاول بنفسه يكتشف أن هناك blocker، وأن الحل هو إدخال blocker إلى interior
+        loop ثم تحريك loaded shuttle. يعني ننقل جزءاً من الذكاء من YAML إلى PDDL.
+      </p>
+      <div class="callout">
+        باختصار: الآن YAML يقول للنظام "كيف" يفرغ الطريق. لاحقاً نريد PDDL يعرف
+        القواعد، وPlanSys2 يكتشف "كيف" يفرغ الطريق بنفسه.
+      </div>
+
+      <h4>شرح أوضح: ماذا يعني استخدام planner كـ fallback مستقبلي؟</h4>
+      <p>
+        هذا تصور معماري لاحق، وليس مسار تشغيل حالي. بعد تدريب المودل، الوضع الطبيعي هو أن المودل يستقبل
+        <code>model_input</code> ويقترح action. لكن لا نريد تنفيذ action خطير فقط
+        لأن المودل قاله. لذلك يبقى <code>VLA Supervisor</code> كحارس أمان.
+      </p>
+      <pre><code>language + images + sensors
+  -> VLA model proposes action
+  -> VLA Supervisor checks safety
+     -> if safe: execute
+     -> if unsafe or low confidence: reject
+     -> future option: ask planner fallback
+  -> future planner fallback proposes safe expert action
+  -> Supervisor checks again
+  -> execute only if safe</code></pre>
+      <p>
+        مثال: إذا قلت "حرّك الشاتل المحمل إلى slot 3"، والمودل اقترح تغيير switch
+        مش آمن أو تحريك shuttle غلط، الـ supervisor يرفض. عندها يمكن للنظام أن
+        يرجع مستقبلاً إلى planner ليحسب خطوة expert آمنة، مثل: أوقف الشاتل، حرّك blocker
+        قليلاً، أو افتح switch الصحيح، ثم يعود للمودل لاحقاً.
+      </p>
+      <div class="warning callout">
+        في النظام الحقيقي، fallback لا يجب أن يستخدم معلومات مخفية غير متاحة.
+        مثلاً إذا loaded/empty غير معروف من sensors، فالplanner لا يأخذ
+        <code>loaded=true</code> سحرياً. يجب أن تأتي معلومة loaded من رؤية المودل،
+        أو من تأكيد operator، أو من نظام perception موثوق. أما sensors/switches
+        الثنائية فهي متاحة ويمكن استخدامها مباشرة.
+      </div>
+
+      <div class="warning callout">
+        المهم: نحن لا نريد أن يصبح المودل معتمداً على PDDL أثناء التشغيل. نريد
+        استخدام scenario generator و metadata كـ expert data generator و evaluator.
+        PlanSys2 يبقى جزءاً من مسار <code>--goal</code> فقط. المودل يتعلم السلوك من
+        الصور واللغة والحساسات، ثم لاحقاً يستطيع التصرف بدون planner.
+      </div>
+    </section>
+
+    <section id="big-picture">
+      <h2>1. الفكرة العامة</h2>
+      <p>
+        الهدف ليس أن نعلّم المودل قواعد <code>PDDL</code> مباشرة، وليس أن نعطيه
+        <code>symbolic plan</code> جاهز أثناء التشغيل. الهدف هو استخدام
+        <code>PDDL-style scenario generation</code> كـ <strong>Expert Scenario Generator</strong>:
+        أي كطبقة خبيرة تولد لنا سيناريوهات صحيحة ومتنوعة، ثم نسجل تنفيذها داخل
+        Gazebo، وبعدها نستخدم هذه التسجيلات لتدريب المودل. PlanSys2 يستخدم فقط
+        عندما ندخل من مسار <code>--goal</code> الذي يحتاج PDDL planning فعلي.
+      </p>
+
+      <div class="callout">
+        الخلاصة: الـ generator هو المعلم أو الخبير الذي ينتج demonstrations.
+        أما المودل النهائي فيتعلم من <code>model_input</code>
+        المسموح فقط، ثم يتوقع <code>action_vector</code> أو أمر JSON بدائي.
+      </div>
+
+      <p>الـ pipeline الكامل عندنا هو:</p>
+      <pre><code>payload_training_cases.yaml case_id or PDDL goal
+  -> room_315_pddl_scenario_generator.py
+     -> --case-id payload case: build symbolic_plan internally from slot policy / blocker / clearance_steps
+     -> --goal station route: build generated PDDL problem text and ask PlanSys2
+  -> Room 315 schema-v3 primitive commands
+  -> VLA Supervisor safety checks
+  -> Gazebo execution
+  -> Dataset recorder events.jsonl
+  -> training_events.jsonl
+  -> model training</code></pre>
+
+      <p>
+        هذا التصميم ممتاز لأننا نفصل بين شيئين:
+      </p>
+      <ul>
+        <li><strong>Planning knowledge</strong>: يعرف كيف نرتب switches/stoppers/shuttles ونزيل blockers.</li>
+        <li><strong>Learned policy</strong>: يتعلم من الصور، اللغة، آخر أمر، والحساسات الثنائية المتوفرة في النظام الحقيقي.</li>
+      </ul>
+    </section>
+
+    <section id="pddl">
+      <h2>2. ما هو PDDL؟</h2>
+      <p>
+        <code>PDDL</code> اختصار لـ <strong>Planning Domain Definition Language</strong>.
+        هو لغة رمزية تستخدم في <strong>Automated Planning</strong>. بدل أن تكتب
+        كل خطوة يدوياً، تصف للعالم:
+      </p>
+      <ul>
+        <li>ما هي الأشياء الموجودة؟ <code>objects</code></li>
+        <li>ما هي الحقائق الحالية؟ <code>predicates / initial state</code></li>
+        <li>ما هي الأفعال الممكنة؟ <code>actions</code></li>
+        <li>ما هو الهدف؟ <code>goal</code></li>
+      </ul>
+
+      <h3>2.1 Domain</h3>
+      <p>
+        ملف <code>domain</code> يصف القواعد العامة. في Room 315، هذا الملف يصف
+        مفاهيم مثل shuttle، side، station، loaded/empty، move actions، وأهداف
+        النقل. الملف الأساسي:
+      </p>
+      <pre><code>mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl</code></pre>
+
+      <h3>2.2 Problem</h3>
+      <p>
+        نص <code>problem</code> يصف حالة واحدة محددة: أين يوجد الشاتل؟ هل هو
+        loaded؟ ما الهدف؟ في النسخة الحالية هذا النص يولده
+        <code>room_315_pddl_scenario_generator.py</code> من <code>--goal</code> عندما
+        يحتاج PlanSys2. أما حالات <code>--case-id</code> الأربعون فتستخدم
+        <code>ScenarioSpec</code> وخطوات داخلية من YAML ولا تحتاج problem text فعلياً.
+      </p>
+      <pre><code>room315-right-loaded-r2-to-staubli</code></pre>
+
+      <h3>2.3 Predicate</h3>
+      <p>
+        <code>predicate</code> هو حقيقة رمزية. أمثلة مفهومية:
+      </p>
+      <pre><code>(loaded right_shuttle_2)
+(empty right_shuttle_1)
+(shuttle_at right_shuttle_2 right_yaskawa)
+(task_done right_shuttle_2 right_staubli)</code></pre>
+
+      <h3>2.4 Action</h3>
+      <p>
+        <code>action</code> في PDDL يحتوي عادة:
+      </p>
+      <ul>
+        <li><code>parameters</code>: متغيرات مثل shuttle/station.</li>
+        <li><code>preconditions</code>: شروط يجب أن تكون صحيحة قبل التنفيذ.</li>
+        <li><code>effects</code>: حقائق تتغير بعد التنفيذ.</li>
+      </ul>
+
+      <p>مثال فكري مبسط:</p>
+      <pre><code>(:action move-loaded-shuttle
+  :parameters (?s - shuttle ?from - station ?to - station)
+  :precondition (and (loaded ?s) (at ?s ?from))
+  :effect (and (not (at ?s ?from)) (at ?s ?to)))</code></pre>
+
+      <div class="warning callout">
+        في مشروعنا، المودل النهائي لا يرى هذه predicates مباشرة. هذه metadata
+        تبقى خارج <code>model_input</code> حتى لا يتعلم من معلومات غير متاحة في
+        النظام الحقيقي.
+      </div>
+    </section>
+
+    <section id="pddl-rules-files">
+      <h2>قوانين PDDL وملفاته المهمة في Room 315</h2>
+      <p>
+        في <code>PDDL</code> كلمة "قوانين" تعني شيئين أساسيين:
+      </p>
+      <ul>
+        <li><strong>Domain rules</strong>: ما هي أنواع الأشياء؟ ما هي الحقائق الممكنة؟ ما هي الأفعال المسموحة؟ وما شروط كل فعل؟</li>
+        <li><strong>Problem facts</strong>: في هذه الحالة المحددة، ما هي الأشياء الموجودة؟ أين يبدأ الشاتل؟ هل هو loaded أو empty؟ وما الهدف؟</li>
+      </ul>
+
+      <div class="callout">
+        <code>PlanSys2</code> لا يخترع القوانين من نفسه. هو يقرأ <code>domain_room315.pddl</code>
+        كقانون عام، ويستقبل نص <code>problem</code> مولداً من الهدف في مسار
+        <code>--goal</code>، ثم يبحث عن سلسلة actions تحقق الهدف بدون كسر شروط
+        الـ preconditions. هذا لا يحدث عند تشغيل الـ 40 payload cases الحالية.
+      </div>
+
+      <h3>1. ملف القوانين الأساسي: domain_room315.pddl</h3>
+      <pre><code>mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl</code></pre>
+
+      <p>
+        هذا الملف هو أهم ملف PDDL. هو لا يصف case واحدة، بل يصف عالم Room 315
+        بشكل عام. محتواه مقسوم إلى:
+      </p>
+
+      <h4>1.1 Requirements</h4>
+      <pre><code>(:requirements :strips :typing :negative-preconditions)</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Requirement</th>
+            <th>معناه</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>:strips</code></td>
+            <td>نستخدم planning بسيط مبني على حقائق تتحول من true إلى false أو العكس.</td>
+          </tr>
+          <tr>
+            <td><code>:typing</code></td>
+            <td>كل object له type مثل shuttle أو station حتى لا يخلط planner بين الأشياء.</td>
+          </tr>
+          <tr>
+            <td><code>:negative-preconditions</code></td>
+            <td>يسمح بكتابة شرط مثل: هذا الشيء ليس true، مثل <code>(not (...))</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>1.2 Types</h4>
+      <p>
+        الـ <code>:types</code> هي أصناف الأشياء التي يعرفها الـ planner:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>استخدامه في Room 315</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>rail_side</code></td>
+            <td>جهة السكة: <code>right</code> أو <code>left</code>.</td>
+          </tr>
+          <tr>
+            <td><code>shuttle</code></td>
+            <td>الشاتل نفسه: مثل <code>right_shuttle_2</code>.</td>
+          </tr>
+          <tr>
+            <td><code>station</code></td>
+            <td>محطة عالية المستوى: <code>right_yaskawa</code>، <code>right_staubli</code>، <code>left_kuka</code>.</td>
+          </tr>
+          <tr>
+            <td><code>slot</code></td>
+            <td>موقع slot رمزي، مفيد لحالات multi-shuttle.</td>
+          </tr>
+          <tr>
+            <td><code>switch_group</code></td>
+            <td>مجموعة switches رمزية، وليس كل switch تفصيلياً دائماً.</td>
+          </tr>
+          <tr>
+            <td><code>stopper_group</code></td>
+            <td>مجموعة stoppers رمزية.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        ملاحظة مهمة: السكة الحقيقية في المشروع ليست ممثلة كـ <code>block</code> داخل PDDL.
+        مصدر الحقيقة للحركة هو ملفات <code>rail_network_right.yaml</code> و
+        <code>rail_network_left.yaml</code>: فيها <code>segments</code> مثل
+        <code>A12E</code> و <code>A34I</code>، والانتقال بينها محكوم بالـ topology
+        وswitch state. لذلك أزلنا <code>block</code> من PDDL حتى لا يكون عندنا
+        abstraction مكرر ومضلل.
+      </div>
+
+      <h4>1.3 Predicates</h4>
+      <p>
+        الـ <code>predicate</code> هو حقيقة ممكن تكون true أو false. هذه أهم الحقائق
+        الموجودة في domain:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Predicate</th>
+            <th>المعنى</th>
+            <th>مثال</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>shuttle_at</code></td>
+            <td>الشاتل موجود عند station.</td>
+            <td><code>(shuttle_at right_shuttle_2 right_yaskawa)</code></td>
+          </tr>
+          <tr>
+            <td><code>shuttle_stopped_at</code></td>
+            <td>الشاتل متوقف عند station، وليس فقط مرّ من عندها.</td>
+            <td><code>(shuttle_stopped_at right_shuttle_2 right_yaskawa)</code></td>
+          </tr>
+          <tr>
+            <td><code>connected</code></td>
+            <td>هناك route رمزي بين محطتين على نفس side.</td>
+            <td><code>(connected right right_yaskawa right_staubli)</code></td>
+          </tr>
+          <tr>
+            <td><code>switches_ready</code></td>
+            <td>الـ switches مجهزة لمسار side معين.</td>
+            <td><code>(switches_ready right)</code></td>
+          </tr>
+          <tr>
+            <td><code>stoppers_open</code></td>
+            <td>الـ stoppers مفتوحة رمزياً لمسار side معين.</td>
+            <td><code>(stoppers_open right)</code></td>
+          </tr>
+          <tr>
+            <td><code>path_ready</code></td>
+            <td>المسار بين from و to جاهز بعد تجهيز switches و stoppers.</td>
+            <td><code>(path_ready right right_yaskawa right_staubli)</code></td>
+          </tr>
+          <tr>
+            <td><code>task_done</code></td>
+            <td>الهدف انتهى: shuttle وصل وتوقف عند station الهدف.</td>
+            <td><code>(task_done right_shuttle_2 right_staubli)</code></td>
+          </tr>
+          <tr>
+            <td><code>shuttle_on_side</code></td>
+            <td>هوية السكة التي ينتمي لها shuttle.</td>
+            <td><code>(shuttle_on_side right_shuttle_2 right)</code></td>
+          </tr>
+          <tr>
+            <td><code>loaded</code> / <code>empty</code></td>
+            <td>حالة الحمولة الرمزية للشاتل. هذه metadata للـ planner/supervisor وليست model_input.</td>
+            <td><code>(loaded right_shuttle_2)</code></td>
+          </tr>
+          <tr>
+            <td><code>shuttle_at_slot</code> / <code>slot_free</code></td>
+            <td>حقائق رمزية لإدارة slots في حالات multi-shuttle.</td>
+            <td><code>(shuttle_at_slot right_shuttle_1 slot_1)</code></td>
+          </tr>
+          <tr>
+            <td><code>front_of</code> / <code>behind</code></td>
+            <td>ترتيب shuttles بالنسبة لبعضها، مفيد لتخطيط blockers لاحقاً.</td>
+            <td><code>(front_of right_shuttle_1 right_shuttle_2)</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>1.4 Actions: القوانين الفعلية للحركة</h4>
+      <p>
+        كل <code>action</code> في PDDL يحتوي:
+      </p>
+      <ul>
+        <li><code>parameters</code>: الأشياء التي يستخدمها الفعل.</li>
+        <li><code>precondition</code>: شروط لازم تكون true قبل تنفيذ الفعل.</li>
+        <li><code>effect</code>: ماذا يتغير بعد تنفيذ الفعل.</li>
+      </ul>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Preconditions المهمة</th>
+            <th>Effects المهمة</th>
+            <th>معناها العملي</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>prepare_switches</code></td>
+            <td>لازم يكون هناك <code>connected side from to</code>.</td>
+            <td>تصير <code>switches_ready side</code>.</td>
+            <td>رمزياً: جهز switches للمسار.</td>
+          </tr>
+          <tr>
+            <td><code>open_stoppers</code></td>
+            <td>المسار connected و <code>switches_ready</code>.</td>
+            <td>تصير <code>stoppers_open</code> و <code>path_ready</code>.</td>
+            <td>رمزياً: افتح stoppers واجعل المسار جاهزاً.</td>
+          </tr>
+          <tr>
+            <td><code>move_shuttle</code></td>
+            <td>
+              الشاتل عند source، المسار connected، path_ready، switches_ready،
+              stoppers_open.
+            </td>
+            <td>
+              الشاتل لم يعد عند source، ولم يعد stopped هناك، وصار عند target.
+            </td>
+            <td>رمزياً: حرّك shuttle من محطة إلى محطة.</td>
+          </tr>
+          <tr>
+            <td><code>stop_shuttle</code></td>
+            <td>الشاتل صار عند target والمسار ما زال ready.</td>
+            <td>يصير <code>shuttle_stopped_at shuttle target</code> ويتم حذف <code>path_ready</code>.</td>
+            <td>رمزياً: أوقف shuttle بعد الوصول.</td>
+          </tr>
+          <tr>
+            <td><code>finish_task</code></td>
+            <td>الشاتل عند station ومتوقف عند نفس station.</td>
+            <td>تصير <code>task_done shuttle station</code>.</td>
+            <td>علم المهمة كناجحة.</td>
+          </tr>
+          <tr>
+            <td><code>assign_task</code></td>
+            <td>المهمة ليست منتهية بعد.</td>
+            <td>تصير <code>task_assigned shuttle station</code>.</td>
+            <td>توسيع رمزي لتحديد هدف shuttle معيّن.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="warning callout">
+        ملاحظة مهمة: ليس كل action موجود في <code>domain_room315.pddl</code> مترجم حالياً
+        إلى أمر ROS/Gazebo. التنفيذ الحالي يترجم بالأساس:
+        <code>prepare_switches</code>،
+        <code>open_stoppers</code>،
+        <code>set_stoppers</code>،
+        <code>move_shuttle</code>،
+        <code>stop_shuttle</code>،
+        <code>finish_task</code>.
+        وتم حذف طبقة payload object/handoff لأنها غير مستخدمة في المسار الحالي؛
+        يكفي تمثيل الحمولة بـ <code>loaded</code> و <code>empty</code>.
+      </div>
+
+      <h3>2. نص problem المولد: الحالات المحددة</h3>
+      <p>
+        لا توجد الآن ملفات problem ثابتة للحالات الجاهزة. عندما تدخل الحالة من
+        <code>--goal</code> ويحتاج السكربت PlanSys2، يولد نص PDDL داخلياً بهذه البنية:
+      </p>
+      <pre><code>(define (problem problem-name)
+  (:domain room315-shuttle)
+
+  (:objects
+    ... objects with types ...
+  )
+
+  (:init
+    ... facts true at the beginning ...
+  )
+
+  (:goal
+    (and
+      ... facts that must become true ...
+    )
+  )
+)</code></pre>
+
+      <h4>2.1 مثال اختياري لمسار --goal: right_loaded_r2_to_staubli</h4>
+      <p>
+        هذا ليس ملفاً. هذا <code>goal_id</code> اختياري موجود داخل
+        <code>SUPPORTED_GOALS</code> في السكربت. عند تشغيله عبر <code>--goal</code>،
+        يولد السكربت problem text مؤقتاً ويرسله إلى PlanSys2:
+      </p>
+      <ul>
+        <li>عندي side اسمها <code>right</code>.</li>
+        <li>عندي shuttles: <code>right_shuttle_1</code> و <code>right_shuttle_2</code>.</li>
+        <li>عندي stations: <code>right_yaskawa</code> و <code>right_staubli</code>.</li>
+        <li><code>right_shuttle_2</code> يبدأ عند <code>right_yaskawa</code>.</li>
+        <li><code>right_shuttle_2</code> هو <code>loaded</code>.</li>
+        <li><code>right_shuttle_1</code> موجود كـ empty shuttle.</li>
+        <li>يوجد route رمزي من Yaskawa إلى Staubli.</li>
+        <li>الهدف: يبقى <code>right_shuttle_2</code> loaded وتصبح <code>task_done</code> عند Staubli.</li>
+      </ul>
+      <pre><code>(:init
+  (shuttle_at right_shuttle_2 right_yaskawa)
+  (shuttle_stopped_at right_shuttle_2 right_yaskawa)
+  (loaded right_shuttle_2)
+  (empty right_shuttle_1)
+  (connected right right_yaskawa right_staubli)
+)
+
+(:goal
+  (and
+    (loaded right_shuttle_2)
+    (task_done right_shuttle_2 right_staubli)
+  )
+)</code></pre>
+
+      <h4>2.2 أهداف --goal الاختيارية، وليست ملفات problem</h4>
+      <div class="warning callout">
+        هذه الأسماء ليست ملفات <code>.pddl</code>، وليست الحالات الأربعين. ملفات
+        <code>problem_*.pddl</code> انحذفت. الجدول التالي يصف فقط goal IDs اختيارية
+        يمكن تمريرها إلى <code>room_315_pddl_scenario_generator.py --goal</code>
+        لتجربة PlanSys2 على route رمزي بسيط. عند تشغيل الـ 40 payload cases عبر
+        <code>room_315_payload_case_batch_runner.py</code> لا تُستخدم هذه القائمة.
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Goal ID</th>
+            <th>ماذا يصف؟</th>
+            <th>متى يستخدم؟</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>right_yaskawa_to_staubli</code></td>
+            <td>شاتل يمين empty من Yaskawa إلى Staubli.</td>
+            <td>اختبار PlanSys2 لمسار station-to-station بسيط على right rail.</td>
+          </tr>
+          <tr>
+            <td><code>right_staubli_to_yaskawa</code></td>
+            <td>شاتل يمين empty من Staubli إلى Yaskawa.</td>
+            <td>اختبار الاتجاه العكسي على right rail.</td>
+          </tr>
+          <tr>
+            <td><code>left_yaskawa_to_kuka</code></td>
+            <td>شاتل يسار empty من Yaskawa إلى KUKA.</td>
+            <td>اختبار station route على left rail باتجاه KUKA.</td>
+          </tr>
+          <tr>
+            <td><code>left_kuka_to_yaskawa</code></td>
+            <td>شاتل يسار empty من KUKA إلى Yaskawa.</td>
+            <td>اختبار الاتجاه العكسي على left rail.</td>
+          </tr>
+          <tr>
+            <td><code>right_loaded_r2_to_staubli</code></td>
+            <td>الشاتل R2 محمل ويجب أن يذهب إلى Staubli.</td>
+            <td>اختبار goal رمزي فيه payload metadata، وليس من الـ 40 cases.</td>
+          </tr>
+          <tr>
+            <td><code>right_empty_r1_to_yaskawa</code></td>
+            <td>الشاتل R1 فارغ ويجب أن يذهب إلى Yaskawa، بينما R2 loaded موجود كـ context.</td>
+            <td>اختبار تمييز empty/loaded في goal رمزي اختياري.</td>
+          </tr>
+          <tr>
+            <td><code>left_loaded_l2_to_kuka</code></td>
+            <td>الشاتل L2 محمل ويجب أن يذهب إلى KUKA.</td>
+            <td>اختبار loaded shuttle goal على left rail.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>3. كيف يحل PlanSys2 المشكلة؟</h3>
+      <p>
+        عندما يأخذ PlanSys2 الـ domain والـ problem، هو يسأل نفسه:
+        ما سلسلة الأفعال التي تجعل <code>:goal</code> true؟
+      </p>
+      <p>
+        في مثال <code>right_loaded_r2_to_staubli</code>، الهدف هو:
+      </p>
+      <pre><code>(loaded right_shuttle_2)
+(task_done right_shuttle_2 right_staubli)</code></pre>
+      <p>
+        حقيقة <code>loaded right_shuttle_2</code> موجودة أصلاً في <code>:init</code>،
+        لذلك المطلوب الحقيقي هو جعل <code>task_done</code> true. لكن
+        <code>finish_task</code> لا يعمل إلا إذا كان الشاتل عند Staubli ومتوقف هناك.
+        لذلك planner يحتاج قبلها:
+      </p>
+      <ol>
+        <li>تحضير switches عبر <code>prepare_switches</code>.</li>
+        <li>فتح stoppers عبر <code>open_stoppers</code> حتى يصبح <code>path_ready</code>.</li>
+        <li>تحريك shuttle عبر <code>move_shuttle</code> حتى تصبح <code>shuttle_at target</code>.</li>
+        <li>إيقاف shuttle عبر <code>stop_shuttle</code> حتى تصبح <code>shuttle_stopped_at target</code>.</li>
+        <li>إنهاء المهمة عبر <code>finish_task</code>.</li>
+      </ol>
+
+      <pre><code>prepare_switches right right_yaskawa right_staubli
+open_stoppers right right_yaskawa right_staubli
+move_shuttle right right_shuttle_2 right_yaskawa right_staubli
+stop_shuttle right right_shuttle_2
+finish_task right_shuttle_2 right_staubli</code></pre>
+
+      <h3>4. كيف يتحول PDDL plan إلى أوامر Gazebo؟</h3>
+      <p>
+        بعد أن تنتج الخطة الرمزية، لا نرسلها كما هي إلى Gazebo. عندنا ملف ترجمة:
+      </p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>PDDL/Symbolic step</th>
+            <th>Supervisor command</th>
+            <th>Action vector primitive</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>prepare_switches right ...</code></td>
+            <td><code>{"action":"switches","side":"right","switches":{"ALL":"EXTERIOR"}}</code></td>
+            <td><code>SET_SWITCHES</code></td>
+          </tr>
+          <tr>
+            <td><code>open_stoppers right ...</code></td>
+            <td><code>{"action":"stoppers","side":"right","stoppers":{"ALL":"0"}}</code></td>
+            <td><code>SET_STOPPERS</code></td>
+          </tr>
+          <tr>
+            <td><code>move_shuttle right right_shuttle_2 ... speed=0.08</code></td>
+            <td><code>{"action":"shuttle","side":"right","shuttle":"right_shuttle_2","command":"ON","speed":0.08}</code></td>
+            <td><code>SHUTTLE_ON</code></td>
+          </tr>
+          <tr>
+            <td><code>stop_shuttle right right_shuttle_2</code></td>
+            <td><code>{"action":"shuttle","side":"right","shuttle":"right_shuttle_2","command":"OFF"}</code></td>
+            <td><code>STOP_NOW</code></td>
+          </tr>
+          <tr>
+            <td><code>finish_task right_shuttle_2 right_staubli</code></td>
+            <td><code>{"action":"DONE","status":"success","shuttle":"right_shuttle_2","station":"right_staubli"}</code></td>
+            <td><code>DONE</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5. شو عم يصير في الكود بالتفصيل؟</h3>
+      <p>
+        الملف المسؤول عن جمع كل القطع هو:
+      </p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_pddl_scenario_generator.py</code></pre>
+      <ol>
+        <li>
+          تقرر كيف دخلت الحالة:
+          <code>--goal</code> أو <code>--case-id</code>.
+        </li>
+        <li>
+          يبني <code>ScenarioSpec</code>: side، shuttle، source، target،
+          payload_condition، target_slot، selection_policy، blocker info.
+        </li>
+        <li>
+          يولد نص <code>problem</code> من <code>ScenarioSpec</code> عند الحاجة إلى PlanSys2.
+        </li>
+        <li>
+          إذا الحالة simple station route، يستخدم <code>PlanSysPlannerBackend</code>:
+          يقرأ <code>domain_room315.pddl</code>، يبني problem text، ويرسل الاثنين إلى
+          <code>/planner/get_plan</code>. هذا ينطبق على مسار <code>--goal</code> وليس على
+          الـ 40 payload cases الحالية.
+        </li>
+        <li>
+          إذا الحالة من حالات الـ 40 وفيها <code>target_slot</code> أو
+          <code>blocker_shuttle</code> أو <code>clearance_steps</code>، فالسكربت يولد
+          symbolic steps من YAML لأن هذه المناورات الدقيقة غير ممثلة بالكامل داخل PDDL domain الحالي.
+        </li>
+        <li>
+          كل symbolic step يمر إلى <code>room_315_pddl_plan_translator.py</code>.
+        </li>
+        <li>
+          المترجم ينتج <code>primitive_commands</code> و <code>action_vectors</code>.
+        </li>
+        <li>
+          عند التنفيذ، الـ supervisor يطبق safety checks ثم Gazebo يتحرك والـ dataset recorder يسجل.
+        </li>
+      </ol>
+
+      <div class="warning callout">
+        لذلك مهم نفرق بين PDDL الرسمي وبين symbolic plan pipeline. الـ PDDL domain الحالي
+        يعطي القواعد العامة للحركة بين stations. أما سيناريوهات الـ 40 التي فيها slot 3،
+        blockers، interior loop، وتحريك blocker مسافة محددة، فهي تستخدم
+        <code>payload_training_cases.yaml</code> لتحديد التفاصيل الدقيقة، ثم تمر بنفس
+        translator/supervisor/dataset pipeline.
+      </div>
+
+      <h3>6. ما هي قوانين PlanSys2 نفسه؟</h3>
+      <p>
+        <code>PlanSys2</code> ليس ملف قوانين جديد. هو محرك planning يطبق قوانين
+        <code>PDDL</code>. عملياً يتبع هذه القواعد:
+      </p>
+      <ul>
+        <li>لا يستطيع اختيار action إلا إذا كانت كل <code>preconditions</code> الخاصة بها صحيحة في الحالة الحالية.</li>
+        <li>بعد اختيار action، يطبق <code>effects</code> لتحديث الحالة الرمزية.</li>
+        <li>يكرر العملية حتى تصبح شروط <code>:goal</code> صحيحة.</li>
+        <li>إذا لا يوجد تسلسل actions يحقق الهدف، يرجع failure أو plan فارغ.</li>
+        <li>لا يعرف تفاصيل Gazebo أو التصادمات أو سرعة الشاتل إلا إذا نحن نمذجناها داخل PDDL.</li>
+        <li>السلامة التفصيلية مثل unsafe switch، target sensor، وتوقف shuttle الحقيقي تبقى مسؤولية <code>VLA Supervisor</code> و runtime validation.</li>
+      </ul>
+
+      <div class="callout">
+        لذلك إذا لم نكتب blocker أو collision أو switch guard داخل PDDL، PlanSys2 لن
+        يستنتجها وحده. لهذا السبب حالات blockers الدقيقة عندنا حالياً موجودة في YAML
+        وتمر على supervisor safety checks.
+      </div>
+
+      <h3>7. pddl_scenario_batch.yaml</h3>
+      <pre><code>mfja_robot_control_config/config/room_315_vla/pddl_scenario_batch.yaml</code></pre>
+      <p>
+        هذا ليس PDDL، لكنه config لتشغيل batch بسيط من أهداف PDDL. يحتوي:
+      </p>
+      <ul>
+        <li><code>goals</code>: قائمة أهداف station-to-station الافتراضية.</li>
+        <li><code>optional_later_goals</code>: أهداف إضافية مثل loaded/empty و slot3.</li>
+        <li><code>repetitions_per_goal</code>: كم مرة نكرر كل goal.</li>
+        <li><code>speed_values</code>: سرعات مختلفة لتوليد تنوع.</li>
+        <li><code>dry_run</code> و <code>execute</code>: هل نولد فقط أم ننفذ فعلياً.</li>
+      </ul>
+    </section>
+
+    <section id="plansys">
+      <h2>3. ما هو PlanSys2؟</h2>
+      <p>
+        <code>PlanSys2</code> هو framework في <code>ROS 2</code> لتشغيل
+        <code>PDDL planning</code>. نحن نستخدمه كـ <strong>planner backend</strong>.
+        يعني نعطيه <code>domain</code> و <code>problem</code>، وهو يرجع خطة رمزية
+        <code>symbolic plan</code>.
+      </p>
+
+      <p>الخدمة التي يستخدمها المشروع:</p>
+      <pre><code>/planner/get_plan</code></pre>
+
+      <p>
+        داخل المشروع، السكربت المسؤول عن التواصل مع PlanSys2 هو:
+      </p>
+      <pre><code>mfja_robot_control_config/scripts/room_315_pddl_scenario_generator.py</code></pre>
+
+      <p>
+        هذا السكربت هو نقطة التحويل العملية. في مسار <code>--goal</code>، يبني
+        <code>PDDL problem</code> ويطلب خطة من PlanSys2. في مسار <code>--case-id</code>
+        الخاص بالـ 40 payload cases، يستخدم <code>target_slot</code> و
+        <code>selection_policy</code> و <code>blocker_shuttle</code> و
+        <code>clearance_steps</code> الموجودة في <code>payload_training_cases.yaml</code>
+        لأن الـ PDDL domain الحالي لا
+        يصف كل تفاصيل إدخال blocker إلى interior loop وإرجاع switch بعده. في
+        الحالتين، الناتج النهائي يكون نفس النوع: خطوات رمزية تتحول إلى أوامر
+        Room 315 قابلة للتنفيذ والتسجيل.
+      </p>
+    </section>
+
+    <section id="pipeline">
+      <h2>4. كيف يتحول الهدف إلى Dataset؟</h2>
+      <h3>4.1 من goal إلى symbolic plan</h3>
+      <p>
+        عندما تقول مثلاً:
+      </p>
+      <pre><code>move the loaded shuttle to slot 3</code></pre>
+      <p>
+        النظام لا يرسل هذه الجملة مباشرة إلى Gazebo. بدلاً من ذلك:
+      </p>
+      <ol>
+        <li>يحدد <code>scenario/case</code> المطلوب.</li>
+        <li>يبني حالة رمزية: أي shuttles موجودة، من loaded، ما الهدف.</li>
+        <li>إذا كانت الحالة من <code>--goal</code> البسيط، يرسلها إلى <code>PlanSys2</code>.</li>
+        <li>إذا كانت الحالة من <code>--case-id</code> payload، يبني الخطة داخلياً من YAML.</li>
+        <li>الناتج في النهاية هو <code>symbolic plan</code> أو symbolic steps.</li>
+      </ol>
+
+      <div class="callout">
+        لذلك اسم السكربت فيه <code>pddl_scenario_generator</code> لأنه يعمل في طبقة
+        التخطيط الرمزي. في الكود الحالي، كل الـ 40 payload cases جاءت من YAML
+        ومنطق generator الداخلي، وليس من PlanSys2. PlanSys2 يبقى لمسار
+        <code>--goal</code> والأهداف الرمزية التي يغطيها <code>domain_room315.pddl</code>.
+      </div>
+
+      <h3>4.2 من symbolic plan إلى primitive commands</h3>
+      <p>
+        الخطة الرمزية لا تصلح مباشرة لـ VLA Supervisor. لذلك نترجمها إلى
+        <code>primitive commands</code>:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Symbolic step</th>
+            <th>Primitive command</th>
+            <th>Action target</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>prepare_switches</code></td>
+            <td><code>{"action":"switches"}</code></td>
+            <td><code>SET_SWITCHES</code></td>
+          </tr>
+          <tr>
+            <td><code>open_stoppers</code></td>
+            <td><code>{"action":"stoppers"}</code></td>
+            <td><code>SET_STOPPERS</code></td>
+          </tr>
+          <tr>
+            <td><code>move_shuttle</code></td>
+            <td><code>{"action":"shuttle","command":"ON"}</code></td>
+            <td><code>SHUTTLE_ON</code></td>
+          </tr>
+          <tr>
+            <td><code>stop_shuttle</code></td>
+            <td><code>{"action":"shuttle","command":"OFF"}</code></td>
+            <td><code>STOP_NOW</code></td>
+          </tr>
+          <tr>
+            <td><code>finish_task</code></td>
+            <td><code>{"action":"DONE"}</code></td>
+            <td><code>DONE</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.3 التنفيذ داخل Gazebo</h3>
+      <p>
+        الأوامر لا تنفذ مباشرة. كل أمر يمر عبر <code>VLA Supervisor</code>، وهو
+        يعمل <strong>safety validation</strong>:
+      </p>
+      <ul>
+        <li>هل side صحيح؟</li>
+        <li>هل shuttle موجود؟</li>
+        <li>هل تغيير switch آمن؟</li>
+        <li>هل stopper مفتوح/مغلق بشكل مناسب؟</li>
+        <li>هل المسار فيه blocker؟</li>
+        <li>هل الأمر ambiguous؟</li>
+      </ul>
+
+      <h3>4.4 التسجيل في Dataset</h3>
+      <p>
+        عند التنفيذ، <code>room_315_vla_dataset_recorder.py</code> يسجل
+        <code>events.jsonl</code>. كل row يمثل قراراً تدريبياً:
+      </p>
+      <pre><code>{
+  "model_input": {
+    "language": "...",
+    "overhead_images": {
+      "right_rail_rgb": "episodes/.../right_rail_rgb/000001.jpg",
+      "left_rail_rgb": "episodes/.../left_rail_rgb/000001.jpg"
+    },
+    "last_command": {"action": "START"},
+    "observable_state": {
+      "right": {
+        "sensors": {"DZI2R": 1, "DZI3R": 0},
+        "switches": {"A1": "EXTERIOR", "A2": "INTERIOR"},
+        "stoppers": {"A1": "open", "A2": "closed"}
+      }
+    }
+  },
+  "action": {"primitive": "SET_SWITCHES", "side": "right"},
+  "action_vector": [...]
+}</code></pre>
+
+      <div class="callout">
+        <code>observable_state</code> مسموح لأنه متوفر في النظام الحقيقي:
+        binary sensors plus switch/stopper states. أما <code>loaded</code> و
+        <code>payload_type</code> و exact pose مثل <code>x/y/yaw/s</code> فهي
+        ممنوعة داخل <code>model_input</code>.
+      </div>
+    </section>
+
+    <section id="files">
+      <h2>5. الملفات المهمة في المشروع</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>الملف</th>
+            <th>الدور</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>config/room_315_vla/pddl/domain_room315.pddl</code></td>
+            <td>تعريف <code>PDDL domain</code>: objects/predicates/actions.</td>
+          </tr>
+          <tr>
+            <td><code>generated problem text</code></td>
+            <td>نص PDDL يبنى من <code>--goal</code> عند استخدام PlanSys2 ولا يخزن كملفات منفصلة.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_pddl_scenario_generator.py</code></td>
+            <td>يولد scenario/commands؛ يستخدم <code>PlanSys2</code> لمسار <code>--goal</code> ويستخدم slot/blocker/clearance data من YAML لمسار <code>--case-id</code>.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_pddl_plan_translator.py</code></td>
+            <td>يترجم symbolic plan إلى primitive commands و <code>action_vector</code>.</td>
+          </tr>
+          <tr>
+            <td><code>config/room_315_vla/payload_training_cases.yaml</code></td>
+            <td>تعريف الحالات الأربعين: ترتيب shuttles، loaded shuttles، blockers، target slot.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_payload_case_batch_runner.py</code></td>
+            <td>يشغل الحالات تلقائياً، يعيد تشغيل Gazebo لكل حالة، ويسجل dataset.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_payload_case_review.py</code></td>
+            <td>يعطي review index للحالات قبل تشغيل batch كامل.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_vla_dataset_recorder.py</code></td>
+            <td>يسجل <code>events.jsonl</code> و images و validation metadata.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_vla_event_extractor.py</code></td>
+            <td>يحول episodes إلى ملف واحد <code>training_events.jsonl</code>.</td>
+          </tr>
+          <tr>
+            <td><code>scripts/room_315_pddl_validation_gate.py</code></td>
+            <td>يتأكد أن episode صالح للتدريب وأن <code>model_input</code> نظيف.</td>
+          </tr>
+          <tr>
+            <td><code>config/room_315_vla/action_space.yaml</code></td>
+            <td>يوثق schema-v3 للـ <code>action_vector</code> و model input fields.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="forty-cases">
+      <h2>6. كيف نستفيد من الحالات الأربعين الحالية؟</h2>
+      <p>
+        الحالات الأربعون هي أول training matrix منظم للـ payload scenarios.
+        الهدف منها أن يرى المودل أمثلة متنوعة على:
+      </p>
+      <div class="callout">
+        الوضع الحالي للكود: الحالات الأربعون كلها تعمل من <code>payload_training_cases.yaml</code>
+        عبر <code>--case-id</code>. لا توجد ملفات problem منفصلة لها، ولا تستدعي PlanSys2.
+        التوزيع الحالي هو 8 حالات slot-policy مباشرة، 8 حالات blocker واحد،
+        و24 حالة <code>clearance_steps</code> متعددة.
+      </div>
+      <ul>
+        <li>shuttle loaded في مواقع مختلفة.</li>
+        <li>blocker shuttles في مواقع مختلفة.</li>
+        <li>حالات بدون blocker.</li>
+        <li>حالات nearest loaded shuttle selection.</li>
+        <li>حالات four-shuttle حيث blocker يدخل <code>interior loop</code>.</li>
+        <li>right rail و left rail بشكل منفصل.</li>
+      </ul>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Case range</th>
+            <th>المعنى</th>
+            <th>الفائدة التدريبية</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>1-20</code></td>
+            <td>سيناريوهات على right rail فقط.</td>
+            <td>تعليم المودل التحكم باليمين، اختيار loaded shuttle، وتفادي blockers.</td>
+          </tr>
+          <tr>
+            <td><code>21-40</code></td>
+            <td>نفس الفكرة لكن على left rail فقط.</td>
+            <td>تعليم symmetry بين right/left مع اختلاف station names مثل KUKA.</td>
+          </tr>
+          <tr>
+            <td><code>four-shuttle cases</code></td>
+            <td>أربع shuttles على نفس السكة، والـ blocker قد يحتاج دخول interior loop.</td>
+            <td>تعليم clearing policy وليس فقط direct move.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        هذه الحالات ليست فقط data. هي أيضاً <strong>curriculum</strong>:
+        تبدأ بحالات سهلة، ثم ambiguous selection، ثم blockers، ثم interior-loop
+        clearance. هذا يساعد المودل على <strong>generalization</strong>.
+      </p>
+
+      <div class="warning callout">
+        لا نريد train عشوائي من كل row فقط. الأفضل تقسيم البيانات حسب
+        <code>case_id</code> أو case families، حتى لا تكون validation/test شبيهة
+        جداً بنفس episode. هذا يقلل <code>overfitting</code>.
+      </div>
+    </section>
+
+    <section id="automatic-generation">
+      <h2>7. كيف نولد سيناريوهات كثيرة تلقائياً؟</h2>
+      <p>
+        التوليد التلقائي عندك حالياً يعتمد على <code>payload_training_cases.yaml</code>.
+        هذا الملف هو matrix للحالات. كل case يحدد:
+      </p>
+      <ul>
+        <li><code>case_id</code>: اسم فريد للحالة.</li>
+        <li><code>side</code>: right أو left.</li>
+        <li><code>target_slot</code>: الهدف مثل slot 2 أو slot 3.</li>
+        <li><code>payload_condition</code>: loaded أو empty.</li>
+        <li><code>selection_policy</code>: مثلاً nearest loaded to target.</li>
+        <li><code>loaded_shuttles</code>: أي shuttles تحمل payload.</li>
+        <li><code>start_slots_by_shuttle</code>: بداية كل shuttle.</li>
+        <li><code>launch</code>: عدد الشاتلات ومواقع البداية وقائمة loaded.</li>
+        <li><code>blocker_shuttle</code> و <code>blocker_clear_*</code>: blocker واحد وخطة تفريغه إذا لزم.</li>
+        <li><code>clearance_steps</code>: خطوات متعددة لتحريك أكثر من blocker في الحالات المعقدة.</li>
+        <li><code>expected</code>: ما الذي يجب أن يحصل في النهاية.</li>
+      </ul>
+
+      <h3>7.1 مثال case مبسط</h3>
+      <pre><code>- case_id: right_loaded_r2_s2_to_slot3_no_blocker
+  title: Loaded R2 from slot 2 to slot 3, no blocker
+  side: right
+  speed: 0.08
+  target_slot: "3"
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles: [right_shuttle_2]
+  start_slots_by_shuttle:
+    right_shuttle_1: "1"
+    right_shuttle_2: "2"
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: "1,2"
+    right_loaded_shuttles: "R2"
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: "3"</code></pre>
+
+      <h3>7.2 ماذا يفعل batch runner؟</h3>
+      <ol>
+        <li>يقرأ كل cases من YAML.</li>
+        <li>لكل case، يقتل launch القديم وينظف العمليات.</li>
+        <li>يشغل Room 315 بعدد shuttles وترتيب بداية مطابق للحالة.</li>
+        <li>ينتظر preflight حتى يرى supervisor الحالة الصحيحة.</li>
+        <li>يشغل scenario generator لهذه الحالة.</li>
+        <li>للحالات 1-40، يستخدم generator منطق slot/blocker/clearance الداخلي من YAML.</li>
+        <li>لا يستدعي <code>/planner/get_plan</code> لهذه الحالات الحالية.</li>
+        <li>يترجم الخطة الرمزية إلى schema-v3 commands.</li>
+        <li>ينفذ الأوامر في Gazebo عبر supervisor.</li>
+        <li>يتأكد أن episode كامل انكتب.</li>
+        <li>بعد كل الحالات، يشغل event extractor ليولد <code>training_events.jsonl</code>.</li>
+      </ol>
+
+      <div class="callout">
+        يعني عندما تشغل <code>room_315_payload_case_batch_runner.py</code> على الحالات
+        1-40، أنت فعلياً تشغل pipeline كامل 40 مرة: مرة لكل case. كل مرة تبدأ
+        بترتيب shuttles مختلف، ثم خطة/خطوات مختلفة، ثم episode مختلف. لذلك إذا كان
+        عندك 40 حالة ناجحة، المفروض يكون عندك 40 episode صالحة للتدريب.
+      </div>
+
+      <h3>7.3 هل أحتاج PlanSys2 بعد ما خلصت الـ dataset؟</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ماذا تريد أن تفعل؟</th>
+            <th>هل تحتاج PlanSys2؟</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>توليد golden dataset جديد من الحالات 1-40</td>
+            <td>لا. شغل batch runner فقط؛ الـ generator يبني الخطط داخلياً لهذه الحالات.</td>
+          </tr>
+          <tr>
+            <td>إضافة حالات 41-80 أو حالات left/right جديدة</td>
+            <td>ليس بالضرورة. إذا أضفتها كـ payload cases في YAML فالـ generator الداخلي يكفي؛ PlanSys2 يفيد فقط لمسار goals PDDL.</td>
+          </tr>
+          <tr>
+            <td>تدريب model على <code>training_events.jsonl</code></td>
+            <td>لا.</td>
+          </tr>
+          <tr>
+            <td>اختبار model متدرب offline على dataset</td>
+            <td>لا، إلا إذا تريد مقارنة model مع expert plan.</td>
+          </tr>
+          <tr>
+            <td>تشغيل robot/model كسياسة deployable</td>
+            <td>لا. fallback عبر PlanSys2 غير مفعّل حالياً.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.4 كيف نوسع الحالات لاحقاً؟</h3>
+      <p>
+        عملياً تستطيع بناء generator أعلى من YAML يعمل <strong>combinatorial generation</strong>:
+      </p>
+      <pre><code>for side in [right, left]:
+  for loaded_shuttle in [1, 2, 3, 4]:
+    for target_slot in [1, 2, 3, 4]:
+      for blocker_pattern in blocker_patterns:
+        create payload_training_case</code></pre>
+
+      <p>
+        لكن لا تشغل كل التركيبات عشوائياً. الأفضل أن تبني <strong>coverage plan</strong>:
+      </p>
+      <ul>
+        <li>كل target slot يظهر عدة مرات.</li>
+        <li>كل shuttle يكون loaded في عدة مواقع.</li>
+        <li>كل switch مهم يظهر في حالات interior/exterior.</li>
+        <li>كل نوع blocker clearing يظهر في right و left.</li>
+        <li>الحالات التي تفشل لا تدخل training set.</li>
+      </ul>
+    </section>
+
+    <section id="commands">
+      <h2>8. أوامر التشغيل خطوة خطوة</h2>
+
+      <h3>8.1 Build</h3>
+      <pre><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select mfja_robot_control_config --allow-overriding mfja_robot_control_config
+source install/setup.bash</code></pre>
+
+      <h3>8.2 تشغيل PlanSys2 planner، اختياري لمسار --goal فقط</h3>
+      <p>
+        لا تحتاج هذه الخطوة لتشغيل الحالات 1-40. شغل PlanSys2 فقط إذا أردت تجربة
+        أهداف <code>--goal</code> أو <code>pddl_scenario_batch.yaml</code>.
+      </p>
+      <p>افتح Terminal خاص عند الحاجة:</p>
+      <pre><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch plansys2_planner planner_launch.py \
+  params_file:=/opt/ros/jazzy/share/plansys2_bringup/params/plansys2_params.yaml</code></pre>
+
+      <h3>8.3 Dry-run لحالة payload واحدة بدون Gazebo movement</h3>
+      <pre><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --case-id right_loaded_r2_s2_to_slot3_no_blocker \
+  --language-template-id loaded_shuttle_to_slot \
+  --dry-run \
+  --output /tmp/room315_case_dry_run.json
+
+python3 -m json.tool /tmp/room315_case_dry_run.json | sed -n '1,180p'</code></pre>
+
+      <h3>8.3b Dry-run لهدف PDDL عبر PlanSys2</h3>
+      <p>هذا المثال يحتاج Terminal PlanSys2 من الخطوة 8.2.</p>
+      <pre><code>ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+  --goal right_yaskawa_to_staubli \
+  --planner-backend plansys \
+  --planner-service /planner/get_plan \
+  --dry-run \
+  --output /tmp/room315_goal_dry_run.json
+
+python3 -m json.tool /tmp/room315_goal_dry_run.json | sed -n '1,180p'</code></pre>
+
+      <h3>8.4 مراجعة قائمة الحالات</h3>
+      <pre><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_review.py \
+  --review-dir /tmp/room315_payload_case_review
+
+sed -n '1,260p' /tmp/room315_payload_case_review/review_index.md</code></pre>
+
+      <h3>8.5 توليد Dataset نهائي من الحالات 1-40</h3>
+      <pre><code>cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --dataset-dir ~/room315_payload_cases_1_40_golden \
+  --results-dir /tmp/room315_payload_cases_1_40_golden \
+  --reset-dataset \
+  --gui false \
+  --launch-wait-s 8 \
+  --speed-scale 1.25
+
+sed -n '1,260p' /tmp/room315_payload_cases_1_40_golden/payload_case_batch_summary.json</code></pre>
+
+      <h3>8.6 عدّ episodes والتأكد من training rows</h3>
+      <pre><code>find ~/room315_payload_cases_1_40_golden/episodes -maxdepth 1 -mindepth 1 -type d | wc -l
+wc -l ~/room315_payload_cases_1_40_golden/meta/training_events.jsonl
+python3 -m json.tool ~/room315_payload_cases_1_40_golden/meta/training_events.jsonl.summary.json</code></pre>
+
+      <h3>8.7 فحص model_input boundary</h3>
+      <pre><code>python3 - &lt;&lt;'PY'
+import json
+from pathlib import Path
+
+path = Path.home() / "room315_payload_cases_1_40_golden/meta/training_events.jsonl"
+rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+required = {"language", "overhead_images", "last_command", "observable_state"}
+forbidden = {
+    "payload_state", "payload_type", "loaded", "raw_shuttle_states",
+    "expert_sensor_state", "target_shuttle_id", "current_segment",
+    "distance_to_switch", "normalized_position", "gazebo_pose"
+}
+
+bad = []
+for index, row in enumerate(rows):
+    model_input = row.get("model_input", {})
+    if set(model_input) != required:
+        bad.append((index, "wrong_keys", sorted(model_input)))
+        continue
+    serialized = json.dumps(model_input, sort_keys=True)
+    leaks = [token for token in forbidden if token in serialized]
+    if leaks:
+        bad.append((index, "leak", leaks))
+
+print("rows:", len(rows))
+print("bad:", bad[:10])
+assert not bad
+PY</code></pre>
+
+      <h3>8.8 Dataset report</h3>
+      <pre><code>ros2 run mfja_robot_control_config room_315_pddl_dataset_report.py \
+  ~/room315_payload_cases_1_40_golden \
+  --output ~/room315_payload_cases_1_40_golden_report.json
+
+python3 -m json.tool ~/room315_payload_cases_1_40_golden_report.json | sed -n '1,220p'</code></pre>
+    </section>
+
+    <section id="training">
+      <h2>9. كيف أدرّب المودل بناءً على البيانات؟</h2>
+      <p>
+        ملف التدريب الرئيسي هو:
+      </p>
+      <pre><code>~/room315_payload_cases_1_40_golden/meta/training_events.jsonl</code></pre>
+
+      <p>
+        كل row هو supervised sample:
+      </p>
+      <pre><code>input  = row["model_input"]
+target = row["action_vector"]  # preferred
+# or target = row["action"]    # readable JSON target</code></pre>
+
+      <h3>9.1 ماذا يدخل للمودل؟</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>يدخل للتدريب؟</th>
+            <th>ملاحظة</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>model_input.language</code></td>
+            <td class="ok">نعم</td>
+            <td>الجملة مثل: move the loaded shuttle to slot 3.</td>
+          </tr>
+          <tr>
+            <td><code>model_input.overhead_images</code></td>
+            <td class="ok">نعم</td>
+            <td>صور RGB من overhead cameras.</td>
+          </tr>
+          <tr>
+            <td><code>model_input.last_command</code></td>
+            <td class="ok">نعم</td>
+            <td>آخر فعل نفذه النظام، مهم للتسلسل الزمني.</td>
+          </tr>
+          <tr>
+            <td><code>model_input.observable_state</code></td>
+            <td class="ok">نعم</td>
+            <td>binary sensors 0/1 + switch states + stopper states فقط.</td>
+          </tr>
+          <tr>
+            <td><code>privileged_eval</code></td>
+            <td>لا</td>
+            <td>للتقييم/debug فقط.</td>
+          </tr>
+          <tr>
+            <td><code>payload_state / loaded / payload_type</code></td>
+            <td>لا</td>
+            <td>المودل يجب أن يستنتج loaded/empty من الصورة.</td>
+          </tr>
+          <tr>
+            <td><code>x/y/z/yaw/s/current_segment</code></td>
+            <td>لا</td>
+            <td>غير متاح بدقة في النظام الحقيقي.</td>
+          </tr>
+          <tr>
+            <td><code>PDDL facts / symbolic_plan</code></td>
+            <td>لا</td>
+            <td>هذه expert metadata وليست deployable input.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 كيف تقسم البيانات؟</h3>
+      <p>
+        لا تقسم rows عشوائياً فقط، لأن rows من نفس episode متشابهة جداً. الأفضل
+        أن يكون split حسب <code>case_id</code> أو episode. مثال عملي:
+      </p>
+      <ul>
+        <li><code>train</code>: أغلب الحالات السهلة والمتوسطة.</li>
+        <li><code>validation</code>: حالات مختلفة لكن مشابهة.</li>
+        <li><code>test</code>: حالات four-shuttle أو left/right غير موجودة بكثرة في train.</li>
+      </ul>
+
+      <p>تقسيم مقترح كبداية:</p>
+      <pre><code>train: cases 1-16 and 21-36
+val:   cases 17-18 and 37-38
+test:  cases 19-20 and 39-40</code></pre>
+
+      <p>
+        إذا أردت تقييم أقسى للـ <code>generalization</code>، اجعل test يحتوي
+        blocker patterns لم تظهر في train.
+      </p>
+
+      <h3>9.3 كيف يقرأ training code البيانات؟</h3>
+      <p>
+        لا يوجد في هذا repo سكربت تدريب نهائي لـ SmolVLA/LeRobot، لذلك هذا هو
+        شكل <code>dataloader</code> المطلوب بناؤه أو ربطه مع framework التدريب:
+      </p>
+      <pre><code>for row in training_events:
+    language = row["model_input"]["language"]
+    image_paths = row["model_input"]["overhead_images"]
+    last_command = row["model_input"]["last_command"]
+    observable_state = row["model_input"]["observable_state"]
+
+    # Load images relative to dataset_dir
+    right_image = load_image(dataset_dir / image_paths["right_rail_rgb"])
+    left_image = load_image(dataset_dir / image_paths["left_rail_rgb"])
+
+    target_action_vector = row["action_vector"]</code></pre>
+
+      <h3>9.4 ما هو target؟</h3>
+      <p>
+        الأفضل حالياً تدريب المودل ليخرج <code>action_vector</code> حسب
+        <code>schema-v3</code>. الحقول موجودة في:
+      </p>
+      <pre><code>mfja_robot_control_config/config/room_315_vla/action_space.yaml</code></pre>
+
+      <p>
+        <code>action_vector</code> يحتوي حقولاً مثل:
+      </p>
+      <ul>
+        <li><code>primitive_id</code>: WAIT, DONE, SET_SWITCHES, SET_STOPPERS, SHUTTLE_ON, STOP_NOW.</li>
+        <li><code>side_id</code>: right أو left.</li>
+        <li><code>shuttle_index</code>: أي shuttle مستهدف.</li>
+        <li><code>switch_mask/value</code>: أي switch يتغير وإلى ماذا.</li>
+        <li><code>stopper_mask/value</code>: أي stopper يتغير وإلى ماذا.</li>
+        <li><code>speed_mps</code>: سرعة الحركة.</li>
+        <li><code>wait_condition_id</code>: متى ننتظر أو نوقف.</li>
+        <li><code>target_id</code>: هدف الحركة أو الحساس.</li>
+        <li><code>coordination_mode</code>: normal/guarded/fleet coordination.</li>
+      </ul>
+
+      <h3>9.5 Loss function بشكل عملي</h3>
+      <p>
+        لأن أغلب الحقول discrete، الأفضل تدريبها كـ <strong>classification heads</strong>
+        بدل regression خام لكل vector. مثلاً:
+      </p>
+      <ul>
+        <li><code>primitive_id</code>: Cross Entropy.</li>
+        <li><code>side_id</code>: Cross Entropy.</li>
+        <li><code>switch_mask_A*</code>: Binary Cross Entropy.</li>
+        <li><code>switch_value_A*</code>: Cross Entropy.</li>
+        <li><code>stopper_mask_A*</code>: Binary Cross Entropy.</li>
+        <li><code>target_id</code>: Cross Entropy.</li>
+        <li><code>speed_mps</code>: Regression أو discrete bins.</li>
+      </ul>
+
+      <p>
+        إذا كنت تستخدم VLA جاهز ينتج JSON أو vector كنص، تستطيع تدريبه على
+        serialized <code>action_vector</code> أو <code>action</code>. لكن للتنفيذ
+        الآمن، يجب دائماً تمرير output إلى <code>VLA Supervisor</code>.
+      </p>
+
+      <h3>9.6 بعد التدريب، كيف نشغله؟</h3>
+      <ol>
+        <li>تشغل Room 315 مع VLA supervisor.</li>
+        <li>تشغل <code>room_315_real_vla_agent.py</code> أو endpoint HTTP.</li>
+        <li>ترسل goal طبيعي مثل: <code>move the loaded shuttle to slot 3</code>.</li>
+        <li>المودل يستقبل <code>model_input</code>.</li>
+        <li>يرجع <code>action_vector</code>.</li>
+        <li>Supervisor يقرر accept/reject.</li>
+        <li>تسجل metrics: success, rejected_action_rate, final_goal_satisfied.</li>
+      </ol>
+    </section>
+
+    <section id="validation">
+      <h2>10. كيف أتأكد أن البيانات صحيحة قبل التدريب؟</h2>
+
+      <h3>10.1 شرط عدد episodes</h3>
+      <p>
+        إذا شغلت 40 حالة ونجحت كلها، يجب أن ترى 40 episode. إذا رأيت أقل من 40،
+        هذا يعني أن بعض الحالات تحركت لكن recorder لم يكتب episode كامل، أو
+        validation رفضها.
+      </p>
+
+      <pre><code>find ~/room315_payload_cases_1_40_golden/episodes -maxdepth 1 -mindepth 1 -type d | wc -l</code></pre>
+
+      <h3>10.2 شرط summary</h3>
+      <p>افتح:</p>
+      <pre><code>~/room315_payload_cases_1_40_golden/meta/training_events.jsonl.summary.json</code></pre>
+      <p>القيم المطلوبة:</p>
+      <ul>
+        <li><code>skipped_episodes</code> يفضل أن يكون 0.</li>
+        <li><code>skip_reasons</code> يجب أن يكون فارغاً.</li>
+        <li><code>approved_episodes</code> يجب أن يساوي عدد الحالات الناجحة.</li>
+        <li><code>rows</code> يجب أن يكون أكبر من 0.</li>
+      </ul>
+
+      <h3>10.3 شرط model_input clean</h3>
+      <p>
+        <code>model_input</code> يجب أن يحتوي فقط:
+      </p>
+      <pre><code>language
+overhead_images
+last_command
+observable_state</code></pre>
+
+      <p>
+        وأي شيء مثل <code>loaded</code> أو <code>payload_type</code> أو exact pose
+        يجب أن يبقى خارج <code>model_input</code>.
+      </p>
+
+      <h3>10.4 شرط visual sanity</h3>
+      <p>
+        قبل اعتماد dataset للتدريب، افتح Gazebo أثناء review أو شغل batch صغير
+        مع <code>--gui true</code> لبعض الحالات:
+      </p>
+      <pre><code>ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --start-at 37 \
+  --stop-after 40 \
+  --dataset-dir ~/room315_payload_review_visual \
+  --results-dir /tmp/room315_payload_review_visual \
+  --reset-dataset \
+  --gui true \
+  --launch-wait-s 8</code></pre>
+
+      <p>
+        إذا رأيت حالة تتحرك بشكل خاطئ، لا تدرب عليها. أخبرني case number حتى
+        نصلح YAML أو plan translation.
+      </p>
+    </section>
+
+    <section id="extend">
+      <h2>11. كيف أضيف حالات جديدة بطريقة صحيحة؟</h2>
+      <p>
+        عندما تضيف حالات جديدة، فكر بها كـ <strong>coverage expansion</strong>
+        وليس مجرد زيادة عدد. اسأل:
+      </p>
+      <ul>
+        <li>هل هذه الحالة تضيف blocker pattern جديد؟</li>
+        <li>هل تضيف target slot جديد؟</li>
+        <li>هل تضيف rail side جديد؟</li>
+        <li>هل تضيف ambiguity في loaded shuttle selection؟</li>
+        <li>هل تضيف interior-loop maneuver غير موجود؟</li>
+      </ul>
+
+      <h3>11.1 خطوات إضافة case</h3>
+      <ol>
+        <li>افتح <code>payload_training_cases.yaml</code>.</li>
+        <li>انسخ case مشابه.</li>
+        <li>غير <code>case_id</code> و <code>title</code>.</li>
+        <li>حدد <code>side</code> و <code>target_slot</code>.</li>
+        <li>حدد <code>loaded_shuttles</code>.</li>
+        <li>حدد <code>start_slots_by_shuttle</code>.</li>
+        <li>إذا يوجد blocker واحد، أضف <code>blocker_shuttle</code> وحقول <code>blocker_clear_*</code>.</li>
+        <li>إذا توجد عدة blockers، أضف <code>clearance_steps</code>.</li>
+        <li>اكتب <code>expected</code> بدقة.</li>
+        <li>شغل dry-run.</li>
+        <li>شغل case واحدة في Gazebo.</li>
+        <li>إذا نجحت، أضفها إلى batch النهائي.</li>
+      </ol>
+
+      <h3>11.2 لا تخلط بين model input و metadata</h3>
+      <p>
+        يمكن أن تسجل metadata كثيرة خارج <code>model_input</code>:
+      </p>
+      <ul>
+        <li><code>target_shuttle_id</code></li>
+        <li><code>payload_present</code></li>
+        <li><code>payload_type</code></li>
+        <li><code>visible_marker_count</code></li>
+        <li><code>symbolic_plan</code></li>
+        <li><code>pddl_goal</code></li>
+      </ul>
+      <p>
+        لكنها لا تدخل للمودل. المودل يتعلم loaded/empty من الصورة، ويستخدم فقط
+        binary sensors/switches/stoppers لأنها متوفرة في النظام الحقيقي.
+      </p>
+
+      <h3>11.3 الخطة المنطقية القادمة</h3>
+      <ol>
+        <li>ولّد <code>room315_payload_cases_1_40_golden</code> بعد التعديلات الأخيرة.</li>
+        <li>تأكد أن لديك 40 episodes و summary نظيف.</li>
+        <li>اعمل baseline تدريب أول على الحالات 1-40.</li>
+        <li>قيّم الفشل: هل يفشل في left؟ blockers؟ interior loop؟ selection ambiguity؟</li>
+        <li>أضف حالات جديدة فقط للمناطق التي فشل فيها المودل.</li>
+        <li>كرر: generate -> validate -> train -> evaluate.</li>
+      </ol>
+
+      <div class="callout">
+        بهذه الطريقة، يصبح <code>room_315_pddl_scenario_generator.py</code> ماكينة توليد بيانات ذكية:
+        لا نكتب demonstrations يدوياً، بل نكتب cases/rules، ثم نجعل النظام ينتج
+        أمثلة صحيحة ومتنوعة وقابلة للتحقق.
+      </div>
+    </section>
+  </main>
+</body>
+</html>

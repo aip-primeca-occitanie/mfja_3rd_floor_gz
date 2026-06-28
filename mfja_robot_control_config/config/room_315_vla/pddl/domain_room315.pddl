@@ -13,10 +13,8 @@
     shuttle
     station
     slot
-    block
     switch_group
     stopper_group
-    payload
   )
 
   (:predicates
@@ -42,20 +40,15 @@
     ; The requested shuttle task has finished at the target station.
     (task_done ?s - shuttle ?station - station)
 
-    ; Multi-shuttle extensions: identity, slot/block occupancy, reservations,
-    ; payload state, and relative ordering. These are planner/supervisor
-    ; metadata only and are not model_input.
+    ; Multi-shuttle extensions: identity, slot occupancy, payload state, and
+    ; relative ordering. These are planner/supervisor metadata only and are not
+    ; model_input. Runtime rail motion uses segment topology outside PDDL.
     (shuttle_on_side ?s - shuttle ?side - rail_side)
     (shuttle_at_slot ?s - shuttle ?slot - slot)
-    (shuttle_at_block ?s - shuttle ?block - block)
-    (block_free ?block - block)
-    (block_reserved_by ?block - block ?s - shuttle)
     (slot_free ?slot - slot)
     (slot_reserved_by ?slot - slot ?s - shuttle)
     (loaded ?s - shuttle)
     (empty ?s - shuttle)
-    (carrying_payload ?s - shuttle)
-    (payload_on_shuttle ?p - payload ?s - shuttle)
     (route_clear ?s - shuttle ?from - station ?to - station)
     (switches_ready_for ?s - shuttle)
     (stoppers_open_for ?s - shuttle)
@@ -164,36 +157,6 @@
     :effect (task_assigned ?s ?station)
   )
 
-  ; Reserve the next symbolic rail block for one shuttle.
-  (:action reserve_next_block
-    :parameters (
-      ?s - shuttle
-      ?from - block
-      ?to - block
-    )
-    :precondition (and
-      (shuttle_at_block ?s ?from)
-      (block_free ?to)
-    )
-    :effect (and
-      (block_reserved_by ?to ?s)
-      (not (block_free ?to))
-    )
-  )
-
-  ; Release a symbolic rail block after the shuttle leaves it.
-  (:action release_block
-    :parameters (
-      ?s - shuttle
-      ?block - block
-    )
-    :precondition (block_reserved_by ?block ?s)
-    :effect (and
-      (block_free ?block)
-      (not (block_reserved_by ?block ?s))
-    )
-  )
-
   ; Prepare switches for one shuttle, keeping identity in the symbolic plan.
   (:action prepare_switches_for_shuttle
     :parameters (
@@ -229,24 +192,6 @@
     )
   )
 
-  ; Move one shuttle from a reserved block into the next block.
-  (:action move_shuttle_to_block
-    :parameters (
-      ?s - shuttle
-      ?from - block
-      ?to - block
-    )
-    :precondition (and
-      (shuttle_at_block ?s ?from)
-      (block_reserved_by ?to ?s)
-    )
-    :effect (and
-      (not (shuttle_at_block ?s ?from))
-      (shuttle_at_block ?s ?to)
-      (block_free ?from)
-    )
-  )
-
   ; Stop a shuttle at a named station slot.
   (:action stop_shuttle_at_slot
     :parameters (
@@ -260,33 +205,14 @@
     )
   )
 
-  ; Explicit wait action used when a block/slot is not yet clear.
+  ; Explicit wait action used when a slot is not yet clear.
   (:action wait_for_clearance
     :parameters (
       ?s - shuttle
-      ?block - block
+      ?slot - slot
     )
-    :precondition (not (block_free ?block))
+    :precondition (not (slot_free ?slot))
     :effect (waiting_for_clearance ?s)
   )
 
-  ; Payload handoff placeholder for future robot/rail integration.
-  (:action transfer_payload_if_applicable
-    :parameters (
-      ?p - payload
-      ?from - shuttle
-      ?to - shuttle
-    )
-    :precondition (payload_on_shuttle ?p ?from)
-    :effect (and
-      (not (payload_on_shuttle ?p ?from))
-      (payload_on_shuttle ?p ?to)
-      (not (loaded ?from))
-      (empty ?from)
-      (not (empty ?to))
-      (loaded ?to)
-      (not (carrying_payload ?from))
-      (carrying_payload ?to)
-    )
-  )
 )

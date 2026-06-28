@@ -12,6 +12,7 @@ review_gate:
     - model_input.language
     - model_input.overhead_images
     - model_input.last_command
+    - model_input.observable_state
 
 cases:
   - case_id: right_loaded_r1_s1_to_slot3_no_blocker

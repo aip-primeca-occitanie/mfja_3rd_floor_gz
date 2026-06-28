@@ -37,17 +37,22 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'stop_shuttle',
     'finish_task',
 }
-MODEL_INPUT_ALLOWED_KEYS = {'language', 'overhead_images', 'last_command'}
+MODEL_INPUT_ALLOWED_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 FORBIDDEN_MODEL_INPUT_KEYS = {
+    'active_position_sensors',
+    'active_sensors',
     'auxiliary_targets',
     'binary_sensor_bits',
     'block_reservations',
+    'current_segment',
     'distance_to_switch',
     'evaluator_label',
     'evaluator_labels',
+    'expert_sensor_state',
     'gazebo_pose',
     'identity_tracks',
     'model_input_exposure',
+    'normalized_position',
     'normalized_rail_position',
     'observation.state',
     'payload',
@@ -64,12 +69,19 @@ FORBIDDEN_MODEL_INPUT_KEYS = {
     'plansys_trace',
     'privileged_eval',
     'raw_shuttle_states',
+    's',
+    'segment',
     'shuttle_identity_tracks',
     'status',
     'stopper_states',
     'structured_rail_state',
     'switch_states',
+    'target_shuttle_id',
     'true_shuttle_segment',
+    'x',
+    'y',
+    'yaw',
+    'z',
 }
 SAFETY_COUNT_FIELDS = (
     'wrong_shuttle_command_count',

@@ -223,6 +223,7 @@ MODEL_INPUT_FIELDS = [
     'language',
     'overhead_images',
     'last_command',
+    'observable_state',
 ]
 START_LAST_COMMAND = {'action': 'START'}
 PRIVILEGED_EVAL_FIELDS = [
@@ -1128,6 +1129,20 @@ def _stopper_states(status: dict[str, Any]) -> dict[str, dict[str, str]]:
     return states
 
 
+def _observable_state_from_status(status: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
+    sensor_bits = _binary_sensor_bits(status)
+    switch_states = _switch_states(status)
+    stopper_states = _stopper_states(status)
+    return {
+        side: {
+            'sensors': dict(sensor_bits.get(side, {})),
+            'switches': dict(switch_states.get(side, {})),
+            'stoppers': dict(stopper_states.get(side, {})),
+        }
+        for side in SIDES
+    }
+
+
 def _normalize_device_assignment_value(raw: Any, *, value_kind: str) -> str:
     if value_kind == 'switch':
         return _normalize_switch_state(raw)
@@ -1296,11 +1311,12 @@ def _model_input_from_status(
     sensor_event_times: dict[str, float | None] | None = None,
     now_s: float | None = None,
 ) -> dict[str, Any]:
-    _ = status, sensor_event_times, now_s
+    _ = sensor_event_times, now_s
     return {
         'language': str(language or ''),
         'overhead_images': _overhead_images(overhead_images),
         'last_command': _normalize_model_last_command(last_command),
+        'observable_state': _observable_state_from_status(status),
     }
 
 
@@ -1631,7 +1647,7 @@ def _validated_model_input(model_input: dict[str, Any]) -> dict[str, Any]:
     if not model_input_is_clean(model_input):
         raise ValueError(
             'Room 315 VLA model_input boundary violation: expected only '
-            'language, overhead_images, and last_command without privileged fields'
+            'language, overhead_images, last_command, and observable_state without privileged fields'
         )
     return model_input
 
@@ -2375,10 +2391,12 @@ class Room315VlaDatasetRecorder(Node):
             'model_input_features': MODEL_INPUT_FIELDS,
             'model_input_note': (
                 'model_input is the only model-facing observation object. It contains '
-                'only language, overhead image references, and last_command. Binary '
-                'sensor bits, switch/stopper states, shuttle command state, exact '
-                'Gazebo pose, true segment, distance-to-switch, and normalized '
-                'position values are excluded from policy input.'
+                'only language, overhead image references, last_command, and '
+                'observable_state. observable_state contains deployable binary '
+                'sensor bits plus current switch/stopper states. Shuttle command '
+                'state, exact Gazebo pose, true segment, distance-to-switch, '
+                'normalized position values, payload labels, and planner metadata '
+                'are excluded from policy input.'
             ),
             'privileged_eval_fields': PRIVILEGED_EVAL_FIELDS,
             'planning_metadata_fields': PLANNING_METADATA_FIELDS,

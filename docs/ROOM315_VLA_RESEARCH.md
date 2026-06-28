@@ -63,7 +63,7 @@ auditing, and evaluation, but they are not input to the learned model. The polic
 still learns:
 
 ```text
-model_input.language + model_input.overhead_images + model_input.last_command
+model_input.language + model_input.overhead_images + model_input.last_command + model_input.observable_state
   -> action_vector
 ```
 
@@ -100,8 +100,8 @@ coordination_mode
 ```
 
 This is still a direct primitive-action target, not a route template and not a
-PDDL action. The model-facing input remains exactly `language`,
-`overhead_images`, and `last_command`.
+PDDL action. The model-facing input remains deployable-only: `language`,
+`overhead_images`, `last_command`, and `observable_state`.
 
 ## Visual Shuttle Identity Under Occlusion
 
@@ -129,23 +129,27 @@ Training and online inference must use only `model_input`. Its schema is version
 language
 overhead_images
 last_command
+observable_state
 ```
 
-Binary sensor bits, switch/stopper states, shuttle command state,
+`observable_state` contains only the real deploy-time binary sensor bits plus
+current switch and stopper states. Shuttle command state,
 time-since-last-sensor-event, exact Gazebo pose, true shuttle segment,
-arc-length position, distance-to-switch, normalized rail position, and
-reset/evaluation internals are not part of `model_input`. Those values may
-appear only under `privileged_eval`, `structured_rail_state`, `observation.state`,
-or debug fields. Use them for expert execution, offline scoring, oracle
-baselines, reset labels, and auditing; do not feed them to a learned VLA policy.
+arc-length position, distance-to-switch, normalized rail position, payload
+labels, and reset/evaluation internals are not part of `model_input`. Those
+values may appear only under `privileged_eval`, `structured_rail_state`,
+`observation.state`, or debug fields. Use them for expert execution, offline
+scoring, oracle baselines, reset labels, and auditing; do not feed them to a
+learned VLA policy.
 
 ## Why Images Matter
 
-The rail sensors are sparse binary sensors and are still useful for generating
-correct demonstrations. They are not model-facing policy input. The overhead
-images provide the visual signal the policy must use: shuttle location between
-sensors, independently movable right/left obstacle markers, and station
-occupancy inferred from the black shuttle covering or revealing slot fiducials.
+The rail sensors are sparse binary sensors and are useful model-facing
+observations because the real system exposes them. The overhead images still
+provide the visual signal the policy must use for shuttle location between
+sensors, loaded/empty payload status, independently movable right/left obstacle
+markers, and station occupancy inferred from the black shuttle covering or
+revealing slot fiducials.
 Station-specific colored strips and green inspection disks are not used as
 model-facing visual shortcuts.
 
@@ -400,6 +404,7 @@ The deployable model input remains exactly:
 model_input.language
 model_input.overhead_images
 model_input.last_command
+model_input.observable_state
 ```
 
 Payload state, payload type, visible marker count, expected visible IDs,

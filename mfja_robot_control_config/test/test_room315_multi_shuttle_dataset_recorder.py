@@ -101,7 +101,7 @@ def test_payload_occlusion_metadata_is_extracted_outside_model_input():
     )
     serialized = json.dumps(model_input, sort_keys=True)
 
-    assert set(model_input) == {'language', 'overhead_images', 'last_command'}
+    assert set(model_input) == {'language', 'overhead_images', 'last_command', 'observable_state'}
     for forbidden in (
         'target_shuttle_id',
         'visible_marker_count',

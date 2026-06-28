@@ -31,6 +31,12 @@ def test_action_schema_v3_contains_shuttle_and_coordination_fields():
     assert config['schema_version'] == 3
     assert config['action_schema_version'] == 3
     assert config['model_input_schema_version'] == multi.MODEL_INPUT_SCHEMA_VERSION
+    assert config['model_input_fields'] == [
+        'language',
+        'overhead_images',
+        'last_command',
+        'observable_state',
+    ]
     assert config['action_vector_fields'] == multi.ACTION_VECTOR_V3_FIELDS
     assert 'shuttle_index' in multi.ACTION_VECTOR_V3_FIELDS
     assert 'coordination_mode' in multi.ACTION_VECTOR_V3_FIELDS

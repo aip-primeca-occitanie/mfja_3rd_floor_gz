@@ -81,12 +81,28 @@ def test_agent_model_input_schema_v3_excludes_sensor_and_privileged_state():
 
     assert agent_module.MODEL_INPUT_SCHEMA_VERSION == 3
     assert set(model_input) == set(agent_module.MODEL_INPUT_FIELDS)
-    assert set(model_input) == {'language', 'overhead_images', 'last_command'}
+    assert set(model_input) == {'language', 'overhead_images', 'last_command', 'observable_state'}
     assert set(model_input['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
     assert model_input['last_command'] == {
         'action': 'switches',
         'side': 'right',
         'switches': {'A3': 'INTERIOR'},
+    }
+    observable = model_input['observable_state']
+    assert observable['right']['sensors']['DZI2R'] == 1
+    assert observable['right']['sensors']['DZI3R'] == 0
+    assert observable['left']['sensors']['DA3IL'] == 1
+    assert observable['right']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'INTERIOR',
+    }
+    assert observable['right']['stoppers'] == {
+        'A1': 'open',
+        'A2': 'closed',
+        'A3': 'open',
+        'A4': 'closed',
     }
 
     serialized = json.dumps(model_input, sort_keys=True)
@@ -96,9 +112,6 @@ def test_agent_model_input_schema_v3_excludes_sensor_and_privileged_state():
         'stopper_states',
         'shuttle_command_state',
         'time_since_last_sensor_event',
-        'DZI2R',
-        'DZI3R',
-        'DA3IL',
     ):
         assert sensor_shortcut not in serialized
     assert 'supervisor_status' not in serialized
@@ -158,8 +171,9 @@ def test_http_plan_sends_only_schema_v3_model_input_to_provider():
     assert set(payload['model_input']['overhead_images']) == {'right_rail_rgb', 'left_rail_rgb'}
     serialized = json.dumps(payload['model_input'], sort_keys=True)
     assert 'A12E' not in serialized
-    assert 'DZI2R' not in serialized
     assert 'binary_sensor_bits' not in serialized
+    assert payload['model_input']['observable_state']['right']['sensors']['DZI2R'] == 1
+    assert payload['model_input']['observable_state']['right']['switches']['A2'] == 'INTERIOR'
 
 
 def test_agent_accepts_event_level_action_vector_response():

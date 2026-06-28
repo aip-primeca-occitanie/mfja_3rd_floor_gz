@@ -1,7 +1,7 @@
 version: 1
 description: Room 315 VLA payload and identity-occlusion scenarios.
 model_input_boundary:
-  model_input_fields: [language, overhead_images, last_command]
+  model_input_fields: [language, overhead_images, last_command, observable_state]
   payload_and_identity_metadata_exposure: outside_model_input
 payload_zone:
   center_zone_m:

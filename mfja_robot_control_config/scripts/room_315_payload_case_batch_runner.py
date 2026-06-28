@@ -49,6 +49,16 @@ def _as_bool_arg(value: str) -> bool:
     raise argparse.ArgumentTypeError(f'expected true/false, got {value!r}')
 
 
+def _positive_float_arg(value: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError(f'expected a number, got {value!r}') from error
+    if parsed <= 0.0:
+        raise argparse.ArgumentTypeError(f'expected a positive number, got {value!r}')
+    return parsed
+
+
 def _launch_yaml_string(value: Any) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
@@ -178,6 +188,7 @@ def _scenario_generator_cmd(
         cmd.extend([
             '--arrival-timeout-s',
             f'{float(arrival_timeout_s):.4g}',
+            '--require-dataset-recorder',
             '--quiet',
             '--execute',
         ])
@@ -185,6 +196,17 @@ def _scenario_generator_cmd(
             cmd.extend(['--output', str(output_path)])
         return cmd
     raise ValueError(f'unknown scenario generator mode {mode!r}')
+
+
+def _case_speed(
+    case: dict[str, Any],
+    *,
+    default_speed: float,
+    speed_scale: float,
+) -> float:
+    raw_speed = case.get('speed', case.get('speed_mps', default_speed))
+    speed = float(raw_speed if raw_speed is not None else default_speed)
+    return speed * float(speed_scale)
 
 
 def _run_text_command(
@@ -266,6 +288,55 @@ def _execution_success(output_path: Path) -> tuple[bool, str]:
     if bool(execution.get('success', False)):
         return True, ''
     return False, str(execution.get('failure_reason') or 'execution failed')
+
+
+def _episode_event_files(dataset_dir: Path) -> set[Path]:
+    return set((dataset_dir / 'episodes').glob('episode_*/events.jsonl'))
+
+
+def _episode_ready(event_file: Path) -> bool:
+    if not event_file.is_file():
+        return False
+    try:
+        if event_file.stat().st_size <= 0:
+            return False
+    except OSError:
+        return False
+    episode_dir = event_file.parent
+    return (episode_dir / 'episode.json').is_file() and (episode_dir / 'validation.json').is_file()
+
+
+def _wait_for_new_episode(
+    dataset_dir: Path,
+    before: set[Path],
+    *,
+    timeout_s: float,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + max(float(timeout_s), 0.0)
+    latest_new: list[Path] = []
+    while True:
+        current = _episode_event_files(dataset_dir)
+        latest_new = sorted(current - before)
+        ready = [event_file for event_file in latest_new if _episode_ready(event_file)]
+        if ready:
+            event_file = ready[-1]
+            return {
+                'ready': True,
+                'episode_id': event_file.parent.name,
+                'events_jsonl': str(event_file),
+                'episode_json': str(event_file.parent / 'episode.json'),
+                'validation_json': str(event_file.parent / 'validation.json'),
+                'event_file_count': len(current),
+            }
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(0.25)
+    return {
+        'ready': False,
+        'reason': 'dataset recorder did not write a complete episode for the successful case',
+        'new_event_files': [str(path) for path in latest_new],
+        'event_file_count': len(_episode_event_files(dataset_dir)),
+    }
 
 
 def _launch_case(
@@ -359,12 +430,17 @@ def run_cases(args: argparse.Namespace) -> dict[str, Any]:
 
     for ordinal, (case_number, case) in enumerate(selected, start=1):
         case_id = str(case.get('case_id') or '').strip()
-        case_speed = float(case.get('speed', case.get('speed_mps', args.speed)) or args.speed)
+        case_speed = _case_speed(
+            case,
+            default_speed=args.speed,
+            speed_scale=args.speed_scale,
+        )
         result: dict[str, Any] = {
             'case_number': case_number,
             'run_index': ordinal,
             'case_id': case_id,
             'title': str(case.get('title') or ''),
+            'speed': case_speed,
             'success': False,
         }
         launch_process: subprocess.Popen | None = None
@@ -425,6 +501,7 @@ def run_cases(args: argparse.Namespace) -> dict[str, Any]:
             output_path = results_dir / f'{case_number:02d}_{case_id}_execute.json'
             execute_log = results_dir / f'{case_number:02d}_{case_id}_execute.log'
             print('Executing scenario in Gazebo...', flush=True)
+            episode_files_before = _episode_event_files(dataset_dir)
             execute = _run_text_command(
                 _scenario_generator_cmd(
                     case_id=case_id,
@@ -453,8 +530,24 @@ def run_cases(args: argparse.Namespace) -> dict[str, Any]:
                 summary['results'].append(result)
                 continue
             success, reason = _execution_success(output_path)
+            episode_check: dict[str, Any] = {}
+            if success:
+                episode_check = _wait_for_new_episode(
+                    dataset_dir,
+                    episode_files_before,
+                    timeout_s=args.episode_write_timeout_s,
+                )
+                result['episode_check'] = episode_check
+                if not bool(episode_check.get('ready', False)):
+                    success = False
+                    reason = str(
+                        episode_check.get('reason')
+                        or 'dataset recorder did not write an episode'
+                    )
             result['success'] = success
             result['failure_reason'] = reason
+            if episode_check.get('episode_id'):
+                result['episode_id'] = episode_check['episode_id']
             print(
                 f'{"OK" if success else "FAILED"} case {case_number}: {case_id}'
                 + (f' - {reason}' if reason else ''),
@@ -536,7 +629,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--preflight-timeout-s', type=float, default=60.0)
     parser.add_argument('--command-timeout-s', type=float, default=30.0)
     parser.add_argument('--arrival-timeout-s', type=float, default=120.0)
+    parser.add_argument('--episode-write-timeout-s', type=float, default=10.0)
     parser.add_argument('--speed', type=float, default=0.3, help='Default move_shuttle speed for cases without speed.')
+    parser.add_argument(
+        '--speed-scale',
+        type=_positive_float_arg,
+        default=1.0,
+        help='Multiply every case speed without editing the case YAML; try 1.25 before larger values.',
+    )
     parser.add_argument('--keep-last-launch', action='store_true')
     parser.add_argument('--skip-export', action='store_true')
     parser.add_argument('--dry-run', action='store_true')

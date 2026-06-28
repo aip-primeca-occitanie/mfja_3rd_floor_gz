@@ -118,6 +118,7 @@ MODEL_INPUT_FIELDS = (
     'language',
     'overhead_images',
     'last_command',
+    'observable_state',
 )
 OVERHEAD_IMAGE_NAMES = {'right_rail_rgb', 'left_rail_rgb'}
 
@@ -212,6 +213,20 @@ def _stopper_states(status: dict[str, Any]) -> dict[str, dict[str, str]]:
             for name in DEVICE_NAMES
         }
     return states
+
+
+def _observable_state_from_status(status: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
+    sensor_bits = _binary_sensor_bits(status)
+    switch_states = _switch_states(status)
+    stopper_states = _stopper_states(status)
+    return {
+        side: {
+            'sensors': dict(sensor_bits.get(side, {})),
+            'switches': dict(switch_states.get(side, {})),
+            'stoppers': dict(stopper_states.get(side, {})),
+        }
+        for side in SIDES
+    }
 
 
 def _overhead_images(image_refs: dict[str, Any]) -> dict[str, Any]:
@@ -359,16 +374,17 @@ def _model_input_from_status(
     sensor_event_times: dict[str, float | None] | None = None,
     now_s: float | None = None,
 ) -> dict[str, Any]:
-    _ = status, sensor_event_times, now_s
+    _ = sensor_event_times, now_s
     model_input = {
         'language': str(language or ''),
         'overhead_images': _overhead_images(overhead_images),
         'last_command': _normalize_last_command(last_command),
+        'observable_state': _observable_state_from_status(status),
     }
     if not model_input_is_clean(model_input):
         raise ValueError(
-            'Room 315 VLA model_input boundary violation: only language, '
-            'overhead_images, and last_command may be sent to the model'
+            'Room 315 VLA model_input boundary violation: only language, overhead_images, '
+            'last_command, and observable_state may be sent to the model'
         )
     return model_input
 
