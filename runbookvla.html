@@ -35,6 +35,11 @@
       border-left: 4px solid #2f6fed;
       background: #eef4ff;
     }
+    .warning {
+      padding: 12px 14px;
+      border-left: 4px solid #c47f00;
+      background: #fff7e8;
+    }
   </style>
 </head>
 <body>
@@ -44,8 +49,24 @@
       The active Room 315 workflow is the curated 40 payload training cases.
       Legacy station-task orchestration has been removed from the runtime path.
     </p>
+    <p class="warning">
+      Keep the golden dataset immutable when testing. Use fresh test output
+      directories and only replace a golden dataset after the new run is fully
+      approved.
+    </p>
 
-    <h2>Launch Room 315</h2>
+    <h2>Every New Terminal</h2>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash</code></pre>
+
+    <h2>Optional Rebuild After Code Changes</h2>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select mfja_robot_control_config
+source install/setup.bash</code></pre>
+
+    <h2>Manual Launch Room 315</h2>
     <pre><code>ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   start_paused:=false \
@@ -78,11 +99,185 @@
   --quiet \
   --execute</code></pre>
 
-    <h2>Run The 40 Cases</h2>
-    <pre><code>ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml \
-  --dataset-dir ~/room315_payload_all_cases \
-  --results-dir /tmp/room315_payload_case_batch</code></pre>
+    <h2>Test The 40 Golden Cases</h2>
+    <h3>Terminal 1 - Run The Full 40-Case Batch</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --case-config /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml \
+  --dataset-dir /home/tiago/room315_payload_cases_1_40_test \
+  --results-dir /tmp/room315_payload_cases_1_40_test \
+  --reset-dataset \
+  --gui true \
+  --launch-wait-s 15 \
+  --preflight-timeout-s 90 \
+  --command-timeout-s 45 \
+  --arrival-timeout-s 240 \
+  --episode-write-timeout-s 20</code></pre>
+
+    <h3>Terminal 2 - Check The 40-Case Result After Terminal 1 Finishes</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+jq '{case_count, successes, failures, failed_cases}' \
+  /tmp/room315_payload_cases_1_40_test/payload_case_batch_summary.json
+
+jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
+  /home/tiago/room315_payload_cases_1_40_test/meta/training_events.jsonl.summary.json
+
+find /home/tiago/room315_payload_cases_1_40_test/episodes \
+  -maxdepth 2 \
+  -name validation.json \
+  -print0 | xargs -0 jq -r \
+  'select((.approved_for_training != true) or (.validation_status != "approved") or (.task_success != true)) | input_filename + " " + (.failure_reason // "")'</code></pre>
+
+    <h2>Test The 160 Expanded Cases</h2>
+    <p>
+      The expanded case file is local-only:
+      <code>/home/tiago/payload_training_cases_expanded_160_speed_sweep.yaml</code>.
+      It contains the validated 40 case families repeated across four speeds:
+      0.06, 0.08, 0.10, and 0.12 m/s.
+    </p>
+
+    <h3>Terminal 1 - Smoke Test The First 4 Expanded Cases</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --case-config /home/tiago/payload_training_cases_expanded_160_speed_sweep.yaml \
+  --start-at 1 \
+  --stop-after 4 \
+  --dataset-dir /home/tiago/room315_payload_expanded_test_4 \
+  --results-dir /tmp/room315_payload_expanded_test_4 \
+  --reset-dataset \
+  --gui true \
+  --launch-wait-s 15 \
+  --preflight-timeout-s 90 \
+  --command-timeout-s 45 \
+  --arrival-timeout-s 240 \
+  --episode-write-timeout-s 20</code></pre>
+
+    <h3>Terminal 2 - Check The 4-Case Smoke Test</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+jq '{case_count, successes, failures, failed_cases}' \
+  /tmp/room315_payload_expanded_test_4/payload_case_batch_summary.json
+
+jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
+  /home/tiago/room315_payload_expanded_test_4/meta/training_events.jsonl.summary.json</code></pre>
+
+    <h3>Terminal 1 - Run The Full 160-Case Batch</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --case-config /home/tiago/payload_training_cases_expanded_160_speed_sweep.yaml \
+  --dataset-dir /home/tiago/room315_payload_expanded_160_speed_sweep \
+  --results-dir /tmp/room315_payload_expanded_160_speed_sweep \
+  --reset-dataset \
+  --gui true \
+  --launch-wait-s 15 \
+  --preflight-timeout-s 90 \
+  --command-timeout-s 45 \
+  --arrival-timeout-s 240 \
+  --episode-write-timeout-s 20</code></pre>
+
+    <h3>Terminal 2 - Check The 160-Case Result After Terminal 1 Finishes</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+jq '{case_count, successes, failures, failed_cases}' \
+  /tmp/room315_payload_expanded_160_speed_sweep/payload_case_batch_summary.json
+
+jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
+  /home/tiago/room315_payload_expanded_160_speed_sweep/meta/training_events.jsonl.summary.json
+
+find /home/tiago/room315_payload_expanded_160_speed_sweep/episodes \
+  -maxdepth 2 \
+  -name validation.json \
+  -print0 | xargs -0 jq -r \
+  'select((.approved_for_training != true) or (.validation_status != "approved") or (.task_success != true)) | input_filename + " " + (.failure_reason // "")'</code></pre>
+
+    <h2>Test The Decision-Diversity V2 Cases</h2>
+    <p>
+      The decision-diversity case file is local-only:
+      <code>/home/tiago/payload_training_cases_expanded_decision_v2.yaml</code>.
+      It contains 166 new cases focused on multi-blocker permutations,
+      nearest-loaded shuttle selection, single-blocker identity variants, and
+      underrepresented slot routes.
+    </p>
+
+    <h3>Terminal 1 - Smoke Test The First 4 Decision V2 Cases</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --case-config /home/tiago/payload_training_cases_expanded_decision_v2.yaml \
+  --start-at 1 \
+  --stop-after 4 \
+  --dataset-dir /home/tiago/room315_payload_decision_v2_test_4 \
+  --results-dir /tmp/room315_payload_decision_v2_test_4 \
+  --reset-dataset \
+  --gui true \
+  --launch-wait-s 15 \
+  --preflight-timeout-s 90 \
+  --command-timeout-s 45 \
+  --arrival-timeout-s 240 \
+  --episode-write-timeout-s 20</code></pre>
+
+    <h3>Terminal 2 - Check The Decision V2 Smoke Test</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+jq '{case_count, successes, failures, failed_cases}' \
+  /tmp/room315_payload_decision_v2_test_4/payload_case_batch_summary.json
+
+jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
+  /home/tiago/room315_payload_decision_v2_test_4/meta/training_events.jsonl.summary.json</code></pre>
+
+    <h3>Terminal 1 - Run The Full 166-Case Decision V2 Batch</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
+  --case-config /home/tiago/payload_training_cases_expanded_decision_v2.yaml \
+  --dataset-dir /home/tiago/room315_payload_expanded_decision_v2 \
+  --results-dir /tmp/room315_payload_expanded_decision_v2 \
+  --reset-dataset \
+  --gui true \
+  --launch-wait-s 15 \
+  --preflight-timeout-s 90 \
+  --command-timeout-s 45 \
+  --arrival-timeout-s 240 \
+  --episode-write-timeout-s 20</code></pre>
+
+    <h3>Terminal 2 - Check The Decision V2 Result After Terminal 1 Finishes</h3>
+    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+jq '{case_count, successes, failures, failed_cases}' \
+  /tmp/room315_payload_expanded_decision_v2/payload_case_batch_summary.json
+
+jq '{approved_episodes, skipped_episodes, skipped_rows, skip_reasons}' \
+  /home/tiago/room315_payload_expanded_decision_v2/meta/training_events.jsonl.summary.json
+
+find /home/tiago/room315_payload_expanded_decision_v2/episodes \
+  -maxdepth 2 \
+  -name validation.json \
+  -print0 | xargs -0 jq -r \
+  'select((.approved_for_training != true) or (.validation_status != "approved") or (.task_success != true)) | input_filename + " " + (.failure_reason // "")'</code></pre>
   </main>
 </body>
 </html>

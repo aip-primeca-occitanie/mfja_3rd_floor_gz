@@ -30,11 +30,16 @@ from room_315_pddl_validation_gate import build_validation_result
 from room_315_pddl_validation_gate import runtime_failure_reason
 from room_315_pddl_validation_gate import validate_candidate_scenario
 from room_315_pddl_validation_gate import write_validation_result
+from room_315_multi_shuttle import load_rail_topology
+from room_315_multi_shuttle import normalize_shuttle_ref
+from room_315_multi_shuttle import route_blockers_from_rails
+from room_315_multi_shuttle import route_blocks_between_slots
 
 
 REPO_ROOT = SCRIPT_DIR.parents[1]
 PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'pddl'
 PDDL_DOMAIN_PATH = PDDL_DIR / 'domain_room315.pddl'
+KINEMATICS_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_kinematics'
 DEFAULT_PAYLOAD_TRAINING_CASES_PATH = (
     REPO_ROOT
     / 'mfja_robot_control_config'
@@ -46,6 +51,14 @@ DEFAULT_PLANSYS_GET_PLAN_SERVICE = '/planner/get_plan'
 DEFAULT_PLANSYS_TIMEOUT_S = 10.0
 DEFAULT_SUPERVISOR_NODE_NAME = 'room_315_vla_supervisor'
 DEFAULT_SHUTTLE_SPEED_MPS = 0.3
+RAIL_NETWORK_PATH_BY_SIDE = {
+    'right': KINEMATICS_DIR / 'rail_network_right.yaml',
+    'left': KINEMATICS_DIR / 'rail_network_left.yaml',
+}
+RAIL_DEVICES_PATH_BY_SIDE = {
+    'right': KINEMATICS_DIR / 'rail_devices_right.yaml',
+    'left': KINEMATICS_DIR / 'rail_devices_left.yaml',
+}
 
 SUPPORTED_SYMBOLIC_ACTIONS = {
     'prepare_switches',
@@ -1029,6 +1042,9 @@ def generate_scenario(
     }
     if spec.target_slot:
         scenario['target_slot'] = spec.target_slot
+    route_topology = _route_topology_metadata_for_spec(spec)
+    if route_topology:
+        scenario['route_topology'] = route_topology
     if spec.selection_policy:
         scenario['selection_policy'] = spec.selection_policy
         scenario['selection_candidates'] = [dict(item) for item in spec.selection_candidates]
@@ -2484,6 +2500,109 @@ def _payload_state_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
         },
         'model_input_exposure': 'excluded',
     } if spec.payload_condition else {}
+
+
+def _route_topology_metadata_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
+    target_slot = _slot_symbol_or_empty(spec.target_slot)
+    start_slots = {
+        _canonical_planning_shuttle_id(shuttle, side=spec.side): _slot_symbol_or_empty(slot)
+        for shuttle, slot in spec.start_slots_by_shuttle
+    }
+    source_slot = start_slots.get(_canonical_planning_shuttle_id(spec.shuttle, side=spec.side), '')
+    if not target_slot or not source_slot:
+        return {}
+
+    topology = load_rail_topology(
+        RAIL_NETWORK_PATH_BY_SIDE[spec.side],
+        RAIL_DEVICES_PATH_BY_SIDE[spec.side],
+        side=spec.side,
+    )
+    route_blocks = route_blocks_between_slots(
+        topology,
+        source_slot,
+        target_slot,
+    )
+    rails = _synthetic_rails_from_start_slots(spec, topology)
+    blockers = route_blockers_from_rails(
+        rails,
+        topology,
+        source_slot,
+        target_slot,
+        selected_shuttle=spec.shuttle,
+    )
+    return {
+        'source': 'room_315_kinematics_topology',
+        'side': spec.side,
+        'selected_shuttle_id': _canonical_planning_shuttle_id(spec.shuttle, side=spec.side),
+        'source_slot': source_slot,
+        'target_slot': target_slot,
+        'default_switch_state': topology.default_switch_state,
+        'route_blocks': [
+            {
+                'block_id': block.block_id,
+                'segment': block.segment,
+                'start_s_ratio': round(float(block.start_s_ratio), 6),
+                'end_s_ratio': round(float(block.end_s_ratio), 6),
+            }
+            for block in route_blocks
+        ],
+        'route_blocker_count': len(blockers),
+        'route_blockers': [
+            _route_blocker_metadata(blocker, side=spec.side, start_slots=start_slots)
+            for blocker in blockers
+        ],
+        'model_input_exposure': 'excluded',
+    }
+
+
+def _synthetic_rails_from_start_slots(spec: ScenarioSpec, topology: Any) -> dict[str, Any]:
+    shuttles = {}
+    for raw_shuttle, raw_slot in spec.start_slots_by_shuttle:
+        shuttle_id = _canonical_planning_shuttle_id(raw_shuttle, side=spec.side)
+        slot = _slot_symbol_or_empty(raw_slot)
+        location = topology.slots.get(slot)
+        if not shuttle_id or location is None:
+            continue
+        shuttles[_gazebo_entity_for_planning_shuttle(shuttle_id)] = {
+            'segment': location.segment,
+            's_ratio': location.s_ratio,
+            'start_slot': slot,
+        }
+    return {spec.side: {'shuttles': shuttles}}
+
+
+def _route_blocker_metadata(blocker: Any, *, side: str, start_slots: dict[str, str]) -> dict[str, Any]:
+    shuttle_id = _canonical_planning_shuttle_id(blocker.shuttle_id, side=side)
+    entry = {
+        'shuttle_id': shuttle_id,
+        'side': side,
+        'segment': blocker.segment,
+        's_ratio': (
+            round(float(blocker.s_ratio), 6)
+            if blocker.s_ratio is not None
+            else None
+        ),
+        'block_id': blocker.block_id,
+        'reason': blocker.reason,
+    }
+    if blocker.shuttle_id != shuttle_id:
+        entry['short_shuttle_id'] = blocker.shuttle_id
+    start_slot = start_slots.get(shuttle_id, '')
+    if start_slot:
+        entry['start_slot'] = start_slot
+    return entry
+
+
+def _canonical_planning_shuttle_id(raw: Any, *, side: str) -> str:
+    ref = normalize_shuttle_ref(raw, side=side)
+    if ref is not None:
+        return ref.shuttle_id
+    return _clean_symbol(str(raw or '')).lower()
+
+
+def _gazebo_entity_for_planning_shuttle(shuttle_id: str) -> str:
+    text = str(shuttle_id or '').strip()
+    return text if text.startswith('room315_') else f'room315_{text}'
 
 
 def _payload_init_facts_for_spec(spec: ScenarioSpec) -> str:

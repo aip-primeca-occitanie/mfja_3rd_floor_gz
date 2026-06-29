@@ -320,6 +320,55 @@ class FleetSafetyState:
     shuttle_blocks: dict[str, str] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class RailSlotLocation:
+    slot: str
+    segment: str
+    s_ratio: float
+
+
+@dataclass(frozen=True)
+class RailRouteBlock:
+    side: str
+    segment: str
+    start_s_ratio: float
+    end_s_ratio: float
+
+    @property
+    def block_id(self) -> str:
+        return normalize_fleet_block_id(self.segment, side=self.side)
+
+    def contains(self, segment: Any, s_ratio: Any = None) -> bool:
+        if _segment_name(segment) != self.segment:
+            return False
+        ratio = _optional_float(s_ratio)
+        if ratio is None:
+            return True
+        low = min(self.start_s_ratio, self.end_s_ratio)
+        high = max(self.start_s_ratio, self.end_s_ratio)
+        return low <= ratio <= high
+
+
+@dataclass(frozen=True)
+class RailRouteBlocker:
+    shuttle_id: str
+    owner: str
+    side: str
+    segment: str
+    s_ratio: float | None
+    block_id: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class RailTopology:
+    side: str
+    routing_table: dict[str, dict[str, Any]]
+    fixed_transitions: dict[str, str]
+    slots: dict[str, RailSlotLocation]
+    default_switch_state: str = 'E'
+
+
 class BlockReservationTable:
     def __init__(self, reservations: dict[str, str] | None = None) -> None:
         self.reservations = dict(reservations or {})
@@ -443,6 +492,183 @@ def normalize_fleet_slot_id(raw: Any, *, side: str) -> str:
     if text.startswith(f'{side}_'):
         text = text.removeprefix(f'{side}_')
     return f'{side}:slot:{text}'
+
+
+def load_rail_topology(
+    network_path: Path | str,
+    devices_path: Path | str,
+    *,
+    side: str | None = None,
+    default_switch_state: str = 'E',
+) -> RailTopology:
+    """Load the directed Room 315 rail graph and slot positions.
+
+    The returned topology is deliberately small: it contains enough structure to
+    answer "which physical segments does this slot-to-slot move occupy?" without
+    pulling in ROS or the kinematic simulator.
+    """
+
+    network = yaml.safe_load(Path(network_path).expanduser().read_text(encoding='utf-8')) or {}
+    devices = yaml.safe_load(Path(devices_path).expanduser().read_text(encoding='utf-8')) or {}
+    if not isinstance(network, dict):
+        raise ValueError(f'{network_path} must contain a YAML mapping')
+    if not isinstance(devices, dict):
+        raise ValueError(f'{devices_path} must contain a YAML mapping')
+
+    rail_side = normalize_side(side or devices.get('rail_side') or 'right')
+    routing_table = {
+        _segment_name(segment): dict(entry or {})
+        for segment, entry in (network.get('routing_table') or {}).items()
+        if _segment_name(segment)
+    }
+    fixed_transitions = {
+        _segment_name(segment): _segment_name(next_segment)
+        for segment, next_segment in (network.get('fixed_transitions') or {}).items()
+        if _segment_name(segment) and _segment_name(next_segment)
+    }
+    slots: dict[str, RailSlotLocation] = {}
+    for entry in devices.get('slots') or []:
+        if not isinstance(entry, dict):
+            continue
+        slot = _slot_symbol(entry.get('name'))
+        segment = _segment_name(entry.get('segment'))
+        s_ratio = _optional_float(entry.get('s_ratio'))
+        if not slot or not segment or s_ratio is None:
+            raise ValueError(f'invalid slot entry in {devices_path}: {entry!r}')
+        if not 0.0 <= s_ratio <= 1.0:
+            raise ValueError(f'slot {entry.get("name")!r} s_ratio must be in [0.0, 1.0]')
+        slots[slot] = RailSlotLocation(slot=slot, segment=segment, s_ratio=s_ratio)
+    return RailTopology(
+        side=rail_side,
+        routing_table=routing_table,
+        fixed_transitions=fixed_transitions,
+        slots=slots,
+        default_switch_state=str(default_switch_state or 'E').strip().upper(),
+    )
+
+
+def route_blocks_between_slots(
+    topology: RailTopology,
+    source_slot: Any,
+    target_slot: Any,
+    *,
+    switch_states: dict[str, Any] | None = None,
+    max_segments: int = 32,
+) -> list[RailRouteBlock]:
+    source = _slot_location(topology, source_slot)
+    target = _slot_location(topology, target_slot)
+    if source.segment == target.segment and source.s_ratio <= target.s_ratio:
+        return [
+            RailRouteBlock(
+                side=topology.side,
+                segment=source.segment,
+                start_s_ratio=source.s_ratio,
+                end_s_ratio=target.s_ratio,
+            )
+        ]
+
+    blocks: list[RailRouteBlock] = []
+    current_segment = source.segment
+    start_ratio = source.s_ratio
+    first_segment = True
+    for _step in range(max_segments):
+        if (
+            current_segment == target.segment
+            and not (
+                first_segment
+                and source.segment == target.segment
+                and source.s_ratio > target.s_ratio
+            )
+        ):
+            blocks.append(
+                RailRouteBlock(
+                    side=topology.side,
+                    segment=current_segment,
+                    start_s_ratio=start_ratio,
+                    end_s_ratio=target.s_ratio,
+                )
+            )
+            return blocks
+        blocks.append(
+            RailRouteBlock(
+                side=topology.side,
+                segment=current_segment,
+                start_s_ratio=start_ratio,
+                end_s_ratio=1.0,
+            )
+        )
+        next_segment = _next_route_segment(topology, current_segment, switch_states or {})
+        if not next_segment:
+            raise ValueError(
+                f'no route from slot {source.slot} to slot {target.slot}: '
+                f'{current_segment} has no valid successor'
+            )
+        current_segment = next_segment
+        start_ratio = 0.0
+        first_segment = False
+    raise ValueError(
+        f'no route from slot {source.slot} to slot {target.slot} within {max_segments} segments'
+    )
+
+
+def route_blockers_from_rails(
+    rails: dict[str, Any],
+    topology: RailTopology,
+    source_slot: Any,
+    target_slot: Any,
+    *,
+    selected_shuttle: Any = None,
+    side: str | None = None,
+    switch_states: dict[str, Any] | None = None,
+) -> list[RailRouteBlocker]:
+    rail_side = normalize_side(side or topology.side)
+    route_blocks = route_blocks_between_slots(
+        topology,
+        source_slot,
+        target_slot,
+        switch_states=switch_states,
+    )
+    selected_labels = _owner_labels(selected_shuttle, side=rail_side)
+    rail = rails.get(rail_side, {}) if isinstance(rails, dict) else {}
+    shuttles = rail.get('shuttles', {}) if isinstance(rail, dict) else {}
+    if not isinstance(shuttles, dict):
+        return []
+
+    blockers: list[RailRouteBlocker] = []
+    for raw_name, shuttle_state in shuttles.items():
+        if not isinstance(shuttle_state, dict):
+            continue
+        owner = _short_owner(raw_name, side=rail_side) or str(raw_name)
+        if _owner_labels(raw_name, side=rail_side) & selected_labels:
+            continue
+        segment = _segment_name(
+            shuttle_state.get('segment')
+            or shuttle_state.get('current_segment')
+            or shuttle_state.get('block')
+            or shuttle_state.get('current_block')
+        )
+        if not segment:
+            continue
+        s_ratio = _shuttle_s_ratio(shuttle_state)
+        for block in route_blocks:
+            if block.contains(segment, s_ratio):
+                blockers.append(
+                    RailRouteBlocker(
+                        shuttle_id=owner,
+                        owner=owner,
+                        side=rail_side,
+                        segment=segment,
+                        s_ratio=s_ratio,
+                        block_id=block.block_id,
+                        reason=(
+                            'route_segment_overlap'
+                            if s_ratio is not None
+                            else 'route_segment_overlap_unknown_position'
+                        ),
+                    )
+                )
+                break
+    return blockers
 
 
 def normalize_event_action_v3(action: dict[str, Any]) -> dict[str, Any]:
@@ -610,6 +836,99 @@ def validate_fleet_command(
                         f'minimum is {fleet_state.min_headway_blocks}'
                     )
     return True, ''
+
+
+def _segment_name(raw: Any) -> str:
+    text = str(raw or '').strip()
+    if not text:
+        return ''
+    if ':' in text:
+        text = text.rsplit(':', 1)[-1]
+    lowered = text.casefold()
+    for prefix in ('right_', 'left_'):
+        if lowered.startswith(prefix):
+            text = text[len(prefix):]
+            break
+    text = text.strip().upper()
+    if re.fullmatch(r'A(?:14|23)[EI]', text):
+        return text[:-1]
+    return text
+
+
+def _slot_symbol(raw: Any) -> str:
+    text = str(raw or '').strip().casefold()
+    if not text:
+        return ''
+    if ':' in text:
+        text = text.rsplit(':', 1)[-1]
+    text = text.replace('-', '_')
+    if text.startswith('slot_'):
+        text = text.removeprefix('slot_')
+    elif text.startswith('slot'):
+        text = text.removeprefix('slot')
+    return text if text in {'1', '2', '3', '4'} else ''
+
+
+def _slot_location(topology: RailTopology, raw_slot: Any) -> RailSlotLocation:
+    slot = _slot_symbol(raw_slot)
+    if not slot or slot not in topology.slots:
+        raise ValueError(f'unknown Room 315 slot {raw_slot!r} on {topology.side} rail')
+    return topology.slots[slot]
+
+
+def _next_route_segment(
+    topology: RailTopology,
+    segment: Any,
+    switch_states: dict[str, Any],
+) -> str:
+    segment_name = _segment_name(segment)
+    entry = topology.routing_table.get(segment_name)
+    raw_next = ''
+    if isinstance(entry, dict):
+        route_type = str(entry.get('type') or '').strip().casefold()
+        if route_type == 'fixed':
+            raw_next = entry.get('next_segment', '')
+        elif route_type in {'switch_select', 'switch_guard'}:
+            switch_name = str(entry.get('switch') or '').strip().upper()
+            state = str(
+                switch_states.get(switch_name, topology.default_switch_state)
+                if switch_name
+                else topology.default_switch_state
+            ).strip().upper()
+            by_state = entry.get('by_state') if isinstance(entry.get('by_state'), dict) else {}
+            raw_next = by_state.get(state, entry.get('on_unknown_state', ''))
+        else:
+            raw_next = entry.get('next_segment', '')
+    if not raw_next:
+        raw_next = topology.fixed_transitions.get(segment_name, '')
+    next_segment = _segment_name(raw_next)
+    return '' if next_segment == 'FALLING' else next_segment
+
+
+def _owner_labels(raw_name: Any, *, side: str) -> set[str]:
+    text = str(raw_name or '').strip()
+    labels = {text} if text else set()
+    spec = normalize_shuttle_ref(text, side=side)
+    if spec is not None:
+        labels.update({spec.short_id, spec.shuttle_id, spec.gazebo_entity_name})
+    return {label for label in labels if label}
+
+
+def _shuttle_s_ratio(shuttle_state: dict[str, Any]) -> float | None:
+    for key in ('s_ratio', 'position_ratio', 'normalized_position', 'progress_ratio'):
+        ratio = _optional_float(shuttle_state.get(key))
+        if ratio is not None:
+            return max(0.0, min(1.0, ratio))
+    return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == '':
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _optional_int(value: Any) -> int | None:

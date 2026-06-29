@@ -700,6 +700,23 @@ def test_four_shuttle_interior_loop_case_clears_blocker_before_loaded_move():
     assert scenario['blocker_clearance']['blocker_shuttle_id'] == 'right_shuttle_2'
     assert scenario['blocker_clearance']['blocker_clear_target'] == 'interior_loop'
     assert scenario['blocker_clearance']['blocker_final_target'] == 'interior_loop'
+    assert scenario['route_topology']['source_slot'] == '1'
+    assert scenario['route_topology']['target_slot'] == '3'
+    assert [
+        block['segment']
+        for block in scenario['route_topology']['route_blocks']
+    ] == ['A12E', 'A2E', 'A23', 'A3E', 'A34E']
+    assert scenario['route_topology']['route_blocker_count'] == 1
+    assert scenario['route_topology']['route_blockers'][0] == {
+        'shuttle_id': 'right_shuttle_2',
+        'side': 'right',
+        'segment': 'A12E',
+        's_ratio': 0.653074,
+        'block_id': 'right:A12E',
+        'reason': 'route_segment_overlap',
+        'short_shuttle_id': 'R2',
+        'start_slot': '2',
+    }
     assert scenario['symbolic_plan'] == [
         'prepare_switches right yaskawa yaskawa switch=A3 state=EXTERIOR',
         'set_stoppers right A3 closed',
