@@ -46,7 +46,6 @@ def _decode(module, command):
     return module._decode_room315_vla_action(
         command,
         rails=_rails(),
-        route_templates={},
         emergency_stop=False,
         active_tasks={},
         slot_sensor_by_side={'right': {}, 'left': {}},
@@ -105,7 +104,6 @@ def test_supervisor_v3_vector_targets_specific_shuttle():
     decision = supervisor.decode_and_validate(
         vector,
         rails=_rails(),
-        route_templates={},
         emergency_stop=False,
         active_tasks={},
         slot_sensor_by_side={'right': {}, 'left': {}},

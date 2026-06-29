@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
 
 import importlib.util
-import time
 from pathlib import Path
 from types import MethodType
-
-import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_vla_supervisor.py'
-CONFIG_PATH = (
-    REPO_ROOT
-    / 'mfja_robot_control_config'
-    / 'config'
-    / 'room_315_vla'
-    / 'vla_supervisor.yaml'
-)
 
 
 def _load_supervisor_module():
@@ -56,10 +46,6 @@ def _fake_supervisor(module):
             'active_position_sensors': [],
         },
     }
-    supervisor.route_templates = supervisor._load_route_templates(
-        module._load_yaml(CONFIG_PATH)
-    )
-    supervisor.template_aliases = supervisor._load_template_aliases(module._load_yaml(CONFIG_PATH))
     supervisor.active_tasks = {}
     supervisor.completed_tasks = []
     supervisor.completed_task_limit = 3
@@ -141,26 +127,6 @@ def _event_vector(
     return values
 
 
-def test_supervisor_config_loads_canonical_route_templates():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-
-    assert set(supervisor.route_templates) == {
-        'right_yaskawa_to_staubli',
-        'right_staubli_to_yaskawa',
-        'left_yaskawa_to_kuka',
-        'left_kuka_to_yaskawa',
-        'right_enter_interior_loop',
-        'left_enter_interior_loop',
-    }
-    assert supervisor.route_templates['right_yaskawa_to_staubli']['type'] == 'transport'
-    assert supervisor.route_templates['left_enter_interior_loop']['gate_stopper'] == 'A3'
-    assert (
-        supervisor._template_from_text('move the right shuttle from Yaskawa to Staubli')
-        == 'right_yaskawa_to_staubli'
-    )
-
-
 def test_supervisor_ingests_payload_state_as_privileged_snapshot():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
@@ -181,84 +147,13 @@ def test_supervisor_ingests_payload_state_as_privileged_snapshot():
     assert snapshot['by_shuttle']['room315_right_shuttle_2']['model_input_exposure'] == 'excluded'
 
 
-def test_route_template_rejects_ambiguous_loaded_shuttle_command():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-    supervisor.rails['right']['active_position_sensors'] = [
-        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
-        {'name': 'DZI2R', 'shuttle': 'room315_right_shuttle_2'},
-    ]
-    supervisor.rails['right']['payloads'] = {
-        'room315_right_shuttle_1': {'loaded': True, 'payload_type': 'box'},
-        'room315_right_shuttle_2': {'loaded': True, 'payload_type': 'box'},
-    }
-
-    decision = supervisor._safety_decode_command({
-        'action': 'route_template',
-        'template': 'right_yaskawa_to_staubli',
-        'payload_condition': 'loaded',
-    })
-
-    assert decision['accepted'] is False
-    assert 'ambiguous payload command' in decision['reason']
-
-
-def test_route_template_selects_single_loaded_shuttle():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-    supervisor.rails['right']['active_position_sensors'] = [
-        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
-        {'name': 'DZI2R', 'shuttle': 'room315_right_shuttle_2'},
-    ]
-    supervisor.rails['right']['payloads'] = {
-        'room315_right_shuttle_1': {'loaded': False, 'payload_type': 'none'},
-        'room315_right_shuttle_2': {'loaded': True, 'payload_type': 'box'},
-    }
-
-    decision = supervisor._safety_decode_command({
-        'action': 'route_template',
-        'template': 'right_yaskawa_to_staubli',
-        'payload_condition': 'loaded',
-    })
-
-    assert decision['accepted'] is True
-    corrected = decision['corrected_action']
-    assert corrected['shuttle'] == 'room315_right_shuttle_2'
-    assert corrected['validated_source_slot'] == '2'
-    assert corrected['payload_condition'] == 'loaded'
-
-
-def test_transport_task_validation_preserves_selected_shuttle():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-    supervisor.rails['right']['active_position_sensors'] = [
-        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
-        {'name': 'DZI2R', 'shuttle': 'room315_right_shuttle_2'},
-    ]
-    template = supervisor.route_templates['right_yaskawa_to_staubli']
-    task = supervisor._new_task(
-        'right_yaskawa_to_staubli',
-        template,
-        {'shuttle': 'room315_right_shuttle_2'},
-    )
-
-    supervisor._advance_transport_task(task)
-
-    assert task['phase'] == 'prepare'
-    assert task['shuttle'] == 'room315_right_shuttle_2'
-    assert task['source_slot'] == '2'
-
-
-def test_payload_language_command_selects_explicit_shuttle_and_template():
+def test_payload_language_no_longer_maps_to_legacy_route_command():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
 
     command = supervisor._parse_text_command('move R2 carrying a part to Staubli')
 
-    assert command['action'] == 'route_template'
-    assert command['template'] == 'right_yaskawa_to_staubli'
-    assert command['shuttle'] == 'R2'
-    assert command['payload_condition'] == 'loaded'
+    assert command == {'action': 'status'}
 
 
 def test_supervisor_primitive_commands_remain_backward_compatible():
@@ -416,8 +311,10 @@ def test_safety_decoder_rejects_emergency_and_falling_states():
     supervisor.emergency_stop = False
     supervisor.rails['right']['shuttles']['room315_right_shuttle_1']['mode'] = 'FALLING'
     falling_decision = supervisor._safety_decode_command({
-        'action': 'route_template',
-        'template': 'right_yaskawa_to_staubli',
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
     })
     assert falling_decision['accepted'] is False
     assert 'falling state rejection' in falling_decision['reason']
@@ -517,7 +414,7 @@ def test_action_vector_accepts_single_gate_switch_when_shuttle_is_staged_at_gate
     assert decision['executed_action']['switches'] == {'A3': 'INTERIOR'}
 
 
-def test_action_vector_accepts_left_a3_gate_switch_when_staged_on_a23():
+def test_action_vector_rejects_left_a3_switch_without_left_a1_gate_context():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
     supervisor.rails['left']['shuttles']['room315_left_shuttle_2'] = {
@@ -538,8 +435,8 @@ def test_action_vector_accepts_left_a3_gate_switch_when_staged_on_a23():
 
     decision = supervisor.decode_and_validate(action_vector)
 
-    assert decision['accepted'] is True
-    assert decision['executed_action']['switches'] == {'A3': 'INTERIOR'}
+    assert decision['accepted'] is False
+    assert 'left switch A3 guarded segment' in decision['reason']
 
 
 def test_action_vector_accepts_single_gate_restore_after_blocker_clears_switch():
@@ -651,7 +548,7 @@ def test_action_vector_loop_transition_uses_left_gate():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
     supervisor.rails['left']['shuttles'] = {
-        'room315_left_shuttle_1': {'mode': 'STOPPED', 'segment': 'A12E', 'speed': 0.0}
+        'room315_left_shuttle_1': {'mode': 'STOPPED', 'segment': 'A23', 'speed': 0.0}
     }
     action_vector = _event_vector(
         module,
@@ -670,11 +567,11 @@ def test_action_vector_loop_transition_uses_left_gate():
 
     wrong_gate_decision = supervisor.decode_and_validate(action_vector)
     assert wrong_gate_decision['accepted'] is False
-    assert 'side-specific gate A3' in wrong_gate_decision['reason']
+    assert 'side-specific gate A1' in wrong_gate_decision['reason']
 
     supervisor.rails['left']['shuttles']['room315_left_shuttle_1'] = {
         'mode': 'STOPPED',
-        'segment': 'A23',
+        'segment': 'A12E',
         'speed': 0.0,
     }
     staged_decision = supervisor.decode_and_validate(action_vector)
@@ -757,88 +654,3 @@ def test_action_vector_rejection_log_contains_required_fields():
     assert supervisor.last_safety_decision['rejected_action'] == action_vector
     assert supervisor.last_safety_decision['executed_action'] is None
     assert supervisor.safety_metrics['rejected_actions'] == 1
-
-
-def test_supervisor_rejects_invalid_route_template():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-
-    with pytest.raises(ValueError, match='unknown route_template'):
-        supervisor._execute_route_template({
-            'action': 'route_template',
-            'template': 'does_not_exist',
-        })
-
-
-def test_supervisor_rejects_conflicting_route_template_on_same_rail():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-    supervisor.active_tasks['task_000001'] = {
-        'task_id': 'task_000001',
-        'side': 'right',
-        'status': 'running',
-    }
-
-    with pytest.raises(RuntimeError, match='already controls right rail'):
-        supervisor._execute_route_template({
-            'action': 'route_template',
-            'template': 'right_yaskawa_to_staubli',
-        })
-
-
-def test_supervisor_creates_and_completes_transport_task():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-
-    supervisor._execute_route_template({
-        'action': 'route_template',
-        'template': 'right_yaskawa_to_staubli',
-    })
-    task = next(iter(supervisor.active_tasks.values()))
-    assert task['phase'] == 'prepare'
-    assert task['status'] == 'running'
-
-    supervisor._advance_task(task)
-    assert task['phase'] == 'wait_prepare'
-    assert [entry['action'] for entry in task['primitive_commands']] == [
-        'shuttle',
-        'stoppers',
-        'switches',
-    ]
-
-    task['phase_started_s'] = time.monotonic() - 1.0
-    supervisor._advance_task(task)
-    assert task['phase'] == 'start_motion'
-
-    supervisor._advance_task(task)
-    assert task['phase'] == 'wait_target'
-
-    supervisor.rails['right']['active_position_sensors'] = [
-        {'name': 'DZI3R', 'shuttle': 'room315_right_shuttle_1'},
-    ]
-    supervisor._advance_task(task)
-    assert task['phase'] == 'verify_target'
-
-    task['phase_started_s'] = time.monotonic() - 1.0
-    supervisor._advance_task(task)
-
-    assert supervisor.active_tasks == {}
-    assert supervisor.completed_tasks[-1]['status'] == 'succeeded'
-    assert supervisor.completed_tasks[-1]['template'] == 'right_yaskawa_to_staubli'
-    assert supervisor.completed_tasks[-1]['target_slot'] == '3'
-
-
-def test_supervisor_fails_transport_task_when_no_source_shuttle_exists():
-    module = _load_supervisor_module()
-    supervisor = _fake_supervisor(module)
-    supervisor.rails['right']['active_position_sensors'] = []
-
-    supervisor._execute_route_template({
-        'action': 'route_template',
-        'template': 'right_yaskawa_to_staubli',
-    })
-
-    assert supervisor.active_tasks == {}
-    assert supervisor.completed_tasks[-1]['status'] == 'failed'
-    assert supervisor.completed_tasks[-1]['phase'] == 'rejected'
-    assert 'no right-rail shuttle detected' in supervisor.completed_tasks[-1]['failure_reason']

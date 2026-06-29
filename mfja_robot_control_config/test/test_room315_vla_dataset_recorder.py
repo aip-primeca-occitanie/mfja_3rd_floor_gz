@@ -72,7 +72,6 @@ def _fake_recorder(module):
     recorder.last_event_signature = ''
     recorder.last_primitive_signature = ''
     recorder.previous_event_command = {'action': 'START'}
-    recorder.last_task_phase_by_id = {}
     recorder.completed_task_signatures = set()
     recorder.last_sensor_signature_by_side = {side: '' for side in ('right', 'left')}
     recorder.last_sensor_event_time_by_side = {side: None for side in ('right', 'left')}
@@ -211,7 +210,7 @@ def test_event_action_v3_shuttle_wait_done_roundtrips():
             side='left',
             wait_condition='target_sensor_active',
             target_id='DA3IL',
-            reason='task_phase',
+            reason='none',
         ),
         _blank_event_action(
             recorder,
@@ -268,7 +267,7 @@ def test_dataset_recorder_extracts_task_context_and_primitives_from_status():
         'active_tasks': {
             'task_000001': {
                 'task_id': 'task_000001',
-                'template': 'right_enter_interior_loop',
+                'template': 'payload_case',
                 'phase': 'wait_target_switches',
                 'status': 'running',
                 'primitive_commands': [
@@ -281,7 +280,7 @@ def test_dataset_recorder_extracts_task_context_and_primitives_from_status():
 
     context = recorder._task_context_from_status(
         status,
-        {'action': 'route_template', 'template': 'right_enter_interior_loop'},
+        {'action': 'status'},
     )
 
     assert context['task_id'] == 'task_000001'
@@ -851,30 +850,6 @@ def test_stopper_events_use_same_minimal_recording_logic():
         'observable_state',
     }
     assert row['model_input']['observable_state']['right']['stoppers']['A2'] == 'closed'
-
-
-def test_route_template_phase_change_creates_one_event_per_phase():
-    recorder_module = _load_module()
-    recorder = _fake_recorder(recorder_module)
-    recorder.latest_status['active_tasks'] = {
-        'task_000001': {
-            'task_id': 'task_000001',
-            'template': 'right_yaskawa_to_staubli',
-            'phase': 'wait_target',
-            'status': 'running',
-        }
-    }
-
-    recorder._record_status_events()
-    recorder._record_status_events()
-
-    rows = _jsonl_rows(recorder.event_stream)
-    assert len(rows) == 1
-    assert rows[0]['symbolic_next_action']['action'] == 'route_template_phase'
-    assert rows[0]['symbolic_next_action']['phase'] == 'wait_target'
-    assert rows[0]['next_action']['primitive'] == 'WAIT'
-    assert rows[0]['next_action']['wait_condition'] == 'task_phase_observed'
-    assert rows[0]['next_action']['target_id'] == 'task_phase'
 
 
 def test_raw_framewise_recording_still_writes_replay_rows():

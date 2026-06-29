@@ -67,10 +67,6 @@ STOPPER_SENSOR_BY_STOPPER = {
 }
 TASK_TERMINAL_STATES = {'succeeded', 'failed'}
 SAFETY_ACTION_ALIASES = {
-    'template': 'route_template',
-    'task': 'route_template',
-    'route': 'route_shuttle',
-    'start_route': 'route_shuttle',
     'switch': 'switches',
     'stopper': 'stoppers',
     'shuttle_command': 'shuttle',
@@ -83,8 +79,6 @@ SAFETY_ACTION_ALIASES = {
 SAFETY_ACTIONS = {
     'status',
     'snapshot',
-    'route_template',
-    'route_shuttle',
     'switches',
     'stoppers',
     'shuttle',
@@ -143,7 +137,7 @@ EVENT_WAIT_CONDITION_BY_ID = {
     2: 'stopper_state_match',
     3: 'shuttle_command_applied',
     4: 'task_terminal_status',
-    5: 'task_phase_observed',
+    5: 'reserved_legacy_wait_5',
     6: 'terminal',
     7: 'target_sensor_active',
 }
@@ -158,13 +152,13 @@ EVENT_TARGET_BY_ID = {
     7: 'MULTIPLE_DEVICES',
     8: 'right_shuttle',
     9: 'left_shuttle',
-    10: 'right_yaskawa_to_staubli',
-    11: 'right_staubli_to_yaskawa',
-    12: 'left_yaskawa_to_kuka',
-    13: 'left_kuka_to_yaskawa',
-    14: 'right_enter_interior_loop',
-    15: 'left_enter_interior_loop',
-    16: 'task_phase',
+    10: 'reserved_legacy_target_10',
+    11: 'reserved_legacy_target_11',
+    12: 'reserved_legacy_target_12',
+    13: 'reserved_legacy_target_13',
+    14: 'reserved_legacy_target_14',
+    15: 'reserved_legacy_target_15',
+    16: 'reserved_legacy_target_16',
     17: 'terminal',
     18: 'DZI1R',
     19: 'DZI2R',
@@ -180,8 +174,8 @@ EVENT_TARGET_BY_ID = {
 EVENT_REASON_BY_ID = {
     0: 'none',
     1: 'command_event',
-    2: 'route_template_requested',
-    3: 'task_phase',
+    2: 'reserved_legacy_reason_2',
+    3: 'reserved_legacy_reason_3',
     4: 'task_succeeded',
     5: 'task_failed',
     6: 'episode_stopped',
@@ -732,12 +726,11 @@ def _single_gate_switch_change_is_staged(
     *,
     rails: dict[str, Any],
     side: str,
-    route_templates: dict[str, dict[str, Any]],
 ) -> bool:
     if len(expanded) != 1:
         return False
     switch_name = next(iter(expanded))
-    if switch_name != _gate_for_side(route_templates, side):
+    if switch_name != _gate_for_side(side):
         return False
     if _rail_has_moving_shuttle(rails, side):
         return False
@@ -777,15 +770,7 @@ def _switch_assignments_are_noop(
     return True
 
 
-def _gate_for_side(route_templates: dict[str, dict[str, Any]], side: str) -> str:
-    for template in route_templates.values():
-        if not isinstance(template, dict):
-            continue
-        if template.get('type') != 'loop_entry' or _normalize_side(template.get('side')) != side:
-            continue
-        gate = _clean_token(template.get('gate_stopper', '')).upper()
-        if gate in SWITCHES:
-            return gate
+def _gate_for_side(side: str) -> str:
     return {'right': 'A3', 'left': 'A1'}[side]
 
 
@@ -965,7 +950,6 @@ def decode_and_validate(
     action_vector: Any,
     *,
     rails: dict[str, Any],
-    route_templates: dict[str, dict[str, Any]],
     emergency_stop: bool,
     active_tasks: dict[str, dict[str, Any]],
     slot_sensor_by_side: dict[str, dict[str, str]],
@@ -1017,7 +1001,7 @@ def decode_and_validate(
                     original_action=raw_action,
                     reason=f'unsafe loop transition: {side} shuttle must STOP before switching loop mode',
                 )
-            gate = _gate_for_side(route_templates, side)
+            gate = _gate_for_side(side)
             if not _rail_stopped_at_gate(rails, side, gate):
                 return _safety_decision(
                     accepted=False,
@@ -1032,7 +1016,6 @@ def decode_and_validate(
                 expanded,
                 rails=rails,
                 side=side,
-                route_templates=route_templates,
             ):
                 for switch_name in expanded:
                     reason = _occupied_guarded_segment_reason(rails, side, switch_name)
@@ -1046,7 +1029,6 @@ def decode_and_validate(
     decision = _decode_room315_vla_action(
         ros_command,
         rails=rails,
-        route_templates=route_templates,
         emergency_stop=emergency_stop,
         active_tasks=active_tasks,
         slot_sensor_by_side=slot_sensor_by_side,
@@ -1067,7 +1049,6 @@ def _decode_room315_vla_action(
     command: dict[str, Any],
     *,
     rails: dict[str, Any],
-    route_templates: dict[str, dict[str, Any]],
     emergency_stop: bool,
     active_tasks: dict[str, dict[str, Any]],
     slot_sensor_by_side: dict[str, dict[str, str]],
@@ -1115,123 +1096,7 @@ def _decode_room315_vla_action(
             reason=f'falling state rejection: {falling_reason}',
         )
 
-    if action == 'route_template':
-        template_name = _clean_token(
-            command.get('template') or command.get('template_id') or command.get('name') or ''
-        )
-        if not template_name:
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason='route_template action needs template',
-            )
-        if template_name not in route_templates:
-            allowed = ', '.join(sorted(route_templates))
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'unknown route_template {template_name!r}; allowed: {allowed}',
-            )
-        template = route_templates[template_name]
-        side = _strict_side(template.get('side', ''))
-        command_side = _strict_side(command.get('side', side)) if command.get('side') is not None else side
-        if not side or command_side != side:
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'wrong side for template {template_name}: expected {side}, got {command_side or command.get("side")!r}',
-            )
-        for active_task in active_tasks.values():
-            if (
-                isinstance(active_task, dict)
-                and active_task.get('status') not in TASK_TERMINAL_STATES
-                and active_task.get('side') == side
-            ):
-                return _safety_decision(
-                    accepted=False,
-                    original_action=command,
-                    reason=f'active task {active_task.get("task_id")} already controls {side} rail',
-                )
-        source_slots = [str(slot) for slot in template.get('source_slots', [])]
-        payload_condition = _payload_condition_from_command(command)
-        explicit_shuttle = _clean_token(
-            command.get('shuttle') or command.get('shuttle_id') or ''
-        )
-        explicit_shuttle_name = (
-            _resolve_shuttle_command_name(explicit_shuttle, side=side)
-            if explicit_shuttle
-            else ''
-        )
-        source_matches = _find_source_shuttles_for_slots(
-            rails,
-            slot_sensor_by_side,
-            side,
-            source_slots,
-        )
-        if explicit_shuttle_name:
-            source_matches = [
-                (shuttle_name, slot)
-                for shuttle_name, slot in source_matches
-                if shuttle_name == explicit_shuttle_name
-            ]
-            if not source_matches:
-                return _safety_decision(
-                    accepted=False,
-                    original_action=command,
-                    reason=(
-                        f'shuttle {explicit_shuttle_name!r} is not detected in '
-                        f'{side}-rail source slots {source_slots}'
-                    ),
-                )
-        if payload_condition:
-            payload_matches = [
-                (shuttle_name, slot)
-                for shuttle_name, slot in source_matches
-                if _payload_condition_matches(
-                    rails,
-                    side,
-                    shuttle_name,
-                    payload_condition,
-                )
-            ]
-            if explicit_shuttle_name and not payload_matches:
-                return _safety_decision(
-                    accepted=False,
-                    original_action=command,
-                    reason=(
-                        f'shuttle {explicit_shuttle_name!r} does not match '
-                        f'payload condition {payload_condition!r}'
-                    ),
-                )
-            if not explicit_shuttle_name and len(payload_matches) > 1:
-                names = ', '.join(shuttle_name for shuttle_name, _slot in payload_matches)
-                return _safety_decision(
-                    accepted=False,
-                    original_action=command,
-                    reason=(
-                        f'ambiguous payload command: multiple {payload_condition} '
-                        f'{side}-rail shuttles match source slots {source_slots}: {names}'
-                    ),
-                )
-            source_matches = payload_matches
-        shuttle, source_slot = source_matches[0] if source_matches else ('', '')
-        if not shuttle:
-            qualifier = f'{payload_condition} ' if payload_condition else ''
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'no {qualifier}{side}-rail shuttle detected in source slots {source_slots}',
-            )
-        corrected['template'] = template_name
-        corrected['side'] = side
-        corrected['validated_source_slot'] = source_slot
-        corrected['validated_shuttle'] = shuttle
-        corrected['shuttle'] = shuttle
-        if payload_condition:
-            corrected['payload_condition'] = payload_condition
-        return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
-
-    if action in {'route_shuttle', 'switches', 'stoppers', 'shuttle', 'add_shuttle'}:
+    if action in {'switches', 'stoppers', 'shuttle', 'add_shuttle'}:
         side = _strict_side(command.get('side', 'right'))
         if side not in SIDES:
             return _safety_decision(
@@ -1395,44 +1260,6 @@ def _decode_room315_vla_action(
         corrected['start_slot'] = start_slot
         return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
 
-    if action == 'route_shuttle':
-        side = corrected['side']
-        if command.get('start_slot') is not None and not _valid_slot(command.get('start_slot')):
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'invalid start_slot {command.get("start_slot")!r}; allowed 1-4',
-            )
-        loop = _normalize_loop(command.get('loop'))
-        if command.get('loop') is not None and loop is None:
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'invalid loop {command.get("loop")!r}; allowed exterior/interior',
-            )
-        if loop and _rail_has_moving_shuttle(rails, side):
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'unsafe loop transition: {side} shuttle must be staged/stopped before route_shuttle loop change',
-            )
-        start = bool(command.get('start', command.get('start_after_prepare', True)))
-        if start and command.get('start_slot') is None and not _rail_shuttles(rails, side):
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'missing shuttle on {side} rail',
-            )
-        if start and _closed_stoppers(rails, side):
-            return _safety_decision(
-                accepted=False,
-                original_action=command,
-                reason=f'path blocked by closed stopper(s) on {side}: {", ".join(_closed_stoppers(rails, side))}',
-            )
-        if loop:
-            corrected['loop'] = loop
-        return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
-
     return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
 
 
@@ -1461,7 +1288,6 @@ class Room315VlaSupervisor(Node):
         self.declare_parameter('right_camera_info_topic', '/room_315/vla/right_rail_rgbd/camera_info')
         self.declare_parameter('left_camera_info_topic', '/room_315/vla/left_rail_rgbd/camera_info')
         self.declare_parameter('publish_status_period_s', 1.0)
-        self.declare_parameter('task_tick_period_s', 0.1)
         self.declare_parameter('completed_task_limit', 20)
         self.declare_parameter('safety_decision_log_limit', 20)
 
@@ -1471,8 +1297,6 @@ class Room315VlaSupervisor(Node):
         self.defaults = self.config.get('defaults', {})
         if not isinstance(self.defaults, dict):
             self.defaults = {}
-        self.route_templates = self._load_route_templates(self.config)
-        self.template_aliases = self._load_template_aliases(self.config)
 
         self.slot_sensor_by_side = self._slot_sensor_map_from_config()
 
@@ -1623,8 +1447,6 @@ class Room315VlaSupervisor(Node):
 
         period_s = max(float(self.get_parameter('publish_status_period_s').value), 0.1)
         self.create_timer(period_s, self._on_status_timer)
-        task_tick_period_s = max(float(self.get_parameter('task_tick_period_s').value), 0.05)
-        self.create_timer(task_tick_period_s, self._on_task_timer)
         self.get_logger().info(
             f'Room 315 VLA supervisor ready. Command topic: '
             f'{self.get_parameter("command_topic").value}'
@@ -1829,16 +1651,7 @@ class Room315VlaSupervisor(Node):
 
     def _parse_text_command(self, raw: str) -> dict[str, Any]:
         text = raw.casefold()
-        template_name = self._template_from_text(text)
-        if template_name:
-            return {'action': 'route_template', 'template': template_name}
-
-        payload_route = self._payload_route_command_from_text(text)
-        if payload_route:
-            return payload_route
-
         side = self._infer_side(text)
-        slot = self._infer_slot(text)
         loop = self._infer_loop(text)
 
         if 'clear' in text and ('emergency' in text or 'estop' in text):
@@ -1876,71 +1689,7 @@ class Room315VlaSupervisor(Node):
                 'stoppers': {name: state for name in names},
             }
 
-        if (
-            'start' in text
-            or 'run' in text
-            or ' on' in f' {text} '
-            or slot is not None
-        ):
-            return {
-                'action': 'route_shuttle',
-                'side': side,
-                'start_slot': slot,
-                'loop': loop or 'exterior',
-                'start': True,
-            }
-
         return {'action': 'status'}
-
-    def _payload_route_command_from_text(self, text: str) -> dict[str, Any] | None:
-        payload_condition = self._payload_condition_from_text(text)
-        explicit_shuttle = self._shuttle_ref_from_text(text)
-        if not payload_condition and not explicit_shuttle:
-            return None
-
-        target_station = self._station_from_text(text)
-        if not target_station:
-            return None
-        explicit_side = self._side_from_shuttle_ref(explicit_shuttle) if explicit_shuttle else ''
-        if not explicit_side and any(token in text for token in ('left', 'gauche')):
-            explicit_side = 'left'
-        if not explicit_side and any(token in text for token in ('right', 'droit', 'droite')):
-            explicit_side = 'right'
-
-        candidates = self._route_templates_for_target(
-            target_station,
-            side=explicit_side,
-        )
-        if not candidates:
-            return None
-        if len(candidates) > 1:
-            candidates = self._payload_matching_template_candidates(
-                candidates,
-                payload_condition,
-                explicit_shuttle,
-            )
-        if len(candidates) > 1:
-            names = ', '.join(name for name, _template in candidates)
-            raise ValueError(
-                f'ambiguous payload command: target {target_station} matches multiple templates: {names}'
-            )
-        if not candidates:
-            qualifier = f'{payload_condition} ' if payload_condition else ''
-            raise ValueError(
-                f'no {qualifier}shuttle matches target {target_station}'
-            )
-
-        template_name, template = candidates[0]
-        command = {
-            'action': 'route_template',
-            'template': template_name,
-            'side': template['side'],
-        }
-        if payload_condition:
-            command['payload_condition'] = payload_condition
-        if explicit_shuttle:
-            command['shuttle'] = explicit_shuttle
-        return command
 
     @staticmethod
     def _payload_condition_from_text(text: str) -> str:
@@ -1969,79 +1718,6 @@ class Room315VlaSupervisor(Node):
             return 'right'
         if re.fullmatch(r'l[1-4]', text) or text.startswith('left'):
             return 'left'
-        return ''
-
-    @staticmethod
-    def _station_from_text(text: str) -> str:
-        if 'staubli' in text:
-            return 'staubli'
-        if 'kuka' in text:
-            return 'kuka'
-        if 'yaskawa' in text:
-            return 'yaskawa'
-        return ''
-
-    def _route_templates_for_target(
-        self,
-        target_station: str,
-        *,
-        side: str = '',
-    ) -> list[tuple[str, dict[str, Any]]]:
-        target = target_station.casefold()
-        candidates: list[tuple[str, dict[str, Any]]] = []
-        station_slots = {
-            ('right', 'yaskawa'): {'1', '2'},
-            ('right', 'staubli'): {'3', '4'},
-            ('left', 'yaskawa'): {'1', '2'},
-            ('left', 'kuka'): {'3', '4'},
-        }
-        for template_name, template in self.route_templates.items():
-            template_side = str(template.get('side') or '').casefold()
-            if side and template_side != side:
-                continue
-            target_slots = {str(slot) for slot in template.get('target_slots', [])}
-            if target_slots == station_slots.get((template_side, target), set()):
-                candidates.append((template_name, template))
-        return candidates
-
-    def _payload_matching_template_candidates(
-        self,
-        candidates: list[tuple[str, dict[str, Any]]],
-        payload_condition: str,
-        explicit_shuttle: str,
-    ) -> list[tuple[str, dict[str, Any]]]:
-        if explicit_shuttle:
-            side = self._side_from_shuttle_ref(explicit_shuttle)
-            return [
-                (name, template)
-                for name, template in candidates
-                if not side or template.get('side') == side
-            ]
-        if not payload_condition:
-            return candidates
-        matched: list[tuple[str, dict[str, Any]]] = []
-        for name, template in candidates:
-            side = str(template.get('side') or '')
-            source_slots = [str(slot) for slot in template.get('source_slots', [])]
-            if _source_shuttles_matching_payload(
-                self.rails,
-                self.slot_sensor_by_side,
-                side,
-                source_slots,
-                payload_condition,
-            ):
-                matched.append((name, template))
-        return matched
-
-    def _template_from_text(self, text: str) -> str:
-        normalized_text = ' '.join(text.casefold().replace('_', ' ').split())
-        for alias, template_name in self.template_aliases.items():
-            if alias in normalized_text:
-                return template_name
-        for template_name in self.route_templates:
-            normalized_template = template_name.casefold().replace('_', ' ')
-            if normalized_template in normalized_text:
-                return template_name
         return ''
 
     def _infer_side(self, text: str) -> str:
@@ -2144,7 +1820,6 @@ class Room315VlaSupervisor(Node):
         return decode_and_validate(
             action_vector,
             rails=self.rails,
-            route_templates=self.route_templates,
             emergency_stop=self.emergency_stop,
             active_tasks=self.active_tasks,
             slot_sensor_by_side=self.slot_sensor_by_side,
@@ -2162,7 +1837,6 @@ class Room315VlaSupervisor(Node):
         return _decode_room315_vla_action(
             command,
             rails=self.rails,
-            route_templates=self.route_templates,
             emergency_stop=self.emergency_stop,
             active_tasks=self.active_tasks,
             slot_sensor_by_side=self.slot_sensor_by_side,
@@ -2302,12 +1976,6 @@ class Room315VlaSupervisor(Node):
         if self.emergency_stop:
             raise RuntimeError('emergency stop is active; clear it before motion commands')
 
-        if action in {'route_template', 'template', 'task'}:
-            self._execute_route_template(command)
-            return
-        if action in {'route_shuttle', 'route', 'start_route'}:
-            self._execute_route(command)
-            return
         if action in {'add_shuttle', 'spawn_shuttle'}:
             self._execute_add_shuttle(command)
             return
@@ -2321,433 +1989,6 @@ class Room315VlaSupervisor(Node):
             self._execute_stoppers(command)
             return
         raise ValueError(f'unknown VLA action {action!r}')
-
-    def _execute_route_template(self, command: dict[str, Any]) -> None:
-        template_name = str(
-            command.get('template')
-            or command.get('template_id')
-            or command.get('name')
-            or ''
-        ).strip()
-        if not template_name:
-            raise ValueError('route_template action needs "template"')
-        if template_name not in self.route_templates:
-            allowed = ', '.join(sorted(self.route_templates))
-            raise ValueError(f'unknown route_template {template_name!r}; allowed: {allowed}')
-        if self.emergency_stop:
-            raise RuntimeError('emergency stop is active; clear it before route_template')
-
-        template = self.route_templates[template_name]
-        side = _normalize_side(template.get('side', command.get('side', 'right')))
-        for active_task in self.active_tasks.values():
-            if (
-                active_task.get('status') not in TASK_TERMINAL_STATES
-                and active_task.get('side') == side
-            ):
-                raise RuntimeError(
-                    f'active task {active_task.get("task_id")} already controls {side} rail'
-                )
-        task = self._new_task(template_name, template, command)
-        self.active_tasks[task['task_id']] = task
-        self._set_result(f'task {template_name} started: {task["task_id"]}')
-        self._advance_task(task)
-
-    def _new_task(
-        self,
-        template_name: str,
-        template: dict[str, Any],
-        command: dict[str, Any],
-    ) -> dict[str, Any]:
-        self.task_counter += 1
-        now = time.monotonic()
-        side = _normalize_side(template.get('side', command.get('side', 'right')))
-        timeout_s = float(command.get('timeout_s', template.get('timeout_s', 120.0)))
-        speed = float(command.get('speed', template.get('speed', self._default_speed())))
-        task_id = str(command.get('task_id') or f'task_{self.task_counter:06d}')
-        task_type = str(template.get('type') or template.get('kind') or '').strip()
-        return {
-            'task_id': task_id,
-            'template': template_name,
-            'type': task_type,
-            'side': side,
-            'status': 'running',
-            'phase': 'validate',
-            'phase_started_s': now,
-            'started_s': now,
-            'updated_s': now,
-            'duration_s': 0.0,
-            'timeout_s': timeout_s,
-            'speed': speed,
-            'failure_reason': '',
-            'source_slots': self._normalize_slots(template.get('source_slots')),
-            'target_slots': self._normalize_slots(template.get('target_slots')),
-            'shuttle': str(command.get('shuttle') or template.get('shuttle') or '').strip(),
-            'source_slot': '',
-            'target_slot': '',
-            'target_sensor': '',
-            'primitive_commands': [],
-            'template_config': template,
-            'command': command,
-        }
-
-    def _on_task_timer(self) -> None:
-        for task_id in list(self.active_tasks):
-            task = self.active_tasks.get(task_id)
-            if task is None:
-                continue
-            self._advance_task(task)
-
-    def _advance_task(self, task: dict[str, Any]) -> None:
-        if task.get('status') in TASK_TERMINAL_STATES:
-            return
-        now = time.monotonic()
-        task['duration_s'] = round(now - float(task.get('started_s', now)), 3)
-        if self.emergency_stop:
-            self._fail_task(task, 'emergency stop became active')
-            return
-        timeout_s = float(task.get('timeout_s') or 0.0)
-        if timeout_s > 0.0 and now - float(task.get('started_s', now)) > timeout_s:
-            self._fail_task(task, f'timeout after {timeout_s:.1f}s')
-            return
-
-        task_type = str(task.get('type') or '')
-        if task_type == 'transport':
-            self._advance_transport_task(task)
-            return
-        if task_type == 'loop_entry':
-            self._advance_loop_entry_task(task)
-            return
-        self._fail_task(task, f'unsupported route_template type {task_type!r}')
-
-    def _advance_transport_task(self, task: dict[str, Any]) -> None:
-        phase = str(task.get('phase') or '')
-        side = str(task['side'])
-        template = task['template_config']
-
-        if phase == 'validate':
-            requested_shuttle = str(task.get('shuttle') or '').strip()
-            source_slots = list(task.get('source_slots') or [])
-            if requested_shuttle:
-                shuttle, source_slot, _sensor = self._find_specific_shuttle_in_slots(
-                    side,
-                    source_slots,
-                    requested_shuttle,
-                )
-            else:
-                shuttle, source_slot, _sensor = self._find_shuttle_in_slots(
-                    side,
-                    source_slots,
-                )
-            if not shuttle:
-                qualifier = f' {requested_shuttle}' if requested_shuttle else ''
-                self._fail_task(
-                    task,
-                    f'no {side}-rail shuttle{qualifier} detected in source slots {source_slots}',
-                    rejected=True,
-                )
-                return
-            task['shuttle'] = shuttle
-            task['source_slot'] = source_slot
-            self._set_task_phase(task, 'prepare')
-            return
-
-        if phase == 'prepare':
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'OFF',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._publish_stoppers(
-                side,
-                dict(template.get('prepare_stoppers') or {'ALL': '0'}),
-                task_id=str(task['task_id']),
-            )
-            self._publish_switches(
-                side,
-                dict(template.get('prepare_switches') or {'ALL': 'EXTERIOR'}),
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'wait_prepare')
-            return
-
-        if phase == 'wait_prepare':
-            prepare_switches = dict(template.get('prepare_switches') or {'ALL': 'EXTERIOR'})
-            prepare_stoppers = dict(template.get('prepare_stoppers') or {'ALL': '0'})
-            if not self._phase_elapsed(task, float(template.get('prepare_settle_s', 0.4))):
-                return
-            if not self._switches_match(side, prepare_switches):
-                return
-            if not self._stoppers_match(side, prepare_stoppers):
-                return
-            self._set_task_phase(task, 'start_motion')
-            return
-
-        if phase == 'start_motion':
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'ON',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'wait_target')
-            return
-
-        if phase == 'wait_target':
-            hit_slot, hit_sensor = self._active_slot_for_shuttle(
-                side,
-                list(task.get('target_slots') or []),
-                str(task['shuttle']),
-            )
-            if not hit_slot:
-                return
-            task['target_slot'] = hit_slot
-            task['target_sensor'] = hit_sensor
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'OFF',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'verify_target')
-            return
-
-        if phase == 'verify_target':
-            if not self._phase_elapsed(task, float(template.get('stop_settle_s', 0.3))):
-                return
-            self._complete_task(
-                task,
-                (
-                    f'{side} shuttle {task["shuttle"]} reached target slot '
-                    f'{task["target_slot"]}'
-                ),
-            )
-
-    def _advance_loop_entry_task(self, task: dict[str, Any]) -> None:
-        phase = str(task.get('phase') or '')
-        side = str(task['side'])
-        template = task['template_config']
-        gate = str(template.get('gate_stopper') or '').upper()
-        if gate not in SWITCHES:
-            self._fail_task(task, f'loop_entry template has invalid gate_stopper {gate!r}')
-            return
-
-        if phase == 'validate':
-            requested_shuttle = str(task.get('shuttle') or '').strip()
-            source_slots = list(task.get('source_slots') or [])
-            if requested_shuttle:
-                shuttle, source_slot, _sensor = self._find_specific_shuttle_in_slots(
-                    side,
-                    source_slots,
-                    requested_shuttle,
-                )
-            else:
-                shuttle, source_slot, _sensor = self._find_shuttle_in_slots(
-                    side,
-                    source_slots,
-                )
-            if not shuttle:
-                qualifier = f' {requested_shuttle}' if requested_shuttle else ''
-                self._fail_task(
-                    task,
-                    f'no {side}-rail shuttle{qualifier} detected in source slots {source_slots}',
-                    rejected=True,
-                )
-                return
-            task['shuttle'] = shuttle
-            task['source_slot'] = source_slot
-            self._set_task_phase(task, 'prepare_gate')
-            return
-
-        if phase == 'prepare_gate':
-            approach_state = _canonical_switch_state(template.get('approach_switch_state', 'EXTERIOR'))
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'OFF',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._publish_switches(
-                side,
-                {'ALL': approach_state},
-                task_id=str(task['task_id']),
-            )
-            self._publish_stoppers(
-                side,
-                {'ALL': '0', gate: '1'},
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'wait_gate_prepare')
-            return
-
-        if phase == 'wait_gate_prepare':
-            approach_state = _canonical_switch_state(template.get('approach_switch_state', 'EXTERIOR'))
-            if not self._phase_elapsed(task, float(template.get('prepare_settle_s', 0.4))):
-                return
-            if not self._switches_match(side, {'ALL': approach_state}):
-                return
-            if not self._stoppers_match(side, {gate: '1'}):
-                return
-            self._set_task_phase(task, 'move_to_gate')
-            return
-
-        if phase == 'move_to_gate':
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'ON',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'wait_gate_stop')
-            return
-
-        if phase == 'wait_gate_stop':
-            if not self._shuttle_waiting_at_stopper(side, str(task['shuttle']), gate):
-                return
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'OFF',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'set_target_switches')
-            return
-
-        if phase == 'set_target_switches':
-            target_state = _canonical_switch_state(template.get('target_switch_state', 'INTERIOR'))
-            self._publish_switches(
-                side,
-                {'ALL': target_state},
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'wait_target_switches')
-            return
-
-        if phase == 'wait_target_switches':
-            target_state = _canonical_switch_state(template.get('target_switch_state', 'INTERIOR'))
-            if not self._phase_elapsed(task, float(template.get('switch_settle_s', 0.4))):
-                return
-            if not self._switches_match(side, {'ALL': target_state}):
-                return
-            self._set_task_phase(task, 'continue_loop')
-            return
-
-        if phase == 'continue_loop':
-            self._publish_stoppers(
-                side,
-                {'ALL': '0'},
-                task_id=str(task['task_id']),
-            )
-            self._publish_shuttle_command(
-                side,
-                task['shuttle'],
-                'ON',
-                speed=float(task['speed']),
-                task_id=str(task['task_id']),
-            )
-            self._set_task_phase(task, 'verify_loop_entry')
-            return
-
-        if phase == 'verify_loop_entry':
-            completion_sensors = self._normalize_names(template.get('completion_sensors'))
-            completion_segments = self._normalize_segments(template.get('completion_segments'))
-            if self._active_named_sensor_for_shuttle(side, completion_sensors, str(task['shuttle'])):
-                self._complete_task(
-                    task,
-                    f'{side} shuttle {task["shuttle"]} is circulating on the interior loop',
-                )
-                return
-            if completion_segments and self._shuttle_segment(side, str(task['shuttle'])) in completion_segments:
-                self._complete_task(
-                    task,
-                    f'{side} shuttle {task["shuttle"]} reached interior segment',
-                )
-
-    def _set_task_phase(self, task: dict[str, Any], phase: str) -> None:
-        now = time.monotonic()
-        task['phase'] = phase
-        task['phase_started_s'] = now
-        task['updated_s'] = now
-        self._set_result(f'task {task["template"]} phase={phase}: {task["task_id"]}')
-
-    def _phase_elapsed(self, task: dict[str, Any], seconds: float) -> bool:
-        return time.monotonic() - float(task.get('phase_started_s', time.monotonic())) >= seconds
-
-    def _complete_task(self, task: dict[str, Any], detail: str) -> None:
-        task['status'] = 'succeeded'
-        task['phase'] = 'completed'
-        task['failure_reason'] = ''
-        task['updated_s'] = time.monotonic()
-        task['duration_s'] = round(task['updated_s'] - float(task.get('started_s', task['updated_s'])), 3)
-        self.active_tasks.pop(str(task['task_id']), None)
-        self._append_completed_task(task)
-        self._set_result(f'task {task["template"]} completed: {detail}')
-
-    def _fail_task(self, task: dict[str, Any], reason: str, *, rejected: bool = False) -> None:
-        task['status'] = 'failed'
-        task['phase'] = 'rejected' if rejected else 'failed'
-        task['failure_reason'] = reason
-        task['updated_s'] = time.monotonic()
-        task['duration_s'] = round(task['updated_s'] - float(task.get('started_s', task['updated_s'])), 3)
-        side = str(task.get('side') or '')
-        shuttle = str(task.get('shuttle') or '')
-        if side and shuttle:
-            self._publish_shuttle_command(
-                side,
-                shuttle,
-                'OFF',
-                speed=float(task.get('speed') or self._default_speed()),
-                task_id=str(task.get('task_id') or ''),
-            )
-        self.active_tasks.pop(str(task['task_id']), None)
-        self._append_completed_task(task)
-        label = 'rejected' if rejected else 'failed'
-        self._set_result(f'task {task["template"]} {label}: {reason}')
-
-    def _append_completed_task(self, task: dict[str, Any]) -> None:
-        self.completed_tasks.append(self._task_status_snapshot(task))
-        if len(self.completed_tasks) > self.completed_task_limit:
-            self.completed_tasks = self.completed_tasks[-self.completed_task_limit:]
-
-    def _execute_route(self, command: dict[str, Any]) -> None:
-        side = _normalize_side(command.get('side', 'right'))
-        loop = _normalize_loop(command.get('loop'))
-        switches = self._switch_assignments_from_command(command, loop)
-        stoppers = dict(command.get('stoppers') or {'ALL': '0'})
-        start_slot = command.get('start_slot')
-        start = bool(command.get('start', command.get('start_after_prepare', True)))
-        stop_before = bool(command.get('stop_before_prepare', True))
-
-        if stop_before:
-            self._publish_shuttle_command(side, command.get('shuttle') or self._default_shuttle_name(side), 'OFF')
-        if stoppers:
-            self._publish_stoppers(side, stoppers)
-        if switches:
-            self._publish_switches(side, switches)
-        if start_slot:
-            self._request_add_shuttle(
-                side,
-                command.get('shuttle') or self._default_shuttle_name(side),
-                start_slot=str(start_slot),
-                speed=float(command.get('speed', self._default_speed())),
-                start_enabled=start,
-            )
-        elif start:
-            self._publish_shuttle_command(
-                side,
-                command.get('shuttle') or self._default_shuttle_name(side),
-                'ON',
-            )
-
-        self._set_result(f'route prepared on {side}: loop={loop or "unchanged"} start={start}')
-
-
 
     def _execute_add_shuttle(self, command: dict[str, Any]) -> None:
         side = _normalize_side(command.get('side', 'right'))
@@ -2801,66 +2042,6 @@ class Room315VlaSupervisor(Node):
             raise ValueError('stopper action needs "stoppers"')
         self._publish_stoppers(side, stoppers)
         self._set_result(f'stoppers commanded on {side}: {stoppers}')
-
-    def _load_route_templates(self, config: dict[str, Any]) -> dict[str, dict[str, Any]]:
-        raw_templates = config.get('route_templates', {})
-        if raw_templates is None:
-            return {}
-        if not isinstance(raw_templates, dict):
-            raise ValueError('route_templates must be a YAML mapping')
-        templates: dict[str, dict[str, Any]] = {}
-        for raw_name, raw_template in raw_templates.items():
-            name = str(raw_name).strip()
-            if not name:
-                raise ValueError('route_templates contains an empty template name')
-            if not isinstance(raw_template, dict):
-                raise ValueError(f'route_templates.{name} must be a mapping')
-            template = dict(raw_template)
-            template_type = str(template.get('type') or template.get('kind') or '').strip()
-            side = _normalize_side(template.get('side', 'right'))
-            if template_type not in {'transport', 'loop_entry'}:
-                raise ValueError(
-                    f'route_templates.{name}.type must be transport or loop_entry'
-                )
-            template['type'] = template_type
-            template['side'] = side
-            template['source_slots'] = self._normalize_slots(template.get('source_slots'))
-            if not template['source_slots']:
-                raise ValueError(f'route_templates.{name} needs source_slots')
-            if template_type == 'transport':
-                template['target_slots'] = self._normalize_slots(template.get('target_slots'))
-                if not template['target_slots']:
-                    raise ValueError(f'route_templates.{name} needs target_slots')
-                template.setdefault('prepare_switches', {'ALL': 'EXTERIOR'})
-                template.setdefault('prepare_stoppers', {'ALL': '0'})
-            if template_type == 'loop_entry':
-                gate = str(template.get('gate_stopper') or '').strip().upper()
-                if gate not in SWITCHES:
-                    raise ValueError(f'route_templates.{name} needs gate_stopper A1..A4')
-                template['gate_stopper'] = gate
-                template['completion_sensors'] = self._normalize_names(
-                    template.get('completion_sensors')
-                )
-                template['completion_segments'] = self._normalize_segments(
-                    template.get('completion_segments')
-                )
-                template.setdefault('approach_switch_state', 'EXTERIOR')
-                template.setdefault('target_switch_state', 'INTERIOR')
-            templates[name] = template
-        return templates
-
-    def _load_template_aliases(self, config: dict[str, Any]) -> dict[str, str]:
-        aliases: dict[str, str] = {}
-        raw_aliases = config.get('template_aliases') or config.get('station_aliases') or {}
-        if isinstance(raw_aliases, dict):
-            for raw_alias, raw_template in raw_aliases.items():
-                template_name = str(raw_template).strip()
-                if template_name in self.route_templates:
-                    aliases[' '.join(str(raw_alias).casefold().replace('_', ' ').split())] = template_name
-        for template_name, template in self.route_templates.items():
-            for raw_alias in self._normalize_names(template.get('aliases')):
-                aliases[' '.join(raw_alias.casefold().replace('_', ' ').split())] = template_name
-        return aliases
 
     def _slot_sensor_map_from_config(self) -> dict[str, dict[str, str]]:
         mapping = {
@@ -3204,8 +2385,7 @@ class Room315VlaSupervisor(Node):
             self._publish_shuttle_command(side, 'ALL', 'OFF')
             if close_stoppers:
                 self._publish_stoppers(side, {'ALL': '1'})
-        for task in list(self.active_tasks.values()):
-            self._fail_task(task, reason)
+        self.active_tasks.clear()
         self._set_result(f'{reason}: all shuttles OFF')
 
     def _default_speed(self) -> float:
@@ -3287,7 +2467,6 @@ class Room315VlaSupervisor(Node):
             'last_command': self.last_command,
             'last_result': self.last_result,
             'last_primitive_command': self.last_primitive_command,
-            'available_route_templates': sorted(self.route_templates),
             'active_tasks': {
                 task_id: self._task_status_snapshot(task)
                 for task_id, task in self.active_tasks.items()

@@ -16,6 +16,7 @@ SCRIPT_PATH = (
     / 'scripts'
     / 'room_315_pddl_scenario_generator.py'
 )
+RIGHT_CASE = 'right_loaded_r1_s1_to_slot3_no_blocker'
 
 
 class FakePlanSysClient:
@@ -49,9 +50,9 @@ def _right_plansys_actions():
     return [
         '(prepare_switches right right_yaskawa right_staubli right_switch_group)',
         '(open_stoppers right right_yaskawa right_staubli right_stopper_group)',
-        '(move_shuttle right_shuttle right right_yaskawa right_staubli)',
-        '(stop_shuttle right_shuttle right right_yaskawa right_staubli)',
-        '(finish_task right_shuttle right_staubli)',
+        '(move_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
+        '(stop_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
+        '(finish_task right_shuttle_1 right_staubli)',
     ]
 
 
@@ -83,7 +84,7 @@ def test_external_pddl_backend_is_not_supported():
 
 def test_missing_plansys_package_gives_clear_error(monkeypatch):
     generator = _load_module()
-    spec = generator.scenario_spec_from_goal('right_yaskawa_to_staubli')
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
     original_import_module = generator.importlib.import_module
 
     def fake_import_module(name, *args, **kwargs):
@@ -100,7 +101,7 @@ def test_missing_plansys_package_gives_clear_error(monkeypatch):
 
 def test_plansys_backend_converts_plan_items_to_internal_symbolic_plan():
     generator = _load_module()
-    spec = generator.scenario_spec_from_goal('right_yaskawa_to_staubli')
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
     client = FakePlanSysClient(_right_plansys_actions())
     backend = generator.PlanSysPlannerBackend(planner_client=client)
 
@@ -109,15 +110,15 @@ def test_plansys_backend_converts_plan_items_to_internal_symbolic_plan():
     assert plan == [
         'prepare_switches right yaskawa staubli',
         'open_stoppers right yaskawa staubli',
-        'move_shuttle right right_shuttle yaskawa staubli speed=0.41',
-        'stop_shuttle right right_shuttle',
-        'finish_task right_shuttle staubli',
+        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.41',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_1 staubli',
     ]
 
 
 def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     generator = _load_module()
-    spec = generator.scenario_spec_from_goal('right_yaskawa_to_staubli')
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
     client = FakePlanSysClient(_right_plansys_actions())
     backend = generator.PlanSysPlannerBackend(planner_client=client)
 
@@ -126,8 +127,8 @@ def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     assert len(client.calls) == 1
     call = client.calls[0]
     assert '(domain room315-shuttle)' in call['domain']
-    assert '(problem room315-right-yaskawa-to-staubli)' in call['problem']
-    assert '(task_done right_shuttle right_staubli)' in call['problem']
+    assert f'(problem room315-{RIGHT_CASE})' in call['problem']
+    assert '(task_done right_shuttle_1 right_staubli)' in call['problem']
 
 
 def test_plansys_output_translates_to_primitive_commands_and_action_vectors():
@@ -136,7 +137,7 @@ def test_plansys_output_translates_to_primitive_commands_and_action_vectors():
     backend = generator.PlanSysPlannerBackend(planner_client=client)
 
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         speed=0.35,
         planner=backend,
     )
@@ -165,8 +166,8 @@ def test_cli_rejects_fallback_backend_before_planning():
         [
             sys.executable,
             str(SCRIPT_PATH),
-            '--goal',
-            'right_yaskawa_to_staubli',
+            '--case-id',
+            RIGHT_CASE,
             '--planner-backend',
             'fallback',
             '--dry-run',

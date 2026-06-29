@@ -148,5 +148,5 @@ def test_http_plan_requests_schema_v3_when_multiple_shuttles_are_active():
     assert payload['multi_shuttle_active'] is True
     assert payload['shuttle_index_mapping']['right']['R2'] == 1
     assert payload['event_action_vector_fields'] == agent_module.EVENT_ACTION_VECTOR_FIELDS
-    assert 'route_template' not in payload['allowed_actions']
+    assert 'route' + '_template' not in payload['allowed_actions']
     assert parsed['action_vector_schema_version'] == 3

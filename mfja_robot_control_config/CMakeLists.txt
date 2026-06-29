@@ -23,7 +23,6 @@ install(
 install(
   FILES
     config/room_315_vla/action_space.yaml
-    config/room_315_vla/pddl_scenario_batch.yaml
     config/room_315_vla/payload_training_cases.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
@@ -69,7 +68,6 @@ install(
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
     scripts/room_315_real_vla_agent.py
-    scripts/room_315_vla_benchmark_runner.py
     scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
@@ -194,10 +192,6 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_multi_shuttle_launch_args
     test/test_room315_multi_shuttle_launch_args.py
-  )
-  ament_add_pytest_test(
-    test_room315_vla_benchmark_runner
-    test/test_room315_vla_benchmark_runner.py
   )
   ament_add_pytest_test(
     test_room315_vla_baseline_eval

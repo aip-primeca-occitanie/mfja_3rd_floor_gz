@@ -85,9 +85,6 @@ SENSOR_IDS_BY_SIDE = {
 
 COMMAND_ACTIONS = {
     'status',
-    'route_template',
-    'route_template_phase',
-    'route_shuttle',
     'switches',
     'stoppers',
     'shuttle',
@@ -116,7 +113,7 @@ WAIT_CONDITION_IDS = {
     'stopper_state_match': 2,
     'shuttle_command_applied': 3,
     'task_terminal_status': 4,
-    'task_phase_observed': 5,
+    'reserved_legacy_wait_5': 5,
     'terminal': 6,
     'target_sensor_active': 7,
     'block_clearance': 8,
@@ -133,13 +130,13 @@ TARGET_IDS = {
     'MULTIPLE_DEVICES': 7,
     'right_shuttle': 8,
     'left_shuttle': 9,
-    'right_yaskawa_to_staubli': 10,
-    'right_staubli_to_yaskawa': 11,
-    'left_yaskawa_to_kuka': 12,
-    'left_kuka_to_yaskawa': 13,
-    'right_enter_interior_loop': 14,
-    'left_enter_interior_loop': 15,
-    'task_phase': 16,
+    'reserved_legacy_target_10': 10,
+    'reserved_legacy_target_11': 11,
+    'reserved_legacy_target_12': 12,
+    'reserved_legacy_target_13': 13,
+    'reserved_legacy_target_14': 14,
+    'reserved_legacy_target_15': 15,
+    'reserved_legacy_target_16': 16,
     'terminal': 17,
     'DZI1R': 18,
     'DZI2R': 19,
@@ -163,8 +160,8 @@ TARGET_IDS = {
 REASON_IDS = {
     'none': 0,
     'command_event': 1,
-    'route_template_requested': 2,
-    'task_phase': 3,
+    'reserved_legacy_reason_2': 2,
+    'reserved_legacy_reason_3': 3,
     'task_succeeded': 4,
     'task_failed': 5,
     'episode_stopped': 6,
@@ -357,12 +354,6 @@ def _as_command_dict(command: Any) -> dict[str, Any]:
 def _normalize_action_name(command: dict[str, Any]) -> str:
     action = str(command.get('action') or command.get('intent') or command.get('type') or 'status')
     action = action.lower().strip()
-    if action in {'route', 'start_route'}:
-        return 'route_shuttle'
-    if action in {'template', 'task'}:
-        return 'route_template'
-    if action in {'route_template_phase', 'task_phase'}:
-        return 'route_template_phase'
     if action in {'switch'}:
         return 'switches'
     if action in {'stopper'}:
@@ -407,39 +398,6 @@ def _normalize_symbolic_action(command: Any) -> dict[str, Any]:
             'failure_reason': str(command_dict.get('failure_reason') or '').strip(),
         }
 
-    if action == 'route_template':
-        return {
-            'action': 'route_template',
-            'template': str(
-                command_dict.get('template')
-                or command_dict.get('template_id')
-                or command_dict.get('name')
-                or ''
-            ).strip(),
-        }
-
-    if action == 'route_template_phase':
-        return {
-            'action': 'route_template_phase',
-            'template': str(command_dict.get('template') or '').strip(),
-            'task_id': str(command_dict.get('task_id') or '').strip(),
-            'phase': str(command_dict.get('phase') or '').strip(),
-            'status': str(command_dict.get('status') or '').strip(),
-        }
-
-    if action == 'route_shuttle':
-        normalized = {
-            'action': 'route_shuttle',
-            'side': side or 'right',
-            'loop': str(command_dict.get('loop') or '').strip().lower(),
-            'start': bool(command_dict.get('start', command_dict.get('start_after_prepare', True))),
-        }
-        if command_dict.get('start_slot') is not None:
-            normalized['start_slot'] = str(command_dict.get('start_slot')).strip()
-        if command_dict.get('speed') is not None:
-            normalized['speed'] = float(command_dict.get('speed') or 0.0)
-        return normalized
-
     if action == 'switches':
         switches = command_dict.get('switches')
         if not isinstance(switches, dict) and 'name' in command_dict and 'state' in command_dict:
@@ -479,10 +437,8 @@ def _normalize_symbolic_action(command: Any) -> dict[str, Any]:
 
 def _is_meaningful_event_action(next_action: dict[str, Any]) -> bool:
     action = str(next_action.get('action') or '')
-    if action in {'switches', 'stoppers', 'route_shuttle', 'route_template'}:
+    if action in {'switches', 'stoppers'}:
         return True
-    if action == 'route_template_phase':
-        return bool(next_action.get('phase'))
     if action == 'DONE':
         return True
     if action == 'shuttle':
@@ -672,9 +628,6 @@ def _target_from_wait_condition(wait_condition: dict[str, Any]) -> str:
             return _target_from_assignments(target, device_kind='stopper')
     if isinstance(target, str):
         return _normalize_target_id(target)
-    phase = wait_condition.get('phase') if isinstance(wait_condition, dict) else ''
-    if phase:
-        return 'task_phase'
     return 'none'
 
 
@@ -694,10 +647,6 @@ def _reason_for_action(
         if status == 'discarded':
             return 'episode_discarded'
         return 'episode_stopped'
-    if action == 'route_template_phase' or event_type == 'task_phase':
-        return 'task_phase'
-    if action == 'route_template':
-        return 'route_template_requested'
     if action == 'switches':
         return 'switch_update'
     if action == 'stoppers':
@@ -755,16 +704,6 @@ def _event_action_from_symbolic_action(
             except (TypeError, ValueError):
                 speed_mps = 0.0
             primitive = 'SHUTTLE_ON'
-    elif action == 'route_shuttle':
-        start = command_dict.get('start', command_dict.get('start_after_prepare', True))
-        if _as_bool(start):
-            try:
-                speed_mps = float(command_dict.get('speed', 0.0) or 0.0)
-            except (TypeError, ValueError):
-                speed_mps = 0.0
-            primitive = 'SHUTTLE_ON'
-        else:
-            primitive = 'STOP_NOW'
     elif action == 'stop_all':
         primitive = 'STOP_NOW'
     elif action == 'emergency_stop':
@@ -786,10 +725,6 @@ def _event_action_from_symbolic_action(
             target_id = f'{side}_shuttle'
         elif primitive == 'DONE':
             target_id = _normalize_target_id(command_dict.get('template')) or 'terminal'
-        elif action == 'route_template':
-            target_id = _normalize_target_id(command_dict.get('template'))
-        elif action == 'route_template_phase':
-            target_id = 'task_phase'
     if target_id == 'none' and primitive == 'DONE':
         target_id = 'terminal'
 
@@ -1668,14 +1603,6 @@ def _wait_condition_for_action(
     if action == 'shuttle':
         command = str(next_action.get('command') or '')
         return {'type': 'shuttle_command_applied', 'target': command}
-    if action == 'route_template':
-        return {'type': 'task_terminal_status', 'target': 'succeeded_or_failed'}
-    if action == 'route_template_phase':
-        return {
-            'type': 'task_phase_observed',
-            'phase': next_action.get('phase', ''),
-            'task_status': next_action.get('status', ''),
-        }
     if action == 'DONE':
         return {'type': 'terminal', 'status': next_action.get('status', '')}
     if task_context:
@@ -1749,7 +1676,6 @@ class Room315VlaDatasetRecorder(Node):
         self.previous_event_command: dict[str, Any] | None = deepcopy(START_LAST_COMMAND)
         self.event_generation_metrics: dict[str, Any] = _empty_event_generation_metrics()
         self.current_task_success: bool | None = None
-        self.last_task_phase_by_id: dict[str, str] = {}
         self.completed_task_signatures: set[str] = set()
         self.last_sensor_signature_by_side: dict[str, str] = {side: '' for side in SIDES}
         self.last_sensor_event_time_by_side: dict[str, float | None] = {
@@ -1893,7 +1819,6 @@ class Room315VlaDatasetRecorder(Node):
         self.previous_event_command = deepcopy(START_LAST_COMMAND)
         self.event_generation_metrics = _empty_event_generation_metrics()
         self.current_task_success = None
-        self.last_task_phase_by_id = {}
         self.completed_task_signatures = set()
         self.last_sensor_signature_by_side = {side: '' for side in SIDES}
         self.last_sensor_event_time_by_side = {side: None for side in SIDES}
@@ -2054,8 +1979,6 @@ class Room315VlaDatasetRecorder(Node):
                 'task': self.latest_goal,
                 'task_index': self.latest_task_index,
                 'task_id': task_context.get('task_id', ''),
-                'task_template': task_context.get('template', ''),
-                'task_phase': task_context.get('phase', ''),
                 'task_status': task_context.get('status', ''),
                 'task_failure_reason': task_context.get('failure_reason', ''),
                 'observation.state': _encode_state(self.latest_status),
@@ -2128,31 +2051,6 @@ class Room315VlaDatasetRecorder(Node):
                     original_command=primitive,
                     event_type='supervisor_primitive',
                     task_context=self._task_context_for_primitive(primitive),
-                )
-
-        active_tasks = self.latest_status.get('active_tasks', {})
-        if isinstance(active_tasks, dict):
-            for task in active_tasks.values():
-                if not isinstance(task, dict):
-                    continue
-                task_id = str(task.get('task_id') or '')
-                phase = str(task.get('phase') or '')
-                if not task_id or not phase:
-                    continue
-                if self.last_task_phase_by_id.get(task_id) == phase:
-                    continue
-                self.last_task_phase_by_id[task_id] = phase
-                self._record_event(
-                    {
-                        'action': 'route_template_phase',
-                        'template': task.get('template', ''),
-                        'task_id': task_id,
-                        'phase': phase,
-                        'status': task.get('status', ''),
-                    },
-                    original_command=self.latest_command,
-                    event_type='task_phase',
-                    task_context=task,
                 )
 
         completed_tasks = self.latest_status.get('completed_tasks', [])

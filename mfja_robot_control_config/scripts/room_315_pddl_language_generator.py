@@ -443,21 +443,25 @@ def _render_template(goal: LanguageGoal, template_id: str) -> str:
             shuttle_label=shuttle_label or f'{goal.side} shuttle',
             slot=goal.slot_sequence[-1],
         )
-    route_templates = {
+    station_language_templates = {
         **ROUTE_TEMPLATES,
         **IDENTITY_ROUTE_TEMPLATES,
         **RELATIONAL_ROUTE_TEMPLATES,
         **PAYLOAD_ROUTE_TEMPLATES,
     }
-    if template_id not in route_templates:
-        allowed = ', '.join([*route_templates, *SLOT_SEQUENCE_TEMPLATES, *slot_templates])
+    if template_id not in station_language_templates:
+        allowed = ', '.join([
+            *station_language_templates,
+            *SLOT_SEQUENCE_TEMPLATES,
+            *slot_templates,
+        ])
         raise ValueError(f'unknown language template {template_id!r}; allowed: {allowed}')
     shuttle_label = _shuttle_label(goal.shuttle)
     if template_id in IDENTITY_ROUTE_TEMPLATES and not shuttle_label:
         raise ValueError(f'template {template_id!r} needs a specific shuttle identity')
     if template_id == 'carrying_part_id_to_station' and not shuttle_label:
         raise ValueError(f'template {template_id!r} needs a specific shuttle identity')
-    template = route_templates[template_id]
+    template = station_language_templates[template_id]
     return template.format(
         side=goal.side,
         shuttle_label=shuttle_label or f'{goal.side} shuttle',
@@ -631,7 +635,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description='Generate deterministic Room 315 task language from PDDL goals or plans.'
     )
-    parser.add_argument('--goal', default='', help='PDDL goal or simple goal text.')
+    parser.add_argument('--pddl-goal', default='', help='PDDL goal or simple goal text.')
     parser.add_argument('--problem', default='', help='Optional PDDL problem identifier.')
     parser.add_argument('--plan-step', action='append', default=[], help='Symbolic plan step.')
     parser.add_argument('--action-sequence', default='', help='Plain text action sequence.')
@@ -644,7 +648,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     generated = generate_language(
-        pddl_goal=args.goal,
+        pddl_goal=args.pddl_goal,
         pddl_problem=args.problem,
         symbolic_plan=args.plan_step,
         action_sequence=args.action_sequence,

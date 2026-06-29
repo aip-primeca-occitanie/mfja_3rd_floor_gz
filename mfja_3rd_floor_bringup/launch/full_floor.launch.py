@@ -311,32 +311,6 @@ def generate_launch_description():
             default_value='0.2',
             description='Sample period in seconds for Room 315 VLA demonstrations.',
         ),
-        DeclareLaunchArgument(
-            'enable_room315_vla_benchmark_runner',
-            default_value='false',
-            choices=['true', 'false'],
-            description='Run Room 315 VLA task-level benchmark episodes automatically.',
-        ),
-        DeclareLaunchArgument(
-            'room315_vla_benchmark_tasks',
-            default_value='all',
-            description='Comma-separated VLA benchmark tasks, or group: all, transport, loop_entry.',
-        ),
-        DeclareLaunchArgument(
-            'room315_vla_benchmark_report_dir',
-            default_value='~/.ros/room315_vla_benchmarks',
-            description='Output directory for Room 315 VLA benchmark reports.',
-        ),
-        DeclareLaunchArgument(
-            'room315_vla_benchmark_task_timeout_s',
-            default_value='120.0',
-            description='Maximum seconds to wait for each Room 315 VLA benchmark task.',
-        ),
-        DeclareLaunchArgument(
-            'room315_vla_benchmark_settle_time_s',
-            default_value='2.0',
-            description='Seconds to wait between Room 315 VLA benchmark tasks.',
-        ),
         OpaqueFunction(function=_clear_vla_obstacle_pose_cache),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),
@@ -468,21 +442,6 @@ def generate_launch_description():
                         ),
                         'dataset_sample_period_s': LaunchConfiguration(
                             'room315_vla_dataset_sample_period_s'
-                        ),
-                        'enable_benchmark_runner': LaunchConfiguration(
-                            'enable_room315_vla_benchmark_runner'
-                        ),
-                        'benchmark_tasks': LaunchConfiguration(
-                            'room315_vla_benchmark_tasks'
-                        ),
-                        'benchmark_report_dir': LaunchConfiguration(
-                            'room315_vla_benchmark_report_dir'
-                        ),
-                        'benchmark_task_timeout_s': LaunchConfiguration(
-                            'room315_vla_benchmark_task_timeout_s'
-                        ),
-                        'benchmark_settle_time_s': LaunchConfiguration(
-                            'room315_vla_benchmark_settle_time_s'
                         ),
                     }.items(),
                 ),

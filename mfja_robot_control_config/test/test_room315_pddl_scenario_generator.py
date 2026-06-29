@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import ast
-from collections import Counter
 import importlib.util
 import json
 from pathlib import Path
@@ -28,13 +27,6 @@ BATCH_RUNNER_SCRIPT_PATH = (
     / 'scripts'
     / 'room_315_payload_case_batch_runner.py'
 )
-BATCH_CONFIG_PATH = (
-    REPO_ROOT
-    / 'mfja_robot_control_config'
-    / 'config'
-    / 'room_315_vla'
-    / 'pddl_scenario_batch.yaml'
-)
 PAYLOAD_CASE_CONFIG_PATH = (
     REPO_ROOT
     / 'mfja_robot_control_config'
@@ -42,6 +34,12 @@ PAYLOAD_CASE_CONFIG_PATH = (
     / 'room_315_vla'
     / 'payload_training_cases.yaml'
 )
+RIGHT_CASE = 'right_loaded_r1_s1_to_slot3_no_blocker'
+RIGHT_R2_CASE = 'right_loaded_r2_s2_to_slot3_no_blocker'
+RIGHT_SELECT_R2_CASE = 'right_loaded_r1_s1_r2_s2_select_r2_to_slot3'
+RIGHT_BLOCKER_CASE = 'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3'
+LEFT_CASE = 'left_loaded_l1_s1_to_slot3_no_blocker'
+LEFT_R2_CASE = 'left_loaded_l2_s2_to_slot3_no_blocker'
 
 
 class FakeTransport:
@@ -302,23 +300,23 @@ def _ros_transport_shell(
     return transport
 
 
-def test_dry_run_right_yaskawa_to_staubli_produces_ordered_plan():
+def test_dry_run_right_payload_case_produces_ordered_plan():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         language_seed=42,
         planner=_fake_backend(),
     )
 
-    assert scenario['scenario_id'] == 'right_yaskawa_to_staubli'
-    assert scenario['pddl_goal'] == 'right_shuttle at staubli'
+    assert scenario['scenario_id'] == RIGHT_CASE
+    assert scenario['pddl_goal'] == 'loaded right_shuttle_1 at staubli'
     assert scenario['symbolic_plan'] == [
         'prepare_switches right yaskawa staubli',
         'open_stoppers right yaskawa staubli',
-        'move_shuttle right right_shuttle yaskawa staubli speed=0.3',
-        'stop_shuttle right right_shuttle',
-        'finish_task right_shuttle staubli',
+        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.3',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_1 staubli',
     ]
     assert [event['primitive'] for event in scenario['expected_event_targets']] == [
         'SET_SWITCHES',
@@ -333,12 +331,12 @@ def test_loaded_payload_goal_selects_r2_and_records_metadata_outside_model_input
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='right_loaded_r2_to_staubli',
-        language_template_id='carrying_part_id_to_station',
+        case_id=RIGHT_R2_CASE,
+        language_template_id='loaded_shuttle_to_slot',
         planner=_fake_backend(),
     )
 
-    assert scenario['scenario_id'] == 'right_loaded_r2_to_staubli'
+    assert scenario['scenario_id'] == RIGHT_R2_CASE
     assert scenario['pddl_goal'] == 'loaded right_shuttle_2 at staubli'
     assert scenario['payload_condition'] == 'loaded'
     assert scenario['target_shuttle_id'] == 'right_shuttle_2'
@@ -364,11 +362,11 @@ def test_nearest_loaded_slot_goal_selects_closest_loaded_shuttle():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='right_loaded_to_slot3',
+        case_id=RIGHT_SELECT_R2_CASE,
         planner=_fake_backend(),
     )
 
-    assert scenario['scenario_id'] == 'right_loaded_to_slot3'
+    assert scenario['scenario_id'] == RIGHT_SELECT_R2_CASE
     assert scenario['language'] == 'move the loaded right shuttle to slot 3'
     assert scenario['generated_language_template_id'] == 'loaded_shuttle_to_slot'
     assert scenario['target_slot'] == '3'
@@ -407,7 +405,7 @@ def test_nearest_loaded_slot_goal_selects_closest_loaded_shuttle():
 def test_nearest_loaded_slot_goal_waits_for_slot_sensor_only():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_to_slot3',
+        case_id=RIGHT_SELECT_R2_CASE,
         planner=_fake_backend(),
     )
     transport = ArrivalTrackingTransport()
@@ -556,11 +554,11 @@ def test_blocker_clear_goal_moves_empty_blocker_before_loaded_shuttle():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='right_loaded_to_slot3_clear_blocker',
+        case_id=RIGHT_BLOCKER_CASE,
         planner=_fake_backend(),
     )
 
-    assert scenario['scenario_id'] == 'right_loaded_to_slot3_clear_blocker'
+    assert scenario['scenario_id'] == RIGHT_BLOCKER_CASE
     assert scenario['language'] == 'move the loaded right shuttle to slot 3'
     assert scenario['target_shuttle_id'] == 'right_shuttle_2'
     assert scenario['target_slot'] == '3'
@@ -656,7 +654,7 @@ def test_blocker_restore_policy_falls_back_to_nearest_free_slot():
 def test_blocker_clear_goal_waits_for_blocker_slot_then_loaded_target_slot():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_to_slot3_clear_blocker',
+        case_id=RIGHT_BLOCKER_CASE,
         planner=_fake_backend(),
     )
     transport = ArrivalTrackingTransport()
@@ -1388,33 +1386,33 @@ def test_waiting_mode_counts_as_stopped_even_when_speed_field_is_stale():
 def test_payload_goal_spec_generates_payload_problem_text():
     generator = _load_module()
 
-    spec = generator.scenario_spec_from_goal('right_loaded_r2_to_staubli')
+    spec = generator.scenario_spec_from_case(RIGHT_R2_CASE)
     problem_text = generator._problem_text_for_spec(spec)
 
-    assert spec.goal_id == 'right_loaded_r2_to_staubli'
+    assert spec.goal_id == RIGHT_R2_CASE
     assert spec.shuttle == 'right_shuttle_2'
     assert spec.payload_condition == 'loaded'
     assert '(loaded right_shuttle_2)' in problem_text
     assert 'carrying_payload' not in problem_text
 
 
-def test_dry_run_left_yaskawa_to_kuka_produces_left_side_commands():
+def test_dry_run_left_payload_case_produces_left_side_commands():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='left_yaskawa_to_kuka',
+        case_id=LEFT_CASE,
         language_seed=1,
         planner=_fake_backend(),
     )
 
-    assert scenario['scenario_id'] == 'left_yaskawa_to_kuka'
-    assert scenario['pddl_problem'] == 'room315-left-yaskawa-to-kuka'
+    assert scenario['scenario_id'] == LEFT_CASE
+    assert scenario['pddl_problem'] == f'room315-{LEFT_CASE}'
     assert all(
         command.get('side') == 'left'
         for command in scenario['primitive_commands']
         if command['action'] != 'DONE'
     )
-    assert scenario['primitive_commands'][2]['shuttle'] == 'left_shuttle'
+    assert scenario['primitive_commands'][2]['shuttle'] == 'left_shuttle_1'
     assert scenario['expected_event_targets'][2]['target_id'] == 'left_shuttle_1'
     assert scenario['expected_event_targets'][2]['shuttle_id'] == 'L1'
     assert scenario['expected_event_targets'][2]['shuttle_index'] == 0
@@ -1424,13 +1422,13 @@ def test_generated_plan_includes_language():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='left_yaskawa_to_kuka',
-        language_template_id='move_from_to',
+        case_id=LEFT_CASE,
+        language_template_id='loaded_shuttle_to_slot',
         planner=_fake_backend(),
     )
 
-    assert scenario['language'] == 'move the left shuttle from Yaskawa to KUKA'
-    assert scenario['generated_language_template_id'] == 'move_from_to'
+    assert scenario['language'] == 'move the loaded left shuttle to slot 3'
+    assert scenario['generated_language_template_id'] == 'loaded_shuttle_to_slot'
     assert 'pddl' not in scenario['language'].casefold()
     assert '(' not in scenario['language']
 
@@ -1439,7 +1437,7 @@ def test_generated_plan_includes_primitive_commands():
     generator = _load_module()
 
     scenario = generator.generate_scenario(
-        goal='right_staubli_to_yaskawa',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
 
@@ -1462,7 +1460,7 @@ def test_plansys_domain_order_plan_generates_primitive_commands_and_vectors():
     )
 
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         speed=0.44,
         planner=backend,
     )
@@ -1470,9 +1468,9 @@ def test_plansys_domain_order_plan_generates_primitive_commands_and_vectors():
     assert scenario['symbolic_plan'] == [
         'prepare_switches right yaskawa staubli',
         'open_stoppers right yaskawa staubli',
-        'move_shuttle right right_shuttle yaskawa staubli speed=0.44',
-        'stop_shuttle right right_shuttle',
-        'finish_task right_shuttle staubli',
+        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.44',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_1 staubli',
     ]
     assert scenario['primitive_commands'][2]['speed'] == 0.44
     assert [target['primitive'] for target in scenario['expected_event_targets']] == [
@@ -1497,7 +1495,7 @@ def test_dry_run_imports_ros_lazily_and_can_use_mocked_plansys():
 
     assert 'rclpy' not in imported_modules
     scenario = _load_module().generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
     assert scenario['primitive_commands'][0]['action'] == 'switches'
@@ -1630,7 +1628,7 @@ def test_ros_episode_start_requires_fresh_episode_after_start_publish():
 def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_r2_to_staubli',
+        case_id=RIGHT_R2_CASE,
         planner=_fake_backend(),
     )
     transport = _ros_transport_shell(
@@ -1640,18 +1638,27 @@ def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
             'rails': {
                 'right': {
                     'shuttles': {
+                        'room315_right_shuttle_1': {'mode': 'STOPPED'},
                         'room315_right_shuttle_2': {'mode': 'STOPPED'},
                     },
-                    'payloads': {
-                        'room315_right_shuttle_2': {
-                            'loaded': True,
-                            'payload_type': 'box',
+                        'payloads': {
+                            'room315_right_shuttle_1': {
+                                'loaded': False,
+                                'payload_type': 'none',
+                            },
+                            'room315_right_shuttle_2': {
+                                'loaded': True,
+                                'payload_type': 'box',
                         },
                     },
                 },
             },
             'payload_state': {
                 'by_shuttle': {
+                    'room315_right_shuttle_1': {
+                        'loaded': False,
+                        'payload_type': 'none',
+                    },
                     'room315_right_shuttle_2': {
                         'loaded': True,
                         'payload_type': 'box',
@@ -1675,7 +1682,7 @@ def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
 def test_blocker_clear_preflight_checks_selected_loaded_shuttle_not_blocker():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_to_slot3_clear_blocker',
+        case_id=RIGHT_BLOCKER_CASE,
         planner=_fake_backend(),
     )
     transport = _ros_transport_shell(
@@ -2077,7 +2084,7 @@ def test_payload_case_batch_runner_rejects_nonpositive_speed_scale():
 def test_ros_initial_state_wait_reports_missing_target_shuttle_before_execute():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_r2_to_staubli',
+        case_id=RIGHT_R2_CASE,
         planner=_fake_backend(),
     )
     transport = _ros_transport_shell(
@@ -2111,7 +2118,7 @@ def test_dry_run_does_not_modify_files_unless_output_is_provided(tmp_path):
     before = sorted(path.name for path in tmp_path.iterdir())
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         language_seed=42,
         planner=_fake_backend(),
     )
@@ -2119,22 +2126,20 @@ def test_dry_run_does_not_modify_files_unless_output_is_provided(tmp_path):
 
     assert before == []
     assert after == []
-    assert scenario['scenario_id'] == 'right_yaskawa_to_staubli'
+    assert scenario['scenario_id'] == RIGHT_CASE
 
     output = tmp_path / 'planned_episode.json'
     generator.write_scenario(output, scenario)
 
     assert sorted(path.name for path in tmp_path.iterdir()) == ['planned_episode.json']
-    assert json.loads(output.read_text(encoding='utf-8'))['scenario_id'] == (
-        'right_yaskawa_to_staubli'
-    )
+    assert json.loads(output.read_text(encoding='utf-8'))['scenario_id'] == RIGHT_CASE
 
 
 def test_execute_mode_publishes_episode_start():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
-        language_template_id='move_from_to',
+        case_id=RIGHT_CASE,
+        language_template_id='loaded_shuttle_to_slot',
         planner=_fake_backend(),
     )
     transport = FakeTransport()
@@ -2142,14 +2147,14 @@ def test_execute_mode_publishes_episode_start():
     result = generator.execute_scenario(scenario, transport)
 
     assert result['success'] is True
-    assert transport.episode_controls[0] == 'start move the right shuttle from Yaskawa to Staubli'
+    assert transport.episode_controls[0] == 'start move the loaded right shuttle to slot 3'
 
 
 def test_execute_mode_waits_for_recorder_start_and_stop_ack():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
-        language_template_id='move_from_to',
+        case_id=RIGHT_CASE,
+        language_template_id='loaded_shuttle_to_slot',
         planner=_fake_backend(),
     )
     transport = RecorderAckTransport()
@@ -2163,12 +2168,12 @@ def test_execute_mode_waits_for_recorder_start_and_stop_ack():
     assert result['success'] is True
     assert transport.recorder_waits[0] == (
         'started',
-        'move the right shuttle from Yaskawa to Staubli',
+        'move the loaded right shuttle to slot 3',
         7.0,
     )
     assert transport.recorder_waits[-1] == ('stopped', 7.0)
     assert transport.episode_controls == [
-        'start move the right shuttle from Yaskawa to Staubli',
+        'start move the loaded right shuttle to slot 3',
         'stop success',
     ]
 
@@ -2176,7 +2181,7 @@ def test_execute_mode_waits_for_recorder_start_and_stop_ack():
 def test_execute_mode_publishes_commands_in_plan_order():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
     transport = FakeTransport()
@@ -2201,7 +2206,7 @@ def test_execute_mode_publishes_commands_in_plan_order():
 def test_execute_mode_waits_for_target_sensor_before_stop_command():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
     transport = ArrivalTrackingTransport()
@@ -2215,9 +2220,9 @@ def test_execute_mode_waits_for_target_sensor_before_stop_command():
     assert result['success'] is True
     assert transport.arrival_waits == [{
         'side': 'right',
-        'target_sensors': ['DZI3R', 'DZI4R'],
-        'shuttle': 'right_shuttle',
-        'target_slot': '',
+        'target_sensors': ['DZI3R'],
+        'shuttle': 'right_shuttle_1',
+        'target_slot': '3',
         'target_station': 'staubli',
         'timeout_s': 17.0,
     }]
@@ -2242,7 +2247,7 @@ def test_execute_mode_waits_for_target_sensor_before_stop_command():
 def test_execute_mode_target_arrival_timeout_stops_before_off_command():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
     transport = ArrivalTrackingTransport(
@@ -2266,7 +2271,7 @@ def test_execute_mode_target_arrival_timeout_stops_before_off_command():
 def test_rejected_supervisor_response_stops_episode_with_failure():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
     transport = FakeTransport(decisions=[
@@ -2287,7 +2292,7 @@ def test_rejected_supervisor_response_stops_episode_with_failure():
 def test_execute_mode_fails_clearly_when_supervisor_not_ready():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_yaskawa_to_staubli',
+        case_id=RIGHT_CASE,
         planner=_fake_backend(),
     )
     transport = NotReadyTransport()
@@ -2304,7 +2309,7 @@ def test_execute_mode_fails_clearly_when_supervisor_not_ready():
 def test_preflight_mode_reports_ready_line_without_publishing_commands():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_r2_to_staubli',
+        case_id=RIGHT_R2_CASE,
         planner=_fake_backend(),
     )
     transport = InitialStateTransport({
@@ -2327,7 +2332,7 @@ def test_preflight_mode_reports_ready_line_without_publishing_commands():
 def test_preflight_mode_reports_missing_initial_state():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='right_loaded_r2_to_staubli',
+        case_id=RIGHT_R2_CASE,
         planner=_fake_backend(),
     )
     transport = InitialStateTransport({
@@ -2357,7 +2362,7 @@ def test_main_execute_returns_nonzero_when_execution_fails(monkeypatch, capsys):
     monkeypatch.setattr(generator, 'create_planner_backend', lambda *args, **kwargs: _fake_backend())
     monkeypatch.setattr(generator, 'RosScenarioTransport', lambda **kwargs: transport)
 
-    rc = generator.main(['--goal', 'right_yaskawa_to_staubli', '--execute'])
+    rc = generator.main(['--case-id', RIGHT_CASE, '--execute'])
     captured = capsys.readouterr()
 
     assert rc == 1
@@ -2371,7 +2376,7 @@ def test_main_execute_quiet_suppresses_success_json(monkeypatch, capsys):
     monkeypatch.setattr(generator, 'create_planner_backend', lambda *args, **kwargs: _fake_backend())
     monkeypatch.setattr(generator, 'RosScenarioTransport', lambda **kwargs: transport)
 
-    rc = generator.main(['--goal', 'right_yaskawa_to_staubli', '--execute', '--quiet'])
+    rc = generator.main(['--case-id', RIGHT_CASE, '--execute', '--quiet'])
     captured = capsys.readouterr()
 
     assert rc == 0
@@ -2386,7 +2391,7 @@ def test_main_execute_quiet_reports_compact_failure(monkeypatch, capsys):
     monkeypatch.setattr(generator, 'create_planner_backend', lambda *args, **kwargs: _fake_backend())
     monkeypatch.setattr(generator, 'RosScenarioTransport', lambda **kwargs: transport)
 
-    rc = generator.main(['--goal', 'right_yaskawa_to_staubli', '--execute', '--quiet'])
+    rc = generator.main(['--case-id', RIGHT_CASE, '--execute', '--quiet'])
     captured = capsys.readouterr()
 
     assert rc == 1
@@ -2397,7 +2402,7 @@ def test_main_execute_quiet_reports_compact_failure(monkeypatch, capsys):
 def test_success_path_stops_episode_with_success():
     generator = _load_module()
     scenario = generator.generate_scenario(
-        goal='left_yaskawa_to_kuka',
+        case_id=LEFT_CASE,
         planner=_fake_backend(),
     )
     transport = FakeTransport()
@@ -2407,148 +2412,3 @@ def test_success_path_stops_episode_with_success():
     assert result['success'] is True
     assert transport.episode_controls[-1] == 'stop success'
     assert len(transport.command_messages) == len(scenario['symbolic_plan'])
-
-
-def test_batch_dry_run_creates_n_planned_episodes():
-    generator = _load_module()
-
-    batch = generator.generate_batch_scenarios(
-        generator.load_batch_config(BATCH_CONFIG_PATH),
-        planner=_fake_backend(),
-    )
-
-    assert batch['planned_episode_count'] == 12
-    assert Counter(episode['scenario_id'] for episode in batch['episodes']) == {
-        'right_yaskawa_to_staubli': 3,
-        'right_staubli_to_yaskawa': 3,
-        'left_yaskawa_to_kuka': 3,
-        'left_kuka_to_yaskawa': 3,
-    }
-    assert all(episode['symbolic_plan'] for episode in batch['episodes'])
-
-
-def test_batch_respects_repetitions_per_goal():
-    generator = _load_module()
-
-    batch = generator.generate_batch_scenarios({
-        'goals': ['right_yaskawa_to_staubli', 'left_yaskawa_to_kuka'],
-        'repetitions_per_goal': 3,
-        'speed_values': [0.3],
-    }, planner=_fake_backend())
-
-    assert batch['planned_episode_count'] == 6
-    assert Counter(episode['scenario_id'] for episode in batch['episodes']) == {
-        'right_yaskawa_to_staubli': 3,
-        'left_yaskawa_to_kuka': 3,
-    }
-
-
-def test_batch_produces_language_paraphrases():
-    generator = _load_module()
-
-    batch = generator.generate_batch_scenarios({
-        'goals': ['right_yaskawa_to_staubli'],
-        'repetitions_per_goal': 4,
-        'language_seed': 0,
-        'speed_values': [0.3],
-    }, planner=_fake_backend())
-    languages = [episode['language'] for episode in batch['episodes']]
-
-    assert len(set(languages)) == 4
-    assert [episode['generated_language_template_id'] for episode in batch['episodes']] == [
-        'move_from_to',
-        'send_to_station',
-        'route_between_stations',
-        'bring_to_station',
-    ]
-    assert all('pddl' not in language.casefold() for language in languages)
-
-
-def test_batch_speed_values_propagate_to_shuttle_on_commands():
-    generator = _load_module()
-
-    batch = generator.generate_batch_scenarios({
-        'goals': ['right_yaskawa_to_staubli'],
-        'repetitions_per_goal': 3,
-        'speed_values': [0.2, 0.3, 0.5],
-    }, planner=_fake_backend())
-    speeds = []
-    for episode in batch['episodes']:
-        shuttle_on = [
-            command
-            for command in episode['primitive_commands']
-            if command.get('action') == 'shuttle' and command.get('command') == 'ON'
-        ]
-        speeds.append(shuttle_on[0]['speed'])
-
-    assert speeds == [0.2, 0.3, 0.5]
-
-
-def test_batch_keeps_model_input_free_of_speed_and_pddl_internals():
-    generator = _load_module()
-
-    batch = generator.generate_batch_scenarios({
-        'goals': ['right_yaskawa_to_staubli'],
-        'repetitions_per_goal': 2,
-        'speed_values': [0.2, 0.5],
-    }, planner=_fake_backend())
-
-    forbidden = {
-        'speed',
-        'speed_values',
-        'batch_speed_mps',
-        'pddl_domain',
-        'pddl_problem',
-        'pddl_goal',
-        'symbolic_plan',
-        'plan_step_index',
-    }
-    for episode in batch['episodes']:
-        assert 'model_input' not in episode
-        for payload in generator.command_payloads_for_execution(episode):
-            assert 'model_input' not in payload
-        model_input = {
-            'language': episode['language'],
-            'overhead_images': {},
-            'last_command': {'action': 'START'},
-            'observable_state': {},
-        }
-        assert set(model_input) == {
-            'language',
-            'overhead_images',
-            'last_command',
-            'observable_state',
-        }
-        serialized_model_input = json.dumps(model_input, sort_keys=True)
-        for field in forbidden:
-            assert field not in model_input
-            assert field not in serialized_model_input
-
-
-def test_batch_execute_uses_supervisor_command_path():
-    generator = _load_module()
-    batch = generator.generate_batch_scenarios({
-        'goals': ['right_yaskawa_to_staubli', 'left_yaskawa_to_kuka'],
-        'repetitions_per_goal': 1,
-        'speed_values': [0.3],
-    }, planner=_fake_backend())
-    transport = FakeTransport()
-
-    result = generator.execute_batch_scenarios(batch, transport)
-
-    assert result['success'] is True
-    assert result['completed_episode_count'] == 2
-    assert len(transport.command_messages) == 10
-    assert transport.episode_controls[0].startswith('start ')
-    assert transport.episode_controls[1] == 'stop success'
-    assert transport.episode_controls[2].startswith('start ')
-    assert transport.episode_controls[3] == 'stop success'
-    assert all(message['planning_source'] == 'pddl' for message in transport.command_messages)
-    assert all('action_vector' in message for message in transport.command_messages)
-    assert [message['action'] for message in transport.command_messages[:5]] == [
-        'switches',
-        'stoppers',
-        'shuttle',
-        'shuttle',
-        'DONE',
-    ]

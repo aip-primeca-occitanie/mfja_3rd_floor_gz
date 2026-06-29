@@ -9,7 +9,6 @@ supervisor, execute Gazebo directly, or modify model_input.
 import argparse
 import importlib
 import json
-import random
 import re
 import sys
 import time
@@ -48,98 +47,6 @@ DEFAULT_PLANSYS_TIMEOUT_S = 10.0
 DEFAULT_SUPERVISOR_NODE_NAME = 'room_315_vla_supervisor'
 DEFAULT_SHUTTLE_SPEED_MPS = 0.3
 
-SUPPORTED_GOALS = {
-    'right_yaskawa_to_staubli': {
-        'side': 'right',
-        'shuttle': 'right_shuttle',
-        'source': 'yaskawa',
-        'target': 'staubli',
-        'problem_name': 'room315-right-yaskawa-to-staubli',
-    },
-    'right_staubli_to_yaskawa': {
-        'side': 'right',
-        'shuttle': 'right_shuttle',
-        'source': 'staubli',
-        'target': 'yaskawa',
-        'problem_name': 'room315-right-staubli-to-yaskawa',
-    },
-    'left_yaskawa_to_kuka': {
-        'side': 'left',
-        'shuttle': 'left_shuttle',
-        'source': 'yaskawa',
-        'target': 'kuka',
-        'problem_name': 'room315-left-yaskawa-to-kuka',
-    },
-    'left_kuka_to_yaskawa': {
-        'side': 'left',
-        'shuttle': 'left_shuttle',
-        'source': 'kuka',
-        'target': 'yaskawa',
-        'problem_name': 'room315-left-kuka-to-yaskawa',
-    },
-    'right_loaded_r2_to_staubli': {
-        'side': 'right',
-        'shuttle': 'right_shuttle_2',
-        'source': 'yaskawa',
-        'target': 'staubli',
-        'payload_condition': 'loaded',
-        'problem_name': 'room315-right-loaded-r2-to-staubli',
-    },
-    'right_loaded_to_slot3': {
-        'side': 'right',
-        'target_slot': '3',
-        'payload_condition': 'loaded',
-        'selection_policy': 'nearest_loaded_to_target_slot_then_lowest_id',
-        'loaded_shuttles': ('right_shuttle_1', 'right_shuttle_2'),
-        'start_slots_by_shuttle': {
-            'right_shuttle_1': '1',
-            'right_shuttle_2': '2',
-        },
-        'problem_name': 'room315-right-loaded-to-slot3',
-    },
-    'right_loaded_to_slot3_clear_blocker': {
-        'side': 'right',
-        'target_slot': '3',
-        'payload_condition': 'loaded',
-        'selection_policy': 'nearest_loaded_to_target_slot_then_lowest_id',
-        'loaded_shuttles': ('right_shuttle_2',),
-        'start_slots_by_shuttle': {
-            'right_shuttle_1': '3',
-            'right_shuttle_2': '2',
-        },
-        'blocker_shuttle': 'right_shuttle_1',
-        'blocker_start_slot': '3',
-        'blocker_clear_slot': '4',
-        'blocker_clear_sensor': 'A4_STOPPER_SENSOR',
-        'blocker_clear_stopper': 'A4',
-        'blocker_restore_slot': '',
-        'blocker_restore_policy': 'none',
-        'clearance_strategy': 'clear_blocker_to_a4_stopper_then_move_loaded',
-        'problem_name': 'room315-right-loaded-to-slot3-clear-blocker',
-    },
-    'right_empty_r1_to_yaskawa': {
-        'side': 'right',
-        'shuttle': 'right_shuttle_1',
-        'source': 'staubli',
-        'target': 'yaskawa',
-        'payload_condition': 'empty',
-        'problem_name': 'room315-right-empty-r1-to-yaskawa',
-    },
-    'left_loaded_l2_to_kuka': {
-        'side': 'left',
-        'shuttle': 'left_shuttle_2',
-        'source': 'yaskawa',
-        'target': 'kuka',
-        'payload_condition': 'loaded',
-        'problem_name': 'room315-left-loaded-l2-to-kuka',
-    },
-}
-LANGUAGE_TEMPLATE_SEQUENCE = (
-    'move_from_to',
-    'send_to_station',
-    'route_between_stations',
-    'bring_to_station',
-)
 SUPPORTED_SYMBOLIC_ACTIONS = {
     'prepare_switches',
     'open_stoppers',
@@ -1070,7 +977,6 @@ class RosScenarioTransport(ScenarioTransport):
 
 def generate_scenario(
     *,
-    goal: str = '',
     case_id: str = '',
     case_config: Path | str | None = None,
     language_seed: int | None = None,
@@ -1081,7 +987,6 @@ def generate_scenario(
     """Build a dry-run planned episode structure."""
 
     spec = scenario_spec_from_inputs(
-        goal=goal,
         case_id=case_id,
         case_config=case_config,
     )
@@ -2357,114 +2262,6 @@ def _multi_slot_clear_step_metadata(
     ]
 
 
-def load_batch_config(path: Path | str) -> dict[str, Any]:
-    config_path = Path(path).expanduser()
-    loaded = yaml.safe_load(config_path.read_text(encoding='utf-8')) or {}
-    if not isinstance(loaded, dict):
-        raise ValueError(f'batch config {config_path} must contain a YAML mapping')
-    loaded.setdefault('batch_config_path', str(config_path))
-    return loaded
-
-
-def generate_batch_scenarios(
-    config: dict[str, Any],
-    *,
-    language_seed: int | None = None,
-    language_template_id: str = '',
-    planner: BasePlannerBackend | None = None,
-) -> dict[str, Any]:
-    """Generate a deterministic batch of planned Room 315 episodes."""
-
-    normalized = _normalize_batch_config(config)
-    if language_seed is not None:
-        normalized['language_seed'] = int(language_seed)
-    goals = list(normalized['goals'])
-    repetitions = int(normalized['repetitions_per_goal'])
-    speed_values = list(normalized['speed_values'])
-    base_seed = int(normalized['language_seed'])
-    episodes = []
-    unshuffled_index = 0
-    for goal_index, goal in enumerate(goals):
-        for repetition_index in range(repetitions):
-            speed = float(speed_values[repetition_index % len(speed_values)])
-            template_id = language_template_id or _batch_language_template_id(
-                base_seed=base_seed,
-                goal_index=goal_index,
-                repetition_index=repetition_index,
-            )
-            scenario = generate_scenario(
-                goal=goal,
-                language_seed=base_seed + unshuffled_index,
-                language_template_id=template_id,
-                speed=speed,
-                planner=planner or PlanSysPlannerBackend(),
-            )
-            scenario.update({
-                'batch_id': normalized['batch_id'],
-                'batch_index': unshuffled_index,
-                'batch_goal_index': goal_index,
-                'batch_repetition_index': repetition_index,
-                'batch_speed_mps': speed,
-                'output_dataset_dir': normalized['output_dataset_dir'],
-            })
-            episodes.append(scenario)
-            unshuffled_index += 1
-
-    if normalized['shuffle']:
-        random.Random(base_seed).shuffle(episodes)
-        for batch_index, scenario in enumerate(episodes):
-            scenario['batch_index'] = batch_index
-
-    return {
-        'batch_id': normalized['batch_id'],
-        'batch_config_path': normalized['batch_config_path'],
-        'goals': goals,
-        'optional_later_goals': list(normalized['optional_later_goals']),
-        'repetitions_per_goal': repetitions,
-        'language_seed': base_seed,
-        'speed_values': speed_values,
-        'output_dataset_dir': normalized['output_dataset_dir'],
-        'dry_run': normalized['dry_run'],
-        'execute': normalized['execute'],
-        'shuffle': normalized['shuffle'],
-        'planned_episode_count': len(episodes),
-        'episodes': episodes,
-    }
-
-
-def execute_batch_scenarios(
-    batch: dict[str, Any],
-    transport: ScenarioTransport,
-    *,
-    command_timeout_s: float = 5.0,
-    arrival_timeout_s: float = 120.0,
-) -> dict[str, Any]:
-    """Execute planned episodes through the same supervisor command path."""
-
-    results = []
-    for scenario in list(batch.get('episodes') or []):
-        result = execute_scenario(
-            scenario,
-            transport,
-            command_timeout_s=command_timeout_s,
-            arrival_timeout_s=arrival_timeout_s,
-        )
-        result['scenario_id'] = scenario.get('scenario_id', '')
-        result['batch_index'] = scenario.get('batch_index')
-        results.append(result)
-        if not result.get('success'):
-            break
-    completed = len(results)
-    successes = sum(1 for result in results if result.get('success'))
-    return {
-        'success': completed == len(batch.get('episodes') or []) and successes == completed,
-        'completed_episode_count': completed,
-        'successes': successes,
-        'failures': completed - successes,
-        'results': results,
-    }
-
-
 def create_planner_backend(
     backend_name: str = 'plansys',
     *,
@@ -2721,58 +2518,6 @@ def _stations_from_symbols(symbols: tuple[str, ...]) -> list[str]:
     return stations
 
 
-def _normalize_batch_config(config: dict[str, Any]) -> dict[str, Any]:
-    goals = _as_string_list(config.get('goals'))
-    if not goals:
-        raise ValueError('batch config needs at least one goal')
-    goals = [_canonical_goal_id(goal) for goal in goals]
-    unsupported = [goal for goal in goals if goal not in SUPPORTED_GOALS]
-    if unsupported:
-        allowed = ', '.join(sorted(SUPPORTED_GOALS))
-        raise ValueError(f'unsupported batch goal(s) {unsupported!r}; allowed: {allowed}')
-
-    repetitions = max(int(config.get('repetitions_per_goal', 1) or 1), 1)
-    speed_values = [float(value) for value in _as_list(config.get('speed_values', [0.3]))]
-    if not speed_values:
-        speed_values = [0.3]
-    for speed in speed_values:
-        if speed <= 0.0:
-            raise ValueError(f'batch speed values must be positive, got {speed!r}')
-
-    execute = _as_bool(config.get('execute', False))
-    dry_run = _as_bool(config.get('dry_run', not execute))
-    if execute and dry_run:
-        raise ValueError('batch config cannot enable both dry_run and execute')
-
-    return {
-        'batch_id': str(config.get('batch_id') or 'room315_pddl_batch'),
-        'batch_config_path': str(config.get('batch_config_path') or ''),
-        'goals': goals,
-        'optional_later_goals': _as_string_list(config.get('optional_later_goals')),
-        'repetitions_per_goal': repetitions,
-        'language_seed': int(config.get('language_seed', 0) or 0),
-        'speed_values': speed_values,
-        'output_dataset_dir': str(config.get('output_dataset_dir') or ''),
-        'dry_run': dry_run,
-        'execute': execute,
-        'shuffle': _as_bool(config.get('shuffle', False)),
-    }
-
-
-def _batch_language_template_id(
-    *,
-    base_seed: int,
-    goal_index: int,
-    repetition_index: int,
-) -> str:
-    index = (
-        int(base_seed)
-        + int(goal_index)
-        + int(repetition_index)
-    ) % len(LANGUAGE_TEMPLATE_SEQUENCE)
-    return LANGUAGE_TEMPLATE_SEQUENCE[index]
-
-
 def _as_list(value: Any) -> list[Any]:
     if value is None:
         return []
@@ -2802,15 +2547,6 @@ def _optional_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
-
-
-def _batch_execute_enabled(args: argparse.Namespace, config: dict[str, Any]) -> bool:
-    if bool(getattr(args, 'execute', False)):
-        return True
-    if bool(getattr(args, 'dry_run', False)):
-        return False
-    normalized = _normalize_batch_config(config)
-    return bool(normalized['execute'])
 
 
 def _planning_metadata_for_step(scenario: dict[str, Any], step_index: int) -> dict[str, Any]:
@@ -2895,7 +2631,7 @@ def _problem_text_from_goal_spec(spec: ScenarioSpec) -> str:
     target_station = f'{side_station_prefix}{spec.target}'
     switch_group = f'{spec.side}_switch_group'
     stopper_group = f'{spec.side}_stopper_group'
-    problem_name = spec.pddl_problem or SUPPORTED_GOALS[spec.goal_id]['problem_name']
+    problem_name = spec.pddl_problem or f'room315-{_clean_symbol(spec.goal_id)}'
     payload_facts = _payload_init_facts_for_spec(spec)
     return f"""(define (problem {problem_name})
   (:domain room315-shuttle)
@@ -2923,14 +2659,6 @@ def _problem_text_from_goal_spec(spec: ScenarioSpec) -> str:
   )
 )
 """
-
-
-def _resolved_goal_data(goal_id: str) -> dict[str, Any]:
-    data = dict(SUPPORTED_GOALS[goal_id])
-    policy = str(data.get('selection_policy') or '').strip()
-    if policy == 'nearest_loaded_to_target_slot_then_lowest_id':
-        return _resolve_nearest_loaded_goal_data(goal_id, data)
-    return data
 
 
 def _resolve_nearest_loaded_goal_data(goal_id: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -3119,24 +2847,12 @@ def _station_for_slot(side: str, slot: str) -> str:
 
 def scenario_spec_from_inputs(
     *,
-    goal: str = '',
     case_id: str = '',
     case_config: Path | str | None = None,
 ) -> ScenarioSpec:
     if case_id:
         return scenario_spec_from_case(case_id, case_config=case_config)
-    if goal:
-        return scenario_spec_from_goal(goal)
-    raise ValueError('provide --goal or --case-id')
-
-
-def scenario_spec_from_goal(goal: str) -> ScenarioSpec:
-    goal_id = _canonical_goal_id(goal)
-    if goal_id not in SUPPORTED_GOALS:
-        allowed = ', '.join(sorted(SUPPORTED_GOALS))
-        raise ValueError(f'unsupported Room 315 PDDL goal {goal!r}; allowed: {allowed}')
-    data = _resolved_goal_data(goal_id)
-    return _scenario_spec_from_goal_data(goal_id, data)
+    raise ValueError('provide --case-id')
 
 
 def scenario_spec_from_case(
@@ -3166,7 +2882,7 @@ def scenario_spec_from_case(
     data.setdefault('problem_name', f'room315-{_clean_symbol(raw_case_id)}')
     if data.get('selection_policy'):
         data = _resolve_nearest_loaded_goal_data(raw_case_id, data)
-    return _scenario_spec_from_goal_data(raw_case_id, data)
+    return _scenario_spec_from_case_data(raw_case_id, data)
 
 
 def load_payload_training_case_config(path: Path | str | None = None) -> dict[str, Any]:
@@ -3271,7 +2987,7 @@ def _normalize_clearance_steps(value: Any) -> tuple[dict[str, Any], ...]:
     return tuple(normalized)
 
 
-def _scenario_spec_from_goal_data(goal_id: str, data: dict[str, Any]) -> ScenarioSpec:
+def _scenario_spec_from_case_data(goal_id: str, data: dict[str, Any]) -> ScenarioSpec:
     payload_condition = str(data.get('payload_condition') or '')
     pddl_goal = f'{data["shuttle"]} at {data["target"]}'
     if payload_condition:
@@ -3311,24 +3027,6 @@ def _scenario_spec_from_goal_data(goal_id: str, data: dict[str, Any]) -> Scenari
 def write_scenario(path: Path, scenario: dict[str, Any]) -> None:
     path.expanduser().parent.mkdir(parents=True, exist_ok=True)
     path.expanduser().write_text(_json_dumps(scenario) + '\n', encoding='utf-8')
-
-
-def _canonical_goal_id(goal: str) -> str:
-    text = _clean_symbol(goal).lower()
-    aliases = {
-        'right_shuttle_at_staubli': 'right_yaskawa_to_staubli',
-        'right_shuttle_at_yaskawa': 'right_staubli_to_yaskawa',
-        'left_shuttle_at_kuka': 'left_yaskawa_to_kuka',
-        'left_shuttle_at_yaskawa': 'left_kuka_to_yaskawa',
-        'right_loaded_shuttle_to_slot3': 'right_loaded_to_slot3',
-        'right_loaded_shuttle_to_slot_3': 'right_loaded_to_slot3',
-        'right_loaded_to_slot_3': 'right_loaded_to_slot3',
-        'loaded_right_shuttle_to_slot3': 'right_loaded_to_slot3',
-        'right_loaded_to_slot3_with_blocker': 'right_loaded_to_slot3_clear_blocker',
-        'right_loaded_shuttle_to_slot3_clear_blocker': 'right_loaded_to_slot3_clear_blocker',
-        'loaded_right_shuttle_to_slot3_clear_blocker': 'right_loaded_to_slot3_clear_blocker',
-    }
-    return aliases.get(text, text)
 
 
 def _station_symbol(value: str) -> str:
@@ -4027,12 +3725,13 @@ def main(argv: list[str] | None = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     parser_argv, ros_argv = _strip_ros_args(raw_argv)
     parser = argparse.ArgumentParser(
-        description='Generate or execute Room 315 PDDL-style VLA scenarios.'
+        description='Generate or execute one curated Room 315 payload training case.'
     )
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument('--goal', help='Supported symbolic goal id.')
-    input_group.add_argument('--case-id', help='Payload training case id from --case-config.')
-    input_group.add_argument('--batch-config', type=Path, help='YAML batch scenario config.')
+    parser.add_argument(
+        '--case-id',
+        required=True,
+        help='Payload training case id from --case-config.',
+    )
     parser.add_argument(
         '--case-config',
         type=Path,
@@ -4123,63 +3822,12 @@ def main(argv: list[str] | None = None) -> int:
         ros_args=ros_argv or None,
     )
 
-    if args.batch_config is not None:
-        batch_config = load_batch_config(args.batch_config)
-        if args.execute:
-            batch_config['execute'] = True
-            batch_config['dry_run'] = False
-        elif args.dry_run or args.preflight_only:
-            batch_config['execute'] = False
-            batch_config['dry_run'] = True
-        batch = generate_batch_scenarios(
-            batch_config,
-            language_seed=args.language_seed,
-            language_template_id=args.language_template_id,
-            planner=planner,
-        )
-        if _batch_execute_enabled(args, batch_config):
-            transport = RosScenarioTransport(
-                command_topic=args.command_topic,
-                episode_control_topic=args.episode_control_topic,
-                status_topic=args.status_topic,
-                dataset_status_topic=args.dataset_status_topic,
-                ros_args=ros_argv or None,
-                require_dataset_recorder=args.require_dataset_recorder,
-            )
-            try:
-                batch['execution'] = execute_batch_scenarios(
-                    batch,
-                    transport,
-                    command_timeout_s=args.command_timeout_s,
-                    arrival_timeout_s=args.arrival_timeout_s,
-                )
-            finally:
-                transport.shutdown()
-        if args.output is not None:
-            write_scenario(args.output, batch)
-        if not args.quiet:
-            print(_json_dumps(batch))
-        execution = batch.get('execution')
-        if isinstance(execution, dict) and not bool(execution.get('success', False)):
-            if args.quiet:
-                print(
-                    f"FAILED: {execution.get('failure_reason') or 'batch execution failed'}",
-                    file=sys.stderr,
-                )
-            return 1
-        return 0
-
     scenario_speed = (
         float(args.speed)
         if args.speed is not None
-        else (
-            speed_for_payload_training_case(args.case_id, args.case_config)
-            if args.case_id
-            else DEFAULT_SHUTTLE_SPEED_MPS
-        )
+        else speed_for_payload_training_case(args.case_id, args.case_config)
     )
     scenario = generate_scenario(
-        goal=args.goal or '',
         case_id=args.case_id or '',
         case_config=args.case_config,
         language_seed=args.language_seed,

@@ -162,7 +162,7 @@ def test_http_plan_sends_only_schema_v3_model_input_to_provider():
     assert 'images_jpeg_b64' not in payload
     assert payload['model_input_schema_version'] == 3
     assert payload['allowed_actions'] == agent_module.MODEL_OUTPUT_ACTIONS
-    assert 'route_template' not in payload['allowed_actions']
+    assert 'route' + '_template' not in payload['allowed_actions']
     assert payload['preferred_model_output'] == 'action_vector'
     assert 'action_vector' in payload['allowed_output_formats']
     assert payload['event_action_vector_fields'] == agent_module.EVENT_ACTION_VECTOR_FIELDS

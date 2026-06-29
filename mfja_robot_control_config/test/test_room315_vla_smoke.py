@@ -107,7 +107,6 @@ def _fake_recorder(module):
     recorder.event_stream = StringIO()
     recorder.last_event_signature = ''
     recorder.last_primitive_signature = ''
-    recorder.last_task_phase_by_id = {}
     recorder.completed_task_signatures = set()
     recorder.last_sensor_signature_by_side = {side: '' for side in ('right', 'left')}
     recorder.last_sensor_event_time_by_side = {'right': 95.0, 'left': None}
@@ -247,8 +246,8 @@ def test_smoke_has_one_episode_for_each_evaluator_task_family():
     examples = {
         'visual_target': 'left_slot3_kuka_then_slot2',
         'obstacle_stop': 'right_obstacle_aware_route',
-        'loop_entry': 'right_enter_interior_loop',
-        'transport': 'right_yaskawa_to_staubli',
+        'loop_entry': 'clear blocker into interior loop',
+        'transport': 'right_loaded_r1_s1_to_slot3_no_blocker',
         'station_navigation': 'center at station',
         'stopper': 'stop at A2 stopper',
         'exterior_loop': 'complete one exterior loop',
@@ -398,7 +397,6 @@ def test_smoke_safety_decoder_rejects_invalid_switch_and_move_combos():
     rails = _rails_for_safety()
     common = {
         'rails': rails,
-        'route_templates': {},
         'emergency_stop': False,
         'active_tasks': {},
         'slot_sensor_by_side': {

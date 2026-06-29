@@ -35,8 +35,6 @@ from room_315_multi_shuttle import shuttle_specs_for_side
 
 
 ALLOWED_ACTIONS = (
-    'route_template',
-    'route_shuttle',
     'switches',
     'stoppers',
     'shuttle',
@@ -240,10 +238,6 @@ def _overhead_images(image_refs: dict[str, Any]) -> dict[str, Any]:
 def _normalize_action_name(command: dict[str, Any]) -> str:
     action = str(command.get('action') or command.get('intent') or command.get('type') or 'status')
     action = action.lower().strip()
-    if action in {'route', 'start_route'}:
-        return 'route_shuttle'
-    if action in {'template', 'task'}:
-        return 'route_template'
     if action in {'switch'}:
         return 'switches'
     if action in {'stopper'}:
@@ -287,15 +281,6 @@ def _normalize_last_command(command: Any) -> dict[str, Any]:
         side = str(command.get('side') or '').strip().lower()
         if side in SIDES:
             normalized['side'] = side
-    if action == 'route_template' and command.get('template') is not None:
-        normalized['template'] = str(command.get('template') or '').strip()
-    if action == 'route_shuttle':
-        if command.get('loop') is not None:
-            normalized['loop'] = str(command.get('loop') or '').strip().lower()
-        if command.get('start') is not None:
-            normalized['start'] = bool(command.get('start'))
-        if command.get('start_slot') is not None:
-            normalized['start_slot'] = str(command.get('start_slot') or '').strip()
     if action == 'switches':
         normalized['switches'] = _normalized_assignment_map(
             command.get('switches'),
@@ -314,7 +299,7 @@ def _normalize_last_command(command: Any) -> dict[str, Any]:
             normalized['start_slot'] = str(command.get('start_slot') or '').strip()
     if action == 'stop_all' and command.get('close_stoppers') is not None:
         normalized['close_stoppers'] = bool(command.get('close_stoppers'))
-    if command.get('speed') is not None and action in {'route_shuttle', 'shuttle'}:
+    if command.get('speed') is not None and action == 'shuttle':
         try:
             normalized['speed'] = float(command.get('speed') or 0.0)
         except (TypeError, ValueError):
@@ -589,7 +574,7 @@ def _parse_command_payload(raw: Any, *, multi_shuttle_active: bool = False) -> d
         )
     action = str(parsed.get('action', '')).strip()
     if action not in MODEL_OUTPUT_ACTIONS:
-        raise ValueError(f'unsupported VLA action {action!r}; route_template is not a model output')
+        raise ValueError(f'unsupported VLA action {action!r}; expected a primitive control action')
     if _multi_shuttle_json_command_is_ambiguous(parsed):
         raise ValueError('schema-v3 primitive shuttle command requires shuttle_id/shuttle/name')
     return parsed
@@ -795,7 +780,7 @@ class Room315RealVlaAgent(Node):
                 'multi_shuttle_active': _multi_shuttle_active(self.latest_status),
                 'contract_note': (
                     'Return schema-v3 action_vector. Movement actions must include '
-                    'shuttle_index. Do not return route_template or privileged fields.'
+                    'shuttle_index. Do not return privileged fields.'
                 ),
             },
             headers={},

@@ -112,13 +112,12 @@ The VLA stack includes:
 
 - Independent right-rail and left-rail overhead RGB-D cameras.
 - A high-level VLA supervisor on `/room_315/vla/command`.
-- Task-level `route_template` commands for research and benchmarks.
 - Primitive debugging commands for switches, stoppers, shuttles, stop-all, and
   emergency stop.
 - A safety decoder between model actions and rail execution.
 - Event-level symbolic action schema v3 with switch/stopper masks, shuttle
   identity, and coordination mode values.
-- Dataset recording and benchmark/evaluator tools.
+- Dataset recording plus the curated 40-case payload batch runner.
 
 Canonical station mapping:
 
@@ -129,19 +128,17 @@ Left rail slots 1-2: Yaskawa HC10
 Left rail slots 3-4: KUKA KR6
 ```
 
-Canonical task templates include:
+The active training/evaluation surface is the curated payload case matrix:
 
 ```text
-right_yaskawa_to_staubli
-right_staubli_to_yaskawa
-left_yaskawa_to_kuka
-left_kuka_to_yaskawa
-right_enter_interior_loop
-left_enter_interior_loop
+mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml
 ```
 
-For supervisor operation, VLA topics, task templates, action vectors, and manual
-commands, go to [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md).
+Run one case with `room_315_pddl_scenario_generator.py --case-id ...`, or run
+the 40-case batch with `room_315_payload_case_batch_runner.py`.
+
+For supervisor operation, VLA topics, action vectors, and manual commands, go to
+[docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md).
 For the research formulation, model input, privileged evaluation, scenario
 families, metrics, and roadmap, go to
 [docs/ROOM315_VLA_RESEARCH.md](docs/ROOM315_VLA_RESEARCH.md).

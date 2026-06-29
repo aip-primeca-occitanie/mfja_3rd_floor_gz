@@ -4,7 +4,7 @@ model_input_schema_version: 3
 description: >
   Event-level symbolic action representation used to adapt open-source VLA
   policies such as SmolVLA to the Room 315 rail-cell task. The policy predicts
-  the next direct decision event, not a high-level route_template, not repeated
+  the next direct decision event, not a legacy high-level route command, not repeated
   framewise commands, and not raw Gazebo controls.
 
 action_vector_fields:
@@ -81,7 +81,7 @@ wait_condition_ids:
   stopper_state_match: 2
   shuttle_command_applied: 3
   task_terminal_status: 4
-  task_phase_observed: 5
+  reserved_legacy_wait_5: 5
   terminal: 6
   target_sensor_active: 7
   block_clearance: 8
@@ -98,13 +98,13 @@ target_ids:
   MULTIPLE_DEVICES: 7
   right_shuttle: 8
   left_shuttle: 9
-  right_yaskawa_to_staubli: 10
-  right_staubli_to_yaskawa: 11
-  left_yaskawa_to_kuka: 12
-  left_kuka_to_yaskawa: 13
-  right_enter_interior_loop: 14
-  left_enter_interior_loop: 15
-  task_phase: 16
+  reserved_legacy_target_10: 10
+  reserved_legacy_target_11: 11
+  reserved_legacy_target_12: 12
+  reserved_legacy_target_13: 13
+  reserved_legacy_target_14: 14
+  reserved_legacy_target_15: 15
+  reserved_legacy_target_16: 16
   terminal: 17
   DZI1R: 18
   DZI2R: 19
@@ -128,8 +128,8 @@ target_ids:
 reason_ids:
   none: 0
   command_event: 1
-  route_template_requested: 2
-  task_phase: 3
+  reserved_legacy_reason_2: 2
+  reserved_legacy_reason_3: 3
   task_succeeded: 4
   task_failed: 5
   episode_stopped: 6
