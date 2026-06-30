@@ -45,7 +45,7 @@ DEFAULT_PAYLOAD_TRAINING_CASES_PATH = (
     / 'mfja_robot_control_config'
     / 'config'
     / 'room_315_vla'
-    / 'payload_training_cases.yaml'
+    / 'payload_training_cases_expanded_160_speed_sweep.yaml'
 )
 DEFAULT_PLANSYS_GET_PLAN_SERVICE = '/planner/get_plan'
 DEFAULT_PLANSYS_TIMEOUT_S = 10.0
@@ -107,8 +107,15 @@ SLOT_POSE_BY_SIDE_AND_SLOT = {
 SLOT_POSE_ARRIVAL_TOLERANCE_M = 0.08
 INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE = {
     ('right', 'A3'): ('A34I', 0.7083),
-    ('left', 'A1'): ('A12I', 0.7083),
     ('left', 'A3'): ('A34I', 0.7083),
+}
+INTERIOR_LOOP_GATE_BY_SIDE = {
+    'right': 'A3',
+    'left': 'A3',
+}
+INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE = {
+    ('right', 'A3'): 'DA3IR',
+    ('left', 'A3'): 'DA3IL',
 }
 INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M = 0.08
 
@@ -1695,17 +1702,44 @@ def _clearance_step_start_slot(
 
 
 def _clearance_step_gate_stopper(spec: ScenarioSpec, step: dict[str, Any]) -> str:
-    return (
-        _stopper_symbol_or_empty(step.get('clear_stopper') or step.get('gate_stopper'))
-        or 'A3'
-    )
+    raw_stopper = _stopper_symbol_or_empty(step.get('clear_stopper') or step.get('gate_stopper'))
+    if _clearance_step_enters_interior_loop(step):
+        return _interior_loop_gate_stopper(spec.side, raw_stopper)
+    return raw_stopper or 'A3'
 
 
 def _clearance_step_clear_sensor(spec: ScenarioSpec, step: dict[str, Any]) -> str:
+    if _clearance_step_enters_interior_loop(step):
+        gate_stopper = _clearance_step_gate_stopper(spec, step)
+        return _interior_loop_entry_sensor(spec.side, gate_stopper)
     return str(
         step.get('clear_sensor')
         or ('DA3IR' if spec.side == 'right' else 'DA3IL')
     ).strip()
+
+
+def _interior_loop_gate_stopper(side: str, raw_stopper: Any = '') -> str:
+    default_stopper = INTERIOR_LOOP_GATE_BY_SIDE.get(side, 'A3')
+    stopper = _stopper_symbol_or_empty(raw_stopper)
+    if not stopper:
+        return default_stopper
+    if (side, stopper) in INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE:
+        return stopper
+    return default_stopper
+
+
+def _interior_loop_entry_sensor(side: str, gate_stopper: str) -> str:
+    return INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE.get(
+        (side, gate_stopper),
+        'DA3IR' if side == 'right' else 'DA3IL',
+    )
+
+
+def _interior_loop_clear_pose(side: str, gate_stopper: str) -> tuple[str, float]:
+    return INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE.get(
+        (side, gate_stopper),
+        ('A34I' if side == 'right' else 'A34I', 0.7083),
+    )
 
 
 def _require_clearance_step_value(
@@ -1730,13 +1764,9 @@ def _interior_loop_clear_symbolic_plan_for_spec(
     blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
     selected_source = spec.source
     selected_target = spec.target
-    gate_stopper = spec.blocker_clear_stopper or 'A3'
+    gate_stopper = _interior_loop_gate_stopper(spec.side, spec.blocker_clear_stopper)
     speed_text = f'{float(speed):.4g}'
     return [
-        (
-            f'prepare_switches {spec.side} {blocker_source} {blocker_source} '
-            f'switch={gate_stopper} state=EXTERIOR'
-        ),
         f'set_stoppers {spec.side} {gate_stopper} closed',
         (
             f'move_shuttle {spec.side} {spec.blocker_shuttle} '
@@ -1825,10 +1855,6 @@ def _interior_loop_clear_symbolic_steps_for_clearance_step(
         message=f'could not map slot {source_slot!r} to a station on {spec.side!r} rail',
     )
     return [
-        (
-            f'prepare_switches {spec.side} {source} {source} '
-            f'switch={gate_stopper} state=EXTERIOR'
-        ),
         f'set_stoppers {spec.side} {gate_stopper} closed',
         (
             f'move_shuttle {spec.side} {shuttle} {source} {source} '
@@ -1945,8 +1971,15 @@ def _blocker_clearance_metadata_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
         'clear_only',
     }
     blocker_clear_target = spec.blocker_clear_target
+    blocker_clear_sensor = spec.blocker_clear_sensor
+    blocker_clear_stopper = spec.blocker_clear_stopper
     if _blocker_enters_interior_loop(spec):
         blocker_clear_target = blocker_clear_target or 'interior_loop'
+        blocker_clear_stopper = _interior_loop_gate_stopper(
+            spec.side,
+            spec.blocker_clear_stopper,
+        )
+        blocker_clear_sensor = _interior_loop_entry_sensor(spec.side, blocker_clear_stopper)
     return {
         'strategy': spec.clearance_strategy,
         'phase': (
@@ -1958,8 +1991,8 @@ def _blocker_clearance_metadata_for_spec(spec: ScenarioSpec) -> dict[str, Any]:
         'blocker_start_slot': spec.blocker_start_slot,
         'blocker_clear_slot': spec.blocker_clear_slot,
         'blocker_clear_target': blocker_clear_target,
-        'blocker_clear_sensor': spec.blocker_clear_sensor,
-        'blocker_clear_stopper': spec.blocker_clear_stopper,
+        'blocker_clear_sensor': blocker_clear_sensor,
+        'blocker_clear_stopper': blocker_clear_stopper,
         'blocker_restore_slot': spec.blocker_restore_slot,
         'blocker_final_slot': spec.blocker_restore_slot or spec.blocker_clear_slot,
         'blocker_final_target': (
@@ -2041,14 +2074,11 @@ def _blocker_clear_plan_step_metadata(spec: ScenarioSpec) -> list[dict[str, Any]
 
 
 def _interior_loop_clear_plan_step_metadata(spec: ScenarioSpec) -> list[dict[str, Any]]:
-    gate_stopper = spec.blocker_clear_stopper or 'A3'
+    gate_stopper = _interior_loop_gate_stopper(spec.side, spec.blocker_clear_stopper)
     gate_sensor = f'{gate_stopper}_STOPPER_SENSOR'
-    interior_sensor = spec.blocker_clear_sensor or ('DA3IR' if spec.side == 'right' else 'DA3IL')
+    interior_sensor = _interior_loop_entry_sensor(spec.side, gate_stopper)
     blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
-    clear_segment, clear_s = INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE.get(
-        (spec.side, gate_stopper),
-        ('A34I' if spec.side == 'right' else 'A12I', 0.7083),
-    )
+    clear_segment, clear_s = _interior_loop_clear_pose(spec.side, gate_stopper)
     gate_route = {
         'coordination_phase': 'clear_blocker_to_gate',
         'plan_step_target_shuttle_id': spec.blocker_shuttle,
@@ -2081,7 +2111,6 @@ def _interior_loop_clear_plan_step_metadata(spec: ScenarioSpec) -> list[dict[str
     selected_move = dict(selected_route)
     selected_move['target_slot'] = spec.target_slot
     return [
-        dict(gate_route),
         dict(gate_route),
         dict(gate_route),
         dict(gate_route),
@@ -2191,10 +2220,7 @@ def _multi_interior_step_metadata(
     gate_stopper = _clearance_step_gate_stopper(spec, step)
     gate_sensor = f'{gate_stopper}_STOPPER_SENSOR'
     interior_sensor = _clearance_step_clear_sensor(spec, step)
-    clear_segment, clear_s = INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE.get(
-        (spec.side, gate_stopper),
-        ('A34I' if spec.side == 'right' else 'A12I', 0.7083),
-    )
+    clear_segment, clear_s = _interior_loop_clear_pose(spec.side, gate_stopper)
     gate_route = {
         'coordination_phase': 'clear_blocker_to_gate',
         'clearance_step_index': step_index,
@@ -2231,7 +2257,6 @@ def _multi_interior_step_metadata(
         'clearance_strategy': spec.clearance_strategy,
     }
     return [
-        dict(gate_route),
         dict(gate_route),
         dict(gate_route),
         dict(gate_route),

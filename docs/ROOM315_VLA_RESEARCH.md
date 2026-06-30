@@ -1,7 +1,7 @@
 # Room 315 Visual VLA Research
 
-The current Room 315 research setup is focused on the 40 successful payload
-training cases. The learned policy observes task language, overhead camera
+The current Room 315 research setup is focused on the 160 successful payload
+speed-sweep cases. The learned policy observes task language, overhead camera
 images, and the previous command, then predicts the next event-level direct
 symbolic action.
 
@@ -12,7 +12,7 @@ signals are kept in privileged metadata for audit and evaluation.
 ## Current Pipeline
 
 ```text
-payload_training_cases.yaml
+payload_training_cases_expanded_160_speed_sweep.yaml
   -> case resolver
   -> symbolic primitive sequence
   -> schema-v3 event actions
@@ -33,7 +33,7 @@ nearest loaded shuttle selection, no-blocker moves, blocker clearance to a
 stopper, and blocker clearance into the interior loop.
 
 ```text
-mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml
+mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
 ```
 
 ## Evaluation

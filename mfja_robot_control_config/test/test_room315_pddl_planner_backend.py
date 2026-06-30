@@ -16,7 +16,7 @@ SCRIPT_PATH = (
     / 'scripts'
     / 'room_315_pddl_scenario_generator.py'
 )
-RIGHT_CASE = 'right_loaded_r1_s1_to_slot3_no_blocker'
+RIGHT_CASE = 'right_loaded_r1_s1_to_slot3_no_blocker_speed008'
 
 
 class FakePlanSysClient:

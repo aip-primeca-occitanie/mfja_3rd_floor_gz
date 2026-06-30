@@ -1,0 +1,5946 @@
+schema_version: 1
+description: Active Room 315 payload training cases. The current training
+  matrix contains 160 validated speed-sweep cases with distinct commanded
+  shuttle speeds to broaden timing, image-frame, and action-vector coverage.
+review_gate:
+  training_export_default: validated_batch_dataset
+  bad_cases_action: report_case_number_and_fix_case_definition
+  curation_method: automatic_accept_successful_batch_runs
+  model_input_boundary:
+  - model_input.language
+  - model_input.overhead_images
+  - model_input.last_command
+  - model_input.observable_state
+augmentation:
+  source_case_config: retired_payload_training_cases_40_golden
+  source_case_count: 40
+  strategy: speed_sweep_from_validated_case_families
+  speeds_mps:
+  - 0.06
+  - 0.08
+  - 0.1
+  - 0.12
+  notes:
+  - Case IDs are suffixed by speed and are the active in-repository case IDs.
+  - Run through the normal batch runner and export only approved_for_training episodes.
+cases:
+- case_id: right_loaded_r1_s1_to_slot3_no_blocker_speed006
+  title: Loaded R1 from slot 1 to slot 3, no blocker (speed 0.06 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '1'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  speed: 0.06
+  base_case_id: right_loaded_r1_s1_to_slot3_no_blocker
+  base_case_number: 1
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r1_s1_to_slot3_no_blocker_speed008
+  title: Loaded R1 from slot 1 to slot 3, no blocker (speed 0.08 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '1'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  speed: 0.08
+  base_case_id: right_loaded_r1_s1_to_slot3_no_blocker
+  base_case_number: 1
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r1_s1_to_slot3_no_blocker_speed010
+  title: Loaded R1 from slot 1 to slot 3, no blocker (speed 0.10 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '1'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  speed: 0.1
+  base_case_id: right_loaded_r1_s1_to_slot3_no_blocker
+  base_case_number: 1
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r1_s1_to_slot3_no_blocker_speed012
+  title: Loaded R1 from slot 1 to slot 3, no blocker (speed 0.12 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '1'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  speed: 0.12
+  base_case_id: right_loaded_r1_s1_to_slot3_no_blocker
+  base_case_number: 1
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r1_s2_to_slot3_no_blocker_speed006
+  title: Loaded R1 from slot 2 to slot 3, no blocker (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '2'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s2_to_slot3_no_blocker
+  base_case_number: 2
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r1_s2_to_slot3_no_blocker_speed008
+  title: Loaded R1 from slot 2 to slot 3, no blocker (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '2'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s2_to_slot3_no_blocker
+  base_case_number: 2
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r1_s2_to_slot3_no_blocker_speed010
+  title: Loaded R1 from slot 2 to slot 3, no blocker (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '2'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s2_to_slot3_no_blocker
+  base_case_number: 2
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r1_s2_to_slot3_no_blocker_speed012
+  title: Loaded R1 from slot 2 to slot 3, no blocker (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+  launch:
+    right_shuttle_count: 1
+    right_start_slots: '2'
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s2_to_slot3_no_blocker
+  base_case_number: 2
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r2_s2_to_slot3_no_blocker_speed006
+  title: Loaded R2 from slot 2 to slot 3, no blocker (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r2_s2_to_slot3_no_blocker
+  base_case_number: 3
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r2_s2_to_slot3_no_blocker_speed008
+  title: Loaded R2 from slot 2 to slot 3, no blocker (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r2_s2_to_slot3_no_blocker
+  base_case_number: 3
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r2_s2_to_slot3_no_blocker_speed010
+  title: Loaded R2 from slot 2 to slot 3, no blocker (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r2_s2_to_slot3_no_blocker
+  base_case_number: 3
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r2_s2_to_slot3_no_blocker_speed012
+  title: Loaded R2 from slot 2 to slot 3, no blocker (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r2_s2_to_slot3_no_blocker
+  base_case_number: 3
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3_speed006
+  title: R1 and R2 loaded; nearest loaded R2 goes to slot 3 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1,R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3
+  base_case_number: 4
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3_speed008
+  title: R1 and R2 loaded; nearest loaded R2 goes to slot 3 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1,R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3
+  base_case_number: 4
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3_speed010
+  title: R1 and R2 loaded; nearest loaded R2 goes to slot 3 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1,R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3
+  base_case_number: 4
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3_speed012
+  title: R1 and R2 loaded; nearest loaded R2 goes to slot 3 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1,R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: right_loaded_r1_s1_r2_s2_select_r2_to_slot3
+  base_case_number: 4
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3_speed006
+  title: Loaded R1 from slot 2 to slot 3, R2 blocker clears forward near A4 (speed 0.06 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+    right_shuttle_2: '3'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.06
+  base_case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3
+  base_case_number: 5
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3_speed008
+  title: Loaded R1 from slot 2 to slot 3, R2 blocker clears forward near A4 (speed 0.08 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+    right_shuttle_2: '3'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.08
+  base_case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3
+  base_case_number: 5
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3_speed010
+  title: Loaded R1 from slot 2 to slot 3, R2 blocker clears forward near A4 (speed 0.10 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+    right_shuttle_2: '3'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.1
+  base_case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3
+  base_case_number: 5
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3_speed012
+  title: Loaded R1 from slot 2 to slot 3, R2 blocker clears forward near A4 (speed 0.12 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '2'
+    right_shuttle_2: '3'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.12
+  base_case_id: right_loaded_r1_s2_blocker_r2_s3_clear_s1_to_slot3
+  base_case_number: 5
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3_speed006
+  title: Loaded R2 from slot 2 to slot 3, R1 blocker clears forward near A4 (speed 0.06 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '3'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 3,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.06
+  base_case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3
+  base_case_number: 6
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3_speed008
+  title: Loaded R2 from slot 2 to slot 3, R1 blocker clears forward near A4 (speed 0.08 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '3'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 3,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.08
+  base_case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3
+  base_case_number: 6
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3_speed010
+  title: Loaded R2 from slot 2 to slot 3, R1 blocker clears forward near A4 (speed 0.10 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '3'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 3,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.1
+  base_case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3
+  base_case_number: 6
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3_speed012
+  title: Loaded R2 from slot 2 to slot 3, R1 blocker clears forward near A4 (speed 0.12 m/s)
+  side: right
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '3'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 3,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.12
+  base_case_id: right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3
+  base_case_number: 6
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3_speed006
+  title: Right-rail scene; R2 blocker enters the interior loop so loaded R1 reaches slot 3 (speed 0.06
+    m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3
+  base_case_number: 7
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3_speed008
+  title: Right-rail scene; R2 blocker enters the interior loop so loaded R1 reaches slot 3 (speed 0.08
+    m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3
+  base_case_number: 7
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3_speed010
+  title: Right-rail scene; R2 blocker enters the interior loop so loaded R1 reaches slot 3 (speed 0.10
+    m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3
+  base_case_number: 7
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3_speed012
+  title: Right-rail scene; R2 blocker enters the interior loop so loaded R1 reaches slot 3 (speed 0.12
+    m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+  blocker_shuttle: right_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 2
+    right_start_slots: 1,2
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r1_s1_blocker_r2_s2_four_shuttles_interior_to_slot3
+  base_case_number: 7
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3_speed006
+  title: Right-rail scene; R3 blocker enters the interior loop so loaded R2 reaches slot 3 (speed 0.06
+    m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+  blocker_shuttle: right_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 3
+    right_start_slots: 4,1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3
+  base_case_number: 8
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3_speed008
+  title: Right-rail scene; R3 blocker enters the interior loop so loaded R2 reaches slot 3 (speed 0.08
+    m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+  blocker_shuttle: right_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 3
+    right_start_slots: 4,1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3
+  base_case_number: 8
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3_speed010
+  title: Right-rail scene; R3 blocker enters the interior loop so loaded R2 reaches slot 3 (speed 0.10
+    m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+  blocker_shuttle: right_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 3
+    right_start_slots: 4,1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3
+  base_case_number: 8
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3_speed012
+  title: Right-rail scene; R3 blocker enters the interior loop so loaded R2 reaches slot 3 (speed 0.12
+    m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+  blocker_shuttle: right_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IR
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    right_shuttle_count: 3
+    right_start_slots: 4,1,2
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: right_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IR
+  base_case_id: right_loaded_r2_s1_blocker_r3_s2_four_shuttles_interior_to_slot3
+  base_case_number: 8
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2_speed006
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R4 reaches slot
+    1 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 9
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2_speed008
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R4 reaches slot
+    1 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 9
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2_speed010
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R4 reaches slot
+    1 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 9
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2_speed012
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R4 reaches slot
+    1 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 9
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2_speed006
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R3 reaches slot
+    1 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 10
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2_speed008
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R3 reaches slot
+    1 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 10
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2_speed010
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R3 reaches slot
+    1 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 10
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2_speed012
+  title: Four right shuttles; R2 enters the interior loop and R1 clears slot 1 so loaded R3 reaches slot
+    1 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot1_clear_r2_interior_r1_s2
+  base_case_number: 10
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2_speed006
+  title: Four right shuttles; R3 enters the interior loop and R1 clears slot 1 so loaded R2 reaches slot
+    1 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2
+  base_case_number: 11
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2_speed008
+  title: Four right shuttles; R3 enters the interior loop and R1 clears slot 1 so loaded R2 reaches slot
+    1 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2
+  base_case_number: 11
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2_speed010
+  title: Four right shuttles; R3 enters the interior loop and R1 clears slot 1 so loaded R2 reaches slot
+    1 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2
+  base_case_number: 11
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2_speed012
+  title: Four right shuttles; R3 enters the interior loop and R1 clears slot 1 so loaded R2 reaches slot
+    1 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot1_clear_r3_interior_r1_s2
+  base_case_number: 11
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2_speed006
+  title: Four right shuttles; R3 enters the interior loop and R2 clears slot 1 so loaded R1 reaches slot
+    1 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2
+  base_case_number: 12
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2_speed008
+  title: Four right shuttles; R3 enters the interior loop and R2 clears slot 1 so loaded R1 reaches slot
+    1 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2
+  base_case_number: 12
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2_speed010
+  title: Four right shuttles; R3 enters the interior loop and R2 clears slot 1 so loaded R1 reaches slot
+    1 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2
+  base_case_number: 12
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2_speed012
+  title: Four right shuttles; R3 enters the interior loop and R2 clears slot 1 so loaded R1 reaches slot
+    1 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot1_clear_r3_interior_r2_s2
+  base_case_number: 12
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior_speed006
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R1 reaches slot 3 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior
+  base_case_number: 13
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior_speed008
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R1 reaches slot 3 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior
+  base_case_number: 13
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior_speed010
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R1 reaches slot 3 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior
+  base_case_number: 13
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior_speed012
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R1 reaches slot 3 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r1_s1_to_slot3_clear_r4_a4_r3_s4_r2_interior
+  base_case_number: 13
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior_speed006
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R2 reaches slot 3 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior
+  base_case_number: 14
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior_speed008
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R2 reaches slot 3 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior
+  base_case_number: 14
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior_speed010
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R2 reaches slot 3 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior
+  base_case_number: 14
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior_speed012
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R2 reaches slot 3 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r2_s1_to_slot3_clear_r1_a4_r4_s4_r3_interior
+  base_case_number: 14
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior_speed006
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R3 reaches slot 3 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '1'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,1,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior
+  base_case_number: 15
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior_speed008
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R3 reaches slot 3 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '1'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,1,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior
+  base_case_number: 15
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior_speed010
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R3 reaches slot 3 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '1'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,1,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior
+  base_case_number: 15
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior_speed012
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R3 reaches slot 3 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '1'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,1,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r3_s1_to_slot3_clear_r1_a4_r4_s4_r2_interior
+  base_case_number: 15
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior_speed006
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R4 reaches slot 3 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,3,1
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior
+  base_case_number: 16
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior_speed008
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R4 reaches slot 3 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,3,1
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior
+  base_case_number: 16
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior_speed010
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R4 reaches slot 3 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,3,1
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior
+  base_case_number: 16
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior_speed012
+  title: Four right shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded R4 reaches slot 3 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: right_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,2,3,1
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: right_four_shuttles_loaded_r4_s1_to_slot3_clear_r1_a4_r3_s4_r2_interior
+  base_case_number: 16
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3_speed006
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R4 reaches
+    slot 2 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 17
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3_speed008
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R4 reaches
+    slot 2 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 17
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3_speed010
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R4 reaches
+    slot 2 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 17
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3_speed012
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R4 reaches
+    slot 2 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_4
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '3'
+    right_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,3,4
+    right_loaded_shuttles: R4
+  expected:
+    selected_shuttle: right_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r4_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 17
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3_speed006
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R3 reaches
+    slot 2 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 18
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3_speed008
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R3 reaches
+    slot 2 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 18
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3_speed010
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R3 reaches
+    slot 2 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 18
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3_speed012
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R3 reaches
+    slot 2 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_3
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '2'
+    right_shuttle_3: '4'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,2,4,3
+    right_loaded_shuttles: R3
+  expected:
+    selected_shuttle: right_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r3_s4_to_slot2_clear_r2_interior_r1_a3
+  base_case_number: 18
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3_speed006
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R2 reaches
+    slot 2 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3
+  base_case_number: 19
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3_speed008
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R2 reaches
+    slot 2 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3
+  base_case_number: 19
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3_speed010
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R2 reaches
+    slot 2 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3
+  base_case_number: 19
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3_speed012
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R2 reaches
+    slot 2 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_2
+  start_slots_by_shuttle:
+    right_shuttle_1: '1'
+    right_shuttle_2: '4'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 1,4,2,3
+    right_loaded_shuttles: R2
+  expected:
+    selected_shuttle: right_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r2_s4_to_slot2_clear_r3_interior_r1_a3
+  base_case_number: 19
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3_speed006
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R1 reaches
+    slot 2 (speed 0.06 m/s)
+  side: right
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3
+  base_case_number: 20
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3_speed008
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R1 reaches
+    slot 2 (speed 0.08 m/s)
+  side: right
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3
+  base_case_number: 20
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3_speed010
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R1 reaches
+    slot 2 (speed 0.10 m/s)
+  side: right
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3
+  base_case_number: 20
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3_speed012
+  title: Four right shuttles; send slot 2 blocker inside and hold slot 1 blocker at A3 so loaded R1 reaches
+    slot 2 (speed 0.12 m/s)
+  side: right
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - right_shuttle_1
+  start_slots_by_shuttle:
+    right_shuttle_1: '4'
+    right_shuttle_2: '1'
+    right_shuttle_3: '2'
+    right_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: right_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IR
+    clear_stopper: A3
+  - shuttle: right_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A3_STOPPER_SENSOR
+    clear_stopper: A3
+  launch:
+    right_shuttle_count: 4
+    right_start_slots: 4,1,2,3
+    right_loaded_shuttles: R1
+  expected:
+    selected_shuttle: right_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: right_four_shuttles_loaded_r1_s4_to_slot2_clear_r3_interior_r2_a3
+  base_case_number: 20
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l1_s1_to_slot3_no_blocker_speed006
+  title: Loaded L1 from slot 1 to slot 3, no blocker (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '1'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_to_slot3_no_blocker
+  base_case_number: 21
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l1_s1_to_slot3_no_blocker_speed008
+  title: Loaded L1 from slot 1 to slot 3, no blocker (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '1'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_to_slot3_no_blocker
+  base_case_number: 21
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l1_s1_to_slot3_no_blocker_speed010
+  title: Loaded L1 from slot 1 to slot 3, no blocker (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '1'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_to_slot3_no_blocker
+  base_case_number: 21
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l1_s1_to_slot3_no_blocker_speed012
+  title: Loaded L1 from slot 1 to slot 3, no blocker (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '1'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_to_slot3_no_blocker
+  base_case_number: 21
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l1_s2_to_slot3_no_blocker_speed006
+  title: Loaded L1 from slot 2 to slot 3, no blocker (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '2'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s2_to_slot3_no_blocker
+  base_case_number: 22
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l1_s2_to_slot3_no_blocker_speed008
+  title: Loaded L1 from slot 2 to slot 3, no blocker (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '2'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s2_to_slot3_no_blocker
+  base_case_number: 22
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l1_s2_to_slot3_no_blocker_speed010
+  title: Loaded L1 from slot 2 to slot 3, no blocker (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '2'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s2_to_slot3_no_blocker
+  base_case_number: 22
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l1_s2_to_slot3_no_blocker_speed012
+  title: Loaded L1 from slot 2 to slot 3, no blocker (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+  launch:
+    left_shuttle_count: 1
+    left_start_slots: '2'
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s2_to_slot3_no_blocker
+  base_case_number: 22
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l2_s2_to_slot3_no_blocker_speed006
+  title: Loaded L2 from slot 2 to slot 3, no blocker (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l2_s2_to_slot3_no_blocker
+  base_case_number: 23
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l2_s2_to_slot3_no_blocker_speed008
+  title: Loaded L2 from slot 2 to slot 3, no blocker (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l2_s2_to_slot3_no_blocker
+  base_case_number: 23
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l2_s2_to_slot3_no_blocker_speed010
+  title: Loaded L2 from slot 2 to slot 3, no blocker (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l2_s2_to_slot3_no_blocker
+  base_case_number: 23
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l2_s2_to_slot3_no_blocker_speed012
+  title: Loaded L2 from slot 2 to slot 3, no blocker (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l2_s2_to_slot3_no_blocker
+  base_case_number: 23
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3_speed006
+  title: L1 and L2 loaded; nearest loaded L2 goes to slot 3 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1,L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3
+  base_case_number: 24
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3_speed008
+  title: L1 and L2 loaded; nearest loaded L2 goes to slot 3 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1,L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3
+  base_case_number: 24
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3_speed010
+  title: L1 and L2 loaded; nearest loaded L2 goes to slot 3 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1,L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3
+  base_case_number: 24
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3_speed012
+  title: L1 and L2 loaded; nearest loaded L2 goes to slot 3 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1,L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_clear_slot: ''
+  base_case_id: left_loaded_l1_s1_l2_s2_select_l2_to_slot3
+  base_case_number: 24
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3_speed006
+  title: Loaded L1 from slot 2 to slot 3, L2 blocker clears forward near A4 (speed 0.06 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+    left_shuttle_2: '3'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.06
+  base_case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3
+  base_case_number: 25
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3_speed008
+  title: Loaded L1 from slot 2 to slot 3, L2 blocker clears forward near A4 (speed 0.08 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+    left_shuttle_2: '3'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.08
+  base_case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3
+  base_case_number: 25
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3_speed010
+  title: Loaded L1 from slot 2 to slot 3, L2 blocker clears forward near A4 (speed 0.10 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+    left_shuttle_2: '3'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.1
+  base_case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3
+  base_case_number: 25
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3_speed012
+  title: Loaded L1 from slot 2 to slot 3, L2 blocker clears forward near A4 (speed 0.12 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '2'
+    left_shuttle_2: '3'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.12
+  base_case_id: left_loaded_l1_s2_blocker_l2_s3_clear_s1_to_slot3
+  base_case_number: 25
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3_speed006
+  title: Loaded L2 from slot 2 to slot 3, L1 blocker clears forward near A4 (speed 0.06 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '3'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 3,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.06
+  base_case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3
+  base_case_number: 26
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3_speed008
+  title: Loaded L2 from slot 2 to slot 3, L1 blocker clears forward near A4 (speed 0.08 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '3'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 3,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.08
+  base_case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3
+  base_case_number: 26
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3_speed010
+  title: Loaded L2 from slot 2 to slot 3, L1 blocker clears forward near A4 (speed 0.10 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '3'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 3,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.1
+  base_case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3
+  base_case_number: 26
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3_speed012
+  title: Loaded L2 from slot 2 to slot 3, L1 blocker clears forward near A4 (speed 0.12 m/s)
+  side: left
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '3'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_1
+  blocker_start_slot: '3'
+  blocker_clear_slot: '4'
+  blocker_clear_sensor: A4_STOPPER_SENSOR
+  blocker_clear_stopper: A4
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_a4_stopper_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 3,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_1
+    blocker_clear_slot: '4'
+    blocker_clear_sensor: A4_STOPPER_SENSOR
+  speed: 0.12
+  base_case_id: left_loaded_l2_s2_blocker_l1_s3_clear_s1_to_slot3
+  base_case_number: 26
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3_speed006
+  title: Left-rail scene; L2 blocker enters the interior loop so loaded L1 reaches slot 3 (speed 0.06
+    m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3
+  base_case_number: 27
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3_speed008
+  title: Left-rail scene; L2 blocker enters the interior loop so loaded L1 reaches slot 3 (speed 0.08
+    m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3
+  base_case_number: 27
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3_speed010
+  title: Left-rail scene; L2 blocker enters the interior loop so loaded L1 reaches slot 3 (speed 0.10
+    m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3
+  base_case_number: 27
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3_speed012
+  title: Left-rail scene; L2 blocker enters the interior loop so loaded L1 reaches slot 3 (speed 0.12
+    m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+  blocker_shuttle: left_shuttle_2
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 2
+    left_start_slots: 1,2
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_2
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l1_s1_blocker_l2_s2_interior_to_slot3
+  base_case_number: 27
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3_speed006
+  title: Left-rail scene; L3 blocker enters the interior loop so loaded L2 reaches slot 3 (speed 0.06
+    m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+  blocker_shuttle: left_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 3
+    left_start_slots: 4,1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3
+  base_case_number: 28
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3_speed008
+  title: Left-rail scene; L3 blocker enters the interior loop so loaded L2 reaches slot 3 (speed 0.08
+    m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+  blocker_shuttle: left_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 3
+    left_start_slots: 4,1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3
+  base_case_number: 28
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3_speed010
+  title: Left-rail scene; L3 blocker enters the interior loop so loaded L2 reaches slot 3 (speed 0.10
+    m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+  blocker_shuttle: left_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 3
+    left_start_slots: 4,1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3
+  base_case_number: 28
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3_speed012
+  title: Left-rail scene; L3 blocker enters the interior loop so loaded L2 reaches slot 3 (speed 0.12
+    m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+  blocker_shuttle: left_shuttle_3
+  blocker_start_slot: '2'
+  blocker_clear_slot: ''
+  blocker_clear_target: interior_loop
+  blocker_clear_sensor: DA3IL
+  blocker_clear_stopper: A3
+  blocker_restore_slot: ''
+  blocker_restore_policy: none
+  clearance_strategy: clear_blocker_to_interior_loop_then_move_loaded
+  launch:
+    left_shuttle_count: 3
+    left_start_slots: 4,1,2
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    blocker_shuttle: left_shuttle_3
+    blocker_clear_target: interior_loop
+    blocker_clear_sensor: DA3IL
+  base_case_id: left_loaded_l2_s1_blocker_l3_s2_interior_to_slot3
+  base_case_number: 28
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2_speed006
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L4 reaches slot
+    1 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 29
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2_speed008
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L4 reaches slot
+    1 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 29
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2_speed010
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L4 reaches slot
+    1 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 29
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2_speed012
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L4 reaches slot
+    1 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 29
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2_speed006
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L3 reaches slot
+    1 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 30
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2_speed008
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L3 reaches slot
+    1 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 30
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2_speed010
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L3 reaches slot
+    1 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 30
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2_speed012
+  title: Four left shuttles; L2 enters the interior loop and L1 clears slot 1 so loaded L3 reaches slot
+    1 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot1_clear_l2_interior_l1_s2
+  base_case_number: 30
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2_speed006
+  title: Four left shuttles; L3 enters the interior loop and L1 clears slot 1 so loaded L2 reaches slot
+    1 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2
+  base_case_number: 31
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2_speed008
+  title: Four left shuttles; L3 enters the interior loop and L1 clears slot 1 so loaded L2 reaches slot
+    1 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2
+  base_case_number: 31
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2_speed010
+  title: Four left shuttles; L3 enters the interior loop and L1 clears slot 1 so loaded L2 reaches slot
+    1 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2
+  base_case_number: 31
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2_speed012
+  title: Four left shuttles; L3 enters the interior loop and L1 clears slot 1 so loaded L2 reaches slot
+    1 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot1_clear_l3_interior_l1_s2
+  base_case_number: 31
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2_speed006
+  title: Four left shuttles; L3 enters the interior loop and L2 clears slot 1 so loaded L1 reaches slot
+    1 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2
+  base_case_number: 32
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2_speed008
+  title: Four left shuttles; L3 enters the interior loop and L2 clears slot 1 so loaded L1 reaches slot
+    1 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2
+  base_case_number: 32
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2_speed010
+  title: Four left shuttles; L3 enters the interior loop and L2 clears slot 1 so loaded L1 reaches slot
+    1 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2
+  base_case_number: 32
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2_speed012
+  title: Four left shuttles; L3 enters the interior loop and L2 clears slot 1 so loaded L1 reaches slot
+    1 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '1'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '1'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot1_clear_l3_interior_l2_s2
+  base_case_number: 32
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior_speed006
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L1 reaches slot 3 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior
+  base_case_number: 33
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior_speed008
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L1 reaches slot 3 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior
+  base_case_number: 33
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior_speed010
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L1 reaches slot 3 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior
+  base_case_number: 33
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior_speed012
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L1 reaches slot 3 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_4
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l1_s1_to_slot3_clear_l4_a4_l3_s4_l2_interior
+  base_case_number: 33
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior_speed006
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L2 reaches slot 3 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior
+  base_case_number: 34
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior_speed008
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L2 reaches slot 3 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior
+  base_case_number: 34
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior_speed010
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L2 reaches slot 3 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior
+  base_case_number: 34
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior_speed012
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L2 reaches slot 3 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l2_s1_to_slot3_clear_l1_a4_l4_s4_l3_interior
+  base_case_number: 34
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior_speed006
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L3 reaches slot 3 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '1'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,1,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior
+  base_case_number: 35
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior_speed008
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L3 reaches slot 3 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '1'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,1,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior
+  base_case_number: 35
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior_speed010
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L3 reaches slot 3 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '1'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,1,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior
+  base_case_number: 35
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior_speed012
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L3 reaches slot 3 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '1'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_4
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,1,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l3_s1_to_slot3_clear_l1_a4_l4_s4_l2_interior
+  base_case_number: 35
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior_speed006
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L4 reaches slot 3 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,3,1
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior
+  base_case_number: 36
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior_speed008
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L4 reaches slot 3 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,3,1
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior
+  base_case_number: 36
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior_speed010
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L4 reaches slot 3 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,3,1
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior
+  base_case_number: 36
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior_speed012
+  title: Four left shuttles; clear slot 4 forward, move slot 3 blocker to slot 4, and send slot 2 blocker
+    inside so loaded L4 reaches slot 3 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '3'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '1'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_1
+    start_slot: '4'
+    clear_slot: '4'
+    clear_sensor: A4_STOPPER_SENSOR
+    clear_stopper: A4
+  - shuttle: left_shuttle_3
+    start_slot: '3'
+    clear_slot: '4'
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,2,3,1
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '3'
+    clearance_step_count: 3
+    final_clear_target: interior_loop
+  base_case_id: left_four_shuttles_loaded_l4_s1_to_slot3_clear_l1_a4_l3_s4_l2_interior
+  base_case_number: 36
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2_speed006
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L4 reaches
+    slot 2 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 37
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2_speed008
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L4 reaches
+    slot 2 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 37
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2_speed010
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L4 reaches
+    slot 2 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 37
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2_speed012
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L4 reaches
+    slot 2 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_4
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '3'
+    left_shuttle_4: '4'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,3,4
+    left_loaded_shuttles: L4
+  expected:
+    selected_shuttle: left_shuttle_4
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l4_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 37
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2_speed006
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L3 reaches
+    slot 2 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 38
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2_speed008
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L3 reaches
+    slot 2 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 38
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2_speed010
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L3 reaches
+    slot 2 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 38
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2_speed012
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L3 reaches
+    slot 2 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_3
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '2'
+    left_shuttle_3: '4'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_2
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,2,4,3
+    left_loaded_shuttles: L3
+  expected:
+    selected_shuttle: left_shuttle_3
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l3_s4_to_slot2_clear_l2_interior_l1_a2
+  base_case_number: 38
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2_speed006
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L2 reaches
+    slot 2 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2
+  base_case_number: 39
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2_speed008
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L2 reaches
+    slot 2 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2
+  base_case_number: 39
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2_speed010
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L2 reaches
+    slot 2 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2
+  base_case_number: 39
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2_speed012
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L2 reaches
+    slot 2 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_2
+  start_slots_by_shuttle:
+    left_shuttle_1: '1'
+    left_shuttle_2: '4'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_1
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 1,4,2,3
+    left_loaded_shuttles: L2
+  expected:
+    selected_shuttle: left_shuttle_2
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l2_s4_to_slot2_clear_l3_interior_l1_a2
+  base_case_number: 39
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2_speed006
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L1 reaches
+    slot 2 (speed 0.06 m/s)
+  side: left
+  speed: 0.06
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2
+  base_case_number: 40
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.06
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2_speed008
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L1 reaches
+    slot 2 (speed 0.08 m/s)
+  side: left
+  speed: 0.08
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2
+  base_case_number: 40
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.08
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2_speed010
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L1 reaches
+    slot 2 (speed 0.10 m/s)
+  side: left
+  speed: 0.1
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2
+  base_case_number: 40
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.1
+- case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2_speed012
+  title: Four left shuttles; send slot 2 blocker inside and hold slot 1 blocker at A2 so loaded L1 reaches
+    slot 2 (speed 0.12 m/s)
+  side: left
+  speed: 0.12
+  target_slot: '2'
+  payload_condition: loaded
+  selection_policy: nearest_loaded_to_target_slot_then_lowest_id
+  loaded_shuttles:
+  - left_shuttle_1
+  start_slots_by_shuttle:
+    left_shuttle_1: '4'
+    left_shuttle_2: '1'
+    left_shuttle_3: '2'
+    left_shuttle_4: '3'
+  clearance_strategy: multi_blocker_clear_then_move_loaded
+  clearance_steps:
+  - shuttle: left_shuttle_3
+    start_slot: '2'
+    clear_target: interior_loop
+    clear_sensor: DA3IL
+    clear_stopper: A3
+  - shuttle: left_shuttle_2
+    start_slot: '1'
+    clear_slot: '2'
+    clear_sensor: A2_STOPPER_SENSOR
+    clear_stopper: A2
+  launch:
+    left_shuttle_count: 4
+    left_start_slots: 4,1,2,3
+    left_loaded_shuttles: L1
+  expected:
+    selected_shuttle: left_shuttle_1
+    selected_target_slot: '2'
+    clearance_step_count: 2
+    final_clear_slot: '2'
+  base_case_id: left_four_shuttles_loaded_l1_s4_to_slot2_clear_l3_interior_l2_a2
+  base_case_number: 40
+  augmentation:
+    type: speed_sweep
+    speed_mps: 0.12

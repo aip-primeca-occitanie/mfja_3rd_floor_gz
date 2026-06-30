@@ -36,7 +36,7 @@ class FakePlanSysBackend:
 def _scenario():
     generator = _load_script('room_315_pddl_scenario_generator')
     return generator.generate_scenario(
-        case_id='right_loaded_r1_s1_to_slot3_no_blocker',
+        case_id='right_loaded_r1_s1_to_slot3_no_blocker_speed008',
         planner=FakePlanSysBackend(),
     )
 

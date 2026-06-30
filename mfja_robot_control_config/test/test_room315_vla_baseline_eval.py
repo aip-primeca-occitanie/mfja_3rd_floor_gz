@@ -173,22 +173,22 @@ def test_vla_feature_uses_images_not_sensor_state(tmp_path):
     assert baseline.vla_feature(row_a, tmp_path) == baseline.vla_feature(row_b, tmp_path)
 
 
-def test_task_family_metrics_include_requested_success_rates(tmp_path):
+def test_task_family_metrics_include_payload_runtime_rates(tmp_path):
     baseline = _load_module()
     terminal = _action('DONE', 'right', 'terminal', 'task_succeeded')
     rows = [
         baseline._event_row(_row(
             tmp_path,
-            episode_id='episode_visual',
-            task='left_slot3_kuka_then_slot2',
-            image_name='visual_done.jpg',
+            episode_id='episode_transport',
+            task='right_loaded_r1_s1_to_slot3_no_blocker_speed008',
+            image_name='transport_start.jpg',
             timestamp=1.0,
         ), 0),
         baseline._event_row(_row(
             tmp_path,
-            episode_id='episode_visual',
-            task='left_slot3_kuka_then_slot2',
-            image_name='visual_done.jpg',
+            episode_id='episode_transport',
+            task='right_loaded_r1_s1_to_slot3_no_blocker_speed008',
+            image_name='transport_done.jpg',
             timestamp=4.0,
             action=terminal,
             task_status='succeeded',
@@ -206,9 +206,9 @@ def test_task_family_metrics_include_requested_success_rates(tmp_path):
         ), 1),
         baseline._event_row(_row(
             tmp_path,
-            episode_id='episode_obstacle',
-            task='right_obstacle_aware_route',
-            image_name='obstacle_done.jpg',
+            episode_id='episode_loop',
+            task='clear blocker into interior loop',
+            image_name='loop_done.jpg',
             timestamp=3.0,
             action=terminal,
             task_status='succeeded',
@@ -222,17 +222,17 @@ def test_task_family_metrics_include_requested_success_rates(tmp_path):
 
     assert 'unknown_position' not in metrics
     assert 'sensor_dropout' not in metrics
-    assert metrics['visual_target']['task_success'] == 1.0
-    assert metrics['visual_target']['completion_time'] == 3.0
-    assert metrics['visual_target']['command_count'] == 2.0
-    assert metrics['visual_target']['illegal_proposal_rate'] == 0.2
-    assert metrics['visual_target']['rejected_action_rate'] == 0.2
-    assert metrics['visual_target']['skipped_redundant_event_count'] == 2.0
-    assert metrics['visual_target']['redundant_action_rate'] == 0.2
-    assert metrics['visual_target']['noop_action_rate'] == 0.2
-    assert metrics['visual_target']['effective_action_rate'] == 0.8
-    assert metrics['visual_target']['visual_target_success'] == 1.0
-    assert metrics['obstacle_stop']['obstacle_stop_success'] == 1.0
+    assert set(metrics).isdisjoint({'visual' + '_target', 'obstacle' + '_stop'})
+    assert metrics['transport']['task_success'] == 1.0
+    assert metrics['transport']['completion_time'] == 3.0
+    assert metrics['transport']['command_count'] == 2.0
+    assert metrics['transport']['illegal_proposal_rate'] == 0.2
+    assert metrics['transport']['rejected_action_rate'] == 0.2
+    assert metrics['transport']['skipped_redundant_event_count'] == 2.0
+    assert metrics['transport']['redundant_action_rate'] == 0.2
+    assert metrics['transport']['noop_action_rate'] == 0.2
+    assert metrics['transport']['effective_action_rate'] == 0.8
+    assert metrics['loop_entry']['task_success'] == 1.0
 
 
 def test_device_accuracy_checks_switch_and_stopper_masks(tmp_path):

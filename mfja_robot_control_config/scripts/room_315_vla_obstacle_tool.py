@@ -93,12 +93,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--pose-file',
         default=DEFAULT_POSE_FILE,
-        help='Pose cache read by vla_teleop_generator.py for m10/m11.',
+        help='Pose cache path for reusable obstacle marker positions.',
     )
     parser.add_argument(
         '--no-pose-file',
         action='store_true',
-        help='Move Gazebo only; do not update the m10/m11 pose cache.',
+        help='Move Gazebo only; do not update the obstacle pose cache.',
     )
     parser.add_argument(
         '--dry-run',

@@ -91,7 +91,7 @@ def _fake_recorder(module):
     recorder.episode_id = 'episode_000001_smoke'
     recorder.frame_index = 0
     recorder.event_index = 0
-    recorder.latest_goal = 'left_slot3_kuka_then_slot2'
+    recorder.latest_goal = 'right_loaded_r1_s1_to_slot3_no_blocker_speed008'
     recorder.latest_task_index = 0
     recorder.latest_command = {'action': 'status'}
     recorder.latest_status = _status()
@@ -244,10 +244,8 @@ def _rails_for_safety():
 def test_smoke_has_one_episode_for_each_evaluator_task_family():
     evaluator = _load_eval()
     examples = {
-        'visual_target': 'left_slot3_kuka_then_slot2',
-        'obstacle_stop': 'right_obstacle_aware_route',
         'loop_entry': 'clear blocker into interior loop',
-        'transport': 'right_loaded_r1_s1_to_slot3_no_blocker',
+        'transport': 'right_loaded_r1_s1_to_slot3_no_blocker_speed008',
         'station_navigation': 'center at station',
         'stopper': 'stop at A2 stopper',
         'exterior_loop': 'complete one exterior loop',

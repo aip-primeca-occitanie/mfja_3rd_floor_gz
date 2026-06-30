@@ -1,10 +1,10 @@
 # Room 315 VLA Operations
 
-Room 315 VLA operation is currently scoped to the curated 40 payload training
+Room 315 VLA operation is currently scoped to the curated 160 payload speed-sweep
 cases in:
 
 ```text
-mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml
+mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
 ```
 
 The supervisor accepts direct primitive JSON commands and schema-v3 action
@@ -33,7 +33,7 @@ ros2 topic echo /room_315/vla/status std_msgs/msg/String
 
 ```bash
 ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
-  --case-id right_loaded_r1_s1_to_slot3_no_blocker \
+  --case-id right_loaded_r1_s1_to_slot3_no_blocker_speed008 \
   --language-template-id loaded_shuttle_to_slot \
   --dry-run
 ```
@@ -42,20 +42,20 @@ Execute a case with the supervisor and dataset recorder running:
 
 ```bash
 ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
-  --case-id right_loaded_r1_s1_to_slot3_no_blocker \
+  --case-id right_loaded_r1_s1_to_slot3_no_blocker_speed008 \
   --language-template-id loaded_shuttle_to_slot \
   --arrival-timeout-s 120 \
   --require-dataset-recorder \
   --execute
 ```
 
-## Run The 40 Cases
+## Run The 160 Cases
 
 ```bash
 ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml \
-  --dataset-dir ~/room315_payload_all_cases \
-  --results-dir /tmp/room315_payload_case_batch
+  --case-config mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml \
+  --dataset-dir ~/room315_payload_expanded_160_speed_sweep \
+  --results-dir /tmp/room315_payload_expanded_160_speed_sweep
 ```
 
 Use `--dry-run` to inspect launch arguments without starting Gazebo.

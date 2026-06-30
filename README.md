@@ -117,7 +117,7 @@ The VLA stack includes:
 - A safety decoder between model actions and rail execution.
 - Event-level symbolic action schema v3 with switch/stopper masks, shuttle
   identity, and coordination mode values.
-- Dataset recording plus the curated 40-case payload batch runner.
+- Dataset recording plus the curated 160-case payload speed-sweep batch runner.
 
 Canonical station mapping:
 
@@ -131,11 +131,11 @@ Left rail slots 3-4: KUKA KR6
 The active training/evaluation surface is the curated payload case matrix:
 
 ```text
-mfja_robot_control_config/config/room_315_vla/payload_training_cases.yaml
+mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
 ```
 
 Run one case with `room_315_pddl_scenario_generator.py --case-id ...`, or run
-the 40-case batch with `room_315_payload_case_batch_runner.py`.
+the 160-case batch with `room_315_payload_case_batch_runner.py`.
 
 For supervisor operation, VLA topics, action vectors, and manual commands, go to
 [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md).

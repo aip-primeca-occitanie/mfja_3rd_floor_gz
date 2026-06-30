@@ -44,19 +44,8 @@ TASK_FAMILY_METRIC_FIELDS = (
     'effective_action_rate',
     'illegal_proposal_rate',
     'rejected_action_rate',
-    'visual_target_success',
-    'obstacle_stop_success',
 )
 TASK_FAMILY_KEYWORDS = (
-    (
-        'visual_target',
-        (
-            'left_slot3_kuka_then_slot2',
-            'visual_marker_target',
-            'visual marker target',
-        ),
-    ),
-    ('obstacle_stop', ('obstacle_aware_route', 'obstacle stop', 'obstacle')),
     ('loop_entry', ('enter_interior_loop', 'interior loop', 'interior mode')),
     ('transport', ('loaded_', 'payload', 'to_slot', 'to slot', 'clear blocker')),
     ('station_navigation', ('go to staubli', 'go to yaskawa', 'go to kuka', 'center at station')),
@@ -500,13 +489,7 @@ def _aggregate_task_metrics(rows: list[dict[str, Any]], family_name: str = 'all'
         'effective_action_rate': _rate_from_runtime(latest_runtime, 'effective_action_rate'),
         'illegal_proposal_rate': _rate_from_runtime(latest_runtime, 'illegal_proposal_rate'),
         'rejected_action_rate': _rate_from_runtime(latest_runtime, 'rejected_action_rate'),
-        'visual_target_success': None,
-        'obstacle_stop_success': None,
     }
-    if family_name == 'visual_target':
-        metrics['visual_target_success'] = success_rate
-    elif family_name == 'obstacle_stop':
-        metrics['obstacle_stop_success'] = success_rate
     return metrics
 
 

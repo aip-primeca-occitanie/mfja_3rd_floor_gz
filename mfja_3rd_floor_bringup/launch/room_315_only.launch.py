@@ -259,7 +259,7 @@ def generate_launch_description():
             default_value='true',
             choices=['true', 'false'],
             description=(
-                'Clear the m10/m11 obstacle pose cache at simulation startup so '
+                'Clear the VLA obstacle pose cache at simulation startup so '
                 'stale obstacle moves from a previous Gazebo run are not reused.'
             ),
         ),

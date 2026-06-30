@@ -740,7 +740,6 @@ def _single_gate_switch_change_is_staged(
 def _rail_stopped_on_gate_approach(rails: dict[str, Any], side: str, gate: str) -> bool:
     approach_segments = {
         ('right', 'A3'): {'A23'},
-        ('left', 'A1'): {'A14'},
         ('left', 'A3'): {'A23'},
     }.get((side, gate), set())
     for shuttle_state in _rail_shuttles(rails, side).values():
@@ -771,7 +770,7 @@ def _switch_assignments_are_noop(
 
 
 def _gate_for_side(side: str) -> str:
-    return {'right': 'A3', 'left': 'A1'}[side]
+    return {'right': 'A3', 'left': 'A3'}[side]
 
 
 def _rail_stopped_at_gate(rails: dict[str, Any], side: str, gate: str) -> bool:

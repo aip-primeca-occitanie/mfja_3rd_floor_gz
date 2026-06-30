@@ -1,7 +1,7 @@
 schema_version: 4
 description: >
-  Room 315 VLA supervisor runtime defaults for the curated 40 payload training
-  cases. Legacy high-level station goals are intentionally not configured;
+  Room 315 VLA supervisor runtime defaults for the curated 160 payload
+  speed-sweep cases. Legacy high-level station goals are intentionally not configured;
   payload cases execute through generated primitive commands and schema-v3
   action vectors only.
 

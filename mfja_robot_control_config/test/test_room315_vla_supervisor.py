@@ -414,7 +414,7 @@ def test_action_vector_accepts_single_gate_switch_when_shuttle_is_staged_at_gate
     assert decision['executed_action']['switches'] == {'A3': 'INTERIOR'}
 
 
-def test_action_vector_rejects_left_a3_switch_without_left_a1_gate_context():
+def test_action_vector_accepts_left_a3_switch_at_left_gate_context():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
     supervisor.rails['left']['shuttles']['room315_left_shuttle_2'] = {
@@ -435,8 +435,8 @@ def test_action_vector_rejects_left_a3_switch_without_left_a1_gate_context():
 
     decision = supervisor.decode_and_validate(action_vector)
 
-    assert decision['accepted'] is False
-    assert 'left switch A3 guarded segment' in decision['reason']
+    assert decision['accepted'] is True
+    assert decision['executed_action']['switches'] == {'A3': 'INTERIOR'}
 
 
 def test_action_vector_accepts_single_gate_restore_after_blocker_clears_switch():
@@ -548,7 +548,7 @@ def test_action_vector_loop_transition_uses_left_gate():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
     supervisor.rails['left']['shuttles'] = {
-        'room315_left_shuttle_1': {'mode': 'STOPPED', 'segment': 'A23', 'speed': 0.0}
+        'room315_left_shuttle_1': {'mode': 'STOPPED', 'segment': 'A12E', 'speed': 0.0}
     }
     action_vector = _event_vector(
         module,
@@ -567,11 +567,11 @@ def test_action_vector_loop_transition_uses_left_gate():
 
     wrong_gate_decision = supervisor.decode_and_validate(action_vector)
     assert wrong_gate_decision['accepted'] is False
-    assert 'side-specific gate A1' in wrong_gate_decision['reason']
+    assert 'side-specific gate A3' in wrong_gate_decision['reason']
 
     supervisor.rails['left']['shuttles']['room315_left_shuttle_1'] = {
         'mode': 'STOPPED',
-        'segment': 'A12E',
+        'segment': 'A34E',
         'speed': 0.0,
     }
     staged_decision = supervisor.decode_and_validate(action_vector)

@@ -23,7 +23,7 @@ install(
 install(
   FILES
     config/room_315_vla/action_space.yaml
-    config/room_315_vla/payload_training_cases.yaml
+    config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
     config/room_315_vla/vla_supervisor.yaml
@@ -74,7 +74,6 @@ install(
     scripts/room_315_vla_obstacle_tool.py
     scripts/room_315_vla_shuttle_identity_tracker.py
     scripts/room_315_vla_supervisor.py
-    scripts/vla_teleop_generator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -224,10 +223,6 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_visual_debug_colors
     test/test_room315_visual_debug_colors.py
-  )
-  ament_add_pytest_test(
-    test_vla_teleop_generator
-    test/test_vla_teleop_generator.py
   )
 endif()
 
