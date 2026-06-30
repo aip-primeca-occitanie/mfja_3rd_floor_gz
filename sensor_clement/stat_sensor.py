@@ -8,17 +8,14 @@ from collections import deque
 import numpy as np
 from scipy import stats as sp_stats
 
-print("start")
-system = nidaqmx.system.System.local()
 print(list(nidaqmx.system.System.local().devices))
-print("end")
 
 # --- Paramètres ---
-channel_fz = "cDAQ2Mod1/ai6"  # à adapter à ton canal Fz
-channel_mz = "cDAQ2Mod1/ai7"  # à adapter à ton canal Mz
+channel_fz = "cDAQ1Mod1/ai7"  # à adapter à ton canal Fz
+channel_mz = "cDAQ1Mod1/ai6"  # à adapter à ton canal Mz
 sample_rate = 1000.0  # échantillons/sec
 csv_filename = "acquisition.csv"
-buffer_size = 1000
+buffer_size = 50000
 animation_interval_ms = 100 # Intervalle de mise à jour de l'animation en ms, correspond à 'interval' de FuncAnimation
 
 # --- Initialisation des buffers pour le tracé ---
