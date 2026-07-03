@@ -97,7 +97,7 @@ public:
             std::bind(&CartesianPublisher::cartesianTargetCb, this, std::placeholders::_1));
         
         //move to initial position
-        rclcpp::sleep_for(std::chrono::seconds(0.5));
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
         trajectory_msgs::msg::JointTrajectory traj;
         traj.header.stamp = this->now();
         traj.header.frame_id = "base_link";
@@ -223,7 +223,7 @@ private:
         traj.joint_names = joint_names;
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions.assign(q_solution.data(), q_solution.data() + q_solution.size());
-        point.time_from_start  = rclcpp::Duration::from_seconds(0.005);
+        point.time_from_start  = rclcpp::Duration::from_seconds(1.0);
         traj.points.push_back(point);
         pub_traj->publish(traj);
         }

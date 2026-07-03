@@ -31,7 +31,7 @@ ament_target_dependencies(target_force_publisher rclcpp std_msgs)
 add_executable(force_pid_controller src/force_pid_controller.cpp)
 ament_target_dependencies(force_pid_controller rclcpp geometry_msgs std_msgs staubli_tx2_60l_controller)
 
-add_executable(sinus_mvt src/sinus_mvt.cpp)
+add_executable(sinus_mvt src/sin_mvt.cpp)
 ament_target_dependencies(sinus_mvt rclcpp geometry_msgs)
 
 # ---- Other Nodes ---- 
