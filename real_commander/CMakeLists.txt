@@ -63,6 +63,7 @@ install(TARGETS
   target_force_publisher
   sensor
   sensor_filter
+  sinus_mvt
   DESTINATION lib/${PROJECT_NAME} )
 
 install(PROGRAMS

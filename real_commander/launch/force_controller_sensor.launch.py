@@ -119,7 +119,7 @@ def generate_launch_description():
         parameters=[{
             "kalman_q" : 2.825,
             "kalman_r" : 5.4,
-            "median_window" : 25
+            "median_window" : 10
             }]
         )
 

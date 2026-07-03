@@ -47,6 +47,7 @@ public:
         target.pose.orientation.y = qy;
         target.pose.orientation.z = qz;
         target.pose.orientation.w = qw;
+        pub_cartesian_target->publish(target);
     }
 
 private:
