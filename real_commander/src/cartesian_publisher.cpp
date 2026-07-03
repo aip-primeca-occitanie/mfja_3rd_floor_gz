@@ -96,8 +96,8 @@ public:
             "/cartesian_target", 10,
             std::bind(&CartesianPublisher::cartesianTargetCb, this, std::placeholders::_1));
         
-        //move to initial position (simulation only ?)
-        rclcpp::sleep_for(std::chrono::seconds(2));
+        //move to initial position
+        rclcpp::sleep_for(std::chrono::seconds(0.5));
         trajectory_msgs::msg::JointTrajectory traj;
         traj.header.stamp = this->now();
         traj.header.frame_id = "base_link";
@@ -131,7 +131,7 @@ private:
     bool solveIK(const pinocchio::SE3 & target_se3, Eigen::VectorXd & q_out)
     {
         const int nv = model.nv;
-        Eigen::VectorXd q = q_current;   // seed = current state
+        Eigen::VectorXd q = q_current; // seed = current state
 
         for (int iter = 0; iter < IK_MAX_ITER; ++iter)
         {
