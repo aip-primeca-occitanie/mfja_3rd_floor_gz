@@ -223,7 +223,7 @@ private:
         traj.joint_names = joint_names;
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions.assign(q_solution.data(), q_solution.data() + q_solution.size());
-        point.time_from_start  = rclcpp::Duration::from_seconds(1.0);
+        point.time_from_start  = rclcpp::Duration::from_seconds(0.005);
         traj.points.push_back(point);
         pub_traj->publish(traj);
         }

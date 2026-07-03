@@ -71,7 +71,6 @@ class ForceFilterNode : public rclcpp::Node {
                 win, Q, R);
 
             pub = this->create_publisher<std_msgs::msg::Float64>("/Fz", 10);
-            //pub_median = this->create_publisher<std_msgs::msg::Float64>("/Fz_median", 10);
 
             sub_fz = this->create_subscription<std_msgs::msg::Float64>(
                 "/Fz_raw", rclcpp::SensorDataQoS(), std::bind(&ForceFilterNode::callback, this, std::placeholders::_1));
@@ -83,18 +82,11 @@ class ForceFilterNode : public rclcpp::Node {
 
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr sub_fz;
         rclcpp::Publisher  <std_msgs::msg::Float64>::SharedPtr pub;
-        //rclcpp::Publisher  <std_msgs::msg::Float64>::SharedPtr pub_median;
 
         void callback(const std_msgs::msg::Float64::SharedPtr msg){
+
             double fz_median = median_filter->update(msg->data);
             double fz_kalman = kalman_filter->update(fz_median);
-
-            /*
-            auto out_median = std_msgs::msg::Float64();
-            out_median.data = fz_median;
-            pub_median->publish(out_median);
-            */
-
             auto out_filtered = std_msgs::msg::Float64();
             out_filtered.data = fz_kalman;
             pub->publish(out_filtered);

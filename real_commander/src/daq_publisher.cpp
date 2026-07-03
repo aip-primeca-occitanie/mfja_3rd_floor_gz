@@ -126,7 +126,8 @@ private:
     void publishData(const float64 data[2]) {
         std_msgs::msg::Float64 fz_msg, mz_msg;
         //vérification sur les paramètres de config sur WITIS, Fz correspond à AI7 et Mz à AI6
-        fz_msg.data = data[0] * 20.864489; //N = k * V, k was computed with samplings
+        if (data[0]>0.) {fz_msg.data = data[0] * 20.864489;} //N = k * V, k was computed with samplings
+        else {fz_msg.data = 0.;}
         mz_msg.data = data[1]; //coeff to be determined
         fz_pub->publish(fz_msg);
         mz_pub->publish(mz_msg);

@@ -94,11 +94,11 @@ def generate_launch_description():
         name='force_pid_controller',
         output='screen',
         parameters=[{
-            "KP": 0.004153e-1, #0.004153 values found with matlab/simulnk
-            "KI": 0.00424e-1, #0.00424,
-            "KD": 4.24e-6, #4.24e-5,
+            "KP": (0.004153e-1)/2, #0.004153 values found with matlab/simulnk for ideal case
+            "KI": 0., #(0.00424e-1)/2, #0.00424,
+            "KD": 0., #(4.24e-5), #4.24e-5,
             "MAX_OUTPUT": 0.05,
-            "TARGET": 50.0,
+            "TARGET": 10.0,
             "FREQ": 250
             }]
         )
@@ -111,19 +111,17 @@ def generate_launch_description():
         parameters=[{"FREQ" : 250}]
         )
 
-    filter_node = Node(
+    filter_node = Node( #from sensor_clement/stat_sensor.py
         package='real_commander',
         executable='sensor_filter',
         name='sensor_filter',
-        output='screen'
+        output='screen',
+        parameters=[{
+            "kalman_q" : 2.825,
+            "kalman_r" : 5.4,
+            "median_window" : 25
+            }]
         )
-    
-    visu_node = Node(
-        package='real_commander',
-        executable='realtime_plotter_node.py',
-        name='realtime_plotter',
-        output='screen'
-        ),
 
     timer_action = TimerAction(
         period=5.0,
@@ -131,8 +129,8 @@ def generate_launch_description():
         )
 
     force_pid_controller_delayed = TimerAction(
-        period=8.0,
-        actions=[filter_node, force_pid_controller_node, visu_node]
+        period=12.0,
+        actions=[filter_node, force_pid_controller_node]
         )
 
     return LaunchDescription(
