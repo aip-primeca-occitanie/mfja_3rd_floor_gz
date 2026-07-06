@@ -58,13 +58,15 @@ def main():
     ros_thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     ros_thread.start()
 
-    fig, (ax) = plt.subplots(1, 1, figsize=(10, 8))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
 
     line_z, = ax.plot([], [], color="#1100ff", linewidth=1.0, label = "Position z (cm)")
     line_cmd, = ax.plot([], [], color="#15ff00", linewidth=1.0, label = "Commande z (cm)")
 
     ax.set_title("Position vs Commande")
     ax.set_xlabel("Temps (s)")
+    ax.set_ylabel("Position (cm)")
+    ax.legend()
     ax.grid(True, alpha=0.3)
 
     def update(_frame):
@@ -72,14 +74,14 @@ def main():
             t_z = list(node.t_z); z = list(node.z_vals)
             t_cmd = list(node.t_cmd); cmd = list(node.cmd_vals)
 
-        for line, ax, t, v in [(line_z, ax, t_z, z), (line_cmd, ax, t_cmd, cmd)]:
+        for line, ax_, t, v in [(line_z, ax, t_z, z), (line_cmd, ax, t_cmd, cmd)]:
             if len(t) < 2:
                 continue
             line.set_data(t, v)
             t_now = t[-1]
-            ax.set_xlim(t_now - WINDOW_S, t_now)
-            ax.relim()
-            ax.autoscale_view(scalex=False)
+            ax_.set_xlim(t_now - WINDOW_S, t_now)
+            ax_.relim()
+            ax_.autoscale_view(scalex=False)
         return line_z, line_cmd
 
     ani = animation.FuncAnimation(fig, update, interval=100, blit=False, cache_frame_data=False)
