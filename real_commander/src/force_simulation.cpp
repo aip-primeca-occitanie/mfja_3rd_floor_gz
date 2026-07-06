@@ -11,9 +11,9 @@ public:
     ForceSimulation()
     : rclcpp::Node("force_simulation")
     {
-        this->declare_parameter<double>("z_contact",  -0.4);    // [m]
+        this->declare_parameter<double>("z_contact",  -0.4); // [m]
         this->declare_parameter<double>("stiffness",  5000.0); // [N/m]
-        this->declare_parameter<double>("damping",    50.0);   // [N.s/m]
+        this->declare_parameter<double>("damping",    50.0); // [N.s/m]
 
         z_contact = this->get_parameter("z_contact").as_double();
         k = this->get_parameter("stiffness").as_double();

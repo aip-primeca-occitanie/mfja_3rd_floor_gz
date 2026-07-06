@@ -90,7 +90,7 @@ private:
     void onCartesianState(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         current_x = msg->pose.position.x;
         current_y = msg->pose.position.y;
-        current_z = - msg->pose.position.z;
+        current_z = - msg->pose.position.z; //compute negative here to avoid reapplying negative later and ending up with the wrong sign
         qx = msg->pose.orientation.x;
         qy = msg->pose.orientation.y;
         qz = msg->pose.orientation.z;
@@ -125,7 +125,7 @@ private:
         double delta_z = - pid.compute(force_error, dt);
 
         geometry_msgs::msg::PoseStamped target;
-        target.header.stamp    = now;
+        target.header.stamp = now;
         target.header.frame_id = "base_link";
         target.pose.position.x = current_x;
         target.pose.position.y = current_y;

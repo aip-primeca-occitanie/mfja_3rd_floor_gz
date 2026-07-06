@@ -36,30 +36,20 @@ with AnyReader([Path(BAG_PATH)]) as reader:
         msg = reader.deserialize(rawdata, connection.msgtype)
 
         if connection.topic == POSITION_TOPIC:
-
             t = timestamp * 1e-9  # ns -> s
-
-            # Première valeur du tableau
             z = msg.pose.position.z
-
             t_z.append(t)
             z_values.append(z)
 
         elif connection.topic == FORCE_TOPIC:
-
             t = timestamp * 1e-9  # ns -> s
-
             fz = msg.data
-
             t_f.append(t)
             fz_values.append(fz)
         
         elif connection.topic == COMMAND_TOPIC:
-
             t = timestamp * 1e-9  # ns -> s
-
             com = msg.pose.position.z
-
             t_command.append(t)
             command_values.append(com)
 

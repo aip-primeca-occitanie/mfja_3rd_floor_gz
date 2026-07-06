@@ -44,6 +44,10 @@ public:
     CartesianPublisher()
     : rclcpp::Node("cartesian_publisher")
     {
+        this->declare_parameter<double>("velocity_ratio", 0.5); // 0.0 - 1.0, fraction de la vitesse max URDF
+        velocity_ratio = this->get_parameter("velocity_ratio").as_double();
+        velocity_ratio = std::clamp(velocity_ratio, 0.01, 1.0);
+
         pub_traj = this->create_publisher<trajectory_msgs::msg::JointTrajectory>(
             "/joint_path_command", 10);
     }
@@ -105,7 +109,7 @@ public:
 
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions = REF_ANGLES;
-        point.time_from_start = rclcpp::Duration::from_seconds(3.0);
+        point.time_from_start = rclcpp::Duration::from_seconds(1.0);
         traj.points.push_back(point);
         pub_traj->publish(traj);
         RCLCPP_INFO(this->get_logger(), "Moving to initial position...");
@@ -125,8 +129,11 @@ private:
     pinocchio::SE3 ref_transform;
 
     Eigen::VectorXd q_current;
+    double velocity_ratio;
 
     sensor_msgs::msg::JointState last_js{};
+
+    rclcpp::Time last_cmd_time_{0, 0, RCL_ROS_TIME};
 
     bool solveIK(const pinocchio::SE3 & target_se3, Eigen::VectorXd & q_out)
     {
@@ -173,6 +180,13 @@ private:
     }
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+
+        double min_interval = 0.15; // secondes : à ajuster selon la vitesse réelle observée
+        rclcpp::Time now_t = this->now();
+        if ((now_t - last_cmd_time_).seconds() < min_interval)
+            return; // on ignore les cibles trop rapprochées
+        last_cmd_time_ = now_t;
+
         geometry_msgs::msg::Pose corrected_pose = msg->pose;
         corrected_pose.position.x = msg->pose.position.z;
         corrected_pose.position.z = msg->pose.position.x; //inverted ?
@@ -212,6 +226,15 @@ private:
         
         q_current = q_solution;
 
+        Eigen::VectorXd dq = q_solution - q_current;
+        std::vector<double> velocities(dq.size());
+        for (int i = 0; i < dq.size(); ++i)
+        {
+            double max_v = model.velocityLimit[i];
+            double sign  = (dq[i] >= 0.0) ? 1.0 : -1.0;
+            velocities[i] = sign * velocity_ratio * max_v;
+        }
+
         std::vector<std::string> joint_names = {
             "joint_1", "joint_2", "joint_3",
             "joint_4", "joint_5", "joint_6"
@@ -223,7 +246,7 @@ private:
         traj.joint_names = joint_names;
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions.assign(q_solution.data(), q_solution.data() + q_solution.size());
-        point.time_from_start  = rclcpp::Duration::from_seconds(1.0);
+        point.velocities = velocities;  
         traj.points.push_back(point);
         pub_traj->publish(traj);
         }
