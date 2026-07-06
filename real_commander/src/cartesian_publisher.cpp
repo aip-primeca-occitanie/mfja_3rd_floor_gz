@@ -44,9 +44,9 @@ public:
     CartesianPublisher()
     : rclcpp::Node("cartesian_publisher")
     {
-        this->declare_parameter<double>("velocity_ratio", 0.5); // 0.0 - 1.0, fraction de la vitesse max URDF
+        /*this->declare_parameter<double>("velocity_ratio", 0.5); // 0.0 - 1.0, fraction de la vitesse max URDF
         velocity_ratio = this->get_parameter("velocity_ratio").as_double();
-        velocity_ratio = std::clamp(velocity_ratio, 0.01, 1.0);
+        velocity_ratio = std::clamp(velocity_ratio, 0.01, 1.0);*/
 
         pub_traj = this->create_publisher<trajectory_msgs::msg::JointTrajectory>(
             "/joint_path_command", 10);
@@ -129,7 +129,7 @@ private:
     pinocchio::SE3 ref_transform;
 
     Eigen::VectorXd q_current;
-    double velocity_ratio;
+    //double velocity_ratio;
 
     sensor_msgs::msg::JointState last_js{};
 
@@ -225,7 +225,8 @@ private:
             }
         
         q_current = q_solution;
-
+        
+        /*
         Eigen::VectorXd dq = q_solution - q_current;
         std::vector<double> velocities(dq.size());
         for (int i = 0; i < dq.size(); ++i)
@@ -233,7 +234,7 @@ private:
             double max_v = model.velocityLimit[i];
             double sign  = (dq[i] >= 0.0) ? 1.0 : -1.0;
             velocities[i] = sign * velocity_ratio * max_v;
-        }
+        }*/
 
         std::vector<std::string> joint_names = {
             "joint_1", "joint_2", "joint_3",
@@ -246,7 +247,7 @@ private:
         traj.joint_names = joint_names;
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions.assign(q_solution.data(), q_solution.data() + q_solution.size());
-        point.velocities = velocities;  
+        //point.velocities = velocities;  
         traj.points.push_back(point);
         pub_traj->publish(traj);
         }

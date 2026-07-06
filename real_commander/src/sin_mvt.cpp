@@ -95,7 +95,7 @@ private:
         if (dt <= 0.0 || dt > 0.5) return;
 
         elapsed_t += dt;
-        z_offset += amplitude * std::cos(omega * elapsed_t) * dt;
+        z_offset += omega * amplitude * std::cos(omega * elapsed_t) * dt;
 
         geometry_msgs::msg::PoseStamped target;
         target.header.stamp    = now;

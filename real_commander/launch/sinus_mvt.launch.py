@@ -86,7 +86,7 @@ def generate_launch_description():
         executable='cartesian_publisher',
         name='cartesian_publisher',
         output='screen',
-        parameters=[{'velocity_ratio' : 0.5}], # % velocity
+        #parameters=[{'velocity_ratio' : 0.5}], # % velocity
         )
 
     sinus_mvt = Node(
@@ -95,8 +95,8 @@ def generate_launch_description():
         name='sinus_mvt',
         output='screen',
         parameters=[{
-            "AMPLITUDE" : 0.1,
-            "OMEGA" : 1.,
+            "AMPLITUDE" : 0.05,
+            "OMEGA" : 0.8,
             "LOOP_FREQ" :250,
             }]
         )
