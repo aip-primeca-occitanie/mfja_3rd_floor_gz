@@ -95,8 +95,8 @@ def generate_launch_description():
         name='sinus_mvt',
         output='screen',
         parameters=[{
-            "AMPLITUDE" : 0.2,
-            "OMEGA" : 3.,
+            "AMPLITUDE" : 0.1,
+            "OMEGA" : 1.,
             "LOOP_FREQ" :250,
             }]
         )
