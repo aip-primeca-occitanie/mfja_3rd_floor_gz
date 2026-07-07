@@ -8,7 +8,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float64
 from geometry_msgs.msg import PoseStamped
 
-WINDOW_S = 10.0  # durée affichée en secondes
+WINDOW_S = 2.0  # durée affichée en secondes
 
 class RealtimePlotterNode(Node):
     def __init__(self):
@@ -20,12 +20,16 @@ class RealtimePlotterNode(Node):
         self.t_raw, self.fz_raw = [], [] # force Fz (N)
         self.t_cmd, self.cmd_vals = [], [] # commande delta z (cm)
 
+        self.target_force = None
+        self.target_time = None
+
         self.t0 = None
 
         self.create_subscription(PoseStamped, '/cartesian_state', self.cb_pos, 10)
         self.create_subscription(Float64, '/Fz', self.cb_fz, 10)
         self.create_subscription(Float64, '/Fz_raw', self.cb_raw, 10)
         self.create_subscription(PoseStamped, '/cartesian_target', self.cb_cmd, 10)
+        self.create_subscription(Float64, '/target_force', self.cb_target_force, 10)
 
     def _now(self):
         t = self.get_clock().now().nanoseconds * 1e-9
@@ -55,6 +59,14 @@ class RealtimePlotterNode(Node):
     
     def cb_raw(self, msg):
         t = self._now()
+
+        if self.target_force is not None and self.target_time is not None:
+            if abs(msg.data) >= abs(self.target_force):
+                delay = t - self.target_time
+                self.get_logger().info(f"Réponse force : {delay:.3f} s ")
+                self.target_force = None
+                self.target_time = None
+
         with self.lock:
             self.t_raw.append(t)
             self.fz_raw.append(msg.data) #N
@@ -69,6 +81,13 @@ class RealtimePlotterNode(Node):
             else :
                 self.cmd_vals.append(0.)
             self.trim(self.t_cmd, self.cmd_vals, t)
+
+    def cb_target_force(self, msg):
+        self.target_force = msg.data
+        self.target_time = self._now()
+        self.get_logger().info(
+            f"Nouvelle consigne force : {self.target_force:.2f} N"
+        )
 
 def main():
     rclpy.init()
