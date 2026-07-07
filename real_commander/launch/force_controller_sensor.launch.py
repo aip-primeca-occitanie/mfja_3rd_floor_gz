@@ -111,7 +111,7 @@ def generate_launch_description():
         parameters=[{"FREQ" : 250}]
         )
 
-    filter_node = Node( #from sensor_clement/stat_sensor.py
+    filter_node = Node(
         package='real_commander',
         executable='sensor_filter',
         name='sensor_filter',
