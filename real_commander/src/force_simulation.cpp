@@ -22,7 +22,7 @@ public:
         c = this->get_parameter("damping").as_double();
         noise_sigma = this->get_parameter("noise_sigma").as_double();
 
-        pub_force = this->create_publisher<std_msgs::msg::Float64>("/Fz", 10);
+        pub_force = this->create_publisher<std_msgs::msg::Float64>("/Fz_raw", 10);
 
         sub_pose = this->create_subscription<geometry_msgs::msg::PoseStamped>(
             "/cartesian_state", 10,

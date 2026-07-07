@@ -21,6 +21,7 @@ class RealtimePlotterNode(Node):
         self.t_cmd, self.cmd_vals = [], [] # commande delta z (cm)
 
         self.target_force = None
+        self.prev_force = None
         self.target_time = None
 
         self.t0 = None
@@ -53,6 +54,8 @@ class RealtimePlotterNode(Node):
     def cb_fz(self, msg):
         t = self._now()
         with self.lock:
+            if self.prev_force is None :
+                self.prev_force = msg.data
             self.t_fz.append(t)
             self.fz_vals.append(msg.data) #N
             self.trim(self.t_fz, self.fz_vals, t)
@@ -60,10 +63,11 @@ class RealtimePlotterNode(Node):
     def cb_raw(self, msg):
         t = self._now()
 
-        if self.target_force is not None and self.target_time is not None:
-            if abs(msg.data) >= abs(self.target_force):
+        if self.target_force is not None and self.target_time is not None and self.prev_force is not None:
+            if ((self.prev_force < self.target_force and abs(msg.data) >= abs(self.target_force)) or (self.prev_force > self.target_force and abs(msg.data) <= abs(self.target_force))):
                 delay = t - self.target_time
                 self.get_logger().info(f"Réponse force : {delay:.3f} s ")
+                self.prev_force = self.target_force
                 self.target_force = None
                 self.target_time = None
 
@@ -77,7 +81,7 @@ class RealtimePlotterNode(Node):
         with self.lock:
             self.t_cmd.append(t)
             if len(self.z_vals)>0 :
-                self.cmd_vals.append(- msg.pose.position.z * 100) # + self.z_vals[-1] ) #cm /!\ a verif
+                self.cmd_vals.append(- msg.pose.position.z * 100 - self.z_vals[-1] ) #cm /!\ a verif
             else :
                 self.cmd_vals.append(0.)
             self.trim(self.t_cmd, self.cmd_vals, t)
