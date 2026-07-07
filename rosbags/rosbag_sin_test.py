@@ -10,7 +10,7 @@ from rosbags.highlevel import AnyReader
 # CONFIGURATION
 # ==========================
 
-BAG_PATH = "rosbag2_2026_07_03-12_50_05"
+BAG_PATH = "rosbag2_2026_07_06-13_25_26"
 
 POSITION_TOPIC = "/joint_states"
 COMMAND_TOPIC = "/joint_path_command"
