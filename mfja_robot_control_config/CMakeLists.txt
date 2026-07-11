@@ -75,6 +75,7 @@ install(
     scripts/room_315_real_vla_agent.py
     scripts/room_315_task_goal_builder.py
     scripts/room_315_vla_baseline_eval.py
+    scripts/room_315_vla_benchmark_suite.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
     scripts/room_315_vla_obstacle_tool.py
@@ -228,6 +229,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_vla_baseline_eval
     test/test_room315_vla_baseline_eval.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_benchmark_suite
+    test/test_room315_vla_benchmark_suite.py
   )
   ament_add_pytest_test(
     test_room315_vla_dataset_recorder

@@ -281,3 +281,6 @@ These commands were prepared, not run in this audit. They intentionally start fr
 - SmolVLA compact32 results are invalid-for-comparison because `observation.state` includes `payload_present` and `step_index_norm`.
 - The SmolVLA train split was sampled with `--stride 8`; val/test were full split passes.
 - The baseline is a direct-action behavior-cloning comparison only. It does not satisfy `goal -> ObservedState -> PlanSys2 -> one action -> safety -> execute -> re-observe/replan`.
+- When included beside Oracle+PlanSys2 or visual-state PlanSys2 methods, report
+  it under `legacy_direct_action_offline`; it is not Gazebo PlanSys2 evidence or
+  a real-image perception claim.

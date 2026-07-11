@@ -1,7 +1,7 @@
 # Room 315 VLA Operations
 
-Room 315 VLA operation is currently scoped to the curated 160 payload speed-sweep
-cases in:
+Room 315 VLA operation keeps the curated 160 payload speed-sweep cases as the
+regression subset in:
 
 ```text
 mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
@@ -11,6 +11,11 @@ The supervisor accepts direct primitive JSON commands and schema-v3 action
 vectors only. Generated payload cases execute as `switches`, `stoppers`,
 `shuttle`, `DONE`, `stop_all`, and `emergency_stop` commands through
 `/room_315/vla/command`.
+
+For seeded benchmark expansion and method comparison, use
+[ROOM315_BENCHMARK_RUNBOOK.md](ROOM315_BENCHMARK_RUNBOOK.md). The benchmark
+generator writes YAML manifests only; generated datasets and checkpoints stay
+outside the repository.
 
 ## Launch
 
@@ -59,6 +64,20 @@ ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
 ```
 
 Use `--dry-run` to inspect launch arguments without starting Gazebo.
+
+## Generate The Seeded Benchmark Manifest
+
+```bash
+ros2 run mfja_robot_control_config room_315_vla_benchmark_suite.py generate-cases \
+  --extension-case-count 320 \
+  --seed 315 \
+  --output /tmp/room315_seeded_balanced_cases.yaml
+```
+
+The output retains the 160 regression cases and adds balanced stress-family
+coverage for 4+4 fleets, loaded/empty selection, blockers, occupied targets,
+unknown positions, dropout, obstacles, inspection, and simultaneous requests.
+Report Gazebo planning results separately from real-image perception claims.
 
 ## Manual Primitive Commands
 

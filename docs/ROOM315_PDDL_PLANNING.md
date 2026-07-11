@@ -1,7 +1,7 @@
 # Room 315 Payload Case Planning
 
-The active planning workflow is case based. The source of truth is the curated
-160 payload speed-sweep cases:
+The active planning workflow is case based. The checked-in source of truth for
+regression is the curated 160 payload speed-sweep cases:
 
 ```text
 mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
@@ -58,3 +58,25 @@ ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
 The batch runner launches Room 315 for each selected case, checks preflight,
 executes the generated primitive sequence, waits for a complete dataset episode,
 and writes `payload_case_batch_summary.json`.
+
+## Seeded Benchmark Expansion
+
+Use the benchmark suite to create a deterministic extension manifest without
+committing generated artifacts:
+
+```bash
+ros2 run mfja_robot_control_config room_315_vla_benchmark_suite.py generate-cases \
+  --extension-case-count 320 \
+  --seed 315 \
+  --output /tmp/room315_seeded_balanced_cases.yaml
+```
+
+The generated file embeds the 160-case regression subset and adds 100 to 1000
+balanced extension cases. The extension explicitly covers 4+4 fleets,
+loaded/empty shuttle selection, blockers, occupied targets, unknown positions,
+sensor dropout, obstacles, inspection, and simultaneous requests.
+
+Comparison reports should keep `oracle_plansys2`, `frozen_visual_plansys2`,
+`lora_visual_plansys2`, and `legacy_direct_action_smolvla` in separate rows, and
+should keep Gazebo planning evidence separate from real-image perception
+claims. See [ROOM315_BENCHMARK_RUNBOOK.md](ROOM315_BENCHMARK_RUNBOOK.md).
