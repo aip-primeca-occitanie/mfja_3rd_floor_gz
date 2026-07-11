@@ -73,7 +73,11 @@ install(
     scripts/room_315_vla_event_extractor.py
     scripts/room_315_vla_obstacle_tool.py
     scripts/room_315_vla_shuttle_identity_tracker.py
+    scripts/room_315_vla_split_dataset.py
     scripts/room_315_vla_supervisor.py
+    scripts/room_315_vla_train_local.py
+    scripts/room_315_vla_to_lerobot.py
+    scripts/room_315_smolvla_eval.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -219,6 +223,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_vla_smoke
     test/test_room315_vla_smoke.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_training_tools
+    test/test_room315_vla_training_tools.py
   )
   ament_add_pytest_test(
     test_room315_visual_debug_colors
