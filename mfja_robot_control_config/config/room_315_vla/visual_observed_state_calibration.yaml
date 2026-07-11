@@ -1,0 +1,56 @@
+schema_version: 1
+calibration_id: room315_visual_observed_state_v1
+description: >
+  Deterministic Room 315 overhead RGB-D calibration for converting compact
+  visual detections into planner-safe visual facts. Gazebo poses and structured
+  identity trackers remain label/evaluation inputs only; production visual
+  state uses RGB-D, CameraInfo, and this calibration.
+thresholds:
+  stale_after_s: 0.75
+  min_detection_confidence: 0.6
+  min_identity_confidence: 0.65
+  min_loaded_confidence: 0.65
+cameras:
+  overhead_right_rgbd:
+    role: overhead_rgbd
+    rail_side: right
+    frame_id: overhead_right_rgbd_optical_frame
+    depth_scale: 1.0
+    room_from_camera:
+      - [1.0, 0.0, 0.0, 0.0]
+      - [0.0, 1.0, 0.0, 0.0]
+      - [0.0, 0.0, 1.0, 0.0]
+      - [0.0, 0.0, 0.0, 1.0]
+  overhead_left_rgbd:
+    role: overhead_rgbd
+    rail_side: left
+    frame_id: overhead_left_rgbd_optical_frame
+    depth_scale: 1.0
+    room_from_camera:
+      - [1.0, 0.0, 0.0, 0.0]
+      - [0.0, 1.0, 0.0, 1.0]
+      - [0.0, 0.0, 1.0, 0.0]
+      - [0.0, 0.0, 0.0, 1.0]
+rail_geometry:
+  right:
+    slots:
+      "1": {center_m: [0.2, 0.0, 2.0], radius_m: 0.18}
+      "2": {center_m: [1.0, 0.0, 2.0], radius_m: 0.18}
+      "3": {center_m: [2.0, 0.0, 2.0], radius_m: 0.18}
+      "4": {center_m: [3.0, 0.0, 2.0], radius_m: 0.18}
+    segments:
+      A1E: {start_m: [0.0, 0.0, 2.0], end_m: [0.5, 0.0, 2.0], max_distance_m: 0.22}
+      A12E: {start_m: [0.5, 0.0, 2.0], end_m: [1.5, 0.0, 2.0], max_distance_m: 0.22}
+      A23: {start_m: [1.5, 0.0, 2.0], end_m: [2.5, 0.0, 2.0], max_distance_m: 0.22}
+      A34E: {start_m: [2.5, 0.0, 2.0], end_m: [3.5, 0.0, 2.0], max_distance_m: 0.22}
+  left:
+    slots:
+      "1": {center_m: [0.2, 1.0, 2.0], radius_m: 0.18}
+      "2": {center_m: [1.0, 1.0, 2.0], radius_m: 0.18}
+      "3": {center_m: [2.0, 1.0, 2.0], radius_m: 0.18}
+      "4": {center_m: [3.0, 1.0, 2.0], radius_m: 0.18}
+    segments:
+      A1E: {start_m: [0.0, 1.0, 2.0], end_m: [0.5, 1.0, 2.0], max_distance_m: 0.22}
+      A12E: {start_m: [0.5, 1.0, 2.0], end_m: [1.5, 1.0, 2.0], max_distance_m: 0.22}
+      A23: {start_m: [1.5, 1.0, 2.0], end_m: [2.5, 1.0, 2.0], max_distance_m: 0.22}
+      A34E: {start_m: [2.5, 1.0, 2.0], end_m: [3.5, 1.0, 2.0], max_distance_m: 0.22}

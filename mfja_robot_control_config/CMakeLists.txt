@@ -26,6 +26,7 @@ install(
     config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
+    config/room_315_vla/visual_observed_state_calibration.yaml
     config/room_315_vla/vla_supervisor.yaml
   DESTINATION share/${PROJECT_NAME}/config/room_315_vla
 )
@@ -82,6 +83,7 @@ install(
     scripts/room_315_vla_supervisor.py
     scripts/room_315_vla_train_local.py
     scripts/room_315_vla_to_lerobot.py
+    scripts/room_315_visual_observed_state_provider.py
     scripts/room_315_visual_state_dataset.py
     scripts/room_315_smolvla_eval.py
   DESTINATION lib/${PROJECT_NAME}
@@ -254,6 +256,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_vla_training_tools
     test/test_room315_vla_training_tools.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_observed_state_provider
+    test/test_room315_visual_observed_state_provider.py
   )
   ament_add_pytest_test(
     test_room315_visual_debug_colors
