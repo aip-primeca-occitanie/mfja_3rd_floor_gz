@@ -34,8 +34,12 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'open_stoppers',
     'set_stoppers',
     'move_shuttle',
+    'move_shuttle_to_slot',
     'stop_shuttle',
     'finish_task',
+    'finish_candidate_task',
+    'inspect_state',
+    'wait_for_clearance',
 }
 MODEL_INPUT_ALLOWED_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 FORBIDDEN_MODEL_INPUT_KEYS = {

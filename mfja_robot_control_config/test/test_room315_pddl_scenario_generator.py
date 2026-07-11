@@ -40,6 +40,7 @@ RIGHT_SELECT_R2_CASE = 'right_loaded_r1_s1_r2_s2_select_r2_to_slot3_speed008'
 RIGHT_BLOCKER_CASE = 'right_loaded_r2_s2_blocker_r1_s3_clear_s1_to_slot3_speed008'
 LEFT_CASE = 'left_loaded_l1_s1_to_slot3_no_blocker_speed008'
 LEFT_R2_CASE = 'left_loaded_l2_s2_to_slot3_no_blocker_speed008'
+_LOADED_GENERATOR = None
 
 
 class FakeTransport:
@@ -168,6 +169,18 @@ class FakePlanSysBackend:
 
     def plan(self, spec, *, speed):
         self.calls.append({'goal_id': spec.goal_id, 'speed': float(speed)})
+        generator = _LOADED_GENERATOR
+        if generator is not None:
+            if spec.clearance_steps:
+                return generator.oracle_multi_blocker_clear_symbolic_plan_for_spec(
+                    spec,
+                    speed=float(speed),
+                )
+            if spec.blocker_shuttle:
+                return generator.oracle_blocker_clear_symbolic_plan_for_spec(
+                    spec,
+                    speed=float(speed),
+                )
         return [
             f'prepare_switches {spec.side} {spec.source} {spec.target}',
             f'open_stoppers {spec.side} {spec.source} {spec.target}',
@@ -212,10 +225,12 @@ def _domain_order_right_plan():
 
 
 def _load_module():
+    global _LOADED_GENERATOR
     spec = importlib.util.spec_from_file_location('room_315_pddl_scenario_generator', SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
+    _LOADED_GENERATOR = module
     return module
 
 

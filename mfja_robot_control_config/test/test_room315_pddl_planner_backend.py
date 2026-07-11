@@ -116,6 +116,32 @@ def test_plansys_backend_converts_plan_items_to_internal_symbolic_plan():
     ]
 
 
+def test_plansys_backend_canonicalizes_costed_slot_plan_actions():
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
+    client = FakePlanSysClient([
+        '(prepare_switches right right_yaskawa right_staubli right_switch_group)',
+        '(open_stoppers right right_yaskawa right_staubli right_stopper_group)',
+        (
+            '(move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+            'right_staubli right_slot_1 right_slot_3)'
+        ),
+        '(stop_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
+        '(finish_candidate_task right_shuttle_1 right_staubli right_slot_3)',
+    ])
+    backend = generator.PlanSysPlannerBackend(planner_client=client)
+
+    plan = backend.plan(spec, speed=0.29)
+
+    assert plan == [
+        'prepare_switches right yaskawa staubli',
+        'open_stoppers right yaskawa staubli',
+        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.29',
+        'stop_shuttle right right_shuttle_1',
+        'finish_task right_shuttle_1 staubli',
+    ]
+
+
 def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     generator = _load_module()
     spec = generator.scenario_spec_from_case(RIGHT_CASE)
@@ -128,7 +154,71 @@ def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     call = client.calls[0]
     assert '(domain room315-shuttle)' in call['domain']
     assert f'(problem room315-{RIGHT_CASE})' in call['problem']
-    assert '(task_done right_shuttle_1 right_staubli)' in call['problem']
+    assert '(goal_candidate right_shuttle_1)' in call['problem']
+    assert '(transport_goal_done right_staubli)' in call['problem']
+    assert '(goal_slot_reached right_slot_3)' in call['problem']
+    assert '(= (route_cost right_slot_1 right_slot_3) 2)' in call['problem']
+    assert 'right_shuttle_1 right_shuttle_2 right_shuttle_3 right_shuttle_4' in call['problem']
+    assert '(slot_occupied_by right_slot_1 right_shuttle_1)' in call['problem']
+    assert '(block_free right_block_slot_3)' in call['problem']
+
+
+def test_problem_builder_fails_closed_on_unknown_required_facts():
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
+    state = generator._observed_state_from_scenario_spec(spec)
+    facts = []
+    for fact in state.fused_planner_state:
+        if fact.subject == 'right:slot:3' and fact.predicate == 'occupancy':
+            facts.append(generator.ObservedFact(
+                fact_id=fact.fact_id,
+                subject=fact.subject,
+                predicate=fact.predicate,
+                value=fact.value,
+                source=fact.source,
+                timestamp=fact.timestamp,
+                confidence=fact.confidence,
+                status='unknown',
+                metadata=fact.metadata,
+            ))
+        else:
+            facts.append(fact)
+    unsafe_state = generator.ObservedState(
+        state_id='unsafe-right-slot3-unknown',
+        timestamp=state.timestamp,
+        stale_after_s=state.stale_after_s,
+        visual_model_inputs=[],
+        fused_planner_state=facts,
+    )
+    task_goal = generator._task_goal_from_scenario_spec(spec)
+
+    with pytest.raises(generator.PddlProblemBuildError, match='observation or recovery'):
+        generator.build_pddl_problem_from_observed_state_task_goal(unsafe_state, task_goal)
+
+
+def test_problem_builder_supports_inspection_goal_from_validated_state():
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
+    state = generator._observed_state_from_scenario_spec(spec)
+    task_goal = generator.TaskGoal(
+        goal_id='inspect-right-slot-3',
+        description='inspect right slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'inspection',
+            'side': 'right',
+            'inspection_subject': 'right_slot_3',
+        },
+    )
+
+    problem = generator.build_pddl_problem_from_observed_state_task_goal(state, task_goal)
+
+    assert '(inspection_required right_slot_3)' in problem.problem_text
+    assert problem.goal_text == '(inspection_done right_slot_3)'
+    assert '(switch_state_known right_switch_a1)' in problem.problem_text
+    assert '(stopper_open right_stopper_a1)' in problem.problem_text
 
 
 def test_plansys_output_translates_to_primitive_commands_and_action_vectors():

@@ -36,6 +36,13 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
         'shuttle_on_side',
         'shuttle_at_slot',
         'slot_reserved_by',
+        'block_free',
+        'block_reserved_by',
+        'block_occupied_by',
+        'move_shuttle_to_slot',
+        'finish_candidate_task',
+        'route_cost',
+        'inspection_done',
         'front_of',
         'waiting_for_clearance',
         'assign_task',
@@ -46,8 +53,6 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
     ):
         assert required in text
     for removed in (
-        'block_free',
-        'block_reserved_by',
         'shuttle_at_block',
         'reserve_next_block',
         'release_block',

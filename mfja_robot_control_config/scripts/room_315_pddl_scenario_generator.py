@@ -30,6 +30,12 @@ from room_315_pddl_validation_gate import build_validation_result
 from room_315_pddl_validation_gate import runtime_failure_reason
 from room_315_pddl_validation_gate import validate_candidate_scenario
 from room_315_pddl_validation_gate import write_validation_result
+from room_315_contracts import ObservedFact
+from room_315_contracts import ObservedState
+from room_315_contracts import TaskGoal
+from room_315_multi_shuttle import DEVICE_NAMES
+from room_315_multi_shuttle import SIDES
+from room_315_multi_shuttle import all_shuttle_specs
 from room_315_multi_shuttle import load_rail_topology
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import route_blockers_from_rails
@@ -65,8 +71,24 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'open_stoppers',
     'set_stoppers',
     'move_shuttle',
+    'move_shuttle_to_slot',
     'stop_shuttle',
     'finish_task',
+    'finish_candidate_task',
+    'inspect_state',
+    'wait_for_clearance',
+}
+PDDL_ACTION_TRANSLATION_PROVENANCE = {
+    'prepare_switches': 'primitive:SET_SWITCHES',
+    'open_stoppers': 'primitive:SET_STOPPERS',
+    'set_stoppers': 'primitive:SET_STOPPERS',
+    'move_shuttle': 'primitive:SHUTTLE_ON',
+    'move_shuttle_to_slot': 'deterministic_macro:move_shuttle with slot metadata',
+    'stop_shuttle': 'primitive:STOP_NOW',
+    'finish_task': 'primitive:DONE',
+    'finish_candidate_task': 'deterministic_macro:finish_task for selected candidate',
+    'inspect_state': 'deterministic_macro:DONE after validated observation',
+    'wait_for_clearance': 'primitive:STOP_NOW while waiting for block/slot clearance',
 }
 TARGET_SENSORS_BY_SIDE_AND_STATION = {
     ('right', 'yaskawa'): ('DZI1R', 'DZI2R'),
@@ -149,10 +171,35 @@ class ScenarioSpec:
     clearance_steps: tuple[dict[str, Any], ...] = ()
 
 
+@dataclass(frozen=True)
+class Room315PddlProblem:
+    """Validated PlanSys2 problem built from ObservedState + TaskGoal."""
+
+    problem_name: str
+    problem_text: str
+    goal_text: str
+    goal_type: str
+    side: str
+    target_station: str = ''
+    target_slot: str = ''
+    selected_shuttle: str = ''
+    selection_policy: str = ''
+    provenance: dict[str, Any] | None = None
+
+
+class PddlProblemBuildError(RuntimeError):
+    """Raised when state/goal contracts are not safe enough for PDDL planning."""
+
+
 class BasePlannerBackend:
     """Planner interface boundary for PlanSys2-backed symbolic planning."""
 
-    def plan(self, goal_or_problem: ScenarioSpec, *, speed: float) -> list[str]:
+    def plan(
+        self,
+        goal_or_problem: ScenarioSpec | Room315PddlProblem,
+        *,
+        speed: float,
+    ) -> list[str]:
         raise NotImplementedError
 
 
@@ -258,10 +305,19 @@ class PlanSysPlannerBackend(BasePlannerBackend):
         self.timeout_s = float(timeout_s)
         self.ros_args = ros_args
 
-    def plan(self, goal_or_problem: ScenarioSpec, *, speed: float) -> list[str]:
-        spec = goal_or_problem
+    def plan(
+        self,
+        goal_or_problem: ScenarioSpec | Room315PddlProblem,
+        *,
+        speed: float,
+    ) -> list[str]:
+        spec = goal_or_problem if isinstance(goal_or_problem, ScenarioSpec) else None
+        problem = (
+            build_pddl_problem_from_spec(goal_or_problem)
+            if isinstance(goal_or_problem, ScenarioSpec)
+            else goal_or_problem
+        )
         domain_text = self._domain_text()
-        problem_text = _problem_text_for_spec(spec)
         client = self.planner_client or PlanSys2GetPlanClient(
             service_name=self.planner_service,
             timeout_s=self.timeout_s,
@@ -269,11 +325,16 @@ class PlanSysPlannerBackend(BasePlannerBackend):
         )
         close = getattr(client, 'close', None) if self.planner_client is None else None
         try:
-            plan_msg = client.get_plan(domain=domain_text, problem=problem_text)
+            plan_msg = client.get_plan(domain=domain_text, problem=problem.problem_text)
         finally:
             if close is not None:
                 close()
-        return _symbolic_plan_from_plansys_plan(plan_msg, spec=spec, speed=float(speed))
+        return _symbolic_plan_from_plansys_plan(
+            plan_msg,
+            spec=spec,
+            problem=problem,
+            speed=float(speed),
+        )
 
     def _domain_text(self) -> str:
         if not self.domain_path.exists():
@@ -1010,15 +1071,9 @@ def generate_scenario(
         case_id=case_id,
         case_config=case_config,
     )
-    if spec.clearance_steps:
-        plan = _multi_blocker_clear_symbolic_plan_for_spec(spec, speed=float(speed))
-    elif spec.blocker_shuttle:
-        plan = _blocker_clear_symbolic_plan_for_spec(spec, speed=float(speed))
-    elif spec.target_slot and spec.selection_policy:
-        plan = _station_route_symbolic_plan_for_spec(spec, speed=float(speed))
-    else:
-        planner = planner or PlanSysPlannerBackend()
-        plan = planner.plan(spec, speed=float(speed))
+    problem = build_pddl_problem_from_spec(spec)
+    planner = planner or PlanSysPlannerBackend()
+    plan = planner.plan(spec, speed=float(speed))
 
     translated = translate_plan(plan)
     default_template_id = _default_language_template_id_for_spec(spec)
@@ -1042,6 +1097,7 @@ def generate_scenario(
         'planning_source': 'pddl',
         'planner_backend': 'plansys',
         'pddl_domain': str(PDDL_DOMAIN_PATH.name),
+        'planner_provenance': problem.provenance or {},
         'symbolic_plan': plan,
         'primitive_commands': [step.command for step in translated],
         'expected_event_targets': [step.event_action for step in translated],
@@ -1608,11 +1664,16 @@ def _language_action_sequence_for_spec(spec: ScenarioSpec) -> str:
     return f'move the {condition}{spec.side} shuttle to slot {spec.target_slot}'
 
 
-def _blocker_clear_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -> list[str]:
+def oracle_blocker_clear_symbolic_plan_for_spec(
+    spec: ScenarioSpec,
+    *,
+    speed: float,
+) -> list[str]:
+    """Oracle-only fixture plan retained for tests; production uses PlanSys2."""
     if not spec.blocker_shuttle:
         return []
     if _blocker_enters_interior_loop(spec):
-        return _interior_loop_clear_symbolic_plan_for_spec(spec, speed=speed)
+        return oracle_interior_loop_clear_symbolic_plan_for_spec(spec, speed=speed)
     blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
     blocker_target = _station_for_slot(spec.side, spec.blocker_clear_slot)
     selected_source = spec.source
@@ -1658,6 +1719,68 @@ def _blocker_clear_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -
         ])
     plan.append(f'finish_task {spec.shuttle} {selected_target}')
     return plan
+
+
+def oracle_multi_blocker_clear_symbolic_plan_for_spec(
+    spec: ScenarioSpec,
+    *,
+    speed: float,
+) -> list[str]:
+    """Oracle-only fixture plan retained for tests; production uses PlanSys2."""
+
+    if not spec.clearance_steps:
+        return []
+    speed_text = f'{float(speed):.4g}'
+    plan: list[str] = []
+    for step in spec.clearance_steps:
+        if _clearance_step_enters_interior_loop(step):
+            plan.extend(
+                oracle_interior_loop_clear_symbolic_steps_for_clearance_step(
+                    spec,
+                    step,
+                    speed_text=speed_text,
+                )
+            )
+            continue
+        plan.extend(
+            oracle_slot_clear_symbolic_steps_for_clearance_step(
+                spec,
+                step,
+                speed_text=speed_text,
+            )
+        )
+
+    plan.extend([
+        f'prepare_switches {spec.side} {spec.source} {spec.target}',
+        f'open_stoppers {spec.side} {spec.source} {spec.target}',
+        (
+            f'move_shuttle {spec.side} {spec.shuttle} '
+            f'{spec.source} {spec.target} speed={speed_text}'
+        ),
+        f'stop_shuttle {spec.side} {spec.shuttle}',
+        f'finish_task {spec.shuttle} {spec.target}',
+    ])
+    return plan
+
+
+def oracle_station_route_symbolic_plan_for_spec(
+    spec: ScenarioSpec,
+    *,
+    speed: float,
+) -> list[str]:
+    """Oracle-only fixture plan retained for tests; production uses PlanSys2."""
+
+    speed_text = f'{float(speed):.4g}'
+    return [
+        f'prepare_switches {spec.side} {spec.source} {spec.target}',
+        f'open_stoppers {spec.side} {spec.source} {spec.target}',
+        (
+            f'move_shuttle {spec.side} {spec.shuttle} '
+            f'{spec.source} {spec.target} speed={speed_text}'
+        ),
+        f'stop_shuttle {spec.side} {spec.shuttle}',
+        f'finish_task {spec.shuttle} {spec.target}',
+    ]
 
 
 def _blocker_enters_interior_loop(spec: ScenarioSpec) -> bool:
@@ -1756,11 +1879,13 @@ def _require_clearance_step_value(
     raise ValueError(f'clearance step for {shuttle!r}: {detail}')
 
 
-def _interior_loop_clear_symbolic_plan_for_spec(
+def oracle_interior_loop_clear_symbolic_plan_for_spec(
     spec: ScenarioSpec,
     *,
     speed: float,
 ) -> list[str]:
+    """Oracle-only interior-loop fixture plan retained for tests."""
+
     blocker_source = _station_for_slot(spec.side, spec.blocker_start_slot)
     selected_source = spec.source
     selected_target = spec.target
@@ -1798,52 +1923,14 @@ def _interior_loop_clear_symbolic_plan_for_spec(
     ]
 
 
-def _multi_blocker_clear_symbolic_plan_for_spec(
-    spec: ScenarioSpec,
-    *,
-    speed: float,
-) -> list[str]:
-    if not spec.clearance_steps:
-        return []
-    speed_text = f'{float(speed):.4g}'
-    plan: list[str] = []
-    for step in spec.clearance_steps:
-        if _clearance_step_enters_interior_loop(step):
-            plan.extend(
-                _interior_loop_clear_symbolic_steps_for_clearance_step(
-                    spec,
-                    step,
-                    speed_text=speed_text,
-                )
-            )
-            continue
-        plan.extend(
-            _slot_clear_symbolic_steps_for_clearance_step(
-                spec,
-                step,
-                speed_text=speed_text,
-            )
-        )
-
-    plan.extend([
-        f'prepare_switches {spec.side} {spec.source} {spec.target}',
-        f'open_stoppers {spec.side} {spec.source} {spec.target}',
-        (
-            f'move_shuttle {spec.side} {spec.shuttle} '
-            f'{spec.source} {spec.target} speed={speed_text}'
-        ),
-        f'stop_shuttle {spec.side} {spec.shuttle}',
-        f'finish_task {spec.shuttle} {spec.target}',
-    ])
-    return plan
-
-
-def _interior_loop_clear_symbolic_steps_for_clearance_step(
+def oracle_interior_loop_clear_symbolic_steps_for_clearance_step(
     spec: ScenarioSpec,
     step: dict[str, Any],
     *,
     speed_text: str,
 ) -> list[str]:
+    """Oracle-only interior-loop clearance fixture steps retained for tests."""
+
     shuttle = _clearance_step_shuttle(step)
     source_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
     source = _station_for_slot(spec.side, source_slot)
@@ -1875,12 +1962,14 @@ def _interior_loop_clear_symbolic_steps_for_clearance_step(
     ]
 
 
-def _slot_clear_symbolic_steps_for_clearance_step(
+def oracle_slot_clear_symbolic_steps_for_clearance_step(
     spec: ScenarioSpec,
     step: dict[str, Any],
     *,
     speed_text: str,
 ) -> list[str]:
+    """Oracle-only slot-clearance fixture steps retained for tests."""
+
     shuttle = _clearance_step_shuttle(step)
     source_slot = _clearance_step_start_slot(spec, step, shuttle=shuttle)
     clear_slot = _slot_symbol_or_empty(step.get('clear_slot') or step.get('target_slot'))
@@ -1912,21 +2001,6 @@ def _slot_clear_symbolic_steps_for_clearance_step(
         f'move_shuttle {spec.side} {shuttle} {source} {target} {move_kwargs}',
         f'stop_shuttle {spec.side} {shuttle}',
     ]
-
-
-def _station_route_symbolic_plan_for_spec(spec: ScenarioSpec, *, speed: float) -> list[str]:
-    speed_text = f'{float(speed):.4g}'
-    return [
-        f'prepare_switches {spec.side} {spec.source} {spec.target}',
-        f'open_stoppers {spec.side} {spec.source} {spec.target}',
-        (
-            f'move_shuttle {spec.side} {spec.shuttle} '
-            f'{spec.source} {spec.target} speed={speed_text}'
-        ),
-        f'stop_shuttle {spec.side} {spec.shuttle}',
-        f'finish_task {spec.shuttle} {spec.target}',
-    ]
-
 
 def _slot_target_plan_step_metadata(spec: ScenarioSpec, plan: list[str]) -> list[dict[str, Any]]:
     metadata = []
@@ -2335,11 +2409,12 @@ def create_planner_backend(
 def _symbolic_plan_from_plansys_plan(
     plan_msg: Any,
     *,
-    spec: ScenarioSpec,
+    spec: ScenarioSpec | None,
+    problem: Room315PddlProblem,
     speed: float,
 ) -> list[str]:
     plan = [
-        _canonical_symbolic_step(step, spec=spec, speed=speed)
+        _canonical_symbolic_step(step, spec=spec, problem=problem, speed=speed)
         for step in _plansys_action_strings(plan_msg)
     ]
     plan = [step for step in plan if step]
@@ -2376,7 +2451,13 @@ def _action_string_from_plan_item(item: Any) -> str:
     return str(getattr(item, 'action', '') or '')
 
 
-def _canonical_symbolic_step(raw_action: Any, *, spec: ScenarioSpec, speed: float) -> str:
+def _canonical_symbolic_step(
+    raw_action: Any,
+    *,
+    spec: ScenarioSpec | None,
+    problem: Room315PddlProblem,
+    speed: float,
+) -> str:
     text = str(raw_action or '').strip()
     if not text:
         return ''
@@ -2390,16 +2471,23 @@ def _canonical_symbolic_step(raw_action: Any, *, spec: ScenarioSpec, speed: floa
     if step.name not in SUPPORTED_SYMBOLIC_ACTIONS:
         return ''
     if step.name == 'set_stoppers':
-        side = _side_from_symbols(step.args, default=spec.side)
+        side = _side_from_symbols(step.args, default=_problem_side(problem, spec))
         stopper = _stopper_from_symbols(step.args, default='ALL')
         state = _stopper_state_from_step(step)
         return f'set_stoppers {side} {stopper} {state}'
-    side, shuttle, source, target = _route_parts_from_step(step, spec)
+    if step.name == 'wait_for_clearance':
+        side = _side_from_symbols(step.args, default=_problem_side(problem, spec))
+        shuttle = _shuttle_from_symbols(step.args, default=_problem_shuttle(problem, spec))
+        return f'stop_shuttle {side} {shuttle}'
+    if step.name == 'inspect_state':
+        target = step.args[0] if step.args else 'room315'
+        return f'inspect_state {target}'
+    side, shuttle, source, target = _route_parts_from_step(step, spec, problem)
     if step.name == 'prepare_switches':
         return f'prepare_switches {side} {source} {target}'
     if step.name == 'open_stoppers':
         return f'open_stoppers {side} {source} {target}'
-    if step.name == 'move_shuttle':
+    if step.name in {'move_shuttle', 'move_shuttle_to_slot'}:
         step_speed = step.kwargs.get('speed') or step.kwargs.get('speed_mps')
         speed_text = step_speed if step_speed is not None else f'{float(speed):.4g}'
         target_stopper = _stopper_symbol_or_empty(
@@ -2409,21 +2497,43 @@ def _canonical_symbolic_step(raw_action: Any, *, spec: ScenarioSpec, speed: floa
         return f'move_shuttle {side} {shuttle} {source} {target} speed={speed_text}{stopper_text}'
     if step.name == 'stop_shuttle':
         return f'stop_shuttle {side} {shuttle}'
-    if step.name == 'finish_task':
+    if step.name in {'finish_task', 'finish_candidate_task'}:
         return f'finish_task {shuttle} {target}'
     return ''
 
 
-def _route_parts_from_step(step: Any, spec: ScenarioSpec) -> tuple[str, str, str, str]:
-    side = _side_from_symbols(step.args, default=spec.side)
-    shuttle = _shuttle_from_symbols(step.args, default=spec.shuttle)
+def _route_parts_from_step(
+    step: Any,
+    spec: ScenarioSpec | None,
+    problem: Room315PddlProblem,
+) -> tuple[str, str, str, str]:
+    side = _side_from_symbols(step.args, default=_problem_side(problem, spec))
+    shuttle = _shuttle_from_symbols(step.args, default=_problem_shuttle(problem, spec))
     stations = _stations_from_symbols(step.args)
-    source = stations[0] if len(stations) > 0 else spec.source
-    target = stations[1] if len(stations) > 1 else spec.target
-    if step.name == 'finish_task' and len(stations) == 1:
-        source = spec.source
+    source = stations[0] if len(stations) > 0 else _problem_source_station(problem, spec)
+    target = stations[1] if len(stations) > 1 else _problem_target_station(problem, spec)
+    if step.name in {'finish_task', 'finish_candidate_task'} and len(stations) == 1:
+        source = _problem_source_station(problem, spec)
         target = stations[0]
     return side, shuttle, source, target
+
+
+def _problem_side(problem: Room315PddlProblem, spec: ScenarioSpec | None) -> str:
+    return problem.side or (spec.side if spec is not None else 'right')
+
+
+def _problem_shuttle(problem: Room315PddlProblem, spec: ScenarioSpec | None) -> str:
+    return problem.selected_shuttle or (spec.shuttle if spec is not None else 'right_shuttle_1')
+
+
+def _problem_source_station(problem: Room315PddlProblem, spec: ScenarioSpec | None) -> str:
+    return spec.source if spec is not None else ''
+
+
+def _problem_target_station(problem: Room315PddlProblem, spec: ScenarioSpec | None) -> str:
+    if problem.target_station:
+        return _station_symbol(problem.target_station)
+    return spec.target if spec is not None else ''
 
 
 def _stopper_from_symbols(symbols: tuple[str, ...], *, default: str) -> str:
@@ -2464,10 +2574,9 @@ def _shuttle_from_symbols(symbols: tuple[str, ...], *, default: str) -> str:
         text = _clean_symbol(symbol).lower()
         if re.fullmatch(r'[rl][1-4]', text):
             return f'{"right" if text.startswith("r") else "left"}_shuttle_{text[1:]}'
-        if (
-            re.fullmatch(r'(?:right|left)_shuttle(?:_[1-4])?', text)
-            or text in {'right_shuttle', 'left_shuttle'}
-        ):
+        if text in {'right_shuttle', 'left_shuttle'}:
+            return f'{text}_1'
+        if re.fullmatch(r'(?:right|left)_shuttle_[1-4]', text):
             return text
     return default
 
@@ -2766,43 +2875,914 @@ def _payload_loaded_for_shuttle(scenario: dict[str, Any], shuttle_id: str) -> bo
 
 
 def _problem_text_for_spec(spec: ScenarioSpec) -> str:
-    return _problem_text_from_goal_spec(spec)
+    return build_pddl_problem_from_spec(spec).problem_text
 
 
-def _problem_text_from_goal_spec(spec: ScenarioSpec) -> str:
-    side_station_prefix = f'{spec.side}_'
-    source_station = f'{side_station_prefix}{spec.source}'
-    target_station = f'{side_station_prefix}{spec.target}'
-    switch_group = f'{spec.side}_switch_group'
-    stopper_group = f'{spec.side}_stopper_group'
-    problem_name = spec.pddl_problem or f'room315-{_clean_symbol(spec.goal_id)}'
-    payload_facts = _payload_init_facts_for_spec(spec)
-    return f"""(define (problem {problem_name})
-  (:domain room315-shuttle)
+def build_pddl_problem_from_spec(spec: ScenarioSpec) -> Room315PddlProblem:
+    """Build a PlanSys2 problem from a ScenarioSpec via validated contracts."""
 
-  (:objects
-    {spec.side} - rail_side
-    {spec.shuttle} - shuttle
-    {source_station} {target_station} - station
-    {switch_group} - switch_group
-    {stopper_group} - stopper_group
-  )
-
-    (:init
-    (shuttle_at {spec.shuttle} {source_station})
-    (shuttle_stopped_at {spec.shuttle} {source_station})
-    (shuttle_on_side {spec.shuttle} {spec.side})
-{payload_facts}
-    (connected {spec.side} {source_station} {target_station})
-  )
-
-  (:goal
-    (and
-      (task_done {spec.shuttle} {target_station})
+    observed_state = _observed_state_from_scenario_spec(spec)
+    task_goal = _task_goal_from_scenario_spec(spec)
+    return build_pddl_problem_from_observed_state_task_goal(
+        observed_state,
+        task_goal,
+        problem_name=spec.pddl_problem or f'room315-{_clean_symbol(spec.goal_id)}',
     )
-  )
-)
-"""
+
+
+def build_pddl_problem_from_observed_state_task_goal(
+    observed_state: ObservedState,
+    task_goal: TaskGoal,
+    *,
+    problem_name: str | None = None,
+) -> Room315PddlProblem:
+    """Convert validated planner state and a high-level goal into PDDL.
+
+    The builder is intentionally fail-closed. Missing, unknown, stale, or
+    conflicting facts that affect planning raise PddlProblemBuildError instead
+    of being emitted as false PDDL predicates.
+    """
+
+    if not isinstance(observed_state, ObservedState):
+        raise PddlProblemBuildError('observed_state must be an ObservedState contract')
+    if not isinstance(task_goal, TaskGoal):
+        raise PddlProblemBuildError('task_goal must be a TaskGoal contract')
+
+    constraints = dict(task_goal.constraints or {})
+    goal_type = str(constraints.get('goal_type') or '').strip().casefold()
+    if goal_type not in {'transport', 'inspection'}:
+        raise PddlProblemBuildError(
+            f'unsupported TaskGoal goal_type {goal_type!r}; expected transport or inspection'
+        )
+    side = _normalise_planning_side(constraints.get('side') or 'right')
+    problem_name = _pddl_problem_name(
+        problem_name
+        or f'room315-{_clean_symbol(task_goal.goal_id or observed_state.state_id)}'
+    )
+
+    fact_index = _observed_fact_index(observed_state)
+    fleet = _fleet_snapshot_from_observed_state(fact_index)
+    devices = _device_snapshot_from_observed_state(fact_index)
+    obstacles = _obstacle_snapshot_from_observed_state(fact_index)
+    blocks = _block_snapshot_from_observed_state(fact_index, fleet)
+    goal_data = _goal_data_from_task_goal(
+        constraints,
+        side=side,
+        goal_type=goal_type,
+        fleet=fleet,
+    )
+
+    init_facts = _pddl_init_facts(
+        fleet=fleet,
+        devices=devices,
+        obstacles=obstacles,
+        blocks=blocks,
+        goal_data=goal_data,
+    )
+    objects = _pddl_objects(
+        fleet=fleet,
+        devices=devices,
+        obstacles=obstacles,
+        blocks=blocks,
+        goal_data=goal_data,
+    )
+    goal_text = _pddl_goal_text(goal_data)
+    problem_text = _format_pddl_problem(
+        problem_name=problem_name,
+        objects=objects,
+        init_facts=init_facts,
+        goal_text=goal_text,
+    )
+    provenance = {
+        'planner': 'PlanSys2',
+        'problem_builder': 'observed_state_task_goal_v1',
+        'observed_state_id': observed_state.state_id,
+        'task_goal_id': task_goal.goal_id,
+        'task_goal_source': task_goal.source,
+        'unknown_fact_policy': 'fail_closed_or_request_observation_before_planning',
+        'model_input_exposure': 'excluded',
+        'oracle_test_fixture_used': False,
+        'symbolic_action_mapping': dict(PDDL_ACTION_TRANSLATION_PROVENANCE),
+    }
+    if goal_data['selection_policy']:
+        provenance['selection_policy'] = goal_data['selection_policy']
+        provenance['candidate_shuttles'] = list(goal_data['candidate_shuttles'])
+        provenance['selection_owner'] = (
+            'PlanSys2 via goal_candidate facts and route_cost metric'
+            if goal_data['planner_selects_candidate']
+            else 'TaskGoal explicit grounding'
+        )
+    return Room315PddlProblem(
+        problem_name=problem_name,
+        problem_text=problem_text,
+        goal_text=goal_text,
+        goal_type=goal_type,
+        side=side,
+        target_station=goal_data.get('target_station', ''),
+        target_slot=goal_data.get('target_slot', ''),
+        selected_shuttle=goal_data.get('selected_shuttle', ''),
+        selection_policy=goal_data.get('selection_policy', ''),
+        provenance=provenance,
+    )
+
+
+def _observed_state_from_scenario_spec(spec: ScenarioSpec) -> ObservedState:
+    timestamp = 0.0
+    facts: list[ObservedFact] = []
+    side = _normalise_planning_side(spec.side)
+    start_slots = {
+        _canonical_planning_shuttle_id(shuttle, side=side): _slot_symbol_or_empty(slot)
+        for shuttle, slot in spec.start_slots_by_shuttle
+    }
+    if spec.shuttle and spec.shuttle not in start_slots:
+        source_slot = _slot_for_station_default(side, spec.source)
+        if source_slot:
+            start_slots[_canonical_planning_shuttle_id(spec.shuttle, side=side)] = source_slot
+    if spec.blocker_shuttle and spec.blocker_start_slot:
+        start_slots[_canonical_planning_shuttle_id(spec.blocker_shuttle, side=side)] = (
+            _slot_symbol_or_empty(spec.blocker_start_slot)
+        )
+    for step in spec.clearance_steps:
+        shuttle = _canonical_planning_shuttle_id(_clearance_step_shuttle(step), side=side)
+        start_slots.setdefault(
+            shuttle,
+            _clearance_step_start_slot(spec, step, shuttle=shuttle),
+        )
+
+    loaded_shuttles = {
+        _canonical_planning_shuttle_id(shuttle, side=side)
+        for shuttle in spec.loaded_shuttles
+    }
+    if not loaded_shuttles and spec.payload_condition == 'loaded' and spec.shuttle:
+        loaded_shuttles.add(_canonical_planning_shuttle_id(spec.shuttle, side=side))
+
+    for shuttle_spec in all_shuttle_specs():
+        shuttle_id = shuttle_spec.shuttle_id
+        slot = start_slots.get(shuttle_id, '')
+        present = bool(slot)
+        loaded = shuttle_id in loaded_shuttles
+        metadata = {
+            'side': shuttle_spec.side,
+            'short_id': shuttle_spec.short_id,
+            'model_input_exposure': 'excluded',
+            'synthetic_from_case_spec': True,
+        }
+        facts.extend([
+            _planner_fact(
+                shuttle_spec.gazebo_entity_name,
+                'present',
+                present,
+                timestamp=timestamp,
+                metadata=metadata,
+            ),
+            _planner_fact(
+                shuttle_spec.gazebo_entity_name,
+                'loaded',
+                loaded,
+                timestamp=timestamp,
+                metadata=metadata,
+            ),
+            _planner_fact(
+                shuttle_spec.gazebo_entity_name,
+                'location_slot',
+                _contract_slot_id(shuttle_spec.side, slot) if slot else None,
+                timestamp=timestamp,
+                metadata=metadata,
+            ),
+            _planner_fact(
+                shuttle_spec.gazebo_entity_name,
+                'location_block',
+                _block_id_for_slot(shuttle_spec.side, slot) if slot else None,
+                timestamp=timestamp,
+                metadata=metadata,
+            ),
+        ])
+
+    for rail_side in SIDES:
+        occupied_by_slot = {
+            slot: shuttle
+            for shuttle, slot in start_slots.items()
+            if _shuttle_side(shuttle) == rail_side and slot
+        }
+        for slot in ('1', '2', '3', '4'):
+            shuttle = occupied_by_slot.get(slot, '')
+            facts.append(_planner_fact(
+                _contract_slot_id(rail_side, slot),
+                'occupancy',
+                {
+                    'occupied': bool(shuttle),
+                    'shuttle': _gazebo_entity_for_planning_shuttle(shuttle) if shuttle else None,
+                    'sensor': SLOT_SENSOR_BY_SIDE_AND_SLOT[(rail_side, slot)],
+                },
+                timestamp=timestamp,
+                metadata={
+                    'side': rail_side,
+                    'slot': slot,
+                    'model_input_exposure': 'excluded',
+                    'synthetic_from_case_spec': True,
+                },
+            ))
+            block_id = _block_id_for_slot(rail_side, slot)
+            facts.append(_planner_fact(
+                block_id,
+                'occupancy',
+                _gazebo_entity_for_planning_shuttle(shuttle) if shuttle else None,
+                timestamp=timestamp,
+                metadata={
+                    'side': rail_side,
+                    'slot': slot,
+                    'block_id': block_id,
+                    'model_input_exposure': 'excluded',
+                    'synthetic_from_case_spec': True,
+                },
+            ))
+            facts.append(_planner_fact(
+                block_id,
+                'reservation',
+                None,
+                timestamp=timestamp,
+                metadata={
+                    'side': rail_side,
+                    'slot': slot,
+                    'block_id': block_id,
+                    'model_input_exposure': 'excluded',
+                    'synthetic_from_case_spec': True,
+                },
+            ))
+        for device in DEVICE_NAMES:
+            facts.append(_planner_fact(
+                f'{rail_side}:switch:{device}',
+                'state',
+                'EXTERIOR',
+                timestamp=timestamp,
+                metadata={'side': rail_side, 'device': device, 'model_input_exposure': 'excluded'},
+            ))
+            facts.append(_planner_fact(
+                f'{rail_side}:stopper:{device}',
+                'state',
+                'open',
+                timestamp=timestamp,
+                metadata={'side': rail_side, 'device': device, 'model_input_exposure': 'excluded'},
+            ))
+        facts.append(_planner_fact(
+            f'{rail_side}:obstacles',
+            'present_obstacles',
+            [],
+            timestamp=timestamp,
+            metadata={'side': rail_side, 'model_input_exposure': 'excluded'},
+        ))
+
+    return ObservedState(
+        state_id=f'room315-scenario-{_clean_symbol(spec.goal_id)}',
+        timestamp=timestamp,
+        stale_after_s=1.0,
+        visual_model_inputs=[],
+        fused_planner_state=facts,
+    )
+
+
+def _task_goal_from_scenario_spec(spec: ScenarioSpec) -> TaskGoal:
+    constraints: dict[str, Any] = {
+        'goal_type': 'transport',
+        'side': spec.side,
+        'target_kind': 'slot' if spec.target_slot else 'station',
+        'target_station': spec.target,
+        'shuttle_selection': 'explicit',
+        'payload_required': spec.payload_condition,
+    }
+    if spec.target_slot:
+        constraints['target_slot'] = spec.target_slot
+    if spec.selection_policy:
+        constraints['shuttle_selection'] = (
+            'nearest'
+            if 'nearest' in spec.selection_policy
+            else spec.payload_condition or 'loaded'
+        )
+    else:
+        constraints['target_shuttle'] = spec.shuttle
+    return TaskGoal(
+        goal_id=spec.goal_id,
+        description=spec.pddl_goal or _language_action_sequence_for_spec(spec),
+        source='planner',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints=constraints,
+    )
+
+
+def _planner_fact(
+    subject: str,
+    predicate: str,
+    value: Any,
+    *,
+    timestamp: float,
+    metadata: dict[str, Any],
+) -> ObservedFact:
+    return ObservedFact(
+        fact_id=f'planner-{_pddl_symbol(subject)}-{_pddl_symbol(predicate)}',
+        subject=subject,
+        predicate=predicate,
+        value=value,
+        source='planner',
+        timestamp=timestamp,
+        confidence=1.0,
+        status='known',
+        metadata=metadata,
+    )
+
+
+def _observed_fact_index(observed_state: ObservedState) -> dict[tuple[str, str], ObservedFact]:
+    index: dict[tuple[str, str], ObservedFact] = {}
+    for fact in observed_state.fused_planner_state:
+        key = (str(fact.subject), str(fact.predicate))
+        if key in index and index[key].value != fact.value:
+            raise PddlProblemBuildError(f'conflicting duplicate fact for {key!r}')
+        index[key] = fact
+    return index
+
+
+def _known_fact(
+    index: dict[tuple[str, str], ObservedFact],
+    subjects: tuple[str, ...],
+    predicate: str,
+    *,
+    context: str,
+    required: bool = True,
+) -> ObservedFact | None:
+    for subject in subjects:
+        fact = index.get((subject, predicate))
+        if fact is None:
+            continue
+        if fact.status != 'known':
+            raise PddlProblemBuildError(
+                f'{context} fact {subject!r}/{predicate!r} is {fact.status}; '
+                'observation or recovery is required before planning'
+            )
+        return fact
+    if required:
+        raise PddlProblemBuildError(
+            f'missing required {context} fact for {subjects[0]!r}/{predicate!r}; '
+            'observation or recovery is required before planning'
+        )
+    return None
+
+
+def _fleet_snapshot_from_observed_state(
+    index: dict[tuple[str, str], ObservedFact],
+) -> dict[str, Any]:
+    loaded_by_shuttle: dict[str, bool] = {}
+    present_by_shuttle: dict[str, bool] = {}
+    location_slot_by_shuttle: dict[str, str] = {}
+    location_block_by_shuttle: dict[str, str] = {}
+    slot_occupancy: dict[str, str] = {}
+
+    for shuttle_spec in all_shuttle_specs():
+        shuttle_id = shuttle_spec.shuttle_id
+        subjects = (shuttle_spec.gazebo_entity_name, shuttle_id)
+        loaded_fact = _known_fact(index, subjects, 'loaded', context='payload')
+        loaded_by_shuttle[shuttle_id] = bool(loaded_fact.value)
+        present_fact = _known_fact(index, subjects, 'present', context='presence', required=False)
+        present_by_shuttle[shuttle_id] = True if present_fact is None else bool(present_fact.value)
+        slot_fact = _known_fact(index, subjects, 'location_slot', context='slot location', required=False)
+        if slot_fact is not None and slot_fact.value:
+            location_slot_by_shuttle[shuttle_id] = _slot_symbol_from_observation(
+                slot_fact.value,
+                default_side=shuttle_spec.side,
+            )
+        block_fact = _known_fact(index, subjects, 'location_block', context='block location', required=False)
+        if block_fact is not None and block_fact.value:
+            location_block_by_shuttle[shuttle_id] = _pddl_symbol(block_fact.value)
+
+    for rail_side in SIDES:
+        for slot in ('1', '2', '3', '4'):
+            slot_id = _contract_slot_id(rail_side, slot)
+            slot_symbol = _slot_object(rail_side, slot)
+            fact = _known_fact(
+                index,
+                (slot_id, slot_symbol),
+                'occupancy',
+                context='slot occupancy',
+            )
+            occupant = _occupancy_shuttle_from_value(fact.value, side=rail_side, slot=slot)
+            slot_occupancy[slot_symbol] = occupant
+            if occupant:
+                location_slot_by_shuttle.setdefault(occupant, slot_symbol)
+
+    return {
+        'loaded_by_shuttle': loaded_by_shuttle,
+        'present_by_shuttle': present_by_shuttle,
+        'location_slot_by_shuttle': location_slot_by_shuttle,
+        'location_block_by_shuttle': location_block_by_shuttle,
+        'slot_occupancy': slot_occupancy,
+    }
+
+
+def _device_snapshot_from_observed_state(
+    index: dict[tuple[str, str], ObservedFact],
+) -> dict[str, dict[str, str]]:
+    devices = {'switches': {}, 'stoppers': {}}
+    for side in SIDES:
+        for device in DEVICE_NAMES:
+            switch_subject = f'{side}:switch:{device}'
+            stopper_subject = f'{side}:stopper:{device}'
+            switch = _known_fact(index, (switch_subject,), 'state', context='switch state')
+            stopper = _known_fact(index, (stopper_subject,), 'state', context='stopper state')
+            devices['switches'][_switch_object(side, device)] = _switch_state_for_pddl(switch.value)
+            devices['stoppers'][_stopper_object(side, device)] = _stopper_state_symbol(stopper.value)
+    return devices
+
+
+def _obstacle_snapshot_from_observed_state(
+    index: dict[tuple[str, str], ObservedFact],
+) -> dict[str, list[str]]:
+    obstacles: dict[str, list[str]] = {}
+    for side in SIDES:
+        fact = _known_fact(
+            index,
+            (f'{side}:obstacles',),
+            'present_obstacles',
+            context='obstacle observation',
+        )
+        values = fact.value if isinstance(fact.value, (list, tuple, set)) else []
+        obstacles[side] = [_pddl_symbol(f'{side}_{value}') for value in values if str(value).strip()]
+    return obstacles
+
+
+def _block_snapshot_from_observed_state(
+    index: dict[tuple[str, str], ObservedFact],
+    fleet: dict[str, Any],
+) -> dict[str, Any]:
+    block_occupancy: dict[str, str] = {}
+    block_reservations: dict[str, str] = {}
+    blocks = {
+        _block_object_for_slot(side, slot): {'side': side, 'slot': slot}
+        for side in SIDES
+        for slot in ('1', '2', '3', '4')
+    }
+    for shuttle, block in fleet['location_block_by_shuttle'].items():
+        block_symbol = _pddl_symbol(block)
+        blocks.setdefault(block_symbol, {'side': _shuttle_side(shuttle), 'slot': ''})
+        block_occupancy[block_symbol] = shuttle
+    for side in SIDES:
+        for slot in ('1', '2', '3', '4'):
+            raw_block = _block_id_for_slot(side, slot)
+            block_symbol = _block_object_for_slot(side, slot)
+            occupancy = _known_fact(
+                index,
+                (raw_block, block_symbol),
+                'occupancy',
+                context='block occupancy',
+                required=False,
+            )
+            if occupancy is not None and occupancy.value:
+                block_occupancy[block_symbol] = _occupancy_shuttle_from_value(
+                    occupancy.value,
+                    side=side,
+                    slot=slot,
+                )
+            reservation = _known_fact(
+                index,
+                (raw_block, block_symbol),
+                'reservation',
+                context='block reservation',
+                required=False,
+            )
+            if reservation is not None and reservation.value:
+                block_reservations[block_symbol] = _occupancy_shuttle_from_value(
+                    reservation.value,
+                    side=side,
+                    slot=slot,
+                )
+    return {
+        'blocks': blocks,
+        'block_occupancy': block_occupancy,
+        'block_reservations': block_reservations,
+    }
+
+
+def _goal_data_from_task_goal(
+    constraints: dict[str, Any],
+    *,
+    side: str,
+    goal_type: str,
+    fleet: dict[str, Any],
+) -> dict[str, Any]:
+    if goal_type == 'inspection':
+        subject = _pddl_symbol(constraints.get('inspection_subject') or 'room315_system')
+        return {
+            'goal_type': goal_type,
+            'side': side,
+            'inspection_subject': subject,
+            'target_station': '',
+            'target_slot': '',
+            'selected_shuttle': '',
+            'candidate_shuttles': (),
+            'selection_policy': '',
+            'planner_selects_candidate': False,
+        }
+
+    target_slot = _slot_symbol_or_empty(constraints.get('target_slot'))
+    target_kind = str(constraints.get('target_kind') or '').strip().casefold()
+    raw_station = constraints.get('target_station')
+    target_station = _station_symbol(raw_station) if raw_station else ''
+    if target_kind == 'slot' or target_slot:
+        if not target_slot:
+            raise PddlProblemBuildError('transport TaskGoal target_kind slot requires target_slot')
+        target_station = _station_for_slot(side, target_slot)
+    if not target_station:
+        raise PddlProblemBuildError('transport TaskGoal requires target_station or target_slot')
+
+    selection = str(constraints.get('shuttle_selection') or '').strip().casefold()
+    target_shuttle = _task_goal_target_shuttle(constraints, side=side)
+    payload_required = str(constraints.get('payload_required') or '').strip().casefold()
+    if target_shuttle:
+        selection = 'explicit'
+    if selection not in {'explicit', 'loaded', 'empty', 'nearest'}:
+        selection = 'explicit' if target_shuttle else (payload_required or 'loaded')
+
+    side_shuttles = [
+        spec.shuttle_id for spec in all_shuttle_specs() if spec.side == side
+    ]
+    if selection == 'explicit':
+        if not target_shuttle:
+            raise PddlProblemBuildError('explicit transport TaskGoal requires target_shuttle')
+        candidates = (target_shuttle,)
+        selected = target_shuttle
+        planner_selects_candidate = False
+    else:
+        wants_loaded = selection in {'loaded', 'nearest'} or payload_required == 'loaded'
+        wants_empty = selection == 'empty' or payload_required == 'empty'
+        candidates_list = []
+        for shuttle in side_shuttles:
+            loaded = bool(fleet['loaded_by_shuttle'][shuttle])
+            if wants_loaded and not loaded:
+                continue
+            if wants_empty and loaded:
+                continue
+            _require_goal_candidate_location(fleet, shuttle)
+            candidates_list.append(shuttle)
+        if not candidates_list:
+            raise PddlProblemBuildError(
+                f'no {selection} shuttle candidates with known state on {side} rail'
+            )
+        if selection == 'nearest' and target_slot:
+            target_index = int(target_slot)
+            candidates_list = sorted(
+                candidates_list,
+                key=lambda shuttle: (
+                    abs(int(_slot_number_from_object(fleet['location_slot_by_shuttle'][shuttle])) - target_index),
+                    _shuttle_sort_key(shuttle),
+                ),
+            )
+        else:
+            candidates_list = sorted(candidates_list, key=_shuttle_sort_key)
+        candidates = tuple(candidates_list)
+        selected = candidates[0]
+        planner_selects_candidate = True
+
+    for shuttle in candidates:
+        _require_goal_candidate_location(fleet, shuttle)
+
+    return {
+        'goal_type': goal_type,
+        'side': side,
+        'target_station': target_station,
+        'target_slot': target_slot,
+        'selected_shuttle': selected,
+        'candidate_shuttles': candidates,
+        'selection_policy': selection,
+        'planner_selects_candidate': planner_selects_candidate,
+    }
+
+
+def _pddl_objects(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    blocks: dict[str, Any],
+    goal_data: dict[str, Any],
+) -> dict[str, list[str]]:
+    obstacle_objects = sorted({item for values in obstacles.values() for item in values})
+    typed_objects = {
+        'rail_side': list(SIDES),
+        'shuttle': [spec.shuttle_id for spec in all_shuttle_specs()],
+        'station': [
+            'right_yaskawa',
+            'right_staubli',
+            'left_yaskawa',
+            'left_kuka',
+        ],
+        'slot': [_slot_object(side, slot) for side in SIDES for slot in ('1', '2', '3', '4')],
+        'block': sorted(blocks['blocks']),
+        'switch_device': sorted(devices['switches']),
+        'stopper_device': sorted(devices['stoppers']),
+        'obstacle': obstacle_objects or ['no_obstacle'],
+        'switch_group': [f'{side}_switch_group' for side in SIDES],
+        'stopper_group': [f'{side}_stopper_group' for side in SIDES],
+    }
+    declared = {name for names in typed_objects.values() for name in names}
+    inspection_targets = ['room315_system']
+    if (
+        goal_data['goal_type'] == 'inspection'
+        and goal_data['inspection_subject'] not in declared
+    ):
+        inspection_targets.append(goal_data['inspection_subject'])
+    typed_objects['inspection_target'] = sorted(set(inspection_targets) - declared)
+    return typed_objects
+
+
+def _pddl_init_facts(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    blocks: dict[str, Any],
+    goal_data: dict[str, Any],
+) -> list[str]:
+    facts: list[str] = ['(= (total-cost) 0)', '(validated_state)']
+    for side in SIDES:
+        stations = ('yaskawa', 'staubli') if side == 'right' else ('yaskawa', 'kuka')
+        for source in stations:
+            for target in stations:
+                facts.append(f'(connected {side} {_station_object(side, source)} {_station_object(side, target)})')
+        for slot in ('1', '2', '3', '4'):
+            slot_object = _slot_object(side, slot)
+            station = _station_object(side, _station_for_slot(side, slot))
+            block = _block_object_for_slot(side, slot)
+            facts.extend([
+                f'(slot_on_side {slot_object} {side})',
+                f'(slot_at_station {slot_object} {station})',
+                f'(slot_in_block {slot_object} {block})',
+                f'(block_on_side {block} {side})',
+            ])
+    for shuttle_spec in all_shuttle_specs():
+        shuttle = shuttle_spec.shuttle_id
+        facts.append(f'(shuttle_on_side {shuttle} {shuttle_spec.side})')
+        if fleet['loaded_by_shuttle'][shuttle]:
+            facts.append(f'(loaded {shuttle})')
+        else:
+            facts.append(f'(empty {shuttle})')
+        slot_object = fleet['location_slot_by_shuttle'].get(shuttle)
+        if slot_object:
+            station = _station_object(
+                shuttle_spec.side,
+                _station_for_slot(shuttle_spec.side, _slot_number_from_object(slot_object)),
+            )
+            facts.extend([
+                f'(shuttle_at_slot {shuttle} {slot_object})',
+                f'(shuttle_at {shuttle} {station})',
+                f'(shuttle_stopped_at {shuttle} {station})',
+            ])
+        block_object = fleet['location_block_by_shuttle'].get(shuttle)
+        if block_object:
+            facts.append(f'(shuttle_in_block {shuttle} {_pddl_symbol(block_object)})')
+    for side in SIDES:
+        side_has_obstacle = bool(obstacles.get(side))
+        for from_slot in ('1', '2', '3', '4'):
+            from_object = _slot_object(side, from_slot)
+            for to_slot in ('1', '2', '3', '4'):
+                to_object = _slot_object(side, to_slot)
+                cost = abs(int(from_slot) - int(to_slot))
+                if cost == 0:
+                    cost = 1
+                facts.append(f'(= (route_cost {from_object} {to_object}) {cost})')
+                if not side_has_obstacle:
+                    facts.append(f'(route_clear_between {from_object} {to_object})')
+    for slot_object, occupant in sorted(fleet['slot_occupancy'].items()):
+        if occupant:
+            facts.append(f'(slot_occupied_by {slot_object} {occupant})')
+        else:
+            facts.append(f'(slot_free {slot_object})')
+    for block_object in sorted(blocks['blocks']):
+        occupant = blocks['block_occupancy'].get(block_object, '')
+        reservation = blocks['block_reservations'].get(block_object, '')
+        if occupant:
+            facts.append(f'(block_occupied_by {block_object} {occupant})')
+        else:
+            facts.append(f'(block_free {block_object})')
+        if reservation:
+            facts.append(f'(block_reserved_by {block_object} {reservation})')
+    for switch, state in sorted(devices['switches'].items()):
+        facts.append(f'(switch_state_known {switch})')
+        facts.append(f'(switch_{state} {switch})')
+    for stopper, state in sorted(devices['stoppers'].items()):
+        facts.append(f'(stopper_state_known {stopper})')
+        facts.append(f'(stopper_{state} {stopper})')
+    for side, side_obstacles in sorted(obstacles.items()):
+        for obstacle in side_obstacles:
+            facts.append(f'(obstacle_present {obstacle} {side})')
+    if goal_data['goal_type'] == 'transport':
+        target_station = _station_object(goal_data['side'], goal_data['target_station'])
+        facts.append(f'(target_station_for_goal {target_station})')
+        if goal_data['target_slot']:
+            facts.append(f'(target_slot_for_goal {_slot_object(goal_data["side"], goal_data["target_slot"])})')
+        for shuttle in goal_data['candidate_shuttles']:
+            facts.append(f'(goal_candidate {shuttle})')
+    else:
+        facts.append(f'(inspection_required {goal_data["inspection_subject"]})')
+    return _unique_sorted_facts(facts)
+
+
+def _pddl_goal_text(goal_data: dict[str, Any]) -> str:
+    if goal_data['goal_type'] == 'inspection':
+        return f'(inspection_done {goal_data["inspection_subject"]})'
+    target_station = _station_object(goal_data['side'], goal_data['target_station'])
+    if goal_data['planner_selects_candidate']:
+        if goal_data['target_slot']:
+            return (
+                f'(and (transport_goal_done {target_station}) '
+                f'(goal_slot_reached {_slot_object(goal_data["side"], goal_data["target_slot"])}))'
+            )
+        return f'(transport_goal_done {target_station})'
+    selected = goal_data['selected_shuttle']
+    if goal_data['target_slot']:
+        return (
+            f'(and (task_done {selected} {target_station}) '
+            f'(shuttle_at_slot {selected} {_slot_object(goal_data["side"], goal_data["target_slot"])}))'
+        )
+    return f'(task_done {selected} {target_station})'
+
+
+def _format_pddl_problem(
+    *,
+    problem_name: str,
+    objects: dict[str, list[str]],
+    init_facts: list[str],
+    goal_text: str,
+) -> str:
+    object_lines = []
+    for pddl_type, names in objects.items():
+        object_lines.append(f'    {" ".join(sorted(names))} - {pddl_type}')
+    init_lines = [f'    {fact}' for fact in init_facts]
+    return (
+        f'(define (problem {problem_name})\n'
+        '  (:domain room315-shuttle)\n\n'
+        '  (:objects\n'
+        + '\n'.join(object_lines)
+        + '\n  )\n\n'
+        '  (:init\n'
+        + '\n'.join(init_lines)
+        + '\n  )\n\n'
+        '  (:goal\n'
+        f'    {goal_text}\n'
+        '  )\n\n'
+        '  (:metric minimize (total-cost))\n'
+        ')\n'
+    )
+
+
+def _unique_sorted_facts(facts: list[str]) -> list[str]:
+    return sorted(dict.fromkeys(facts))
+
+
+def _normalise_planning_side(value: Any) -> str:
+    text = str(value or '').strip().casefold()
+    if text in {'right', 'r'}:
+        return 'right'
+    if text in {'left', 'l'}:
+        return 'left'
+    raise PddlProblemBuildError(f'invalid Room 315 side {value!r}')
+
+
+def _task_goal_target_shuttle(constraints: dict[str, Any], *, side: str) -> str:
+    raw = constraints.get('target_shuttle')
+    if not raw:
+        return ''
+    shuttle = _canonical_planning_shuttle_id(raw, side=side)
+    if _shuttle_side(shuttle) != side:
+        raise PddlProblemBuildError(
+            f'target_shuttle {raw!r} is not on requested {side!r} rail'
+        )
+    return shuttle
+
+
+def _require_goal_candidate_location(fleet: dict[str, Any], shuttle: str) -> None:
+    if shuttle not in fleet['location_slot_by_shuttle']:
+        raise PddlProblemBuildError(
+            f'goal candidate {shuttle!r} has no known slot; observation or recovery is required'
+        )
+
+
+def _occupancy_shuttle_from_value(value: Any, *, side: str, slot: str) -> str:
+    raw: Any = value
+    occupied = False
+    if isinstance(value, dict):
+        occupied = bool(value.get('occupied', False))
+        raw = value.get('shuttle') or value.get('occupant') or value.get('shuttle_id')
+        if not occupied:
+            return ''
+    elif value is None or value is False:
+        return ''
+    else:
+        occupied = True
+    if not raw:
+        if occupied:
+            raise PddlProblemBuildError(
+                f'occupied slot {side}:{slot} lacks shuttle identity; observation recovery required'
+            )
+        return ''
+    shuttle = _canonical_planning_shuttle_id(raw, side=side)
+    if _shuttle_side(shuttle) != side:
+        raise PddlProblemBuildError(
+            f'occupancy for {side}:{slot} references shuttle on another rail: {raw!r}'
+        )
+    return shuttle
+
+
+def _slot_symbol_from_observation(value: Any, *, default_side: str) -> str:
+    text = str(value or '').strip()
+    for (side, slot), sensor in SLOT_SENSOR_BY_SIDE_AND_SLOT.items():
+        if text.upper() == sensor:
+            return _slot_object(side, slot)
+    match = re.search(r'\b(right|left)[:_-]?slot[:_-]?([1-4])\b', text, re.IGNORECASE)
+    if match:
+        return _slot_object(match.group(1).lower(), match.group(2))
+    match = re.search(r'\b([1-4])\b', text)
+    if match:
+        return _slot_object(default_side, match.group(1))
+    raise PddlProblemBuildError(f'could not parse Room 315 slot observation {value!r}')
+
+
+def _slot_number_from_object(slot_object: str) -> str:
+    match = re.search(r'([1-4])$', str(slot_object or ''))
+    if not match:
+        raise PddlProblemBuildError(f'invalid slot object {slot_object!r}')
+    return match.group(1)
+
+
+def _slot_for_station_default(side: str, station: str) -> str:
+    station = _station_symbol(station)
+    for slot in ('1', '2', '3', '4'):
+        if _station_for_slot(side, slot) == station:
+            return slot
+    return ''
+
+
+def _contract_slot_id(side: str, slot: str) -> str:
+    return f'{side}:slot:{_slot_symbol_or_empty(slot)}'
+
+
+def _block_id_for_slot(side: str, slot: str) -> str:
+    return f'{side}:block:slot:{_slot_symbol_or_empty(slot)}'
+
+
+def _slot_object(side: str, slot: str) -> str:
+    return f'{side}_slot_{_slot_symbol_or_empty(slot)}'
+
+
+def _block_object_for_slot(side: str, slot: str) -> str:
+    return f'{side}_block_slot_{_slot_symbol_or_empty(slot)}'
+
+
+def _station_object(side: str, station: str) -> str:
+    return f'{side}_{_station_symbol(station)}'
+
+
+def _switch_object(side: str, device: str) -> str:
+    return f'{side}_switch_{str(device).upper()}'.lower()
+
+
+def _stopper_object(side: str, device: str) -> str:
+    return f'{side}_stopper_{str(device).upper()}'.lower()
+
+
+def _switch_state_for_pddl(value: Any) -> str:
+    text = str(value or '').strip().casefold()
+    if text in {'interior', 'i'}:
+        return 'interior'
+    if text in {'exterior', 'e'}:
+        return 'exterior'
+    raise PddlProblemBuildError(f'invalid switch state {value!r}; expected EXTERIOR or INTERIOR')
+
+
+def _shuttle_side(shuttle: str) -> str:
+    text = str(shuttle or '').strip().casefold()
+    if text.startswith('left_') or text.startswith('l'):
+        return 'left'
+    return 'right'
+
+
+def _pddl_symbol(value: Any) -> str:
+    text = str(value or '').strip().casefold().replace('-', '_').replace(':', '_')
+    text = re.sub(r'[^a-z0-9_]+', '_', text)
+    text = re.sub(r'_+', '_', text).strip('_')
+    if not text:
+        text = 'unnamed'
+    if text[0].isdigit():
+        text = f'n_{text}'
+    return text
+
+
+def _pddl_problem_name(value: Any) -> str:
+    text = str(value or '').strip().casefold().replace(':', '_')
+    text = re.sub(r'[^a-z0-9_-]+', '_', text)
+    text = re.sub(r'_+', '_', text).strip('_-')
+    if not text:
+        text = 'room315_problem'
+    if text[0].isdigit():
+        text = f'n-{text}'
+    return text
 
 
 def _resolve_nearest_loaded_goal_data(goal_id: str, data: dict[str, Any]) -> dict[str, Any]:

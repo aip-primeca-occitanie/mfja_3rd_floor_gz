@@ -269,3 +269,36 @@ def test_translator_accepts_domain_order_for_move_and_stop_steps():
     assert move.command['shuttle'] == 'right_shuttle'
     assert stop.command['side'] == 'right'
     assert stop.command['shuttle'] == 'right_shuttle'
+
+
+def test_costed_slot_move_and_candidate_finish_have_primitive_mappings():
+    translator = _load_module()
+
+    move = translator.translate_step(
+        '(move_shuttle_to_slot right_shuttle_2 right right_yaskawa '
+        'right_staubli right_slot_2 right_slot_3)'
+    )
+    finish = translator.translate_step(
+        '(finish_candidate_task right_shuttle_2 right_staubli right_slot_3)'
+    )
+
+    assert translator.SYMBOLIC_ACTION_PRIMITIVE_MAP['move_shuttle_to_slot'] == 'SHUTTLE_ON'
+    assert move.command['action'] == 'shuttle'
+    assert move.event_action['primitive'] == 'SHUTTLE_ON'
+    assert finish.command['action'] == 'DONE'
+    assert finish.event_action['primitive'] == 'DONE'
+
+
+def test_wait_for_clearance_is_safe_stop_macro():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        '(wait_for_clearance right_shuttle_2 right_slot_3)'
+    )
+
+    assert translated.command['action'] == 'shuttle'
+    assert translated.command['command'] == 'OFF'
+    assert translated.command['deterministic_macro'] == 'wait_for_clearance'
+    assert translated.event_action['primitive'] == 'STOP_NOW'
+    assert translated.event_action['wait_condition'] == 'block_clearance'
+    assert translated.event_action['reason'] == 'wait_for_block_clearance'

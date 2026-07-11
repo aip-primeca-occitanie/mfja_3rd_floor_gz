@@ -52,6 +52,8 @@ WAIT_CONDITION_IDS = {
     'reserved_legacy_wait_5': 5,
     'terminal': 6,
     'target_sensor_active': 7,
+    'block_clearance': 8,
+    'headway_clearance': 9,
 }
 TARGET_IDS = {
     'none': 0,
@@ -101,6 +103,27 @@ REASON_IDS = {
     'shuttle_stop': 11,
     'emergency': 12,
     'unsupported_command': 13,
+    'target_station_route': 14,
+    'wait_for_block_clearance': 15,
+    'maintain_headway': 16,
+    'avoid_collision': 17,
+    'avoid_deadlock': 18,
+    'obstacle_stop': 19,
+    'wrong_shuttle_rejected': 20,
+    'fleet_coordination': 21,
+}
+
+SYMBOLIC_ACTION_PRIMITIVE_MAP = {
+    'prepare_switches': 'SET_SWITCHES',
+    'open_stoppers': 'SET_STOPPERS',
+    'set_stoppers': 'SET_STOPPERS',
+    'move_shuttle': 'SHUTTLE_ON',
+    'move_shuttle_to_slot': 'SHUTTLE_ON',
+    'stop_shuttle': 'STOP_NOW',
+    'finish_task': 'DONE',
+    'finish_candidate_task': 'DONE',
+    'inspect_state': 'DONE',
+    'wait_for_clearance': 'STOP_NOW',
 }
 
 ACTION_VECTOR_FIELDS = list(ACTION_VECTOR_V3_FIELDS)
@@ -202,12 +225,16 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
         command, event_action = _translate_open_stoppers(parsed)
     elif parsed.name == 'set_stoppers':
         command, event_action = _translate_set_stoppers(parsed)
-    elif parsed.name == 'move_shuttle':
+    elif parsed.name in {'move_shuttle', 'move_shuttle_to_slot'}:
         command, event_action = _translate_move_shuttle(parsed)
     elif parsed.name == 'stop_shuttle':
         command, event_action = _translate_stop_shuttle(parsed)
-    elif parsed.name == 'finish_task':
+    elif parsed.name in {'finish_task', 'finish_candidate_task'}:
         command, event_action = _translate_finish_task(parsed)
+    elif parsed.name == 'inspect_state':
+        command, event_action = _translate_inspect_state(parsed)
+    elif parsed.name == 'wait_for_clearance':
+        command, event_action = _translate_wait_for_clearance(parsed)
     else:
         raise ValueError(f'unsupported Room 315 PDDL action {parsed.name!r}')
     return TranslatedPlanStep(
@@ -412,6 +439,47 @@ def _translate_finish_task(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str
         target_id='terminal',
         reason='task_succeeded',
     )
+    return command, event_action
+
+
+def _translate_inspect_state(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
+    target = step.args[0] if step.args else 'room315_system'
+    command = {
+        'action': 'DONE',
+        'status': 'success',
+        'inspection_subject': target,
+        'deterministic_macro': 'inspect_state',
+    }
+    event_action = _blank_event_action(
+        primitive='DONE',
+        side='right',
+        wait_condition='terminal',
+        target_id='terminal',
+        reason='task_succeeded',
+    )
+    return command, event_action
+
+
+def _translate_wait_for_clearance(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
+    side, shuttle = _side_and_shuttle_from_args(step.args)
+    command = {
+        'action': 'shuttle',
+        'side': side,
+        'shuttle': shuttle,
+        'command': 'OFF',
+        'deterministic_macro': 'wait_for_clearance',
+    }
+    if len(step.args) > 1:
+        command['clearance_target'] = step.args[-1]
+    event_action = _blank_event_action(
+        primitive='STOP_NOW',
+        side=side,
+        wait_condition='block_clearance',
+        target_id=f'{side}_shuttle',
+        reason='wait_for_block_clearance',
+    )
+    event_action.update(_multi_shuttle_fields(side=side, shuttle=shuttle))
+    event_action['coordination_mode'] = 'wait_for_clearance'
     return command, event_action
 
 
