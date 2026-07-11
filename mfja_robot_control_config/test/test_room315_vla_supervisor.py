@@ -54,6 +54,17 @@ def _fake_supervisor(module):
     supervisor.last_result = ''
     supervisor.last_primitive_command = None
     supervisor.safety_metrics = module._empty_safety_metrics()
+    supervisor.block_reservations = {}
+    supervisor.station_slot_targets = {}
+    supervisor.min_headway_blocks = 1
+    supervisor.max_recovery_retries = 1
+    supervisor.safety_recovery = {
+        'phase': 'idle',
+        'retry_count': 0,
+        'reason': '',
+        'next_step': '',
+        'model_input_exposure': 'excluded',
+    }
     supervisor.last_safety_decision = None
     supervisor.safety_decisions = []
     supervisor.safety_decision_log_limit = 3
@@ -248,6 +259,120 @@ def test_safety_decoder_rejects_shuttle_on_when_path_blocked():
     assert 'path blocked by closed stopper' in decision['reason']
 
 
+def test_safety_decoder_rejects_unknown_localization_before_motion():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['shuttles']['room315_right_shuttle_1'] = {
+        'mode': 'STOPPED',
+        'speed': 0.0,
+    }
+    supervisor.rails['right']['active_position_sensors'] = []
+
+    decision = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+    })
+
+    assert decision['accepted'] is False
+    assert 'unknown localization' in decision['reason']
+
+
+def test_safety_decoder_rejects_obstacle_appearance_but_allows_stop():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['obstacles'] = ['box_on_track']
+
+    rejected = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+    })
+    stopped = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'OFF',
+    })
+
+    assert rejected['accepted'] is False
+    assert 'obstacle appearance' in rejected['reason']
+    assert stopped['accepted'] is True
+
+
+def test_safety_decoder_rejects_occupied_target_slot_from_trusted_sensors():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['shuttles']['room315_right_shuttle_2'] = {
+        'mode': 'STOPPED',
+        'segment': 'A34E',
+        'speed': 0.0,
+    }
+    supervisor.rails['right']['active_position_sensors'] = [
+        {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
+        {'name': 'DZI3R', 'shuttle': 'room315_right_shuttle_2'},
+    ]
+
+    decision = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+        'target_slot': '3',
+    })
+
+    assert decision['accepted'] is False
+    assert 'target slot right:slot:3 is occupied by room315_right_shuttle_2' in decision['reason']
+
+
+def test_safety_decoder_rejects_stale_conflicting_dropout_and_timeout_state():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+
+    supervisor.rails['right']['state_status'] = 'stale'
+    stale = supervisor._safety_decode_command({
+        'action': 'switches',
+        'side': 'right',
+        'switches': {'A1': 'INTERIOR'},
+    })
+    assert stale['accepted'] is False
+    assert 'stale' in stale['reason']
+
+    supervisor.rails['right'].pop('state_status')
+    supervisor.rails['right']['shuttles']['room315_right_shuttle_1']['status'] = 'conflicting'
+    conflicting = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+    })
+    assert conflicting['accepted'] is False
+    assert 'conflicting' in conflicting['reason']
+
+    supervisor.rails['right']['shuttles']['room315_right_shuttle_1'].pop('status')
+    supervisor.rails['right']['sensor_dropout'] = True
+    dropout = supervisor._safety_decode_command({
+        'action': 'stoppers',
+        'side': 'right',
+        'stoppers': {'A1': '1'},
+    })
+    assert dropout['accepted'] is False
+    assert 'sensor dropout' in dropout['reason']
+
+    supervisor.rails['right'].pop('sensor_dropout')
+    supervisor.rails['right']['timed_out'] = True
+    timeout = supervisor._safety_decode_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+    })
+    assert timeout['accepted'] is False
+    assert 'timeout' in timeout['reason']
+
+
 def test_safety_decoder_allows_explicit_target_stopper_stop():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
@@ -318,6 +443,33 @@ def test_safety_decoder_rejects_emergency_and_falling_states():
     })
     assert falling_decision['accepted'] is False
     assert 'falling state rejection' in falling_decision['reason']
+
+
+def test_recoverable_safety_rejection_safe_stops_then_fail_safe_aborts():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    rejected = {
+        'accepted': False,
+        'reason': 'obstacle appearance on right rail: box',
+    }
+
+    recovered = supervisor._handle_recoverable_safety_rejection(rejected)
+
+    assert recovered is True
+    assert supervisor.safety_recovery['phase'] == 'safe_stop_reobserve_replan'
+    assert supervisor.safety_recovery['next_step'] == 'reacquire_observations_then_request_new_plan'
+    assert supervisor.safety_recovery['model_input_exposure'] == 'excluded'
+    assert supervisor.safety_metrics['safety_recovery_count'] == 1
+    assert supervisor.last_primitive_command['action'] == 'shuttle'
+    assert supervisor.last_primitive_command['command'] == 'OFF'
+
+    aborted = supervisor._handle_recoverable_safety_rejection(rejected)
+
+    assert aborted is True
+    assert supervisor.emergency_stop is True
+    assert supervisor.safety_recovery['phase'] == 'fail_safe_abort'
+    assert supervisor.safety_metrics['fail_safe_abort_count'] == 1
+    assert supervisor.last_primitive_command['action'] == 'stoppers'
 
 
 def test_safety_decoder_metrics_track_illegal_proposal_rate():

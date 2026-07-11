@@ -66,6 +66,18 @@ STOPPER_SENSOR_BY_STOPPER = {
     'A4': 'A4_STOPPER_SENSOR',
 }
 TASK_TERMINAL_STATES = {'succeeded', 'failed'}
+RECOVERABLE_SAFETY_KEYWORDS = (
+    'stale',
+    'conflicting',
+    'unknown localization',
+    'sensor dropout',
+    'timeout',
+    'obstacle',
+    'occupied',
+    'reserved',
+    'headway',
+    'deadlock',
+)
 SAFETY_ACTION_ALIASES = {
     'switch': 'switches',
     'stopper': 'stoppers',
@@ -292,6 +304,14 @@ def _empty_safety_metrics() -> dict[str, Any]:
         'illegal_proposal_rate': 0.0,
         'rejected_action_rate': 0.0,
         'rejection_reasons': {},
+        'trusted_state_rejection_count': 0,
+        'unknown_localization_rejection_count': 0,
+        'obstacle_stop_count': 0,
+        'sensor_dropout_count': 0,
+        'timeout_rejection_count': 0,
+        'occupied_target_rejection_count': 0,
+        'safety_recovery_count': 0,
+        'fail_safe_abort_count': 0,
     }
     metrics.update(empty_fleet_safety_metrics())
     return metrics
@@ -357,6 +377,164 @@ def _any_falling_shuttle(rails: dict[str, Any]) -> str:
         for shuttle_name, state in _rail_shuttles(rails, side).items():
             if _shuttle_is_falling(state):
                 return f'{side} shuttle {shuttle_name} is in {state.get("mode")} mode'
+    return ''
+
+
+def _is_recoverable_safety_reason(reason: Any) -> bool:
+    text = str(reason or '').casefold()
+    return any(keyword in text for keyword in RECOVERABLE_SAFETY_KEYWORDS)
+
+
+def _explicit_state_quality_reason(container: Any, context: str) -> str:
+    if not isinstance(container, dict):
+        return ''
+    for key in ('status', 'state_status', 'trusted_state_status', 'safety_status'):
+        status = _clean_token(container.get(key)).casefold()
+        if status in {'stale', 'conflicting'}:
+            return f'{context} is {status}; safe stop, reobserve, and replan required'
+    for key in ('timed_out', 'timeout', 'sensor_timeout', 'observation_timeout'):
+        if bool(container.get(key)):
+            return f'{context} timeout; safe stop, reobserve, and replan required'
+    for key in ('age_s', 'observation_age_s', 'last_update_age_s'):
+        if key not in container:
+            continue
+        try:
+            age_s = float(container.get(key))
+        except (TypeError, ValueError):
+            continue
+        max_age_s = float(container.get('max_age_s', container.get('stale_after_s', 2.0)) or 2.0)
+        if age_s > max_age_s:
+            return (
+                f'{context} stale: age {age_s:.3f}s exceeds {max_age_s:.3f}s; '
+                'safe stop, reobserve, and replan required'
+            )
+    return ''
+
+
+def _sensor_dropout_reason(rail: dict[str, Any], side: str) -> str:
+    if bool(rail.get('sensor_dropout') or rail.get('position_sensor_dropout')):
+        return f'sensor dropout on {side} rail; safe stop, reobserve, and replan required'
+    status = _clean_token(
+        rail.get('sensor_status')
+        or rail.get('position_sensor_status')
+        or rail.get('trusted_sensor_status')
+    ).casefold()
+    if status in {'dropout', 'lost', 'missing', 'unavailable'}:
+        return f'sensor dropout on {side} rail ({status}); safe stop, reobserve, and replan required'
+    return ''
+
+
+def _obstacle_appearance_reason(rail: dict[str, Any], side: str) -> str:
+    raw_obstacles = (
+        rail.get('obstacles')
+        or rail.get('present_obstacles')
+        or rail.get('obstacle_markers')
+        or []
+    )
+    if isinstance(raw_obstacles, dict):
+        obstacles = [name for name, present in raw_obstacles.items() if bool(present)]
+    elif isinstance(raw_obstacles, list):
+        obstacles = [item for item in raw_obstacles if item]
+    elif raw_obstacles:
+        obstacles = [raw_obstacles]
+    else:
+        obstacles = []
+    if obstacles or bool(rail.get('obstacle_present')):
+        names = ', '.join(str(item) for item in obstacles) or 'unidentified obstacle'
+        return f'obstacle appearance on {side} rail: {names}; safe stop and replan required'
+    for reading in _active_sensor_readings_from_rail(rail):
+        sensor_type = _clean_token(reading.get('type') or reading.get('sensor_type')).casefold()
+        if sensor_type == 'obstacle':
+            name = _clean_token(reading.get('name') or 'obstacle')
+            return f'obstacle appearance on {side} rail: {name}; safe stop and replan required'
+    return ''
+
+
+def _unknown_localization_reason(
+    rails: dict[str, Any],
+    side: str,
+    shuttle_name: str,
+) -> str:
+    state = _rail_shuttles(rails, side).get(shuttle_name, {})
+    if not isinstance(state, dict):
+        return f'unknown localization for {shuttle_name!r}: missing trusted shuttle state'
+    quality = _explicit_state_quality_reason(state, f'{shuttle_name} trusted shuttle state')
+    if quality:
+        return quality
+    localized = any(
+        state.get(key) is not None and _clean_token(state.get(key)) != ''
+        for key in ('segment', 'current_segment', 'block', 'current_block')
+    )
+    if localized:
+        return ''
+    for reading in _active_sensor_readings_from_rail(_rail_snapshot(rails, side)):
+        if _clean_token(reading.get('shuttle')) == shuttle_name:
+            return ''
+    return (
+        f'unknown localization for {shuttle_name!r}: no segment/block or active '
+        'position sensor; safe stop, reobserve, and replan required'
+    )
+
+
+def _slot_number(raw: Any) -> str:
+    text = _clean_token(raw)
+    if not text:
+        return ''
+    if ':slot:' in text:
+        return text.rsplit(':slot:', 1)[-1]
+    if text.startswith(('right_slot_', 'left_slot_', 'slot_')):
+        return text.rsplit('_', 1)[-1]
+    return text if text in {'1', '2', '3', '4'} else ''
+
+
+def _owner_labels_for_safety(raw_name: Any, *, side: str) -> set[str]:
+    labels = {_clean_token(raw_name)} if _clean_token(raw_name) else set()
+    spec = normalize_shuttle_ref(raw_name, side=side)
+    if spec is not None:
+        labels.update({spec.short_id, spec.shuttle_id, spec.gazebo_entity_name})
+    return {label for label in labels if label}
+
+
+def _target_slot_occupied_reason(
+    rails: dict[str, Any],
+    slot_sensor_by_side: dict[str, dict[str, str]],
+    side: str,
+    command: dict[str, Any],
+    shuttle_name: str,
+) -> str:
+    slot = _slot_number(command.get('target_slot') or command.get('slot'))
+    if not slot:
+        return ''
+    rail = _rail_snapshot(rails, side)
+    slot_id = f'{side}:slot:{slot}'
+    expected_labels = _owner_labels_for_safety(shuttle_name, side=side)
+    occupancy_maps = [
+        rail.get('slot_occupancy', {}),
+        rail.get('slots', {}),
+    ]
+    for mapping in occupancy_maps:
+        if not isinstance(mapping, dict):
+            continue
+        for key in (slot, slot_id, f'{side}_slot_{slot}', f'slot_{slot}'):
+            if key not in mapping:
+                continue
+            raw_value = mapping.get(key)
+            if isinstance(raw_value, dict):
+                raw_value = raw_value.get('shuttle') or raw_value.get('occupant')
+            occupant = _clean_token(raw_value)
+            if occupant and occupant not in expected_labels:
+                return f'target slot {slot_id} is occupied by {occupant}'
+    target_sensor = _sensor_for_slot(slot_sensor_by_side, side, slot).casefold()
+    if not target_sensor:
+        return ''
+    for reading in _active_sensor_readings_from_rail(rail):
+        if _clean_token(reading.get('name')).casefold() != target_sensor:
+            continue
+        occupant = _clean_token(reading.get('shuttle'))
+        if occupant and occupant not in expected_labels:
+            return f'target slot {slot_id} is occupied by {occupant}'
+        if not occupant:
+            return f'target slot {slot_id} occupancy is active but shuttle identity is unknown'
     return ''
 
 
@@ -1117,6 +1295,13 @@ def _decode_room315_vla_action(
             )
         expanded = _expanded_device_assignments(assignments)
         side = corrected['side']
+        rail = _rail_snapshot(rails, side)
+        reason = (
+            _explicit_state_quality_reason(rail, f'{side} trusted safety state')
+            or _sensor_dropout_reason(rail, side)
+        )
+        if reason:
+            return _safety_decision(accepted=False, original_action=command, reason=reason)
         assignments_are_noop = _switch_assignments_are_noop(rails, side, expanded)
         if (
             _is_all_switch_loop_transition(expanded)
@@ -1148,6 +1333,13 @@ def _decode_room315_vla_action(
             )
         expanded = _expanded_device_assignments(assignments)
         side = corrected['side']
+        rail = _rail_snapshot(rails, side)
+        reason = (
+            _explicit_state_quality_reason(rail, f'{side} trusted safety state')
+            or _sensor_dropout_reason(rail, side)
+        )
+        if reason:
+            return _safety_decision(accepted=False, original_action=command, reason=reason)
         if _rail_has_moving_shuttle(rails, side):
             for stopper_name, state in expanded.items():
                 if state != '1':
@@ -1215,6 +1407,22 @@ def _decode_room315_vla_action(
                 reason=f'missing shuttle {shuttle_name!r} on {side} rail',
             )
         if command_name == 'ON':
+            rail = _rail_snapshot(rails, side)
+            reason = (
+                _explicit_state_quality_reason(rail, f'{side} trusted safety state')
+                or _sensor_dropout_reason(rail, side)
+                or _unknown_localization_reason(rails, side, shuttle_name)
+                or _obstacle_appearance_reason(rail, side)
+                or _target_slot_occupied_reason(
+                    rails,
+                    slot_sensor_by_side,
+                    side,
+                    command,
+                    shuttle_name,
+                )
+            )
+            if reason:
+                return _safety_decision(accepted=False, original_action=command, reason=reason)
             blocked = _closed_stoppers(rails, side)
             if blocked:
                 target_stopper = _clean_token(
@@ -1250,6 +1458,12 @@ def _decode_room315_vla_action(
                 reason=f'invalid start_slot {start_slot!r}; allowed 1-4',
             )
         moving = bool(command.get('moving', command.get('start', False)))
+        rail = _rail_snapshot(rails, side)
+        reason = _explicit_state_quality_reason(rail, f'{side} trusted safety state')
+        if moving:
+            reason = reason or _sensor_dropout_reason(rail, side) or _obstacle_appearance_reason(rail, side)
+        if reason:
+            return _safety_decision(accepted=False, original_action=command, reason=reason)
         if moving and _closed_stoppers(rails, side):
             return _safety_decision(
                 accepted=False,
@@ -1315,6 +1529,14 @@ class Room315VlaSupervisor(Node):
         self.block_reservations: dict[str, str] = {}
         self.station_slot_targets: dict[str, str] = {}
         self.min_headway_blocks = int(self.defaults.get('min_headway_blocks', 1) or 1)
+        self.max_recovery_retries = max(int(self.defaults.get('max_recovery_retries', 2) or 2), 0)
+        self.safety_recovery: dict[str, Any] = {
+            'phase': 'idle',
+            'retry_count': 0,
+            'reason': '',
+            'next_step': '',
+            'model_input_exposure': 'excluded',
+        }
         self.last_safety_decision: dict[str, Any] | None = None
         self.safety_decisions: list[dict[str, Any]] = []
         self.safety_decision_log_limit = max(
@@ -1633,6 +1855,9 @@ class Room315VlaSupervisor(Node):
             command = self._parse_command(raw)
             decision = self._decode_and_record_safety(command)
             if not decision.get('accepted'):
+                if self._handle_recoverable_safety_rejection(decision):
+                    self._publish_status()
+                    return
                 self._set_result(f'command rejected by safety decoder: {decision.get("reason", "")}')
                 self.get_logger().warning(self.last_result)
                 self._publish_status()
@@ -1879,6 +2104,30 @@ class Room315VlaSupervisor(Node):
                 self.safety_metrics['deadlock_detected_count'] = (
                     int(self.safety_metrics.get('deadlock_detected_count') or 0) + 1
                 )
+            if any(word in reason_text for word in ('stale', 'conflicting', 'trusted safety state')):
+                self.safety_metrics['trusted_state_rejection_count'] = (
+                    int(self.safety_metrics.get('trusted_state_rejection_count') or 0) + 1
+                )
+            if 'unknown localization' in reason_text:
+                self.safety_metrics['unknown_localization_rejection_count'] = (
+                    int(self.safety_metrics.get('unknown_localization_rejection_count') or 0) + 1
+                )
+            if 'obstacle' in reason_text:
+                self.safety_metrics['obstacle_stop_count'] = (
+                    int(self.safety_metrics.get('obstacle_stop_count') or 0) + 1
+                )
+            if 'sensor dropout' in reason_text:
+                self.safety_metrics['sensor_dropout_count'] = (
+                    int(self.safety_metrics.get('sensor_dropout_count') or 0) + 1
+                )
+            if 'timeout' in reason_text:
+                self.safety_metrics['timeout_rejection_count'] = (
+                    int(self.safety_metrics.get('timeout_rejection_count') or 0) + 1
+                )
+            if 'target slot' in reason_text and 'occupied' in reason_text:
+                self.safety_metrics['occupied_target_rejection_count'] = (
+                    int(self.safety_metrics.get('occupied_target_rejection_count') or 0) + 1
+                )
         total = int(self.safety_metrics.get('total_proposed_actions') or 0)
         rejected = int(self.safety_metrics.get('rejected_actions') or 0)
         self.safety_metrics['illegal_proposal_rate'] = 0.0 if total == 0 else round(rejected / total, 4)
@@ -1891,6 +2140,48 @@ class Room315VlaSupervisor(Node):
         self.safety_decisions.append(entry)
         if len(self.safety_decisions) > self.safety_decision_log_limit:
             self.safety_decisions = self.safety_decisions[-self.safety_decision_log_limit:]
+
+    def _handle_recoverable_safety_rejection(self, decision: dict[str, Any]) -> bool:
+        reason = str(decision.get('reason') or 'unknown safety rejection')
+        if not _is_recoverable_safety_reason(reason):
+            return False
+        previous = self.safety_recovery if isinstance(self.safety_recovery, dict) else {}
+        retry_count = int(previous.get('retry_count') or 0) + 1
+        if retry_count > self.max_recovery_retries:
+            self.safety_metrics['fail_safe_abort_count'] = (
+                int(self.safety_metrics.get('fail_safe_abort_count') or 0) + 1
+            )
+            self.emergency_stop = True
+            self._stop_all(
+                close_stoppers=True,
+                reason=f'fail-safe abort after bounded recovery retries: {reason}',
+            )
+            self.safety_recovery = {
+                'phase': 'fail_safe_abort',
+                'retry_count': retry_count,
+                'max_retries': self.max_recovery_retries,
+                'reason': reason,
+                'next_step': 'manual_intervention_required',
+                'model_input_exposure': 'excluded',
+            }
+            return True
+
+        self.safety_metrics['safety_recovery_count'] = (
+            int(self.safety_metrics.get('safety_recovery_count') or 0) + 1
+        )
+        self._stop_all(
+            close_stoppers=False,
+            reason=f'safe recovery stop before reobserve/replan: {reason}',
+        )
+        self.safety_recovery = {
+            'phase': 'safe_stop_reobserve_replan',
+            'retry_count': retry_count,
+            'max_retries': self.max_recovery_retries,
+            'reason': reason,
+            'next_step': 'reacquire_observations_then_request_new_plan',
+            'model_input_exposure': 'excluded',
+        }
+        return True
 
     def _update_runtime_fleet_safety(self, decision: dict[str, Any]) -> None:
         corrected = decision.get('corrected_action')
@@ -2475,6 +2766,10 @@ class Room315VlaSupervisor(Node):
                 'metrics': self.safety_metrics,
                 'last_decision': self.last_safety_decision,
                 'recent_decisions': list(self.safety_decisions),
+                'recovery': dict(getattr(self, 'safety_recovery', {
+                    'phase': 'idle',
+                    'model_input_exposure': 'excluded',
+                })),
                 'fleet_state': {
                     'block_occupancy': fleet_state.block_occupancy,
                     'block_reservations': dict(getattr(self, 'block_reservations', {})),

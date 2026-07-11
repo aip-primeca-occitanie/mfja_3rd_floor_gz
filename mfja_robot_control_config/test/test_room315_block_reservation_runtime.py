@@ -96,3 +96,36 @@ def test_supervisor_rejects_motion_into_reserved_block():
 
     assert decision['accepted'] is False
     assert 'reserved by R1' in decision['reason']
+
+
+def test_fleet_validator_detects_deadlock_with_deterministic_tie_breaking():
+    multi = _load_module('room_315_multi_shuttle', MULTI_PATH)
+    registry = multi.ShuttleRegistry(right_count=2, left_count=0)
+    state = multi.FleetSafetyState(
+        block_occupancy={
+            'right:A12E': 'R1',
+            'right:A23E': 'R2',
+        },
+        block_reservations={
+            'right:A12E': 'R2',
+            'right:A23E': 'R1',
+        },
+        station_slot_targets={},
+        min_headway_blocks=1,
+    )
+
+    ok, reason = multi.validate_fleet_command(
+        {
+            'action': 'shuttle',
+            'side': 'right',
+            'shuttle_id': 'R2',
+            'command': 'ON',
+            'next_block': 'A12E',
+        },
+        registry=registry,
+        fleet_state=state,
+    )
+
+    assert ok is False
+    assert 'deadlock detected' in reason
+    assert 'priority to R1' in reason

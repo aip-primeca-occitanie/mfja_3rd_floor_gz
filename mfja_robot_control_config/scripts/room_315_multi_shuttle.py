@@ -800,6 +800,10 @@ def validate_fleet_command(
         target_slot = normalize_fleet_slot_id(raw_target_slot, side=side)
         if fleet_state is not None:
             owner_labels = {spec.short_id, spec.shuttle_id, spec.gazebo_entity_name}
+            if command_name == 'ON':
+                deadlock_reason = _deadlock_tie_breaker_reason(fleet_state, spec.short_id)
+                if deadlock_reason:
+                    return False, deadlock_reason
             if command_name == 'ON' and next_block:
                 occupant = _fleet_mapping_lookup(
                     fleet_state.block_occupancy,
@@ -836,6 +840,25 @@ def validate_fleet_command(
                         f'minimum is {fleet_state.min_headway_blocks}'
                     )
     return True, ''
+
+
+def _deadlock_tie_breaker_reason(state: FleetSafetyState, owner: str) -> str:
+    if not owner or not DeadlockDetector().detect(state):
+        return ''
+    participants: set[str] = set()
+    for block, reserved_owner in state.block_reservations.items():
+        occupant = state.block_occupancy.get(block, '')
+        if occupant and reserved_owner and occupant != reserved_owner:
+            participants.update({occupant, reserved_owner})
+    if owner not in participants or len(participants) < 2:
+        return ''
+    winner = sorted(participants)[0]
+    if owner == winner:
+        return ''
+    return (
+        f'deadlock detected: deterministic tie-breaker grants priority to {winner}; '
+        f'{owner} must safe-stop, reobserve, and replan'
+    )
 
 
 def _segment_name(raw: Any) -> str:
