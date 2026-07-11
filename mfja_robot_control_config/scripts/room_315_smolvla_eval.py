@@ -3,6 +3,7 @@
 import argparse
 import csv
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -14,6 +15,40 @@ from typing import Any
 
 import numpy as np
 import yaml
+
+try:
+    from room_315_legacy_direct_action_metrics import (
+        BASELINE_ID,
+        action_metrics,
+        action_metrics_by_family,
+        detect_vectorizer_leakage,
+        episode_family_lookup,
+        family_from_row,
+        file_fingerprint,
+        load_json,
+        load_jsonl,
+        offline_supervisor_decision,
+    )
+except ModuleNotFoundError:
+    _metrics_path = Path(__file__).with_name('room_315_legacy_direct_action_metrics.py')
+    _spec = importlib.util.spec_from_file_location(
+        'room_315_legacy_direct_action_metrics',
+        _metrics_path,
+    )
+    if _spec is None or _spec.loader is None:
+        raise
+    _metrics = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_metrics)
+    BASELINE_ID = _metrics.BASELINE_ID
+    action_metrics = _metrics.action_metrics
+    action_metrics_by_family = _metrics.action_metrics_by_family
+    detect_vectorizer_leakage = _metrics.detect_vectorizer_leakage
+    episode_family_lookup = _metrics.episode_family_lookup
+    family_from_row = _metrics.family_from_row
+    file_fingerprint = _metrics.file_fingerprint
+    load_json = _metrics.load_json
+    load_jsonl = _metrics.load_jsonl
+    offline_supervisor_decision = _metrics.offline_supervisor_decision
 
 
 def _env_path(name: str, fallback: str) -> Path:
@@ -29,6 +64,7 @@ DEFAULT_OUTPUT_DIR = _env_path(
     'ROOM315_SMOLVLA_EVAL_OUTPUT_DIR',
     'room315_local_training/smolvla_eval/v1_pretrained_compact32',
 )
+DEFAULT_SPLITS_DIR = _env_path('ROOM315_VLA_SPLITS_DIR', 'room315_local_training/splits')
 DEFAULT_ACTION_SPACE = (
     Path(__file__).resolve().parents[1]
     / 'config'
@@ -72,6 +108,7 @@ SAMPLE_FIELDS = (
     'episode_index',
     'frame_index',
     'task',
+    'task_family',
     'true_primitive_id',
     'pred_primitive_id',
     'true_side_id',
@@ -82,6 +119,10 @@ SAMPLE_FIELDS = (
     'pred_speed_mps',
     'exact_discrete_action',
     'exact_action',
+    'action_schema_legal',
+    'supervisor_rejection_reason',
+    'inference_latency_s',
+    'cycle_time_s',
     'action_mae',
 )
 
@@ -412,6 +453,32 @@ def camera_completeness_report(tracker: dict[str, Any], total_samples: int) -> d
     }
 
 
+def conversion_state_vectorizer_path(dataset_root: Path) -> Path | None:
+    conversion_path = dataset_root.expanduser() / 'room315_conversion.json'
+    if not conversion_path.exists():
+        return None
+    conversion = load_json(conversion_path)
+    raw_path = str(conversion.get('state_vectorizer') or '').strip()
+    if not raw_path:
+        return None
+    path = Path(raw_path).expanduser()
+    return path if path.is_absolute() else conversion_path.parent / path
+
+
+def _peak_gpu_memory(torch_module: Any) -> dict[str, Any]:
+    if not torch_module.cuda.is_available():
+        return {
+            'cuda_available': False,
+            'allocated_bytes': None,
+            'reserved_bytes': None,
+        }
+    return {
+        'cuda_available': True,
+        'allocated_bytes': int(torch_module.cuda.max_memory_allocated()),
+        'reserved_bytes': int(torch_module.cuda.max_memory_reserved()),
+    }
+
+
 def _require_lerobot():
     try:
         import torch
@@ -459,6 +526,7 @@ def evaluate_smolvla(
     dataset_root: Path,
     output_dir: Path,
     split_name: str,
+    source_jsonl: Path | None = None,
     action_space_path: Path = DEFAULT_ACTION_SPACE,
     max_samples: int | None = None,
     stride: int = 1,
@@ -473,8 +541,15 @@ def evaluate_smolvla(
         raise FileNotFoundError(f'checkpoint not found: {checkpoint}')
     if not dataset_root.exists():
         raise FileNotFoundError(f'dataset root not found: {dataset_root}')
+    if source_jsonl is None:
+        candidate = (DEFAULT_SPLITS_DIR / f'{split_name}.jsonl').expanduser()
+        source_jsonl = candidate if candidate.exists() else None
+    source_rows = load_jsonl(source_jsonl) if source_jsonl is not None and source_jsonl.exists() else []
+    source_family_lookup = episode_family_lookup(source_rows)
 
     dataset_fingerprint = dataset_root_fingerprint(dataset_root)
+    source_fingerprint = file_fingerprint(source_jsonl) if source_jsonl is not None and source_jsonl.exists() else None
+    leakage = detect_vectorizer_leakage(conversion_state_vectorizer_path(dataset_root))
     action_space = load_action_space(action_space_path)
     fields = action_vector_fields(action_space)
     ranges = action_field_ranges(action_space)
@@ -495,6 +570,8 @@ def evaluate_smolvla(
     policy = SmolVLAPolicy.from_pretrained(checkpoint)
     policy.eval()
     preprocessor, postprocessor = make_pre_post_processors(policy.config, pretrained_path=str(checkpoint))
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
 
     records: list[dict[str, Any]] = []
     task_counts: Counter[str] = Counter()
@@ -502,6 +579,7 @@ def evaluate_smolvla(
     camera_tracker = _new_camera_tracker()
     with torch.no_grad():
         for sample_index, dataset_index in enumerate(indexes):
+            cycle_start = time.perf_counter()
             item = dataset[dataset_index]
             _track_camera_item(
                 camera_tracker,
@@ -515,22 +593,34 @@ def evaluate_smolvla(
             true_raw = _tensor_to_numpy(item['action']).reshape(-1)
             batch = preprocessor(_make_policy_batch(torch, item))
             policy.reset()
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+            inference_start = time.perf_counter()
             predicted = policy.select_action(dict(batch))
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+            inference_latency = time.perf_counter() - inference_start
             predicted = postprocessor(predicted)
             pred_raw = _tensor_to_numpy(predicted).reshape(-1)[: len(fields)]
             true_raw = true_raw[: len(fields)]
             true_quantized = quantize_action(true_raw, fields, ranges)
             pred_quantized = quantize_action(pred_raw, fields, ranges)
+            source_row = source_rows[dataset_index] if dataset_index < len(source_rows) else {'task': task}
+            decision = offline_supervisor_decision(pred_quantized)
             record = {
                 'sample_index': sample_index,
                 'dataset_index': dataset_index,
                 'episode_index': _safe_int(_tensor_to_numpy(item['episode_index']).item()),
                 'frame_index': _safe_int(_tensor_to_numpy(item['frame_index']).item()),
                 'task': task,
+                'task_family': family_from_row(source_row, source_family_lookup),
                 'true_raw': true_raw,
                 'pred_raw': pred_raw,
                 'true_quantized': true_quantized,
                 'pred_quantized': pred_quantized,
+                'supervisor_decision': decision,
+                'inference_latency_seconds': inference_latency,
+                'cycle_time_seconds': time.perf_counter() - cycle_start,
             }
             records.append(record)
             per_task_records[task].append(record)
@@ -538,10 +628,14 @@ def evaluate_smolvla(
                 print(f'evaluated {sample_index + 1}/{len(indexes)} samples', flush=True)
 
     summary_metrics = summarise_predictions(records, fields, speed_tolerance=speed_tolerance)
+    summary_metrics.update(
+        action_metrics(records, fields, speed_tolerance=speed_tolerance)
+    )
     task_metrics = {
         task: summarise_predictions(task_records, fields, speed_tolerance=speed_tolerance)
         for task, task_records in sorted(per_task_records.items())
     }
+    family_metrics = action_metrics_by_family(records, fields, speed_tolerance=speed_tolerance)
     camera_report = camera_completeness_report(camera_tracker, len(records))
     if camera_report['complete_samples'] != len(records):
         raise ValueError(
@@ -575,6 +669,7 @@ def evaluate_smolvla(
                 'episode_index': record['episode_index'],
                 'frame_index': record['frame_index'],
                 'task': record['task'],
+                'task_family': record['task_family'],
                 'true_primitive_id': int(true_q[primitive_index]),
                 'pred_primitive_id': int(pred_q[primitive_index]),
                 'true_side_id': int(true_q[side_index]),
@@ -585,16 +680,29 @@ def evaluate_smolvla(
                 'pred_speed_mps': round(float(pred_raw[speed_index]), 5),
                 'exact_discrete_action': exact_discrete,
                 'exact_action': exact_action,
+                'action_schema_legal': bool(record['supervisor_decision'].get('accepted')),
+                'supervisor_rejection_reason': str(record['supervisor_decision'].get('reason') or ''),
+                'inference_latency_s': round(float(record['inference_latency_seconds']), 6),
+                'cycle_time_s': round(float(record['cycle_time_seconds']), 6),
                 'action_mae': round(float(np.mean(np.abs(pred_raw - true_raw))), 6),
             })
 
     summary = {
         'tool': 'room_315_smolvla_eval',
+        'workflow_id': BASELINE_ID,
         'baseline_purpose': 'direct-action SmolVLA action_vector evaluation',
         'checkpoint': str(checkpoint),
         'dataset_repo_id': dataset_repo_id,
         'dataset_root': str(dataset_root),
         'dataset_fingerprint': dataset_fingerprint,
+        'source_jsonl': str(source_jsonl) if source_jsonl is not None else None,
+        'source_fingerprint': source_fingerprint,
+        'source_rows': len(source_rows) if source_rows else None,
+        'source_row_alignment': {
+            'dataset_frames': len(dataset),
+            'source_rows': len(source_rows) if source_rows else None,
+            'dataset_index_source_row_lookup': bool(source_rows),
+        },
         'split': split_name,
         'dataset_frames': len(dataset),
         'dataset_episodes': dataset.num_episodes,
@@ -617,11 +725,23 @@ def evaluate_smolvla(
             'row_level_metadata_used_as_features': [],
             'debug_or_ablation_features': [],
         },
+        'comparison_validity': {
+            **leakage,
+            'validity_label': (
+                'valid-for-comparison'
+                if leakage.get('comparison_valid') is True
+                else 'invalid-for-comparison'
+                if leakage.get('comparison_valid') is False
+                else 'unknown'
+            ),
+        },
         'camera_completeness': camera_report,
         'class_balance': class_balance,
         'task_counts': dict(task_counts),
         'metrics': summary_metrics,
         'task_metrics': task_metrics,
+        'family_metrics': family_metrics,
+        'peak_gpu_memory': _peak_gpu_memory(torch),
         'summary_json': str(summary_path),
         'predictions_csv': str(samples_path),
     }
@@ -654,6 +774,12 @@ def main() -> None:
         default=DEFAULT_OUTPUT_DIR,
         help='Evaluation output directory. Defaults to ROOM315_SMOLVLA_EVAL_OUTPUT_DIR.',
     )
+    parser.add_argument(
+        '--source-jsonl',
+        type=Path,
+        default=None,
+        help='Clean split JSONL used to derive fingerprints and task-family metrics.',
+    )
     parser.add_argument('--action-space', type=Path, default=DEFAULT_ACTION_SPACE)
     parser.add_argument('--max-samples', type=int, default=None)
     parser.add_argument('--stride', type=int, default=1)
@@ -669,6 +795,7 @@ def main() -> None:
         dataset_root=args.dataset_root or Path(defaults['root']),
         output_dir=args.output_dir,
         split_name=args.split,
+        source_jsonl=args.source_jsonl,
         action_space_path=args.action_space,
         max_samples=args.max_samples,
         stride=args.stride,

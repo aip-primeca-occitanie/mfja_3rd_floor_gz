@@ -12,6 +12,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SPLIT_SCRIPT = REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_vla_split_dataset.py'
 TRAIN_SCRIPT = REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_vla_train_local.py'
 LEROBOT_SCRIPT = REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_vla_to_lerobot.py'
+METRICS_SCRIPT = (
+    REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_legacy_direct_action_metrics.py'
+)
 SMOLVLA_EVAL_SCRIPT = (
     REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_smolvla_eval.py'
 )
@@ -257,16 +260,132 @@ def test_training_helper_builds_vocab_state_vectorizer_and_target_stats():
     vocab = trainer.build_vocab(rows, max_vocab_size=12)
     encoded = trainer.encode_text('move unknown_token', vocab, max_tokens=4)
     vectorizer = trainer.StateVectorizer.fit(rows)
+    restored = trainer.StateVectorizer.from_json(vectorizer.to_json())
     state = vectorizer.transform(rows[0])
+    restored_state = restored.transform(rows[0])
     mean, std = trainer.target_stats(rows)
 
     assert vocab['move'] > 1
     assert encoded.shape == (4,)
     assert encoded[1] == vocab[trainer.TEXT_UNK]
     assert state.shape == (vectorizer.dim,)
+    assert restored_state.shape == (vectorizer.dim,)
+    assert restored.numeric_keys == vectorizer.numeric_keys
     assert vectorizer.dim > 0
     assert mean.shape == (24,)
     assert std.shape == (24,)
+
+
+def test_legacy_direct_action_metrics_legality_latency_and_family():
+    metrics = _load_module('room_315_legacy_direct_action_metrics', METRICS_SCRIPT)
+    fields = [
+        'primitive_id',
+        'side_id',
+        'shuttle_index',
+        'switch_mask_A1',
+        'switch_mask_A2',
+        'switch_mask_A3',
+        'switch_mask_A4',
+        'switch_value_A1',
+        'switch_value_A2',
+        'switch_value_A3',
+        'switch_value_A4',
+        'stopper_mask_A1',
+        'stopper_mask_A2',
+        'stopper_mask_A3',
+        'stopper_mask_A4',
+        'stopper_value_A1',
+        'stopper_value_A2',
+        'stopper_value_A3',
+        'stopper_value_A4',
+        'speed_mps',
+        'wait_condition_id',
+        'target_id',
+        'reason_id',
+        'coordination_mode',
+    ]
+    action = [
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.08,
+        7.0,
+        28.0,
+        10.0,
+        0.0,
+    ]
+    decision = metrics.offline_supervisor_decision(action)
+    summary = metrics.action_metrics(
+        [
+            {
+                'true_raw': action,
+                'pred_raw': action,
+                'true_quantized': action,
+                'pred_quantized': action,
+                'task_family': 'right_loaded_case',
+                'supervisor_decision': decision,
+                'inference_latency_seconds': 0.002,
+                'cycle_time_seconds': 0.005,
+            }
+        ],
+        fields,
+        speed_tolerance=0.015,
+    )
+    by_family = metrics.action_metrics_by_family(
+        [
+            {
+                'true_raw': action,
+                'pred_raw': action,
+                'true_quantized': action,
+                'pred_quantized': action,
+                'task_family': 'right_loaded_case',
+                'supervisor_decision': decision,
+                'inference_latency_seconds': 0.002,
+                'cycle_time_seconds': 0.005,
+            }
+        ],
+        fields,
+        speed_tolerance=0.015,
+    )
+
+    assert decision['accepted'] is True
+    assert summary['action_schema_decode_success_rate'] == 1.0
+    assert summary['action_schema_legality_rate'] == 1.0
+    assert summary['supervisor_rejection_rate'] == 0.0
+    assert summary['inference_latency_seconds']['p50'] == 0.002
+    assert summary['cycle_time_seconds']['p95'] == 0.005
+    assert by_family['right_loaded_case']['samples'] == 1
+
+
+def test_legacy_direct_action_metrics_detects_leaked_vectorizer(tmp_path):
+    metrics = _load_module('room_315_legacy_direct_action_metrics_leakage', METRICS_SCRIPT)
+    vectorizer_path = tmp_path / 'state_vectorizer.json'
+    vectorizer_path.write_text(
+        json.dumps({'dim': 32, 'names': ['task.side_left', 'payload_present', 'step_index_norm']}),
+        encoding='utf-8',
+    )
+
+    report = metrics.detect_vectorizer_leakage(vectorizer_path)
+
+    assert report['checked'] is True
+    assert report['comparison_valid'] is False
+    assert report['leaked_features'] == ['payload_present', 'step_index_norm']
 
 
 def test_lerobot_converter_state_vectorizer_round_trip():

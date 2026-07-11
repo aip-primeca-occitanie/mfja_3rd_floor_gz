@@ -7,18 +7,56 @@ baseline over event-level action vectors using production features declared in
 """
 
 import argparse
+import csv
 import hashlib
+import importlib.util
 import json
 import math
 import os
 import random
 import re
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+import yaml
 from PIL import Image
+
+try:
+    from room_315_legacy_direct_action_metrics import (
+        BASELINE_ID,
+        action_metrics,
+        action_metrics_by_family,
+        detect_vectorizer_leakage,
+        episode_family_lookup,
+        family_from_row,
+        file_fingerprint as baseline_file_fingerprint,
+        offline_supervisor_decision,
+        quantize_action as baseline_quantize_action,
+        rows_fingerprint as baseline_rows_fingerprint,
+    )
+except ModuleNotFoundError:
+    _metrics_path = Path(__file__).with_name('room_315_legacy_direct_action_metrics.py')
+    _spec = importlib.util.spec_from_file_location(
+        'room_315_legacy_direct_action_metrics',
+        _metrics_path,
+    )
+    if _spec is None or _spec.loader is None:
+        raise
+    _metrics = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_metrics)
+    BASELINE_ID = _metrics.BASELINE_ID
+    action_metrics = _metrics.action_metrics
+    action_metrics_by_family = _metrics.action_metrics_by_family
+    detect_vectorizer_leakage = _metrics.detect_vectorizer_leakage
+    episode_family_lookup = _metrics.episode_family_lookup
+    family_from_row = _metrics.family_from_row
+    baseline_file_fingerprint = _metrics.file_fingerprint
+    offline_supervisor_decision = _metrics.offline_supervisor_decision
+    baseline_quantize_action = _metrics.quantize_action
+    baseline_rows_fingerprint = _metrics.rows_fingerprint
 
 
 def _env_path(name: str, fallback: str) -> Path:
@@ -28,11 +66,18 @@ def _env_path(name: str, fallback: str) -> Path:
 DEFAULT_SPLITS_DIR = _env_path('ROOM315_VLA_SPLITS_DIR', 'room315_local_training/splits')
 DEFAULT_OUTPUT_DIR = _env_path('ROOM315_LOCAL_BASELINE_OUTPUT_DIR', 'room315_local_training/checkpoints/v0')
 DEFAULT_DATASET_ROOT = _env_path('ROOM315_VLA_DATASET_ROOT', 'room315_payload_dataset')
+DEFAULT_ACTION_SPACE = (
+    Path(__file__).resolve().parents[1]
+    / 'config'
+    / 'room_315_vla'
+    / 'action_space.yaml'
+)
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 MODEL_INPUT_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 TEXT_PAD = '<pad>'
 TEXT_UNK = '<unk>'
 SPEED_INDEX = 19
+SPEED_FIELD = 'speed_mps'
 
 
 def _pretty_json(data: Any) -> str:
@@ -104,6 +149,19 @@ def _load_manifest(splits_dir: Path) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def _load_json(path: Path) -> dict[str, Any]:
+    with path.expanduser().open('r', encoding='utf-8') as stream:
+        parsed = json.load(stream)
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _safe_int(raw: Any, fallback: int = 0) -> int:
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return fallback
+
+
 def _resolve_dataset_root(dataset_root: Path | None, splits_dir: Path) -> Path:
     if dataset_root is not None:
         return dataset_root.expanduser().resolve()
@@ -112,6 +170,55 @@ def _resolve_dataset_root(dataset_root: Path | None, splits_dir: Path) -> Path:
     if root:
         return Path(root).expanduser().resolve()
     return DEFAULT_DATASET_ROOT.expanduser().resolve()
+
+
+def _mapping_range(config: dict[str, Any], key: str, *, fallback: tuple[int, int]) -> tuple[int, int]:
+    values = config.get(key)
+    if not isinstance(values, dict) or not values:
+        return fallback
+    numeric_values = [_safe_int(value) for value in values.values()]
+    return min(numeric_values), max(numeric_values)
+
+
+def load_action_space(path: Path = DEFAULT_ACTION_SPACE) -> dict[str, Any]:
+    with path.expanduser().open('r', encoding='utf-8') as stream:
+        parsed = yaml.safe_load(stream)
+    if not isinstance(parsed, dict):
+        raise ValueError(f'action space YAML must contain a mapping: {path}')
+    fields = parsed.get('action_vector_fields')
+    if not isinstance(fields, list) or not fields:
+        raise ValueError(f'action space YAML has no action_vector_fields: {path}')
+    return parsed
+
+
+def action_vector_fields(action_space: dict[str, Any]) -> list[str]:
+    return [str(field) for field in action_space['action_vector_fields']]
+
+
+def action_field_ranges(action_space: dict[str, Any]) -> dict[str, tuple[int, int]]:
+    ranges: dict[str, tuple[int, int]] = {
+        'primitive_id': _mapping_range(action_space, 'primitive_ids', fallback=(0, 6)),
+        'side_id': _mapping_range(action_space, 'side_ids', fallback=(0, 1)),
+        'shuttle_index': (-1, 3),
+        'wait_condition_id': _mapping_range(action_space, 'wait_condition_ids', fallback=(0, 9)),
+        'target_id': _mapping_range(action_space, 'target_ids', fallback=(0, 35)),
+        'reason_id': _mapping_range(action_space, 'reason_ids', fallback=(0, 21)),
+        'coordination_mode': _mapping_range(action_space, 'coordination_mode_ids', fallback=(0, 5)),
+    }
+    for slot in ('A1', 'A2', 'A3', 'A4'):
+        ranges[f'switch_mask_{slot}'] = _mapping_range(
+            action_space, 'device_mask_ids', fallback=(0, 1)
+        )
+        ranges[f'stopper_mask_{slot}'] = _mapping_range(
+            action_space, 'device_mask_ids', fallback=(0, 1)
+        )
+        ranges[f'switch_value_{slot}'] = _mapping_range(
+            action_space, 'switch_value_ids', fallback=(0, 2)
+        )
+        ranges[f'stopper_value_{slot}'] = _mapping_range(
+            action_space, 'stopper_value_ids', fallback=(0, 2)
+        )
+    return ranges
 
 
 def _model_input(row: dict[str, Any], *, context: str = 'row') -> dict[str, Any]:
@@ -229,6 +336,21 @@ class StateVectorizer:
         return cls(
             sorted(numeric_keys),
             {key: sorted(values) for key, values in sorted(categorical_values.items())},
+        )
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> 'StateVectorizer':
+        numeric_keys = data.get('numeric_keys')
+        categorical_values = data.get('categorical_values')
+        if not isinstance(numeric_keys, list) or not isinstance(categorical_values, dict):
+            raise ValueError('state vectorizer JSON is missing numeric_keys/categorical_values')
+        return cls(
+            [str(key) for key in numeric_keys],
+            {
+                str(key): [str(value) for value in values]
+                for key, values in categorical_values.items()
+                if isinstance(values, list)
+            },
         )
 
     @property
@@ -744,6 +866,362 @@ def _save_checkpoint(
     )
 
 
+def _torch_load_checkpoint(torch_module: Any, path: Path) -> dict[str, Any]:
+    try:
+        loaded = torch_module.load(path, map_location='cpu', weights_only=False)
+    except TypeError:
+        loaded = torch_module.load(path, map_location='cpu')
+    if not isinstance(loaded, dict) or 'model_state_dict' not in loaded:
+        raise ValueError(f'checkpoint does not contain a model_state_dict: {path}')
+    return loaded
+
+
+def _artifact_path(checkpoint: Path, name: str) -> Path:
+    return checkpoint.expanduser().resolve().parent / name
+
+
+def _load_target_stats(path: Path) -> tuple[np.ndarray, np.ndarray]:
+    parsed = _load_json(path)
+    mean = np.asarray(parsed.get('mean'), dtype=np.float32)
+    std = np.asarray(parsed.get('std'), dtype=np.float32)
+    if mean.ndim != 1 or std.ndim != 1 or mean.shape != std.shape:
+        raise ValueError(f'target stats must contain same-length mean/std arrays: {path}')
+    std = std.copy()
+    std[std < 1e-6] = 1.0
+    return mean, std
+
+
+def _checkpoint_training_config(checkpoint: dict[str, Any], checkpoint_path: Path) -> dict[str, Any]:
+    config = checkpoint.get('config')
+    if isinstance(config, dict):
+        return dict(config)
+    path = _artifact_path(checkpoint_path, 'training_config.json')
+    return _load_json(path) if path.exists() else {}
+
+
+def _peak_gpu_memory(torch_module: Any, device: str) -> dict[str, Any]:
+    if device != 'cuda' or not torch_module.cuda.is_available():
+        return {
+            'device': device,
+            'cuda_available': bool(torch_module.cuda.is_available()),
+            'allocated_bytes': None,
+            'reserved_bytes': None,
+        }
+    return {
+        'device': device,
+        'cuda_available': True,
+        'allocated_bytes': int(torch_module.cuda.max_memory_allocated()),
+        'reserved_bytes': int(torch_module.cuda.max_memory_reserved()),
+    }
+
+
+def _row_tensor_inputs(
+    torch_module: Any,
+    row: dict[str, Any],
+    *,
+    dataset_root: Path,
+    vocab: dict[str, int],
+    state_vectorizer: StateVectorizer,
+    max_tokens: int,
+    image_width: int,
+    image_height: int,
+    allow_blank_images: bool,
+    device: str,
+) -> tuple[Any, Any, Any]:
+    text = torch_module.as_tensor(
+        encode_text(_language(row), vocab, max_tokens),
+        dtype=torch_module.long,
+        device=device,
+    ).unsqueeze(0)
+    state = torch_module.as_tensor(
+        state_vectorizer.transform(row),
+        dtype=torch_module.float32,
+        device=device,
+    ).unsqueeze(0)
+    image = torch_module.as_tensor(
+        load_paired_images(
+            row,
+            dataset_root,
+            width=image_width,
+            height=image_height,
+            allow_blank_images=allow_blank_images,
+        ),
+        dtype=torch_module.float32,
+        device=device,
+    ).unsqueeze(0)
+    return text, state, image
+
+
+def _write_prediction_csv(path: Path, rows: list[dict[str, Any]], fields: list[str]) -> None:
+    speed_index = fields.index(SPEED_FIELD)
+    primitive_index = fields.index('primitive_id')
+    side_index = fields.index('side_id')
+    target_index = fields.index('target_id')
+    fieldnames = [
+        'split',
+        'sample_index',
+        'episode_id',
+        'task_family',
+        'true_primitive_id',
+        'pred_primitive_id',
+        'true_side_id',
+        'pred_side_id',
+        'true_target_id',
+        'pred_target_id',
+        'true_speed_mps',
+        'pred_speed_mps',
+        'action_schema_legal',
+        'supervisor_rejection_reason',
+        'inference_latency_s',
+        'cycle_time_s',
+    ]
+    with path.open('w', encoding='utf-8', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=fieldnames)
+        writer.writeheader()
+        for record in rows:
+            true_q = record['true_quantized']
+            pred_q = record['pred_quantized']
+            decision = record.get('supervisor_decision') or {}
+            writer.writerow({
+                'split': record['split'],
+                'sample_index': record['sample_index'],
+                'episode_id': record['episode_id'],
+                'task_family': record['task_family'],
+                'true_primitive_id': int(true_q[primitive_index]),
+                'pred_primitive_id': int(pred_q[primitive_index]),
+                'true_side_id': int(true_q[side_index]),
+                'pred_side_id': int(pred_q[side_index]),
+                'true_target_id': int(true_q[target_index]),
+                'pred_target_id': int(pred_q[target_index]),
+                'true_speed_mps': round(float(record['true_raw'][speed_index]), 5),
+                'pred_speed_mps': round(float(record['pred_raw'][speed_index]), 5),
+                'action_schema_legal': bool(decision.get('accepted')),
+                'supervisor_rejection_reason': str(decision.get('reason') or ''),
+                'inference_latency_s': round(float(record['inference_latency_seconds']), 6),
+                'cycle_time_s': round(float(record['cycle_time_seconds']), 6),
+            })
+
+
+def evaluate_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
+    torch_module = _require_torch()
+    checkpoint_path = args.eval_checkpoint.expanduser().resolve()
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f'checkpoint not found: {checkpoint_path}')
+    splits_dir = args.splits_dir.expanduser().resolve()
+    dataset_root = _resolve_dataset_root(args.dataset_root, splits_dir)
+    output_dir = (
+        args.eval_output_dir.expanduser().resolve()
+        if args.eval_output_dir is not None
+        else checkpoint_path.parent / BASELINE_ID
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    checkpoint = _torch_load_checkpoint(torch_module, checkpoint_path)
+    config = _checkpoint_training_config(checkpoint, checkpoint_path)
+    vocab = _load_json(_artifact_path(checkpoint_path, 'vocab.json'))
+    vectorizer_path = _artifact_path(checkpoint_path, 'state_vectorizer.json')
+    state_vectorizer = StateVectorizer.from_json(_load_json(vectorizer_path))
+    target_mean, target_std = _load_target_stats(_artifact_path(checkpoint_path, 'target_stats.json'))
+    action_space = load_action_space(args.action_space)
+    fields = action_vector_fields(action_space)
+    ranges = action_field_ranges(action_space)
+    if len(fields) != int(target_mean.shape[0]):
+        raise ValueError(
+            f'action-space field count {len(fields)} does not match checkpoint output '
+            f'dim {int(target_mean.shape[0])}'
+        )
+
+    _set_seed(torch_module, args.seed)
+    device = _choose_device(torch_module, args.device)
+    model = _build_model(
+        torch_module,
+        vocab_size=len(vocab),
+        state_dim=state_vectorizer.dim,
+        output_dim=int(target_mean.shape[0]),
+    ).to(device)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    if device == 'cuda' and torch_module.cuda.is_available():
+        torch_module.cuda.reset_peak_memory_stats()
+
+    image_width = _safe_int(config.get('image_width'), args.image_width)
+    image_height = _safe_int(config.get('image_height'), args.image_height)
+    max_tokens = _safe_int(config.get('max_tokens'), args.max_tokens)
+    mean_tensor = torch_module.as_tensor(target_mean, dtype=torch_module.float32, device=device)
+    std_tensor = torch_module.as_tensor(target_std, dtype=torch_module.float32, device=device)
+
+    split_names = [
+        name.strip()
+        for name in str(args.eval_splits or '').split(',')
+        if name.strip()
+    ]
+    if not split_names:
+        raise ValueError('--eval-splits selected no splits')
+
+    started = time.perf_counter()
+    splits: dict[str, Any] = {}
+    all_records: list[dict[str, Any]] = []
+    with torch_module.no_grad():
+        for split_name in split_names:
+            split_file = splits_dir / f'{split_name}.jsonl'
+            rows = _row_limit(_iter_jsonl(split_file), args.limit_eval_rows)
+            if not rows:
+                raise ValueError(f'{split_name} split is empty')
+            validate_model_input_rows(rows, split_name=split_name)
+            image_report = image_integrity_report(
+                rows,
+                dataset_root,
+                split_name=split_name,
+                allow_blank_images=args.allow_blank_images,
+            )
+            family_lookup = episode_family_lookup(rows)
+            split_records: list[dict[str, Any]] = []
+            for sample_index, row in enumerate(rows):
+                cycle_start = time.perf_counter()
+                text, state, image = _row_tensor_inputs(
+                    torch_module,
+                    row,
+                    dataset_root=dataset_root,
+                    vocab=vocab,
+                    state_vectorizer=state_vectorizer,
+                    max_tokens=max_tokens,
+                    image_width=image_width,
+                    image_height=image_height,
+                    allow_blank_images=args.allow_blank_images,
+                    device=device,
+                )
+                if device == 'cuda' and torch_module.cuda.is_available():
+                    torch_module.cuda.synchronize()
+                inference_start = time.perf_counter()
+                pred_norm = model(text, state, image)
+                if device == 'cuda' and torch_module.cuda.is_available():
+                    torch_module.cuda.synchronize()
+                inference_latency = time.perf_counter() - inference_start
+                pred = (pred_norm[0] * std_tensor + mean_tensor).detach().cpu().numpy()
+                true_raw = action_vector(row)[: len(fields)]
+                pred_raw = np.asarray(pred[: len(fields)], dtype=np.float32)
+                true_quantized = baseline_quantize_action(true_raw, fields, ranges)
+                pred_quantized = baseline_quantize_action(pred_raw, fields, ranges)
+                decision = offline_supervisor_decision(pred_quantized)
+                record = {
+                    'split': split_name,
+                    'sample_index': sample_index,
+                    'episode_id': str(row.get('episode_id') or ''),
+                    'task': str(row.get('task') or ''),
+                    'task_family': family_from_row(row, family_lookup),
+                    'true_raw': true_raw.tolist(),
+                    'pred_raw': pred_raw.tolist(),
+                    'true_quantized': true_quantized,
+                    'pred_quantized': pred_quantized,
+                    'supervisor_decision': decision,
+                    'inference_latency_seconds': inference_latency,
+                    'cycle_time_seconds': time.perf_counter() - cycle_start,
+                }
+                split_records.append(record)
+                if args.progress_every > 0 and (sample_index + 1) % args.progress_every == 0:
+                    print(
+                        f'evaluated {split_name} {sample_index + 1}/{len(rows)} samples',
+                        flush=True,
+                    )
+
+            split_prediction_path = output_dir / f'{split_name}_predictions.csv'
+            _write_prediction_csv(split_prediction_path, split_records, fields)
+            split_metrics = action_metrics(
+                split_records,
+                fields,
+                speed_tolerance=args.speed_tolerance,
+            )
+            splits[split_name] = {
+                'source_file': baseline_file_fingerprint(split_file),
+                'row_fingerprint': baseline_rows_fingerprint(rows),
+                'rows': len(rows),
+                'image_integrity': image_report,
+                'class_balance': class_balance_report(rows, expected_dim=len(fields)),
+                'metrics': split_metrics,
+                'family_metrics': action_metrics_by_family(
+                    split_records,
+                    fields,
+                    speed_tolerance=args.speed_tolerance,
+                ),
+                'predictions_csv': str(split_prediction_path),
+            }
+            all_records.extend(split_records)
+
+    artifact_paths = {
+        'checkpoint': checkpoint_path,
+        'vocab': _artifact_path(checkpoint_path, 'vocab.json'),
+        'state_vectorizer': vectorizer_path,
+        'target_stats': _artifact_path(checkpoint_path, 'target_stats.json'),
+        'training_config': _artifact_path(checkpoint_path, 'training_config.json'),
+    }
+    leakage = detect_vectorizer_leakage(vectorizer_path)
+    summary_path = output_dir / 'legacy_direct_action_eval.json'
+    summary = {
+        'tool': 'room_315_vla_train_local',
+        'workflow_id': BASELINE_ID,
+        'baseline_purpose': (
+            'small custom direct-action action_vector checkpoint evaluation; no PlanSys2, '
+            'execution, re-observation, or replanning loop'
+        ),
+        'checkpoint': str(checkpoint_path),
+        'checkpoint_epoch': checkpoint.get('epoch'),
+        'checkpoint_metrics': checkpoint.get('metrics'),
+        'checkpoint_training_config': config,
+        'dataset_root': str(dataset_root),
+        'splits_dir': str(splits_dir),
+        'evaluated_splits': split_names,
+        'speed_tolerance': args.speed_tolerance,
+        'seed': args.seed,
+        'device': device,
+        'allow_blank_images': bool(args.allow_blank_images),
+        'debug_blank_image_mode': bool(args.allow_blank_images),
+        'production_feature_source': 'model_input only',
+        'feature_purity': {
+            'production_features_from': 'model_input',
+            'row_level_metadata_used_as_features': [],
+            'debug_or_ablation_features': ['allow_blank_images'] if args.allow_blank_images else [],
+        },
+        'comparison_validity': {
+            **leakage,
+            'validity_label': (
+                'valid-for-comparison'
+                if leakage.get('comparison_valid') is True
+                else 'invalid-for-comparison'
+                if leakage.get('comparison_valid') is False
+                else 'unknown'
+            ),
+            'legacy_training_config': not bool(config.get('dataset_report')),
+            'legacy_training_config_reason': (
+                'training_config predates dataset_report/image-integrity metadata'
+                if not bool(config.get('dataset_report'))
+                else 'training_config contains hardened dataset report pointer'
+            ),
+        },
+        'artifact_fingerprints': {
+            name: baseline_file_fingerprint(path)
+            for name, path in artifact_paths.items()
+            if path.exists()
+        },
+        'action_vector_fields': fields,
+        'splits': splits,
+        'aggregate_metrics': action_metrics(
+            all_records,
+            fields,
+            speed_tolerance=args.speed_tolerance,
+        ),
+        'aggregate_family_metrics': action_metrics_by_family(
+            all_records,
+            fields,
+            speed_tolerance=args.speed_tolerance,
+        ),
+        'peak_gpu_memory': _peak_gpu_memory(torch_module, device),
+        'elapsed_seconds': round(time.perf_counter() - started, 3),
+        'summary_json': str(summary_path),
+    }
+    summary_path.write_text(_pretty_json(summary) + '\n', encoding='utf-8')
+    return summary
+
+
 def train_local(args: argparse.Namespace) -> dict[str, Any]:
     torch_module = _require_torch()
     splits_dir = args.splits_dir.expanduser().resolve()
@@ -1045,8 +1523,34 @@ def main() -> None:
         action='store_true',
         help='Debug only: substitute zero tensors for missing/unreadable required images.',
     )
+    parser.add_argument(
+        '--eval-checkpoint',
+        type=Path,
+        default=None,
+        help='Evaluate an existing local checkpoint instead of training.',
+    )
+    parser.add_argument(
+        '--eval-output-dir',
+        type=Path,
+        default=None,
+        help='Output directory for --eval-checkpoint artifacts.',
+    )
+    parser.add_argument(
+        '--eval-splits',
+        default='train,val,test',
+        help='Comma-separated JSONL split names to evaluate with --eval-checkpoint.',
+    )
+    parser.add_argument(
+        '--limit-eval-rows',
+        type=int,
+        default=None,
+        help='Optional debug row limit per split during --eval-checkpoint.',
+    )
+    parser.add_argument('--action-space', type=Path, default=DEFAULT_ACTION_SPACE)
+    parser.add_argument('--speed-tolerance', type=float, default=0.015)
+    parser.add_argument('--progress-every', type=int, default=100)
     args = parser.parse_args()
-    summary = train_local(args)
+    summary = evaluate_checkpoint(args) if args.eval_checkpoint is not None else train_local(args)
     print(_pretty_json(summary))
 
 

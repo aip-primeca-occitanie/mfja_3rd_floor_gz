@@ -60,6 +60,7 @@ install(
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
+    scripts/room_315_legacy_direct_action_metrics.py
     scripts/room_315_multi_shuttle.py
     scripts/room_315_pddl_dataset_report.py
     scripts/room_315_pddl_language_generator.py
