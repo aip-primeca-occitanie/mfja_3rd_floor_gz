@@ -57,6 +57,7 @@ install(
     scripts/conveyor_loop_mode_controller.py
     scripts/presentation_left_slot3_kuka_slot2.py
     scripts/robot_joint_command.py
+    scripts/room_315_contracts.py
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
@@ -92,6 +93,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_device_marker_lifecycle
     test/test_room315_device_marker_lifecycle.py
+  )
+  ament_add_pytest_test(
+    test_room315_contracts
+    test/test_room315_contracts.py
   )
   ament_add_pytest_test(
     test_presentation_left_slot3_kuka_slot2
