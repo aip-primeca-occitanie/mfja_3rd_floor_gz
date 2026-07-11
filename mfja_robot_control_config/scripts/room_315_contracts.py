@@ -57,8 +57,13 @@ STEP_RESULT_STATUSES = frozenset({
     'stale',
 })
 TASK_GOAL_CONSTRAINT_KEYS = frozenset({
+    'goal_type',
+    'inspection_subject',
+    'shuttle_selection',
     'side',
     'target_slot',
+    'target_kind',
+    'target_station',
     'target_shuttle',
     'payload_required',
     'max_plan_steps',

@@ -71,6 +71,7 @@ install(
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
     scripts/room_315_real_vla_agent.py
+    scripts/room_315_task_goal_builder.py
     scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
@@ -102,6 +103,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_observed_state_provider
     test/test_room315_observed_state_provider.py
+  )
+  ament_add_pytest_test(
+    test_room315_task_goal_builder
+    test/test_room315_task_goal_builder.py
   )
   ament_add_pytest_test(
     test_presentation_left_slot3_kuka_slot2
