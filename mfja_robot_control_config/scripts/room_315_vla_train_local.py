@@ -58,6 +58,46 @@ except ModuleNotFoundError:
     baseline_quantize_action = _metrics.quantize_action
     baseline_rows_fingerprint = _metrics.rows_fingerprint
 
+try:
+    from room_315_visual_state_dataset import (
+        DATASET_MODE_LEGACY_ACTION,
+        DATASET_MODE_VISUAL_STATE,
+        VISUAL_LABEL_SUFFIX,
+        VISUAL_STATE_SCHEMA_VERSION,
+        VisualStateLabelVectorizer,
+        load_visual_labels_for_rows,
+        pretty_json as visual_pretty_json,
+        validate_visual_state_rows,
+        visual_label_path_for_split,
+        visual_model_input_image_refs,
+        visual_state_class_balance,
+        visual_state_metrics,
+        visual_target_stats,
+    )
+except ModuleNotFoundError:
+    _visual_state_path = Path(__file__).with_name('room_315_visual_state_dataset.py')
+    _visual_spec = importlib.util.spec_from_file_location(
+        'room_315_visual_state_dataset',
+        _visual_state_path,
+    )
+    if _visual_spec is None or _visual_spec.loader is None:
+        raise
+    _visual_state = importlib.util.module_from_spec(_visual_spec)
+    _visual_spec.loader.exec_module(_visual_state)
+    DATASET_MODE_LEGACY_ACTION = _visual_state.DATASET_MODE_LEGACY_ACTION
+    DATASET_MODE_VISUAL_STATE = _visual_state.DATASET_MODE_VISUAL_STATE
+    VISUAL_LABEL_SUFFIX = _visual_state.VISUAL_LABEL_SUFFIX
+    VISUAL_STATE_SCHEMA_VERSION = _visual_state.VISUAL_STATE_SCHEMA_VERSION
+    VisualStateLabelVectorizer = _visual_state.VisualStateLabelVectorizer
+    load_visual_labels_for_rows = _visual_state.load_visual_labels_for_rows
+    visual_pretty_json = _visual_state.pretty_json
+    validate_visual_state_rows = _visual_state.validate_visual_state_rows
+    visual_label_path_for_split = _visual_state.visual_label_path_for_split
+    visual_model_input_image_refs = _visual_state.visual_model_input_image_refs
+    visual_state_class_balance = _visual_state.visual_state_class_balance
+    visual_state_metrics = _visual_state.visual_state_metrics
+    visual_target_stats = _visual_state.visual_target_stats
+
 
 def _env_path(name: str, fallback: str) -> Path:
     return Path(os.environ.get(name, fallback))
@@ -74,6 +114,8 @@ DEFAULT_ACTION_SPACE = (
 )
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 MODEL_INPUT_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
+DATASET_MODES = (DATASET_MODE_LEGACY_ACTION, DATASET_MODE_VISUAL_STATE)
+VISUAL_STATE_NAMES = ('visual_state.constant_zero_no_privileged_state',)
 TEXT_PAD = '<pad>'
 TEXT_UNK = '<unk>'
 SPEED_INDEX = 19
@@ -375,7 +417,9 @@ class StateVectorizer:
         }
 
 
-def _image_refs(row: dict[str, Any]) -> dict[str, str]:
+def _image_refs(row: dict[str, Any], *, dataset_mode: str = DATASET_MODE_LEGACY_ACTION) -> dict[str, str]:
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        return visual_model_input_image_refs(row)
     overhead_images = _model_input(row).get('overhead_images', {})
     return {
         str(key): str(value)
@@ -438,8 +482,9 @@ def load_paired_images(
     width: int,
     height: int,
     allow_blank_images: bool = False,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
 ) -> np.ndarray:
-    refs = _image_refs(row)
+    refs = _image_refs(row, dataset_mode=dataset_mode)
     left = load_image_tensor(
         dataset_root,
         refs.get('left_rail_rgb', ''),
@@ -497,6 +542,7 @@ def image_integrity_report(
     *,
     split_name: str,
     allow_blank_images: bool = False,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
 ) -> dict[str, Any]:
     per_camera = {
         camera: {
@@ -512,7 +558,7 @@ def image_integrity_report(
     complete_rows = 0
     problems: list[dict[str, Any]] = []
     for row_index, row in enumerate(rows):
-        refs = _image_refs(row)
+        refs = _image_refs(row, dataset_mode=dataset_mode)
         row_complete = True
         for camera in IMAGE_KEYS:
             ref = refs.get(camera, '')
@@ -716,6 +762,62 @@ class Room315EventDataset:
         }
 
 
+class Room315VisualStateDataset:
+    def __init__(
+        self,
+        rows: list[dict[str, Any]],
+        labels: list[dict[str, Any]],
+        *,
+        dataset_root: Path,
+        label_vectorizer: VisualStateLabelVectorizer,
+        target_mean: np.ndarray,
+        target_std: np.ndarray,
+        max_tokens: int,
+        image_width: int,
+        image_height: int,
+        torch_module: Any,
+        allow_blank_images: bool = False,
+    ) -> None:
+        if len(rows) != len(labels):
+            raise ValueError('visual-state rows and labels must have the same length')
+        self.rows = rows
+        self.labels = labels
+        self.dataset_root = dataset_root
+        self.label_vectorizer = label_vectorizer
+        self.target_mean = target_mean
+        self.target_std = target_std
+        self.max_tokens = max_tokens
+        self.image_width = image_width
+        self.image_height = image_height
+        self.torch = torch_module
+        self.allow_blank_images = allow_blank_images
+
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        row = self.rows[index]
+        target = np.asarray(self.label_vectorizer.transform(self.labels[index]), dtype=np.float32)
+        normalized_target = (target - self.target_mean) / self.target_std
+        return {
+            'text': self.torch.zeros((self.max_tokens,), dtype=self.torch.long),
+            'state': self.torch.zeros((len(VISUAL_STATE_NAMES),), dtype=self.torch.float32),
+            'image': self.torch.as_tensor(
+                load_paired_images(
+                    row,
+                    self.dataset_root,
+                    width=self.image_width,
+                    height=self.image_height,
+                    allow_blank_images=self.allow_blank_images,
+                    dataset_mode=DATASET_MODE_VISUAL_STATE,
+                ),
+                dtype=self.torch.float32,
+            ),
+            'target': self.torch.as_tensor(normalized_target, dtype=self.torch.float32),
+            'raw_target': self.torch.as_tensor(target, dtype=self.torch.float32),
+        }
+
+
 def _build_model(torch_module: Any, *, vocab_size: int, state_dim: int, output_dim: int):
     nn = torch_module.nn
 
@@ -842,6 +944,45 @@ def _evaluate(
         'target_id_accuracy': round(target_correct / denom, 6),
         'speed_mae': round(speed_error_total / denom, 6),
     }
+
+
+def _evaluate_visual_state(
+    torch_module: Any,
+    model: Any,
+    loader: Any,
+    *,
+    device: str,
+    target_mean: np.ndarray,
+    target_std: np.ndarray,
+    label_names: list[str],
+) -> dict[str, Any]:
+    model.eval()
+    loss_fn = torch_module.nn.SmoothL1Loss(reduction='sum')
+    mean_tensor = torch_module.as_tensor(target_mean, dtype=torch_module.float32, device=device)
+    std_tensor = torch_module.as_tensor(target_std, dtype=torch_module.float32, device=device)
+    rows = 0
+    loss_total = 0.0
+    records: list[dict[str, Any]] = []
+    with torch_module.no_grad():
+        for batch in loader:
+            text = batch['text'].to(device)
+            state = batch['state'].to(device)
+            image = batch['image'].to(device)
+            target = batch['target'].to(device)
+            raw_target = batch['raw_target'].to(device)
+            pred_norm = model(text, state, image)
+            loss_total += float(loss_fn(pred_norm, target).item())
+            pred = pred_norm * std_tensor + mean_tensor
+            batch_size = int(raw_target.shape[0])
+            rows += batch_size
+            for true_row, pred_row in zip(raw_target.detach().cpu().numpy(), pred.detach().cpu().numpy()):
+                records.append({
+                    'true_raw': true_row.astype(np.float32).tolist(),
+                    'pred_raw': pred_row.astype(np.float32).tolist(),
+                })
+    metrics = visual_state_metrics(records, label_names)
+    metrics['loss'] = round(loss_total / max(1, rows), 6)
+    return metrics
 
 
 def _save_checkpoint(
@@ -1002,7 +1143,478 @@ def _write_prediction_csv(path: Path, rows: list[dict[str, Any]], fields: list[s
             })
 
 
+def _visual_labels_path_for(splits_dir: Path, split_file: str, override: Path | None = None) -> Path:
+    if override is not None:
+        return override.expanduser().resolve()
+    return visual_label_path_for_split(splits_dir / split_file).expanduser().resolve()
+
+
+def _load_visual_split(
+    splits_dir: Path,
+    split_file: str,
+    labels_path: Path,
+    *,
+    limit: int | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    rows = _row_limit(_iter_jsonl(splits_dir / split_file), limit)
+    if not rows:
+        raise ValueError(f'{split_file} split is empty')
+    labels = load_visual_labels_for_rows(rows, labels_path)
+    integrity = validate_visual_state_rows(rows, labels_path)
+    return rows, labels, integrity
+
+
+def _save_visual_label_vectorizer(vectorizer: VisualStateLabelVectorizer, path: Path) -> None:
+    path.write_text(visual_pretty_json(vectorizer.to_json()) + '\n', encoding='utf-8')
+
+
+def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
+    torch_module = _require_torch()
+    splits_dir = args.splits_dir.expanduser().resolve()
+    dataset_root = _resolve_dataset_root(args.dataset_root, splits_dir)
+    train_labels_path = _visual_labels_path_for(splits_dir, args.train_file, args.visual_train_labels)
+    val_labels_path = _visual_labels_path_for(splits_dir, args.val_file, args.visual_val_labels)
+    train_rows, train_labels, train_input = _load_visual_split(
+        splits_dir,
+        args.train_file,
+        train_labels_path,
+        limit=args.limit_train_rows,
+    )
+    val_rows, val_labels, val_input = _load_visual_split(
+        splits_dir,
+        args.val_file,
+        val_labels_path,
+        limit=args.limit_val_rows,
+    )
+    train_image_integrity = image_integrity_report(
+        train_rows,
+        dataset_root,
+        split_name='train',
+        allow_blank_images=args.allow_blank_images,
+        dataset_mode=DATASET_MODE_VISUAL_STATE,
+    )
+    val_image_integrity = image_integrity_report(
+        val_rows,
+        dataset_root,
+        split_name='val',
+        allow_blank_images=args.allow_blank_images,
+        dataset_mode=DATASET_MODE_VISUAL_STATE,
+    )
+
+    _set_seed(torch_module, args.seed)
+    device = _choose_device(torch_module, args.device)
+    label_vectorizer = VisualStateLabelVectorizer.fit(train_labels)
+    target_mean_list, target_std_list = visual_target_stats(train_labels, label_vectorizer)
+    target_mean = np.asarray(target_mean_list, dtype=np.float32)
+    target_std = np.asarray(target_std_list, dtype=np.float32)
+    output_dim = int(target_mean.shape[0])
+    output_dir = args.output_dir.expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    vocab = {TEXT_PAD: 0, TEXT_UNK: 1}
+    dataset_report = {
+        'tool': 'room_315_vla_train_local',
+        'dataset_mode': DATASET_MODE_VISUAL_STATE,
+        'baseline_purpose': 'small custom visual-state label predictor; outputs are not rail commands',
+        'source_files': {
+            'train': _file_fingerprint(splits_dir / args.train_file),
+            'val': _file_fingerprint(splits_dir / args.val_file),
+            'train_labels': _file_fingerprint(train_labels_path),
+            'val_labels': _file_fingerprint(val_labels_path),
+        },
+        'row_fingerprint': {
+            'train': _rows_fingerprint(train_rows),
+            'val': _rows_fingerprint(val_rows),
+            'train_labels': baseline_rows_fingerprint([
+                {'visual_state_labels': label}
+                for label in train_labels
+            ]),
+            'val_labels': baseline_rows_fingerprint([
+                {'visual_state_labels': label}
+                for label in val_labels
+            ]),
+        },
+        'model_input_integrity': {
+            'train': train_input,
+            'val': val_input,
+        },
+        'camera_completeness': {
+            'train': train_image_integrity,
+            'val': val_image_integrity,
+        },
+        'class_balance': {
+            'train': visual_state_class_balance(train_labels),
+            'val': visual_state_class_balance(val_labels),
+        },
+        'split_integrity': split_integrity_report(train_rows, val_rows),
+        'feature_purity': {
+            'production_features_from': 'model_input.overhead_images',
+            'oracle_labels_physically_separate_from_model_input': True,
+            'row_level_metadata_used_as_features': [],
+            'debug_or_ablation_features': ['allow_blank_images'] if args.allow_blank_images else [],
+        },
+        'schema': {
+            'visual_state_schema_version': VISUAL_STATE_SCHEMA_VERSION,
+            'label_vector_names': label_vectorizer.names,
+        },
+    }
+    config = {
+        'tool': 'room_315_vla_train_local',
+        'dataset_mode': DATASET_MODE_VISUAL_STATE,
+        'baseline_purpose': 'small custom visual-state label predictor; outputs are not rail commands',
+        'dataset_root': str(dataset_root),
+        'splits_dir': str(splits_dir),
+        'train_file': args.train_file,
+        'val_file': args.val_file,
+        'train_labels': str(train_labels_path),
+        'val_labels': str(val_labels_path),
+        'seed': args.seed,
+        'device': device,
+        'epochs': args.epochs,
+        'batch_size': args.batch_size,
+        'learning_rate': args.learning_rate,
+        'weight_decay': args.weight_decay,
+        'image_width': args.image_width,
+        'image_height': args.image_height,
+        'max_tokens': args.max_tokens,
+        'train_rows': len(train_rows),
+        'val_rows': len(val_rows),
+        'output_dim': output_dim,
+        'state_dim': len(VISUAL_STATE_NAMES),
+        'vocab_size': len(vocab),
+        'allow_blank_images': bool(args.allow_blank_images),
+        'debug_blank_image_mode': bool(args.allow_blank_images),
+        'production_feature_source': 'model_input.overhead_images only',
+        'dataset_report': str(output_dir / 'dataset_report.json'),
+    }
+
+    (output_dir / 'dataset_report.json').write_text(_pretty_json(dataset_report) + '\n', encoding='utf-8')
+    (output_dir / 'vocab.json').write_text(_pretty_json(vocab) + '\n', encoding='utf-8')
+    (output_dir / 'visual_label_vectorizer.json').write_text(
+        visual_pretty_json(label_vectorizer.to_json()) + '\n',
+        encoding='utf-8',
+    )
+    (output_dir / 'state_vectorizer.json').write_text(
+        _pretty_json({
+            'kind': 'room315_visual_state_constant_state',
+            'dataset_mode': DATASET_MODE_VISUAL_STATE,
+            'names': list(VISUAL_STATE_NAMES),
+            'dim': len(VISUAL_STATE_NAMES),
+        }) + '\n',
+        encoding='utf-8',
+    )
+    (output_dir / 'target_stats.json').write_text(
+        _pretty_json({
+            'mean': target_mean.tolist(),
+            'std': target_std.tolist(),
+        }) + '\n',
+        encoding='utf-8',
+    )
+    (output_dir / 'training_config.json').write_text(_pretty_json(config) + '\n', encoding='utf-8')
+
+    train_dataset = Room315VisualStateDataset(
+        train_rows,
+        train_labels,
+        dataset_root=dataset_root,
+        label_vectorizer=label_vectorizer,
+        target_mean=target_mean,
+        target_std=target_std,
+        max_tokens=args.max_tokens,
+        image_width=args.image_width,
+        image_height=args.image_height,
+        torch_module=torch_module,
+        allow_blank_images=args.allow_blank_images,
+    )
+    val_dataset = Room315VisualStateDataset(
+        val_rows,
+        val_labels,
+        dataset_root=dataset_root,
+        label_vectorizer=label_vectorizer,
+        target_mean=target_mean,
+        target_std=target_std,
+        max_tokens=args.max_tokens,
+        image_width=args.image_width,
+        image_height=args.image_height,
+        torch_module=torch_module,
+        allow_blank_images=args.allow_blank_images,
+    )
+    train_loader = torch_module.utils.data.DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        pin_memory=(device == 'cuda'),
+    )
+    val_loader = torch_module.utils.data.DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=(device == 'cuda'),
+    )
+    model = _build_model(
+        torch_module,
+        vocab_size=len(vocab),
+        state_dim=len(VISUAL_STATE_NAMES),
+        output_dim=output_dim,
+    ).to(device)
+    optimizer = torch_module.optim.AdamW(
+        model.parameters(),
+        lr=args.learning_rate,
+        weight_decay=args.weight_decay,
+    )
+    loss_fn = torch_module.nn.SmoothL1Loss()
+    history: list[dict[str, Any]] = []
+    best_val_loss = float('inf')
+    best_epoch = 0
+
+    for epoch in range(1, args.epochs + 1):
+        model.train()
+        running_loss = 0.0
+        seen = 0
+        for batch in train_loader:
+            text = batch['text'].to(device)
+            state = batch['state'].to(device)
+            image = batch['image'].to(device)
+            target = batch['target'].to(device)
+            optimizer.zero_grad(set_to_none=True)
+            pred = model(text, state, image)
+            loss = loss_fn(pred, target)
+            loss.backward()
+            optimizer.step()
+            batch_size = int(target.shape[0])
+            running_loss += float(loss.item()) * batch_size
+            seen += batch_size
+        train_loss = running_loss / max(1, seen)
+        val_metrics = _evaluate_visual_state(
+            torch_module,
+            model,
+            val_loader,
+            device=device,
+            target_mean=target_mean,
+            target_std=target_std,
+            label_names=label_vectorizer.names,
+        )
+        epoch_metrics = {
+            'epoch': epoch,
+            'train_loss': round(train_loss, 6),
+            **{f'val_{key}': value for key, value in val_metrics.items()},
+        }
+        history.append(epoch_metrics)
+        print(_pretty_json(epoch_metrics), flush=True)
+        _save_checkpoint(
+            torch_module,
+            output_dir / 'last.pt',
+            model=model,
+            optimizer=optimizer,
+            epoch=epoch,
+            metrics=epoch_metrics,
+            config=config,
+        )
+        if float(val_metrics['loss']) < best_val_loss:
+            best_val_loss = float(val_metrics['loss'])
+            best_epoch = epoch
+            _save_checkpoint(
+                torch_module,
+                output_dir / 'best.pt',
+                model=model,
+                optimizer=optimizer,
+                epoch=epoch,
+                metrics=epoch_metrics,
+                config=config,
+            )
+
+    summary = {
+        'tool': 'room_315_vla_train_local',
+        'dataset_mode': DATASET_MODE_VISUAL_STATE,
+        'baseline_purpose': 'small custom visual-state label predictor; outputs are not rail commands',
+        'output_dir': str(output_dir),
+        'best_checkpoint': str(output_dir / 'best.pt'),
+        'last_checkpoint': str(output_dir / 'last.pt'),
+        'best_epoch': best_epoch,
+        'best_val_loss': best_val_loss,
+        'history': history,
+        'config': config,
+        'dataset_report': dataset_report,
+    }
+    (output_dir / 'metrics.json').write_text(_pretty_json(summary) + '\n', encoding='utf-8')
+    return summary
+
+
+def _load_visual_label_vectorizer(path: Path) -> VisualStateLabelVectorizer:
+    parsed = _load_json(path)
+    return VisualStateLabelVectorizer.from_json(parsed)
+
+
+def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
+    torch_module = _require_torch()
+    checkpoint_path = args.eval_checkpoint.expanduser().resolve()
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f'checkpoint not found: {checkpoint_path}')
+    splits_dir = args.splits_dir.expanduser().resolve()
+    dataset_root = _resolve_dataset_root(args.dataset_root, splits_dir)
+    output_dir = (
+        args.eval_output_dir.expanduser().resolve()
+        if args.eval_output_dir is not None
+        else checkpoint_path.parent / 'visual_state_eval'
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    checkpoint = _torch_load_checkpoint(torch_module, checkpoint_path)
+    config = _checkpoint_training_config(checkpoint, checkpoint_path)
+    vocab = _load_json(_artifact_path(checkpoint_path, 'vocab.json'))
+    label_vectorizer = _load_visual_label_vectorizer(
+        _artifact_path(checkpoint_path, 'visual_label_vectorizer.json')
+    )
+    target_mean, target_std = _load_target_stats(_artifact_path(checkpoint_path, 'target_stats.json'))
+    _set_seed(torch_module, args.seed)
+    device = _choose_device(torch_module, args.device)
+    model = _build_model(
+        torch_module,
+        vocab_size=max(2, len(vocab)),
+        state_dim=len(VISUAL_STATE_NAMES),
+        output_dim=int(target_mean.shape[0]),
+    ).to(device)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    if device == 'cuda' and torch_module.cuda.is_available():
+        torch_module.cuda.reset_peak_memory_stats()
+
+    split_names = [
+        name.strip()
+        for name in str(args.eval_splits or '').split(',')
+        if name.strip()
+    ]
+    if not split_names:
+        raise ValueError('--eval-splits selected no splits')
+
+    image_width = _safe_int(config.get('image_width'), args.image_width)
+    image_height = _safe_int(config.get('image_height'), args.image_height)
+    max_tokens = _safe_int(config.get('max_tokens'), args.max_tokens)
+    mean_tensor = torch_module.as_tensor(target_mean, dtype=torch_module.float32, device=device)
+    std_tensor = torch_module.as_tensor(target_std, dtype=torch_module.float32, device=device)
+    started = time.perf_counter()
+    splits: dict[str, Any] = {}
+    all_records: list[dict[str, Any]] = []
+
+    with torch_module.no_grad():
+        for split_name in split_names:
+            split_file = f'{split_name}.jsonl'
+            labels_path = visual_label_path_for_split(splits_dir / split_file)
+            rows, labels, input_integrity = _load_visual_split(
+                splits_dir,
+                split_file,
+                labels_path,
+                limit=args.limit_eval_rows,
+            )
+            image_report = image_integrity_report(
+                rows,
+                dataset_root,
+                split_name=split_name,
+                allow_blank_images=args.allow_blank_images,
+                dataset_mode=DATASET_MODE_VISUAL_STATE,
+            )
+            split_records: list[dict[str, Any]] = []
+            for sample_index, (row, label) in enumerate(zip(rows, labels)):
+                cycle_start = time.perf_counter()
+                text = torch_module.zeros((1, max_tokens), dtype=torch_module.long, device=device)
+                state = torch_module.zeros((1, len(VISUAL_STATE_NAMES)), dtype=torch_module.float32, device=device)
+                image = torch_module.as_tensor(
+                    load_paired_images(
+                        row,
+                        dataset_root,
+                        width=image_width,
+                        height=image_height,
+                        allow_blank_images=args.allow_blank_images,
+                        dataset_mode=DATASET_MODE_VISUAL_STATE,
+                    ),
+                    dtype=torch_module.float32,
+                    device=device,
+                ).unsqueeze(0)
+                if device == 'cuda' and torch_module.cuda.is_available():
+                    torch_module.cuda.synchronize()
+                inference_start = time.perf_counter()
+                pred_norm = model(text, state, image)
+                if device == 'cuda' and torch_module.cuda.is_available():
+                    torch_module.cuda.synchronize()
+                inference_latency = time.perf_counter() - inference_start
+                pred = (pred_norm[0] * std_tensor + mean_tensor).detach().cpu().numpy()
+                true_raw = np.asarray(label_vectorizer.transform(label), dtype=np.float32)
+                record = {
+                    'split': split_name,
+                    'sample_index': sample_index,
+                    'episode_id': str(row.get('episode_id') or ''),
+                    'task_family': str(row.get('scenario_family') or ''),
+                    'true_raw': true_raw.tolist(),
+                    'pred_raw': pred[: len(true_raw)].astype(np.float32).tolist(),
+                    'inference_latency_seconds': inference_latency,
+                    'cycle_time_seconds': time.perf_counter() - cycle_start,
+                }
+                split_records.append(record)
+            splits[split_name] = {
+                'source_file': baseline_file_fingerprint(splits_dir / split_file),
+                'label_file': baseline_file_fingerprint(labels_path),
+                'row_fingerprint': baseline_rows_fingerprint(rows),
+                'label_fingerprint': baseline_rows_fingerprint([
+                    {'visual_state_labels': label}
+                    for label in labels
+                ]),
+                'rows': len(rows),
+                'model_input_integrity': input_integrity,
+                'image_integrity': image_report,
+                'class_balance': visual_state_class_balance(labels),
+                'metrics': visual_state_metrics(split_records, label_vectorizer.names),
+            }
+            all_records.extend(split_records)
+
+    summary_path = output_dir / 'visual_state_eval.json'
+    summary = {
+        'tool': 'room_315_vla_train_local',
+        'dataset_mode': DATASET_MODE_VISUAL_STATE,
+        'baseline_purpose': 'small custom visual-state label checkpoint evaluation',
+        'checkpoint': str(checkpoint_path),
+        'checkpoint_epoch': checkpoint.get('epoch'),
+        'checkpoint_metrics': checkpoint.get('metrics'),
+        'checkpoint_training_config': config,
+        'dataset_root': str(dataset_root),
+        'splits_dir': str(splits_dir),
+        'evaluated_splits': split_names,
+        'seed': args.seed,
+        'device': device,
+        'allow_blank_images': bool(args.allow_blank_images),
+        'debug_blank_image_mode': bool(args.allow_blank_images),
+        'production_feature_source': 'model_input.overhead_images only',
+        'feature_purity': {
+            'production_features_from': 'model_input.overhead_images',
+            'oracle_labels_physically_separate_from_model_input': True,
+            'row_level_metadata_used_as_features': [],
+            'debug_or_ablation_features': ['allow_blank_images'] if args.allow_blank_images else [],
+        },
+        'artifact_fingerprints': {
+            name: baseline_file_fingerprint(path)
+            for name, path in {
+                'checkpoint': checkpoint_path,
+                'vocab': _artifact_path(checkpoint_path, 'vocab.json'),
+                'visual_label_vectorizer': _artifact_path(checkpoint_path, 'visual_label_vectorizer.json'),
+                'target_stats': _artifact_path(checkpoint_path, 'target_stats.json'),
+                'training_config': _artifact_path(checkpoint_path, 'training_config.json'),
+            }.items()
+            if path.exists()
+        },
+        'label_names': label_vectorizer.names,
+        'splits': splits,
+        'aggregate_metrics': visual_state_metrics(all_records, label_vectorizer.names),
+        'peak_gpu_memory': _peak_gpu_memory(torch_module, device),
+        'elapsed_seconds': round(time.perf_counter() - started, 3),
+        'summary_json': str(summary_path),
+    }
+    summary_path.write_text(_pretty_json(summary) + '\n', encoding='utf-8')
+    return summary
+
+
 def evaluate_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
+    if getattr(args, 'dataset_mode', DATASET_MODE_LEGACY_ACTION) == DATASET_MODE_VISUAL_STATE:
+        return evaluate_visual_state_checkpoint(args)
     torch_module = _require_torch()
     checkpoint_path = args.eval_checkpoint.expanduser().resolve()
     if not checkpoint_path.exists():
@@ -1502,8 +2114,30 @@ def main() -> None:
             'or room315_local_training/checkpoints/v0.'
         ),
     )
+    parser.add_argument(
+        '--dataset-mode',
+        choices=DATASET_MODES,
+        default=DATASET_MODE_LEGACY_ACTION,
+        help=(
+            'legacy_action preserves the small custom 24-value direct-action baseline. '
+            f'{DATASET_MODE_VISUAL_STATE} trains/evaluates image-to-visual-state labels from '
+            f'separate *{VISUAL_LABEL_SUFFIX} sidecars.'
+        ),
+    )
     parser.add_argument('--train-file', default='train.jsonl')
     parser.add_argument('--val-file', default='val.jsonl')
+    parser.add_argument(
+        '--visual-train-labels',
+        type=Path,
+        default=None,
+        help='Visual-state train label JSONL. Defaults to sibling train_visual_labels.jsonl.',
+    )
+    parser.add_argument(
+        '--visual-val-labels',
+        type=Path,
+        default=None,
+        help='Visual-state val label JSONL. Defaults to sibling val_visual_labels.jsonl.',
+    )
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--learning-rate', type=float, default=1e-3)
@@ -1550,7 +2184,12 @@ def main() -> None:
     parser.add_argument('--speed-tolerance', type=float, default=0.015)
     parser.add_argument('--progress-every', type=int, default=100)
     args = parser.parse_args()
-    summary = evaluate_checkpoint(args) if args.eval_checkpoint is not None else train_local(args)
+    if args.eval_checkpoint is not None:
+        summary = evaluate_checkpoint(args)
+    elif args.dataset_mode == DATASET_MODE_VISUAL_STATE:
+        summary = train_visual_state(args)
+    else:
+        summary = train_local(args)
     print(_pretty_json(summary))
 
 

@@ -50,6 +50,28 @@ except ModuleNotFoundError:
     load_jsonl = _metrics.load_jsonl
     offline_supervisor_decision = _metrics.offline_supervisor_decision
 
+try:
+    from room_315_visual_state_dataset import (
+        DATASET_MODE_LEGACY_ACTION,
+        DATASET_MODE_VISUAL_STATE,
+        VisualStateLabelVectorizer,
+        visual_state_metrics,
+    )
+except ModuleNotFoundError:
+    _visual_state_path = Path(__file__).with_name('room_315_visual_state_dataset.py')
+    _visual_spec = importlib.util.spec_from_file_location(
+        'room_315_visual_state_dataset',
+        _visual_state_path,
+    )
+    if _visual_spec is None or _visual_spec.loader is None:
+        raise
+    _visual_state = importlib.util.module_from_spec(_visual_spec)
+    _visual_spec.loader.exec_module(_visual_state)
+    DATASET_MODE_LEGACY_ACTION = _visual_state.DATASET_MODE_LEGACY_ACTION
+    DATASET_MODE_VISUAL_STATE = _visual_state.DATASET_MODE_VISUAL_STATE
+    VisualStateLabelVectorizer = _visual_state.VisualStateLabelVectorizer
+    visual_state_metrics = _visual_state.visual_state_metrics
+
 
 def _env_path(name: str, fallback: str) -> Path:
     return Path(os.environ.get(name, fallback))
@@ -94,6 +116,7 @@ DEFAULT_DATASETS = {
         ),
     },
 }
+DATASET_MODES = (DATASET_MODE_LEGACY_ACTION, DATASET_MODE_VISUAL_STATE)
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 POLICY_INPUT_KEYS = {
     'task',
@@ -465,6 +488,28 @@ def conversion_state_vectorizer_path(dataset_root: Path) -> Path | None:
     return path if path.is_absolute() else conversion_path.parent / path
 
 
+def conversion_visual_label_names(dataset_root: Path, action_dim: int | None = None) -> list[str]:
+    conversion_path = dataset_root.expanduser() / 'room315_conversion.json'
+    if conversion_path.exists():
+        conversion = load_json(conversion_path)
+        raw_path = str(conversion.get('visual_label_vectorizer') or '').strip()
+        if raw_path:
+            path = Path(raw_path).expanduser()
+            if not path.is_absolute():
+                path = conversion_path.parent / path
+            if path.exists():
+                with path.open('r', encoding='utf-8') as stream:
+                    parsed = json.load(stream)
+                if isinstance(parsed, dict):
+                    return VisualStateLabelVectorizer.from_json(parsed).names
+        names = conversion.get('action_names') or conversion.get('label_names')
+        if isinstance(names, list) and names:
+            return [str(name) for name in names]
+    if action_dim is None:
+        return []
+    return [f'visual_label_{index}' for index in range(action_dim)]
+
+
 def _peak_gpu_memory(torch_module: Any) -> dict[str, Any]:
     if not torch_module.cuda.is_available():
         return {
@@ -533,7 +578,10 @@ def evaluate_smolvla(
     seed: int = 13,
     speed_tolerance: float = 0.015,
     progress_every: int = 25,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
 ) -> dict[str, Any]:
+    if dataset_mode not in DATASET_MODES:
+        raise ValueError(f'unknown dataset mode: {dataset_mode}')
     checkpoint = checkpoint.expanduser().resolve()
     dataset_root = dataset_root.expanduser().resolve()
     output_dir = output_dir.expanduser().resolve()
@@ -550,9 +598,9 @@ def evaluate_smolvla(
     dataset_fingerprint = dataset_root_fingerprint(dataset_root)
     source_fingerprint = file_fingerprint(source_jsonl) if source_jsonl is not None and source_jsonl.exists() else None
     leakage = detect_vectorizer_leakage(conversion_state_vectorizer_path(dataset_root))
-    action_space = load_action_space(action_space_path)
-    fields = action_vector_fields(action_space)
-    ranges = action_field_ranges(action_space)
+    action_space = load_action_space(action_space_path) if dataset_mode == DATASET_MODE_LEGACY_ACTION else {}
+    fields = action_vector_fields(action_space) if dataset_mode == DATASET_MODE_LEGACY_ACTION else []
+    ranges = action_field_ranges(action_space) if dataset_mode == DATASET_MODE_LEGACY_ACTION else {}
     torch, LeRobotDataset, SmolVLAPolicy, make_pre_post_processors = _require_lerobot()
 
     random.seed(seed)
@@ -602,11 +650,21 @@ def evaluate_smolvla(
             inference_latency = time.perf_counter() - inference_start
             predicted = postprocessor(predicted)
             pred_raw = _tensor_to_numpy(predicted).reshape(-1)[: len(fields)]
-            true_raw = true_raw[: len(fields)]
-            true_quantized = quantize_action(true_raw, fields, ranges)
-            pred_quantized = quantize_action(pred_raw, fields, ranges)
+            if dataset_mode == DATASET_MODE_VISUAL_STATE:
+                pred_raw = _tensor_to_numpy(predicted).reshape(-1)[: len(true_raw)]
+                true_quantized = true_raw.copy()
+                pred_quantized = pred_raw.copy()
+            else:
+                true_raw = true_raw[: len(fields)]
+                pred_raw = pred_raw[: len(fields)]
+                true_quantized = quantize_action(true_raw, fields, ranges)
+                pred_quantized = quantize_action(pred_raw, fields, ranges)
             source_row = source_rows[dataset_index] if dataset_index < len(source_rows) else {'task': task}
-            decision = offline_supervisor_decision(pred_quantized)
+            decision = (
+                {'accepted': True, 'reason': '', 'mode': DATASET_MODE_VISUAL_STATE}
+                if dataset_mode == DATASET_MODE_VISUAL_STATE
+                else offline_supervisor_decision(pred_quantized)
+            )
             record = {
                 'sample_index': sample_index,
                 'dataset_index': dataset_index,
@@ -627,33 +685,71 @@ def evaluate_smolvla(
             if progress_every > 0 and (sample_index + 1) % progress_every == 0:
                 print(f'evaluated {sample_index + 1}/{len(indexes)} samples', flush=True)
 
-    summary_metrics = summarise_predictions(records, fields, speed_tolerance=speed_tolerance)
-    summary_metrics.update(
-        action_metrics(records, fields, speed_tolerance=speed_tolerance)
-    )
-    task_metrics = {
-        task: summarise_predictions(task_records, fields, speed_tolerance=speed_tolerance)
-        for task, task_records in sorted(per_task_records.items())
-    }
-    family_metrics = action_metrics_by_family(records, fields, speed_tolerance=speed_tolerance)
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        label_names = conversion_visual_label_names(dataset_root, len(records[0]['true_raw']))
+        summary_metrics = visual_state_metrics(records, label_names)
+        task_metrics = {
+            task: visual_state_metrics(task_records, label_names)
+            for task, task_records in sorted(per_task_records.items())
+        }
+        family_metrics = {}
+    else:
+        label_names = []
+        summary_metrics = summarise_predictions(records, fields, speed_tolerance=speed_tolerance)
+        summary_metrics.update(
+            action_metrics(records, fields, speed_tolerance=speed_tolerance)
+        )
+        task_metrics = {
+            task: summarise_predictions(task_records, fields, speed_tolerance=speed_tolerance)
+            for task, task_records in sorted(per_task_records.items())
+        }
+        family_metrics = action_metrics_by_family(records, fields, speed_tolerance=speed_tolerance)
     camera_report = camera_completeness_report(camera_tracker, len(records))
     if camera_report['complete_samples'] != len(records):
         raise ValueError(
             'evaluation split is missing required camera observations: '
             f'{camera_report["problem_examples"][:1]}'
         )
-    class_balance = class_balance_from_records(records, fields)
+    class_balance = (
+        {'rows': len(records), 'visual_label_dim': len(label_names)}
+        if dataset_mode == DATASET_MODE_VISUAL_STATE
+        else class_balance_from_records(records, fields)
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     summary_path = output_dir / f'{split_name}_smolvla_eval.json'
     samples_path = output_dir / f'{split_name}_smolvla_predictions.csv'
-    speed_index = fields.index(SPEED_FIELD)
-    primitive_index = fields.index('primitive_id')
-    side_index = fields.index('side_id')
-    target_index = fields.index('target_id')
+    sample_fields = SAMPLE_FIELDS if dataset_mode == DATASET_MODE_LEGACY_ACTION else (
+        'sample_index',
+        'dataset_index',
+        'episode_index',
+        'frame_index',
+        'task',
+        'task_family',
+        'label_mae',
+        'inference_latency_s',
+        'cycle_time_s',
+    )
     with samples_path.open('w', encoding='utf-8', newline='') as stream:
-        writer = csv.DictWriter(stream, fieldnames=SAMPLE_FIELDS)
+        writer = csv.DictWriter(stream, fieldnames=sample_fields)
         writer.writeheader()
         for record in records:
+            if dataset_mode == DATASET_MODE_VISUAL_STATE:
+                writer.writerow({
+                    'sample_index': record['sample_index'],
+                    'dataset_index': record['dataset_index'],
+                    'episode_index': record['episode_index'],
+                    'frame_index': record['frame_index'],
+                    'task': record['task'],
+                    'task_family': record['task_family'],
+                    'label_mae': round(float(np.mean(np.abs(record['pred_raw'] - record['true_raw']))), 6),
+                    'inference_latency_s': round(float(record['inference_latency_seconds']), 6),
+                    'cycle_time_s': round(float(record['cycle_time_seconds']), 6),
+                })
+                continue
+            speed_index = fields.index(SPEED_FIELD)
+            primitive_index = fields.index('primitive_id')
+            side_index = fields.index('side_id')
+            target_index = fields.index('target_id')
             true_q = record['true_quantized']
             pred_q = record['pred_quantized']
             true_raw = record['true_raw']
@@ -689,8 +785,13 @@ def evaluate_smolvla(
 
     summary = {
         'tool': 'room_315_smolvla_eval',
+        'dataset_mode': dataset_mode,
         'workflow_id': BASELINE_ID,
-        'baseline_purpose': 'direct-action SmolVLA action_vector evaluation',
+        'baseline_purpose': (
+            'direct-action SmolVLA action_vector evaluation'
+            if dataset_mode == DATASET_MODE_LEGACY_ACTION
+            else 'SmolVLA visual-state label evaluation; outputs are not rail commands'
+        ),
         'checkpoint': str(checkpoint),
         'dataset_repo_id': dataset_repo_id,
         'dataset_root': str(dataset_root),
@@ -711,7 +812,8 @@ def evaluate_smolvla(
         'seed': seed,
         'speed_tolerance': speed_tolerance,
         'elapsed_seconds': round(time.perf_counter() - started, 3),
-        'action_vector_fields': fields,
+        'action_vector_fields': fields if dataset_mode == DATASET_MODE_LEGACY_ACTION else [],
+        'visual_label_names': label_names,
         'policy_input_keys': sorted(POLICY_INPUT_KEYS),
         'feature_purity': {
             'production_inputs': sorted(POLICY_INPUT_KEYS),
@@ -724,6 +826,7 @@ def evaluate_smolvla(
             ],
             'row_level_metadata_used_as_features': [],
             'debug_or_ablation_features': [],
+            'oracle_labels_used_as_policy_inputs': False,
         },
         'comparison_validity': {
             **leakage,
@@ -780,6 +883,12 @@ def main() -> None:
         default=None,
         help='Clean split JSONL used to derive fingerprints and task-family metrics.',
     )
+    parser.add_argument(
+        '--dataset-mode',
+        choices=DATASET_MODES,
+        default=DATASET_MODE_LEGACY_ACTION,
+        help='legacy_action evaluates 24-value action vectors; visual_state evaluates visual label vectors.',
+    )
     parser.add_argument('--action-space', type=Path, default=DEFAULT_ACTION_SPACE)
     parser.add_argument('--max-samples', type=int, default=None)
     parser.add_argument('--stride', type=int, default=1)
@@ -802,6 +911,7 @@ def main() -> None:
         seed=args.seed,
         speed_tolerance=args.speed_tolerance,
         progress_every=args.progress_every,
+        dataset_mode=args.dataset_mode,
     )
 
 

@@ -18,6 +18,9 @@ METRICS_SCRIPT = (
 SMOLVLA_EVAL_SCRIPT = (
     REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_smolvla_eval.py'
 )
+VISUAL_STATE_SCRIPT = (
+    REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_visual_state_dataset.py'
+)
 
 
 def _load_module(name, path):
@@ -176,6 +179,74 @@ def _write_image(path: Path) -> None:
     Image.new('RGB', (4, 3), color=(10, 20, 30)).save(path)
 
 
+def _visual_labels(*, family='visual_case', shuttle='R1', loaded_state='loaded'):
+    return {
+        'schema_version': 'room315.visual_state.v1',
+        'calibration_version': 'calib-2026-07',
+        'scenario_family': family,
+        'confidence': 0.95,
+        'shuttles': [
+            {
+                'id': shuttle,
+                'visually_available_identity': shuttle,
+                'bbox': [1.0, 2.0, 10.0, 12.0],
+                'location': {'side': 'right', 'slot': 'A1'},
+                'loaded_state': loaded_state,
+                'confidence': 0.9,
+            }
+        ],
+        'switches': [
+            {'id': 'right:A1', 'state': 'EXTERIOR', 'confidence': 0.8},
+        ],
+        'obstacles': [
+            {
+                'id': 'box',
+                'bbox': [3.0, 4.0, 5.0, 6.0],
+                'location': {'side': 'right', 'block': 'A12E'},
+                'confidence': 0.7,
+            }
+        ],
+    }
+
+
+def _visual_row(tmp_path, *, episode_id, family, step=0, missing_images=False):
+    left = f'episodes/{episode_id}/images/left_rail_rgb/000000.jpg'
+    right = f'episodes/{episode_id}/images/right_rail_rgb/000000.jpg'
+    if not missing_images:
+        _write_image(tmp_path / left)
+        _write_image(tmp_path / right)
+    episode_dir = tmp_path / 'episodes' / episode_id
+    episode_dir.mkdir(parents=True, exist_ok=True)
+    (episode_dir / 'validation.json').write_text(
+        json.dumps({
+            'episode_id': episode_id,
+            'approved_for_training': True,
+            'task_success': True,
+            'validation_status': 'approved',
+        }),
+        encoding='utf-8',
+    )
+    return {
+        'sample_id': f'{episode_id}:step:{step}',
+        'episode_id': episode_id,
+        'step_index': step,
+        'task': f'observe {family}',
+        'scenario_family': family,
+        'pddl_problem': f'room315-{family}_speed008',
+        'model_input': {
+            'language': 'legacy field should be stripped by visual split',
+            'last_command': {'action': 'START'},
+            'observable_state': {'right': {'sensors': {'DZI1R': 1}}},
+            'overhead_images': {
+                'left_rail_rgb': left,
+                'right_rail_rgb': right,
+            },
+        },
+        'visual_state_labels': _visual_labels(family=family),
+        'action_vector': [0.0] * 24,
+    }
+
+
 def test_split_dataset_keeps_speed_variants_with_their_base_family(tmp_path):
     splitter = _load_module('room_315_vla_split_dataset', SPLIT_SCRIPT)
     training_events = _make_dataset(tmp_path)
@@ -220,6 +291,122 @@ def test_split_dataset_keeps_speed_variants_with_their_base_family(tmp_path):
             if str(row.get('pddl_problem') or '').startswith(f'room315-{family}')
         ]
         assert len(family_rows) == 2
+
+
+def test_visual_state_split_writes_image_inputs_and_separate_oracle_labels(tmp_path):
+    splitter = _load_module('room_315_vla_split_dataset_visual', SPLIT_SCRIPT)
+    rows = []
+    index = 0
+    for family in ('visual_case_a', 'visual_case_b', 'visual_case_c'):
+        for speed in ('006', '008'):
+            rows.append(
+                _visual_row(
+                    tmp_path,
+                    episode_id=f'episode_{index:06d}_{family}_{speed}',
+                    family=family,
+                    step=0,
+                )
+            )
+            index += 1
+    meta = tmp_path / 'meta'
+    meta.mkdir()
+    training_events = meta / 'training_events.jsonl'
+    training_events.write_text(
+        ''.join(json.dumps(row) + '\n' for row in rows),
+        encoding='utf-8',
+    )
+
+    output_a = tmp_path / 'visual_splits_a'
+    output_b = tmp_path / 'visual_splits_b'
+    summary_a = splitter.split_dataset(
+        training_events,
+        output_a,
+        seed=17,
+        val_families=1,
+        test_families=1,
+        dataset_mode='visual_state',
+        overwrite=True,
+    )
+    summary_b = splitter.split_dataset(
+        training_events,
+        output_b,
+        seed=17,
+        val_families=1,
+        test_families=1,
+        dataset_mode='visual_state',
+        overwrite=True,
+    )
+
+    train_rows = [
+        json.loads(line)
+        for line in (output_a / 'train.jsonl').read_text(encoding='utf-8').splitlines()
+    ]
+    train_labels = [
+        json.loads(line)
+        for line in (output_a / 'train_visual_labels.jsonl').read_text(encoding='utf-8').splitlines()
+    ]
+
+    assert summary_a['dataset_mode'] == 'visual_state'
+    assert summary_a['visual_state_model_input_integrity']['oracle_labels_physically_separate'] is True
+    assert summary_a['oracle_label_fingerprint'] == summary_b['oracle_label_fingerprint']
+    assert summary_a['split_integrity']['families_disjoint'] is True
+    assert train_rows
+    assert train_labels
+    assert set(train_rows[0]['model_input']) == {'overhead_images'}
+    assert 'action_vector' not in train_rows[0]
+    assert 'visual_state_labels' not in train_rows[0]
+    assert train_labels[0]['model_input_exposure'] == 'excluded'
+    assert train_labels[0]['visual_state_labels']['shuttles'][0]['bbox'] == [1.0, 2.0, 10.0, 12.0]
+    assert summary_a['splits']['train']['label_file'] == 'train_visual_labels.jsonl'
+
+
+def test_visual_state_rejects_model_input_label_leakage():
+    visual = _load_module('room_315_visual_state_dataset', VISUAL_STATE_SCRIPT)
+    row = {
+        'sample_id': 'sample-1',
+        'model_input': {
+            'overhead_images': {},
+            'visual_state_labels': {'bbox': [0, 0, 1, 1]},
+        },
+        'visual_state_labels': _visual_labels(),
+    }
+
+    with pytest.raises(visual.VisualStateValidationError, match='undeclared fields'):
+        visual.validate_visual_model_input(row)
+
+
+def test_visual_state_missing_images_fail_by_default_in_converter_and_trainer(tmp_path):
+    converter = _load_module('room_315_vla_to_lerobot_visual_images', LEROBOT_SCRIPT)
+    trainer = _load_module('room_315_vla_train_local_visual_images', TRAIN_SCRIPT)
+    row = {
+        'sample_id': 'sample-1',
+        'episode_id': 'episode_000001_visual',
+        'model_input': {
+            'overhead_images': {
+                'left_rail_rgb': 'missing_left.jpg',
+                'right_rail_rgb': 'missing_right.jpg',
+            }
+        },
+    }
+
+    with pytest.raises(FileNotFoundError):
+        converter.image_integrity_report([row], tmp_path, dataset_mode='visual_state')
+    with pytest.raises(FileNotFoundError):
+        trainer.image_integrity_report(
+            [row],
+            tmp_path,
+            split_name='train',
+            dataset_mode='visual_state',
+        )
+
+    report = converter.image_integrity_report(
+        [row],
+        tmp_path,
+        dataset_mode='visual_state',
+        allow_blank_images=True,
+    )
+    assert report['debug_blank_image_mode'] is True
+    assert report['per_camera']['left_rail_rgb']['blank_substitutions'] == 1
 
 
 def test_training_helper_builds_vocab_state_vectorizer_and_target_stats():
@@ -602,6 +789,116 @@ def test_lerobot_converter_feature_schema_uses_room315_modalities():
     assert features['observation.images.left_rail_rgb']['dtype'] == 'image'
     assert features['observation.images.left_rail_rgb']['shape'] == (240, 320, 3)
     assert features['observation.images.right_rail_rgb']['dtype'] == 'image'
+
+
+def test_lerobot_converter_visual_state_mode_uses_label_targets_and_sidecar(tmp_path, monkeypatch):
+    converter = _load_module('room_315_vla_to_lerobot_visual', LEROBOT_SCRIPT)
+    row = _visual_row(
+        tmp_path,
+        episode_id='episode_000001_visual_case',
+        family='visual_case',
+        step=0,
+    )
+    model_row = {
+        'dataset_mode': 'visual_state',
+        'sample_id': row['sample_id'],
+        'episode_id': row['episode_id'],
+        'step_index': row['step_index'],
+        'task': row['task'],
+        'scenario_family': row['scenario_family'],
+        'model_input': {'overhead_images': row['model_input']['overhead_images']},
+    }
+    label_row = {
+        'sample_id': row['sample_id'],
+        'episode_id': row['episode_id'],
+        'step_index': row['step_index'],
+        'visual_state_labels': row['visual_state_labels'],
+        'model_input_exposure': 'excluded',
+    }
+    split_path = tmp_path / 'train.jsonl'
+    labels_path = tmp_path / 'train_visual_labels.jsonl'
+    split_path.write_text(json.dumps(model_row) + '\n', encoding='utf-8')
+    labels_path.write_text(json.dumps(label_row) + '\n', encoding='utf-8')
+    created = {}
+
+    class FakeLeRobotDataset:
+        @classmethod
+        def create(cls, **kwargs):
+            created['kwargs'] = kwargs
+            return cls()
+
+        def __init__(self):
+            self.frames = []
+            self.saved = 0
+            self.finalized = False
+
+        def add_frame(self, frame):
+            self.frames.append(frame)
+
+        def save_episode(self):
+            self.saved += 1
+
+        def finalize(self):
+            self.finalized = True
+
+    monkeypatch.setattr(converter, '_require_lerobot_dataset', lambda: FakeLeRobotDataset)
+
+    summary = converter.convert_room315_to_lerobot(
+        split_path,
+        dataset_root=tmp_path,
+        output_root=tmp_path / 'lerobot',
+        name='room315_visual_state_train',
+        repo_id='room315/visual_state_train',
+        state_mode='full',
+        state_vectorizer_path=None,
+        state_vectorizer_out=tmp_path / 'unused_state_vectorizer.json',
+        image_width=4,
+        image_height=3,
+        fps=10,
+        dataset_mode='visual_state',
+        visual_labels_path=labels_path,
+        visual_label_vectorizer_out=tmp_path / 'visual_label_vectorizer.json',
+        overwrite=True,
+    )
+
+    features = created['kwargs']['features']
+    assert summary['dataset_mode'] == 'visual_state'
+    assert summary['legacy_action_baseline_preserved'] is False
+    assert summary['model_input_integrity']['oracle_labels_physically_separate'] is True
+    assert summary['action_dim'] > 0
+    assert features['action']['output_semantics'] == 'visual_state_labels_not_rail_commands'
+    assert features['observation.state']['names'] == ['visual_state.constant_zero_no_privileged_state']
+    assert Path(summary['structured_visual_labels']).exists()
+    assert Path(summary['visual_label_vectorizer']).exists()
+    assert 'loaded_state' in json.dumps(summary['class_balance'])
+
+
+def test_visual_state_vectorizer_round_trip_and_metrics():
+    visual = _load_module('room_315_visual_state_dataset_metrics', VISUAL_STATE_SCRIPT)
+    label = visual.normalize_visual_state_labels({'visual_state_labels': _visual_labels()})
+    vectorizer = visual.VisualStateLabelVectorizer.fit([label])
+    restored = visual.VisualStateLabelVectorizer.from_json(vectorizer.to_json())
+    true_vector = restored.transform(label)
+    pred_vector = list(true_vector)
+    bbox_index = next(index for index, name in enumerate(restored.names) if '.bbox.0' in name)
+    confidence_index = restored.names.index('confidence')
+    pred_vector[bbox_index] += 2.0
+    pred_vector[confidence_index] -= 0.05
+
+    metrics = visual.visual_state_metrics(
+        [{'true_raw': true_vector, 'pred_raw': pred_vector}],
+        restored.names,
+    )
+
+    assert restored.dim == len(restored.names)
+    assert any('loaded_state==loaded' in name for name in restored.names)
+    assert any('calibration_version==calib-2026-07' in name for name in restored.names)
+    assert metrics['dataset_mode'] == 'visual_state'
+    assert metrics['samples'] == 1
+    assert metrics['bbox_mae'] > 0.0
+    assert metrics['confidence_mae'] > 0.0
+    assert metrics['loaded_state_accuracy'] == 1.0
+    assert metrics['switch_state_accuracy'] == 1.0
 
 
 def test_smolvla_eval_quantizes_discrete_fields_and_summarises_metrics():

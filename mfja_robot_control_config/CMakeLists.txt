@@ -82,6 +82,7 @@ install(
     scripts/room_315_vla_supervisor.py
     scripts/room_315_vla_train_local.py
     scripts/room_315_vla_to_lerobot.py
+    scripts/room_315_visual_state_dataset.py
     scripts/room_315_smolvla_eval.py
   DESTINATION lib/${PROJECT_NAME}
 )

@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -14,6 +15,46 @@ from typing import Any
 import numpy as np
 import yaml
 from PIL import Image
+
+try:
+    from room_315_visual_state_dataset import (
+        DATASET_MODE_LEGACY_ACTION,
+        DATASET_MODE_VISUAL_STATE,
+        VISUAL_LABEL_SUFFIX,
+        VISUAL_STATE_SCHEMA_VERSION,
+        VisualStateLabelVectorizer,
+        load_visual_labels_for_rows,
+        pretty_json as _visual_pretty_json,
+        rows_fingerprint as visual_rows_fingerprint,
+        validate_visual_state_rows,
+        visual_label_path_for_split,
+        visual_model_input_image_refs,
+        visual_state_class_balance,
+        write_jsonl as write_visual_jsonl,
+    )
+except ModuleNotFoundError:
+    _visual_state_path = Path(__file__).with_name('room_315_visual_state_dataset.py')
+    _spec = importlib.util.spec_from_file_location(
+        'room_315_visual_state_dataset',
+        _visual_state_path,
+    )
+    if _spec is None or _spec.loader is None:
+        raise
+    _visual_state = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_visual_state)
+    DATASET_MODE_LEGACY_ACTION = _visual_state.DATASET_MODE_LEGACY_ACTION
+    DATASET_MODE_VISUAL_STATE = _visual_state.DATASET_MODE_VISUAL_STATE
+    VISUAL_LABEL_SUFFIX = _visual_state.VISUAL_LABEL_SUFFIX
+    VISUAL_STATE_SCHEMA_VERSION = _visual_state.VISUAL_STATE_SCHEMA_VERSION
+    VisualStateLabelVectorizer = _visual_state.VisualStateLabelVectorizer
+    load_visual_labels_for_rows = _visual_state.load_visual_labels_for_rows
+    _visual_pretty_json = _visual_state.pretty_json
+    visual_rows_fingerprint = _visual_state.rows_fingerprint
+    validate_visual_state_rows = _visual_state.validate_visual_state_rows
+    visual_label_path_for_split = _visual_state.visual_label_path_for_split
+    visual_model_input_image_refs = _visual_state.visual_model_input_image_refs
+    visual_state_class_balance = _visual_state.visual_state_class_balance
+    write_visual_jsonl = _visual_state.write_jsonl
 
 
 def _env_path(name: str, fallback: str) -> Path:
@@ -35,6 +76,8 @@ IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 SIDES = ('right', 'left')
 SLOTS = ('A1', 'A2', 'A3', 'A4')
 MODEL_INPUT_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
+DATASET_MODES = (DATASET_MODE_LEGACY_ACTION, DATASET_MODE_VISUAL_STATE)
+VISUAL_STATE_NAMES = ('visual_state.constant_zero_no_privileged_state',)
 COMPACT32_STATE_NAMES = (
     'task.side_left',
     'task.target_slot_norm',
@@ -519,19 +562,23 @@ def build_lerobot_features(
     image_height: int,
     image_width: int,
     use_videos: bool,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
 ) -> dict[str, dict[str, Any]]:
     image_dtype = 'video' if use_videos else 'image'
+    action_feature = {
+        'dtype': 'float32',
+        'shape': (len(action_names),),
+        'names': action_names,
+    }
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        action_feature['output_semantics'] = 'visual_state_labels_not_rail_commands'
     features: dict[str, dict[str, Any]] = {
         'observation.state': {
             'dtype': 'float32',
             'shape': (len(state_names),),
             'names': state_names,
         },
-        'action': {
-            'dtype': 'float32',
-            'shape': (len(action_names),),
-            'names': action_names,
-        },
+        'action': action_feature,
     }
     for image_key in IMAGE_KEYS:
         features[f'observation.images.{image_key}'] = {
@@ -542,7 +589,9 @@ def build_lerobot_features(
     return features
 
 
-def _image_refs(row: dict[str, Any]) -> dict[str, str]:
+def _image_refs(row: dict[str, Any], *, dataset_mode: str = DATASET_MODE_LEGACY_ACTION) -> dict[str, str]:
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        return visual_model_input_image_refs(row)
     overhead_images = _model_input(row).get('overhead_images', {})
     return {
         str(key): str(value)
@@ -574,8 +623,9 @@ def load_image(
     image_width: int,
     image_height: int,
     allow_blank_images: bool = False,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
 ) -> Image.Image:
-    image_ref = _image_refs(row).get(image_key, '')
+    image_ref = _image_refs(row, dataset_mode=dataset_mode).get(image_key, '')
     if not image_ref:
         if allow_blank_images:
             return _blank_image(image_width=image_width, image_height=image_height)
@@ -602,6 +652,7 @@ def image_integrity_report(
     dataset_root: Path,
     *,
     allow_blank_images: bool = False,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
 ) -> dict[str, Any]:
     per_camera = {
         camera: {
@@ -617,7 +668,7 @@ def image_integrity_report(
     complete_rows = 0
     problems: list[dict[str, Any]] = []
     for row_index, row in enumerate(rows):
-        refs = _image_refs(row)
+        refs = _image_refs(row, dataset_mode=dataset_mode)
         row_complete = True
         for camera in IMAGE_KEYS:
             ref = refs.get(camera, '')
@@ -748,6 +799,20 @@ def validate_model_input_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def load_visual_label_vectorizer(path: Path) -> VisualStateLabelVectorizer:
+    with path.expanduser().open('r', encoding='utf-8') as stream:
+        parsed = json.load(stream)
+    if not isinstance(parsed, dict):
+        raise ValueError(f'visual label vectorizer must be a JSON object: {path}')
+    return VisualStateLabelVectorizer.from_json(parsed)
+
+
+def save_visual_label_vectorizer(vectorizer: VisualStateLabelVectorizer, path: Path) -> None:
+    path = path.expanduser().resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_visual_pretty_json(vectorizer.to_json()) + '\n', encoding='utf-8')
+
+
 def _rounded_key(value: Any) -> str:
     try:
         return f'{float(value):.4g}'
@@ -828,7 +893,13 @@ def convert_room315_to_lerobot(
     use_videos: bool = False,
     allow_blank_images: bool = False,
     overwrite: bool = False,
+    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
+    visual_labels_path: Path | None = None,
+    visual_label_vectorizer_path: Path | None = None,
+    visual_label_vectorizer_out: Path | None = None,
 ) -> dict[str, Any]:
+    if dataset_mode not in DATASET_MODES:
+        raise ValueError(f'unknown dataset mode: {dataset_mode}')
     LeRobotDataset = _require_lerobot_dataset()
     input_file = _resolve_input_path(input_path)
     rows = _iter_jsonl(input_file)
@@ -842,28 +913,59 @@ def convert_room315_to_lerobot(
     if not rows:
         raise ValueError(f'no rows selected from {input_file}')
 
-    model_input_integrity = validate_model_input_rows(rows)
+    if dataset_mode == DATASET_MODE_VISUAL_STATE and visual_labels_path is None:
+        candidate = visual_label_path_for_split(input_file)
+        visual_labels_path = candidate if candidate.exists() else None
+
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        labels = load_visual_labels_for_rows(rows, visual_labels_path)
+        model_input_integrity = validate_visual_state_rows(rows, visual_labels_path)
+    else:
+        labels = []
+        model_input_integrity = validate_model_input_rows(rows)
     image_integrity = image_integrity_report(
         rows,
         dataset_root,
         allow_blank_images=allow_blank_images,
+        dataset_mode=dataset_mode,
     )
 
-    if state_vectorizer_path is not None:
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        vectorizer = None
+        fitted_state_vectorizer = False
+        if visual_label_vectorizer_path is not None:
+            label_vectorizer = load_visual_label_vectorizer(visual_label_vectorizer_path)
+            fitted_label_vectorizer = False
+        else:
+            label_vectorizer = VisualStateLabelVectorizer.fit(labels)
+            fitted_label_vectorizer = True
+        action_names = label_vectorizer.names
+        state_names = list(VISUAL_STATE_NAMES)
+        state_mode = DATASET_MODE_VISUAL_STATE
+    elif state_vectorizer_path is not None:
         vectorizer = load_state_vectorizer(state_vectorizer_path)
         fitted_state_vectorizer = False
+        label_vectorizer = None
+        fitted_label_vectorizer = False
+        action_names = load_action_vector_fields()
+        state_names = vectorizer.names
     else:
         vectorizer = fit_state_vectorizer(rows, state_mode)
         fitted_state_vectorizer = True
+        label_vectorizer = None
+        fitted_label_vectorizer = False
+        action_names = load_action_vector_fields()
+        state_names = vectorizer.names
 
-    state_mode = str(vectorizer.to_json().get('state_mode') or state_mode)
-    action_names = load_action_vector_fields()
+    if dataset_mode == DATASET_MODE_LEGACY_ACTION:
+        state_mode = str(vectorizer.to_json().get('state_mode') or state_mode)
     features = build_lerobot_features(
-        state_names=vectorizer.names,
+        state_names=state_names,
         action_names=action_names,
         image_height=image_height,
         image_width=image_width,
         use_videos=use_videos,
+        dataset_mode=dataset_mode,
     )
     root = _conversion_root(output_root, name)
     _prepare_output_root(root, overwrite=overwrite)
@@ -879,14 +981,25 @@ def convert_room315_to_lerobot(
     )
     frame_count = 0
     task_counts: Counter[str] = Counter()
+    labels_by_sample = {
+        str(row.get('sample_id') or f'{row.get("episode_id", "")}:step:{row.get("step_index", "")}'): label
+        for row, label in zip(rows, labels)
+    }
     for episode_id, episode_rows in episodes:
         for row in episode_rows:
-            task = _language(row)
+            task = str(row.get('task') or 'visual_state') if dataset_mode == DATASET_MODE_VISUAL_STATE else _language(row)
             task_counts[task] += 1
+            if dataset_mode == DATASET_MODE_VISUAL_STATE:
+                sample_id = str(row.get('sample_id') or f'{row.get("episode_id", "")}:step:{row.get("step_index", "")}')
+                target = np.asarray(label_vectorizer.transform(labels_by_sample[sample_id]), dtype=np.float32)
+                state = np.zeros((len(VISUAL_STATE_NAMES),), dtype=np.float32)
+            else:
+                target = action_vector(row, expected_dim=len(action_names))
+                state = vectorizer.transform(row)
             frame = {
                 'task': task,
-                'observation.state': vectorizer.transform(row),
-                'action': action_vector(row, expected_dim=len(action_names)),
+                'observation.state': state,
+                'action': target,
             }
             for image_key in IMAGE_KEYS:
                 frame[f'observation.images.{image_key}'] = load_image(
@@ -896,6 +1009,7 @@ def convert_room315_to_lerobot(
                     image_width=image_width,
                     image_height=image_height,
                     allow_blank_images=allow_blank_images,
+                    dataset_mode=dataset_mode,
                 )
             dataset.add_frame(frame)
             frame_count += 1
@@ -903,12 +1017,40 @@ def convert_room315_to_lerobot(
         print(f'converted {episode_id}: {len(episode_rows)} frames', flush=True)
     dataset.finalize()
 
-    if fitted_state_vectorizer:
+    if fitted_state_vectorizer and vectorizer is not None:
         save_state_vectorizer(vectorizer, state_vectorizer_out)
+    if dataset_mode == DATASET_MODE_VISUAL_STATE and fitted_label_vectorizer:
+        if visual_label_vectorizer_out is None:
+            visual_label_vectorizer_out = output_root / 'room315_visual_state_label_vectorizer.json'
+        save_visual_label_vectorizer(label_vectorizer, visual_label_vectorizer_out)
+    if dataset_mode == DATASET_MODE_VISUAL_STATE:
+        structured_labels_path = root / 'room315_visual_state_labels.jsonl'
+        write_visual_jsonl(
+            structured_labels_path,
+            [
+                {
+                    'sample_id': str(row.get('sample_id') or ''),
+                    'episode_id': str(row.get('episode_id') or ''),
+                    'step_index': row.get('step_index', row.get('event_index')),
+                    'visual_state_labels': label,
+                    'label_source': 'oracle',
+                    'model_input_exposure': 'excluded',
+                }
+                for row, label in zip(rows, labels)
+            ],
+        )
+    else:
+        structured_labels_path = None
 
     summary = {
         'tool': 'room_315_vla_to_lerobot',
-        'baseline_purpose': 'direct-action action_vector behavior-cloning dataset conversion',
+        'dataset_mode': dataset_mode,
+        'baseline_purpose': (
+            'direct-action action_vector behavior-cloning dataset conversion'
+            if dataset_mode == DATASET_MODE_LEGACY_ACTION
+            else 'visual-state label dataset conversion; labels are not rail commands'
+        ),
+        'legacy_action_baseline_preserved': dataset_mode == DATASET_MODE_LEGACY_ACTION,
         'source': str(input_file),
         'source_fingerprint': _file_fingerprint(input_file),
         'row_fingerprint': _rows_fingerprint(rows),
@@ -924,22 +1066,53 @@ def convert_room315_to_lerobot(
         'image_width': image_width,
         'image_height': image_height,
         'state_mode': state_mode,
-        'state_dim': vectorizer.dim,
+        'state_dim': len(state_names),
         'action_dim': len(action_names),
         'state_vectorizer': str(
             state_vectorizer_path.expanduser().resolve()
             if state_vectorizer_path is not None
             else state_vectorizer_out.expanduser().resolve()
+        ) if dataset_mode == DATASET_MODE_LEGACY_ACTION else None,
+        'visual_label_vectorizer': (
+            str(
+                visual_label_vectorizer_path.expanduser().resolve()
+                if visual_label_vectorizer_path is not None
+                else (visual_label_vectorizer_out or output_root / 'room315_visual_state_label_vectorizer.json').expanduser().resolve()
+            )
+            if dataset_mode == DATASET_MODE_VISUAL_STATE
+            else None
+        ),
+        'visual_state_label_schema_version': (
+            VISUAL_STATE_SCHEMA_VERSION if dataset_mode == DATASET_MODE_VISUAL_STATE else None
+        ),
+        'structured_visual_labels': str(structured_labels_path) if structured_labels_path is not None else None,
+        'oracle_label_file': str(visual_labels_path) if visual_labels_path is not None else None,
+        'oracle_label_fingerprint': (
+            visual_rows_fingerprint([{'visual_state_labels': label} for label in labels])
+            if dataset_mode == DATASET_MODE_VISUAL_STATE
+            else None
         ),
         'state_vectorizer_fitted_from_input': fitted_state_vectorizer,
+        'visual_label_vectorizer_fitted_from_input': fitted_label_vectorizer,
         'feature_keys': sorted(features),
         'model_input_integrity': model_input_integrity,
         'camera_completeness': image_integrity,
-        'class_balance': class_balance_report(rows, expected_dim=len(action_names)),
+        'class_balance': (
+            class_balance_report(rows, expected_dim=len(action_names))
+            if dataset_mode == DATASET_MODE_LEGACY_ACTION
+            else visual_state_class_balance(labels)
+        ),
         'feature_purity': {
-            'production_features_from': 'model_input',
+            'production_features_from': (
+                'model_input'
+                if dataset_mode == DATASET_MODE_LEGACY_ACTION
+                else 'model_input.overhead_images'
+            ),
             'row_level_metadata_used_as_features': [],
             'debug_or_ablation_features': [],
+            'oracle_labels_physically_separate_from_model_input': (
+                dataset_mode == DATASET_MODE_VISUAL_STATE
+            ),
         },
     }
     (root / 'room315_conversion.json').write_text(_pretty_json(summary) + '\n', encoding='utf-8')
@@ -977,6 +1150,16 @@ def main() -> None:
     parser.add_argument('--name', default='room315_vla_train')
     parser.add_argument('--repo-id', default='room315/room315_vla_train')
     parser.add_argument(
+        '--dataset-mode',
+        choices=DATASET_MODES,
+        default=DATASET_MODE_LEGACY_ACTION,
+        help=(
+            'legacy_action preserves the 24-value action_vector baseline. '
+            f'{DATASET_MODE_VISUAL_STATE} converts image-only rows plus '
+            f'a *{VISUAL_LABEL_SUFFIX} oracle label sidecar.'
+        ),
+    )
+    parser.add_argument(
         '--state-mode',
         choices=('full', 'compact32'),
         default='full',
@@ -993,6 +1176,24 @@ def main() -> None:
         type=Path,
         default=None,
         help='Where to write a fitted state vectorizer when --state-vectorizer is omitted.',
+    )
+    parser.add_argument(
+        '--visual-labels',
+        type=Path,
+        default=None,
+        help='Visual-state oracle label JSONL. Defaults to sibling *_visual_labels.jsonl.',
+    )
+    parser.add_argument(
+        '--visual-label-vectorizer',
+        type=Path,
+        default=None,
+        help='Existing visual-state label vectorizer JSON. Use this for val/test conversions.',
+    )
+    parser.add_argument(
+        '--visual-label-vectorizer-out',
+        type=Path,
+        default=None,
+        help='Where to write a fitted visual-state label vectorizer.',
     )
     parser.add_argument('--image-width', type=int, default=320)
     parser.add_argument('--image-height', type=int, default=240)
@@ -1032,6 +1233,10 @@ def main() -> None:
         use_videos=args.use_videos,
         allow_blank_images=args.allow_blank_images,
         overwrite=args.overwrite,
+        dataset_mode=args.dataset_mode,
+        visual_labels_path=args.visual_labels,
+        visual_label_vectorizer_path=args.visual_label_vectorizer,
+        visual_label_vectorizer_out=args.visual_label_vectorizer_out,
     )
 
 
