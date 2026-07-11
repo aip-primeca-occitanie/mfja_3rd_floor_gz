@@ -63,6 +63,7 @@ install(
     scripts/room_315_kinematic_shuttle_node.py
     scripts/room_315_legacy_direct_action_metrics.py
     scripts/room_315_multi_shuttle.py
+    scripts/room_315_observed_state_provider.py
     scripts/room_315_pddl_dataset_report.py
     scripts/room_315_pddl_language_generator.py
     scripts/room_315_pddl_plan_translator.py
@@ -97,6 +98,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_contracts
     test/test_room315_contracts.py
+  )
+  ament_add_pytest_test(
+    test_room315_observed_state_provider
+    test/test_room315_observed_state_provider.py
   )
   ament_add_pytest_test(
     test_presentation_left_slot3_kuka_slot2

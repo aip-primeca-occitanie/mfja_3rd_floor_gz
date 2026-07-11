@@ -31,6 +31,8 @@ FACT_SOURCES = frozenset({
     'supervisor',
     'executor',
     'manual',
+    'oracle',
+    'trusted_device',
 })
 LEARNED_OUTPUT_SOURCES = frozenset({'visual_model', 'learned_task_goal'})
 TASK_GOAL_SOURCES = frozenset({'human', 'learned_task_goal', 'planner', 'supervisor'})
