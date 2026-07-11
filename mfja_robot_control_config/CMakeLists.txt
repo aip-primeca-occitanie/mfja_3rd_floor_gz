@@ -58,6 +58,7 @@ install(
     scripts/presentation_left_slot3_kuka_slot2.py
     scripts/robot_joint_command.py
     scripts/room_315_contracts.py
+    scripts/room_315_closed_loop_executive.py
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
@@ -107,6 +108,14 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_task_goal_builder
     test/test_room315_task_goal_builder.py
+  )
+  ament_add_pytest_test(
+    test_room315_closed_loop_executive
+    test/test_room315_closed_loop_executive.py
+  )
+  ament_add_pytest_test(
+    test_room315_closed_loop_executive_ros_integration
+    test/test_room315_closed_loop_executive_ros_integration.py
   )
   ament_add_pytest_test(
     test_presentation_left_slot3_kuka_slot2
