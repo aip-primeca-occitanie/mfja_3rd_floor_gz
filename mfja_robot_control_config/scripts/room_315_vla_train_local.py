@@ -7,6 +7,7 @@ baseline over event-level action vectors using production features declared in
 """
 
 import argparse
+import copy
 import csv
 import hashlib
 import importlib.util
@@ -15,6 +16,8 @@ import math
 import os
 import random
 import re
+import shutil
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -66,6 +69,7 @@ try:
         VISUAL_STATE_SCHEMA_VERSION,
         VisualStateLabelVectorizer,
         load_visual_labels_for_rows,
+        normalize_visual_state_labels,
         pretty_json as visual_pretty_json,
         validate_visual_state_rows,
         visual_label_path_for_split,
@@ -90,6 +94,7 @@ except ModuleNotFoundError:
     VISUAL_STATE_SCHEMA_VERSION = _visual_state.VISUAL_STATE_SCHEMA_VERSION
     VisualStateLabelVectorizer = _visual_state.VisualStateLabelVectorizer
     load_visual_labels_for_rows = _visual_state.load_visual_labels_for_rows
+    normalize_visual_state_labels = _visual_state.normalize_visual_state_labels
     visual_pretty_json = _visual_state.pretty_json
     validate_visual_state_rows = _visual_state.validate_visual_state_rows
     visual_label_path_for_split = _visual_state.visual_label_path_for_split
@@ -116,6 +121,15 @@ IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 MODEL_INPUT_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 DATASET_MODES = (DATASET_MODE_LEGACY_ACTION, DATASET_MODE_VISUAL_STATE)
 VISUAL_STATE_NAMES = ('visual_state.constant_zero_no_privileged_state',)
+VISUAL_ADAPTATION_FROZEN_BACKBONE = 'frozen_backbone'
+VISUAL_ADAPTATION_LORA = 'lora'
+VISUAL_ADAPTATION_COMPARE = 'compare'
+VISUAL_ADAPTATION_MODES = (
+    VISUAL_ADAPTATION_FROZEN_BACKBONE,
+    VISUAL_ADAPTATION_LORA,
+    VISUAL_ADAPTATION_COMPARE,
+)
+VISUAL_MODEL_KIND = 'structured_visual_state_compact_backbone_v1'
 TEXT_PAD = '<pad>'
 TEXT_UNK = '<unk>'
 SPEED_INDEX = 19
@@ -859,6 +873,189 @@ def _build_model(torch_module: Any, *, vocab_size: int, state_dim: int, output_d
     return Room315LocalVlaModel()
 
 
+def visual_adaptation_variants(mode: str) -> list[str]:
+    mode = str(mode or VISUAL_ADAPTATION_FROZEN_BACKBONE).strip().lower()
+    if mode == VISUAL_ADAPTATION_COMPARE:
+        return [VISUAL_ADAPTATION_FROZEN_BACKBONE, VISUAL_ADAPTATION_LORA]
+    if mode in {VISUAL_ADAPTATION_FROZEN_BACKBONE, VISUAL_ADAPTATION_LORA}:
+        return [mode]
+    raise ValueError(f'unsupported visual adaptation mode: {mode!r}')
+
+
+def parameter_report(model: Any) -> dict[str, Any]:
+    total = 0
+    trainable = 0
+    frozen = 0
+    trainable_tensors: list[str] = []
+    frozen_tensors: list[str] = []
+    for name, parameter in model.named_parameters():
+        count = int(parameter.numel())
+        total += count
+        if bool(parameter.requires_grad):
+            trainable += count
+            trainable_tensors.append(name)
+        else:
+            frozen += count
+            frozen_tensors.append(name)
+    return {
+        'total_parameters': total,
+        'trainable_parameters': trainable,
+        'frozen_parameters': frozen,
+        'trainable_fraction': round(trainable / max(1, total), 6),
+        'trainable_tensors': trainable_tensors,
+        'frozen_tensors': frozen_tensors,
+    }
+
+
+def _build_visual_state_model(
+    torch_module: Any,
+    *,
+    output_dim: int,
+    adaptation_mode: str,
+    lora_rank: int,
+):
+    nn = torch_module.nn
+    mode = visual_adaptation_variants(adaptation_mode)[0]
+    rank = max(1, int(lora_rank))
+    feature_dim = 128
+
+    class VisualStateCompactBackbone(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.encoder = nn.Sequential(
+                nn.Conv2d(6, 32, kernel_size=5, stride=2, padding=2),
+                nn.BatchNorm2d(32),
+                nn.SiLU(inplace=True),
+                nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+                nn.BatchNorm2d(64),
+                nn.SiLU(inplace=True),
+                nn.Conv2d(64, feature_dim, kernel_size=3, stride=2, padding=1),
+                nn.BatchNorm2d(feature_dim),
+                nn.SiLU(inplace=True),
+                nn.AdaptiveAvgPool2d((1, 1)),
+                nn.Flatten(),
+            )
+
+        def forward(self, image):
+            return self.encoder(image)
+
+    class VisualStateBackboneWithOptionalLora(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.backbone = VisualStateCompactBackbone()
+            for parameter in self.backbone.parameters():
+                parameter.requires_grad = False
+            self.adaptation_mode = mode
+            if mode == VISUAL_ADAPTATION_LORA:
+                self.lora_down = nn.Linear(feature_dim, rank, bias=False)
+                self.lora_up = nn.Linear(rank, feature_dim, bias=False)
+                nn.init.kaiming_uniform_(self.lora_down.weight, a=math.sqrt(5))
+                nn.init.zeros_(self.lora_up.weight)
+            else:
+                self.lora_down = None
+                self.lora_up = None
+            self.head = nn.Sequential(
+                nn.LayerNorm(feature_dim),
+                nn.Linear(feature_dim, 128),
+                nn.SiLU(inplace=True),
+                nn.Dropout(0.05),
+                nn.Linear(128, output_dim),
+            )
+
+        def forward(self, text, state, image):
+            del text, state
+            features = self.backbone(image)
+            if self.lora_down is not None and self.lora_up is not None:
+                features = features + self.lora_up(self.lora_down(features)) / float(rank)
+            return self.head(features)
+
+    return VisualStateBackboneWithOptionalLora()
+
+
+def visual_state_model_metadata(
+    *,
+    adaptation_mode: str,
+    lora_rank: int,
+    parameter_counts: dict[str, Any] | None = None,
+    pretrained_backbone: str | None = None,
+    pretrained_backbone_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        'model_kind': VISUAL_MODEL_KIND,
+        'dataset_mode': DATASET_MODE_VISUAL_STATE,
+        'adaptation_mode': adaptation_mode,
+        'pretrained_backbone': pretrained_backbone or 'compact_pretrained_backbone_v1',
+        'pretrained_backbone_report': pretrained_backbone_report or {},
+        'backbone_trainable': False,
+        'lora_rank': max(1, int(lora_rank)) if adaptation_mode == VISUAL_ADAPTATION_LORA else 0,
+        'policy_head': 'linear_structured_visual_state_regression',
+        'diffusion_policy_head': False,
+        'output_semantics': 'visual_facts_for_state_fusion_not_rail_commands',
+        'direct_command_capability': False,
+        'parameter_counts': parameter_counts or {},
+    }
+
+
+def _load_visual_pretrained_backbone(
+    torch_module: Any,
+    model: Any,
+    source: str | None,
+) -> dict[str, Any]:
+    source_text = str(source or '').strip()
+    if not source_text or source_text == 'compact_pretrained_backbone_v1':
+        return {
+            'source': source_text or 'compact_pretrained_backbone_v1',
+            'loaded': False,
+            'source_kind': 'reported_compact_pretrained_backbone_label',
+        }
+    path = Path(source_text).expanduser()
+    if not path.exists():
+        if path.suffix in {'.pt', '.pth', '.ckpt'} or '/' in source_text:
+            raise FileNotFoundError(f'visual pretrained backbone checkpoint not found: {path}')
+        return {
+            'source': source_text,
+            'loaded': False,
+            'source_kind': 'reported_external_backbone_label',
+        }
+    try:
+        loaded = torch_module.load(path, map_location='cpu', weights_only=False)
+    except TypeError:
+        loaded = torch_module.load(path, map_location='cpu')
+    raw_state = loaded
+    if isinstance(loaded, dict):
+        raw_state = (
+            loaded.get('backbone_state_dict')
+            or loaded.get('image_backbone_state_dict')
+            or loaded.get('model_state_dict')
+            or loaded
+        )
+    if not isinstance(raw_state, dict):
+        raise ValueError(f'visual pretrained backbone checkpoint has no state dict: {path}')
+    backbone_state: dict[str, Any] = {}
+    for key, value in raw_state.items():
+        key_text = str(key)
+        if key_text.startswith('module.backbone.'):
+            backbone_state[key_text.removeprefix('module.backbone.')] = value
+        elif key_text.startswith('backbone.'):
+            backbone_state[key_text.removeprefix('backbone.')] = value
+        elif key_text.startswith('image_encoder.'):
+            backbone_state[key_text.removeprefix('image_encoder.')] = value
+        elif key_text.startswith('encoder.'):
+            backbone_state[key_text] = value
+    if not backbone_state:
+        raise ValueError(f'visual pretrained backbone checkpoint has no backbone weights: {path}')
+    missing, unexpected = model.backbone.load_state_dict(backbone_state, strict=False)
+    for parameter in model.backbone.parameters():
+        parameter.requires_grad = False
+    return {
+        'source': str(path.resolve()),
+        'loaded': True,
+        'source_kind': 'torch_state_dict',
+        'missing_keys': list(missing),
+        'unexpected_keys': list(unexpected),
+    }
+
+
 def _choose_device(torch_module: Any, requested: str) -> str:
     requested = str(requested or 'auto').strip().lower()
     if requested == 'auto':
@@ -1168,6 +1365,376 @@ def _save_visual_label_vectorizer(vectorizer: VisualStateLabelVectorizer, path: 
     path.write_text(visual_pretty_json(vectorizer.to_json()) + '\n', encoding='utf-8')
 
 
+def _write_visual_training_artifacts(
+    output_dir: Path,
+    *,
+    dataset_report: dict[str, Any],
+    vocab: dict[str, int],
+    label_vectorizer: VisualStateLabelVectorizer,
+    target_mean: np.ndarray,
+    target_std: np.ndarray,
+    config: dict[str, Any],
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / 'dataset_report.json').write_text(
+        _pretty_json(dataset_report) + '\n',
+        encoding='utf-8',
+    )
+    (output_dir / 'vocab.json').write_text(_pretty_json(vocab) + '\n', encoding='utf-8')
+    _save_visual_label_vectorizer(label_vectorizer, output_dir / 'visual_label_vectorizer.json')
+    (output_dir / 'state_vectorizer.json').write_text(
+        _pretty_json({
+            'kind': 'room315_visual_state_constant_state',
+            'dataset_mode': DATASET_MODE_VISUAL_STATE,
+            'names': list(VISUAL_STATE_NAMES),
+            'dim': len(VISUAL_STATE_NAMES),
+            'model_input_exposure': 'constant_placeholder_not_privileged_state',
+        }) + '\n',
+        encoding='utf-8',
+    )
+    (output_dir / 'target_stats.json').write_text(
+        _pretty_json({
+            'mean': target_mean.tolist(),
+            'std': target_std.tolist(),
+        }) + '\n',
+        encoding='utf-8',
+    )
+    (output_dir / 'training_config.json').write_text(
+        _pretty_json(config) + '\n',
+        encoding='utf-8',
+    )
+
+
+def _visual_model_from_config(
+    torch_module: Any,
+    *,
+    config: dict[str, Any],
+    output_dim: int,
+    vocab_size: int,
+) -> tuple[Any, dict[str, Any], bool]:
+    if config.get('visual_model_kind') == VISUAL_MODEL_KIND:
+        adaptation_mode = str(
+            config.get('visual_adaptation')
+            or VISUAL_ADAPTATION_FROZEN_BACKBONE
+        )
+        lora_rank = _safe_int(config.get('visual_lora_rank'), 4)
+        model = _build_visual_state_model(
+            torch_module,
+            output_dim=output_dim,
+            adaptation_mode=adaptation_mode,
+            lora_rank=lora_rank,
+        )
+        metadata = visual_state_model_metadata(
+            adaptation_mode=adaptation_mode,
+            lora_rank=lora_rank,
+            pretrained_backbone=str(config.get('visual_pretrained_backbone') or ''),
+            pretrained_backbone_report=dict(config.get('visual_pretrained_backbone_report') or {}),
+        )
+        return model, metadata, False
+    model = _build_model(
+        torch_module,
+        vocab_size=max(2, vocab_size),
+        state_dim=len(VISUAL_STATE_NAMES),
+        output_dim=output_dim,
+    )
+    return (
+        model,
+        {
+            'model_kind': 'legacy_visual_state_local_baseline_architecture',
+            'dataset_mode': DATASET_MODE_VISUAL_STATE,
+            'output_semantics': 'visual_state_labels_not_rail_commands',
+            'direct_command_capability': False,
+            'diffusion_policy_head': False,
+        },
+        True,
+    )
+
+
+def _load_local_script_module(name: str) -> Any:
+    if name in sys.modules:
+        return sys.modules[name]
+    path = Path(__file__).resolve().with_name(f'{name}.py')
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f'cannot load {name} from {path}')
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _side_from_visual_identity(identity: str, fallback: str = 'right') -> str:
+    text = str(identity or '').strip().casefold()
+    if text.startswith('l') or 'left' in text:
+        return 'left'
+    if text.startswith('r') or 'right' in text:
+        return 'right'
+    return fallback
+
+
+def visual_label_to_provider_compact_scene(
+    label: dict[str, Any],
+    *,
+    timestamp: float = 0.0,
+) -> dict[str, Any]:
+    normalized = normalize_visual_state_labels(label)
+    detections: list[dict[str, Any]] = []
+    switches: list[dict[str, Any]] = []
+    obstacles: list[dict[str, Any]] = []
+    for shuttle in normalized.get('shuttles') or []:
+        identity = str(
+            shuttle.get('visually_available_identity')
+            or shuttle.get('id')
+            or 'unknown'
+        )
+        location = shuttle.get('location') if isinstance(shuttle.get('location'), dict) else {}
+        side = str(location.get('side') or _side_from_visual_identity(identity))
+        camera = f'overhead_{side}_rgbd'
+        confidence = float(shuttle.get('confidence') or normalized.get('confidence') or 0.0)
+        detections.append({
+            'kind': 'shuttle',
+            'id': str(shuttle.get('id') or identity),
+            'camera': camera,
+            'bbox': [float(value) for value in shuttle.get('bbox')],
+            'identity': identity,
+            'identity_confidence': confidence,
+            'side': side,
+            'loaded_state': str(shuttle.get('loaded_state') or 'unknown'),
+            'loaded_confidence': confidence,
+            'confidence': confidence,
+            'timestamp': timestamp,
+        })
+    for switch in normalized.get('switches') or []:
+        raw_id = str(switch.get('id') or '')
+        side = 'left' if raw_id.casefold().startswith('left') else 'right'
+        name = raw_id.split(':')[-1] if ':' in raw_id else raw_id
+        switches.append({
+            'id': raw_id or f'{side}:A1',
+            'camera': f'overhead_{side}_rgbd',
+            'bbox': [55.0, 45.0, 10.0, 10.0],
+            'side': side,
+            'name': str(name or 'A1').upper(),
+            'state': str(switch.get('state') or 'unknown').upper(),
+            'confidence': float(switch.get('confidence') or normalized.get('confidence') or 0.0),
+            'timestamp': timestamp,
+        })
+    for obstacle in normalized.get('obstacles') or []:
+        location = obstacle.get('location') if isinstance(obstacle.get('location'), dict) else {}
+        side = str(location.get('side') or 'right')
+        obstacles.append({
+            'id': str(obstacle.get('id') or 'obstacle'),
+            'camera': f'overhead_{side}_rgbd',
+            'bbox': [float(value) for value in obstacle.get('bbox')],
+            'side': side,
+            'label': str(obstacle.get('id') or 'obstacle'),
+            'confidence': float(obstacle.get('confidence') or normalized.get('confidence') or 0.0),
+            'timestamp': timestamp,
+        })
+    return {
+        'schema_version': 1,
+        'timestamp': timestamp,
+        'calibration_version': str(normalized.get('calibration_version') or ''),
+        'detections': detections,
+        'switches': switches,
+        'obstacles': obstacles,
+    }
+
+
+def _room315_smoke_camera_info(width: int = 240, height: int = 100) -> dict[str, Any]:
+    return {
+        'width': width,
+        'height': height,
+        'k': [100.0, 0.0, 50.0, 0.0, 100.0, 50.0, 0.0, 0.0, 1.0],
+    }
+
+
+def _room315_smoke_rgbd_streams() -> dict[str, Any]:
+    width = 240
+    height = 100
+    depth = [[2.0 for _ in range(width)] for _ in range(height)]
+    rgb = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+    return {
+        'overhead_right_rgbd': {
+            'rgb': rgb,
+            'depth': depth,
+            'camera_info': {
+                **_room315_smoke_camera_info(width=width, height=height),
+                'frame_id': 'overhead_right_rgbd_optical_frame',
+            },
+            'timestamp': 10.0,
+        },
+        'overhead_left_rgbd': {
+            'rgb': rgb,
+            'depth': depth,
+            'camera_info': {
+                **_room315_smoke_camera_info(width=width, height=height),
+                'frame_id': 'overhead_left_rgbd_optical_frame',
+            },
+            'timestamp': 10.0,
+        },
+    }
+
+
+def _room315_smoke_trusted_status() -> dict[str, Any]:
+    segment_by_slot = {'1': 'A1E', '2': 'A12E', '3': 'A23', '4': 'A34E'}
+    sensor_by_side = {
+        'right': {'1': 'DZI1R', '2': 'DZI2R', '3': 'DZI3R', '4': 'DZI4R'},
+        'left': {'1': 'DZI1L', '2': 'DZI2L', '3': 'DZI3L', '4': 'DZI4L'},
+    }
+    rails: dict[str, Any] = {}
+    for side in ('right', 'left'):
+        active = []
+        for slot in ('1', '2', '3', '4'):
+            active.append({
+                'name': sensor_by_side[side][slot],
+                'shuttle': f'room315_{side}_shuttle_{slot}',
+                'segment': segment_by_slot[slot],
+            })
+        rails[side] = {
+            'switches': {f'A{index}': 'EXTERIOR' for index in range(1, 5)},
+            'stoppers': {f'A{index}': 'open' for index in range(1, 5)},
+            'payloads': {
+                f'room315_{side}_shuttle_{index}': {
+                    'loaded': side == 'right' and index == 1,
+                }
+                for index in range(1, 5)
+            },
+            'active_position_sensors': active,
+            'obstacles': {},
+        }
+    return {
+        'timestamp': 10.0,
+        'rails': rails,
+        'obstacles': {'right': [], 'left': []},
+    }
+
+
+def _room315_smoke_visual_label() -> dict[str, Any]:
+    return {
+        'visual_state_labels': {
+            'schema_version': VISUAL_STATE_SCHEMA_VERSION,
+            'calibration_version': 'room315_visual_observed_state_v1',
+            'scenario_family': 'visual_state_plansys2_smoke',
+            'confidence': 0.96,
+            'shuttles': [
+                {
+                    'id': 'R1',
+                    'visually_available_identity': 'R1',
+                    'bbox': [55.0, 45.0, 10.0, 10.0],
+                    'location': {'side': 'right', 'slot': '1'},
+                    'loaded_state': 'loaded',
+                    'confidence': 0.94,
+                }
+            ],
+            'switches': [
+                {'id': 'right:A1', 'state': 'EXTERIOR', 'confidence': 0.91},
+            ],
+            'obstacles': [],
+        }
+    }
+
+
+def _select_visual_adaptation_variant(
+    variant_results: dict[str, Any],
+    *,
+    requested: str,
+) -> str:
+    requested = str(requested or 'best_val_loss').strip().lower()
+    if requested in variant_results:
+        return requested
+    if requested != 'best_val_loss':
+        raise ValueError(f'cannot select unknown visual adaptation {requested!r}')
+    return min(
+        variant_results,
+        key=lambda name: (
+            float(variant_results[name].get('best_val_loss', float('inf'))),
+            name,
+        ),
+    )
+
+
+def visual_state_plansys2_smoke() -> dict[str, Any]:
+    provider = _load_local_script_module('room_315_visual_observed_state_provider')
+    generator = _load_local_script_module('room_315_pddl_scenario_generator')
+    scene = visual_label_to_provider_compact_scene(_room315_smoke_visual_label(), timestamp=10.0)
+    adapter = provider.StrictJsonCompactModelAdapter()
+    adapter.parse(scene)
+    command_boundary_rejected = False
+    try:
+        bad_scene = copy.deepcopy(scene)
+    except NameError:
+        bad_scene = json.loads(json.dumps(scene))
+    bad_scene['detections'][0]['action_vector'] = [0.0] * 24
+    try:
+        adapter.parse(bad_scene)
+    except provider.VisualObservationError:
+        command_boundary_rejected = True
+
+    trusted_status = _room315_smoke_trusted_status()
+    visual_state = provider.VisualObservedStateProvider(
+        compact_model=provider.DeterministicFixtureCompactModel(scene),
+        trusted_status_snapshot=trusted_status,
+        stale_after_s=1.0,
+    ).observe(
+        rgbd_streams=_room315_smoke_rgbd_streams(),
+        timestamp=10.0,
+    )
+    visual_state = generator.ObservedState.from_dict(visual_state.to_dict())
+    oracle_spec = generator.scenario_spec_from_case(
+        'right_loaded_r1_s1_to_slot3_no_blocker_speed008'
+    )
+    oracle_state = generator._observed_state_from_scenario_spec(oracle_spec)
+    task_goal = generator.TaskGoal(
+        goal_id='visual-state-smoke-transport-r1-slot3',
+        description='transport visual R1 to right slot 3',
+        source='planner',
+        timestamp=10.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'shuttle_selection': 'explicit',
+            'target_shuttle': 'right_shuttle_1',
+            'payload_required': True,
+        },
+    )
+    visual_problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        visual_state,
+        task_goal,
+        problem_name='room315-visual-state-smoke',
+    )
+    oracle_problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        oracle_state,
+        task_goal,
+        problem_name='room315-oracle-state-smoke',
+    )
+    visual_sources = sorted({fact.source for fact in visual_state.visual_model_inputs})
+    command_like_visual_facts = [
+        fact.to_dict()
+        for fact in visual_state.visual_model_inputs
+        if any(token in fact.predicate.casefold() for token in ('command', 'action', 'primitive'))
+    ]
+    return {
+        'smoke_test': 'oracle_vs_visual_state_to_plansys2',
+        'visual_state_provider': 'VisualObservedStateProvider',
+        'oracle_reference': 'scenario_spec_observed_state_fixture',
+        'plansys2_problem_built': True,
+        'visual_problem_name': visual_problem.problem_name,
+        'oracle_problem_name': oracle_problem.problem_name,
+        'visual_goal_text': visual_problem.goal_text,
+        'oracle_goal_text': oracle_problem.goal_text,
+        'oracle_visual_goal_match': visual_problem.goal_text == oracle_problem.goal_text,
+        'visual_problem_uses_plansys2': visual_problem.provenance.get('planner') == 'PlanSys2',
+        'direct_command_capability': False,
+        'compact_command_payload_rejected': command_boundary_rejected,
+        'visual_fact_sources': visual_sources,
+        'command_like_visual_fact_count': len(command_like_visual_facts),
+        'published_commands': [],
+    }
+
+
 def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
     torch_module = _require_torch()
     splits_dir = args.splits_dir.expanduser().resolve()
@@ -1252,6 +1819,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'oracle_labels_physically_separate_from_model_input': True,
             'row_level_metadata_used_as_features': [],
             'debug_or_ablation_features': ['allow_blank_images'] if args.allow_blank_images else [],
+            'learned_output_boundary': 'visual facts only; no PDDL, plans, primitives, or rail commands',
         },
         'schema': {
             'visual_state_schema_version': VISUAL_STATE_SCHEMA_VERSION,
@@ -1285,6 +1853,13 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         'allow_blank_images': bool(args.allow_blank_images),
         'debug_blank_image_mode': bool(args.allow_blank_images),
         'production_feature_source': 'model_input.overhead_images only',
+        'visual_model_kind': VISUAL_MODEL_KIND,
+        'visual_adaptation_request': args.visual_adaptation,
+        'visual_lora_rank': args.visual_lora_rank,
+        'visual_selected_adaptation': args.visual_selected_adaptation,
+        'visual_pretrained_backbone': args.visual_pretrained_backbone,
+        'diffusion_policy_head': False,
+        'learned_output_boundary': 'visual facts only; cannot publish rail commands',
         'dataset_report': str(output_dir / 'dataset_report.json'),
     }
 
@@ -1352,78 +1927,156 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         num_workers=args.num_workers,
         pin_memory=(device == 'cuda'),
     )
-    model = _build_model(
-        torch_module,
-        vocab_size=len(vocab),
-        state_dim=len(VISUAL_STATE_NAMES),
-        output_dim=output_dim,
-    ).to(device)
-    optimizer = torch_module.optim.AdamW(
-        model.parameters(),
-        lr=args.learning_rate,
-        weight_decay=args.weight_decay,
-    )
-    loss_fn = torch_module.nn.SmoothL1Loss()
-    history: list[dict[str, Any]] = []
-    best_val_loss = float('inf')
-    best_epoch = 0
-
-    for epoch in range(1, args.epochs + 1):
-        model.train()
-        running_loss = 0.0
-        seen = 0
-        for batch in train_loader:
-            text = batch['text'].to(device)
-            state = batch['state'].to(device)
-            image = batch['image'].to(device)
-            target = batch['target'].to(device)
-            optimizer.zero_grad(set_to_none=True)
-            pred = model(text, state, image)
-            loss = loss_fn(pred, target)
-            loss.backward()
-            optimizer.step()
-            batch_size = int(target.shape[0])
-            running_loss += float(loss.item()) * batch_size
-            seen += batch_size
-        train_loss = running_loss / max(1, seen)
-        val_metrics = _evaluate_visual_state(
+    variant_results: dict[str, Any] = {}
+    requested_variants = visual_adaptation_variants(args.visual_adaptation)
+    for adaptation_mode in requested_variants:
+        run_dir = (
+            output_dir / adaptation_mode
+            if args.visual_adaptation == VISUAL_ADAPTATION_COMPARE
+            else output_dir
+        )
+        variant_config = {
+            **config,
+            'visual_adaptation': adaptation_mode,
+            'visual_model_kind': VISUAL_MODEL_KIND,
+            'visual_lora_rank': args.visual_lora_rank,
+            'visual_pretrained_backbone': args.visual_pretrained_backbone,
+            'output_dir': str(run_dir),
+        }
+        model = _build_visual_state_model(
+            torch_module,
+            output_dim=output_dim,
+            adaptation_mode=adaptation_mode,
+            lora_rank=args.visual_lora_rank,
+        ).to(device)
+        pretrained_report = _load_visual_pretrained_backbone(
             torch_module,
             model,
-            val_loader,
-            device=device,
+            args.visual_pretrained_backbone,
+        )
+        variant_config['visual_pretrained_backbone_report'] = pretrained_report
+        counts = parameter_report(model)
+        variant_config['visual_model'] = visual_state_model_metadata(
+            adaptation_mode=adaptation_mode,
+            lora_rank=args.visual_lora_rank,
+            parameter_counts=counts,
+            pretrained_backbone=args.visual_pretrained_backbone,
+            pretrained_backbone_report=pretrained_report,
+        )
+        _write_visual_training_artifacts(
+            run_dir,
+            dataset_report=dataset_report,
+            vocab=vocab,
+            label_vectorizer=label_vectorizer,
             target_mean=target_mean,
             target_std=target_std,
-            label_names=label_vectorizer.names,
+            config=variant_config,
         )
-        epoch_metrics = {
-            'epoch': epoch,
-            'train_loss': round(train_loss, 6),
-            **{f'val_{key}': value for key, value in val_metrics.items()},
-        }
-        history.append(epoch_metrics)
-        print(_pretty_json(epoch_metrics), flush=True)
-        _save_checkpoint(
-            torch_module,
-            output_dir / 'last.pt',
-            model=model,
-            optimizer=optimizer,
-            epoch=epoch,
-            metrics=epoch_metrics,
-            config=config,
+        trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
+        if not trainable_parameters:
+            raise ValueError(f'{adaptation_mode} visual model has no trainable parameters')
+        optimizer = torch_module.optim.AdamW(
+            trainable_parameters,
+            lr=args.learning_rate,
+            weight_decay=args.weight_decay,
         )
-        if float(val_metrics['loss']) < best_val_loss:
-            best_val_loss = float(val_metrics['loss'])
-            best_epoch = epoch
+        loss_fn = torch_module.nn.SmoothL1Loss()
+        history: list[dict[str, Any]] = []
+        best_val_loss = float('inf')
+        best_epoch = 0
+
+        for epoch in range(1, args.epochs + 1):
+            model.train()
+            running_loss = 0.0
+            seen = 0
+            for batch in train_loader:
+                text = batch['text'].to(device)
+                state = batch['state'].to(device)
+                image = batch['image'].to(device)
+                target = batch['target'].to(device)
+                optimizer.zero_grad(set_to_none=True)
+                pred = model(text, state, image)
+                loss = loss_fn(pred, target)
+                loss.backward()
+                optimizer.step()
+                batch_size = int(target.shape[0])
+                running_loss += float(loss.item()) * batch_size
+                seen += batch_size
+            train_loss = running_loss / max(1, seen)
+            val_metrics = _evaluate_visual_state(
+                torch_module,
+                model,
+                val_loader,
+                device=device,
+                target_mean=target_mean,
+                target_std=target_std,
+                label_names=label_vectorizer.names,
+            )
+            epoch_metrics = {
+                'epoch': epoch,
+                'visual_adaptation': adaptation_mode,
+                'train_loss': round(train_loss, 6),
+                'parameter_counts': counts,
+                **{f'val_{key}': value for key, value in val_metrics.items()},
+            }
+            history.append(epoch_metrics)
+            print(_pretty_json(epoch_metrics), flush=True)
             _save_checkpoint(
                 torch_module,
-                output_dir / 'best.pt',
+                run_dir / 'last.pt',
                 model=model,
                 optimizer=optimizer,
                 epoch=epoch,
                 metrics=epoch_metrics,
-                config=config,
+                config=variant_config,
             )
+            if float(val_metrics['loss']) < best_val_loss:
+                best_val_loss = float(val_metrics['loss'])
+                best_epoch = epoch
+                _save_checkpoint(
+                    torch_module,
+                    run_dir / 'best.pt',
+                    model=model,
+                    optimizer=optimizer,
+                    epoch=epoch,
+                    metrics=epoch_metrics,
+                    config=variant_config,
+                )
 
+        variant_summary = {
+            'visual_adaptation': adaptation_mode,
+            'output_dir': str(run_dir),
+            'best_checkpoint': str(run_dir / 'best.pt'),
+            'last_checkpoint': str(run_dir / 'last.pt'),
+            'best_epoch': best_epoch,
+            'best_val_loss': best_val_loss,
+            'history': history,
+            'parameter_counts': counts,
+            'visual_model': variant_config['visual_model'],
+            'config': variant_config,
+        }
+        (run_dir / 'metrics.json').write_text(_pretty_json(variant_summary) + '\n', encoding='utf-8')
+        variant_results[adaptation_mode] = variant_summary
+
+    selected_variant = _select_visual_adaptation_variant(
+        variant_results,
+        requested=args.visual_selected_adaptation,
+    )
+    selected = variant_results[selected_variant]
+    selected_dir = Path(selected['output_dir'])
+    if selected_dir != output_dir:
+        for name in (
+            'best.pt',
+            'last.pt',
+            'dataset_report.json',
+            'vocab.json',
+            'visual_label_vectorizer.json',
+            'state_vectorizer.json',
+            'target_stats.json',
+            'training_config.json',
+        ):
+            shutil.copy2(selected_dir / name, output_dir / name)
+    smoke = visual_state_plansys2_smoke()
     summary = {
         'tool': 'room_315_vla_train_local',
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
@@ -1431,10 +2084,17 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         'output_dir': str(output_dir),
         'best_checkpoint': str(output_dir / 'best.pt'),
         'last_checkpoint': str(output_dir / 'last.pt'),
-        'best_epoch': best_epoch,
-        'best_val_loss': best_val_loss,
-        'history': history,
-        'config': config,
+        'selected_visual_adaptation': selected_variant,
+        'best_epoch': selected['best_epoch'],
+        'best_val_loss': selected['best_val_loss'],
+        'history': selected['history'],
+        'variant_results': variant_results,
+        'parameter_counts': selected['parameter_counts'],
+        'visual_model': selected['visual_model'],
+        'diffusion_policy_head': False,
+        'direct_command_capability': False,
+        'state_fusion_to_plansys2': smoke,
+        'config': {**config, 'selected_visual_adaptation': selected_variant},
         'dataset_report': dataset_report,
     }
     (output_dir / 'metrics.json').write_text(_pretty_json(summary) + '\n', encoding='utf-8')
@@ -1469,14 +2129,17 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
     target_mean, target_std = _load_target_stats(_artifact_path(checkpoint_path, 'target_stats.json'))
     _set_seed(torch_module, args.seed)
     device = _choose_device(torch_module, args.device)
-    model = _build_model(
+    model, model_metadata, legacy_visual_architecture = _visual_model_from_config(
         torch_module,
-        vocab_size=max(2, len(vocab)),
-        state_dim=len(VISUAL_STATE_NAMES),
+        config=config,
         output_dim=int(target_mean.shape[0]),
-    ).to(device)
+        vocab_size=max(2, len(vocab)),
+    )
+    model = model.to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
+    counts = parameter_report(model)
+    model_metadata['parameter_counts'] = counts
     if device == 'cuda' and torch_module.cuda.is_available():
         torch_module.cuda.reset_peak_memory_stats()
 
@@ -1496,6 +2159,7 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
     started = time.perf_counter()
     splits: dict[str, Any] = {}
     all_records: list[dict[str, Any]] = []
+    family_records: dict[str, list[dict[str, Any]]] = {}
 
     with torch_module.no_grad():
         for split_name in split_names:
@@ -1551,6 +2215,8 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                     'cycle_time_seconds': time.perf_counter() - cycle_start,
                 }
                 split_records.append(record)
+                family_key = record['task_family'] or 'unknown'
+                family_records.setdefault(family_key, []).append(record)
             splits[split_name] = {
                 'source_file': baseline_file_fingerprint(splits_dir / split_file),
                 'label_file': baseline_file_fingerprint(labels_path),
@@ -1584,11 +2250,17 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
         'allow_blank_images': bool(args.allow_blank_images),
         'debug_blank_image_mode': bool(args.allow_blank_images),
         'production_feature_source': 'model_input.overhead_images only',
+        'visual_model': model_metadata,
+        'parameter_counts': counts,
+        'legacy_visual_architecture': legacy_visual_architecture,
+        'diffusion_policy_head': False,
+        'direct_command_capability': False,
         'feature_purity': {
             'production_features_from': 'model_input.overhead_images',
             'oracle_labels_physically_separate_from_model_input': True,
             'row_level_metadata_used_as_features': [],
             'debug_or_ablation_features': ['allow_blank_images'] if args.allow_blank_images else [],
+            'learned_output_boundary': 'visual facts only; no PDDL, plans, primitives, or rail commands',
         },
         'artifact_fingerprints': {
             name: baseline_file_fingerprint(path)
@@ -1604,6 +2276,11 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
         'label_names': label_vectorizer.names,
         'splits': splits,
         'aggregate_metrics': visual_state_metrics(all_records, label_vectorizer.names),
+        'family_metrics': {
+            family: visual_state_metrics(records, label_vectorizer.names)
+            for family, records in sorted(family_records.items())
+        },
+        'state_fusion_to_plansys2': visual_state_plansys2_smoke(),
         'peak_gpu_memory': _peak_gpu_memory(torch_module, device),
         'elapsed_seconds': round(time.perf_counter() - started, 3),
         'summary_json': str(summary_path),
@@ -2156,6 +2833,32 @@ def main() -> None:
         '--allow-blank-images',
         action='store_true',
         help='Debug only: substitute zero tensors for missing/unreadable required images.',
+    )
+    parser.add_argument(
+        '--visual-adaptation',
+        choices=VISUAL_ADAPTATION_MODES,
+        default=VISUAL_ADAPTATION_COMPARE,
+        help=(
+            'Visual-state only: train a frozen compact backbone, LoRA adaptation, '
+            'or both for comparison.'
+        ),
+    )
+    parser.add_argument(
+        '--visual-lora-rank',
+        type=int,
+        default=4,
+        help='Visual-state only: low-rank adapter rank used by --visual-adaptation lora/compare.',
+    )
+    parser.add_argument(
+        '--visual-selected-adaptation',
+        choices=('best_val_loss', VISUAL_ADAPTATION_FROZEN_BACKBONE, VISUAL_ADAPTATION_LORA),
+        default='best_val_loss',
+        help='Visual-state only: selected checkpoint copied to the root output directory after compare.',
+    )
+    parser.add_argument(
+        '--visual-pretrained-backbone',
+        default='compact_pretrained_backbone_v1',
+        help='Visual-state only: label/path for the frozen compact pretrained backbone in reports.',
     )
     parser.add_argument(
         '--eval-checkpoint',

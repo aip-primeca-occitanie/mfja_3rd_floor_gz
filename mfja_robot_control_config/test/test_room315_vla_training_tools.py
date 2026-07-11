@@ -899,6 +899,81 @@ def test_visual_state_vectorizer_round_trip_and_metrics():
     assert metrics['confidence_mae'] > 0.0
     assert metrics['loaded_state_accuracy'] == 1.0
     assert metrics['switch_state_accuracy'] == 1.0
+    assert metrics['localization_metrics']['bbox_mae'] == metrics['bbox_mae']
+    assert metrics['loaded_state_metrics']['accuracy'] == 1.0
+    assert metrics['obstacle_metrics']['presence_accuracy'] == 1.0
+    assert metrics['confidence_calibration']['mean_abs_calibration_error'] > 0.0
+    assert metrics['inference_latency_seconds']['p50'] is None
+
+
+def test_visual_state_training_models_compare_frozen_backbone_and_lora():
+    torch = pytest.importorskip('torch')
+    trainer = _load_module('room_315_vla_train_local_visual_models', TRAIN_SCRIPT)
+
+    frozen = trainer._build_visual_state_model(
+        torch,
+        output_dim=8,
+        adaptation_mode='frozen_backbone',
+        lora_rank=2,
+    )
+    lora = trainer._build_visual_state_model(
+        torch,
+        output_dim=8,
+        adaptation_mode='lora',
+        lora_rank=2,
+    )
+
+    frozen_counts = trainer.parameter_report(frozen)
+    lora_counts = trainer.parameter_report(lora)
+    metadata = trainer.visual_state_model_metadata(
+        adaptation_mode='lora',
+        lora_rank=2,
+        parameter_counts=lora_counts,
+    )
+
+    assert trainer.visual_adaptation_variants('compare') == ['frozen_backbone', 'lora']
+    assert all(not parameter.requires_grad for parameter in frozen.backbone.parameters())
+    assert all(not parameter.requires_grad for parameter in lora.backbone.parameters())
+    assert lora_counts['trainable_parameters'] > frozen_counts['trainable_parameters']
+    assert metadata['diffusion_policy_head'] is False
+    assert metadata['direct_command_capability'] is False
+    assert metadata['output_semantics'] == 'visual_facts_for_state_fusion_not_rail_commands'
+
+
+def test_visual_state_compact_scene_is_provider_compatible_and_command_free():
+    trainer = _load_module('room_315_vla_train_local_visual_compact', TRAIN_SCRIPT)
+    provider = trainer._load_local_script_module('room_315_visual_observed_state_provider')
+    scene = trainer.visual_label_to_provider_compact_scene(
+        {'visual_state_labels': _visual_labels()},
+        timestamp=12.0,
+    )
+
+    parsed = provider.StrictJsonCompactModelAdapter().parse(scene)
+    lower = json.dumps(parsed, sort_keys=True).casefold()
+
+    assert parsed['detections'][0]['identity'] == 'R1'
+    assert 'action_vector' not in lower
+    assert 'pddl' not in lower
+    assert 'rail_command' not in lower
+    with pytest.raises(provider.VisualObservationError, match='forbidden key'):
+        provider.StrictJsonCompactModelAdapter().parse({
+            **scene,
+            'detections': [{**scene['detections'][0], 'action_vector': [0.0] * 24}],
+        })
+
+
+def test_visual_state_plansys2_smoke_connects_provider_without_commands():
+    trainer = _load_module('room_315_vla_train_local_visual_plansys2', TRAIN_SCRIPT)
+
+    smoke = trainer.visual_state_plansys2_smoke()
+
+    assert smoke['plansys2_problem_built'] is True
+    assert smoke['visual_problem_uses_plansys2'] is True
+    assert smoke['oracle_visual_goal_match'] is True
+    assert smoke['direct_command_capability'] is False
+    assert smoke['compact_command_payload_rejected'] is True
+    assert smoke['command_like_visual_fact_count'] == 0
+    assert smoke['published_commands'] == []
 
 
 def test_smolvla_eval_quantizes_discrete_fields_and_summarises_metrics():

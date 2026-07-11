@@ -524,6 +524,29 @@ def _peak_gpu_memory(torch_module: Any) -> dict[str, Any]:
     }
 
 
+def _parameter_report(model: Any) -> dict[str, Any]:
+    if not hasattr(model, 'named_parameters'):
+        return {
+            'total_parameters': None,
+            'trainable_parameters': None,
+            'frozen_parameters': None,
+            'trainable_fraction': None,
+        }
+    total = 0
+    trainable = 0
+    for _, parameter in model.named_parameters():
+        count = int(parameter.numel())
+        total += count
+        if bool(parameter.requires_grad):
+            trainable += count
+    return {
+        'total_parameters': total,
+        'trainable_parameters': trainable,
+        'frozen_parameters': total - trainable,
+        'trainable_fraction': round(trainable / max(1, total), 6),
+    }
+
+
 def _require_lerobot():
     try:
         import torch
@@ -617,6 +640,7 @@ def evaluate_smolvla(
 
     policy = SmolVLAPolicy.from_pretrained(checkpoint)
     policy.eval()
+    parameter_counts = _parameter_report(policy)
     preprocessor, postprocessor = make_pre_post_processors(policy.config, pretrained_path=str(checkpoint))
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
@@ -814,6 +838,9 @@ def evaluate_smolvla(
         'elapsed_seconds': round(time.perf_counter() - started, 3),
         'action_vector_fields': fields if dataset_mode == DATASET_MODE_LEGACY_ACTION else [],
         'visual_label_names': label_names,
+        'parameter_counts': parameter_counts,
+        'diffusion_policy_head': False if dataset_mode == DATASET_MODE_VISUAL_STATE else None,
+        'direct_command_capability': dataset_mode == DATASET_MODE_LEGACY_ACTION,
         'policy_input_keys': sorted(POLICY_INPUT_KEYS),
         'feature_purity': {
             'production_inputs': sorted(POLICY_INPUT_KEYS),

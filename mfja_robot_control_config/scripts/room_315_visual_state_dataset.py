@@ -603,6 +603,72 @@ def _binary_accuracy(records: list[dict[str, Any]], indexes: list[int]) -> float
     return round(correct / max(1, total), 6)
 
 
+def _distribution(records: list[dict[str, Any]], key: str) -> dict[str, float | None]:
+    values = []
+    for record in records:
+        try:
+            value = float(record.get(key))
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value):
+            values.append(value)
+    if not values:
+        return {'p50': None, 'p95': None, 'mean': None}
+    ordered = sorted(values)
+
+    def percentile(percent: float) -> float:
+        if len(ordered) == 1:
+            return ordered[0]
+        position = (len(ordered) - 1) * percent
+        lower = math.floor(position)
+        upper = math.ceil(position)
+        if lower == upper:
+            return ordered[int(position)]
+        weight = position - lower
+        return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+    return {
+        'p50': round(percentile(0.50), 6),
+        'p95': round(percentile(0.95), 6),
+        'mean': round(sum(ordered) / len(ordered), 6),
+    }
+
+
+def _confidence_calibration(
+    records: list[dict[str, Any]],
+    indexes: list[int],
+) -> dict[str, Any]:
+    if not records or not indexes:
+        return {
+            'samples': 0,
+            'confidence_fields': 0,
+            'mean_abs_calibration_error': None,
+            'overconfident_rate': None,
+            'underconfident_rate': None,
+        }
+    total_error = 0.0
+    overconfident = 0
+    underconfident = 0
+    count = 0
+    for record in records:
+        true = record['true_raw']
+        pred = record['pred_raw']
+        for index in indexes:
+            predicted_confidence = max(0.0, min(1.0, float(pred[index])))
+            target_confidence = max(0.0, min(1.0, float(true[index])))
+            total_error += abs(predicted_confidence - target_confidence)
+            overconfident += int(predicted_confidence > target_confidence)
+            underconfident += int(predicted_confidence < target_confidence)
+            count += 1
+    return {
+        'samples': len(records),
+        'confidence_fields': len(indexes),
+        'mean_abs_calibration_error': round(total_error / max(1, count), 6),
+        'overconfident_rate': round(overconfident / max(1, count), 6),
+        'underconfident_rate': round(underconfident / max(1, count), 6),
+    }
+
+
 def _categorical_group_accuracy(
     records: list[dict[str, Any]],
     names: list[str],
@@ -638,23 +704,41 @@ def visual_state_metrics(records: list[dict[str, Any]], label_names: list[str]) 
         for idx, name in enumerate(label_names)
         if name.startswith('obstacles.') and name.endswith('.confidence')
     ]
+    bbox_mae = _mae(records, bbox_indexes)
+    confidence_mae = _mae(records, confidence_indexes)
+    loaded_state_accuracy = _categorical_group_accuracy(
+        records,
+        label_names,
+        '.loaded_state',
+    )
+    location_accuracy = _categorical_group_accuracy(records, label_names, '.location.')
+    obstacle_presence_accuracy = _binary_accuracy(records, obstacle_presence)
     return {
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
         'samples': len(records),
         'label_mae': _mae(records, all_indexes),
-        'bbox_mae': _mae(records, bbox_indexes),
-        'confidence_mae': _mae(records, confidence_indexes),
+        'bbox_mae': bbox_mae,
+        'confidence_mae': confidence_mae,
         'identity_accuracy': _categorical_group_accuracy(
             records,
             label_names,
             '.visually_available_identity',
         ),
-        'loaded_state_accuracy': _categorical_group_accuracy(
-            records,
-            label_names,
-            '.loaded_state',
-        ),
+        'loaded_state_accuracy': loaded_state_accuracy,
         'switch_state_accuracy': _categorical_group_accuracy(records, label_names, '.state'),
-        'location_accuracy': _categorical_group_accuracy(records, label_names, '.location.'),
-        'obstacle_presence_accuracy': _binary_accuracy(records, obstacle_presence),
+        'location_accuracy': location_accuracy,
+        'obstacle_presence_accuracy': obstacle_presence_accuracy,
+        'localization_metrics': {
+            'bbox_mae': bbox_mae,
+            'location_accuracy': location_accuracy,
+        },
+        'loaded_state_metrics': {
+            'accuracy': loaded_state_accuracy,
+        },
+        'obstacle_metrics': {
+            'presence_accuracy': obstacle_presence_accuracy,
+        },
+        'confidence_calibration': _confidence_calibration(records, confidence_indexes),
+        'inference_latency_seconds': _distribution(records, 'inference_latency_seconds'),
+        'cycle_time_seconds': _distribution(records, 'cycle_time_seconds'),
     }
