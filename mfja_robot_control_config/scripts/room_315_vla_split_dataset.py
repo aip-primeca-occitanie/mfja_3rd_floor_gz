@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import json
+import os
 import random
 import re
 from collections import Counter
@@ -9,8 +11,13 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_INPUT = Path('/home/tiago/room315_payload_expanded_160_merged_final')
-DEFAULT_OUTPUT_DIR = Path('/home/tiago/room315_local_training/splits')
+def _env_path(name: str, fallback: str) -> Path:
+    return Path(os.environ.get(name, fallback))
+
+
+DEFAULT_INPUT = _env_path('ROOM315_VLA_DATASET_ROOT', 'room315_payload_dataset')
+DEFAULT_OUTPUT_DIR = _env_path('ROOM315_VLA_SPLITS_DIR', 'room315_local_training/splits')
+IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 SPLIT_FILENAMES = {
     'train': 'train.jsonl',
     'val': 'val.jsonl',
@@ -35,6 +42,152 @@ def _iter_jsonl(path: Path):
             if not isinstance(parsed, dict):
                 raise ValueError(f'{path}:{line_number}: JSONL row must be an object')
             yield parsed
+
+
+def _file_fingerprint(path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    size = 0
+    lines = 0
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+            size += len(chunk)
+            lines += chunk.count(b'\n')
+    return {
+        'path': str(path),
+        'sha256': digest.hexdigest(),
+        'bytes': size,
+        'newline_count': lines,
+    }
+
+
+def _row_fingerprint(rows: list[dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for row in rows:
+        payload = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+        digest.update(payload.encode('utf-8'))
+        digest.update(b'\n')
+    return digest.hexdigest()
+
+
+def _model_input(row: dict[str, Any]) -> dict[str, Any]:
+    model_input = row.get('model_input')
+    return model_input if isinstance(model_input, dict) else {}
+
+
+def _model_input_image_refs(row: dict[str, Any]) -> dict[str, str]:
+    overhead_images = _model_input(row).get('overhead_images')
+    if not isinstance(overhead_images, dict):
+        return {}
+    return {str(key): str(value) for key, value in overhead_images.items() if value}
+
+
+def _resolve_image_path(dataset_root: Path, image_ref: str) -> Path:
+    path = Path(str(image_ref)).expanduser()
+    return path if path.is_absolute() else dataset_root / path
+
+
+def _camera_completeness_report(
+    rows: list[dict[str, Any]],
+    dataset_root: Path,
+) -> dict[str, Any]:
+    per_camera = {
+        camera: {
+            'referenced_rows': 0,
+            'missing_ref_rows': 0,
+            'existing_files': 0,
+            'missing_files': 0,
+        }
+        for camera in IMAGE_KEYS
+    }
+    complete_rows = 0
+    rows_with_any_camera = 0
+    missing_examples: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        refs = _model_input_image_refs(row)
+        row_complete = True
+        if refs:
+            rows_with_any_camera += 1
+        for camera in IMAGE_KEYS:
+            ref = refs.get(camera, '')
+            stats = per_camera[camera]
+            if not ref:
+                stats['missing_ref_rows'] += 1
+                row_complete = False
+                if len(missing_examples) < 10:
+                    missing_examples.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'missing_ref',
+                    })
+                continue
+            stats['referenced_rows'] += 1
+            image_path = _resolve_image_path(dataset_root, ref)
+            if image_path.exists() and image_path.is_file():
+                stats['existing_files'] += 1
+            else:
+                stats['missing_files'] += 1
+                row_complete = False
+                if len(missing_examples) < 10:
+                    missing_examples.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'missing_file',
+                        'ref': ref,
+                    })
+        if row_complete:
+            complete_rows += 1
+    total = len(rows)
+    return {
+        'required_cameras': list(IMAGE_KEYS),
+        'total_rows': total,
+        'rows_with_any_camera': rows_with_any_camera,
+        'complete_rows': complete_rows,
+        'complete_row_rate': round(complete_rows / max(1, total), 6),
+        'per_camera': per_camera,
+        'missing_examples': missing_examples,
+        'source': 'model_input.overhead_images',
+    }
+
+
+def _rounded_key(value: Any) -> str:
+    try:
+        return f'{float(value):.4g}'
+    except (TypeError, ValueError):
+        return 'invalid'
+
+
+def _class_balance_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    primitive = Counter()
+    side = Counter()
+    shuttle = Counter()
+    target = Counter()
+    speed = Counter()
+    action_missing = 0
+    for row in rows:
+        vector = row.get('action_vector')
+        if not isinstance(vector, list) or len(vector) < 24:
+            action_missing += 1
+            continue
+        try:
+            primitive[str(int(round(float(vector[0]))))] += 1
+            side[str(int(round(float(vector[1]))))] += 1
+            shuttle[str(int(round(float(vector[2]))))] += 1
+            speed[_rounded_key(vector[19])] += 1
+            target[str(int(round(float(vector[21]))))] += 1
+        except (TypeError, ValueError):
+            action_missing += 1
+    return {
+        'rows': len(rows),
+        'missing_or_short_action_vector_rows': action_missing,
+        'primitive_id': dict(sorted(primitive.items())),
+        'side_id': dict(sorted(side.items())),
+        'shuttle_index': dict(sorted(shuttle.items())),
+        'target_id': dict(sorted(target.items())),
+        'speed_mps': dict(sorted(speed.items())),
+    }
 
 
 def _resolve_dataset_input(input_path: Path) -> tuple[Path, Path]:
@@ -205,6 +358,7 @@ def _manifest_for_split(
     episodes: dict[str, dict[str, Any]],
     family_ids: set[str],
     indexed_rows: list[tuple[int, dict[str, Any]]],
+    dataset_root: Path,
 ) -> dict[str, Any]:
     split_episode_ids = sorted(
         [
@@ -221,6 +375,11 @@ def _manifest_for_split(
         'episode_count': len(split_episode_ids),
         'family_count': len(family_ids),
         'families': sorted(family_ids),
+        'camera_completeness': _camera_completeness_report(
+            [row for _, row in indexed_rows],
+            dataset_root,
+        ),
+        'class_balance': _class_balance_report([row for _, row in indexed_rows]),
         'episodes': [
             {
                 'episode_id': episode_id,
@@ -241,6 +400,47 @@ def _check_outputs(output_dir: Path, *, overwrite: bool) -> None:
     if existing and not overwrite:
         formatted = ', '.join(str(path) for path in existing)
         raise FileExistsError(f'split output already exists; pass --overwrite: {formatted}')
+
+
+def _split_integrity_report(
+    rows: list[dict[str, Any]],
+    episodes: dict[str, dict[str, Any]],
+    split_rows: dict[str, list[tuple[int, dict[str, Any]]]],
+    family_splits: dict[str, set[str]],
+) -> dict[str, Any]:
+    family_to_splits: dict[str, list[str]] = {}
+    for split_name, family_ids in family_splits.items():
+        for family_id in family_ids:
+            family_to_splits.setdefault(family_id, []).append(split_name)
+    overlapping_families = {
+        family_id: splits
+        for family_id, splits in sorted(family_to_splits.items())
+        if len(splits) > 1
+    }
+    assigned_row_indexes = [
+        row_index
+        for indexed_rows in split_rows.values()
+        for row_index, _ in indexed_rows
+    ]
+    assigned_episode_ids = {
+        str(row.get('episode_id') or '')
+        for indexed_rows in split_rows.values()
+        for _, row in indexed_rows
+    }
+    source_episode_ids = set(episodes)
+    return {
+        'source_rows': len(rows),
+        'assigned_rows': len(assigned_row_indexes),
+        'row_count_matches': len(assigned_row_indexes) == len(rows),
+        'duplicate_row_assignments': (
+            len(assigned_row_indexes) - len(set(assigned_row_indexes))
+        ),
+        'missing_episode_assignments': sorted(source_episode_ids - assigned_episode_ids),
+        'unexpected_episode_assignments': sorted(assigned_episode_ids - source_episode_ids),
+        'families_disjoint': not overlapping_families,
+        'overlapping_families': overlapping_families,
+        'speed_variants_grouped_by_family': not overlapping_families,
+    }
 
 
 def split_dataset(
@@ -281,6 +481,8 @@ def split_dataset(
     manifest = {
         'dataset_root': str(dataset_root),
         'source': str(event_file),
+        'source_fingerprint': _file_fingerprint(event_file),
+        'row_fingerprint': _row_fingerprint(rows),
         'output_dir': str(output_dir),
         'seed': seed,
         'rows': len(rows),
@@ -289,12 +491,21 @@ def split_dataset(
         'val_families': val_families,
         'test_families': test_families,
         'allow_unvalidated': allow_unvalidated,
+        'camera_completeness': _camera_completeness_report(rows, dataset_root),
+        'class_balance': _class_balance_report(rows),
+        'split_integrity': _split_integrity_report(
+            rows,
+            episodes,
+            split_rows,
+            family_splits,
+        ),
         'splits': {
             split_name: _manifest_for_split(
                 split_name,
                 episodes,
                 family_splits[split_name],
                 split_rows[split_name],
+                dataset_root,
             )
             for split_name in SPLIT_FILENAMES
         },
@@ -314,13 +525,20 @@ def main() -> None:
         nargs='?',
         type=Path,
         default=DEFAULT_INPUT,
-        help='Dataset directory or meta/training_events.jsonl.',
+        help=(
+            'Dataset directory or meta/training_events.jsonl. Defaults to '
+            'ROOM315_VLA_DATASET_ROOT or room315_payload_dataset.'
+        ),
     )
     parser.add_argument(
         '--output-dir',
         type=Path,
         default=DEFAULT_OUTPUT_DIR,
-        help='Directory that will receive train.jsonl, val.jsonl, test.jsonl, and split_manifest.json.',
+        help=(
+            'Directory that will receive train.jsonl, val.jsonl, test.jsonl, '
+            'and split_manifest.json. Defaults to ROOM315_VLA_SPLITS_DIR or '
+            'room315_local_training/splits.'
+        ),
     )
     parser.add_argument('--seed', type=int, default=13)
     parser.add_argument(

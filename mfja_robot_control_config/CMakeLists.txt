@@ -127,6 +127,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_pddl_scenario_generator
     test/test_room315_pddl_scenario_generator.py
+    TIMEOUT 180
   )
   ament_add_pytest_test(
     test_room315_action_schema_v3

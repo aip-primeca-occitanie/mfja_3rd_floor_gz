@@ -2,8 +2,10 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import math
+import os
 import random
 import time
 from collections import Counter, defaultdict
@@ -14,11 +16,19 @@ import numpy as np
 import yaml
 
 
-DEFAULT_CHECKPOINT = Path(
-    '/home/tiago/room315_local_training/smolvla_runs/'
-    'v1_pretrained_compact32/checkpoints/002000/pretrained_model'
+def _env_path(name: str, fallback: str) -> Path:
+    return Path(os.environ.get(name, fallback))
+
+
+DEFAULT_CHECKPOINT = _env_path(
+    'ROOM315_SMOLVLA_CHECKPOINT',
+    'room315_local_training/smolvla_runs/'
+    'v1_pretrained_compact32/checkpoints/002000/pretrained_model',
 )
-DEFAULT_OUTPUT_DIR = Path('/home/tiago/room315_local_training/smolvla_eval/v1_pretrained_compact32')
+DEFAULT_OUTPUT_DIR = _env_path(
+    'ROOM315_SMOLVLA_EVAL_OUTPUT_DIR',
+    'room315_local_training/smolvla_eval/v1_pretrained_compact32',
+)
 DEFAULT_ACTION_SPACE = (
     Path(__file__).resolve().parents[1]
     / 'config'
@@ -28,16 +38,32 @@ DEFAULT_ACTION_SPACE = (
 DEFAULT_DATASETS = {
     'train': {
         'repo_id': 'room315/room315_vla_train_compact32',
-        'root': '/home/tiago/room315_local_training/lerobot/room315_vla_train_compact32',
+        'root': _env_path(
+            'ROOM315_LEROBOT_TRAIN_ROOT',
+            'room315_local_training/lerobot/room315_vla_train_compact32',
+        ),
     },
     'val': {
         'repo_id': 'room315/room315_vla_val_compact32',
-        'root': '/home/tiago/room315_local_training/lerobot/room315_vla_val_compact32',
+        'root': _env_path(
+            'ROOM315_LEROBOT_VAL_ROOT',
+            'room315_local_training/lerobot/room315_vla_val_compact32',
+        ),
     },
     'test': {
         'repo_id': 'room315/room315_vla_test_compact32',
-        'root': '/home/tiago/room315_local_training/lerobot/room315_vla_test_compact32',
+        'root': _env_path(
+            'ROOM315_LEROBOT_TEST_ROOT',
+            'room315_local_training/lerobot/room315_vla_test_compact32',
+        ),
     },
+}
+IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
+POLICY_INPUT_KEYS = {
+    'task',
+    'observation.state',
+    'observation.images.left_rail_rgb',
+    'observation.images.right_rail_rgb',
 }
 SPEED_FIELD = 'speed_mps'
 SAMPLE_FIELDS = (
@@ -62,6 +88,47 @@ SAMPLE_FIELDS = (
 
 def _pretty_json(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def dataset_root_fingerprint(root: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    file_count = 0
+    total_bytes = 0
+    content_hashed_files = 0
+    for path in sorted(item for item in root.rglob('*') if item.is_file()):
+        relative = path.relative_to(root).as_posix()
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        file_count += 1
+        total_bytes += size
+        digest.update(relative.encode('utf-8'))
+        digest.update(b'\0')
+        digest.update(str(size).encode('ascii'))
+        digest.update(b'\0')
+        if size <= 1024 * 1024 or path.suffix.lower() in {'.json', '.jsonl', '.yaml', '.yml'}:
+            digest.update(_file_sha256(path).encode('ascii'))
+            content_hashed_files += 1
+        else:
+            digest.update(b'size-only-large-file')
+        digest.update(b'\n')
+    return {
+        'root': str(root),
+        'fingerprint_kind': 'relative-path, size, and small-file-content sha256',
+        'sha256': digest.hexdigest(),
+        'files': file_count,
+        'bytes': total_bytes,
+        'content_hashed_files': content_hashed_files,
+    }
 
 
 def _safe_int(raw: Any, fallback: int = 0) -> int:
@@ -232,6 +299,119 @@ def summarise_predictions(
     }
 
 
+def _rounded_key(value: Any) -> str:
+    try:
+        return f'{float(value):.4g}'
+    except (TypeError, ValueError):
+        return 'invalid'
+
+
+def class_balance_from_records(records: list[dict[str, Any]], fields: list[str]) -> dict[str, Any]:
+    primitive = Counter()
+    side = Counter()
+    shuttle = Counter()
+    target = Counter()
+    speed = Counter()
+    if not records:
+        return {
+            'rows': 0,
+            'primitive_id': {},
+            'side_id': {},
+            'shuttle_index': {},
+            'target_id': {},
+            'speed_mps': {},
+        }
+    indexes = {field: fields.index(field) for field in fields}
+    for record in records:
+        true_quantized = record['true_quantized']
+        true_raw = record['true_raw']
+        if 'primitive_id' in indexes:
+            primitive[str(int(true_quantized[indexes['primitive_id']]))] += 1
+        if 'side_id' in indexes:
+            side[str(int(true_quantized[indexes['side_id']]))] += 1
+        if 'shuttle_index' in indexes:
+            shuttle[str(int(true_quantized[indexes['shuttle_index']]))] += 1
+        if 'target_id' in indexes:
+            target[str(int(true_quantized[indexes['target_id']]))] += 1
+        if SPEED_FIELD in indexes:
+            speed[_rounded_key(true_raw[indexes[SPEED_FIELD]])] += 1
+    return {
+        'rows': len(records),
+        'primitive_id': dict(sorted(primitive.items())),
+        'side_id': dict(sorted(side.items())),
+        'shuttle_index': dict(sorted(shuttle.items())),
+        'target_id': dict(sorted(target.items())),
+        'speed_mps': dict(sorted(speed.items())),
+    }
+
+
+def _new_camera_tracker() -> dict[str, Any]:
+    return {
+        'per_camera': {
+            camera: {
+                'present_samples': 0,
+                'missing_samples': 0,
+                'empty_tensor_samples': 0,
+            }
+            for camera in IMAGE_KEYS
+        },
+        'complete_samples': 0,
+        'problem_examples': [],
+    }
+
+
+def _track_camera_item(
+    tracker: dict[str, Any],
+    item: dict[str, Any],
+    *,
+    torch_module: Any,
+    sample_index: int,
+    dataset_index: int,
+) -> None:
+    complete = True
+    problems: list[dict[str, Any]] = tracker['problem_examples']
+    for camera in IMAGE_KEYS:
+        key = f'observation.images.{camera}'
+        stats = tracker['per_camera'][camera]
+        value = item.get(key)
+        if value is None:
+            stats['missing_samples'] += 1
+            complete = False
+            if len(problems) < 20:
+                problems.append({
+                    'sample_index': sample_index,
+                    'dataset_index': dataset_index,
+                    'camera': camera,
+                    'reason': 'missing_key',
+                })
+            continue
+        if torch_module.is_tensor(value) and int(value.numel()) == 0:
+            stats['empty_tensor_samples'] += 1
+            complete = False
+            if len(problems) < 20:
+                problems.append({
+                    'sample_index': sample_index,
+                    'dataset_index': dataset_index,
+                    'camera': camera,
+                    'reason': 'empty_tensor',
+                })
+            continue
+        stats['present_samples'] += 1
+    if complete:
+        tracker['complete_samples'] += 1
+
+
+def camera_completeness_report(tracker: dict[str, Any], total_samples: int) -> dict[str, Any]:
+    return {
+        'required_cameras': list(IMAGE_KEYS),
+        'evaluated_samples': total_samples,
+        'complete_samples': int(tracker['complete_samples']),
+        'complete_sample_rate': round(int(tracker['complete_samples']) / max(1, total_samples), 6),
+        'per_camera': tracker['per_camera'],
+        'problem_examples': tracker['problem_examples'],
+    }
+
+
 def _require_lerobot():
     try:
         import torch
@@ -241,8 +421,8 @@ def _require_lerobot():
     except ImportError as exc:
         raise SystemExit(
             'LeRobot/SmolVLA dependencies are required for evaluation.\n'
-            'Activate the local training environment first:\n'
-            '  source /home/tiago/room315_local_training/venv/bin/activate'
+            'Activate an environment with torch, lerobot, and SmolVLA installed, '
+            'or install those dependencies before rerunning.'
         ) from exc
     return torch, LeRobotDataset, SmolVLAPolicy, make_pre_post_processors
 
@@ -259,7 +439,7 @@ def _sample_indexes(dataset_size: int, *, max_samples: int | None, stride: int) 
 def _make_policy_batch(torch: Any, item: dict[str, Any]) -> dict[str, Any]:
     batch: dict[str, Any] = {}
     for key, value in item.items():
-        if key == 'action':
+        if key not in POLICY_INPUT_KEYS:
             continue
         if torch.is_tensor(value):
             batch[key] = value.unsqueeze(0)
@@ -294,6 +474,7 @@ def evaluate_smolvla(
     if not dataset_root.exists():
         raise FileNotFoundError(f'dataset root not found: {dataset_root}')
 
+    dataset_fingerprint = dataset_root_fingerprint(dataset_root)
     action_space = load_action_space(action_space_path)
     fields = action_vector_fields(action_space)
     ranges = action_field_ranges(action_space)
@@ -318,9 +499,17 @@ def evaluate_smolvla(
     records: list[dict[str, Any]] = []
     task_counts: Counter[str] = Counter()
     per_task_records: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    camera_tracker = _new_camera_tracker()
     with torch.no_grad():
         for sample_index, dataset_index in enumerate(indexes):
             item = dataset[dataset_index]
+            _track_camera_item(
+                camera_tracker,
+                item,
+                torch_module=torch,
+                sample_index=sample_index,
+                dataset_index=dataset_index,
+            )
             task = str(item.get('task', ''))
             task_counts[task] += 1
             true_raw = _tensor_to_numpy(item['action']).reshape(-1)
@@ -353,6 +542,13 @@ def evaluate_smolvla(
         task: summarise_predictions(task_records, fields, speed_tolerance=speed_tolerance)
         for task, task_records in sorted(per_task_records.items())
     }
+    camera_report = camera_completeness_report(camera_tracker, len(records))
+    if camera_report['complete_samples'] != len(records):
+        raise ValueError(
+            'evaluation split is missing required camera observations: '
+            f'{camera_report["problem_examples"][:1]}'
+        )
+    class_balance = class_balance_from_records(records, fields)
     output_dir.mkdir(parents=True, exist_ok=True)
     summary_path = output_dir / f'{split_name}_smolvla_eval.json'
     samples_path = output_dir / f'{split_name}_smolvla_predictions.csv'
@@ -393,9 +589,12 @@ def evaluate_smolvla(
             })
 
     summary = {
+        'tool': 'room_315_smolvla_eval',
+        'baseline_purpose': 'direct-action SmolVLA action_vector evaluation',
         'checkpoint': str(checkpoint),
         'dataset_repo_id': dataset_repo_id,
         'dataset_root': str(dataset_root),
+        'dataset_fingerprint': dataset_fingerprint,
         'split': split_name,
         'dataset_frames': len(dataset),
         'dataset_episodes': dataset.num_episodes,
@@ -405,6 +604,21 @@ def evaluate_smolvla(
         'speed_tolerance': speed_tolerance,
         'elapsed_seconds': round(time.perf_counter() - started, 3),
         'action_vector_fields': fields,
+        'policy_input_keys': sorted(POLICY_INPUT_KEYS),
+        'feature_purity': {
+            'production_inputs': sorted(POLICY_INPUT_KEYS),
+            'metadata_keys_excluded_from_policy_batch': [
+                'action',
+                'episode_index',
+                'frame_index',
+                'index',
+                'timestamp',
+            ],
+            'row_level_metadata_used_as_features': [],
+            'debug_or_ablation_features': [],
+        },
+        'camera_completeness': camera_report,
+        'class_balance': class_balance,
         'task_counts': dict(task_counts),
         'metrics': summary_metrics,
         'task_metrics': task_metrics,
@@ -420,11 +634,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description='Evaluate a local Room 315 SmolVLA checkpoint on a LeRobot split.'
     )
-    parser.add_argument('--checkpoint', type=Path, default=DEFAULT_CHECKPOINT)
+    parser.add_argument(
+        '--checkpoint',
+        type=Path,
+        default=DEFAULT_CHECKPOINT,
+        help='SmolVLA checkpoint directory. Defaults to ROOM315_SMOLVLA_CHECKPOINT.',
+    )
     parser.add_argument('--split', choices=sorted(DEFAULT_DATASETS), default='val')
     parser.add_argument('--dataset-repo-id', default=None)
-    parser.add_argument('--dataset-root', type=Path, default=None)
-    parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        '--dataset-root',
+        type=Path,
+        default=None,
+        help='LeRobot split root. Defaults to the split-specific ROOM315_LEROBOT_*_ROOT.',
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help='Evaluation output directory. Defaults to ROOM315_SMOLVLA_EVAL_OUTPUT_DIR.',
+    )
     parser.add_argument('--action-space', type=Path, default=DEFAULT_ACTION_SPACE)
     parser.add_argument('--max-samples', type=int, default=None)
     parser.add_argument('--stride', type=int, default=1)

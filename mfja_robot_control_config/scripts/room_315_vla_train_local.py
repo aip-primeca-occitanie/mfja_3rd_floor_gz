@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
+"""Small custom Room 315 direct-action baseline trainer.
+
+This is intentionally not a SmolVLA trainer. It trains a compact local PyTorch
+baseline over event-level action vectors using production features declared in
+`model_input` only.
+"""
 
 import argparse
+import hashlib
 import json
 import math
+import os
 import random
 import re
 from collections import Counter
@@ -13,9 +21,15 @@ import numpy as np
 from PIL import Image
 
 
-DEFAULT_SPLITS_DIR = Path('/home/tiago/room315_local_training/splits')
-DEFAULT_OUTPUT_DIR = Path('/home/tiago/room315_local_training/checkpoints/v0')
-DEFAULT_DATASET_ROOT = Path('/home/tiago/room315_payload_expanded_160_merged_final')
+def _env_path(name: str, fallback: str) -> Path:
+    return Path(os.environ.get(name, fallback))
+
+
+DEFAULT_SPLITS_DIR = _env_path('ROOM315_VLA_SPLITS_DIR', 'room315_local_training/splits')
+DEFAULT_OUTPUT_DIR = _env_path('ROOM315_LOCAL_BASELINE_OUTPUT_DIR', 'room315_local_training/checkpoints/v0')
+DEFAULT_DATASET_ROOT = _env_path('ROOM315_VLA_DATASET_ROOT', 'room315_payload_dataset')
+IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
+MODEL_INPUT_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 TEXT_PAD = '<pad>'
 TEXT_UNK = '<unk>'
 SPEED_INDEX = 19
@@ -42,13 +56,39 @@ def _iter_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _file_fingerprint(path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    size = 0
+    lines = 0
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+            size += len(chunk)
+            lines += chunk.count(b'\n')
+    return {
+        'path': str(path),
+        'sha256': digest.hexdigest(),
+        'bytes': size,
+        'newline_count': lines,
+    }
+
+
+def _rows_fingerprint(rows: list[dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for row in rows:
+        payload = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+        digest.update(payload.encode('utf-8'))
+        digest.update(b'\n')
+    return digest.hexdigest()
+
+
 def _require_torch():
     try:
         import torch
     except ImportError as exc:
         raise SystemExit(
             'PyTorch is required for local neural training but is not installed.\n'
-            'Install it first, then rerun this command. For this machine, start with:\n'
+            'Install it first, then rerun this command. For CUDA 12.8, start with:\n'
             '  python3 -m pip install --user torch --index-url https://download.pytorch.org/whl/cu128\n'
             'Or choose the current command from https://pytorch.org/get-started/locally/.'
         ) from exc
@@ -74,15 +114,34 @@ def _resolve_dataset_root(dataset_root: Path | None, splits_dir: Path) -> Path:
     return DEFAULT_DATASET_ROOT.expanduser().resolve()
 
 
+def _model_input(row: dict[str, Any], *, context: str = 'row') -> dict[str, Any]:
+    model_input = row.get('model_input')
+    if not isinstance(model_input, dict):
+        raise ValueError(f'{context} is missing model_input')
+    unexpected = sorted(set(model_input) - MODEL_INPUT_KEYS)
+    if unexpected:
+        raise ValueError(f'{context} model_input has undeclared fields: {unexpected}')
+    missing = sorted(MODEL_INPUT_KEYS - set(model_input))
+    if missing:
+        raise ValueError(f'{context} model_input is missing fields: {missing}')
+    if not isinstance(model_input.get('overhead_images'), dict):
+        raise ValueError(f'{context} model_input.overhead_images must be an object')
+    if not isinstance(model_input.get('observable_state'), dict):
+        raise ValueError(f'{context} model_input.observable_state must be an object')
+    if not isinstance(model_input.get('last_command'), dict):
+        raise ValueError(f'{context} model_input.last_command must be an object')
+    return model_input
+
+
 def tokenize(text: Any) -> list[str]:
     return re.findall(r'[A-Za-z0-9_]+', str(text or '').lower())
 
 
 def _language(row: dict[str, Any]) -> str:
-    model_input = row.get('model_input')
-    if isinstance(model_input, dict) and model_input.get('language'):
-        return str(model_input.get('language') or '')
-    return str(row.get('task') or row.get('generated_language') or '')
+    language = str(_model_input(row).get('language') or '')
+    if not language:
+        raise ValueError(f'row for episode {row.get("episode_id", "")!r} has empty model_input.language')
+    return language
 
 
 def build_vocab(
@@ -138,9 +197,7 @@ def _to_float(value: Any) -> float | None:
 
 
 def _model_input_state(row: dict[str, Any]) -> dict[str, Any]:
-    model_input = row.get('model_input')
-    if not isinstance(model_input, dict):
-        return {}
+    model_input = _model_input(row)
     state = {}
     _flatten('observable_state', model_input.get('observable_state', {}), state)
     _flatten('last_command', model_input.get('last_command', {}), state)
@@ -197,20 +254,11 @@ class StateVectorizer:
 
 
 def _image_refs(row: dict[str, Any]) -> dict[str, str]:
-    model_input = row.get('model_input')
-    if isinstance(model_input, dict) and isinstance(model_input.get('overhead_images'), dict):
-        return {
-            str(key): str(value)
-            for key, value in model_input['overhead_images'].items()
-            if value
-        }
-    refs = row.get('image_frame_refs')
-    if isinstance(refs, dict):
-        return {str(key): str(value) for key, value in refs.items() if value}
+    overhead_images = _model_input(row).get('overhead_images', {})
     return {
-        key.removeprefix('observation.images.'): str(value)
-        for key, value in row.items()
-        if key.startswith('observation.images.') and value
+        str(key): str(value)
+        for key, value in overhead_images.items()
+        if value
     }
 
 
@@ -219,21 +267,45 @@ def _resolve_image_path(dataset_root: Path, image_ref: str) -> Path:
     return path if path.is_absolute() else dataset_root / path
 
 
+def _blank_image_tensor(*, width: int, height: int) -> np.ndarray:
+    return np.zeros((3, height, width), dtype=np.float32)
+
+
+def _missing_image_error(row: dict[str, Any], image_key: str, reason: str, ref: str = '') -> str:
+    episode_id = str(row.get('episode_id') or '')
+    detail = f' ({ref})' if ref else ''
+    return f'episode {episode_id!r} image {image_key!r} is {reason}{detail}'
+
+
 def load_image_tensor(
     dataset_root: Path,
     image_ref: str,
     *,
     width: int,
     height: int,
+    row: dict[str, Any] | None = None,
+    image_key: str = '',
+    allow_blank_images: bool = False,
 ) -> np.ndarray:
     if not image_ref:
-        return np.zeros((3, height, width), dtype=np.float32)
+        if allow_blank_images:
+            return _blank_image_tensor(width=width, height=height)
+        raise FileNotFoundError(
+            _missing_image_error(row or {}, image_key, 'missing from model_input.overhead_images')
+        )
     image_path = _resolve_image_path(dataset_root, image_ref)
     if not image_path.exists():
-        return np.zeros((3, height, width), dtype=np.float32)
-    with Image.open(image_path) as image:
-        rgb = image.convert('RGB').resize((width, height), Image.BILINEAR)
-        array = np.asarray(rgb, dtype=np.float32) / 255.0
+        if allow_blank_images:
+            return _blank_image_tensor(width=width, height=height)
+        raise FileNotFoundError(_missing_image_error(row or {}, image_key, 'missing on disk', image_ref))
+    try:
+        with Image.open(image_path) as image:
+            rgb = image.convert('RGB').resize((width, height), Image.BILINEAR)
+            array = np.asarray(rgb, dtype=np.float32) / 255.0
+    except Exception as exc:
+        if allow_blank_images:
+            return _blank_image_tensor(width=width, height=height)
+        raise RuntimeError(_missing_image_error(row or {}, image_key, 'unreadable', image_ref)) from exc
     return np.transpose(array, (2, 0, 1))
 
 
@@ -243,11 +315,209 @@ def load_paired_images(
     *,
     width: int,
     height: int,
+    allow_blank_images: bool = False,
 ) -> np.ndarray:
     refs = _image_refs(row)
-    left = load_image_tensor(dataset_root, refs.get('left_rail_rgb', ''), width=width, height=height)
-    right = load_image_tensor(dataset_root, refs.get('right_rail_rgb', ''), width=width, height=height)
+    left = load_image_tensor(
+        dataset_root,
+        refs.get('left_rail_rgb', ''),
+        width=width,
+        height=height,
+        row=row,
+        image_key='left_rail_rgb',
+        allow_blank_images=allow_blank_images,
+    )
+    right = load_image_tensor(
+        dataset_root,
+        refs.get('right_rail_rgb', ''),
+        width=width,
+        height=height,
+        row=row,
+        image_key='right_rail_rgb',
+        allow_blank_images=allow_blank_images,
+    )
     return np.concatenate([left, right], axis=0).astype(np.float32)
+
+
+def validate_model_input_rows(rows: list[dict[str, Any]], *, split_name: str) -> dict[str, Any]:
+    issues: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        try:
+            _model_input(row, context=f'{split_name} row {row_index}')
+            _language(row)
+        except ValueError as exc:
+            if len(issues) < 20:
+                issues.append({
+                    'row_index': row_index,
+                    'episode_id': str(row.get('episode_id') or ''),
+                    'reason': str(exc),
+                })
+    if issues:
+        raise ValueError(f'{split_name} model_input integrity check failed: {issues[0]}')
+    return {
+        'rows_checked': len(rows),
+        'allowed_model_input_fields': sorted(MODEL_INPUT_KEYS),
+        'production_feature_source': 'model_input only',
+        'row_level_metadata_excluded_from_features': [
+            'pddl_goal',
+            'pddl_problem',
+            'payload_present',
+            'payload_condition',
+            'step_index',
+            'event_index',
+        ],
+    }
+
+
+def image_integrity_report(
+    rows: list[dict[str, Any]],
+    dataset_root: Path,
+    *,
+    split_name: str,
+    allow_blank_images: bool = False,
+) -> dict[str, Any]:
+    per_camera = {
+        camera: {
+            'referenced_rows': 0,
+            'missing_ref_rows': 0,
+            'existing_files': 0,
+            'missing_files': 0,
+            'unreadable_files': 0,
+            'blank_substitutions': 0,
+        }
+        for camera in IMAGE_KEYS
+    }
+    complete_rows = 0
+    problems: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        refs = _image_refs(row)
+        row_complete = True
+        for camera in IMAGE_KEYS:
+            ref = refs.get(camera, '')
+            stats = per_camera[camera]
+            if not ref:
+                stats['missing_ref_rows'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                if len(problems) < 20:
+                    problems.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'missing_ref',
+                    })
+                continue
+            stats['referenced_rows'] += 1
+            image_path = _resolve_image_path(dataset_root, ref)
+            if not image_path.exists():
+                stats['missing_files'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                if len(problems) < 20:
+                    problems.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'missing_file',
+                        'ref': ref,
+                    })
+                continue
+            try:
+                with Image.open(image_path) as image:
+                    image.verify()
+                stats['existing_files'] += 1
+            except Exception:
+                stats['unreadable_files'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                if len(problems) < 20:
+                    problems.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'unreadable_file',
+                        'ref': ref,
+                    })
+        if row_complete:
+            complete_rows += 1
+    problem_count = sum(
+        stats['missing_ref_rows'] + stats['missing_files'] + stats['unreadable_files']
+        for stats in per_camera.values()
+    )
+    if problem_count and not allow_blank_images:
+        first = problems[0] if problems else {}
+        raise FileNotFoundError(f'{split_name} image integrity check failed before training: {first}')
+    total = len(rows)
+    return {
+        'required_cameras': list(IMAGE_KEYS),
+        'total_rows': total,
+        'complete_rows': complete_rows,
+        'complete_row_rate': round(complete_rows / max(1, total), 6),
+        'allow_blank_images': bool(allow_blank_images),
+        'debug_blank_image_mode': bool(allow_blank_images),
+        'per_camera': per_camera,
+        'problem_examples': problems,
+    }
+
+
+def _rounded_key(value: Any) -> str:
+    try:
+        return f'{float(value):.4g}'
+    except (TypeError, ValueError):
+        return 'invalid'
+
+
+def class_balance_report(rows: list[dict[str, Any]], *, expected_dim: int) -> dict[str, Any]:
+    primitive = Counter()
+    side = Counter()
+    shuttle = Counter()
+    target = Counter()
+    speed = Counter()
+    invalid_rows = 0
+    for row in rows:
+        vector = row.get('action_vector')
+        if not isinstance(vector, list) or len(vector) != expected_dim:
+            invalid_rows += 1
+            continue
+        try:
+            primitive[str(int(round(float(vector[0]))))] += 1
+            side[str(int(round(float(vector[1]))))] += 1
+            shuttle[str(int(round(float(vector[2]))))] += 1
+            speed[_rounded_key(vector[SPEED_INDEX])] += 1
+            target[str(int(round(float(vector[21]))))] += 1
+        except (TypeError, ValueError):
+            invalid_rows += 1
+    return {
+        'rows': len(rows),
+        'invalid_action_vector_rows': invalid_rows,
+        'primitive_id': dict(sorted(primitive.items())),
+        'side_id': dict(sorted(side.items())),
+        'shuttle_index': dict(sorted(shuttle.items())),
+        'target_id': dict(sorted(target.items())),
+        'speed_mps': dict(sorted(speed.items())),
+    }
+
+
+def split_integrity_report(
+    train_rows: list[dict[str, Any]],
+    val_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    train_episodes = {str(row.get('episode_id') or '') for row in train_rows}
+    val_episodes = {str(row.get('episode_id') or '') for row in val_rows}
+    overlap = sorted((train_episodes & val_episodes) - {''})
+    return {
+        'train_rows': len(train_rows),
+        'val_rows': len(val_rows),
+        'train_episode_count': len(train_episodes - {''}),
+        'val_episode_count': len(val_episodes - {''}),
+        'episode_overlap': overlap,
+        'disjoint_episodes': not overlap,
+        'train_row_fingerprint': _rows_fingerprint(train_rows),
+        'val_row_fingerprint': _rows_fingerprint(val_rows),
+    }
 
 
 def action_vector(row: dict[str, Any]) -> np.ndarray:
@@ -279,6 +549,7 @@ class Room315EventDataset:
         image_width: int,
         image_height: int,
         torch_module: Any,
+        allow_blank_images: bool = False,
     ) -> None:
         self.rows = rows
         self.dataset_root = dataset_root
@@ -290,6 +561,7 @@ class Room315EventDataset:
         self.image_width = image_width
         self.image_height = image_height
         self.torch = torch_module
+        self.allow_blank_images = allow_blank_images
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -313,6 +585,7 @@ class Room315EventDataset:
                     self.dataset_root,
                     width=self.image_width,
                     height=self.image_height,
+                    allow_blank_images=self.allow_blank_images,
                 ),
                 dtype=self.torch.float32,
             ),
@@ -475,12 +748,29 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
     torch_module = _require_torch()
     splits_dir = args.splits_dir.expanduser().resolve()
     dataset_root = _resolve_dataset_root(args.dataset_root, splits_dir)
-    train_rows = _row_limit(_iter_jsonl(splits_dir / args.train_file), args.limit_train_rows)
-    val_rows = _row_limit(_iter_jsonl(splits_dir / args.val_file), args.limit_val_rows)
+    train_file_path = splits_dir / args.train_file
+    val_file_path = splits_dir / args.val_file
+    train_rows = _row_limit(_iter_jsonl(train_file_path), args.limit_train_rows)
+    val_rows = _row_limit(_iter_jsonl(val_file_path), args.limit_val_rows)
     if not train_rows:
         raise ValueError('train split is empty')
     if not val_rows:
         raise ValueError('validation split is empty')
+
+    train_model_input = validate_model_input_rows(train_rows, split_name='train')
+    val_model_input = validate_model_input_rows(val_rows, split_name='val')
+    train_image_integrity = image_integrity_report(
+        train_rows,
+        dataset_root,
+        split_name='train',
+        allow_blank_images=args.allow_blank_images,
+    )
+    val_image_integrity = image_integrity_report(
+        val_rows,
+        dataset_root,
+        split_name='val',
+        allow_blank_images=args.allow_blank_images,
+    )
 
     _set_seed(torch_module, args.seed)
     device = _choose_device(torch_module, args.device)
@@ -492,7 +782,44 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
     state_vectorizer = StateVectorizer.fit(train_rows)
     target_mean, target_std = target_stats(train_rows)
     output_dim = int(target_mean.shape[0])
+    output_dir = args.output_dir.expanduser().resolve()
+    dataset_report = {
+        'tool': 'room_315_vla_train_local',
+        'baseline_purpose': (
+            'small custom Room 315 direct-action action_vector behavior-cloning baseline'
+        ),
+        'source_files': {
+            'train': _file_fingerprint(train_file_path),
+            'val': _file_fingerprint(val_file_path),
+        },
+        'row_fingerprint': {
+            'train': _rows_fingerprint(train_rows),
+            'val': _rows_fingerprint(val_rows),
+        },
+        'model_input_integrity': {
+            'train': train_model_input,
+            'val': val_model_input,
+        },
+        'camera_completeness': {
+            'train': train_image_integrity,
+            'val': val_image_integrity,
+        },
+        'class_balance': {
+            'train': class_balance_report(train_rows, expected_dim=output_dim),
+            'val': class_balance_report(val_rows, expected_dim=output_dim),
+        },
+        'split_integrity': split_integrity_report(train_rows, val_rows),
+        'feature_purity': {
+            'production_features_from': 'model_input',
+            'row_level_metadata_used_as_features': [],
+            'debug_or_ablation_features': [],
+        },
+    }
     config = {
+        'tool': 'room_315_vla_train_local',
+        'baseline_purpose': (
+            'small custom Room 315 direct-action action_vector behavior-cloning baseline'
+        ),
         'dataset_root': str(dataset_root),
         'splits_dir': str(splits_dir),
         'train_file': args.train_file,
@@ -512,10 +839,17 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
         'output_dim': output_dim,
         'state_dim': state_vectorizer.dim,
         'vocab_size': len(vocab),
+        'allow_blank_images': bool(args.allow_blank_images),
+        'debug_blank_image_mode': bool(args.allow_blank_images),
+        'production_feature_source': 'model_input only',
+        'dataset_report': str(output_dir / 'dataset_report.json'),
     }
 
-    output_dir = args.output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / 'dataset_report.json').write_text(
+        _pretty_json(dataset_report) + '\n',
+        encoding='utf-8',
+    )
     (output_dir / 'vocab.json').write_text(_pretty_json(vocab) + '\n', encoding='utf-8')
     (output_dir / 'state_vectorizer.json').write_text(
         _pretty_json(state_vectorizer.to_json()) + '\n',
@@ -541,6 +875,7 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
         image_width=args.image_width,
         image_height=args.image_height,
         torch_module=torch_module,
+        allow_blank_images=args.allow_blank_images,
     )
     val_dataset = Room315EventDataset(
         val_rows,
@@ -553,6 +888,7 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
         image_width=args.image_width,
         image_height=args.image_height,
         torch_module=torch_module,
+        allow_blank_images=args.allow_blank_images,
     )
     train_loader = torch_module.utils.data.DataLoader(
         train_dataset,
@@ -641,6 +977,10 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
             )
 
     summary = {
+        'tool': 'room_315_vla_train_local',
+        'baseline_purpose': (
+            'small custom Room 315 direct-action action_vector behavior-cloning baseline'
+        ),
         'output_dir': str(output_dir),
         'best_checkpoint': str(output_dir / 'best.pt'),
         'last_checkpoint': str(output_dir / 'last.pt'),
@@ -648,6 +988,7 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
         'best_val_loss': best_val_loss,
         'history': history,
         'config': config,
+        'dataset_report': dataset_report,
     }
     (output_dir / 'metrics.json').write_text(_pretty_json(summary) + '\n', encoding='utf-8')
     return summary
@@ -655,11 +996,34 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description='Train a compact local Room 315 VLA policy from train/val JSONL splits.'
+        description=(
+            'Train a small custom Room 315 direct-action baseline from train/val JSONL splits.'
+        )
     )
-    parser.add_argument('--splits-dir', type=Path, default=DEFAULT_SPLITS_DIR)
-    parser.add_argument('--dataset-root', type=Path, default=None)
-    parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        '--splits-dir',
+        type=Path,
+        default=DEFAULT_SPLITS_DIR,
+        help='Split directory. Defaults to ROOM315_VLA_SPLITS_DIR or room315_local_training/splits.',
+    )
+    parser.add_argument(
+        '--dataset-root',
+        type=Path,
+        default=None,
+        help=(
+            'Dataset root for relative image refs. Defaults to the split manifest '
+            'dataset_root, ROOM315_VLA_DATASET_ROOT, or room315_payload_dataset.'
+        ),
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help=(
+            'Output checkpoint directory. Defaults to ROOM315_LOCAL_BASELINE_OUTPUT_DIR '
+            'or room315_local_training/checkpoints/v0.'
+        ),
+    )
     parser.add_argument('--train-file', default='train.jsonl')
     parser.add_argument('--val-file', default='val.jsonl')
     parser.add_argument('--epochs', type=int, default=5)
@@ -676,6 +1040,11 @@ def main() -> None:
     parser.add_argument('--seed', type=int, default=13)
     parser.add_argument('--limit-train-rows', type=int, default=None)
     parser.add_argument('--limit-val-rows', type=int, default=None)
+    parser.add_argument(
+        '--allow-blank-images',
+        action='store_true',
+        help='Debug only: substitute zero tensors for missing/unreadable required images.',
+    )
     args = parser.parse_args()
     summary = train_local(args)
     print(_pretty_json(summary))

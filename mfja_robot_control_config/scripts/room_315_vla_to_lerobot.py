@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import json
 import math
+import os
 import re
 import shutil
 from collections import Counter
@@ -14,9 +16,13 @@ import yaml
 from PIL import Image
 
 
-DEFAULT_DATASET_ROOT = Path('/home/tiago/room315_payload_expanded_160_merged_final')
-DEFAULT_SPLITS_DIR = Path('/home/tiago/room315_local_training/splits')
-DEFAULT_OUTPUT_ROOT = Path('/home/tiago/room315_local_training/lerobot')
+def _env_path(name: str, fallback: str) -> Path:
+    return Path(os.environ.get(name, fallback))
+
+
+DEFAULT_DATASET_ROOT = _env_path('ROOM315_VLA_DATASET_ROOT', 'room315_payload_dataset')
+DEFAULT_SPLITS_DIR = _env_path('ROOM315_VLA_SPLITS_DIR', 'room315_local_training/splits')
+DEFAULT_OUTPUT_ROOT = _env_path('ROOM315_LEROBOT_OUTPUT_ROOT', 'room315_local_training/lerobot')
 DEFAULT_ACTION_SPACE = (
     Path(__file__).resolve().parents[1]
     / 'config'
@@ -28,11 +34,12 @@ DEFAULT_COMPACT_STATE_VECTORIZER = DEFAULT_OUTPUT_ROOT / 'room315_state_vectoriz
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 SIDES = ('right', 'left')
 SLOTS = ('A1', 'A2', 'A3', 'A4')
+MODEL_INPUT_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 COMPACT32_STATE_NAMES = (
     'task.side_left',
     'task.target_slot_norm',
-    'payload_present',
-    'step_index_norm',
+    'language.payload_hint',
+    'last.command_present',
     'right.slot.A1.occupied',
     'right.slot.A2.occupied',
     'right.slot.A3.occupied',
@@ -96,6 +103,32 @@ def _iter_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _file_fingerprint(path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    size = 0
+    lines = 0
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+            size += len(chunk)
+            lines += chunk.count(b'\n')
+    return {
+        'path': str(path),
+        'sha256': digest.hexdigest(),
+        'bytes': size,
+        'newline_count': lines,
+    }
+
+
+def _rows_fingerprint(rows: list[dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for row in rows:
+        payload = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+        digest.update(payload.encode('utf-8'))
+        digest.update(b'\n')
+    return digest.hexdigest()
+
+
 def _resolve_input_path(input_path: Path) -> Path:
     input_path = input_path.expanduser()
     if input_path.is_dir():
@@ -120,11 +153,30 @@ def _safe_int(raw: Any, fallback: int = 0) -> int:
         return fallback
 
 
-def _language(row: dict[str, Any]) -> str:
+def _model_input(row: dict[str, Any], *, context: str = 'row') -> dict[str, Any]:
     model_input = row.get('model_input')
-    if isinstance(model_input, dict) and model_input.get('language'):
-        return str(model_input.get('language') or '')
-    return str(row.get('task') or row.get('generated_language') or '')
+    if not isinstance(model_input, dict):
+        raise ValueError(f'{context} is missing model_input')
+    unexpected = sorted(set(model_input) - MODEL_INPUT_KEYS)
+    if unexpected:
+        raise ValueError(f'{context} model_input has undeclared fields: {unexpected}')
+    missing = sorted(MODEL_INPUT_KEYS - set(model_input))
+    if missing:
+        raise ValueError(f'{context} model_input is missing fields: {missing}')
+    if not isinstance(model_input.get('overhead_images'), dict):
+        raise ValueError(f'{context} model_input.overhead_images must be an object')
+    if not isinstance(model_input.get('observable_state'), dict):
+        raise ValueError(f'{context} model_input.observable_state must be an object')
+    if not isinstance(model_input.get('last_command'), dict):
+        raise ValueError(f'{context} model_input.last_command must be an object')
+    return model_input
+
+
+def _language(row: dict[str, Any]) -> str:
+    language = str(_model_input(row).get('language') or '')
+    if not language:
+        raise ValueError(f'row for episode {row.get("episode_id", "")!r} has empty model_input.language')
+    return language
 
 
 def _flatten(prefix: str, value: Any, output: dict[str, Any]) -> None:
@@ -152,9 +204,7 @@ def _to_float(value: Any) -> float | None:
 
 
 def _model_input_state(row: dict[str, Any]) -> dict[str, Any]:
-    model_input = row.get('model_input')
-    if not isinstance(model_input, dict):
-        return {}
+    model_input = _model_input(row)
     state: dict[str, Any] = {}
     _flatten('observable_state', model_input.get('observable_state', {}), state)
     _flatten('last_command', model_input.get('last_command', {}), state)
@@ -284,12 +334,7 @@ def _side_left(value: Any) -> float:
 
 
 def _target_slot(row: dict[str, Any]) -> int:
-    text_parts = [
-        _language(row),
-        str(row.get('pddl_goal') or ''),
-        str(row.get('pddl_problem') or ''),
-    ]
-    text = ' '.join(text_parts).lower()
+    text = _language(row).lower()
     match = re.search(r'\bslot[_\s-]*(\d+)\b', text)
     if match:
         return max(1, min(4, _safe_int(match.group(1), 0)))
@@ -300,11 +345,7 @@ def _target_slot(row: dict[str, Any]) -> int:
 
 
 def _task_side(row: dict[str, Any]) -> str:
-    text = ' '.join([
-        _language(row),
-        str(row.get('pddl_goal') or ''),
-        str(row.get('pddl_problem') or ''),
-    ]).lower()
+    text = _language(row).lower()
     if re.search(r'\bleft\b', text):
         return 'left'
     if re.search(r'\bright\b', text):
@@ -312,18 +353,18 @@ def _task_side(row: dict[str, Any]) -> str:
     return ''
 
 
-def _payload_present(row: dict[str, Any]) -> float:
-    raw = row.get('payload_present')
-    if isinstance(raw, bool):
-        return 1.0 if raw else 0.0
-    if raw is None:
-        return -1.0
-    text = str(raw).strip().lower()
-    if text in {'true', '1', 'yes', 'loaded'}:
+def _payload_hint_from_language(row: dict[str, Any]) -> float:
+    text = _language(row).lower()
+    if any(token in text for token in ('loaded', 'with payload', 'carrying', 'with a box')):
         return 1.0
-    if text in {'false', '0', 'no', 'empty'}:
+    if any(token in text for token in ('empty', 'without payload', 'no payload', 'unloaded')):
         return 0.0
     return -1.0
+
+
+def _last_command_present(last_command: dict[str, Any]) -> float:
+    action = str(last_command.get('primitive') or last_command.get('action') or '').strip()
+    return 1.0 if action else 0.0
 
 
 def _normalise_target_id(value: Any) -> float:
@@ -379,8 +420,8 @@ class Room315CompactStateVectorizer:
         values: list[float] = [
             _side_left(_task_side(row)),
             target_slot / 4.0 if target_slot else 0.0,
-            _payload_present(row),
-            min(max(_safe_int(row.get('step_index', row.get('event_index')), 0), 0), 20) / 20.0,
+            _payload_hint_from_language(row),
+            _last_command_present(last_command),
         ]
         for side in SIDES:
             suffix = 'R' if side == 'right' else 'L'
@@ -416,8 +457,9 @@ class Room315CompactStateVectorizer:
             'names': self.names,
             'dim': self.dim,
             'description': (
-                'Fixed 32-value Room 315 state for SmolVLA base: task hint, slot occupancy, '
-                'route occupancy, switch positions, and the previous symbolic command.'
+                'Fixed 32-value Room 315 state for the SmolVLA direct-action baseline. '
+                'All production features are derived only from model_input: language, '
+                'observable_state, and last_command.'
             ),
         }
 
@@ -501,20 +543,11 @@ def build_lerobot_features(
 
 
 def _image_refs(row: dict[str, Any]) -> dict[str, str]:
-    model_input = row.get('model_input')
-    if isinstance(model_input, dict) and isinstance(model_input.get('overhead_images'), dict):
-        return {
-            str(key): str(value)
-            for key, value in model_input['overhead_images'].items()
-            if value
-        }
-    refs = row.get('image_frame_refs')
-    if isinstance(refs, dict):
-        return {str(key): str(value) for key, value in refs.items() if value}
+    overhead_images = _model_input(row).get('overhead_images', {})
     return {
-        key.removeprefix('observation.images.'): str(value)
-        for key, value in row.items()
-        if key.startswith('observation.images.') and value
+        str(key): str(value)
+        for key, value in overhead_images.items()
+        if value
     }
 
 
@@ -527,6 +560,12 @@ def _blank_image(*, image_width: int, image_height: int) -> Image.Image:
     return Image.new('RGB', (image_width, image_height), color=(0, 0, 0))
 
 
+def _missing_image_error(row: dict[str, Any], image_key: str, reason: str, ref: str = '') -> str:
+    episode_id = str(row.get('episode_id') or '')
+    detail = f' ({ref})' if ref else ''
+    return f'episode {episode_id!r} image {image_key!r} is {reason}{detail}'
+
+
 def load_image(
     row: dict[str, Any],
     dataset_root: Path,
@@ -534,18 +573,121 @@ def load_image(
     *,
     image_width: int,
     image_height: int,
+    allow_blank_images: bool = False,
 ) -> Image.Image:
     image_ref = _image_refs(row).get(image_key, '')
     if not image_ref:
-        return _blank_image(image_width=image_width, image_height=image_height)
+        if allow_blank_images:
+            return _blank_image(image_width=image_width, image_height=image_height)
+        raise FileNotFoundError(_missing_image_error(row, image_key, 'missing from model_input.overhead_images'))
     image_path = _resolve_image_path(dataset_root, image_ref)
     if not image_path.exists():
-        return _blank_image(image_width=image_width, image_height=image_height)
-    with Image.open(image_path) as image:
-        rgb = image.convert('RGB')
-        if rgb.size != (image_width, image_height):
-            rgb = rgb.resize((image_width, image_height), Image.BILINEAR)
-        return rgb.copy()
+        if allow_blank_images:
+            return _blank_image(image_width=image_width, image_height=image_height)
+        raise FileNotFoundError(_missing_image_error(row, image_key, 'missing on disk', image_ref))
+    try:
+        with Image.open(image_path) as image:
+            rgb = image.convert('RGB')
+            if rgb.size != (image_width, image_height):
+                rgb = rgb.resize((image_width, image_height), Image.BILINEAR)
+            return rgb.copy()
+    except Exception as exc:
+        if allow_blank_images:
+            return _blank_image(image_width=image_width, image_height=image_height)
+        raise RuntimeError(_missing_image_error(row, image_key, 'unreadable', image_ref)) from exc
+
+
+def image_integrity_report(
+    rows: list[dict[str, Any]],
+    dataset_root: Path,
+    *,
+    allow_blank_images: bool = False,
+) -> dict[str, Any]:
+    per_camera = {
+        camera: {
+            'referenced_rows': 0,
+            'missing_ref_rows': 0,
+            'existing_files': 0,
+            'missing_files': 0,
+            'unreadable_files': 0,
+            'blank_substitutions': 0,
+        }
+        for camera in IMAGE_KEYS
+    }
+    complete_rows = 0
+    problems: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        refs = _image_refs(row)
+        row_complete = True
+        for camera in IMAGE_KEYS:
+            ref = refs.get(camera, '')
+            stats = per_camera[camera]
+            if not ref:
+                stats['missing_ref_rows'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                if len(problems) < 20:
+                    problems.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'missing_ref',
+                    })
+                continue
+            stats['referenced_rows'] += 1
+            image_path = _resolve_image_path(dataset_root, ref)
+            if not image_path.exists():
+                stats['missing_files'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                if len(problems) < 20:
+                    problems.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'missing_file',
+                        'ref': ref,
+                    })
+                continue
+            try:
+                with Image.open(image_path) as image:
+                    image.verify()
+                stats['existing_files'] += 1
+            except Exception:
+                stats['unreadable_files'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                if len(problems) < 20:
+                    problems.append({
+                        'row_index': row_index,
+                        'episode_id': str(row.get('episode_id') or ''),
+                        'camera': camera,
+                        'reason': 'unreadable_file',
+                        'ref': ref,
+                    })
+        if row_complete:
+            complete_rows += 1
+    problem_count = sum(
+        stats['missing_ref_rows'] + stats['missing_files'] + stats['unreadable_files']
+        for stats in per_camera.values()
+    )
+    if problem_count and not allow_blank_images:
+        first = problems[0] if problems else {}
+        raise FileNotFoundError(f'image integrity check failed before conversion: {first}')
+    total = len(rows)
+    return {
+        'required_cameras': list(IMAGE_KEYS),
+        'total_rows': total,
+        'complete_rows': complete_rows,
+        'complete_row_rate': round(complete_rows / max(1, total), 6),
+        'allow_blank_images': bool(allow_blank_images),
+        'debug_blank_image_mode': bool(allow_blank_images),
+        'per_camera': per_camera,
+        'problem_examples': problems,
+    }
 
 
 def group_rows_by_episode(rows: list[dict[str, Any]]) -> list[tuple[str, list[dict[str, Any]]]]:
@@ -576,14 +718,81 @@ def group_rows_by_episode(rows: list[dict[str, Any]]) -> list[tuple[str, list[di
     ]
 
 
+def validate_model_input_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    issues: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        try:
+            _model_input(row, context=f'row {row_index}')
+            _language(row)
+        except ValueError as exc:
+            if len(issues) < 20:
+                issues.append({
+                    'row_index': row_index,
+                    'episode_id': str(row.get('episode_id') or ''),
+                    'reason': str(exc),
+                })
+    if issues:
+        raise ValueError(f'model_input integrity check failed: {issues[0]}')
+    return {
+        'rows_checked': len(rows),
+        'allowed_model_input_fields': sorted(MODEL_INPUT_KEYS),
+        'production_feature_source': 'model_input only',
+        'row_level_metadata_excluded_from_features': [
+            'pddl_goal',
+            'pddl_problem',
+            'payload_present',
+            'payload_condition',
+            'step_index',
+            'event_index',
+        ],
+    }
+
+
+def _rounded_key(value: Any) -> str:
+    try:
+        return f'{float(value):.4g}'
+    except (TypeError, ValueError):
+        return 'invalid'
+
+
+def class_balance_report(rows: list[dict[str, Any]], *, expected_dim: int) -> dict[str, Any]:
+    primitive = Counter()
+    side = Counter()
+    shuttle = Counter()
+    target = Counter()
+    speed = Counter()
+    invalid_rows = 0
+    for row in rows:
+        vector = row.get('action_vector')
+        if not isinstance(vector, list) or len(vector) != expected_dim:
+            invalid_rows += 1
+            continue
+        try:
+            primitive[str(int(round(float(vector[0]))))] += 1
+            side[str(int(round(float(vector[1]))))] += 1
+            shuttle[str(int(round(float(vector[2]))))] += 1
+            speed[_rounded_key(vector[19])] += 1
+            target[str(int(round(float(vector[21]))))] += 1
+        except (TypeError, ValueError):
+            invalid_rows += 1
+    return {
+        'rows': len(rows),
+        'invalid_action_vector_rows': invalid_rows,
+        'primitive_id': dict(sorted(primitive.items())),
+        'side_id': dict(sorted(side.items())),
+        'shuttle_index': dict(sorted(shuttle.items())),
+        'target_id': dict(sorted(target.items())),
+        'speed_mps': dict(sorted(speed.items())),
+    }
+
+
 def _require_lerobot_dataset():
     try:
         from lerobot.datasets.lerobot_dataset import LeRobotDataset
     except ImportError as exc:
         raise SystemExit(
             'LeRobot is required for conversion but is not installed in this Python environment.\n'
-            'Activate the training venv and install it first:\n'
-            '  source /home/tiago/room315_local_training/venv/bin/activate\n'
+            'Activate your training environment and install it first:\n'
             '  python -m pip install lerobot'
         ) from exc
     return LeRobotDataset
@@ -617,6 +826,7 @@ def convert_room315_to_lerobot(
     max_episodes: int | None = None,
     max_rows: int | None = None,
     use_videos: bool = False,
+    allow_blank_images: bool = False,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     LeRobotDataset = _require_lerobot_dataset()
@@ -631,6 +841,13 @@ def convert_room315_to_lerobot(
         episodes = group_rows_by_episode(rows)
     if not rows:
         raise ValueError(f'no rows selected from {input_file}')
+
+    model_input_integrity = validate_model_input_rows(rows)
+    image_integrity = image_integrity_report(
+        rows,
+        dataset_root,
+        allow_blank_images=allow_blank_images,
+    )
 
     if state_vectorizer_path is not None:
         vectorizer = load_state_vectorizer(state_vectorizer_path)
@@ -678,6 +895,7 @@ def convert_room315_to_lerobot(
                     image_key,
                     image_width=image_width,
                     image_height=image_height,
+                    allow_blank_images=allow_blank_images,
                 )
             dataset.add_frame(frame)
             frame_count += 1
@@ -689,7 +907,11 @@ def convert_room315_to_lerobot(
         save_state_vectorizer(vectorizer, state_vectorizer_out)
 
     summary = {
+        'tool': 'room_315_vla_to_lerobot',
+        'baseline_purpose': 'direct-action action_vector behavior-cloning dataset conversion',
         'source': str(input_file),
+        'source_fingerprint': _file_fingerprint(input_file),
+        'row_fingerprint': _rows_fingerprint(rows),
         'dataset_root': str(dataset_root.expanduser().resolve()),
         'output_root': str(root),
         'repo_id': repo_id,
@@ -711,6 +933,14 @@ def convert_room315_to_lerobot(
         ),
         'state_vectorizer_fitted_from_input': fitted_state_vectorizer,
         'feature_keys': sorted(features),
+        'model_input_integrity': model_input_integrity,
+        'camera_completeness': image_integrity,
+        'class_balance': class_balance_report(rows, expected_dim=len(action_names)),
+        'feature_purity': {
+            'production_features_from': 'model_input',
+            'row_level_metadata_used_as_features': [],
+            'debug_or_ablation_features': [],
+        },
     }
     (root / 'room315_conversion.json').write_text(_pretty_json(summary) + '\n', encoding='utf-8')
     print(_pretty_json(summary))
@@ -726,10 +956,24 @@ def main() -> None:
         nargs='?',
         type=Path,
         default=DEFAULT_SPLITS_DIR / 'train.jsonl',
-        help='Room 315 JSONL split, full training_events.jsonl, or dataset directory.',
+        help=(
+            'Room 315 JSONL split, full training_events.jsonl, or dataset directory. '
+            'Defaults to ROOM315_VLA_SPLITS_DIR/train.jsonl or '
+            'room315_local_training/splits/train.jsonl.'
+        ),
     )
-    parser.add_argument('--dataset-root', type=Path, default=DEFAULT_DATASET_ROOT)
-    parser.add_argument('--output-root', type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument(
+        '--dataset-root',
+        type=Path,
+        default=DEFAULT_DATASET_ROOT,
+        help='Dataset root for relative image refs. Defaults to ROOM315_VLA_DATASET_ROOT.',
+    )
+    parser.add_argument(
+        '--output-root',
+        type=Path,
+        default=DEFAULT_OUTPUT_ROOT,
+        help='LeRobot output root. Defaults to ROOM315_LEROBOT_OUTPUT_ROOT.',
+    )
     parser.add_argument('--name', default='room315_vla_train')
     parser.add_argument('--repo-id', default='room315/room315_vla_train')
     parser.add_argument(
@@ -756,6 +1000,11 @@ def main() -> None:
     parser.add_argument('--max-episodes', type=int, default=None)
     parser.add_argument('--max-rows', type=int, default=None)
     parser.add_argument('--use-videos', action='store_true')
+    parser.add_argument(
+        '--allow-blank-images',
+        action='store_true',
+        help='Debug only: substitute black frames for missing/unreadable required images.',
+    )
     parser.add_argument('--overwrite', action='store_true')
     args = parser.parse_args()
     state_vectorizer_out = args.state_vectorizer_out
@@ -781,6 +1030,7 @@ def main() -> None:
         max_episodes=args.max_episodes,
         max_rows=args.max_rows,
         use_videos=args.use_videos,
+        allow_blank_images=args.allow_blank_images,
         overwrite=args.overwrite,
     )
 
