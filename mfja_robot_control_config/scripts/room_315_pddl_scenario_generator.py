@@ -3392,13 +3392,30 @@ def _goal_data_from_task_goal(
     if not target_station:
         raise PddlProblemBuildError('transport TaskGoal requires target_station or target_slot')
 
-    selection = str(constraints.get('shuttle_selection') or '').strip().casefold()
+    selection = str(
+        constraints.get('selection_strategy')
+        or constraints.get('shuttle_selection')
+        or ''
+    ).strip().casefold()
     target_shuttle = _task_goal_target_shuttle(constraints, side=side)
-    payload_required = str(constraints.get('payload_required') or '').strip().casefold()
+    payload_filter = str(
+        constraints.get('payload_filter')
+        or constraints.get('payload_required')
+        or ''
+    ).strip().casefold()
+    if payload_filter == 'true':
+        payload_filter = 'loaded'
+    elif payload_filter == 'false':
+        payload_filter = 'empty'
     if target_shuttle:
         selection = 'explicit'
-    if selection not in {'explicit', 'loaded', 'empty', 'nearest'}:
-        selection = 'explicit' if target_shuttle else (payload_required or 'loaded')
+    if selection in {'loaded', 'empty'} and payload_filter in {'', 'any'}:
+        payload_filter = selection
+        selection = 'any'
+    if selection not in {'explicit', 'nearest', 'any'}:
+        selection = 'explicit' if target_shuttle else 'any'
+    if payload_filter not in {'loaded', 'empty', 'any'}:
+        payload_filter = 'any'
 
     side_shuttles = [
         spec.shuttle_id for spec in all_shuttle_specs() if spec.side == side
@@ -3410,8 +3427,8 @@ def _goal_data_from_task_goal(
         selected = target_shuttle
         planner_selects_candidate = False
     else:
-        wants_loaded = selection in {'loaded', 'nearest'} or payload_required == 'loaded'
-        wants_empty = selection == 'empty' or payload_required == 'empty'
+        wants_loaded = payload_filter == 'loaded'
+        wants_empty = payload_filter == 'empty'
         candidates_list = []
         for shuttle in side_shuttles:
             loaded = bool(fleet['loaded_by_shuttle'][shuttle])

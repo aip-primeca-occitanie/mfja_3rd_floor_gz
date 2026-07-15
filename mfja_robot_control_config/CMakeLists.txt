@@ -74,6 +74,10 @@ install(
     scripts/room_315_payload_case_review.py
     scripts/room_315_real_vla_agent.py
     scripts/room_315_task_goal_builder.py
+    scripts/room_315_task_goal_dialogue.py
+    scripts/room_315_task_goal_parsers.py
+    scripts/room_315_task_goal_schema.py
+    scripts/room_315_task_goal_validation.py
     scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_benchmark_suite.py
     scripts/room_315_vla_dataset_recorder.py

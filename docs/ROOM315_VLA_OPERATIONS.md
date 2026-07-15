@@ -17,6 +17,11 @@ For seeded benchmark expansion and method comparison, use
 generator writes YAML manifests only; generated datasets and checkpoints stay
 outside the repository.
 
+For the current production task-goal understanding layer, including
+`TaskGoalDraft`, parser boundaries, clarification, confirmation, and local-model
+output restrictions, use
+[ROOM315_TASK_GOAL_UNDERSTANDING.md](ROOM315_TASK_GOAL_UNDERSTANDING.md).
+
 ## Launch
 
 ```bash

@@ -26,10 +26,26 @@ from room_315_contracts import TaskGoal
 from room_315_multi_shuttle import SIDES
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import normalize_side
+from room_315_task_goal_dialogue import TaskGoalDialogueManager
+from room_315_task_goal_dialogue import TaskGoalDialogueState
+from room_315_task_goal_parsers import DeterministicEnglishParser
+from room_315_task_goal_parsers import LocalSemanticModelAdapter
+from room_315_task_goal_parsers import ParserPipeline
+from room_315_task_goal_parsers import RegexFallbackParser
+from room_315_task_goal_parsers import StructuredFormParser
+from room_315_task_goal_parsers import parse_task_goal_draft
+from room_315_task_goal_schema import PAYLOAD_FILTERS
+from room_315_task_goal_schema import SELECTION_STRATEGIES
+from room_315_task_goal_schema import TASK_GOAL_DRAFT_CONTRACT_TYPE
+from room_315_task_goal_schema import TaskGoalDraft
+from room_315_task_goal_schema import strict_model_draft_from_json
+from room_315_task_goal_validation import Room315DomainValidator
 
 
 SLOTS = ('1', '2', '3', '4')
 SELECTIONS = ('loaded', 'empty', 'nearest', 'explicit')
+SELECTION_STRATEGIES_COMPAT = SELECTION_STRATEGIES
+PAYLOAD_FILTERS_COMPAT = PAYLOAD_FILTERS
 GOAL_TYPES = ('transport', 'inspection')
 STATIONS_BY_SIDE = {
     'right': ('yaskawa', 'staubli'),
@@ -176,54 +192,25 @@ def build_task_goal(
 ) -> TaskGoalBuildResult:
     """Build a high-level TaskGoal from deterministic Room 315 request fields."""
 
-    normalized, parse_issues = _request_to_normalized(request)
-    if parse_issues:
-        return _result_for_issues(parse_issues, normalized_request=normalized)
-
-    blocked = _blocked_paths(normalized, MODEL_BLOCKED_KEYS)
-    if blocked:
-        return _error_result(
-            'forbidden_field',
-            'TaskGoal requests may not contain PDDL, plans, action vectors, '
-            'primitive commands, or editable safety constraints',
-            field=blocked[0],
-            normalized_request=normalized,
-            details={'blocked_paths': blocked[:10]},
+    parsed = parse_task_goal_draft(request)
+    if not parsed.ok:
+        return _result_for_schema_issues(
+            parsed.issues,
+            normalized_request={'parser': parsed.parser_name},
         )
-
-    goal_type = _normalize_goal_type(normalized.get('goal_type'))
-    if not goal_type:
-        return _clarification_result(
-            'missing_goal_type',
-            'Specify whether this is a transport or inspection goal',
-            field='goal_type',
-            options=GOAL_TYPES,
-            normalized_request=normalized,
-        )
-
-    if goal_type == 'transport':
-        return _build_transport_goal(
-            normalized,
-            timestamp=timestamp,
-            source=source,
-            confidence=confidence,
-            goal_id=goal_id,
-        )
-    if goal_type == 'inspection':
-        return _build_inspection_goal(
-            normalized,
-            timestamp=timestamp,
-            source=source,
-            confidence=confidence,
-            goal_id=goal_id,
-        )
-    return _error_result(
-        'unsupported_goal_type',
-        f'Unsupported Room 315 goal_type {goal_type!r}',
-        field='goal_type',
-        options=GOAL_TYPES,
-        normalized_request=normalized,
+    draft = parsed.draft
+    if confidence is not None:
+        draft = draft.merge(confidence=confidence)
+    validation = Room315DomainValidator().validate(
+        draft,
+        timestamp=timestamp,
+        source=source,
+        goal_id=goal_id,
     )
+    return _result_from_validation(validation, normalized_request={
+        'parser': parsed.parser_name,
+        'draft': draft.to_dict(),
+    })
 
 
 def parse_model_task_goal_json(
@@ -233,69 +220,28 @@ def parse_model_task_goal_json(
     confidence: float | None = None,
     goal_id: str | None = None,
 ) -> TaskGoalBuildResult:
-    """Parse strict model JSON into a constrained learned TaskGoal only."""
+    """Parse strict local-model TaskGoalDraft JSON into a constrained TaskGoal."""
 
-    try:
-        payload = json.loads(model_output)
-    except json.JSONDecodeError as exc:
-        return _error_result(
-            'invalid_json',
-            f'Model output must be a single strict JSON object: {exc.msg}',
-            field='model_output',
-            details={'line': exc.lineno, 'column': exc.colno},
+    parsed = strict_model_draft_from_json(model_output)
+    if not parsed.ok:
+        return _result_for_schema_issues(
+            parsed.issues,
+            normalized_request={'parser': parsed.parser_name},
         )
-    if not isinstance(payload, dict):
-        return _error_result(
-            'invalid_json_type',
-            'Model output must be a JSON object',
-            field='model_output',
-        )
-
-    blocked = _blocked_paths(payload, MODEL_BLOCKED_KEYS)
-    if blocked:
-        return _error_result(
-            'forbidden_model_field',
-            'Model JSON may output TaskGoal fields only, not PDDL, plans, '
-            'action vectors, primitive commands, or editable safety constraints',
-            field=blocked[0],
-            details={'blocked_paths': blocked[:10]},
-        )
-    unknown = sorted(set(payload) - MODEL_ALLOWED_TOP_LEVEL_KEYS)
-    if unknown:
-        return _error_result(
-            'unknown_model_field',
-            'Model JSON contains fields outside the strict TaskGoal request schema',
-            field=unknown[0],
-            details={'unknown_fields': unknown},
-        )
-    if payload.get('contract_type') not in (None, 'TaskGoal'):
-        return _error_result(
-            'unsupported_contract_type',
-            'Model JSON may only declare contract_type TaskGoal',
-            field='contract_type',
-        )
-    if 'schema_version' in payload and payload.get('schema_version') != CONTRACT_SCHEMA_VERSION:
-        return _error_result(
-            'unsupported_schema_version',
-            f'Model JSON schema_version must be {CONTRACT_SCHEMA_VERSION}',
-            field='schema_version',
-        )
-    schema_error = _validate_model_request_shape(payload)
-    if schema_error is not None:
-        return schema_error
-
-    request = _model_payload_to_request(payload)
-    chosen_confidence = confidence
-    if chosen_confidence is None and isinstance(payload.get('confidence'), (int, float)):
-        chosen_confidence = float(payload['confidence'])
-    chosen_goal_id = goal_id or _optional_text(payload.get('goal_id')) or None
-    return build_task_goal(
-        request,
+    draft = parsed.draft
+    if confidence is not None:
+        draft = draft.merge(confidence=confidence)
+    validation = Room315DomainValidator().validate(
+        draft,
         timestamp=timestamp,
         source='learned_task_goal',
-        confidence=chosen_confidence,
-        goal_id=chosen_goal_id,
+        goal_id=goal_id,
     )
+    return _result_from_validation(validation, normalized_request={
+        'parser': parsed.parser_name,
+        'draft': draft.to_dict(),
+        'raw_model_output': copy.deepcopy(parsed.raw_output),
+    })
 
 
 def _build_transport_goal(
@@ -895,6 +841,83 @@ def _result_for_issues(
     )
 
 
+def _result_for_schema_issues(
+    issues: tuple[Any, ...],
+    *,
+    normalized_request: dict[str, Any],
+) -> TaskGoalBuildResult:
+    converted = [
+        GoalIssue(
+            code=str(issue.code),
+            message=str(issue.message),
+            field=str(getattr(issue, 'field', '') or ''),
+            options=tuple(getattr(issue, 'options', ()) or ()),
+            details=copy.deepcopy(getattr(issue, 'details', {}) or {}),
+        )
+        for issue in issues
+    ]
+    return _result_for_issues(converted, normalized_request=normalized_request)
+
+
+def _result_from_validation(
+    validation: Any,
+    *,
+    normalized_request: dict[str, Any],
+) -> TaskGoalBuildResult:
+    if validation.status == 'ok':
+        return TaskGoalBuildResult(
+            status='ok',
+            task_goal=validation.task_goal,
+            normalized_request=copy.deepcopy({
+                **normalized_request,
+                'constraints': validation.constraints,
+                'risk_level': validation.risk_level,
+            }),
+        )
+    if validation.status == 'confirmation_required':
+        issue = GoalIssue(
+            'confirmation_required',
+            validation.confirmation_prompt,
+            'confirmation',
+            details={'risk_level': validation.risk_level},
+        )
+        return TaskGoalBuildResult(
+            status='confirmation_required',
+            clarifications=(issue,),
+            normalized_request=copy.deepcopy({
+                **normalized_request,
+                'constraints': validation.constraints,
+                'risk_level': validation.risk_level,
+            }),
+        )
+    errors = [
+        GoalIssue(
+            code=str(issue.code),
+            message=str(issue.message),
+            field=str(getattr(issue, 'field', '') or ''),
+            options=tuple(getattr(issue, 'options', ()) or ()),
+            details=copy.deepcopy(getattr(issue, 'details', {}) or {}),
+        )
+        for issue in validation.errors
+    ]
+    clarifications = [
+        GoalIssue(
+            code=str(issue.code),
+            message=str(issue.message),
+            field=str(getattr(issue, 'field', '') or ''),
+            options=tuple(getattr(issue, 'options', ()) or ()),
+            details=copy.deepcopy(getattr(issue, 'details', {}) or {}),
+        )
+        for issue in validation.clarifications
+    ]
+    return TaskGoalBuildResult(
+        status='error' if errors else 'clarification_required',
+        errors=tuple(errors),
+        clarifications=tuple(clarifications),
+        normalized_request=copy.deepcopy(normalized_request),
+    )
+
+
 def _error_result(
     code: str,
     message: str,
@@ -1071,12 +1094,26 @@ def _optional_text(value: Any) -> str:
 
 
 __all__ = [
+    'DeterministicEnglishParser',
     'GOAL_TYPES',
     'GoalIssue',
+    'LocalSemanticModelAdapter',
+    'PAYLOAD_FILTERS',
+    'PAYLOAD_FILTERS_COMPAT',
+    'ParserPipeline',
+    'RegexFallbackParser',
+    'SELECTION_STRATEGIES',
+    'SELECTION_STRATEGIES_COMPAT',
     'SELECTIONS',
     'SLOTS',
     'STATIONS_BY_SIDE',
+    'StructuredFormParser',
+    'TASK_GOAL_DRAFT_CONTRACT_TYPE',
     'TaskGoalBuildResult',
+    'TaskGoalDialogueManager',
+    'TaskGoalDialogueState',
+    'TaskGoalDraft',
     'build_task_goal',
+    'parse_task_goal_draft',
     'parse_model_task_goal_json',
 ]
