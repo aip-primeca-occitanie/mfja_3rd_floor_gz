@@ -34,6 +34,9 @@ ament_target_dependencies(force_pid_controller rclcpp geometry_msgs std_msgs sta
 add_executable(sinus_mvt src/sin_mvt.cpp)
 ament_target_dependencies(sinus_mvt rclcpp geometry_msgs)
 
+add_executable(sin_mvt_precalc src/sin_mvt_precalc.cpp)
+ament_target_dependencies(sin_mvt_precalc rclcpp geometry_msgs sensor_msgs trajectory_msgs)
+
 # ---- Other Nodes ---- 
 add_executable(cartesian_converter src/cartesian_converter.cpp)
 ament_target_dependencies(cartesian_converter rclcpp sensor_msgs geometry_msgs tf2_eigen ament_index_cpp)
@@ -64,6 +67,7 @@ install(TARGETS
   sensor
   sensor_filter
   sinus_mvt
+  sin_mvt_precalc
   DESTINATION lib/${PROJECT_NAME} )
 
 install(PROGRAMS
