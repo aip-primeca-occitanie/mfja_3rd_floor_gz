@@ -26,7 +26,10 @@ from room_315_task_goal_validation import Room315DomainValidator
 
 
 YES_WORDS = {'yes', 'y', 'confirm', 'confirmed', 'correct', 'proceed', 'go ahead'}
-NO_WORDS = {'no', 'n', 'cancel', 'stop', 'revise', 'change'}
+NO_WORDS = {'no', 'n', 'reject', 'revise', 'change'}
+CANCEL_WORDS = {'cancel', 'stop', 'abort'}
+RESTART_WORDS = {'restart', 'start over', 'start-over', 'reset'}
+HELP_WORDS = {'help', 'what can i say', 'options'}
 
 
 @dataclass(frozen=True)
@@ -63,18 +66,22 @@ class DialogueTurnResult:
 @dataclass(frozen=True)
 class TaskGoalDialogueState:
     pending_draft: TaskGoalDraft | None = None
+    confirmed_draft: TaskGoalDraft | None = None
     attempts: int = 0
     max_attempts: int = 3
     awaiting_confirmation: bool = False
+    requires_confirmation: bool = False
     confirmation_prompt: str = ''
     history: tuple[dict[str, Any], ...] = dataclass_field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             'pending_draft': self.pending_draft.to_dict() if self.pending_draft else None,
+            'confirmed_draft': self.confirmed_draft.to_dict() if self.confirmed_draft else None,
             'attempts': self.attempts,
             'max_attempts': self.max_attempts,
             'awaiting_confirmation': self.awaiting_confirmation,
+            'requires_confirmation': self.requires_confirmation,
             'confirmation_prompt': self.confirmation_prompt,
             'history': [copy.deepcopy(item) for item in self.history],
         }
@@ -85,11 +92,16 @@ class TaskGoalDialogueState:
         pending = payload.get('pending_draft')
         if isinstance(pending, dict):
             pending = TaskGoalDraft.from_dict(pending, strict=False)
+        confirmed = payload.get('confirmed_draft')
+        if isinstance(confirmed, dict):
+            confirmed = TaskGoalDraft.from_dict(confirmed, strict=False)
         return TaskGoalDialogueState(
             pending_draft=pending,
+            confirmed_draft=confirmed,
             attempts=int(payload.get('attempts', self.attempts)),
             max_attempts=int(payload.get('max_attempts', self.max_attempts)),
             awaiting_confirmation=bool(payload.get('awaiting_confirmation', self.awaiting_confirmation)),
+            requires_confirmation=bool(payload.get('requires_confirmation', self.requires_confirmation)),
             confirmation_prompt=str(payload.get('confirmation_prompt', self.confirmation_prompt) or ''),
             history=tuple(payload.get('history') or ()),
         )
@@ -115,11 +127,47 @@ class TaskGoalDialogueManager:
         timestamp: float = 0.0,
     ) -> DialogueTurnResult:
         state = state or TaskGoalDialogueState(max_attempts=self.max_attempts)
+        if isinstance(utterance, str):
+            control = _clean(utterance)
+            if control in CANCEL_WORDS:
+                cleared = state.with_update(pending_draft=None, awaiting_confirmation=False, requires_confirmation=False, confirmation_prompt='')
+                issue = GoalIssue('dialogue_cancelled', 'Goal entry was cancelled. No TaskGoal was finalized.', 'dialogue')
+                return DialogueTurnResult(
+                    status='cancelled',
+                    state=_append_history(cleared, utterance, {'status': 'cancelled'}),
+                    clarifications=(issue,),
+                    questions=(issue.message,),
+                )
+            if control in RESTART_WORDS:
+                restarted = TaskGoalDialogueState(max_attempts=state.max_attempts, confirmed_draft=state.confirmed_draft)
+                issue = GoalIssue('dialogue_restarted', 'Goal entry was restarted. Provide a new Room 315 goal.', 'dialogue')
+                return DialogueTurnResult(
+                    status='clarification_required',
+                    state=_append_history(restarted, utterance, {'status': 'restarted'}),
+                    clarifications=(issue,),
+                    questions=(issue.message,),
+                )
+            if control in HELP_WORDS:
+                issue = GoalIssue(
+                    'help_requested',
+                    'You can ask for transport or inspection using Room 315 sides, shuttles, stations, or slots.',
+                    'dialogue',
+                )
+                return DialogueTurnResult(
+                    status='clarification_required',
+                    state=_append_history(state, utterance, {'status': 'help'}),
+                    clarifications=(issue,),
+                    questions=(issue.message,),
+                )
         if state.awaiting_confirmation:
             return self._handle_confirmation(utterance, state=state, timestamp=timestamp)
 
         if state.pending_draft is not None and isinstance(utterance, str):
-            merge_result = merge_clarification_answer(state.pending_draft, utterance)
+            reference = _reference_updates(state, utterance)
+            if reference:
+                merge_result = _MergeResult(status='ok', draft=state.pending_draft.merge(**reference))
+            else:
+                merge_result = merge_clarification_answer(state.pending_draft, utterance)
             if merge_result.status == 'error':
                 next_state = _append_history(state, utterance, merge_result.to_dict())
                 return DialogueTurnResult(
@@ -131,13 +179,14 @@ class TaskGoalDialogueManager:
             if merge_result.draft is not None:
                 draft = merge_result.draft
             else:
-                parsed = self.parser.parse(utterance)
+                parsed = self.parser.parse(utterance, confirmed_draft=state.confirmed_draft)
                 if not parsed.ok:
                     next_state = _append_history(state, utterance, parsed.to_dict())
                     return DialogueTurnResult(status='error', state=next_state, errors=parsed.issues)
                 draft = _merge_drafts(state.pending_draft, parsed.draft)
+            state = state.with_update(requires_confirmation=True)
         else:
-            parsed = self.parser.parse(utterance)
+            parsed = self.parser.parse(utterance, confirmed_draft=state.confirmed_draft)
             if not parsed.ok:
                 next_state = _append_history(state, utterance, parsed.to_dict())
                 return DialogueTurnResult(status='error', state=next_state, errors=parsed.issues)
@@ -170,7 +219,9 @@ class TaskGoalDialogueManager:
             )
             cleared = state.with_update(
                 pending_draft=None,
+                confirmed_draft=validation.draft if validation.ok else state.confirmed_draft,
                 awaiting_confirmation=False,
+                requires_confirmation=False,
                 confirmation_prompt='',
                 attempts=0,
             )
@@ -182,6 +233,15 @@ class TaskGoalDialogueManager:
                 draft=validation.draft,
                 errors=validation.errors,
                 clarifications=validation.clarifications,
+            )
+        if text in CANCEL_WORDS:
+            issue = GoalIssue('dialogue_cancelled', 'Goal entry was cancelled. No TaskGoal was finalized.', 'dialogue')
+            cleared = state.with_update(pending_draft=None, awaiting_confirmation=False, requires_confirmation=False, confirmation_prompt='')
+            return DialogueTurnResult(
+                status='cancelled',
+                state=_append_history(cleared, utterance, {'status': 'cancelled'}),
+                clarifications=(issue,),
+                questions=(issue.message,),
             )
         if text in NO_WORDS:
             issue = GoalIssue(
@@ -198,6 +258,35 @@ class TaskGoalDialogueManager:
                 clarifications=(issue,),
                 questions=(issue.message,),
             )
+        if isinstance(utterance, str):
+            merge_result = merge_clarification_answer(state.pending_draft, utterance) if state.pending_draft else _MergeResult(status='no_match')
+            if merge_result.status == 'ok' and merge_result.draft is not None:
+                validation = self.validator.validate(
+                    merge_result.draft,
+                    timestamp=timestamp,
+                    require_confirmation=True,
+                )
+                corrected_state = state.with_update(
+                    pending_draft=merge_result.draft,
+                    awaiting_confirmation=False,
+                    requires_confirmation=True,
+                    confirmation_prompt='',
+                )
+                return self._result_from_validation(utterance, corrected_state, validation)
+            parsed = self.parser.parse(utterance, confirmed_draft=state.confirmed_draft)
+            if parsed.ok and state.pending_draft is not None:
+                validation = self.validator.validate(
+                    _merge_drafts(state.pending_draft, parsed.draft),
+                    timestamp=timestamp,
+                    require_confirmation=True,
+                )
+                corrected_state = state.with_update(
+                    pending_draft=validation.draft,
+                    awaiting_confirmation=False,
+                    requires_confirmation=True,
+                    confirmation_prompt='',
+                )
+                return self._result_from_validation(utterance, corrected_state, validation)
         issue = GoalIssue('confirmation_required', 'Reply yes to finalize this goal, or no to revise it.', 'confirmation')
         return DialogueTurnResult(
             status='confirmation_required',
@@ -226,11 +315,12 @@ class TaskGoalDialogueManager:
                 next_state = state.with_update(pending_draft=validation.draft, attempts=attempts)
                 next_state = _append_history(next_state, utterance, validation.to_dict())
                 return DialogueTurnResult(status='error', state=next_state, draft=validation.draft, errors=(issue,))
-            questions = tuple(question_for_issue(issue) for issue in validation.clarifications)
+            questions = tuple(dict.fromkeys(question_for_issue(issue) for issue in validation.clarifications))
             next_state = state.with_update(
                 pending_draft=validation.draft,
                 attempts=attempts,
                 awaiting_confirmation=False,
+                requires_confirmation=True,
                 confirmation_prompt='',
             )
             next_state = _append_history(next_state, utterance, validation.to_dict())
@@ -242,10 +332,12 @@ class TaskGoalDialogueManager:
                 questions=questions,
             )
         if validation.status == 'confirmation_required':
+            prompt = canonical_confirmation_prompt(validation.constraints, validation.risk_level)
             next_state = state.with_update(
                 pending_draft=validation.draft,
                 awaiting_confirmation=True,
-                confirmation_prompt=validation.confirmation_prompt,
+                requires_confirmation=True,
+                confirmation_prompt=prompt,
             )
             next_state = _append_history(next_state, utterance, validation.to_dict())
             return DialogueTurnResult(
@@ -253,10 +345,29 @@ class TaskGoalDialogueManager:
                 state=next_state,
                 draft=validation.draft,
                 confirmation_required=True,
-                confirmation_prompt=validation.confirmation_prompt,
-                questions=(validation.confirmation_prompt,),
+                confirmation_prompt=prompt,
+                questions=(prompt,),
+            )
+        if validation.status == 'ok' and state.requires_confirmation:
+            prompt = canonical_confirmation_prompt(validation.constraints, validation.risk_level)
+            next_state = state.with_update(
+                pending_draft=validation.draft,
+                awaiting_confirmation=True,
+                requires_confirmation=True,
+                confirmation_prompt=prompt,
+            )
+            next_state = _append_history(next_state, utterance, validation.to_dict())
+            return DialogueTurnResult(
+                status='confirmation_required',
+                state=next_state,
+                draft=validation.draft,
+                confirmation_required=True,
+                confirmation_prompt=prompt,
+                questions=(prompt,),
             )
         next_state = state.with_update(pending_draft=None, attempts=0, awaiting_confirmation=False, confirmation_prompt='')
+        if validation.ok:
+            next_state = next_state.with_update(confirmed_draft=validation.draft, requires_confirmation=False)
         next_state = _append_history(next_state, utterance, validation.to_dict())
         return DialogueTurnResult(
             status=validation.status,
@@ -348,6 +459,38 @@ def question_for_issue(issue: GoalIssue) -> str:
     return issue.message
 
 
+def canonical_confirmation_prompt(constraints: dict[str, Any], risk_level: str) -> str:
+    lines = ['Confirm Room 315 goal:']
+    goal_type = constraints.get('goal_type', 'transport')
+    lines.append(f'Action: {goal_type.title()}')
+    if goal_type == 'transport':
+        if constraints.get('target_shuttle'):
+            shuttle = constraints['target_shuttle']
+        else:
+            selection = constraints.get('selection_strategy', 'any')
+            payload = constraints.get('payload_filter', 'any')
+            shuttle = f'{selection} {payload} shuttle'.replace('any any', 'any')
+        lines.append(f'Shuttle: {shuttle}')
+        lines.append(f'Rail: {constraints.get("side", "unknown").title()}')
+        if constraints.get('target_kind') == 'station':
+            station = constraints.get('target_station')
+            destination = (
+                f'Station {station} / Slot {constraints["target_slot"]}'
+                if constraints.get('target_slot')
+                else f'Station {station}'
+            )
+        else:
+            destination = f'Slot {constraints.get("target_slot")}'
+        lines.append(f'Destination: {destination}')
+    else:
+        lines.append(f'Target: {constraints.get("inspection_subject", constraints.get("target_kind", "unknown"))}')
+        if constraints.get('side'):
+            lines.append(f'Rail: {constraints["side"].title()}')
+    lines.append(f'Risk: {risk_level}')
+    lines.append('Reply yes to finalize, no to revise, or cancel.')
+    return '\n'.join(lines)
+
+
 def _merge_drafts(base: TaskGoalDraft, update: TaskGoalDraft) -> TaskGoalDraft:
     updates = {
         key: value
@@ -367,6 +510,31 @@ def _merge_drafts(base: TaskGoalDraft, update: TaskGoalDraft) -> TaskGoalDraft:
     return base.merge(**updates)
 
 
+def _reference_updates(state: TaskGoalDialogueState, answer: str) -> dict[str, Any]:
+    if state.confirmed_draft is None:
+        return {}
+    text = _clean(answer)
+    confirmed = state.confirmed_draft
+    updates: dict[str, Any] = {}
+    if 'same shuttle' in text or 'same one' in text or text in {'it', 'that one'}:
+        if confirmed.target_shuttle:
+            updates['target_shuttle'] = confirmed.target_shuttle
+            updates['selection_strategy'] = 'explicit'
+            updates['payload_filter'] = confirmed.payload_filter or 'any'
+    if text in {'there', 'same place', 'same destination'}:
+        if confirmed.target_station:
+            updates['target_kind'] = 'station'
+            updates['target_station'] = confirmed.target_station
+            if confirmed.side:
+                updates['side'] = confirmed.side
+        elif confirmed.target_slot:
+            updates['target_kind'] = 'slot'
+            updates['target_slot'] = confirmed.target_slot
+            if confirmed.side:
+                updates['side'] = confirmed.side
+    return updates
+
+
 def _append_history(
     state: TaskGoalDialogueState,
     utterance: str | dict[str, Any],
@@ -384,6 +552,7 @@ __all__ = [
     'DialogueTurnResult',
     'TaskGoalDialogueManager',
     'TaskGoalDialogueState',
+    'canonical_confirmation_prompt',
     'merge_clarification_answer',
     'question_for_issue',
 ]

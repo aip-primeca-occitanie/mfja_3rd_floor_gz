@@ -22,6 +22,48 @@ For the current production task-goal understanding layer, including
 output restrictions, use
 [ROOM315_TASK_GOAL_UNDERSTANDING.md](ROOM315_TASK_GOAL_UNDERSTANDING.md).
 
+The task-goal semantic runtime is configured by:
+
+```text
+mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml
+```
+
+Install or verify the real local offline intent checkpoint outside Git:
+
+```bash
+python3 mfja_robot_control_config/scripts/setup_room315_intent_model.py
+source /home/tiago/models/room315_intent/room315_intent.env
+```
+
+Run a real semantic health/parse smoke test with:
+
+```bash
+PYTHONPATH=mfja_robot_control_config/scripts \
+python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
+  --require-real-model \
+  --expect-semantic \
+  --expect-draft-field selection_strategy=nearest \
+  --expect-draft-field payload_filter=loaded \
+  --expect-draft-field side=right \
+  --expect-draft-field target_slot=3 \
+  --text "Could you send whichever carrier is closest and holding a component to the third position on the right-hand line?"
+```
+
+Run the interactive user-facing command interface:
+
+```bash
+PYTHONPATH=mfja_robot_control_config/scripts \
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py
+```
+
+Run the English corpus benchmark with:
+
+```bash
+ros2 run mfja_robot_control_config room_315_task_goal_benchmark.py \
+  --corpus mfja_robot_control_config/config/room_315_vla/task_goal_english_benchmark.yaml \
+  --output /tmp/room315_task_goal_benchmark_report.json
+```
+
 ## Launch
 
 ```bash

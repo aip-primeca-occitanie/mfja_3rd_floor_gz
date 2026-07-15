@@ -28,6 +28,16 @@ STATIONS_BY_SIDE = {
     'right': ('yaskawa', 'staubli'),
     'left': ('yaskawa', 'kuka'),
 }
+SLOT_STATION_BY_SIDE_AND_SLOT = {
+    ('right', '1'): 'yaskawa',
+    ('right', '2'): 'yaskawa',
+    ('right', '3'): 'staubli',
+    ('right', '4'): 'staubli',
+    ('left', '1'): 'yaskawa',
+    ('left', '2'): 'yaskawa',
+    ('left', '3'): 'kuka',
+    ('left', '4'): 'kuka',
+}
 STATION_ALIASES = {
     'yaskawa': 'yaskawa',
     'yaskawa_station': 'yaskawa',
@@ -427,6 +437,25 @@ def normalize_slot_symbol(value: Any) -> str | None:
     return text
 
 
+def station_for_slot(side: str | None, slot: str | None) -> str:
+    return SLOT_STATION_BY_SIDE_AND_SLOT.get((str(side or ''), normalize_slot_symbol(slot) or ''), '')
+
+
+def slots_for_station(side: str | None, station: str | None) -> tuple[str, ...]:
+    normalized_station = normalize_station_symbol(station)
+    normalized_side = normalize_side_symbol(side)
+    return tuple(
+        slot
+        for (candidate_side, slot), candidate_station in SLOT_STATION_BY_SIDE_AND_SLOT.items()
+        if candidate_side == normalized_side and candidate_station == normalized_station
+    )
+
+
+def first_slot_for_station(side: str | None, station: str | None) -> str:
+    slots = slots_for_station(side, station)
+    return slots[0] if slots else ''
+
+
 def slug_text(value: Any) -> str:
     return re.sub(r'[^a-z0-9_]+', '_', str(value or '').strip().casefold()).strip('_')
 
@@ -449,10 +478,14 @@ __all__ = [
     'SELECTION_STRATEGIES',
     'SIDES',
     'SLOTS',
+    'SLOT_STATION_BY_SIDE_AND_SLOT',
     'STATIONS_BY_SIDE',
     'TASK_GOAL_DRAFT_CONTRACT_TYPE',
     'TaskGoalDraft',
     'DraftParseResult',
     'blocked_paths',
+    'first_slot_for_station',
+    'slots_for_station',
+    'station_for_slot',
     'strict_model_draft_from_json',
 ]

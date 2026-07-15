@@ -1,0 +1,33 @@
+schema_version: 1
+prompt_schema_version: 1
+
+local_semantic_model:
+  enabled: true
+  backend: llama_cpp
+  # Set ROOM315_INTENT_MODEL_PATH to an absolute local GGUF checkpoint under
+  # /home/tiago/models/room315_intent, or replace this with an absolute local
+  # filesystem path in a generated local config.
+  # Runtime refuses URIs, relative paths, missing paths, and download-backed
+  # loading.
+  model_path: "${ROOM315_INTENT_MODEL_PATH}"
+  model_sha256: "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+  device: cpu
+  quantization: q4_k_m
+  context_size: 4096
+  n_threads: 0
+  n_gpu_layers: 0
+  chat_format: chatml
+
+generation:
+  temperature: 0.0
+  top_p: 1.0
+  max_output_tokens: 192
+  seed: 315
+
+runtime:
+  timeout_s: 45.0
+  retry_count: 1
+  offline_only: true
+  shadow_mode: false
+  deterministic_only: false
+  require_real_model_for_smoke: false

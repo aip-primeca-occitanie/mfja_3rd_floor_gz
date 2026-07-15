@@ -28,6 +28,7 @@ from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import normalize_side
 from room_315_task_goal_dialogue import TaskGoalDialogueManager
 from room_315_task_goal_dialogue import TaskGoalDialogueState
+from room_315_task_goal_parsers import ConversationalIntentGatewayParser
 from room_315_task_goal_parsers import DeterministicEnglishParser
 from room_315_task_goal_parsers import LocalSemanticModelAdapter
 from room_315_task_goal_parsers import ParserPipeline
@@ -210,6 +211,7 @@ def build_task_goal(
     return _result_from_validation(validation, normalized_request={
         'parser': parsed.parser_name,
         'draft': draft.to_dict(),
+        'parse_trace': copy.deepcopy(parsed.raw_output.get('trace')) if isinstance(parsed.raw_output, dict) else None,
     })
 
 
@@ -1094,6 +1096,7 @@ def _optional_text(value: Any) -> str:
 
 
 __all__ = [
+    'ConversationalIntentGatewayParser',
     'DeterministicEnglishParser',
     'GOAL_TYPES',
     'GoalIssue',

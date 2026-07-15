@@ -9,6 +9,13 @@ from typing import Any
 from typing import Callable
 from typing import Protocol
 
+from room_315_task_goal_fusion import EvidenceAwareFusionResolver
+from room_315_task_goal_fusion import ExplicitFactExtractor
+from room_315_task_goal_semantic import LocalSemanticBackend
+from room_315_task_goal_semantic import LocalSemanticModelConfig
+from room_315_task_goal_semantic import SemanticParseEnvelope
+from room_315_task_goal_semantic import get_default_semantic_backend
+from room_315_task_goal_semantic import strict_semantic_envelope_from_json
 from room_315_task_goal_schema import CONTRACT_SCHEMA_VERSION
 from room_315_task_goal_schema import PAYLOAD_FILTERS
 from room_315_task_goal_schema import SELECTION_STRATEGIES
@@ -28,6 +35,12 @@ from room_315_task_goal_schema import normalize_station_symbol
 from room_315_task_goal_schema import normalize_target_kind
 from room_315_task_goal_schema import slug_text
 from room_315_task_goal_schema import strict_model_draft_from_json
+
+TERMINAL_GATEWAY_ISSUES = {
+    'ambiguous_explicit_conflict',
+    'missing_reference_context',
+    'unsupported_language',
+}
 
 
 class TaskGoalDraftParser(Protocol):
@@ -357,23 +370,168 @@ class LocalSemanticModelAdapter:
         )
 
 
+class ConversationalIntentGatewayParser:
+    parser_name = 'conversational_intent_gateway'
+
+    def __init__(
+        self,
+        *,
+        backend: LocalSemanticBackend | None = None,
+        config: LocalSemanticModelConfig | None = None,
+        config_path: str | None = None,
+        extractor: ExplicitFactExtractor | None = None,
+        resolver: EvidenceAwareFusionResolver | None = None,
+        shadow_mode: bool | None = None,
+        deterministic_only: bool | None = None,
+    ) -> None:
+        self.config = config or LocalSemanticModelConfig.from_file(config_path)
+        self.backend = backend or get_default_semantic_backend(config_path)
+        self.extractor = extractor or ExplicitFactExtractor()
+        self.resolver = resolver or EvidenceAwareFusionResolver()
+        self.shadow_mode = self.config.shadow_mode if shadow_mode is None else shadow_mode
+        self.deterministic_only = self.config.deterministic_only if deterministic_only is None else deterministic_only
+
+    def parse(
+        self,
+        request: Any,
+        *,
+        confirmed_draft: TaskGoalDraft | None = None,
+    ) -> DraftParseResult:
+        if not isinstance(request, str):
+            return DraftParseResult(
+                status='error',
+                issues=(GoalIssue('invalid_text_request', 'Conversational parser requires English text.', 'request'),),
+                parser_name=self.parser_name,
+            )
+        if _has_non_english_letters(request):
+            return DraftParseResult(
+                status='error',
+                issues=(GoalIssue(
+                    'unsupported_language',
+                    'Task-goal understanding is English-only in production.',
+                    'request',
+                ),),
+                parser_name=self.parser_name,
+                raw_output=request,
+            )
+        if not _normalize_text(request):
+            return DraftParseResult(
+                status='error',
+                issues=(GoalIssue('empty_request', 'Task-goal request is empty.', 'request'),),
+                parser_name=self.parser_name,
+                raw_output=request,
+            )
+
+        explicit_facts = self.extractor.extract(request)
+        if self.extractor.contains_unresolved_reference(request, has_context=confirmed_draft is not None):
+            trace = self.resolver.resolve(
+                request_text=request,
+                explicit_facts=explicit_facts,
+                semantic_envelope=None,
+                backend_result=None,
+                confirmed_draft=confirmed_draft,
+                fallback_reason='unresolved_reference',
+                prompt_schema_version=self.config.prompt_schema_version,
+            ).trace
+            return DraftParseResult(
+                status='error',
+                issues=(GoalIssue(
+                    'missing_reference_context',
+                    'The request uses a reference such as it, there, or the same shuttle without confirmed context.',
+                    'reference',
+                ),),
+                parser_name=self.parser_name,
+                raw_output={'trace': trace.to_dict() if trace else {}},
+            )
+
+        semantic_envelope: SemanticParseEnvelope | None = None
+        backend_result = None
+        fallback_reason = ''
+        if self.deterministic_only:
+            fallback_reason = 'deterministic_only'
+        else:
+            backend_result = self.backend.infer(
+                request,
+                confirmed_context=confirmed_draft.to_dict() if confirmed_draft else None,
+            )
+            if backend_result.ok:
+                envelope_result = strict_semantic_envelope_from_json(backend_result.text)
+                if envelope_result.ok:
+                    semantic_envelope = envelope_result.envelope
+                else:
+                    fallback_reason = envelope_result.issues[0].code if envelope_result.issues else 'invalid_semantic_envelope'
+            else:
+                fallback_reason = backend_result.fallback_reason or backend_result.status
+
+        fusion = self.resolver.resolve(
+            request_text=request,
+            explicit_facts=explicit_facts,
+            semantic_envelope=semantic_envelope,
+            backend_result=backend_result,
+            confirmed_draft=confirmed_draft,
+            shadow_mode=self.shadow_mode,
+            fallback_reason=fallback_reason,
+            prompt_schema_version=self.config.prompt_schema_version,
+        )
+        raw_output = {
+            'trace': fusion.trace.to_dict() if fusion.trace else {},
+            'semantic_envelope': semantic_envelope.to_dict() if semantic_envelope else None,
+            'backend_result': backend_result.to_dict() if backend_result else None,
+        }
+        if fusion.ok:
+            return DraftParseResult(
+                status='ok',
+                draft=fusion.draft,
+                parser_name=self.parser_name,
+                raw_output=raw_output,
+            )
+        return DraftParseResult(
+            status='error',
+            issues=fusion.issues,
+            parser_name=self.parser_name,
+            raw_output=raw_output,
+        )
+
+
 class ParserPipeline:
-    def __init__(self, parsers: list[TaskGoalDraftParser] | None = None) -> None:
+    def __init__(
+        self,
+        parsers: list[TaskGoalDraftParser] | None = None,
+        *,
+        semantic_backend: LocalSemanticBackend | None = None,
+        semantic_config: LocalSemanticModelConfig | None = None,
+    ) -> None:
         self.parsers = parsers or [
             StructuredFormParser(),
-            DeterministicEnglishParser(),
+            ConversationalIntentGatewayParser(backend=semantic_backend, config=semantic_config),
             RegexFallbackParser(),
         ]
 
-    def parse(self, request: Any) -> DraftParseResult:
+    def parse(
+        self,
+        request: Any,
+        *,
+        confirmed_draft: TaskGoalDraft | None = None,
+    ) -> DraftParseResult:
         errors: list[GoalIssue] = []
         for parser in self.parsers:
             if not isinstance(request, dict) and getattr(parser, 'parser_name', '') == StructuredFormParser.parser_name:
                 continue
-            result = parser.parse(request)
+            try:
+                result = parser.parse(request, confirmed_draft=confirmed_draft)  # type: ignore[call-arg]
+            except TypeError:
+                result = parser.parse(request)
             if result.ok:
                 return result
             errors.extend(result.issues)
+            if getattr(parser, 'parser_name', '') == ConversationalIntentGatewayParser.parser_name:
+                if any(issue.code in TERMINAL_GATEWAY_ISSUES for issue in result.issues):
+                    return DraftParseResult(
+                        status='error',
+                        issues=tuple(errors),
+                        parser_name=parser.parser_name,
+                        raw_output=result.raw_output,
+                    )
             if isinstance(request, dict):
                 break
         return DraftParseResult(status='error', issues=tuple(errors), parser_name='parser_pipeline')
@@ -415,15 +573,18 @@ def _selection_strategy_from_text(text: str, *, shuttle: bool) -> str | None:
         return 'nearest'
     if shuttle:
         return 'explicit'
-    if re.search(r'\bany\s+shuttle\b', text):
+    if re.search(r'\b(?:any\s+)?(?:shuttle|carrier)\b', text):
         return 'any'
     return None
 
 
 def _payload_filter_from_text(text: str) -> str | None:
-    if re.search(r'\b(?:loaded|carrying|with\s+(?:a\s+)?(?:payload|part|load))\b', text):
+    if re.search(
+        r'\b(?:loaded|carrying(?:\s+(?:a\s+)?(?:payload|part|load|component))?|holding(?:\s+(?:a\s+)?(?:payload|part|load|component))?|with\s+(?:a\s+)?(?:payload|part|load|component))\b',
+        text,
+    ):
         return 'loaded'
-    if re.search(r'\b(?:empty|unloaded|without\s+(?:a\s+)?(?:payload|part|load))\b', text):
+    if re.search(r'\b(?:empty|unloaded|without\s+(?:a\s+)?(?:payload|part|load|component))\b', text):
         return 'empty'
     if re.search(r'\bany\s+(?:payload|load|shuttle)\b', text):
         return 'any'
@@ -476,6 +637,7 @@ def _optional_text(value: Any) -> str:
 
 
 __all__ = [
+    'ConversationalIntentGatewayParser',
     'DeterministicEnglishParser',
     'LocalSemanticModelAdapter',
     'ParserPipeline',

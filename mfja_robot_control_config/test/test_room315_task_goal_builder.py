@@ -156,7 +156,8 @@ def test_returns_structured_clarifications_for_incomplete_or_ambiguous_requests(
     incomplete = builder.build_task_goal('move shuttle to slot 3', timestamp=1.0)
     assert incomplete.status == 'clarification_required'
     codes = {issue.code for issue in incomplete.clarifications}
-    assert {'missing_side', 'missing_selection_strategy', 'missing_payload_filter'} <= codes
+    assert {'missing_side', 'missing_payload_filter'} <= codes
+    assert 'missing_selection_strategy' not in codes
     assert incomplete.to_dict()['clarifications'][0]['code']
 
     ambiguous = builder.build_task_goal('send the nearest shuttle to yaskawa', timestamp=1.0)

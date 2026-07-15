@@ -26,6 +26,8 @@ install(
     config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
+    config/room_315_vla/task_goal_english_benchmark.yaml
+    config/room_315_vla/task_goal_understanding.yaml
     config/room_315_vla/visual_observed_state_calibration.yaml
     config/room_315_vla/vla_supervisor.yaml
   DESTINATION share/${PROJECT_NAME}/config/room_315_vla
@@ -58,6 +60,7 @@ install(
     scripts/conveyor_loop_mode_controller.py
     scripts/presentation_left_slot3_kuka_slot2.py
     scripts/robot_joint_command.py
+    scripts/setup_room315_intent_model.py
     scripts/room_315_contracts.py
     scripts/room_315_closed_loop_executive.py
     scripts/room_315_device_position_tool.py
@@ -74,9 +77,14 @@ install(
     scripts/room_315_payload_case_review.py
     scripts/room_315_real_vla_agent.py
     scripts/room_315_task_goal_builder.py
+    scripts/room_315_task_goal_benchmark.py
+    scripts/room_315_task_goal_cli.py
     scripts/room_315_task_goal_dialogue.py
+    scripts/room_315_task_goal_fusion.py
     scripts/room_315_task_goal_parsers.py
     scripts/room_315_task_goal_schema.py
+    scripts/room_315_task_goal_semantic.py
+    scripts/room_315_task_goal_semantic_smoke.py
     scripts/room_315_task_goal_validation.py
     scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_benchmark_suite.py
@@ -116,6 +124,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_task_goal_builder
     test/test_room315_task_goal_builder.py
+  )
+  ament_add_pytest_test(
+    test_room315_task_goal_semantic_gateway
+    test/test_room315_task_goal_semantic_gateway.py
   )
   ament_add_pytest_test(
     test_room315_closed_loop_executive

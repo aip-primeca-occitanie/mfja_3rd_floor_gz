@@ -6,6 +6,14 @@ log/
 .codex
 __pycache__/
 *.pyc
+*.gguf
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+.venv/
+venv/
+.cache/
 *.aux
 *.log
 *.out

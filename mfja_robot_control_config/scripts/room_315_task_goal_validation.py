@@ -23,6 +23,9 @@ from room_315_task_goal_schema import SLOTS
 from room_315_task_goal_schema import STATIONS_BY_SIDE
 from room_315_task_goal_schema import GoalIssue
 from room_315_task_goal_schema import TaskGoalDraft
+from room_315_task_goal_schema import first_slot_for_station
+from room_315_task_goal_schema import slots_for_station
+from room_315_task_goal_schema import station_for_slot
 
 
 @dataclass(frozen=True)
@@ -114,7 +117,8 @@ class Room315DomainValidator:
             elif side is None:
                 side = shuttle.side
 
-        if draft.target_slot is not None and draft.target_slot not in SLOTS:
+        target_slot = draft.target_slot
+        if target_slot is not None and target_slot not in SLOTS:
             errors.append(GoalIssue('invalid_slot', 'Room 315 target_slot must be 1, 2, 3, or 4.', 'target_slot', SLOTS))
 
         if draft.target_station is not None:
@@ -145,6 +149,22 @@ class Room315DomainValidator:
                     'side',
                     valid_sides,
                 ))
+            if side is not None and side in valid_sides:
+                station_slots = slots_for_station(side, draft.target_station)
+                if target_slot in SLOTS:
+                    slot_station = station_for_slot(side, target_slot)
+                    if slot_station != draft.target_station:
+                        errors.append(GoalIssue(
+                            'station_slot_mismatch',
+                            (
+                                f'Slot {target_slot!r} on the {side!r} rail belongs to '
+                                f'{slot_station!r}, not {draft.target_station!r}.'
+                            ),
+                            'target_slot',
+                            station_slots,
+                        ))
+                elif goal_type == 'transport':
+                    target_slot = first_slot_for_station(side, draft.target_station) or target_slot
 
         selection_strategy = draft.selection_strategy
         payload_filter = draft.payload_filter
@@ -171,6 +191,7 @@ class Room315DomainValidator:
             self._validate_transport(
                 draft,
                 side=side,
+                target_slot=target_slot,
                 shuttle=shuttle,
                 selection_strategy=selection_strategy,
                 payload_filter=payload_filter,
@@ -181,6 +202,7 @@ class Room315DomainValidator:
             self._validate_inspection(
                 draft,
                 side=side,
+                target_slot=target_slot,
                 shuttle=shuttle,
                 selection_strategy=selection_strategy,
                 payload_filter=payload_filter,
@@ -205,6 +227,7 @@ class Room315DomainValidator:
         constraints = self._constraints(
             draft,
             side=side,
+            target_slot=target_slot,
             shuttle=shuttle,
             selection_strategy=selection_strategy,
             payload_filter=payload_filter,
@@ -255,6 +278,7 @@ class Room315DomainValidator:
         draft: TaskGoalDraft,
         *,
         side: str | None,
+        target_slot: str | None,
         shuttle: Any,
         selection_strategy: str | None,
         payload_filter: str | None,
@@ -284,7 +308,7 @@ class Room315DomainValidator:
                 'target_station',
                 ('yaskawa', 'staubli', 'kuka'),
             ))
-        if draft.target_kind == 'slot' and not draft.target_slot:
+        if draft.target_kind == 'slot' and not target_slot:
             clarifications.append(GoalIssue('missing_target_slot', 'Slot transport goals need slot 1, 2, 3, or 4.', 'target_slot', SLOTS))
         if shuttle is None and selection_strategy is None and payload_filter is None:
             clarifications.append(GoalIssue(
@@ -293,6 +317,13 @@ class Room315DomainValidator:
                 'selection_strategy',
                 SELECTION_STRATEGIES,
             ))
+            clarifications.append(GoalIssue(
+                'missing_payload_filter',
+                'Specify loaded, empty, or any payload filter.',
+                'payload_filter',
+                PAYLOAD_FILTERS,
+            ))
+        elif shuttle is None and selection_strategy == 'any' and payload_filter is None:
             clarifications.append(GoalIssue(
                 'missing_payload_filter',
                 'Specify loaded, empty, or any payload filter.',
@@ -311,6 +342,7 @@ class Room315DomainValidator:
         draft: TaskGoalDraft,
         *,
         side: str | None,
+        target_slot: str | None,
         shuttle: Any,
         selection_strategy: str | None,
         payload_filter: str | None,
@@ -325,7 +357,7 @@ class Room315DomainValidator:
                     'inspection_subject',
                 ))
             return
-        if draft.target_kind == 'slot' and draft.target_slot is None:
+        if draft.target_kind == 'slot' and target_slot is None:
             clarifications.append(GoalIssue('missing_target_slot', 'Slot inspection goals need slot 1, 2, 3, or 4.', 'target_slot', SLOTS))
         if draft.target_kind == 'station' and draft.target_station is None:
             clarifications.append(GoalIssue(
@@ -356,6 +388,7 @@ class Room315DomainValidator:
         draft: TaskGoalDraft,
         *,
         side: str | None,
+        target_slot: str | None,
         shuttle: Any,
         selection_strategy: str | None,
         payload_filter: str | None,
@@ -374,8 +407,8 @@ class Room315DomainValidator:
             constraints['target_kind'] = draft.target_kind
         if draft.target_station:
             constraints['target_station'] = draft.target_station
-        if draft.target_slot:
-            constraints['target_slot'] = draft.target_slot
+        if target_slot:
+            constraints['target_slot'] = target_slot
         if shuttle is not None:
             constraints['target_shuttle'] = shuttle.gazebo_entity_name
         if goal_type == 'inspection':
@@ -413,7 +446,11 @@ class Room315DomainValidator:
             return f'inspect {constraints.get("inspection_subject", "room315_system")}'
         side = constraints.get('side')
         target = (
-            f'station {constraints["target_station"]}'
+            (
+                f'station {constraints["target_station"]} / slot {constraints["target_slot"]}'
+                if constraints.get('target_slot')
+                else f'station {constraints["target_station"]}'
+            )
             if constraints.get('target_kind') == 'station'
             else f'slot {constraints.get("target_slot")}'
         )
