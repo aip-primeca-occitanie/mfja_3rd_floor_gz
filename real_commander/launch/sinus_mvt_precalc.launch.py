@@ -95,8 +95,8 @@ def generate_launch_description():
         name='sin_mvt_precalc',
         output='screen',
         parameters=[{
-            "AMPLITUDE" : 0.05,
-            "OMEGA" : 0.8,
+            "AMPLITUDE" : 0.1,
+            "OMEGA" : 3.1,
             "LOOP_FREQ" : 250,
             "DURATION" : 15.,
             "JOINT_INDEX" : 2,

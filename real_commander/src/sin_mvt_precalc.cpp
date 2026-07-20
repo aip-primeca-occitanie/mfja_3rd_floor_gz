@@ -21,7 +21,7 @@ public:
         this->declare_parameter<double>("DURATION", 15.0); // s
         this->declare_parameter<int>("JOINT_INDEX", 2); // index 0-based -> joint_3
 
-        amplitude = this->get_parameter("AMPLITUDE_RAD").as_double();
+        amplitude = this->get_parameter("AMPLITUDE").as_double();
         omega = this->get_parameter("OMEGA").as_double();
         rate_hz = this->get_parameter("LOOP_FREQ").as_int();
         duration = this->get_parameter("DURATION").as_double();

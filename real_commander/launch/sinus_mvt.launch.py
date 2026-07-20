@@ -96,8 +96,8 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             "AMPLITUDE" : 0.05,
-            "OMEGA" : 0.8,
-            "LOOP_FREQ" :250,
+            "OMEGA" : 0.5,
+            "LOOP_FREQ" : 100,
             }]
         )
 
