@@ -10,7 +10,7 @@ from rosbags.highlevel import AnyReader
 # CONFIGURATION
 # ==========================
 
-BAG_PATH = "rosbag2_2026_06_16-16_34_37"
+BAG_PATH = "timing_record"
 
 POSITION_TOPIC = "/cartesian_state"
 FORCE_TOPIC = "/Fz"
@@ -78,6 +78,11 @@ if len(t_command) == 0:
     raise RuntimeError(f"Aucune donnée trouvée sur {COMMAND_TOPIC}")
 
 t0 = t_z[0]
+
+from datetime import datetime, timezone
+
+print(datetime.fromtimestamp(t0, tz=timezone.utc))
+
 t_z -= t0
 t_f -= t0
 t_command -= t0
