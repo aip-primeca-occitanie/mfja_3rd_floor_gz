@@ -181,7 +181,7 @@ private:
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
 
-        double min_interval = 0.15; // secondes : à ajuster selon la vitesse réelle observée
+        double min_interval = 1/250.; // secondes : à ajuster selon la vitesse réelle observée
         rclcpp::Time now_t = this->now();
         if ((now_t - last_cmd_time_).seconds() < min_interval)
             return; // on ignore les cibles trop rapprochées
