@@ -19,8 +19,8 @@ from scapy.all import rdpcap, IP, Raw
 # CONFIGURATION
 # ==========================
 
-BAG_PATH  = "timing_record"
-PCAP_PATH = "timing_record.pcap"
+BAG_PATH  = "timing_record_2"
+PCAP_PATH = "timing_record_2.pcap"
 OUT_PATH  = "timeline_events.txt"
 
 IP_1 = "172.31.0.1"
@@ -100,20 +100,17 @@ pkts_1_to_2.sort(key=lambda x: x[0])
 if len(pkts_2_to_1) == 0:
     raise RuntimeError(f"sender not found")
 
-# TEMPS 0 : PREMIER PAQUET NON NUL 2 -> 1
-t0 = None
-for t, size in pkts_2_to_1:
-    if size > 0:
-        t0 = t
-        break
-
-if t0 is None:
-    raise RuntimeError("Aucun paquet non nul 2 -> 1 trouvé, impossible de définir t0")
-
 # EVENEMENT e : ENVOI ETHERNET 2 -> 1 (paquets non nuls uniquement)
 for t, size in pkts_2_to_1:
     if size > 0:
         events.append((t, "e"))
+
+# TEMPS 0 : PREMIER PAQUET NON NUL 2 -> 1
+t0 = None
+t0 = [t for t,event in events if event=='d'][1]
+
+if t0 is None:
+    raise RuntimeError("Aucun paquet non nul 2 -> 1 trouvé, impossible de définir t0")
 
 # EVENEMENTS f1 / f2 : ENVOI ETHERNET 1 -> 2 (regroupement 4 -> 12 -> 132)
 for t, size in pkts_1_to_2:
@@ -191,12 +188,19 @@ MARKERS = {
 plt.figure(figsize=(14, 6))
 plt.plot(t_z, z_values, color="gray", linewidth=1, label=POSITION_TOPIC, zorder=1)
 for label in labels:
+    """
     if label=="e" or label=="d" :
         t_event = np.array([t for t, l in events if l == label])
         z_event = np.interp(t_event, t_z, z_values)
         marker, color = MARKERS.get(label, ("o", "black"))
         plt.scatter(t_event, z_event, marker=marker, color=color,
-                    label=f"event {label}", zorder=2, s=80)
+                    label=f"event {label}", zorder=2, s=80)"""
+    t_event = np.array([t for t, l in events if l == label])
+    z_event = np.interp(t_event, t_z, z_values)
+    marker, color = MARKERS.get(label, ("o", "black"))
+    plt.scatter(t_event, z_event, marker=marker, color=color,
+                label=f"event {label}", zorder=2, s=80)
+                    
 plt.xlabel("Temps [s]")
 plt.ylabel("z [cm]")
 plt.title("Timeline des événements sur /cartesian_state (z)")

@@ -129,11 +129,8 @@ private:
     pinocchio::SE3 ref_transform;
 
     Eigen::VectorXd q_current;
-    //double velocity_ratio;
 
     sensor_msgs::msg::JointState last_js{};
-
-    rclcpp::Time last_cmd_time_{0, 0, RCL_ROS_TIME};
 
     bool solveIK(const pinocchio::SE3 & target_se3, Eigen::VectorXd & q_out)
     {
@@ -181,12 +178,6 @@ private:
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
 
-        double min_interval = 1/250.; // secondes : à ajuster selon la vitesse réelle observée
-        rclcpp::Time now_t = this->now();
-        if ((now_t - last_cmd_time_).seconds() < min_interval)
-            return; // on ignore les cibles trop rapprochées
-        last_cmd_time_ = now_t;
-
         geometry_msgs::msg::Pose corrected_pose = msg->pose;
         corrected_pose.position.x = msg->pose.position.z;
         corrected_pose.position.z = msg->pose.position.x; //inverted ?
@@ -225,16 +216,6 @@ private:
             }
         
         q_current = q_solution;
-        
-        /*
-        Eigen::VectorXd dq = q_solution - q_current;
-        std::vector<double> velocities(dq.size());
-        for (int i = 0; i < dq.size(); ++i)
-        {
-            double max_v = model.velocityLimit[i];
-            double sign  = (dq[i] >= 0.0) ? 1.0 : -1.0;
-            velocities[i] = sign * velocity_ratio * max_v;
-        }*/
 
         std::vector<std::string> joint_names = {
             "joint_1", "joint_2", "joint_3",
@@ -247,7 +228,6 @@ private:
         traj.joint_names = joint_names;
         trajectory_msgs::msg::JointTrajectoryPoint point;
         point.positions.assign(q_solution.data(), q_solution.data() + q_solution.size());
-        //point.velocities = velocities;  
         traj.points.push_back(point);
         pub_traj->publish(traj);
         }
