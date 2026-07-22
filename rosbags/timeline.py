@@ -34,8 +34,11 @@ TOPICS = {
     "/Fz" : "b",
     "/cartesian_target" : "c",
     "/joint_path_command" : "d",
+    "2->1" : "e",
+    "1->2[1]" : "f1",
+    "1->2[2]" : "f2",
     "/joint_states" : "g",
-    "/cartesian_state" : "h",}
+    "/cartesian_state" : "h"}
 
 POSITION_TOPIC = "/cartesian_state"   # sert aussi de courbe de fond pour le plot
 
@@ -159,21 +162,12 @@ for label in labels:
     freq_mean = np.mean(freq)
     freq_std = np.std(freq, ddof=1)
 
-    print(f"event {label} : freq_moyenne = {freq_mean:.2f} Hz, ecart_type = {freq_std:.2f} Hz")
-
-t_f1 = np.array(sorted(t for t, l in events if l == "f1"))
-t_f2 = np.array(sorted(t for t, l in events if l == "f2"))
-
-if len(t_f1) > 0 and len(t_f1) == len(t_f2):
-    durations = t_f2 - t_f1
-    print(f"\nDurée moyenne d'un envoi 1->2 (f1 -> f2) : {np.mean(durations) * 1000:.3f} ms "
-          f"(ecart_type = {np.std(durations, ddof=1) * 1000:.3f} ms)")
+    print(f"event {next(key for key, value in TOPICS.items() if value == label):<20}: freq_moyenne = {freq_mean:8.2f} Hz, ecart_type = {freq_std:8.2f} Hz")
 
 
 # PLOT DE LA TIMELINE
 # ==========================
 
-# style des marqueurs par type d'événement : (marqueur, couleur)
 MARKERS = {
     "a": ("*", "tab:blue"),
     "b": ("*", "tab:green"),
@@ -188,18 +182,20 @@ MARKERS = {
 plt.figure(figsize=(14, 6))
 plt.plot(t_z, z_values, color="gray", linewidth=1, label=POSITION_TOPIC, zorder=1)
 for label in labels:
-    """
+    
     if label=="e" or label=="d" :
         t_event = np.array([t for t, l in events if l == label])
         z_event = np.interp(t_event, t_z, z_values)
         marker, color = MARKERS.get(label, ("o", "black"))
         plt.scatter(t_event, z_event, marker=marker, color=color,
-                    label=f"event {label}", zorder=2, s=80)"""
+                    label=f"event {next(key for key, value in TOPICS.items() if value == label)}", zorder=2, s=80)    
+    """
     t_event = np.array([t for t, l in events if l == label])
     z_event = np.interp(t_event, t_z, z_values)
     marker, color = MARKERS.get(label, ("o", "black"))
     plt.scatter(t_event, z_event, marker=marker, color=color,
                 label=f"event {label}", zorder=2, s=80)
+    """
                     
 plt.xlabel("Temps [s]")
 plt.ylabel("z [cm]")
