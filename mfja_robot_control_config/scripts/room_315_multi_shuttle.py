@@ -25,7 +25,6 @@ GLOBAL_SHUTTLE_INDEX = -1
 DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
 
 SIDE_IDS = {'right': 0, 'left': 1}
-SIDE_BY_ID = {value: key for key, value in SIDE_IDS.items()}
 
 PRIMITIVE_IDS = {
     'WAIT': 0,
@@ -36,12 +35,9 @@ PRIMITIVE_IDS = {
     'STOP_NOW': 5,
     'EMERGENCY_STOP': 6,
 }
-PRIMITIVE_BY_ID = {value: key for key, value in PRIMITIVE_IDS.items()}
 
 SWITCH_VALUE_IDS = {'UNCHANGED': 0, 'EXTERIOR': 1, 'INTERIOR': 2}
-SWITCH_VALUE_BY_ID = {value: key for key, value in SWITCH_VALUE_IDS.items()}
 STOPPER_VALUE_IDS = {'UNCHANGED': 0, 'open': 1, 'closed': 2}
-STOPPER_VALUE_BY_ID = {value: key for key, value in STOPPER_VALUE_IDS.items()}
 
 WAIT_CONDITION_IDS = {
     'none': 0,
@@ -49,13 +45,12 @@ WAIT_CONDITION_IDS = {
     'stopper_state_match': 2,
     'shuttle_command_applied': 3,
     'task_terminal_status': 4,
-    'reserved_legacy_wait_5': 5,
+    'reserved_wait_5': 5,
     'terminal': 6,
     'target_sensor_active': 7,
     'block_clearance': 8,
     'headway_clearance': 9,
 }
-WAIT_CONDITION_BY_ID = {value: key for key, value in WAIT_CONDITION_IDS.items()}
 
 TARGET_IDS = {
     'none': 0,
@@ -68,13 +63,13 @@ TARGET_IDS = {
     'MULTIPLE_DEVICES': 7,
     'right_shuttle': 8,
     'left_shuttle': 9,
-    'reserved_legacy_target_10': 10,
-    'reserved_legacy_target_11': 11,
-    'reserved_legacy_target_12': 12,
-    'reserved_legacy_target_13': 13,
-    'reserved_legacy_target_14': 14,
-    'reserved_legacy_target_15': 15,
-    'reserved_legacy_target_16': 16,
+    'reserved_target_10': 10,
+    'reserved_target_11': 11,
+    'reserved_target_12': 12,
+    'reserved_target_13': 13,
+    'reserved_target_14': 14,
+    'reserved_target_15': 15,
+    'reserved_target_16': 16,
     'terminal': 17,
     'DZI1R': 18,
     'DZI2R': 19,
@@ -90,13 +85,11 @@ TARGET_IDS = {
 for _side in SIDES:
     for _index in range(1, MAX_SHUTTLES_PER_SIDE + 1):
         TARGET_IDS[f'{_side}_shuttle_{_index}'] = len(TARGET_IDS)
-TARGET_BY_ID = {value: key for key, value in TARGET_IDS.items()}
-
 REASON_IDS = {
     'none': 0,
     'command_event': 1,
-    'reserved_legacy_reason_2': 2,
-    'reserved_legacy_reason_3': 3,
+    'reserved_reason_2': 2,
+    'reserved_reason_3': 3,
     'task_succeeded': 4,
     'task_failed': 5,
     'episode_stopped': 6,
@@ -116,7 +109,6 @@ REASON_IDS = {
     'wrong_shuttle_rejected': 20,
     'fleet_coordination': 21,
 }
-REASON_BY_ID = {value: key for key, value in REASON_IDS.items()}
 
 COORDINATION_MODE_IDS = {
     'normal': 0,
@@ -126,39 +118,8 @@ COORDINATION_MODE_IDS = {
     'fleet_coordination': 4,
     'emergency': 5,
 }
-COORDINATION_MODE_BY_ID = {value: key for key, value in COORDINATION_MODE_IDS.items()}
 
-ACTION_SCHEMA_VERSION = 3
 MODEL_INPUT_SCHEMA_VERSION = 3
-ACTION_VECTOR_V3_FIELDS = [
-    'primitive_id',
-    'side_id',
-    'shuttle_index',
-    *[f'switch_mask_{name}' for name in DEVICE_NAMES],
-    *[f'switch_value_{name}' for name in DEVICE_NAMES],
-    *[f'stopper_mask_{name}' for name in DEVICE_NAMES],
-    *[f'stopper_value_{name}' for name in DEVICE_NAMES],
-    'speed_mps',
-    'wait_condition_id',
-    'target_id',
-    'reason_id',
-    'coordination_mode',
-]
-EVENT_ACTION_V3_FIELDS = [
-    'primitive',
-    'side',
-    'shuttle_id',
-    'shuttle_index',
-    'switch_mask',
-    'switch_values',
-    'stopper_mask',
-    'stopper_values',
-    'speed_mps',
-    'wait_condition',
-    'target_id',
-    'reason',
-    'coordination_mode',
-]
 
 
 @dataclass(frozen=True)
@@ -671,7 +632,7 @@ def route_blockers_from_rails(
     return blockers
 
 
-def normalize_event_action_v3(action: dict[str, Any]) -> dict[str, Any]:
+def normalize_event_action(action: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(action or {})
     primitive = str(normalized.get('primitive') or 'WAIT').strip().upper()
     side = normalize_side(normalized.get('side', 'right'))
@@ -688,10 +649,10 @@ def normalize_event_action_v3(action: dict[str, Any]) -> dict[str, Any]:
     normalized['primitive'] = primitive if primitive in PRIMITIVE_IDS else 'WAIT'
     normalized['side'] = side
     normalized['shuttle_index'] = shuttle_index
-    normalized['switch_mask'] = _device_map(normalized.get('switch_mask'), default=0)
-    normalized['switch_values'] = _device_map(normalized.get('switch_values'), default='UNCHANGED')
-    normalized['stopper_mask'] = _device_map(normalized.get('stopper_mask'), default=0)
-    normalized['stopper_values'] = _device_map(normalized.get('stopper_values'), default='UNCHANGED')
+    normalized['switch_mask'] = device_map(normalized.get('switch_mask'), default=0)
+    normalized['switch_values'] = device_map(normalized.get('switch_values'), default='UNCHANGED')
+    normalized['stopper_mask'] = device_map(normalized.get('stopper_mask'), default=0)
+    normalized['stopper_values'] = device_map(normalized.get('stopper_values'), default='UNCHANGED')
     normalized['speed_mps'] = round(float(normalized.get('speed_mps') or normalized.get('speed') or 0.0), 4)
     normalized['wait_condition'] = _known(normalized.get('wait_condition'), WAIT_CONDITION_IDS, 'none')
     normalized['target_id'] = _known_target(normalized.get('target_id'), side=side, shuttle_index=shuttle_index)
@@ -702,82 +663,6 @@ def normalize_event_action_v3(action: dict[str, Any]) -> dict[str, Any]:
         'normal',
     )
     return normalized
-
-
-def encode_action_v3(action: dict[str, Any]) -> list[float]:
-    normalized = normalize_event_action_v3(action)
-    return [
-        float(PRIMITIVE_IDS[normalized['primitive']]),
-        float(SIDE_IDS[normalized['side']]),
-        float(normalized['shuttle_index']),
-        *[float(1 if normalized['switch_mask'].get(name) else 0) for name in DEVICE_NAMES],
-        *[float(SWITCH_VALUE_IDS.get(_switch_value(normalized['switch_values'].get(name)), 0)) for name in DEVICE_NAMES],
-        *[float(1 if normalized['stopper_mask'].get(name) else 0) for name in DEVICE_NAMES],
-        *[float(STOPPER_VALUE_IDS.get(_stopper_value(normalized['stopper_values'].get(name)), 0)) for name in DEVICE_NAMES],
-        float(normalized['speed_mps']),
-        float(WAIT_CONDITION_IDS[normalized['wait_condition']]),
-        float(TARGET_IDS[normalized['target_id']]),
-        float(REASON_IDS[normalized['reason']]),
-        float(COORDINATION_MODE_IDS[normalized['coordination_mode']]),
-    ]
-
-
-def decode_action_v3(action_vector: Any) -> dict[str, Any]:
-    values = [float(value) for value in list(action_vector)]
-    if len(values) != len(ACTION_VECTOR_V3_FIELDS):
-        raise ValueError(
-            f'action vector length {len(values)} does not match schema v3 length '
-            f'{len(ACTION_VECTOR_V3_FIELDS)}'
-        )
-
-    def field(name: str) -> float:
-        return values[ACTION_VECTOR_V3_FIELDS.index(name)]
-
-    side = SIDE_BY_ID.get(round_int(field('side_id')), 'right')
-    shuttle_index = round_int(field('shuttle_index'))
-    switch_mask = {name: int(field(f'switch_mask_{name}') >= 0.5) for name in DEVICE_NAMES}
-    switch_values = {
-        name: SWITCH_VALUE_BY_ID.get(round_int(field(f'switch_value_{name}')), 'UNCHANGED')
-        for name in DEVICE_NAMES
-    }
-    stopper_mask = {name: int(field(f'stopper_mask_{name}') >= 0.5) for name in DEVICE_NAMES}
-    stopper_values = {
-        name: STOPPER_VALUE_BY_ID.get(round_int(field(f'stopper_value_{name}')), 'UNCHANGED')
-        for name in DEVICE_NAMES
-    }
-    for name in DEVICE_NAMES:
-        if not switch_mask[name]:
-            switch_values[name] = 'UNCHANGED'
-        elif switch_values[name] == 'UNCHANGED':
-            raise ValueError(f'switch_mask_{name} selected but switch_value_{name} is UNCHANGED')
-        if not stopper_mask[name]:
-            stopper_values[name] = 'UNCHANGED'
-        elif stopper_values[name] == 'UNCHANGED':
-            raise ValueError(f'stopper_mask_{name} selected but stopper_value_{name} is UNCHANGED')
-
-    return {
-        'primitive': PRIMITIVE_BY_ID.get(round_int(field('primitive_id')), 'WAIT'),
-        'side': side,
-        'shuttle_id': (
-            short_shuttle_id(side, shuttle_index + 1)
-            if 0 <= shuttle_index < MAX_SHUTTLES_PER_SIDE
-            else ''
-        ),
-        'shuttle_index': shuttle_index,
-        'switch_mask': switch_mask,
-        'switch_values': switch_values,
-        'stopper_mask': stopper_mask,
-        'stopper_values': stopper_values,
-        'speed_mps': round(float(field('speed_mps')), 4),
-        'wait_condition': WAIT_CONDITION_BY_ID.get(round_int(field('wait_condition_id')), 'none'),
-        'target_id': TARGET_BY_ID.get(round_int(field('target_id')), 'none'),
-        'reason': REASON_BY_ID.get(round_int(field('reason_id')), 'none'),
-        'coordination_mode': COORDINATION_MODE_BY_ID.get(
-            round_int(field('coordination_mode')),
-            'normal',
-        ),
-    }
-
 
 def validate_fleet_command(
     command: dict[str, Any],
@@ -1211,7 +1096,14 @@ def round_int(value: Any) -> int:
         return 0
 
 
-def _device_map(raw: Any, *, default: Any) -> dict[str, Any]:
+def safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def device_map(raw: Any, *, default: Any) -> dict[str, Any]:
     values = {name: default for name in DEVICE_NAMES}
     if isinstance(raw, dict):
         for name in DEVICE_NAMES:

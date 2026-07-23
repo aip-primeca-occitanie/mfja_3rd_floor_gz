@@ -28,11 +28,13 @@ from room_315_task_goal_schema import GoalIssue
 from room_315_task_goal_schema import TaskGoalDraft
 from room_315_task_goal_schema import blocked_paths
 from room_315_task_goal_schema import normalize_payload_filter
+from room_315_task_goal_schema import normalize_goal_type as _goal_type
 from room_315_task_goal_schema import normalize_selection_strategy
 from room_315_task_goal_schema import normalize_side_symbol
 from room_315_task_goal_schema import normalize_slot_symbol
 from room_315_task_goal_schema import normalize_station_symbol
 from room_315_task_goal_schema import normalize_target_kind
+from room_315_task_goal_schema import optional_text as _optional_text
 from room_315_task_goal_schema import slug_text
 from room_315_task_goal_schema import strict_model_draft_from_json
 
@@ -541,17 +543,6 @@ def parse_task_goal_draft(request: Any) -> DraftParseResult:
     return ParserPipeline().parse(request)
 
 
-def _goal_type(value: Any) -> str | None:
-    text = slug_text(value)
-    if not text:
-        return None
-    if text in {'transport', 'move', 'send', 'route', 'bring', 'deliver', 'transfer'}:
-        return 'transport'
-    if text in {'inspection', 'inspect', 'check', 'observe', 'look', 'look_at'}:
-        return 'inspection'
-    return text
-
-
 def _goal_type_from_text(text: str) -> str | None:
     if re.search(r'\b(?:inspect|check|observe|look\s+at)\b', text):
         return 'inspection'
@@ -628,12 +619,6 @@ def _normalize_text(text: str) -> str:
 
 def _has_non_english_letters(text: str) -> bool:
     return bool(re.search(r'[^\x00-\x7f]', text))
-
-
-def _optional_text(value: Any) -> str:
-    if value is None:
-        return ''
-    return str(value).strip()
 
 
 __all__ = [

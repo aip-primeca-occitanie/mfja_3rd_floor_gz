@@ -45,10 +45,9 @@ def _blank_status():
     }
 
 
-def test_dataset_recorder_encodes_action_vector_schema_v3_for_target_shuttle():
+def test_dataset_recorder_normalizes_structured_action_for_target_shuttle():
     recorder = _load_recorder()
     action = {
-        'action_vector_schema_version': 3,
         'primitive': 'SHUTTLE_ON',
         'side': 'right',
         'shuttle_id': 'R2',
@@ -60,15 +59,13 @@ def test_dataset_recorder_encodes_action_vector_schema_v3_for_target_shuttle():
         'coordination_mode': 'guarded_motion',
     }
 
-    encoded = recorder._encode_action(action)
-    decoded = recorder._decode_action(encoded)
+    normalized = recorder._normalize_event_action(action)
 
-    assert len(encoded) == len(recorder.ACTION_VECTOR_V3_FIELDS)
-    assert decoded['primitive'] == 'SHUTTLE_ON'
-    assert decoded['shuttle_id'] == 'R2'
-    assert decoded['shuttle_index'] == 1
-    assert decoded['target_id'] == 'right_shuttle_2'
-    assert decoded['coordination_mode'] == 'guarded_motion'
+    assert normalized['primitive'] == 'SHUTTLE_ON'
+    assert normalized['shuttle_id'] == 'R2'
+    assert normalized['shuttle_index'] == 1
+    assert normalized['target_id'] == 'right_shuttle_2'
+    assert normalized['coordination_mode'] == 'guarded_motion'
 
 
 def test_payload_occlusion_metadata_is_extracted_outside_model_input():

@@ -209,7 +209,7 @@ class TaskGoalDraft:
         if unknown:
             raise ValueError(f'unknown TaskGoalDraft fields: {unknown}')
         return cls(
-            draft_id=_optional_text(payload.get('draft_id')),
+            draft_id=optional_text(payload.get('draft_id')),
             goal_type=normalize_goal_type(payload.get('goal_type')),
             selection_strategy=normalize_selection_strategy(payload.get('selection_strategy')),
             payload_filter=normalize_payload_filter(payload.get('payload_filter')),
@@ -217,14 +217,14 @@ class TaskGoalDraft:
             target_kind=normalize_target_kind(payload.get('target_kind')),
             target_station=normalize_station_symbol(payload.get('target_station')),
             target_slot=normalize_slot_symbol(payload.get('target_slot')),
-            target_shuttle=_optional_text(payload.get('target_shuttle')) or None,
-            inspection_subject=_optional_text(payload.get('inspection_subject')) or None,
+            target_shuttle=optional_text(payload.get('target_shuttle')) or None,
+            inspection_subject=optional_text(payload.get('inspection_subject')) or None,
             confidence=payload.get('confidence'),
-            source=_optional_text(payload.get('source')) or 'human',
-            language=_optional_text(payload.get('language')) or None,
+            source=optional_text(payload.get('source')) or 'human',
+            language=optional_text(payload.get('language')) or None,
             raw=copy.deepcopy(payload.get('raw') or {}),
             schema_version=int(payload.get('schema_version', CONTRACT_SCHEMA_VERSION)),
-            contract_type=_optional_text(payload.get('contract_type')) or TASK_GOAL_DRAFT_CONTRACT_TYPE,
+            contract_type=optional_text(payload.get('contract_type')) or TASK_GOAL_DRAFT_CONTRACT_TYPE,
         )
 
 
@@ -460,7 +460,7 @@ def slug_text(value: Any) -> str:
     return re.sub(r'[^a-z0-9_]+', '_', str(value or '').strip().casefold()).strip('_')
 
 
-def _optional_text(value: Any) -> str:
+def optional_text(value: Any) -> str:
     if value is None:
         return ''
     return str(value).strip()
@@ -485,7 +485,10 @@ __all__ = [
     'DraftParseResult',
     'blocked_paths',
     'first_slot_for_station',
+    'normalize_goal_type',
     'slots_for_station',
     'station_for_slot',
+    'optional_text',
+    'slug_text',
     'strict_model_draft_from_json',
 ]

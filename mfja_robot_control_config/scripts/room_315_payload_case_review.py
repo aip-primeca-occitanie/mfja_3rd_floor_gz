@@ -16,7 +16,9 @@ if str(SCRIPT_DIR) not in sys.path:
 from room_315_pddl_scenario_generator import DEFAULT_PAYLOAD_TRAINING_CASES_PATH
 from room_315_pddl_scenario_generator import command_payloads_for_execution
 from room_315_pddl_scenario_generator import generate_scenario
+from room_315_pddl_scenario_generator import launch_bool as _launch_bool
 from room_315_pddl_scenario_generator import load_payload_training_case_config
+from room_315_pddl_scenario_generator import select_payload_training_cases as _case_items
 
 
 DEFAULT_REVIEW_DIR = Path('/tmp/room315_payload_case_review')
@@ -41,26 +43,6 @@ class ReviewPlanner:
 
 def _json_dumps(data: Any, *, indent: int | None = None) -> str:
     return json.dumps(data, ensure_ascii=False, indent=indent, sort_keys=True)
-
-
-def _case_items(config: dict[str, Any], requested_ids: list[str]) -> list[dict[str, Any]]:
-    cases = config.get('cases', [])
-    if not isinstance(cases, list):
-        raise ValueError('payload training case config needs a cases list')
-    by_id = {
-        str(case.get('case_id') or '').strip(): dict(case)
-        for case in cases
-        if isinstance(case, dict)
-    }
-    by_id.pop('', None)
-    if not requested_ids:
-        return [dict(case) for case in cases if isinstance(case, dict) and case.get('case_id')]
-
-    unknown = [case_id for case_id in requested_ids if case_id not in by_id]
-    if unknown:
-        allowed = ', '.join(sorted(by_id))
-        raise ValueError(f'unknown case id(s): {", ".join(unknown)}; allowed: {allowed}')
-    return [dict(by_id[case_id]) for case_id in requested_ids]
 
 
 def _selected_candidate(scenario: dict[str, Any]) -> dict[str, Any]:
@@ -333,14 +315,6 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \\
   room315_visual_debug_colors:=false \\
   room315_show_device_markers:=false \\
   room315_vla_dataset_dir:=~/room315_payload_review"""
-
-
-def _launch_bool(value: Any, *, default: bool) -> bool:
-    if value is None:
-        return bool(default)
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().casefold() in {'1', 'true', 'yes', 'on'}
 
 
 def _execute_command_for_case(case_id: str, case_config_path: Path) -> str:

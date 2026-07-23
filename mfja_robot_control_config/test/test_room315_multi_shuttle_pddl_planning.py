@@ -64,7 +64,7 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
         assert removed not in text
 
 
-def test_multi_shuttle_plan_step_translates_to_schema_v3_target():
+def test_multi_shuttle_plan_step_translates_to_targeted_primitive_command():
     translator = _load_translator()
 
     translated = translator.translate_step(
@@ -72,9 +72,6 @@ def test_multi_shuttle_plan_step_translates_to_schema_v3_target():
     )
 
     assert translated.command['shuttle'] == 'right_shuttle_2'
-    assert translated.event_action['action_vector_schema_version'] == 3
     assert translated.event_action['shuttle_id'] == 'R2'
     assert translated.event_action['shuttle_index'] == 1
     assert translated.event_action['target_id'] == 'right_shuttle_2'
-    assert len(translated.action_vector) == len(translator.ACTION_VECTOR_V3_FIELDS)
-    assert translated.action_vector[translator.ACTION_VECTOR_V3_FIELDS.index('shuttle_index')] == 1.0

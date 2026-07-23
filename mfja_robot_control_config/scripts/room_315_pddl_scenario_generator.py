@@ -1101,7 +1101,6 @@ def generate_scenario(
         'symbolic_plan': plan,
         'primitive_commands': [step.command for step in translated],
         'expected_event_targets': [step.event_action for step in translated],
-        'action_vectors': [step.action_vector for step in translated],
     }
     if spec.target_slot:
         scenario['target_slot'] = spec.target_slot
@@ -1507,15 +1506,11 @@ def _publish_episode_stop_and_wait(
 
 def command_payloads_for_execution(scenario: dict[str, Any]) -> list[dict[str, Any]]:
     commands = list(scenario.get('primitive_commands') or [])
-    action_vectors = list(scenario.get('action_vectors') or [])
     symbolic_plan = list(scenario.get('symbolic_plan') or [])
     payloads = []
     for index, command in enumerate(commands):
-        action_vector = action_vectors[index] if index < len(action_vectors) else None
         metadata = _planning_metadata_for_step(scenario, index)
         payload = dict(command)
-        if action_vector is not None:
-            payload['action_vector'] = action_vector
         payload.update(metadata)
         if index < len(symbolic_plan):
             payload.setdefault('symbolic_step', symbolic_plan[index])
@@ -3996,6 +3991,40 @@ def scenario_spec_from_inputs(
     raise ValueError('provide --case-id')
 
 
+def payload_training_cases_by_id(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    cases = config.get('cases', [])
+    if not isinstance(cases, list):
+        raise ValueError('payload training case config needs a cases list')
+    return {
+        case_id: dict(case)
+        for case in cases
+        if isinstance(case, dict)
+        and (case_id := str(case.get('case_id') or '').strip())
+    }
+
+
+def select_payload_training_cases(
+    config: dict[str, Any],
+    requested_ids: list[str],
+) -> list[dict[str, Any]]:
+    by_id = payload_training_cases_by_id(config)
+    if not requested_ids:
+        return list(by_id.values())
+    unknown = [case_id for case_id in requested_ids if case_id not in by_id]
+    if unknown:
+        allowed = ', '.join(sorted(by_id))
+        raise ValueError(f'unknown case id(s): {", ".join(unknown)}; allowed: {allowed}')
+    return [dict(by_id[case_id]) for case_id in requested_ids]
+
+
+def launch_bool(value: Any, *, default: bool) -> bool:
+    if value is None:
+        return bool(default)
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().casefold() in {'1', 'true', 'yes', 'on'}
+
+
 def scenario_spec_from_case(
     case_id: str,
     *,
@@ -4005,14 +4034,7 @@ def scenario_spec_from_case(
     if not raw_case_id:
         raise ValueError('case_id must not be empty')
     config = load_payload_training_case_config(case_config)
-    cases = config.get('cases', [])
-    if not isinstance(cases, list):
-        raise ValueError('payload training case config needs a cases list')
-    by_id = {
-        str(case.get('case_id') or '').strip(): case
-        for case in cases
-        if isinstance(case, dict)
-    }
+    by_id = payload_training_cases_by_id(config)
     if raw_case_id not in by_id:
         allowed = ', '.join(sorted(case_id for case_id in by_id if case_id))
         raise ValueError(f'unknown payload training case {raw_case_id!r}; allowed: {allowed}')

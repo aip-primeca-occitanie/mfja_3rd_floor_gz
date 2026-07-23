@@ -1,47 +1,35 @@
 #!/usr/bin/env python3
 
 import argparse
-import hashlib
-import importlib.util
 import json
 import os
 import random
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-try:
-    from room_315_visual_state_dataset import (
-        DATASET_MODE_LEGACY_ACTION,
-        DATASET_MODE_VISUAL_STATE,
-        VISUAL_LABEL_SUFFIX,
-        load_visual_labels_for_rows,
-        sanitized_visual_state_row,
-        scenario_family_from_row,
-        validate_visual_state_rows,
-        visual_label_path_for_split,
-        visual_state_class_balance,
-    )
-except ModuleNotFoundError:
-    _visual_state_path = Path(__file__).with_name('room_315_visual_state_dataset.py')
-    _spec = importlib.util.spec_from_file_location(
-        'room_315_visual_state_dataset',
-        _visual_state_path,
-    )
-    if _spec is None or _spec.loader is None:
-        raise
-    _visual_state = importlib.util.module_from_spec(_spec)
-    _spec.loader.exec_module(_visual_state)
-    DATASET_MODE_LEGACY_ACTION = _visual_state.DATASET_MODE_LEGACY_ACTION
-    DATASET_MODE_VISUAL_STATE = _visual_state.DATASET_MODE_VISUAL_STATE
-    VISUAL_LABEL_SUFFIX = _visual_state.VISUAL_LABEL_SUFFIX
-    load_visual_labels_for_rows = _visual_state.load_visual_labels_for_rows
-    sanitized_visual_state_row = _visual_state.sanitized_visual_state_row
-    scenario_family_from_row = _visual_state.scenario_family_from_row
-    validate_visual_state_rows = _visual_state.validate_visual_state_rows
-    visual_label_path_for_split = _visual_state.visual_label_path_for_split
-    visual_state_class_balance = _visual_state.visual_state_class_balance
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_visual_state_dataset import DATASET_MODES
+from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
+from room_315_visual_state_dataset import IMAGE_KEYS
+from room_315_visual_state_dataset import VISUAL_LABEL_SUFFIX
+from room_315_visual_state_dataset import file_fingerprint as _file_fingerprint
+from room_315_visual_state_dataset import iter_jsonl as _iter_jsonl
+from room_315_visual_state_dataset import load_visual_labels_for_rows
+from room_315_visual_state_dataset import pretty_json as _pretty_json
+from room_315_visual_state_dataset import raw_visual_image_refs as _model_input_image_refs
+from room_315_visual_state_dataset import resolve_image_path as _resolve_image_path
+from room_315_visual_state_dataset import rows_fingerprint as _row_fingerprint
+from room_315_visual_state_dataset import sanitized_visual_state_row
+from room_315_visual_state_dataset import scenario_family_from_row
+from room_315_visual_state_dataset import validate_visual_state_rows
+from room_315_visual_state_dataset import visual_label_path_for_split
+from room_315_visual_state_dataset import visual_state_class_balance
 
 
 def _env_path(name: str, fallback: str) -> Path:
@@ -50,77 +38,11 @@ def _env_path(name: str, fallback: str) -> Path:
 
 DEFAULT_INPUT = _env_path('ROOM315_VLA_DATASET_ROOT', 'room315_payload_dataset')
 DEFAULT_OUTPUT_DIR = _env_path('ROOM315_VLA_SPLITS_DIR', 'room315_local_training/splits')
-IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 SPLIT_FILENAMES = {
     'train': 'train.jsonl',
     'val': 'val.jsonl',
     'test': 'test.jsonl',
 }
-DATASET_MODES = (DATASET_MODE_LEGACY_ACTION, DATASET_MODE_VISUAL_STATE)
-
-
-def _pretty_json(data: Any) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
-
-
-def _iter_jsonl(path: Path):
-    with path.open('r', encoding='utf-8') as stream:
-        for line_number, line in enumerate(stream, start=1):
-            text = line.strip()
-            if not text:
-                continue
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f'{path}:{line_number}: invalid JSONL row: {exc}') from exc
-            if not isinstance(parsed, dict):
-                raise ValueError(f'{path}:{line_number}: JSONL row must be an object')
-            yield parsed
-
-
-def _file_fingerprint(path: Path) -> dict[str, Any]:
-    digest = hashlib.sha256()
-    size = 0
-    lines = 0
-    with path.open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-            digest.update(chunk)
-            size += len(chunk)
-            lines += chunk.count(b'\n')
-    return {
-        'path': str(path),
-        'sha256': digest.hexdigest(),
-        'bytes': size,
-        'newline_count': lines,
-    }
-
-
-def _row_fingerprint(rows: list[dict[str, Any]]) -> str:
-    digest = hashlib.sha256()
-    for row in rows:
-        payload = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
-        digest.update(payload.encode('utf-8'))
-        digest.update(b'\n')
-    return digest.hexdigest()
-
-
-def _model_input(row: dict[str, Any]) -> dict[str, Any]:
-    model_input = row.get('model_input')
-    return model_input if isinstance(model_input, dict) else {}
-
-
-def _model_input_image_refs(row: dict[str, Any]) -> dict[str, str]:
-    overhead_images = _model_input(row).get('overhead_images')
-    if not isinstance(overhead_images, dict):
-        return {}
-    return {str(key): str(value) for key, value in overhead_images.items() if value}
-
-
-def _resolve_image_path(dataset_root: Path, image_ref: str) -> Path:
-    path = Path(str(image_ref)).expanduser()
-    return path if path.is_absolute() else dataset_root / path
-
-
 def _camera_completeness_report(
     rows: list[dict[str, Any]],
     dataset_root: Path,
@@ -183,44 +105,6 @@ def _camera_completeness_report(
         'per_camera': per_camera,
         'missing_examples': missing_examples,
         'source': 'model_input.overhead_images',
-    }
-
-
-def _rounded_key(value: Any) -> str:
-    try:
-        return f'{float(value):.4g}'
-    except (TypeError, ValueError):
-        return 'invalid'
-
-
-def _class_balance_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    primitive = Counter()
-    side = Counter()
-    shuttle = Counter()
-    target = Counter()
-    speed = Counter()
-    action_missing = 0
-    for row in rows:
-        vector = row.get('action_vector')
-        if not isinstance(vector, list) or len(vector) < 24:
-            action_missing += 1
-            continue
-        try:
-            primitive[str(int(round(float(vector[0]))))] += 1
-            side[str(int(round(float(vector[1]))))] += 1
-            shuttle[str(int(round(float(vector[2]))))] += 1
-            speed[_rounded_key(vector[19])] += 1
-            target[str(int(round(float(vector[21]))))] += 1
-        except (TypeError, ValueError):
-            action_missing += 1
-    return {
-        'rows': len(rows),
-        'missing_or_short_action_vector_rows': action_missing,
-        'primitive_id': dict(sorted(primitive.items())),
-        'side_id': dict(sorted(side.items())),
-        'shuttle_index': dict(sorted(shuttle.items())),
-        'target_id': dict(sorted(target.items())),
-        'speed_mps': dict(sorted(speed.items())),
     }
 
 
@@ -399,12 +283,6 @@ def _split_rows(
     }
 
 
-def _write_jsonl(path: Path, indexed_rows: list[tuple[int, dict[str, Any]]]) -> None:
-    with path.open('w', encoding='utf-8') as stream:
-        for _, row in indexed_rows:
-            stream.write(json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n')
-
-
 def _write_visual_state_jsonl(
     path: Path,
     label_path: Path,
@@ -457,7 +335,6 @@ def _manifest_for_split(
             [row for _, row in indexed_rows],
             dataset_root,
         ),
-        'class_balance': _class_balance_report([row for _, row in indexed_rows]),
         'episodes': [
             {
                 'episode_id': episode_id,
@@ -535,7 +412,7 @@ def split_dataset(
     seed: int = 13,
     val_families: int = 4,
     test_families: int = 4,
-    dataset_mode: str = DATASET_MODE_LEGACY_ACTION,
+    dataset_mode: str = DATASET_MODE_VISUAL_STATE,
     allow_unvalidated: bool = False,
     overwrite: bool = False,
 ) -> dict[str, Any]:
@@ -546,9 +423,7 @@ def split_dataset(
     if not rows:
         raise ValueError(f'no rows found in {event_file}')
 
-    visual_input_integrity: dict[str, Any] | None = None
-    if dataset_mode == DATASET_MODE_VISUAL_STATE:
-        load_visual_labels_for_rows(rows)
+    load_visual_labels_for_rows(rows)
 
     episodes = _build_episode_index(
         rows,
@@ -572,44 +447,40 @@ def split_dataset(
     visual_split_rows: dict[str, list[dict[str, Any]]] = {}
     for split_name, filename in SPLIT_FILENAMES.items():
         split_path = output_dir / filename
-        if dataset_mode == DATASET_MODE_VISUAL_STATE:
-            written = _write_visual_state_jsonl(
-                split_path,
-                visual_label_path_for_split(split_path),
-                split_rows[split_name],
-            )
-            visual_split_rows[split_name] = written['model_rows']
-            visual_split_labels[split_name] = [
-                row['visual_state_labels']
-                for row in written['label_rows']
-            ]
-        else:
-            _write_jsonl(split_path, split_rows[split_name])
-    if dataset_mode == DATASET_MODE_VISUAL_STATE:
-        sanitized_rows = [
-            row
-            for rows_for_split in visual_split_rows.values()
-            for row in rows_for_split
+        written = _write_visual_state_jsonl(
+            split_path,
+            visual_label_path_for_split(split_path),
+            split_rows[split_name],
+        )
+        visual_split_rows[split_name] = written['model_rows']
+        visual_split_labels[split_name] = [
+            row['visual_state_labels']
+            for row in written['label_rows']
         ]
-        visual_input_integrity = {
-            'dataset_mode': DATASET_MODE_VISUAL_STATE,
-            'rows_checked': len(sanitized_rows),
-            'labels_checked': sum(len(labels) for labels in visual_split_labels.values()),
-            'allowed_model_input_fields': ['overhead_images'],
-            'production_feature_source': 'model_input.overhead_images only',
-            'oracle_label_source': 'split_sidecar_jsonl',
-            'oracle_labels_physically_separate': True,
-            'row_level_metadata_used_as_features': [],
-        }
-        for split_name, filename in SPLIT_FILENAMES.items():
-            validate_visual_state_rows(
-                visual_split_rows[split_name],
-                visual_label_path_for_split(output_dir / filename),
-            )
+
+    sanitized_rows = [
+        row
+        for rows_for_split in visual_split_rows.values()
+        for row in rows_for_split
+    ]
+    visual_input_integrity: dict[str, Any] = {
+        'dataset_mode': DATASET_MODE_VISUAL_STATE,
+        'rows_checked': len(sanitized_rows),
+        'labels_checked': sum(len(labels) for labels in visual_split_labels.values()),
+        'allowed_model_input_fields': ['overhead_images'],
+        'production_feature_source': 'model_input.overhead_images only',
+        'oracle_label_source': 'split_sidecar_jsonl',
+        'oracle_labels_physically_separate': True,
+        'row_level_metadata_used_as_features': [],
+    }
+    for split_name, filename in SPLIT_FILENAMES.items():
+        validate_visual_state_rows(
+            visual_split_rows[split_name],
+            visual_label_path_for_split(output_dir / filename),
+        )
 
     manifest = {
         'dataset_mode': dataset_mode,
-        'legacy_action_baseline_preserved': dataset_mode == DATASET_MODE_LEGACY_ACTION,
         'dataset_root': str(dataset_root),
         'source': str(event_file),
         'source_fingerprint': _file_fingerprint(event_file),
@@ -623,21 +494,12 @@ def split_dataset(
         'test_families': test_families,
         'allow_unvalidated': allow_unvalidated,
         'camera_completeness': _camera_completeness_report(rows, dataset_root),
-        'class_balance': _class_balance_report(rows),
         'visual_state_model_input_integrity': visual_input_integrity,
-        'visual_state_label_sidecars': (
-            {
-                split_name: str(visual_label_path_for_split(output_dir / filename))
-                for split_name, filename in SPLIT_FILENAMES.items()
-            }
-            if dataset_mode == DATASET_MODE_VISUAL_STATE
-            else {}
-        ),
-        'visual_state_class_balance': (
-            visual_state_class_balance(load_visual_labels_for_rows(rows))
-            if dataset_mode == DATASET_MODE_VISUAL_STATE
-            else {}
-        ),
+        'visual_state_label_sidecars': {
+            split_name: str(visual_label_path_for_split(output_dir / filename))
+            for split_name, filename in SPLIT_FILENAMES.items()
+        },
+        'visual_state_class_balance': visual_state_class_balance(load_visual_labels_for_rows(rows)),
         'split_integrity': _split_integrity_report(
             rows,
             episodes,
@@ -657,21 +519,20 @@ def split_dataset(
             for split_name in SPLIT_FILENAMES
         },
     }
-    if dataset_mode == DATASET_MODE_VISUAL_STATE:
-        manifest['row_fingerprint'] = _row_fingerprint(
-            [
-                row
-                for rows_for_split in visual_split_rows.values()
-                for row in rows_for_split
-            ]
-        )
-        manifest['oracle_label_fingerprint'] = _row_fingerprint(
-            [
-                {'visual_state_labels': label}
-                for labels in visual_split_labels.values()
-                for label in labels
-            ]
-        )
+    manifest['row_fingerprint'] = _row_fingerprint(
+        [
+            row
+            for rows_for_split in visual_split_rows.values()
+            for row in rows_for_split
+        ]
+    )
+    manifest['oracle_label_fingerprint'] = _row_fingerprint(
+        [
+            {'visual_state_labels': label}
+            for labels in visual_split_labels.values()
+            for label in labels
+        ]
+    )
     manifest_path = output_dir / 'split_manifest.json'
     manifest['manifest'] = str(manifest_path)
     manifest_path.write_text(_pretty_json(manifest) + '\n', encoding='utf-8')
@@ -718,9 +579,8 @@ def main() -> None:
     parser.add_argument(
         '--dataset-mode',
         choices=DATASET_MODES,
-        default=DATASET_MODE_LEGACY_ACTION,
+        default=DATASET_MODE_VISUAL_STATE,
         help=(
-            'legacy_action preserves the current 24-value action_vector dataset. '
             f'{DATASET_MODE_VISUAL_STATE} writes image-only model inputs plus '
             f'physically separate *{VISUAL_LABEL_SUFFIX} oracle label sidecars.'
         ),

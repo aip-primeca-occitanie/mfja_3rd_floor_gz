@@ -197,7 +197,7 @@ def test_strict_json_parser_rejects_adversarial_non_goal_outputs():
     builder = _load_builder()
     bad_payloads = [
         {'pddl_goal': '(:goal (and (task_done right_shuttle right_staubli)))'},
-        {'action_vector_schema_version': 3, 'action_vector': [0.0] * 24},
+        {'rail_command': {'action': 'shuttle', 'command': 'ON'}},
         {'plan': ['move_shuttle right_shuttle yaskawa staubli']},
         {'primitive': 'SHUTTLE_ON', 'speed_mps': 0.08},
         {'goal_type': 'transport', 'side': 'right', 'target_station': 'staubli', 'deadline_s': 4.0},

@@ -30,6 +30,11 @@
       background: #ffffff;
       border-radius: 6px;
     }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
     .note {
       padding: 12px 14px;
       border-left: 4px solid #2f6fed;
@@ -46,8 +51,8 @@
   <main>
     <h1>Room 315 VLA Payload Case Runbook</h1>
     <p class="note">
-      The active Room 315 workflow is the curated 160 payload speed-sweep cases.
-      Legacy station-task orchestration has been removed from the runtime path.
+      The active Room 315 workflow uses curated payload speed-sweep cases,
+      validated training exports, visual-state datasets, and planner-based execution.
     </p>
     <p class="warning">
       Use fresh test output directories when running batches. Export only

@@ -18,8 +18,6 @@ from typing import Any
 
 
 CONTRACT_SCHEMA_VERSION = 1
-ACTION_VECTOR_SCHEMA_VERSION = 3
-LEGACY_DIRECT_ACTION_BASELINE = 'legacy_direct_action_baseline'
 
 FACT_STATUSES = frozenset({'known', 'unknown', 'stale', 'conflicting'})
 FACT_SOURCES = frozenset({
@@ -449,7 +447,6 @@ class PrimitiveCommand:
     parameters: dict[str, Any]
     source: str
     timestamp: float
-    legacy_action_vector: dict[str, Any] | None = None
     schema_version: int = CONTRACT_SCHEMA_VERSION
     contract_type: str = 'PrimitiveCommand'
 
@@ -465,22 +462,33 @@ class PrimitiveCommand:
         _require_timestamp(self.timestamp)
         _require_schema(asdict(self), 'PrimitiveCommand')
         _reject_privileged_keys(self.parameters, 'PrimitiveCommand parameters')
-        if self.legacy_action_vector is not None:
-            _validate_disabled_legacy_action_vector(self.legacy_action_vector)
 
     def to_dict(self) -> dict[str, Any]:
-        payload = _deepcopy_jsonable(asdict(self))
-        if self.legacy_action_vector is None:
-            payload['legacy_action_vector'] = None
-        return payload
+        return _deepcopy_jsonable(asdict(self))
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> 'PrimitiveCommand':
         payload = _require_mapping(data, 'PrimitiveCommand')
         _require_schema(payload, 'PrimitiveCommand')
-        if 'action_vector' in payload or 'action_vector_schema_version' in payload:
+        forbidden = {'action_vector', 'action_vector_schema_version'} & set(payload)
+        if forbidden:
             raise ContractValidationError(
-                'schema-v3 action vectors are allowed only under disabled legacy_action_vector'
+                f'PrimitiveCommand no longer accepts removed direct-control fields: {sorted(forbidden)}'
+            )
+        allowed = {
+            'command_id',
+            'plan_step_id',
+            'primitive',
+            'parameters',
+            'source',
+            'timestamp',
+            'schema_version',
+            'contract_type',
+        }
+        extras = sorted(set(payload) - allowed)
+        if extras:
+            raise ContractValidationError(
+                f'PrimitiveCommand contains unsupported fields: {extras}'
             )
         return cls(
             command_id=payload.get('command_id'),
@@ -489,34 +497,7 @@ class PrimitiveCommand:
             parameters=copy.deepcopy(payload.get('parameters') or {}),
             source=payload.get('source'),
             timestamp=payload.get('timestamp'),
-            legacy_action_vector=copy.deepcopy(payload.get('legacy_action_vector')),
         )
-
-
-def _validate_disabled_legacy_action_vector(payload: dict[str, Any]) -> None:
-    if not isinstance(payload, dict):
-        raise ContractValidationError('legacy_action_vector must be an object')
-    if payload.get('baseline_id') != LEGACY_DIRECT_ACTION_BASELINE:
-        raise ContractValidationError(
-            f'legacy_action_vector baseline_id must be {LEGACY_DIRECT_ACTION_BASELINE!r}'
-        )
-    if payload.get('schema_version') != ACTION_VECTOR_SCHEMA_VERSION:
-        raise ContractValidationError(
-            f'legacy_action_vector schema_version must be {ACTION_VECTOR_SCHEMA_VERSION}'
-        )
-    if payload.get('enabled') is not False:
-        raise ContractValidationError('legacy schema-v3 action vectors must remain disabled')
-    vector = payload.get('vector')
-    if vector is not None:
-        if not isinstance(vector, list) or len(vector) != 24:
-            raise ContractValidationError('legacy action vector must be a 24-element list')
-        for index, value in enumerate(vector):
-            try:
-                float(value)
-            except (TypeError, ValueError) as exc:
-                raise ContractValidationError(
-                    f'legacy action vector index {index} must be numeric'
-                ) from exc
 
 
 @dataclass(frozen=True)

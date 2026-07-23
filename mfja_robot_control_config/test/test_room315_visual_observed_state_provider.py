@@ -338,7 +338,7 @@ def test_strict_json_adapter_rejects_privileged_commands_and_trackers():
                     'bbox': [0.0, 0.0, 10.0, 10.0],
                     'identity': 'R1',
                     'confidence': 0.9,
-                    'action_vector': [0.0] * 24,
+                    'rail_command': {'action': 'shuttle', 'command': 'ON'},
                 }
             ],
         })

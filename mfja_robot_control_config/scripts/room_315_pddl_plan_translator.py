@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Translate Room 315 PDDL plan steps into VLA event-level commands.
+"""Translate Room 315 PDDL plan steps into structured primitive commands.
 
 This module is an expert/data-generation bridge. It does not call PlanSys, does
 not execute ROS commands, and does not define learned-model inputs. Symbolic PDDL
@@ -21,97 +21,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
-from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
-from room_315_multi_shuttle import EVENT_ACTION_V3_FIELDS
-from room_315_multi_shuttle import encode_action_v3
+from room_315_multi_shuttle import DEVICE_NAMES
+from room_315_multi_shuttle import PRIMITIVE_IDS
+from room_315_multi_shuttle import REASON_IDS
+from room_315_multi_shuttle import SIDES
+from room_315_multi_shuttle import SIDE_IDS
+from room_315_multi_shuttle import STOPPER_VALUE_IDS
+from room_315_multi_shuttle import SWITCH_VALUE_IDS
+from room_315_multi_shuttle import TARGET_IDS
+from room_315_multi_shuttle import WAIT_CONDITION_IDS
+from room_315_multi_shuttle import device_map as _device_map
 from room_315_multi_shuttle import normalize_shuttle_ref
-
-
-SIDES = ('right', 'left')
-DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
-
-PRIMITIVE_IDS = {
-    'WAIT': 0,
-    'DONE': 1,
-    'SET_SWITCHES': 2,
-    'SET_STOPPERS': 3,
-    'SHUTTLE_ON': 4,
-    'STOP_NOW': 5,
-    'EMERGENCY_STOP': 6,
-}
-SIDE_IDS = {'right': 0, 'left': 1}
-SWITCH_VALUE_IDS = {'UNCHANGED': 0, 'EXTERIOR': 1, 'INTERIOR': 2}
-STOPPER_VALUE_IDS = {'UNCHANGED': 0, 'open': 1, 'closed': 2}
-WAIT_CONDITION_IDS = {
-    'none': 0,
-    'switch_state_match': 1,
-    'stopper_state_match': 2,
-    'shuttle_command_applied': 3,
-    'task_terminal_status': 4,
-    'reserved_legacy_wait_5': 5,
-    'terminal': 6,
-    'target_sensor_active': 7,
-    'block_clearance': 8,
-    'headway_clearance': 9,
-}
-TARGET_IDS = {
-    'none': 0,
-    'A1': 1,
-    'A2': 2,
-    'A3': 3,
-    'A4': 4,
-    'ALL_SWITCHES': 5,
-    'ALL_STOPPERS': 6,
-    'MULTIPLE_DEVICES': 7,
-    'right_shuttle': 8,
-    'left_shuttle': 9,
-    'reserved_legacy_target_10': 10,
-    'reserved_legacy_target_11': 11,
-    'reserved_legacy_target_12': 12,
-    'reserved_legacy_target_13': 13,
-    'reserved_legacy_target_14': 14,
-    'reserved_legacy_target_15': 15,
-    'reserved_legacy_target_16': 16,
-    'terminal': 17,
-    'DZI1R': 18,
-    'DZI2R': 19,
-    'DZI3R': 20,
-    'DZI4R': 21,
-    'DZI1L': 22,
-    'DZI2L': 23,
-    'DZI3L': 24,
-    'DZI4L': 25,
-    'DA3IR': 26,
-    'DA3IL': 27,
-}
-for _side in SIDES:
-    for _index in range(1, 5):
-        TARGET_IDS[f'{_side}_shuttle_{_index}'] = len(TARGET_IDS)
-REASON_IDS = {
-    'none': 0,
-    'command_event': 1,
-    'reserved_legacy_reason_2': 2,
-    'reserved_legacy_reason_3': 3,
-    'task_succeeded': 4,
-    'task_failed': 5,
-    'episode_stopped': 6,
-    'episode_discarded': 7,
-    'switch_update': 8,
-    'stopper_update': 9,
-    'shuttle_start': 10,
-    'shuttle_stop': 11,
-    'emergency': 12,
-    'unsupported_command': 13,
-    'target_station_route': 14,
-    'wait_for_block_clearance': 15,
-    'maintain_headway': 16,
-    'avoid_collision': 17,
-    'avoid_deadlock': 18,
-    'obstacle_stop': 19,
-    'wrong_shuttle_rejected': 20,
-    'fleet_coordination': 21,
-}
+from room_315_multi_shuttle import safe_int as _safe_int
 
 SYMBOLIC_ACTION_PRIMITIVE_MAP = {
     'prepare_switches': 'SET_SWITCHES',
@@ -125,10 +46,6 @@ SYMBOLIC_ACTION_PRIMITIVE_MAP = {
     'inspect_state': 'DONE',
     'wait_for_clearance': 'STOP_NOW',
 }
-
-ACTION_VECTOR_FIELDS = list(ACTION_VECTOR_V3_FIELDS)
-EVENT_ACTION_FIELDS = list(EVENT_ACTION_V3_FIELDS)
-
 
 @dataclass(frozen=True)
 class PddlPlanStep:
@@ -146,12 +63,11 @@ class PddlPlanStep:
 
 @dataclass(frozen=True)
 class TranslatedPlanStep:
-    """PDDL step translated into VLA primitive command and event target."""
+    """PDDL step translated into a primitive command and event target."""
 
     pddl_step: PddlPlanStep
     command: dict[str, Any]
     event_action: dict[str, Any]
-    action_vector: list[float]
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -163,7 +79,6 @@ class TranslatedPlanStep:
             },
             'command': self.command,
             'event_action': self.event_action,
-            'action_vector': self.action_vector,
         }
 
 
@@ -241,21 +156,7 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
         pddl_step=parsed,
         command=command,
         event_action=event_action,
-        action_vector=encode_event_action(event_action),
     )
-
-
-def encode_event_action(action: dict[str, Any]) -> list[float]:
-    """Encode a Room 315 event action into the canonical schema-v3 vector."""
-
-    return encode_action_v3(_normalize_event_action(action))
-
-
-def _safe_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def _translate_prepare_switches(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -405,14 +306,12 @@ def _multi_shuttle_fields(*, side: str, shuttle: str) -> dict[str, Any]:
     if spec is None or shuttle == f'{side}_shuttle':
         shuttle_index = 0
         return {
-            'action_vector_schema_version': ACTION_SCHEMA_VERSION,
             'shuttle_id': f'{"R" if side == "right" else "L"}{shuttle_index + 1}',
             'shuttle_index': shuttle_index,
             'target_id': f'{side}_shuttle_{shuttle_index + 1}',
             'coordination_mode': 'guarded_motion',
         }
     return {
-        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'shuttle_id': spec.short_id,
         'shuttle_index': spec.shuttle_index,
         'target_id': f'{side}_shuttle_{spec.shuttle_index + 1}',
@@ -493,7 +392,6 @@ def _blank_event_action(
     reason: str = 'none',
 ) -> dict[str, Any]:
     return {
-        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'primitive': primitive,
         'side': side,
         'shuttle_id': '',
@@ -512,7 +410,6 @@ def _blank_event_action(
 
 def _normalize_event_action(action: dict[str, Any]) -> dict[str, Any]:
     normalized = {
-        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'primitive': str(action.get('primitive') or 'WAIT').strip().upper(),
         'side': _normalize_side(action.get('side')),
         'shuttle_id': str(action.get('shuttle_id') or '').strip(),
@@ -560,15 +457,6 @@ def _normalize_event_action(action: dict[str, Any]) -> dict[str, Any]:
     }:
         normalized['target_id'] = f'{normalized["side"]}_shuttle_{normalized["shuttle_index"] + 1}'
     return normalized
-
-
-def _device_map(raw: Any, *, default: Any) -> dict[str, Any]:
-    values = {name: default for name in DEVICE_NAMES}
-    if isinstance(raw, dict):
-        for name in DEVICE_NAMES:
-            if name in raw:
-                values[name] = raw[name]
-    return values
 
 
 def _side_and_shuttle_from_args(args: tuple[str, ...]) -> tuple[str, str]:

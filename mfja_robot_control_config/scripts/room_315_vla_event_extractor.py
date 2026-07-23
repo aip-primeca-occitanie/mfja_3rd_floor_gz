@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from room_315_pddl_validation_gate import load_validation_result
 from room_315_pddl_validation_gate import privileged_model_input_paths
 from room_315_pddl_validation_gate import validation_approves_training
+from room_315_json_io import iter_jsonl_objects as _iter_jsonl
 
 
 SIDES = ('right', 'left')
@@ -84,20 +85,6 @@ PLANNING_METADATA_FIELDS = (
 
 def _json_dumps(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True)
-
-
-def _iter_jsonl(path: Path):
-    with path.open('r', encoding='utf-8') as stream:
-        for line_number, line in enumerate(stream, start=1):
-            text = line.strip()
-            if not text:
-                continue
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f'{path}:{line_number}: invalid JSONL row: {exc}') from exc
-            if isinstance(parsed, dict):
-                yield parsed
 
 
 def _image_fields(row: dict[str, Any]) -> dict[str, Any]:
@@ -234,8 +221,6 @@ def _training_row(
         'model_input': _model_input(row, previous_command),
         'action': action,
     }
-    if row.get('action_vector') is not None:
-        training['action_vector'] = row.get('action_vector')
     if isinstance(row.get('auxiliary_targets'), dict):
         training['auxiliary_targets'] = deepcopy(row['auxiliary_targets'])
     for field in PLANNING_METADATA_FIELDS:

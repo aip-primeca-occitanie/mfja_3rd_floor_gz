@@ -211,21 +211,6 @@ def test_method_comparison_keeps_gazebo_and_real_image_claims_separate(tmp_path)
                 'p95_inference_latency_s': 0.07,
             },
         },
-        {
-            'method': 'legacy direct-action SmolVLA',
-            'result_scope': 'legacy_direct_action_offline',
-            'metrics': {
-                'success_rate': 0.4,
-                'false_success_rate': 0.05,
-                'safety_violation_rate': 0.01,
-                'supervisor_rejection_rate': 0.12,
-                'mean_replans': 0.0,
-                'mean_route_length': 5.0,
-                'mean_completion_time_s': 11.0,
-                'latency_p50_s': 0.23,
-                'latency_p95_s': 0.31,
-            },
-        },
     ]
 
     report = suite.compare_method_results(raw_results)
@@ -235,7 +220,6 @@ def test_method_comparison_keeps_gazebo_and_real_image_claims_separate(tmp_path)
     assert by_method['oracle_plansys2']['gazebo_planning_result'] is True
     assert by_method['frozen_visual_plansys2']['real_image_perception_claim'] is False
     assert by_method['lora_visual_plansys2']['real_image_perception_claim'] is True
-    assert by_method['legacy_direct_action_smolvla']['result_scope'] == 'legacy_direct_action_offline'
     assert by_method['frozen_visual_plansys2']['metrics']['success_rate'] == 0.8
 
     paths = suite.write_comparison_report(report, tmp_path / 'comparison.json')
@@ -244,7 +228,7 @@ def test_method_comparison_keeps_gazebo_and_real_image_claims_separate(tmp_path)
     assert parsed['claim_boundary']['real_image_perception_methods'] == [
         'lora_visual_plansys2'
     ]
-    assert 'legacy_direct_action_smolvla' in csv_text
+    assert 'oracle_plansys2' in csv_text
 
 
 def test_method_comparison_does_not_fabricate_missing_results():

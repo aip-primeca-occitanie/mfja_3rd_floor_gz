@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import runpy
 from pathlib import Path
 
 import yaml
@@ -15,6 +16,9 @@ ROOM_ONLY_WORLD = REPO_ROOT / 'mfja_3rd_floor_description' / 'worlds' / 'room_31
 FULL_WORLD = REPO_ROOT / 'mfja_3rd_floor_description' / 'worlds' / 'mfja_3rd_floor.world'
 KINEMATIC_NODE = (
     REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_kinematic_shuttle_node.py'
+)
+RAIL_DEFAULTS = (
+    REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_rail_defaults.py'
 )
 IDENTITY_COLORS = {
     'R1': '0.85 0.05 0.05',
@@ -79,7 +83,11 @@ def test_worlds_preload_eight_distinct_identity_models():
 
 def test_dynamic_spawn_uses_per_identity_shuttle_sdf_when_available():
     text = KINEMATIC_NODE.read_text(encoding='utf-8')
+    defaults = runpy.run_path(str(RAIL_DEFAULTS))
 
     assert '_shuttle_model_sdf_for_entity' in text
     assert 'room315_shuttle_{short_id}' in text
-    assert "preloaded_shuttle_count': 4" in text
+    assert 'RIGHT_ENTITY_DEFAULTS' in text
+    assert 'LEFT_ENTITY_DEFAULTS' in text
+    assert defaults['RIGHT_ENTITY_DEFAULTS']['preloaded_shuttle_count'] == 4
+    assert defaults['LEFT_ENTITY_DEFAULTS']['preloaded_shuttle_count'] == 4

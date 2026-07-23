@@ -7,10 +7,10 @@ regression subset in:
 mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
 ```
 
-The supervisor accepts direct primitive JSON commands and schema-v3 action
-vectors only. Generated payload cases execute as `switches`, `stoppers`,
-`shuttle`, `DONE`, `stop_all`, and `emergency_stop` commands through
-`/room_315/vla/command`.
+The supervisor accepts primitive JSON commands from the planner/executive path.
+Generated payload cases execute as `switches`, `stoppers`, `shuttle`, `DONE`,
+`stop_all`, and `emergency_stop` commands through `/room_315/vla/command`.
+Learned components do not publish this topic directly.
 
 For seeded benchmark expansion and method comparison, use
 [ROOM315_BENCHMARK_RUNBOOK.md](ROOM315_BENCHMARK_RUNBOOK.md). The benchmark

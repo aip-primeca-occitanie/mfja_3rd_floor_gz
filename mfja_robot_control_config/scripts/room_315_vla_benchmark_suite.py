@@ -55,7 +55,6 @@ METHODS = (
     'oracle_plansys2',
     'frozen_visual_plansys2',
     'lora_visual_plansys2',
-    'legacy_direct_action_smolvla',
 )
 
 METHOD_ALIASES = {
@@ -69,10 +68,6 @@ METHOD_ALIASES = {
     'lora visual+plansys2': 'lora_visual_plansys2',
     'lora_visual+plansys2': 'lora_visual_plansys2',
     'lora_visual_plansys2': 'lora_visual_plansys2',
-    'legacy direct-action smolvla': 'legacy_direct_action_smolvla',
-    'legacy_direct_action+smolvla': 'legacy_direct_action_smolvla',
-    'legacy_direct_action_smolvla': 'legacy_direct_action_smolvla',
-    'smolvla': 'legacy_direct_action_smolvla',
 }
 
 COMPARISON_METRIC_ALIASES = {
@@ -729,8 +724,6 @@ def _infer_scope(method: str, raw: dict[str, Any]) -> str:
     perception_source = str(raw.get('perception_source') or '').strip().casefold()
     if perception_source == 'real_image':
         return 'real_image_perception'
-    if method == 'legacy_direct_action_smolvla':
-        return 'legacy_direct_action_offline'
     return 'gazebo_planning'
 
 
@@ -787,11 +780,7 @@ def compare_method_results(
             'method': method,
             'status': 'missing_result',
             'source': '',
-            'result_scope': (
-                'legacy_direct_action_offline'
-                if method == 'legacy_direct_action_smolvla'
-                else 'unverified'
-            ),
+            'result_scope': 'unverified',
             'gazebo_planning_result': False,
             'real_image_perception_claim': False,
             'metrics': {name: None for name in COMPARISON_METRIC_ALIASES},
@@ -820,7 +809,6 @@ def compare_method_results(
         },
         'limitations': [
             'Missing metrics remain null and are not replaced by proxy values.',
-            'Legacy direct-action SmolVLA is not a PlanSys2 closed-loop method.',
         ],
     }
 
@@ -901,7 +889,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     compare = subparsers.add_parser(
         'compare-results',
-        help='Normalize and compare Oracle/Visual/SmolVLA benchmark result JSON files.',
+        help='Normalize and compare Oracle/Visual benchmark result JSON files.',
     )
     compare.add_argument('--output', type=Path, required=True)
     compare.add_argument(

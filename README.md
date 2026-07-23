@@ -114,9 +114,10 @@ The VLA stack includes:
 - A high-level VLA supervisor on `/room_315/vla/command`.
 - Primitive debugging commands for switches, stoppers, shuttles, stop-all, and
   emergency stop.
-- A safety decoder between model actions and rail execution.
-- Event-level symbolic action schema v3 with switch/stopper masks, shuttle
-  identity, and coordination mode values.
+- A safety decoder between planner primitive commands and rail execution.
+- Visual-state datasets for shuttle boxes, identity, rail location,
+  loaded/empty state, visible switch state, obstacles, confidence, and
+  calibration/schema versions.
 - Dataset recording plus the curated 160-case payload speed-sweep batch runner.
 
 Canonical station mapping:
@@ -137,7 +138,8 @@ mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_16
 Run one case with `room_315_pddl_scenario_generator.py --case-id ...`, or run
 the 160-case batch with `room_315_payload_case_batch_runner.py`.
 
-For supervisor operation, VLA topics, action vectors, and manual commands, go to
+For supervisor operation, VLA topics, visual-state datasets, and manual
+primitive commands, go to
 [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md).
 For the research formulation, model input, privileged evaluation, scenario
 families, metrics, and roadmap, go to
@@ -160,11 +162,11 @@ training event represents:
 observation_before_decision -> next_symbolic_event_action
 ```
 
-To export a flat training file:
+To export a flat visual-state training file:
 
 ```bash
 ros2 run mfja_robot_control_config room_315_vla_event_extractor.py \
-  ~/room315_smolvla_demo \
+  ~/.ros/room315_visual_state_datasets/demo \
   --output meta/training_events.jsonl
 ```
 
@@ -173,18 +175,20 @@ it includes only episodes with `episodes/<episode_id>/validation.json` marked
 `approved_for_training: true`. Use `--include-failed` or `--allow-unvalidated`
 only for explicit debug exports.
 
-To run the lightweight baseline evaluator:
+Split the clean visual-state events by complete scenario family:
 
 ```bash
-ros2 run mfja_robot_control_config room_315_vla_baseline_eval.py \
-  ~/room315_smolvla_demo \
-  --output-dir ~/room315_vla_baselines \
-  --holdout-fraction 0.2
+ros2 run mfja_robot_control_config room_315_vla_split_dataset.py \
+  ~/.ros/room315_visual_state_datasets/demo \
+  --output-dir /tmp/room315_visual_splits \
+  --dataset-mode visual_state \
+  --overwrite
 ```
 
-The built-in evaluator reports `state_only`, `vla`, and `oracle` baselines with
-task-level, action-level, device-level, timing, and safety metrics per task
-family.
+Convert the split to LeRobot format or train the local visual-state predictor
+with `room_315_vla_to_lerobot.py` and `room_315_vla_train_local.py`. Learned
+outputs are visual facts only; rail commands are produced later by state fusion,
+PlanSys2, and the supervisor.
 
 For recorder launch commands, benchmark runner usage, output file formats, and
 metric definitions, go to [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md)
@@ -237,10 +241,10 @@ instructions are split by topic:
   switches, stoppers, and sensor checks:
   [docs/QUICK_START_AND_FEATURE_GUIDE.md](docs/QUICK_START_AND_FEATURE_GUIDE.md)
 - VLA supervisor operation, task templates, dataset recorder usage,
-  event-level labels, model input, action vectors, benchmark runner, and VLA
+  visual-state labels, model input, benchmark runner, and VLA
   topics: [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md)
 - Rail-only VLA research formulation, `model_input` vs `privileged_eval`,
-  baselines, metrics, scenario families, and 4-robot roadmap:
+  visual metrics, scenario families, and 4-robot roadmap:
   [docs/ROOM315_VLA_RESEARCH.md](docs/ROOM315_VLA_RESEARCH.md)
 - Rail device YAML, marker behavior, collision tests, message types, and launch
   names: [docs/ROOM315_RAIL_DEVICES_AND_TESTS.md](docs/ROOM315_RAIL_DEVICES_AND_TESTS.md)

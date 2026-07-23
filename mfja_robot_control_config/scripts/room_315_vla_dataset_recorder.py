@@ -24,17 +24,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
-from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
 from room_315_multi_shuttle import COORDINATION_MODE_IDS
-from room_315_multi_shuttle import EVENT_ACTION_V3_FIELDS
-from room_315_multi_shuttle import decode_action_v3 as _decode_action_v3
-from room_315_multi_shuttle import encode_action_v3 as _encode_action_v3
+from room_315_multi_shuttle import DEVICE_NAMES
+from room_315_multi_shuttle import PRIMITIVE_IDS
+from room_315_multi_shuttle import REASON_IDS
+from room_315_multi_shuttle import SIDES
+from room_315_multi_shuttle import SIDE_IDS
+from room_315_multi_shuttle import STOPPER_VALUE_IDS
+from room_315_multi_shuttle import SWITCH_VALUE_IDS
+from room_315_multi_shuttle import TARGET_IDS
+from room_315_multi_shuttle import WAIT_CONDITION_IDS
 from room_315_multi_shuttle import model_input_is_clean
-
-
-SIDES = ('right', 'left')
-DEVICE_NAMES = ('A1', 'A2', 'A3', 'A4')
+from room_315_multi_shuttle import safe_int as _safe_int
 SENSOR_IDS_BY_SIDE = {
     'right': (
         'DZI1R',
@@ -94,103 +95,24 @@ COMMAND_ACTIONS = {
     'clear_emergency_stop',
 }
 
-PRIMITIVE_IDS = {
-    'WAIT': 0,
-    'DONE': 1,
-    'SET_SWITCHES': 2,
-    'SET_STOPPERS': 3,
-    'SHUTTLE_ON': 4,
-    'STOP_NOW': 5,
-    'EMERGENCY_STOP': 6,
-}
-
-SIDE_IDS = {'right': 0, 'left': 1}
-SWITCH_VALUE_IDS = {'UNCHANGED': 0, 'EXTERIOR': 1, 'INTERIOR': 2}
-STOPPER_VALUE_IDS = {'UNCHANGED': 0, 'open': 1, 'closed': 2}
-WAIT_CONDITION_IDS = {
-    'none': 0,
-    'switch_state_match': 1,
-    'stopper_state_match': 2,
-    'shuttle_command_applied': 3,
-    'task_terminal_status': 4,
-    'reserved_legacy_wait_5': 5,
-    'terminal': 6,
-    'target_sensor_active': 7,
-    'block_clearance': 8,
-    'headway_clearance': 9,
-}
-TARGET_IDS = {
-    'none': 0,
-    'A1': 1,
-    'A2': 2,
-    'A3': 3,
-    'A4': 4,
-    'ALL_SWITCHES': 5,
-    'ALL_STOPPERS': 6,
-    'MULTIPLE_DEVICES': 7,
-    'right_shuttle': 8,
-    'left_shuttle': 9,
-    'reserved_legacy_target_10': 10,
-    'reserved_legacy_target_11': 11,
-    'reserved_legacy_target_12': 12,
-    'reserved_legacy_target_13': 13,
-    'reserved_legacy_target_14': 14,
-    'reserved_legacy_target_15': 15,
-    'reserved_legacy_target_16': 16,
-    'terminal': 17,
-    'DZI1R': 18,
-    'DZI2R': 19,
-    'DZI3R': 20,
-    'DZI4R': 21,
-    'DZI1L': 22,
-    'DZI2L': 23,
-    'DZI3L': 24,
-    'DZI4L': 25,
-    'DA3IR': 26,
-    'DA3IL': 27,
-    'right_shuttle_1': 28,
-    'right_shuttle_2': 29,
-    'right_shuttle_3': 30,
-    'right_shuttle_4': 31,
-    'left_shuttle_1': 32,
-    'left_shuttle_2': 33,
-    'left_shuttle_3': 34,
-    'left_shuttle_4': 35,
-}
-REASON_IDS = {
-    'none': 0,
-    'command_event': 1,
-    'reserved_legacy_reason_2': 2,
-    'reserved_legacy_reason_3': 3,
-    'task_succeeded': 4,
-    'task_failed': 5,
-    'episode_stopped': 6,
-    'episode_discarded': 7,
-    'switch_update': 8,
-    'stopper_update': 9,
-    'shuttle_start': 10,
-    'shuttle_stop': 11,
-    'emergency': 12,
-    'unsupported_command': 13,
-    'target_station_route': 14,
-    'wait_for_block_clearance': 15,
-    'maintain_headway': 16,
-    'avoid_collision': 17,
-    'avoid_deadlock': 18,
-    'obstacle_stop': 19,
-    'wrong_shuttle_rejected': 20,
-    'fleet_coordination': 21,
-}
-PRIMITIVE_IDS_BY_VALUE = {value: key for key, value in PRIMITIVE_IDS.items()}
-SIDE_IDS_BY_VALUE = {value: key for key, value in SIDE_IDS.items()}
 SWITCH_VALUE_IDS_BY_VALUE = {value: key for key, value in SWITCH_VALUE_IDS.items()}
 STOPPER_VALUE_IDS_BY_VALUE = {value: key for key, value in STOPPER_VALUE_IDS.items()}
-WAIT_CONDITION_IDS_BY_VALUE = {value: key for key, value in WAIT_CONDITION_IDS.items()}
-TARGET_IDS_BY_VALUE = {value: key for key, value in TARGET_IDS.items()}
-REASON_IDS_BY_VALUE = {value: key for key, value in REASON_IDS.items()}
 
-ACTION_VECTOR_FIELDS = list(ACTION_VECTOR_V3_FIELDS)
-EVENT_ACTION_FIELDS = list(EVENT_ACTION_V3_FIELDS)
+STRUCTURED_ACTION_FIELDS = [
+    'primitive',
+    'side',
+    'shuttle_id',
+    'shuttle_index',
+    'switch_mask',
+    'switch_values',
+    'stopper_mask',
+    'stopper_values',
+    'speed_mps',
+    'wait_condition',
+    'target_id',
+    'reason',
+    'coordination_mode',
+]
 
 OBSERVATION_STATE_FIELDS = [
     'emergency_stop',
@@ -444,31 +366,6 @@ def _is_meaningful_event_action(next_action: dict[str, Any]) -> bool:
     if action == 'shuttle':
         return str(next_action.get('command') or '').upper() in {'ON', 'OFF'}
     return False
-
-
-def _action_vector_or_none(next_action: dict[str, Any]) -> list[float] | None:
-    return _encode_action(next_action)
-
-
-def _action_schema_version_for_event(event_action: dict[str, Any]) -> int:
-    _ = event_action
-    return ACTION_SCHEMA_VERSION
-
-
-def _action_schema_fields_for_event(event_action: dict[str, Any]) -> list[str]:
-    _ = event_action
-    return ACTION_VECTOR_FIELDS
-
-
-def _round_index(raw: Any) -> int:
-    try:
-        return int(round(float(raw)))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _side_from_id(raw: Any) -> str:
-    return SIDE_IDS_BY_VALUE.get(_round_index(raw), 'right')
 
 
 def _assignment_dict(command: dict[str, Any], key: str) -> dict[str, Any]:
@@ -744,7 +641,7 @@ def _event_action_from_symbolic_action(
             status_text=status_text,
         ),
     }
-    event_action.update(_schema_v3_event_fields(
+    event_action.update(_shuttle_event_fields(
         command_dict,
         primitive=primitive,
         side=side,
@@ -753,7 +650,7 @@ def _event_action_from_symbolic_action(
     return event_action
 
 
-def _schema_v3_event_fields(
+def _shuttle_event_fields(
     command: dict[str, Any],
     *,
     primitive: str,
@@ -784,24 +681,11 @@ def _schema_v3_event_fields(
     if primitive in {'SHUTTLE_ON', 'STOP_NOW'} and normalized_target in {'right_shuttle', 'left_shuttle', 'none'}:
         normalized_target = f'{side}_shuttle_{shuttle_index + 1}'
     return {
-        'action_vector_schema_version': ACTION_SCHEMA_VERSION,
         'shuttle_id': shuttle_id,
         'shuttle_index': shuttle_index,
         'target_id': normalized_target,
         'coordination_mode': str(command.get('coordination_mode') or 'normal'),
     }
-
-
-def _requests_action_schema_v3(command: dict[str, Any]) -> bool:
-    _ = command
-    return True
-
-
-def _safe_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def _mask_value_dicts_from_event_action(
@@ -890,48 +774,13 @@ def _normalize_event_action(action: Any) -> dict[str, Any]:
         'target_id': _normalize_target_id(action_dict.get('target_id')),
         'reason': _normalize_reason(action_dict.get('reason')),
     }
-    normalized.update(_schema_v3_event_fields(
+    normalized.update(_shuttle_event_fields(
         action_dict,
         primitive=primitive,
         side=side,
         target_id=normalized['target_id'],
     ))
     return normalized
-
-
-def _encode_action(command: Any) -> list[float]:
-    return _encode_action_v3(_normalize_event_action(command))
-
-
-def _decode_device_assignments(
-    action_vector: list[float],
-    mask_prefix: str,
-    value_prefix: str,
-    value_lookup: dict[int, str],
-) -> dict[str, str]:
-    assignments: dict[str, str] = {}
-    for name in DEVICE_NAMES:
-        mask_index = ACTION_VECTOR_FIELDS.index(f'{mask_prefix}_{name}')
-        value_index = ACTION_VECTOR_FIELDS.index(f'{value_prefix}_{name}')
-        selected = float(action_vector[mask_index]) >= 0.5
-        if not selected:
-            continue
-        value_id = _round_index(action_vector[value_index])
-        value = value_lookup.get(value_id, 'UNCHANGED')
-        if value == 'UNCHANGED':
-            raise ValueError(f'{mask_prefix}_{name} selected but value is UNCHANGED')
-        assignments[name] = value
-    return assignments
-
-
-def _decode_action(action_vector: Any) -> dict[str, Any]:
-    values = [float(value) for value in list(action_vector)]
-    if len(values) != len(ACTION_VECTOR_FIELDS):
-        raise ValueError(
-            f'action vector length {len(values)} does not match schema v3 '
-            f'length {len(ACTION_VECTOR_FIELDS)}'
-        )
-    return _decode_action_v3(values)
 
 
 def _normalize_switch_state(raw: Any) -> str:
@@ -1188,7 +1037,7 @@ def _normalize_model_last_command(command: Any) -> dict[str, Any] | None:
     if isinstance(command, dict) and 'primitive' in command:
         return {
             field: deepcopy(command[field])
-            for field in EVENT_ACTION_FIELDS
+            for field in STRUCTURED_ACTION_FIELDS
             if field in command
         }
     return _normalize_symbolic_action(command)
@@ -1618,7 +1467,7 @@ class Room315VlaDatasetRecorder(Node):
     def __init__(self) -> None:
         super().__init__('room_315_vla_dataset_recorder')
 
-        self.declare_parameter('dataset_dir', '~/.ros/room315_vla_datasets/smolvla_demo')
+        self.declare_parameter('dataset_dir', '~/.ros/room315_visual_state_datasets/demo')
         self.declare_parameter('image_topic', '')
         self.declare_parameter('right_image_topic', '/room_315/vla/right_rail_rgbd/image')
         self.declare_parameter('left_image_topic', '/room_315/vla/left_rail_rgbd/image')
@@ -1633,7 +1482,7 @@ class Room315VlaDatasetRecorder(Node):
         self.declare_parameter('auto_start_on_goal', True)
         self.declare_parameter('image_max_width', 640)
         self.declare_parameter('image_jpeg_quality', 85)
-        self.declare_parameter('camera_name', 'legacy_primary_rgb')
+        self.declare_parameter('camera_name', 'primary_rgb')
 
         raw_dataset_dir = str(self.get_parameter('dataset_dir').value)
         self.dataset_dir = Path(os.path.expandvars(raw_dataset_dir)).expanduser()
@@ -1990,8 +1839,7 @@ class Room315VlaDatasetRecorder(Node):
                     self.latest_status,
                     task_context,
                 ),
-                'action': _encode_action(command),
-                'action_schema': ACTION_VECTOR_FIELDS,
+                'action': _normalize_event_action(command),
                 'command': command,
                 'raw_replay_only': True,
                 'high_level_template': (
@@ -2207,9 +2055,6 @@ class Room315VlaDatasetRecorder(Node):
             'symbolic_next_action': normalized_action,
             'next_action': event_action,
             'action': event_action,
-            'action_vector_schema_version': _action_schema_version_for_event(event_action),
-            'action_vector': _action_vector_or_none(event_action),
-            'action_schema': _action_schema_fields_for_event(event_action),
             'wait_condition': wait_condition,
             'minimal_recording': minimal_metadata,
             'safety_decoder_metrics': self._safety_decoder_metrics(),
@@ -2265,8 +2110,8 @@ class Room315VlaDatasetRecorder(Node):
             'model_input_schema_version': MODEL_INPUT_SCHEMA_VERSION,
             'created_or_updated_at': _utc_now(),
             'description': (
-                'Room 315 VLA demonstrations for adapting open-source policies '
-                'such as SmolVLA/LeRobot to discrete industrial rail-cell control.'
+                'Room 315 visual-state demonstrations for training perception '
+                'models that feed the neuro-symbolic planner.'
             ),
             'training_split_note': (
                 'Use per-episode events.jsonl for supervised training labels. '
@@ -2318,9 +2163,7 @@ class Room315VlaDatasetRecorder(Node):
                 for side, sensor_names in SENSOR_IDS_BY_SIDE.items()
             },
             'debug_observation_fields': DEBUG_OBSERVATION_FIELDS,
-            'action_schema_version': ACTION_SCHEMA_VERSION,
-            'action_features': ACTION_VECTOR_FIELDS,
-            'symbolic_action_features': EVENT_ACTION_FIELDS,
+            'structured_action_features': STRUCTURED_ACTION_FIELDS,
             'action_encodings': {
                 'primitive_id': PRIMITIVE_IDS,
                 'side_id': SIDE_IDS,

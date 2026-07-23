@@ -14,19 +14,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from room_315_multi_shuttle import ACTION_SCHEMA_VERSION
-from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS
-from room_315_multi_shuttle import COORDINATION_MODE_IDS
-from room_315_multi_shuttle import DEVICE_NAMES
-from room_315_multi_shuttle import MAX_SHUTTLES_PER_SIDE
-from room_315_multi_shuttle import PRIMITIVE_IDS
-from room_315_multi_shuttle import REASON_IDS
 from room_315_multi_shuttle import SIDE_IDS
-from room_315_multi_shuttle import STOPPER_VALUE_IDS
-from room_315_multi_shuttle import SWITCH_VALUE_IDS
-from room_315_multi_shuttle import TARGET_IDS
-from room_315_multi_shuttle import WAIT_CONDITION_IDS
-from room_315_multi_shuttle import decode_action_v3
 
 
 SUPPORTED_SYMBOLIC_ACTIONS = {
@@ -43,6 +31,7 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
 }
 MODEL_INPUT_ALLOWED_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 FORBIDDEN_MODEL_INPUT_KEYS = {
+    'action_vector',
     'active_position_sensors',
     'active_sensors',
     'auxiliary_targets',
@@ -115,8 +104,9 @@ def validate_candidate_scenario(
     issues: list[str] = []
     symbolic_plan = list(scenario.get('symbolic_plan') or [])
     commands = list(scenario.get('primitive_commands') or [])
-    action_vectors = list(scenario.get('action_vectors') or [])
-    event_targets = list(scenario.get('expected_event_targets') or [])
+
+    if 'action_vectors' in scenario:
+        issues.append('removed action_vectors are no longer supported in PlanSys2 scenarios')
 
     if not symbolic_plan:
         issues.append('PlanSys2 returned an empty symbolic plan')
@@ -132,26 +122,11 @@ def validate_candidate_scenario(
             'translated primitive command count does not match symbolic plan '
             f'({len(commands)} != {len(symbolic_plan)})'
         )
-    if len(action_vectors) != len(commands):
-        issues.append(
-            'action_vector count does not match primitive command count '
-            f'({len(action_vectors)} != {len(commands)})'
-        )
 
     for index, command in enumerate(commands):
         issues.extend(_validate_primitive_command(
             command,
             index=index,
-            scenario=scenario,
-            multi_shuttle_active=multi_shuttle_active,
-        ))
-
-    for index, vector in enumerate(action_vectors):
-        expected = event_targets[index] if index < len(event_targets) else {}
-        issues.extend(_validate_action_vector(
-            vector,
-            index=index,
-            expected_action=expected if isinstance(expected, dict) else {},
             scenario=scenario,
             multi_shuttle_active=multi_shuttle_active,
         ))
@@ -164,7 +139,6 @@ def validate_candidate_scenario(
         'failure_reasons': issues,
         'checked_symbolic_steps': len(symbolic_plan),
         'checked_primitive_commands': len(commands),
-        'checked_action_vectors': len(action_vectors),
     }
 
 
@@ -406,90 +380,6 @@ def runtime_failure_reason(
     return ''
 
 
-def _validate_action_vector(
-    vector: Any,
-    *,
-    index: int,
-    expected_action: dict[str, Any],
-    scenario: dict[str, Any],
-    multi_shuttle_active: bool | None,
-) -> list[str]:
-    issues: list[str] = []
-    try:
-        values = [float(value) for value in list(vector)]
-    except (TypeError, ValueError):
-        return [f'action_vector at index {index} is not a numeric sequence']
-    if len(values) != len(ACTION_VECTOR_V3_FIELDS):
-        return [
-            f'action_vector at index {index} length {len(values)} does not match '
-            f'schema v{ACTION_SCHEMA_VERSION} length {len(ACTION_VECTOR_V3_FIELDS)}'
-        ]
-
-    field_values = dict(zip(ACTION_VECTOR_V3_FIELDS, values))
-    issues.extend(_validate_enum_field(index, field_values, 'primitive_id', PRIMITIVE_IDS.values()))
-    issues.extend(_validate_enum_field(index, field_values, 'side_id', SIDE_IDS.values()))
-    issues.extend(_validate_enum_field(
-        index,
-        field_values,
-        'wait_condition_id',
-        WAIT_CONDITION_IDS.values(),
-    ))
-    issues.extend(_validate_enum_field(index, field_values, 'target_id', TARGET_IDS.values()))
-    issues.extend(_validate_enum_field(index, field_values, 'reason_id', REASON_IDS.values()))
-    issues.extend(_validate_enum_field(
-        index,
-        field_values,
-        'coordination_mode',
-        COORDINATION_MODE_IDS.values(),
-    ))
-    shuttle_index = _rounded_int(field_values.get('shuttle_index'))
-    if shuttle_index is None or shuttle_index < -1 or shuttle_index >= MAX_SHUTTLES_PER_SIDE:
-        issues.append(
-            f'action_vector at index {index} has invalid shuttle_index '
-            f'{field_values.get("shuttle_index")!r}'
-        )
-    for name in DEVICE_NAMES:
-        for prefix in ('switch_mask', 'stopper_mask'):
-            mask = field_values[f'{prefix}_{name}']
-            if mask not in {0.0, 1.0}:
-                issues.append(f'action_vector at index {index} has invalid {prefix}_{name}={mask!r}')
-        issues.extend(_validate_enum_field(
-            index,
-            field_values,
-            f'switch_value_{name}',
-            SWITCH_VALUE_IDS.values(),
-        ))
-        issues.extend(_validate_enum_field(
-            index,
-            field_values,
-            f'stopper_value_{name}',
-            STOPPER_VALUE_IDS.values(),
-        ))
-    try:
-        decoded = decode_action_v3(values)
-    except ValueError as exc:
-        issues.append(f'action_vector at index {index} failed schema-v3 decode: {exc}')
-        return issues
-    primitive = str(decoded.get('primitive') or '')
-    side = str(decoded.get('side') or '')
-    if expected_action and str(expected_action.get('primitive') or '') != primitive:
-        issues.append(
-            f'action_vector at index {index} primitive {primitive!r} does not match '
-            f'expected action {expected_action.get("primitive")!r}'
-        )
-    if primitive in {'SHUTTLE_ON', 'STOP_NOW'} and _multi_shuttle_for_side(
-        scenario,
-        side,
-        explicit=multi_shuttle_active,
-    ):
-        if shuttle_index is None or shuttle_index < 0:
-            issues.append(
-                f'schema-v3 movement action_vector at index {index} is missing '
-                'a valid shuttle_index in multi-shuttle mode'
-            )
-    return issues
-
-
 def _validate_primitive_command(
     command: Any,
     *,
@@ -500,6 +390,8 @@ def _validate_primitive_command(
     if not isinstance(command, dict):
         return [f'primitive command at index {index} is not a JSON object']
     issues: list[str] = []
+    if 'action_vector' in command:
+        issues.append(f'primitive command at index {index} contains removed action_vector')
     action = str(command.get('action') or '').strip()
     if action not in {'switches', 'stoppers', 'shuttle', 'DONE', 'stop_all', 'emergency_stop'}:
         issues.append(f'primitive command at index {index} has unknown action {action!r}')
@@ -524,18 +416,6 @@ def _validate_primitive_command(
                     'the target shuttle in multi-shuttle mode'
                 )
     return issues
-
-
-def _validate_enum_field(
-    index: int,
-    fields: dict[str, float],
-    name: str,
-    allowed_values,
-) -> list[str]:
-    value = _rounded_int(fields.get(name))
-    if value not in set(int(item) for item in allowed_values):
-        return [f'action_vector at index {index} has invalid {name}={fields.get(name)!r}']
-    return []
 
 
 def _model_input_privileged_paths(model_input: dict[str, Any], *, root: str) -> list[str]:
@@ -790,13 +670,6 @@ def _optional_int(*values: Any, default: Any = None) -> int | None:
             continue
     try:
         return int(default)
-    except (TypeError, ValueError):
-        return None
-
-
-def _rounded_int(value: Any) -> int | None:
-    try:
-        return int(round(float(value)))
     except (TypeError, ValueError):
         return None
 

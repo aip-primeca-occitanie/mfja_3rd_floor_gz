@@ -22,7 +22,6 @@ install(
 
 install(
   FILES
-    config/room_315_vla/action_space.yaml
     config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
@@ -66,16 +65,17 @@ install(
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
-    scripts/room_315_legacy_direct_action_metrics.py
+    scripts/room_315_json_io.py
     scripts/room_315_multi_shuttle.py
     scripts/room_315_observed_state_provider.py
     scripts/room_315_pddl_dataset_report.py
     scripts/room_315_pddl_language_generator.py
     scripts/room_315_pddl_plan_translator.py
     scripts/room_315_pddl_scenario_generator.py
+    scripts/room_315_rail_devices.py
+    scripts/room_315_rail_defaults.py
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
-    scripts/room_315_real_vla_agent.py
     scripts/room_315_task_goal_builder.py
     scripts/room_315_task_goal_benchmark.py
     scripts/room_315_task_goal_cli.py
@@ -86,7 +86,6 @@ install(
     scripts/room_315_task_goal_semantic.py
     scripts/room_315_task_goal_semantic_smoke.py
     scripts/room_315_task_goal_validation.py
-    scripts/room_315_vla_baseline_eval.py
     scripts/room_315_vla_benchmark_suite.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
@@ -98,7 +97,7 @@ install(
     scripts/room_315_vla_to_lerobot.py
     scripts/room_315_visual_observed_state_provider.py
     scripts/room_315_visual_state_dataset.py
-    scripts/room_315_smolvla_eval.py
+    scripts/room_315_visual_state_smoke.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -175,10 +174,6 @@ if(BUILD_TESTING)
     TIMEOUT 180
   )
   ament_add_pytest_test(
-    test_room315_action_schema_v3
-    test/test_room315_action_schema_v3.py
-  )
-  ament_add_pytest_test(
     test_room315_multi_shuttle_registry
     test/test_room315_multi_shuttle_registry.py
   )
@@ -243,10 +238,6 @@ if(BUILD_TESTING)
     test/test_room315_multi_shuttle_launch_args.py
   )
   ament_add_pytest_test(
-    test_room315_vla_baseline_eval
-    test/test_room315_vla_baseline_eval.py
-  )
-  ament_add_pytest_test(
     test_room315_vla_benchmark_suite
     test/test_room315_vla_benchmark_suite.py
   )
@@ -255,24 +246,12 @@ if(BUILD_TESTING)
     test/test_room315_vla_dataset_recorder.py
   )
   ament_add_pytest_test(
-    test_room315_real_vla_agent
-    test/test_room315_real_vla_agent.py
-  )
-  ament_add_pytest_test(
-    test_room315_real_vla_agent_schema_v3
-    test/test_room315_real_vla_agent_schema_v3.py
-  )
-  ament_add_pytest_test(
     test_room315_vla_event_extractor
     test/test_room315_vla_event_extractor.py
   )
   ament_add_pytest_test(
     test_room315_vla_supervisor
     test/test_room315_vla_supervisor.py
-  )
-  ament_add_pytest_test(
-    test_room315_vla_smoke
-    test/test_room315_vla_smoke.py
   )
   ament_add_pytest_test(
     test_room315_vla_training_tools

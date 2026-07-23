@@ -1,7 +1,7 @@
 import os
 import tempfile
-import xml.etree.ElementTree as ET
 from os import environ, pathsep
+from runpy import run_path
 
 import yaml
 from ament_index_python.packages import get_package_share_directory
@@ -16,6 +16,11 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+_LAUNCH_UTILS = run_path(
+    os.path.join(os.path.dirname(__file__), 'room_315_launch_utils.py')
+)
+_get_world_entity_name = _LAUNCH_UTILS['get_world_entity_name']
 
 
 DESCRIPTION_PACKAGE = 'mfja_3rd_floor_description'
@@ -121,15 +126,6 @@ def _select_single_industrial_robot(config_path, selector):
             'Use the exact robot name.'
         )
     return candidates[0]
-
-
-def _get_world_entity_name(world_path):
-    tree = ET.parse(world_path)
-    root = tree.getroot()
-    world_element = root.find('world')
-    if world_element is None:
-        raise RuntimeError(f'No <world> element found in: {world_path}')
-    return world_element.attrib.get('name', 'default')
 
 
 def _resolve_robot_assets(description_pkg_path, model_name):

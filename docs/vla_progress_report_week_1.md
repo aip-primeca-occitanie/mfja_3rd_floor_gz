@@ -6,9 +6,9 @@ Period: June 18, 2026 - June 25, 2026
 
 - This week focused on building the Room 315 VLA pipeline from planning to execution and data collection.
 - Expanded shuttle motion planning inside Room 315 to cover both the left and right rails and loaded payload cases.
-- Connected the workflow between PDDL, the scenario generator, schema-v3 commands, the safety supervisor, and the training data recorder.
+- Connected the workflow between PDDL, the scenario generator, primitive commands, the safety supervisor, and the training data recorder.
 - Improved `room_315_pddl_scenario_generator.py` so training cases can be converted into executable symbolic command sequences.
-- Updated `action_space.yaml` and the PDDL domain to support payload actions, shuttle selection, and movement targets.
+- Updated the PDDL domain and contract-level primitive commands to support payload actions, shuttle selection, and movement targets.
 - Added initial payload training scenarios covering loaded shuttles, target slots, and start-slot configurations.
 - Added batch case execution and review tools to run cases and inspect results in an organized way.
 - Improved `room_315_vla_supervisor.py` so symbolic commands are validated before real rail commands are published.

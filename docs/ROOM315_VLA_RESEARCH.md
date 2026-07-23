@@ -1,9 +1,9 @@
 # Room 315 Visual VLA Research
 
-The current Room 315 research setup is focused on the 160 successful payload
-speed-sweep cases. The learned policy observes task language, overhead camera
-images, and the previous command, then predicts the next event-level direct
-symbolic action.
+The current Room 315 research setup is focused on the closed-loop
+neuro-symbolic workflow. Learned components consume overhead RGB-D image
+references and predict structured visual facts. They do not produce PDDL, plans,
+primitive commands, or rail commands.
 
 Expert-only rail state remains outside `model_input`. Binary sensors, exact
 Gazebo pose, true shuttle segment, payload identity metadata, and validation
@@ -12,19 +12,19 @@ signals are kept in privileged metadata for audit and evaluation.
 ## Current Pipeline
 
 ```text
-payload_training_cases_expanded_160_speed_sweep.yaml
-  -> case resolver
-  -> symbolic primitive sequence
-  -> schema-v3 event actions
-  -> supervisor safety decoder
-  -> Room 315 rail execution
-  -> dataset recorder
-  -> training_events.jsonl
+TaskGoal
+  -> ObservedState / visual facts
+  -> fused planner state
+  -> PlanSys2 problem and plan
+  -> one primitive command
+  -> supervisor safety gate
+  -> execute, re-observe, verify, and replan
 ```
 
-The model-facing output is a schema-v3 `action_vector` or an equivalent
-primitive JSON command. The supervisor validates every proposal before any rail
-command is published.
+The model-facing dataset mode is `visual_state`. Its model input contains only
+declared overhead camera references. Oracle labels for shuttle bbox/location,
+identity, loaded/empty state, visible switch state, obstacles, confidence, and
+schema/calibration versions are stored separately for training and evaluation.
 
 ## Case Matrix
 
@@ -46,6 +46,7 @@ ros2 run mfja_robot_control_config room_315_vla_event_extractor.py \
   --output meta/training_events.jsonl
 ```
 
-The primary boundary to preserve is simple: model input receives only language,
-overhead images, last command, and observable state. All expert routing facts
-remain outside the model input.
+The primary boundary to preserve is simple: visual models receive only declared
+visual inputs and emit visual facts. Trusted device/simulator facts may be used
+for safety, oracle fixtures, and evaluation, but they remain outside learned
+inputs and outside learned outputs.

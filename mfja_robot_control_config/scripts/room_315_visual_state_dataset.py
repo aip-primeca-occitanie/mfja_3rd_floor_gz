@@ -1,23 +1,32 @@
 #!/usr/bin/env python3
 """Shared helpers for the Room 315 visual-state dataset mode.
 
-The visual-state mode is deliberately separate from the legacy 24-value
-direct-action dataset. Model inputs are camera references only; oracle labels
-are loaded from a physically separate JSONL file or from an explicit oracle
-label field before split-time sanitisation.
+Model inputs are camera references only; oracle labels are loaded from a
+physically separate JSONL file or from an explicit oracle label field before
+split-time sanitisation.
 """
 
 import hashlib
 import json
 import math
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-DATASET_MODE_LEGACY_ACTION = 'legacy_action'
+from PIL import Image
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from room_315_json_io import iter_jsonl_objects
+
 DATASET_MODE_VISUAL_STATE = 'visual_state'
+DATASET_MODES = (DATASET_MODE_VISUAL_STATE,)
 VISUAL_STATE_SCHEMA_VERSION = 'room315.visual_state.v1'
 VISUAL_LABEL_SUFFIX = '_visual_labels.jsonl'
+VISUAL_STATE_NAMES = ('visual_state.constant_zero_no_privileged_state',)
 VISUAL_MODEL_INPUT_KEYS = {'overhead_images'}
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 SHUTTLE_LABEL_FIELDS = {
@@ -57,22 +66,13 @@ def pretty_json(data: Any) -> str:
 
 
 def iter_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with path.expanduser().open('r', encoding='utf-8') as stream:
-        for line_number, line in enumerate(stream, start=1):
-            text = line.strip()
-            if not text:
-                continue
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError as exc:
-                raise VisualStateValidationError(
-                    f'{path}:{line_number}: invalid JSONL row: {exc}'
-                ) from exc
-            if not isinstance(parsed, dict):
-                raise VisualStateValidationError(f'{path}:{line_number}: row must be an object')
-            rows.append(parsed)
-    return rows
+    return list(
+        iter_jsonl_objects(
+            path,
+            error_type=VisualStateValidationError,
+            require_object=True,
+        )
+    )
 
 
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -89,6 +89,46 @@ def rows_fingerprint(rows: list[dict[str, Any]]) -> str:
         digest.update(payload.encode('utf-8'))
         digest.update(b'\n')
     return digest.hexdigest()
+
+
+def file_fingerprint(path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    size = 0
+    lines = 0
+    with path.expanduser().open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+            size += len(chunk)
+            lines += chunk.count(b'\n')
+    return {
+        'path': str(path),
+        'sha256': digest.hexdigest(),
+        'bytes': size,
+        'newline_count': lines,
+    }
+
+
+def resolve_image_path(dataset_root: Path, image_ref: str) -> Path:
+    path = Path(str(image_ref)).expanduser()
+    return path if path.is_absolute() else dataset_root / path
+
+
+def missing_image_error(
+    row: dict[str, Any],
+    image_key: str,
+    reason: str,
+    ref: str = '',
+) -> str:
+    episode_id = str(row.get('episode_id') or '')
+    detail = f' ({ref})' if ref else ''
+    return f'episode {episode_id!r} image {image_key!r} is {reason}{detail}'
+
+
+def safe_int(raw: Any, fallback: int = 0) -> int:
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return fallback
 
 
 def sample_id_for_row(row: dict[str, Any], row_index: int | None = None) -> str:
@@ -313,6 +353,112 @@ def visual_model_input_image_refs(row: dict[str, Any]) -> dict[str, str]:
         str(key): str(value)
         for key, value in model_input['overhead_images'].items()
         if value
+    }
+
+
+def raw_visual_image_refs(row: dict[str, Any]) -> dict[str, str]:
+    model_input = row.get('model_input')
+    if not isinstance(model_input, dict):
+        return {}
+    overhead_images = model_input.get('overhead_images')
+    if not isinstance(overhead_images, dict):
+        return {}
+    return {
+        str(key): str(value)
+        for key, value in overhead_images.items()
+        if value
+    }
+
+
+def image_integrity_report(
+    rows: list[dict[str, Any]],
+    dataset_root: Path,
+    *,
+    split_name: str = '',
+    operation: str = 'conversion',
+    allow_blank_images: bool = False,
+    dataset_mode: str = DATASET_MODE_VISUAL_STATE,
+) -> dict[str, Any]:
+    if dataset_mode not in DATASET_MODES:
+        raise ValueError(f'unknown dataset mode: {dataset_mode}')
+    per_camera = {
+        camera: {
+            'referenced_rows': 0,
+            'missing_ref_rows': 0,
+            'existing_files': 0,
+            'missing_files': 0,
+            'unreadable_files': 0,
+            'blank_substitutions': 0,
+        }
+        for camera in IMAGE_KEYS
+    }
+    complete_rows = 0
+    problems: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        refs = visual_model_input_image_refs(row)
+        row_complete = True
+        for camera in IMAGE_KEYS:
+            ref = refs.get(camera, '')
+            stats = per_camera[camera]
+            if not ref:
+                stats['missing_ref_rows'] += 1
+                row_complete = False
+                if allow_blank_images:
+                    stats['blank_substitutions'] += 1
+                reason = 'missing_ref'
+            else:
+                stats['referenced_rows'] += 1
+                image_path = resolve_image_path(dataset_root, ref)
+                if not image_path.exists():
+                    stats['missing_files'] += 1
+                    row_complete = False
+                    if allow_blank_images:
+                        stats['blank_substitutions'] += 1
+                    reason = 'missing_file'
+                else:
+                    try:
+                        with Image.open(image_path) as image:
+                            image.verify()
+                        stats['existing_files'] += 1
+                        continue
+                    except Exception:
+                        stats['unreadable_files'] += 1
+                        row_complete = False
+                        if allow_blank_images:
+                            stats['blank_substitutions'] += 1
+                        reason = 'unreadable_file'
+            if len(problems) < 20:
+                problem = {
+                    'row_index': row_index,
+                    'episode_id': str(row.get('episode_id') or ''),
+                    'camera': camera,
+                    'reason': reason,
+                }
+                if ref:
+                    problem['ref'] = ref
+                problems.append(problem)
+        if row_complete:
+            complete_rows += 1
+    problem_count = sum(
+        stats['missing_ref_rows'] + stats['missing_files'] + stats['unreadable_files']
+        for stats in per_camera.values()
+    )
+    if problem_count and not allow_blank_images:
+        prefix = f'{split_name} ' if split_name else ''
+        first = problems[0] if problems else {}
+        raise FileNotFoundError(
+            f'{prefix}image integrity check failed before {operation}: {first}'
+        )
+    total = len(rows)
+    return {
+        'required_cameras': list(IMAGE_KEYS),
+        'total_rows': total,
+        'complete_rows': complete_rows,
+        'complete_row_rate': round(complete_rows / max(1, total), 6),
+        'allow_blank_images': bool(allow_blank_images),
+        'debug_blank_image_mode': bool(allow_blank_images),
+        'per_camera': per_camera,
+        'problem_examples': problems,
     }
 
 

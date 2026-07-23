@@ -45,29 +45,6 @@ def generate_launch_description():
         }],
     )
 
-    real_vla_agent = Node(
-        package='mfja_robot_control_config',
-        executable='room_315_real_vla_agent.py',
-        name='room_315_real_vla_agent',
-        output='screen',
-        condition=IfCondition(LaunchConfiguration('enable_real_vla_agent')),
-        parameters=[{
-            'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'provider': LaunchConfiguration('vla_agent_provider'),
-            'user_goal_topic': LaunchConfiguration('user_goal_topic'),
-            'image_topic': LaunchConfiguration('image_topic'),
-            'right_image_topic': LaunchConfiguration('right_image_topic'),
-            'left_image_topic': LaunchConfiguration('left_image_topic'),
-            'status_topic': LaunchConfiguration('status_topic'),
-            'command_topic': LaunchConfiguration('command_topic'),
-            'agent_status_topic': LaunchConfiguration('agent_status_topic'),
-
-            'http_endpoint': LaunchConfiguration('vla_agent_http_endpoint'),
-            'decision_period_s': LaunchConfiguration('vla_agent_decision_period_s'),
-            'request_timeout_s': LaunchConfiguration('vla_agent_request_timeout_s'),
-        }],
-    )
-
     dataset_recorder = Node(
         package='mfja_robot_control_config',
         executable='room_315_vla_dataset_recorder.py',
@@ -110,36 +87,10 @@ def generate_launch_description():
             description='Start the Room 315 VLA action supervisor.',
         ),
         DeclareLaunchArgument(
-            'enable_real_vla_agent',
-            default_value='false',
-            choices=['true', 'false'],
-            description='Start the optional model-facing VLA agent.',
-        ),
-        DeclareLaunchArgument(
             'enable_dataset_recorder',
             default_value='false',
             choices=['true', 'false'],
-            description='Record Room 315 VLA episodes for SmolVLA/LeRobot fine-tuning.',
-        ),
-        DeclareLaunchArgument(
-            'vla_agent_provider',
-            default_value='http',
-            description='VLA agent provider (only http is supported now).',
-        ),
-        DeclareLaunchArgument(
-            'vla_agent_http_endpoint',
-            default_value='',
-            description='HTTP endpoint for provider:=http.',
-        ),
-        DeclareLaunchArgument(
-            'vla_agent_decision_period_s',
-            default_value='0.5',
-            description='How often the VLA agent checks for new user goals.',
-        ),
-        DeclareLaunchArgument(
-            'vla_agent_request_timeout_s',
-            default_value='20.0',
-            description='Timeout in seconds for external VLA provider requests.',
+            description='Record Room 315 visual-state episodes for LeRobot conversion.',
         ),
         DeclareLaunchArgument(
             'config_path',
@@ -149,7 +100,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'command_topic',
             default_value='/room_315/vla/command',
-            description='std_msgs/String command input for text or JSON VLA actions.',
+            description='std_msgs/String primitive-command JSON input for the supervisor.',
         ),
         DeclareLaunchArgument(
             'status_topic',
@@ -160,11 +111,6 @@ def generate_launch_description():
             'user_goal_topic',
             default_value='/room_315/vla/user_goal',
             description='std_msgs/String high-level goal input for the VLA agent.',
-        ),
-        DeclareLaunchArgument(
-            'agent_status_topic',
-            default_value='/room_315/vla/agent_status',
-            description='std_msgs/String JSON status output from the VLA agent.',
         ),
         DeclareLaunchArgument(
             'episode_control_topic',
@@ -178,8 +124,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'dataset_dir',
-            default_value='~/.ros/room315_vla_datasets/smolvla_demo',
-            description='Output directory for recorded VLA demonstrations.',
+            default_value='~/.ros/room315_visual_state_datasets/demo',
+            description='Output directory for recorded Room 315 visual-state demonstrations.',
         ),
         DeclareLaunchArgument(
             'dataset_sample_period_s',
@@ -200,7 +146,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'image_topic',
             default_value='',
-            description='Optional legacy primary VLA image topic. Empty disables it.',
+            description='Optional primary image topic. Empty disables it.',
         ),
         DeclareLaunchArgument(
             'right_image_topic',
@@ -215,7 +161,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'camera_info_topic',
             default_value='',
-            description='Optional legacy primary VLA camera info topic. Empty disables it.',
+            description='Optional primary camera info topic. Empty disables it.',
         ),
         DeclareLaunchArgument(
             'right_camera_info_topic',
@@ -229,6 +175,5 @@ def generate_launch_description():
         ),
         camera_bridge,
         supervisor,
-        real_vla_agent,
         dataset_recorder,
     ])

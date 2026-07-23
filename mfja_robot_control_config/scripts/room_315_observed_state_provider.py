@@ -75,7 +75,7 @@ class OracleObservedStateProvider(ObservedStateProvider):
         self.state_id = state_id
 
     def observe(self, *, timestamp: float | None = None) -> ObservedState:
-        observed_at = _timestamp_or_zero(timestamp)
+        observed_at = timestamp_or_zero(timestamp)
         facts = _facts_from_status_snapshot(
             self.status_snapshot,
             source='oracle',
@@ -117,7 +117,7 @@ class FusedObservedStateProvider(ObservedStateProvider):
         self.state_id = state_id
 
     def observe(self, *, timestamp: float | None = None) -> ObservedState:
-        observed_at = _timestamp_or_zero(timestamp)
+        observed_at = timestamp_or_zero(timestamp)
         visual_inputs = [_ensure_visual_fact(fact) for fact in self.visual_facts]
         trusted_facts = _facts_from_status_snapshot(
             self.trusted_status_snapshot,
@@ -628,14 +628,14 @@ def _source_timestamp(
     source_timestamps: dict[str, float],
 ) -> float:
     if source in source_timestamps:
-        return _timestamp_or_zero(source_timestamps[source])
+        return timestamp_or_zero(source_timestamps[source])
     for key in ('observed_at', 'timestamp', 'stamp', 'updated_at'):
         if key in status:
-            return _timestamp_or_zero(status.get(key))
+            return timestamp_or_zero(status.get(key))
     return observed_at
 
 
-def _timestamp_or_zero(value: Any) -> float:
+def timestamp_or_zero(value: Any) -> float:
     if value is None:
         return 0.0
     try:

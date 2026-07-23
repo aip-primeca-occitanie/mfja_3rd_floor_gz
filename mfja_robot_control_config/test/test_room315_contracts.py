@@ -106,12 +106,6 @@ def test_contracts_round_trip_all_closed_loop_boundaries():
         },
         source='plan_translator',
         timestamp=11.1,
-        legacy_action_vector={
-            'baseline_id': contracts.LEGACY_DIRECT_ACTION_BASELINE,
-            'schema_version': contracts.ACTION_VECTOR_SCHEMA_VERSION,
-            'enabled': False,
-            'vector': [0.0] * 24,
-        },
     )
     result = contracts.StepResult(
         result_id='result-1',
@@ -272,44 +266,26 @@ def test_privileged_data_is_rejected_from_planner_and_command_payloads():
         )
 
 
-def test_schema_v3_action_vectors_are_disabled_legacy_baseline_only():
+def test_removed_direct_control_fields_are_rejected_from_primitive_commands():
     contracts = _load_contracts()
-    good_command = contracts.PrimitiveCommand(
+    command = contracts.PrimitiveCommand(
         command_id='cmd-legacy',
         plan_step_id='step-1',
         primitive='WAIT',
         parameters={'duration_s': 0.25},
         source='plan_translator',
         timestamp=4.0,
-        legacy_action_vector={
-            'baseline_id': contracts.LEGACY_DIRECT_ACTION_BASELINE,
-            'schema_version': contracts.ACTION_VECTOR_SCHEMA_VERSION,
-            'enabled': False,
-            'vector': [0.0] * 24,
-        },
     )
-    assert good_command.legacy_action_vector['enabled'] is False
 
-    with pytest.raises(contracts.ContractValidationError, match='disabled'):
-        contracts.PrimitiveCommand(
-            command_id='cmd-enabled-legacy',
-            plan_step_id='step-1',
-            primitive='WAIT',
-            parameters={'duration_s': 0.25},
-            source='plan_translator',
-            timestamp=4.1,
-            legacy_action_vector={
-                'baseline_id': contracts.LEGACY_DIRECT_ACTION_BASELINE,
-                'schema_version': contracts.ACTION_VECTOR_SCHEMA_VERSION,
-                'enabled': True,
-                'vector': [0.0] * 24,
-            },
-        )
-
-    payload = good_command.to_dict()
-    payload['action_vector_schema_version'] = contracts.ACTION_VECTOR_SCHEMA_VERSION
+    payload = command.to_dict()
+    payload['action_vector_schema_version'] = 3
     payload['action_vector'] = [0.0] * 24
-    with pytest.raises(contracts.ContractValidationError, match='legacy_action_vector'):
+    with pytest.raises(contracts.ContractValidationError, match='removed direct-control'):
+        contracts.PrimitiveCommand.from_dict(payload)
+
+    payload = command.to_dict()
+    payload['unexpected_control_payload'] = {'enabled': False}
+    with pytest.raises(contracts.ContractValidationError, match='unsupported fields'):
         contracts.PrimitiveCommand.from_dict(payload)
 
 

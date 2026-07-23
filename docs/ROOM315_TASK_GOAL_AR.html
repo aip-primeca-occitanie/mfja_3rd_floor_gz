@@ -388,7 +388,7 @@
         </div>
         <div class="box">
           <h3>ماذا لا يخرج؟</h3>
-          <p>لا يخرج <code>PrimitiveCommand</code>، لا يخرج <code>PDDL</code>، لا يخرج action vector، ولا يرسل أمر حركة مباشر.</p>
+          <p>لا يخرج <code>PrimitiveCommand</code>، لا يخرج <code>PDDL</code>، ولا يرسل أمر حركة مباشر.</p>
         </div>
       </div>
     </section>
@@ -489,11 +489,11 @@
           </tr>
           <tr>
             <td>الموديل قد يختار shuttle محدد مثل <code>R3</code> بدون أن يذكره المستخدم.</td>
-            <td>نحذف <code>target_shuttle</code> إذا لم يكن مذكوراً صراحة أو مؤكداً من الحوار.</td>
+            <td>يبقى <code>target_shuttle</code> فارغاً إذا لم يكن مذكوراً صراحة أو مؤكداً من الحوار.</td>
           </tr>
           <tr>
             <td>الموديل قد يخرج plan أو command مباشر.</td>
-            <td>الـ schema ترفض أي PDDL أو primitive command أو action vector.</td>
+            <td>الـ schema ترفض أي PDDL أو primitive command أو rail command.</td>
           </tr>
         </tbody>
       </table>
@@ -592,7 +592,7 @@
     <section id="contracts">
       <h2>العقود: TaskGoalDraft مقابل TaskGoal</h2>
       <p>
-        أضفنا فصل واضح بين المسودة والهدف النهائي. هذا مهم لأن كلام المستخدم قد يكون ناقصاً.
+        يوجد فصل واضح بين المسودة والهدف النهائي. هذا مهم لأن كلام المستخدم قد يكون ناقصاً.
         مثلاً إذا قال <code>send loaded shuttle to slot 1</code> فهو لم يحدد جهة rail.
       </p>
       <table>
@@ -674,7 +674,7 @@
 
       <div class="note danger">
         ممنوع على الموديل إخراج PDDL، plan، primitive command، rail command،
-        action vector، أو safety constraints. أي حقل من هذه الأنواع يتم رفضه.
+        rail command، أو safety constraints. أي حقل من هذه الأنواع يتم رفضه.
       </div>
 
       <h3>منع الاختراع أو التخمين</h3>
@@ -696,7 +696,7 @@
           </tr>
           <tr>
             <td>الموديل اقترح shuttle محدد مثل R3 بدون أن يذكره المستخدم</td>
-            <td>يتم حذف <code>target_shuttle</code> من المسودة.</td>
+            <td>يبقى <code>target_shuttle</code> فارغاً في المسودة.</td>
           </tr>
           <tr>
             <td>الموديل اقترح right أو left بدون دليل</td>
@@ -744,7 +744,7 @@
 
       <h3>إلغاء التأكيد</h3>
       <p>
-        أضفنا خيار <code>--auto-confirm</code> لتجربة أسرع. هذا لا يلغي أسئلة المعلومات الناقصة،
+        يوجد خيار <code>--auto-confirm</code> لتجربة أسرع. هذا لا يلغي أسئلة المعلومات الناقصة،
         لكنه يلغي سؤال <code>Reply yes to finalize</code> عندما يكون الهدف واضحاً.
       </p>
       <div class="note warn">
@@ -811,8 +811,8 @@
         </tbody>
       </table>
       <div class="note ok">
-        أضفنا أيضاً حماية من تسريب الهدف السابق: إذا كان الأمر السابق إلى slot 2 ثم قلت
-        <code>kuka station</code>، لا يحمل النظام slot 2. سيستخدم <code>slot 3</code>
+        توجد حماية من تسريب سياق هدف محفوظ: إذا كان السياق إلى slot 2 ثم قلت
+        <code>kuka station</code>، لا يحمل النظام slot 2 تلقائياً. سيستخدم <code>slot 3</code>
         لأنه أول slot مرتبط بـ KUKA.
       </div>
     </section>
@@ -820,7 +820,7 @@
     <section id="python-files">
       <h2>شرح ملفات Python الخاصة بالـ TaskGoal</h2>
       <p>
-        هذا القسم يشرح كل ملف Python أضفناه أو عدلناه في مسار فهم الـ TaskGoal.
+        هذا القسم يشرح كل ملف Python مسؤول في مسار فهم الـ TaskGoal.
         الفكرة أن كل ملف له مسؤولية محددة، حتى يكون النظام قابلاً للاختبار والشرح
         وليس كتلة واحدة غامضة.
       </p>
@@ -881,7 +881,7 @@
               يدير الحوار متعدد الخطوات. إذا كان الهدف ناقصاً يسأل سؤالاً محدداً.
               إذا قال المستخدم <code>right</code> أو <code>left</code> يدمجها مع المسودة
               الحالية. يدعم <code>cancel</code> و <code>restart</code> و <code>help</code>.
-              كما يمنع استخدام السياق القديم إلا عند وجود مرجع واضح مثل
+              كما يمنع استخدام سياق محفوظ إلا عند وجود مرجع واضح مثل
               <code>same shuttle</code> أو <code>there</code>.
             </td>
             <td>لا ينفذ حركة ولا يرسل commands للروبوت.</td>
@@ -908,7 +908,7 @@
           <tr>
             <td><code>room_315_task_goal_builder.py</code></td>
             <td>
-              واجهة توافقية للـ APIs القديمة والداخلية. يوفر <code>build_task_goal()</code>
+              واجهة توافقية للـ APIs الداخلية. يوفر <code>build_task_goal()</code>
               و <code>parse_model_task_goal_json()</code> حتى يبقى الكود الآخر قادراً
               على بناء <code>TaskGoal</code> من نص أو dict أو JSON structured.
             </td>
@@ -985,7 +985,7 @@
             <td>
               يختبر fusion مع الموديل، منع الاختراعات، fallback، الحوار متعدد الخطوات،
               CLI، <code>--auto-confirm</code>، mapping المحطات للـ slots، ومنع تسريب
-              الهدف السابق.
+              سياق الهدف المحفوظ.
             </td>
           </tr>
         </tbody>

@@ -21,10 +21,6 @@ def _load_module():
     return module
 
 
-def _action_value(module, action_vector, field):
-    return action_vector[module.ACTION_VECTOR_FIELDS.index(field)]
-
-
 def test_prepare_switches_translates_to_set_switches_compatible_command():
     translator = _load_module()
 
@@ -45,9 +41,6 @@ def test_prepare_switches_translates_to_set_switches_compatible_command():
     }
     assert translated.event_action['switch_values']['A3'] == 'EXTERIOR'
     assert translated.event_action['target_id'] == 'ALL_SWITCHES'
-    assert _action_value(translator, translated.action_vector, 'primitive_id') == 2.0
-    assert _action_value(translator, translated.action_vector, 'switch_mask_A3') == 1.0
-    assert _action_value(translator, translated.action_vector, 'switch_value_A3') == 1.0
 
 
 def test_prepare_switches_can_target_one_switch():
@@ -71,9 +64,6 @@ def test_prepare_switches_can_target_one_switch():
     }
     assert translated.event_action['switch_values']['A1'] == 'UNCHANGED'
     assert translated.event_action['switch_values']['A3'] == 'INTERIOR'
-    assert _action_value(translator, translated.action_vector, 'switch_mask_A3') == 1.0
-    assert _action_value(translator, translated.action_vector, 'switch_mask_A4') == 0.0
-    assert _action_value(translator, translated.action_vector, 'switch_value_A3') == 2.0
 
 
 def test_open_stoppers_translates_to_set_stoppers_compatible_command():
@@ -95,9 +85,6 @@ def test_open_stoppers_translates_to_set_stoppers_compatible_command():
     }
     assert translated.event_action['stopper_values']['A4'] == 'open'
     assert translated.event_action['target_id'] == 'ALL_STOPPERS'
-    assert _action_value(translator, translated.action_vector, 'primitive_id') == 3.0
-    assert _action_value(translator, translated.action_vector, 'stopper_mask_A4') == 1.0
-    assert _action_value(translator, translated.action_vector, 'stopper_value_A4') == 1.0
 
 
 def test_set_stoppers_can_close_single_stopper_and_open_the_rest():
@@ -124,9 +111,6 @@ def test_set_stoppers_can_close_single_stopper_and_open_the_rest():
         'A3': 'open',
         'A4': 'closed',
     }
-    assert _action_value(translator, translated.action_vector, 'primitive_id') == 3.0
-    assert _action_value(translator, translated.action_vector, 'target_id') == 4.0
-    assert _action_value(translator, translated.action_vector, 'stopper_value_A4') == 2.0
 
 
 def test_move_shuttle_translates_to_shuttle_on_with_speed():
@@ -150,8 +134,6 @@ def test_move_shuttle_translates_to_shuttle_on_with_speed():
     assert translated.event_action['shuttle_id'] == 'R1'
     assert translated.event_action['shuttle_index'] == 0
     assert translated.event_action['reason'] == 'shuttle_start'
-    assert _action_value(translator, translated.action_vector, 'primitive_id') == 4.0
-    assert _action_value(translator, translated.action_vector, 'speed_mps') == 0.3
 
 
 def test_move_shuttle_with_payload_selected_identity_maps_to_r2_schema_fields():
@@ -165,7 +147,6 @@ def test_move_shuttle_with_payload_selected_identity_maps_to_r2_schema_fields():
     assert translated.event_action['target_id'] == 'right_shuttle_2'
     assert translated.event_action['shuttle_id'] == 'R2'
     assert translated.event_action['shuttle_index'] == 1
-    assert _action_value(translator, translated.action_vector, 'shuttle_index') == 1.0
 
 
 def test_move_shuttle_preserves_target_stopper_for_guarded_stopper_motion():
@@ -203,7 +184,6 @@ def test_stop_shuttle_translates_to_stop_now():
     assert translated.event_action['shuttle_id'] == 'R1'
     assert translated.event_action['shuttle_index'] == 0
     assert translated.event_action['reason'] == 'shuttle_stop'
-    assert _action_value(translator, translated.action_vector, 'primitive_id') == 5.0
 
 
 def test_finish_task_translates_to_done():
@@ -221,7 +201,6 @@ def test_finish_task_translates_to_done():
     assert translated.event_action['wait_condition'] == 'terminal'
     assert translated.event_action['target_id'] == 'terminal'
     assert translated.event_action['reason'] == 'task_succeeded'
-    assert _action_value(translator, translated.action_vector, 'primitive_id') == 1.0
 
 
 def test_full_high_level_plan_translates_to_ordered_event_sequence():
@@ -249,13 +228,6 @@ def test_full_high_level_plan_translates_to_ordered_event_sequence():
         'SHUTTLE_ON',
         'STOP_NOW',
         'DONE',
-    ]
-    assert [row.action_vector[0] for row in translated] == [
-        translator.PRIMITIVE_IDS['SET_SWITCHES'],
-        translator.PRIMITIVE_IDS['SET_STOPPERS'],
-        translator.PRIMITIVE_IDS['SHUTTLE_ON'],
-        translator.PRIMITIVE_IDS['STOP_NOW'],
-        translator.PRIMITIVE_IDS['DONE'],
     ]
 
 

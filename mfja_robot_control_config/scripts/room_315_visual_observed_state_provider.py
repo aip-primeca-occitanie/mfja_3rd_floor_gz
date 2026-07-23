@@ -34,6 +34,7 @@ from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_observed_state_provider import DEFAULT_SOURCE_PRIORITY
 from room_315_observed_state_provider import FusedObservedStateProvider
 from room_315_observed_state_provider import ObservedStateProvider
+from room_315_observed_state_provider import timestamp_or_zero as _timestamp_or_zero
 
 
 DEFAULT_CALIBRATION_PATH = (
@@ -1054,18 +1055,6 @@ def _normalise_switch_state(value: Any) -> str | None:
     if text in {'i', 'interior', 'internal'}:
         return 'INTERIOR'
     return None
-
-
-def _timestamp_or_zero(value: Any) -> float:
-    if value is None:
-        return 0.0
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return 0.0
-    if not math.isfinite(parsed) or parsed < 0.0:
-        return 0.0
-    return parsed
 
 
 def _optional_float(value: Any) -> float | None:

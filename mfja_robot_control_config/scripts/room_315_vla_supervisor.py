@@ -31,12 +31,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from room_315_multi_shuttle import ACTION_VECTOR_V3_FIELDS as EVENT_ACTION_VECTOR_V3_FIELDS
 from room_315_multi_shuttle import ShuttleRegistry
-from room_315_multi_shuttle import decode_action_v3
 from room_315_multi_shuttle import empty_fleet_safety_metrics
 from room_315_multi_shuttle import fleet_safety_state_from_rails
-from room_315_multi_shuttle import gazebo_entity_name as multi_gazebo_entity_name
 from room_315_multi_shuttle import normalize_fleet_block_id
 from room_315_multi_shuttle import normalize_fleet_slot_id
 from room_315_multi_shuttle import normalize_shuttle_ref
@@ -130,79 +127,6 @@ STOPPER_VALUE_BY_ID = {
     1: '0',
     2: '1',
 }
-EVENT_PRIMITIVE_BY_ID = {
-    0: 'WAIT',
-    1: 'DONE',
-    2: 'SET_SWITCHES',
-    3: 'SET_STOPPERS',
-    4: 'SHUTTLE_ON',
-    5: 'STOP_NOW',
-    6: 'EMERGENCY_STOP',
-}
-EVENT_SIDE_BY_ID = {
-    0: 'right',
-    1: 'left',
-}
-EVENT_WAIT_CONDITION_BY_ID = {
-    0: 'none',
-    1: 'switch_state_match',
-    2: 'stopper_state_match',
-    3: 'shuttle_command_applied',
-    4: 'task_terminal_status',
-    5: 'reserved_legacy_wait_5',
-    6: 'terminal',
-    7: 'target_sensor_active',
-}
-EVENT_TARGET_BY_ID = {
-    0: 'none',
-    1: 'A1',
-    2: 'A2',
-    3: 'A3',
-    4: 'A4',
-    5: 'ALL_SWITCHES',
-    6: 'ALL_STOPPERS',
-    7: 'MULTIPLE_DEVICES',
-    8: 'right_shuttle',
-    9: 'left_shuttle',
-    10: 'reserved_legacy_target_10',
-    11: 'reserved_legacy_target_11',
-    12: 'reserved_legacy_target_12',
-    13: 'reserved_legacy_target_13',
-    14: 'reserved_legacy_target_14',
-    15: 'reserved_legacy_target_15',
-    16: 'reserved_legacy_target_16',
-    17: 'terminal',
-    18: 'DZI1R',
-    19: 'DZI2R',
-    20: 'DZI3R',
-    21: 'DZI4R',
-    22: 'DZI1L',
-    23: 'DZI2L',
-    24: 'DZI3L',
-    25: 'DZI4L',
-    26: 'DA3IR',
-    27: 'DA3IL',
-}
-EVENT_REASON_BY_ID = {
-    0: 'none',
-    1: 'command_event',
-    2: 'reserved_legacy_reason_2',
-    3: 'reserved_legacy_reason_3',
-    4: 'task_succeeded',
-    5: 'task_failed',
-    6: 'episode_stopped',
-    7: 'episode_discarded',
-    8: 'switch_update',
-    9: 'stopper_update',
-    10: 'shuttle_start',
-    11: 'shuttle_stop',
-    12: 'emergency',
-    13: 'unsupported_command',
-}
-EVENT_ACTION_VECTOR_FIELDS = EVENT_ACTION_VECTOR_V3_FIELDS
-
-
-
 def _default_config_path() -> Path:
     try:
         from ament_index_python.packages import get_package_share_directory
@@ -983,8 +907,8 @@ def _safe_int(raw: Any, default: int = 0) -> int:
         return default
 
 
-def _is_action_vector(raw: Any) -> bool:
-    if not isinstance(raw, list) or len(raw) != len(EVENT_ACTION_VECTOR_FIELDS):
+def _looks_like_numeric_vector(raw: Any) -> bool:
+    if not isinstance(raw, list) or not raw:
         return False
     try:
         [float(value) for value in raw]
@@ -993,127 +917,15 @@ def _is_action_vector(raw: Any) -> bool:
     return True
 
 
-def _decode_event_action_vector(action_vector: Any) -> dict[str, Any]:
-    values = [float(value) for value in list(action_vector)]
-    if len(values) != len(EVENT_ACTION_VECTOR_FIELDS):
-        raise ValueError(
-            f'action_vector length {len(values)} does not match schema v3 length '
-            f'{len(EVENT_ACTION_VECTOR_FIELDS)}'
-        )
-    return decode_action_v3(values)
-
-
-def _selected_assignments_from_event_action(
-    event_action: dict[str, Any],
-    *,
-    mask_key: str,
-    value_key: str,
-) -> dict[str, str]:
-    mask = event_action.get(mask_key, {})
-    values = event_action.get(value_key, {})
-    if not isinstance(mask, dict) or not isinstance(values, dict):
-        return {}
-    assignments: dict[str, str] = {}
-    for name in SWITCHES:
-        selected = str(mask.get(name, '')).lower() in {'1', 'true', 'yes', 'on'}
-        if selected:
-            assignments[name] = _clean_token(values.get(name, ''))
-    return assignments
-
-
-def _event_action_to_ros_command(
-    event_action: dict[str, Any],
-    *,
-    default_shuttle_name_by_side: dict[str, str],
-) -> tuple[dict[str, Any] | None, str]:
-    primitive = _clean_token(event_action.get('primitive', '')).upper()
-    side = _strict_side(event_action.get('side', 'right')) or 'right'
-    target_id = _clean_token(event_action.get('target_id', 'none'))
-    wait_condition = _clean_token(event_action.get('wait_condition', 'none'))
-    shuttle_name = _event_action_shuttle_name(
-        event_action,
-        side=side,
-        default_shuttle_name_by_side=default_shuttle_name_by_side,
+def _removed_action_vector_decision(raw: Any) -> dict[str, Any]:
+    return _safety_decision(
+        accepted=False,
+        original_action=raw,
+        reason=(
+            'removed action_vector commands are not supported; production execution '
+            'must use PlanSys2 primitive command JSON'
+        ),
     )
-
-    if primitive in {'WAIT', 'DONE'}:
-        return {'action': 'status'}, ''
-    if primitive == 'EMERGENCY_STOP':
-        return {'action': 'emergency_stop'}, ''
-    if primitive == 'STOP_NOW':
-        return {
-            'action': 'shuttle',
-            'side': side,
-            'shuttle': shuttle_name,
-            'command': 'OFF',
-        }, ''
-    if primitive == 'SHUTTLE_ON':
-        if wait_condition == 'none' or target_id == 'none':
-            return None, 'unsafe shuttle ON: missing wait_condition or target_id'
-        expected_target = f'{side}_shuttle'
-        specific_targets = {
-            f'{side}_shuttle_{index}'
-            for index in range(1, 5)
-        }
-        if target_id not in {expected_target, 'MULTIPLE_DEVICES', *specific_targets}:
-            return None, (
-                f'unsafe shuttle ON: target_id {target_id!r} does not match '
-                f'{expected_target!r}'
-            )
-        try:
-            speed_mps = float(event_action.get('speed_mps', 0.0) or 0.0)
-        except (TypeError, ValueError):
-            speed_mps = 0.0
-        if speed_mps <= 0.0:
-            return None, 'unsafe shuttle ON: speed_mps must be > 0'
-        return {
-            'action': 'shuttle',
-            'side': side,
-            'shuttle': shuttle_name,
-            'command': 'ON',
-            'speed': speed_mps,
-        }, ''
-    if primitive == 'SET_SWITCHES':
-        assignments = _selected_assignments_from_event_action(
-            event_action,
-            mask_key='switch_mask',
-            value_key='switch_values',
-        )
-        if not assignments:
-            return None, 'SET_SWITCHES needs at least one selected switch'
-        return {'action': 'switches', 'side': side, 'switches': assignments}, ''
-    if primitive == 'SET_STOPPERS':
-        assignments = _selected_assignments_from_event_action(
-            event_action,
-            mask_key='stopper_mask',
-            value_key='stopper_values',
-        )
-        if not assignments:
-            return None, 'SET_STOPPERS needs at least one selected stopper'
-        return {'action': 'stoppers', 'side': side, 'stoppers': assignments}, ''
-    return None, f'unsupported primitive {primitive!r}'
-
-
-def _event_action_shuttle_name(
-    event_action: dict[str, Any],
-    *,
-    side: str,
-    default_shuttle_name_by_side: dict[str, str],
-) -> str:
-    spec = normalize_shuttle_ref(
-        event_action.get('shuttle_id') or event_action.get('target_id'),
-        side=side,
-    )
-    if spec is None:
-        try:
-            shuttle_index = int(event_action.get('shuttle_index'))
-        except (TypeError, ValueError):
-            shuttle_index = -1
-        if shuttle_index >= 0:
-            return multi_gazebo_entity_name(side, shuttle_index + 1)
-    if spec is not None:
-        return spec.gazebo_entity_name
-    return default_shuttle_name_by_side.get(side, f'room315_{side}_shuttle_1')
 
 
 def _resolve_shuttle_command_name(raw: str, *, side: str) -> str:
@@ -1121,105 +933,6 @@ def _resolve_shuttle_command_name(raw: str, *, side: str) -> str:
     if spec is not None:
         return spec.gazebo_entity_name
     return _clean_token(raw)
-
-
-def decode_and_validate(
-    action_vector: Any,
-    *,
-    rails: dict[str, Any],
-    emergency_stop: bool,
-    active_tasks: dict[str, dict[str, Any]],
-    slot_sensor_by_side: dict[str, dict[str, str]],
-    default_shuttle_name_by_side: dict[str, str],
-    block_reservations: dict[str, str] | None = None,
-    station_slot_targets: dict[str, str] | None = None,
-    min_headway_blocks: int = 1,
-) -> dict[str, Any]:
-    raw_action = action_vector
-    try:
-        event_action = _decode_event_action_vector(action_vector)
-    except ValueError as exc:
-        return _safety_decision(
-            accepted=False,
-            original_action=raw_action,
-            reason=str(exc),
-        )
-
-    ros_command, reason = _event_action_to_ros_command(
-        event_action,
-        default_shuttle_name_by_side=default_shuttle_name_by_side,
-    )
-    if reason:
-        return _safety_decision(
-            accepted=False,
-            original_action=raw_action,
-            reason=reason,
-        )
-    if ros_command is None:
-        return _safety_decision(
-            accepted=False,
-            original_action=raw_action,
-            reason='action_vector did not decode to a ROS command',
-        )
-
-    primitive = event_action['primitive']
-    side = event_action['side']
-    if primitive == 'SET_SWITCHES':
-        assignments, reason = _canonical_switch_assignments(ros_command.get('switches', {}))
-        if reason:
-            return _safety_decision(accepted=False, original_action=raw_action, reason=reason)
-        expanded = _expanded_device_assignments(assignments)
-        is_transition = _is_all_switch_loop_transition(expanded)
-        assignments_are_noop = _switch_assignments_are_noop(rails, side, expanded)
-        if is_transition and not assignments_are_noop:
-            if _rail_has_moving_shuttle(rails, side):
-                return _safety_decision(
-                    accepted=False,
-                    original_action=raw_action,
-                    reason=f'unsafe loop transition: {side} shuttle must STOP before switching loop mode',
-                )
-            gate = _gate_for_side(side)
-            if not _rail_stopped_at_gate(rails, side, gate):
-                return _safety_decision(
-                    accepted=False,
-                    original_action=raw_action,
-                    reason=(
-                        f'unsafe loop transition: {side} rail must be staged at '
-                        f'side-specific gate {gate} before switching loop mode'
-                    ),
-                )
-        elif not assignments_are_noop:
-            if not _single_gate_switch_change_is_staged(
-                expanded,
-                rails=rails,
-                side=side,
-            ):
-                for switch_name in expanded:
-                    reason = _occupied_guarded_segment_reason(rails, side, switch_name)
-                    if reason:
-                        return _safety_decision(
-                            accepted=False,
-                            original_action=raw_action,
-                            reason=reason,
-                        )
-
-    decision = _decode_room315_vla_action(
-        ros_command,
-        rails=rails,
-        emergency_stop=emergency_stop,
-        active_tasks=active_tasks,
-        slot_sensor_by_side=slot_sensor_by_side,
-        default_shuttle_name_by_side=default_shuttle_name_by_side,
-        block_reservations=block_reservations,
-        station_slot_targets=station_slot_targets,
-        min_headway_blocks=min_headway_blocks,
-    )
-    decision['raw_action'] = raw_action
-    decision['decoded_action'] = event_action
-    decision['executed_action'] = decision.get('corrected_action') if decision.get('accepted') else None
-    decision['illegal_proposal'] = not bool(decision.get('accepted'))
-    decision['rejected_action'] = None if decision.get('accepted') else raw_action
-    return decision
 
 
 def _decode_room315_vla_action(
@@ -1234,12 +947,16 @@ def _decode_room315_vla_action(
     station_slot_targets: dict[str, str] | None = None,
     min_headway_blocks: int = 1,
 ) -> dict[str, Any]:
+    if _looks_like_numeric_vector(command):
+        return _removed_action_vector_decision(command)
     if not isinstance(command, dict):
         return _safety_decision(
             accepted=False,
             original_action=command,
             reason='model action must be a JSON object',
         )
+    if 'action_vector' in command:
+        return _removed_action_vector_decision(command)
 
     action = _normalize_safety_action(command.get('action') or command.get('intent') or command.get('type') or 'status')
     if action == 'snapshot':
@@ -1977,35 +1694,12 @@ class Room315VlaSupervisor(Node):
         return {side: self._default_shuttle_name(side) for side in SIDES}
 
     def _decode_and_record_safety(self, command: dict[str, Any] | list[Any]) -> dict[str, Any]:
-        if _is_action_vector(command):
-            decision = self.decode_and_validate(command)
+        if isinstance(command, dict) and 'action_vector' in command:
+            decision = _removed_action_vector_decision(command)
             self._record_safety_decision(decision)
             return decision
-        if isinstance(command, dict) and 'action_vector' in command:
-            target_stopper = (
-                command.get('target_stopper')
-                or command.get('stopper_target')
-                or command.get('target')
-            )
-            if (
-                str(command.get('action') or '').casefold() == 'shuttle'
-                and str(command.get('command') or '').upper() == 'ON'
-                and target_stopper
-            ):
-                command_for_safety = dict(command)
-                raw_action = command_for_safety.pop('action_vector')
-                decision = self._safety_decode_command(command_for_safety)
-                decision['raw_action'] = raw_action
-                decision['executed_action'] = (
-                    decision.get('corrected_action') if decision.get('accepted') else None
-                )
-                decision['illegal_proposal'] = not bool(decision.get('accepted'))
-            else:
-                decision = self.decode_and_validate(command.get('action_vector'))
-                decision['raw_action'] = command.get('action_vector')
-            decision['original_action'] = command
-            if not decision.get('accepted'):
-                decision['rejected_action'] = command.get('action_vector')
+        if _looks_like_numeric_vector(command):
+            decision = _removed_action_vector_decision(command)
             self._record_safety_decision(decision)
             return decision
         if isinstance(command, list):
@@ -2040,24 +1734,11 @@ class Room315VlaSupervisor(Node):
         self._record_safety_decision(decision)
         return decision
 
-    def decode_and_validate(self, action_vector: Any) -> dict[str, Any]:
-        return decode_and_validate(
-            action_vector,
-            rails=self.rails,
-            emergency_stop=self.emergency_stop,
-            active_tasks=self.active_tasks,
-            slot_sensor_by_side=self.slot_sensor_by_side,
-            default_shuttle_name_by_side=self._default_shuttle_names_by_side(),
-            block_reservations=getattr(self, 'block_reservations', {}),
-            station_slot_targets=getattr(self, 'station_slot_targets', {}),
-            min_headway_blocks=getattr(self, 'min_headway_blocks', 1),
-        )
-
     def _safety_decode_command(self, command: Any) -> dict[str, Any]:
-        if _is_action_vector(command):
-            return self.decode_and_validate(command)
         if isinstance(command, dict) and 'action_vector' in command:
-            return self.decode_and_validate(command.get('action_vector'))
+            return _removed_action_vector_decision(command)
+        if _looks_like_numeric_vector(command):
+            return _removed_action_vector_decision(command)
         return _decode_room315_vla_action(
             command,
             rails=self.rails,

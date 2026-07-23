@@ -296,7 +296,7 @@ def test_event_extractor_rebuilds_previous_command_and_ignores_leaking_input(tmp
             'auxiliary_targets': {'switch_states': {'right': {'A3': 'EXTERIOR'}}},
             'symbolic_next_action': {'action': action['primitive']},
             'action': action,
-            'action_vector': [float(index), float(index + 1)],
+            'rail_command': {'action': 'shuttle', 'command': 'ON'},
         })
     (episode_dir / 'events.jsonl').write_text(
         ''.join(json.dumps(row) + '\n' for row in leaking_rows),
@@ -323,10 +323,7 @@ def test_event_extractor_rebuilds_previous_command_and_ignores_leaking_input(tmp
         actions[4],
     ]
     assert [row['action'] for row in rows] == actions
-    assert [row['action_vector'] for row in rows] == [
-        [float(index), float(index + 1)]
-        for index in range(len(actions))
-    ]
+    assert all('rail_command' not in row for row in rows)
     for row in rows:
         assert row['model_input']['last_command'] != row['action']
         assert set(row['model_input']) == {

@@ -1,7 +1,7 @@
 schema_version: 1
 description: Active Room 315 payload training cases. The current training
   matrix contains 160 validated speed-sweep cases with distinct commanded
-  shuttle speeds to broaden timing, image-frame, and action-vector coverage.
+  shuttle speeds to broaden timing, image-frame, and visual-state coverage.
 review_gate:
   training_export_default: validated_batch_dataset
   bad_cases_action: report_case_number_and_fix_case_definition

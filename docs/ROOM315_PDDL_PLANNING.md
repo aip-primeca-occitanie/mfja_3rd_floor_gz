@@ -10,7 +10,7 @@ mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_16
 Each case declares the side, target slot, loaded shuttle candidates, starting
 slots, optional blocker-clearance strategy, launch parameters, and expected
 selected shuttle. The scenario generator resolves one case into symbolic steps,
-primitive commands, expected event targets, and schema-v3 action vectors.
+primitive commands, expected event targets, and planner provenance.
 
 ## Dry Run
 
@@ -76,7 +76,7 @@ balanced extension cases. The extension explicitly covers 4+4 fleets,
 loaded/empty shuttle selection, blockers, occupied targets, unknown positions,
 sensor dropout, obstacles, inspection, and simultaneous requests.
 
-Comparison reports should keep `oracle_plansys2`, `frozen_visual_plansys2`,
-`lora_visual_plansys2`, and `legacy_direct_action_smolvla` in separate rows, and
-should keep Gazebo planning evidence separate from real-image perception
-claims. See [ROOM315_BENCHMARK_RUNBOOK.md](ROOM315_BENCHMARK_RUNBOOK.md).
+Comparison reports should keep `oracle_plansys2`, `frozen_visual_plansys2`, and
+`lora_visual_plansys2` in separate rows, and should keep Gazebo planning
+evidence separate from real-image perception claims. See
+[ROOM315_BENCHMARK_RUNBOOK.md](ROOM315_BENCHMARK_RUNBOOK.md).

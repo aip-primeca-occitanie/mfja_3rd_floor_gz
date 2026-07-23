@@ -37,29 +37,21 @@ from room_315_task_goal_parsers import StructuredFormParser
 from room_315_task_goal_parsers import parse_task_goal_draft
 from room_315_task_goal_schema import PAYLOAD_FILTERS
 from room_315_task_goal_schema import SELECTION_STRATEGIES
+from room_315_task_goal_schema import GOAL_TYPES
+from room_315_task_goal_schema import SLOTS
+from room_315_task_goal_schema import STATIONS_BY_SIDE
+from room_315_task_goal_schema import STATION_ALIASES
 from room_315_task_goal_schema import TASK_GOAL_DRAFT_CONTRACT_TYPE
 from room_315_task_goal_schema import TaskGoalDraft
+from room_315_task_goal_schema import optional_text as _optional_text
+from room_315_task_goal_schema import slug_text as _slug_text
 from room_315_task_goal_schema import strict_model_draft_from_json
 from room_315_task_goal_validation import Room315DomainValidator
 
 
-SLOTS = ('1', '2', '3', '4')
 SELECTIONS = ('loaded', 'empty', 'nearest', 'explicit')
 SELECTION_STRATEGIES_COMPAT = SELECTION_STRATEGIES
 PAYLOAD_FILTERS_COMPAT = PAYLOAD_FILTERS
-GOAL_TYPES = ('transport', 'inspection')
-STATIONS_BY_SIDE = {
-    'right': ('yaskawa', 'staubli'),
-    'left': ('yaskawa', 'kuka'),
-}
-STATION_ALIASES = {
-    'yaskawa': 'yaskawa',
-    'yaskawa_station': 'yaskawa',
-    'staubli': 'staubli',
-    'staubli_station': 'staubli',
-    'kuka': 'kuka',
-    'kuka_station': 'kuka',
-}
 MODEL_ALLOWED_TOP_LEVEL_KEYS = frozenset({
     'schema_version',
     'contract_type',
@@ -1083,16 +1075,6 @@ def _slot_symbol(value: Any) -> str:
     elif text.startswith('slot'):
         text = text.removeprefix('slot')
     return text if text in SLOTS else ''
-
-
-def _slug_text(value: Any) -> str:
-    return re.sub(r'[^a-z0-9_]+', '_', str(value or '').strip().casefold()).strip('_')
-
-
-def _optional_text(value: Any) -> str:
-    if value is None:
-        return ''
-    return str(value).strip()
 
 
 __all__ = [

@@ -1480,10 +1480,11 @@ def test_generated_plan_includes_primitive_commands():
     ]
     assert scenario['primitive_commands'][2]['command'] == 'ON'
     assert scenario['primitive_commands'][3]['command'] == 'OFF'
-    assert len(scenario['action_vectors']) == len(scenario['expected_event_targets'])
+    assert len(scenario['primitive_commands']) == len(scenario['expected_event_targets'])
+    assert 'action_vectors' not in scenario
 
 
-def test_plansys_domain_order_plan_generates_primitive_commands_and_vectors():
+def test_plansys_domain_order_plan_generates_primitive_commands_and_event_targets():
     generator = _load_module()
     backend = generator.PlanSysPlannerBackend(
         planner_client=FakePlanSysClient(_domain_order_right_plan())
@@ -1510,7 +1511,7 @@ def test_plansys_domain_order_plan_generates_primitive_commands_and_vectors():
         'STOP_NOW',
         'DONE',
     ]
-    assert scenario['action_vectors'][2][0] == 4.0
+    assert scenario['expected_event_targets'][2]['primitive'] == 'SHUTTLE_ON'
 
 
 def test_dry_run_imports_ros_lazily_and_can_use_mocked_plansys():
@@ -2200,9 +2201,8 @@ def test_execute_mode_publishes_commands_in_plan_order():
         'shuttle',
         'shuttle',
     ]
-    assert all('action_vector' in message for message in transport.command_messages)
+    assert all('action_vector' not in message for message in transport.command_messages)
     assert transport.command_messages[-1]['action'] == 'DONE'
-    assert 'action_vector' in transport.command_messages[-1]
     assert [message['plan_step_index'] for message in transport.command_messages] == [0, 1, 2, 3, 4]
     assert transport.command_messages[0]['planning_source'] == 'pddl'
     assert transport.command_messages[2]['command'] == 'ON'

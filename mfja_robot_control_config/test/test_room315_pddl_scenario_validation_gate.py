@@ -220,14 +220,14 @@ def test_unsatisfied_final_goal_is_not_approved():
     assert validation['final_goal_satisfied'] is False
 
 
-def test_invalid_action_vector_is_not_approved():
+def test_removed_action_vectors_are_not_approved():
     scenario = copy.deepcopy(_scenario())
-    scenario['action_vectors'][0] = [0.0] * 22
+    scenario['action_vectors'] = [[0.0] * 24]
 
     validation = _approved_validation(scenario)
 
     assert validation['approved_for_training'] is False
-    assert 'action_vector at index 0 length 22' in validation['failure_reason']
+    assert 'removed action_vectors are no longer supported' in validation['failure_reason']
 
 
 def test_multi_shuttle_movement_without_identity_is_not_approved():
@@ -236,7 +236,6 @@ def test_multi_shuttle_movement_without_identity_is_not_approved():
     scenario['primitive_commands'][2]['shuttle'] = 'right_shuttle'
     scenario['primitive_commands'][2].pop('shuttle_id', None)
     scenario['primitive_commands'][2].pop('shuttle_index', None)
-    scenario['action_vectors'][2][2] = -1.0
 
     validation = _approved_validation(scenario, multi_shuttle_active=True)
 

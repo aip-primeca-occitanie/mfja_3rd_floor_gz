@@ -186,6 +186,10 @@ def test_visual_debug_color_launch_argument_is_threaded_to_room315_nodes():
     ]
     for path in files:
         text = path.read_text(encoding='utf-8')
+        if path.parent == BRINGUP_LAUNCH_DIR:
+            text += (
+                BRINGUP_LAUNCH_DIR / 'room_315_floor_common.py'
+            ).read_text(encoding='utf-8')
         assert 'visual_debug_colors' in text or 'room315_visual_debug_colors' in text
 
 
@@ -197,6 +201,10 @@ def test_room315_sensor_and_visible_pose_rates_are_video_synchronized():
     ]
     for path in launch_files:
         text = path.read_text(encoding='utf-8')
+        if path.parent == BRINGUP_LAUNCH_DIR:
+            text += (
+                BRINGUP_LAUNCH_DIR / 'room_315_floor_common.py'
+            ).read_text(encoding='utf-8')
         assert 'sync_sensor_feedback_to_motion_tick' in text
         assert 'gazebo_set_pose_rate_hz' in text
         assert 'sensor_marker_visual_hold_s' in text

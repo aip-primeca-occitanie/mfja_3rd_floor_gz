@@ -16,24 +16,11 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from room_315_pddl_validation_gate import load_validation_result
 from room_315_pddl_validation_gate import validation_approves_training
+from room_315_json_io import iter_jsonl_objects as iter_jsonl
 
 
 def _json_dumps(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
-
-
-def iter_jsonl(path: Path):
-    with path.open('r', encoding='utf-8') as stream:
-        for line_number, line in enumerate(stream, start=1):
-            text = line.strip()
-            if not text:
-                continue
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f'{path}:{line_number}: invalid JSONL row: {exc}') from exc
-            if isinstance(parsed, dict):
-                yield parsed
 
 
 def event_files_from_input(input_path: Path | str) -> tuple[list[Path], Path]:

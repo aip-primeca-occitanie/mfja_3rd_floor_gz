@@ -3,8 +3,8 @@
 Room 315 task-goal understanding is an offline, English-only front end for the
 closed-loop symbolic executive. Its production responsibility is intentionally
 narrow: convert a human or local semantic-model request into a validated,
-immutable `TaskGoal`. It never produces PDDL, plans, action vectors, primitive
-commands, device commands, or editable safety constraints.
+immutable `TaskGoal`. It never produces PDDL, plans, primitive commands, device
+commands, rail-control payloads, or editable safety constraints.
 
 ## Contract Flow
 
@@ -40,9 +40,9 @@ selection_strategy: nearest | explicit | any | null
 payload_filter:     loaded  | empty    | any | null
 ```
 
-This avoids the old overloaded meaning where values such as `loaded`,
-`nearest`, and `explicit` all lived in one selection field. Legacy compatibility
-keys are still generated in final `TaskGoal.constraints` where practical:
+This keeps payload constraints separate from shuttle-selection strategy.
+Compatibility keys are still generated in final `TaskGoal.constraints` where
+practical:
 
 ```text
 shuttle_selection
@@ -51,9 +51,9 @@ payload_required
 
 The semantic model outputs a strict `SemanticParseEnvelope`, not a final
 `TaskGoal`. The envelope is fused with deterministic explicit facts before a
-draft is built. Any model output containing PDDL, plans, action vectors,
-primitive commands, rail commands, device commands, privileged state, or safety
-constraints is rejected before fusion and domain validation.
+draft is built. Any model output containing PDDL, plans, primitive commands,
+rail commands, device commands, privileged state, or safety constraints is
+rejected before fusion and domain validation.
 
 ## Parsers
 
@@ -105,8 +105,8 @@ Non-English text is rejected.
 `LocalSemanticModelAdapter` is retained as a compatibility adapter for strict
 draft JSON. The active free-text pipeline uses the semantic envelope backend.
 
-`RegexFallbackParser` keeps the current regex-style baseline available as a
-fast fallback and compatibility path.
+`RegexFallbackParser` keeps a fast deterministic fallback available for simple
+phrases and compatibility paths.
 
 ## Semantic Envelope
 
@@ -140,8 +140,8 @@ LlamaCppSemanticBackend
 
 It loads a local GGUF checkpoint through `llama-cpp-python` in CPU-first mode.
 Runtime never downloads weights and refuses URI, relative, missing, or checksum
-mismatched model paths. The legacy `TransformersSemanticBackend` remains
-available for local Hugging Face directories, but the active YAML selects
+mismatched model paths. `TransformersSemanticBackend` remains available for
+explicit local Hugging Face directories, but the active YAML selects
 `llama_cpp`.
 
 Configuration is versioned here:
@@ -319,7 +319,7 @@ parse_model_task_goal_json(model_output, ...)
 Both now route through `TaskGoalDraft`, strict schema validation, deterministic
 domain validation, and final `TaskGoal` construction.
 
-Code that still reads legacy `TaskGoal.constraints` can continue using:
+Code that still reads compatibility `TaskGoal.constraints` keys can continue using:
 
 ```text
 shuttle_selection

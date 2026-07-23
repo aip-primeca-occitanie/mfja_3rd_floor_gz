@@ -221,7 +221,7 @@ def test_problem_builder_supports_inspection_goal_from_validated_state():
     assert '(stopper_open right_stopper_a1)' in problem.problem_text
 
 
-def test_plansys_output_translates_to_primitive_commands_and_action_vectors():
+def test_plansys_output_translates_to_primitive_commands_and_event_targets():
     generator = _load_module()
     client = FakePlanSysClient(_right_plansys_actions())
     backend = generator.PlanSysPlannerBackend(planner_client=client)
@@ -247,8 +247,7 @@ def test_plansys_output_translates_to_primitive_commands_and_action_vectors():
         'STOP_NOW',
         'DONE',
     ]
-    assert len(scenario['action_vectors']) == 5
-    assert scenario['action_vectors'][2][0] == 4.0
+    assert 'action_vectors' not in scenario
 
 
 def test_cli_rejects_fallback_backend_before_planning():

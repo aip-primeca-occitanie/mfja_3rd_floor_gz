@@ -8,7 +8,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
 SUPERVISOR_PATH = SCRIPT_DIR / 'room_315_vla_supervisor.py'
-MULTI_PATH = SCRIPT_DIR / 'room_315_multi_shuttle.py'
 
 
 def _load_module(name, path):
@@ -87,22 +86,29 @@ def test_supervisor_allows_global_emergency_stop_even_with_multiple_shuttles():
     assert decision['corrected_action']['action'] == 'emergency_stop'
 
 
-def test_supervisor_v3_vector_targets_specific_shuttle():
+def test_supervisor_structured_command_targets_specific_shuttle():
     supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
-    multi = _load_module('room_315_multi_shuttle', MULTI_PATH)
-    vector = multi.encode_action_v3({
-        'primitive': 'SHUTTLE_ON',
-        'side': 'right',
-        'shuttle_id': 'R2',
-        'speed_mps': 0.25,
-        'wait_condition': 'shuttle_command_applied',
-        'target_id': 'right_shuttle_2',
-        'reason': 'target_station_route',
-        'coordination_mode': 'guarded_motion',
-    })
 
-    decision = supervisor.decode_and_validate(
-        vector,
+    decision = _decode(
+        supervisor,
+        {
+            'action': 'shuttle',
+            'shuttle_id': 'R2',
+            'command': 'ON',
+            'speed': 0.25,
+        },
+    )
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['shuttle'] == 'room315_right_shuttle_2'
+    assert decision['corrected_action']['speed'] == 0.25
+
+
+def test_supervisor_rejects_removed_numeric_action_vector_payload():
+    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+
+    decision = supervisor._decode_room315_vla_action(
+        [0.0] * 24,
         rails=_rails(),
         emergency_stop=False,
         active_tasks={},
@@ -113,7 +119,23 @@ def test_supervisor_v3_vector_targets_specific_shuttle():
         },
     )
 
-    assert decision['accepted'] is True
-    assert decision['decoded_action']['shuttle_id'] == 'R2'
-    assert decision['executed_action']['shuttle'] == 'room315_right_shuttle_2'
-    assert decision['executed_action']['speed'] == 0.25
+    assert decision['accepted'] is False
+    assert 'removed action_vector commands are not supported' in decision['reason']
+
+
+def test_supervisor_rejects_removed_embedded_action_vector_payload():
+    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+
+    decision = _decode(
+        supervisor,
+        {
+            'action': 'shuttle',
+            'shuttle_id': 'R2',
+            'command': 'ON',
+            'speed': 0.25,
+            'action_vector': [0.0] * 24,
+        },
+    )
+
+    assert decision['accepted'] is False
+    assert 'removed action_vector commands are not supported' in decision['reason']

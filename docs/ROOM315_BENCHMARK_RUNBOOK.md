@@ -42,7 +42,6 @@ ros2 run mfja_robot_control_config room_315_vla_benchmark_suite.py compare-resul
   --result-json /tmp/room315_oracle_plansys2.json \
   --result-json /tmp/room315_frozen_visual_plansys2.json \
   --result-json /tmp/room315_lora_visual_plansys2.json \
-  --result-json /tmp/room315_legacy_direct_action_smolvla.json \
   --output /tmp/room315_method_comparison.json
 ```
 
@@ -53,7 +52,6 @@ The comparison expects these method names or aliases:
 | `oracle_plansys2` | Gazebo/device truth observed state fused into PlanSys2. |
 | `frozen_visual_plansys2` | Frozen compact visual model feeding state fusion and PlanSys2. |
 | `lora_visual_plansys2` | LoRA-adapted compact visual model feeding state fusion and PlanSys2. |
-| `legacy_direct_action_smolvla` | Disabled legacy direct-action baseline, not a PlanSys2 loop. |
 
 Required comparison metrics are success rate, false success rate, safety
 violation rate, supervisor rejection rate, mean replans, mean route length,
@@ -69,7 +67,6 @@ reported separately.
 |---|---|
 | `gazebo_planning` | Planner, executive, safety, route, and timing behavior in simulation. |
 | `real_image_perception` | Visual-state perception claims from real images, with calibration, split, and checkpoint fingerprints. |
-| `legacy_direct_action_offline` | Direct-action SmolVLA action-vector metrics only. This is not closed-loop PlanSys2 evidence. |
 
 Visual methods are not treated as real-image perception results unless their
 result JSON explicitly declares `perception_source: real_image`.
@@ -87,6 +84,6 @@ result JSON explicitly declares `perception_source: real_image`.
 - Frozen and LoRA visual methods must include checkpoint fingerprints and
   visual split fingerprints before their real-image perception numbers can be
   compared.
-- Legacy direct-action SmolVLA can be listed in the same table for contrast, but
-  it cannot satisfy the closed-loop contract because it does not observe,
-  request PlanSys2, execute one atomic step, and re-observe/replan.
+- The comparison table intentionally contains only the current planner-based
+  methods. Learned components are evaluated as visual-state providers, not as
+  direct rail-command publishers.
