@@ -10,6 +10,7 @@ thresholds:
   min_detection_confidence: 0.6
   min_identity_confidence: 0.65
   min_loaded_confidence: 0.65
+  rail_position_uncertainty_m: 0.05
 cameras:
   overhead_right_rgbd:
     role: overhead_rgbd

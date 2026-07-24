@@ -120,6 +120,8 @@ COORDINATION_MODE_IDS = {
 }
 
 MODEL_INPUT_SCHEMA_VERSION = 3
+DEFAULT_SHUTTLE_LENGTH_M = 0.36
+DEFAULT_ROUTE_SAFETY_MARGIN_M = 0.05
 
 
 @dataclass(frozen=True)
@@ -309,6 +311,24 @@ class RailRouteBlock:
         high = max(self.start_s_ratio, self.end_s_ratio)
         return low <= ratio <= high
 
+    def overlaps(
+        self,
+        segment: Any,
+        start_s_ratio: Any,
+        end_s_ratio: Any,
+    ) -> bool:
+        if _segment_name(segment) != self.segment:
+            return False
+        start = _optional_float(start_s_ratio)
+        end = _optional_float(end_s_ratio)
+        if start is None or end is None:
+            return True
+        route_low = min(self.start_s_ratio, self.end_s_ratio)
+        route_high = max(self.start_s_ratio, self.end_s_ratio)
+        occupied_low = min(start, end)
+        occupied_high = max(start, end)
+        return occupied_high >= route_low and occupied_low <= route_high
+
 
 @dataclass(frozen=True)
 class RailRouteBlocker:
@@ -319,6 +339,8 @@ class RailRouteBlocker:
     s_ratio: float | None
     block_id: str
     reason: str
+    occupancy_start_s_ratio: float | None = None
+    occupancy_end_s_ratio: float | None = None
 
 
 @dataclass(frozen=True)
@@ -611,8 +633,18 @@ def route_blockers_from_rails(
         if not segment:
             continue
         s_ratio = _shuttle_s_ratio(shuttle_state)
+        occupancy_bounds = _shuttle_occupancy_ratio_bounds(shuttle_state)
         for block in route_blocks:
-            if block.contains(segment, s_ratio):
+            overlap = (
+                block.overlaps(segment, *occupancy_bounds)
+                if occupancy_bounds is not None
+                else block.contains(segment, s_ratio)
+            )
+            if overlap:
+                interval_available = (
+                    occupancy_bounds is not None
+                    and occupancy_bounds[0] != occupancy_bounds[1]
+                )
                 blockers.append(
                     RailRouteBlocker(
                         shuttle_id=owner,
@@ -622,9 +654,21 @@ def route_blockers_from_rails(
                         s_ratio=s_ratio,
                         block_id=block.block_id,
                         reason=(
-                            'route_segment_overlap'
+                            'route_occupancy_interval_overlap'
+                            if interval_available
+                            else 'route_segment_overlap'
                             if s_ratio is not None
                             else 'route_segment_overlap_unknown_position'
+                        ),
+                        occupancy_start_s_ratio=(
+                            occupancy_bounds[0]
+                            if occupancy_bounds is not None
+                            else None
+                        ),
+                        occupancy_end_s_ratio=(
+                            occupancy_bounds[1]
+                            if occupancy_bounds is not None
+                            else None
                         ),
                     )
                 )
@@ -823,11 +867,55 @@ def _owner_labels(raw_name: Any, *, side: str) -> set[str]:
 
 
 def _shuttle_s_ratio(shuttle_state: dict[str, Any]) -> float | None:
+    rail_position = shuttle_state.get('rail_position')
+    if isinstance(rail_position, dict):
+        ratio = _optional_float(rail_position.get('s_ratio'))
+        if ratio is not None and bool(rail_position.get('available', True)):
+            return max(0.0, min(1.0, ratio))
     for key in ('s_ratio', 'position_ratio', 'normalized_position', 'progress_ratio'):
         ratio = _optional_float(shuttle_state.get(key))
         if ratio is not None:
             return max(0.0, min(1.0, ratio))
     return None
+
+
+def _shuttle_occupancy_ratio_bounds(
+    shuttle_state: dict[str, Any],
+    *,
+    shuttle_length_m: float = DEFAULT_SHUTTLE_LENGTH_M,
+    safety_margin_m: float = DEFAULT_ROUTE_SAFETY_MARGIN_M,
+) -> tuple[float, float] | None:
+    explicit_start = _optional_float(shuttle_state.get('occupancy_start_s_ratio'))
+    explicit_end = _optional_float(shuttle_state.get('occupancy_end_s_ratio'))
+    if explicit_start is not None and explicit_end is not None:
+        return (
+            max(0.0, min(1.0, explicit_start)),
+            max(0.0, min(1.0, explicit_end)),
+        )
+    ratio = _shuttle_s_ratio(shuttle_state)
+    if ratio is None:
+        return None
+    rail_position = shuttle_state.get('rail_position')
+    segment_length_m = None
+    uncertainty_m = 0.0
+    if isinstance(rail_position, dict):
+        segment_length_m = _optional_float(rail_position.get('segment_length_m'))
+        uncertainty_m = _optional_float(
+            rail_position.get('position_uncertainty_m')
+        ) or 0.0
+    if segment_length_m is None:
+        segment_length_m = _optional_float(shuttle_state.get('segment_length_m'))
+    if segment_length_m is None or segment_length_m <= 0.0:
+        return ratio, ratio
+    half_extent_ratio = (
+        float(shuttle_length_m) / 2.0
+        + float(safety_margin_m)
+        + max(0.0, uncertainty_m)
+    ) / segment_length_m
+    return (
+        max(0.0, ratio - half_extent_ratio),
+        min(1.0, ratio + half_extent_ratio),
+    )
 
 
 def _optional_float(value: Any) -> float | None:

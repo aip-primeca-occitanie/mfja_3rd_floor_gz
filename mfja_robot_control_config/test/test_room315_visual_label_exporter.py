@@ -44,6 +44,7 @@ def _oracle_event():
                         'z': 0.8393,
                         'yaw': -0.0004,
                         'segment': 'A12E',
+                        's': 0.9172,
                     }
                 }
             },
@@ -109,11 +110,17 @@ def test_builds_visual_labels_without_exposing_oracle_model_inputs():
     cameras = exporter.load_camera_projections(exporter._default_camera_model_path())
     labels = exporter.visual_labels_from_event(_oracle_event(), cameras)
 
-    assert labels['schema_version'] == 'room315.visual_state.v1'
+    assert labels['schema_version'] == 'room315.visual_state.v2'
     assert labels['calibration_version'] == exporter.CALIBRATION_VERSION
     assert labels['shuttles'][0]['id'] == 'R1'
     assert labels['shuttles'][0]['location'] == {'block': 'A12E', 'side': 'right'}
     assert labels['shuttles'][0]['loaded_state'] == 'loaded'
+    assert labels['shuttles'][0]['rail_position']['available'] is True
+    assert labels['shuttles'][0]['rail_position']['s_m'] == pytest.approx(0.9172)
+    assert labels['shuttles'][0]['rail_position']['s_ratio'] == pytest.approx(
+        0.4118,
+        abs=0.001,
+    )
     assert labels['switches'] == [
         {'id': 'right:A1', 'state': 'exterior', 'confidence': 1.0},
         {'id': 'right:A2', 'state': 'interior', 'confidence': 1.0},

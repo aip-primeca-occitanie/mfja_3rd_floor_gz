@@ -3,6 +3,7 @@
 import importlib.util
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,6 +18,7 @@ SCRIPT_PATH = (
     / 'room_315_pddl_scenario_generator.py'
 )
 RIGHT_CASE = 'right_loaded_r1_s1_to_slot3_no_blocker_speed008'
+LEFT_CASE = 'left_loaded_l1_s1_to_slot3_no_blocker_speed008'
 
 
 class FakePlanSysClient:
@@ -194,6 +196,148 @@ def test_problem_builder_fails_closed_on_unknown_required_facts():
 
     with pytest.raises(generator.PddlProblemBuildError, match='observation or recovery'):
         generator.build_pddl_problem_from_observed_state_task_goal(unsafe_state, task_goal)
+
+
+def _with_continuous_r2(generator, state, *, segment, s_ratio):
+    facts = [
+        replace(fact, value=True)
+        if (
+            fact.subject == 'room315_right_shuttle_2'
+            and fact.predicate == 'present'
+        )
+        else fact
+        for fact in state.fused_planner_state
+    ]
+    facts.append(generator._planner_fact(
+        'room315_right_shuttle_2',
+        'rail_position',
+        {
+            'side': 'right',
+            'segment': segment,
+            's_ratio': s_ratio,
+            'position_uncertainty_m': 0.01,
+        },
+        timestamp=state.timestamp,
+        metadata={'model_input_exposure': 'excluded'},
+    ))
+    return replace(state, fused_planner_state=facts)
+
+
+def test_problem_builder_removes_route_clear_and_emits_order_for_blocker_ahead():
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
+    state = _with_continuous_r2(
+        generator,
+        generator._observed_state_from_scenario_spec(spec),
+        segment='A12E',
+        s_ratio=0.72,
+    )
+
+    problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        state,
+        generator._task_goal_from_scenario_spec(spec),
+    )
+
+    assert '(route_clear_between right_slot_1 right_slot_3)' not in problem.problem_text
+    assert (
+        '(route_blocked_by right_slot_1 right_slot_3 right_shuttle_2)'
+        in problem.problem_text
+    )
+    assert (
+        '(clearance_precedes right_shuttle_2 right_shuttle_1)'
+        in problem.problem_text
+    )
+    assert '(front_of right_shuttle_2 right_shuttle_1)' in problem.problem_text
+    assert '(behind right_shuttle_1 right_shuttle_2)' in problem.problem_text
+    route_pair = next(
+        pair
+        for pair in problem.provenance['route_clearance']['pairs']
+        if pair['from_slot'] == 'right_slot_1'
+        and pair['to_slot'] == 'right_slot_3'
+    )
+    assert route_pair['blocker_shuttles'] == ['right_shuttle_2']
+    assert route_pair['clear'] is False
+    clearance = problem.provenance['target_blocker_clearance_plan']
+    assert clearance['required'] is True
+    assert clearance['ordered_relocations'] == [
+        {
+            'order': 1,
+            'shuttle': 'right_shuttle_2',
+            'reason': 'blocks_selected_shuttle_route',
+            'current_segment': 'A12E',
+            'current_s_ratio': 0.72,
+            'destination': {
+                'kind': 'slot',
+                'target_slot': 'right_slot_4',
+                'target_station': 'right_staubli',
+            },
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ('segment', 's_ratio'),
+    [
+        ('A12E', 0.12),
+        ('A12I', 0.72),
+    ],
+)
+def test_problem_builder_keeps_route_clear_for_nonblocking_hard_negatives(
+    segment,
+    s_ratio,
+):
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
+    state = _with_continuous_r2(
+        generator,
+        generator._observed_state_from_scenario_spec(spec),
+        segment=segment,
+        s_ratio=s_ratio,
+    )
+
+    problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        state,
+        generator._task_goal_from_scenario_spec(spec),
+    )
+
+    assert '(route_clear_between right_slot_1 right_slot_3)' in problem.problem_text
+
+
+def test_problem_builder_maps_left_public_segment_names_to_topology():
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(LEFT_CASE)
+    state = generator._observed_state_from_scenario_spec(spec)
+    facts = [
+        replace(fact, value=True)
+        if (
+            fact.subject == 'room315_left_shuttle_2'
+            and fact.predicate == 'present'
+        )
+        else fact
+        for fact in state.fused_planner_state
+    ]
+    facts.append(generator._planner_fact(
+        'room315_left_shuttle_2',
+        'rail_position',
+        {
+            'side': 'left',
+            'segment': 'A12E',
+            's_ratio': 0.72,
+        },
+        timestamp=state.timestamp,
+        metadata={'segment_naming': 'published_public'},
+    ))
+
+    problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        replace(state, fused_planner_state=facts),
+        generator._task_goal_from_scenario_spec(spec),
+    )
+
+    assert '(route_clear_between left_slot_1 left_slot_3)' not in problem.problem_text
+    assert (
+        '(route_blocked_by left_slot_1 left_slot_3 left_shuttle_2)'
+        in problem.problem_text
+    )
 
 
 def test_problem_builder_supports_inspection_goal_from_validated_state():

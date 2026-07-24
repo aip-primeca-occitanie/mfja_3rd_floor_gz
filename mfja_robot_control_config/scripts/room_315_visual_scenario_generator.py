@@ -28,6 +28,15 @@ SIDES = ('right', 'left')
 SWITCH_NAMES = ('A1', 'A2', 'A3', 'A4')
 START_SLOTS = (1, 2, 3, 4)
 SCENE_TYPES = ('empty', 'single', 'multi_same_rail', 'dual_rail')
+BLOCKER_SCENE_TYPES = (
+    'blocker_ahead_same_segment',
+    'nonblocker_behind_same_segment',
+    'blocker_intermediate_segment',
+    'nonblocker_adjacent_branch',
+    'multi_blocker',
+)
+ALL_SCENE_TYPES = SCENE_TYPES + BLOCKER_SCENE_TYPES
+MIN_SAME_SEGMENT_START_SEPARATION_RATIO = 0.21
 LEGACY_KEYS = {
     'action',
     'action_vector',
@@ -231,6 +240,14 @@ def _launch_arguments(rails: dict[str, dict[str, Any]]) -> dict[str, Any]:
         result[f'room315_{side}_start_slots'] = ','.join(
             str(shuttle['start_slot']) for shuttle in shuttles
         )
+        result[f'room315_{side}_start_positions'] = ','.join(
+            (
+                f'{shuttle["start_position"]["segment"]}@'
+                f'{float(shuttle["start_position"]["s_ratio"]):.6f}'
+            )
+            for shuttle in shuttles
+            if isinstance(shuttle.get('start_position'), dict)
+        )
         result[f'room315_{side}_loaded_shuttles'] = ','.join(
             shuttle['id']
             for shuttle in shuttles
@@ -329,6 +346,265 @@ def _build_scenario(
     }
 
 
+def _named_scene_counts(
+    total: int,
+    raw_weights: Any,
+    scene_types: tuple[str, ...],
+) -> dict[str, int]:
+    if not isinstance(raw_weights, dict):
+        raise VisualScenarioError('scene_type_weights must be an object')
+    if set(raw_weights) != set(scene_types):
+        raise VisualScenarioError(
+            f'scene_type_weights must contain exactly {list(scene_types)}'
+        )
+    weights = {}
+    for name in scene_types:
+        try:
+            weights[name] = float(raw_weights[name])
+        except (TypeError, ValueError) as exc:
+            raise VisualScenarioError(
+                f'scene_type_weights.{name} must be numeric'
+            ) from exc
+        if weights[name] < 0.0:
+            raise VisualScenarioError(
+                f'scene_type_weights.{name} cannot be negative'
+            )
+    weight_sum = sum(weights.values())
+    if weight_sum <= 0.0:
+        raise VisualScenarioError('scene_type_weights must contain a positive weight')
+    exact = {
+        name: total * weights[name] / weight_sum
+        for name in scene_types
+    }
+    counts = {name: int(exact[name]) for name in scene_types}
+    remainder = total - sum(counts.values())
+    order = sorted(
+        scene_types,
+        key=lambda name: (exact[name] - counts[name], weights[name], name),
+        reverse=True,
+    )
+    for name in order[:remainder]:
+        counts[name] += 1
+    return counts
+
+
+def _interleaved_named_types(
+    counts: dict[str, int],
+    scene_types: tuple[str, ...],
+) -> list[str]:
+    remaining = dict(counts)
+    result = []
+    while sum(remaining.values()):
+        ranked = sorted(
+            (name for name in scene_types if remaining[name]),
+            key=lambda name: (
+                remaining[name] / max(1, counts[name]),
+                remaining[name],
+                name,
+            ),
+            reverse=True,
+        )
+        selected = ranked[0]
+        result.append(selected)
+        remaining[selected] -= 1
+    return result
+
+
+def _blocker_positions(
+    scene_type: str,
+    *,
+    side: str,
+    type_index: int,
+) -> tuple[list[tuple[str, float]], list[str]]:
+    selected = {
+        'right': 0.411866742,
+        'left': 0.428330934,
+    }[side]
+    if scene_type == 'blocker_ahead_same_segment':
+        blocker = 0.66 + (type_index % 20) * 0.011
+        return [('A12E', selected), ('A12E', blocker)], ['2']
+    if scene_type == 'nonblocker_behind_same_segment':
+        behind = 0.06 + (type_index % 11) * 0.012
+        return [('A12E', selected), ('A12E', behind)], []
+    if scene_type == 'blocker_intermediate_segment':
+        return [
+            ('A12E', selected),
+            ('A23', 0.12 + (type_index % 16) * 0.05),
+        ], ['2']
+    if scene_type == 'nonblocker_adjacent_branch':
+        return [
+            ('A12E', selected),
+            ('A12I', 0.10 + (type_index % 16) * 0.05),
+        ], []
+    if scene_type == 'multi_blocker':
+        return [
+            ('A12E', selected),
+            ('A12E', 0.66 + (type_index % 10) * 0.02),
+            ('A23', 0.18 + ((type_index // 3) % 10) * 0.06),
+        ], ['2', '3']
+    raise VisualScenarioError(f'unsupported blocker scene type: {scene_type!r}')
+
+
+def _build_blocker_scenario(
+    scene_type: str,
+    *,
+    ordinal: int,
+    type_index: int,
+    seed: int,
+    capture: dict[str, Any],
+) -> dict[str, Any]:
+    active_side = SIDES[(ordinal + type_index) % len(SIDES)]
+    positions, blocker_indexes = _blocker_positions(
+        scene_type,
+        side=active_side,
+        type_index=type_index,
+    )
+    shuttles = []
+    for index, (segment, s_ratio) in enumerate(positions, start=1):
+        shuttles.append({
+            'id': _shuttle_id(active_side, index),
+            'start_slot': index,
+            'start_position': {
+                'segment': segment,
+                's_ratio': round(s_ratio, 6),
+            },
+            'loaded_state': (
+                'loaded'
+                if (seed + type_index + index) % 2
+                else 'empty'
+            ),
+        })
+    active_switches = dict(zip(SWITCH_NAMES, ('exterior',) * 4))
+    inactive_pattern, inactive_switches = _switches(type_index + seed)
+    rails = {
+        active_side: {
+            'switch_pattern': 'all_exterior',
+            'switches': active_switches,
+            'shuttles': shuttles,
+        },
+        ('left' if active_side == 'right' else 'right'): {
+            'switch_pattern': inactive_pattern,
+            'switches': inactive_switches,
+            'shuttles': [],
+        },
+    }
+    scene = {
+        'rails': rails,
+        'obstacles': [],
+    }
+    family_hash = _hash(_family_payload(scene_type, scene))
+    scenario_id = f'visual_{ordinal:04d}_{scene_type}_{family_hash[:8]}'
+    blocker_ids = [
+        _shuttle_id(active_side, int(index))
+        for index in blocker_indexes
+    ]
+    source_slot = f'{active_side}:slot:1'
+    target_slot = f'{active_side}:slot:3'
+    return {
+        'schema_version': SCHEMA_VERSION,
+        'scenario_id': scenario_id,
+        'scenario_family': f'visual_family_{family_hash}',
+        'scene_type': scene_type,
+        'seed': seed,
+        'scene': scene,
+        'capture': {
+            'mode': 'settled_static',
+            'cameras': list(REQUIRED_CAMERAS),
+            'frames': int(capture['frames_per_scenario']),
+            'settle_seconds': float(capture['settle_seconds']),
+            'frame_interval_seconds': float(capture['frame_interval_seconds']),
+        },
+        'setup': {
+            'launch_package': 'mfja_3rd_floor_bringup',
+            'launch_file': 'room_315_only.launch.py',
+            'launch_arguments': _launch_arguments(rails),
+            'switch_topic': '/mfja/conveyor/switch_cmd',
+            'switch_command': _switch_command(rails),
+        },
+        'planning_probe': {
+            'selected_shuttle_id': _shuttle_id(active_side, 1),
+            'side': active_side,
+            'source_slot': source_slot,
+            'target_slot': target_slot,
+            'expected_blocker_ids': blocker_ids,
+            'expected_route_clear': not blocker_ids,
+            'model_input_exposure': 'excluded',
+        },
+        'expected_label_coverage': {
+            'shuttle_count': len(shuttles),
+            'loaded_count': sum(
+                shuttle['loaded_state'] == 'loaded' for shuttle in shuttles
+            ),
+            'empty_count': sum(
+                shuttle['loaded_state'] == 'empty' for shuttle in shuttles
+            ),
+            'switch_count': len(SWITCH_NAMES) * len(SIDES),
+            'obstacle_count': 0,
+            'continuous_position_count': len(shuttles),
+        },
+    }
+
+
+def _generate_blocker_scenarios(
+    config: dict[str, Any],
+    *,
+    count: int | None,
+    seed: int | None,
+) -> list[dict[str, Any]]:
+    generator = config.get('generator')
+    capture = config.get('capture')
+    if not isinstance(generator, dict) or not isinstance(capture, dict):
+        raise VisualScenarioError('generator and capture must be objects')
+    scenario_count = _positive_int(
+        count if count is not None else generator.get('scenario_count'),
+        context='generator.scenario_count',
+    )
+    scenario_seed = int(seed if seed is not None else generator.get('seed', 315))
+    normalized_capture = {
+        'frames_per_scenario': _positive_int(
+            capture.get('frames_per_scenario'),
+            context='capture.frames_per_scenario',
+        ),
+        'settle_seconds': float(capture.get('settle_seconds', 1.5)),
+        'frame_interval_seconds': float(capture.get('frame_interval_seconds', 0.25)),
+    }
+    counts = _named_scene_counts(
+        scenario_count,
+        config.get('scene_type_weights'),
+        BLOCKER_SCENE_TYPES,
+    )
+    ordered_types = _interleaved_named_types(counts, BLOCKER_SCENE_TYPES)
+    type_indices = Counter()
+    randomizer = random.Random(scenario_seed)
+    seed_offsets = list(range(scenario_count * 4))
+    randomizer.shuffle(seed_offsets)
+    scenarios = []
+    seen_families = set()
+    for ordinal, scene_type in enumerate(ordered_types, start=1):
+        type_index = type_indices[scene_type]
+        type_indices[scene_type] += 1
+        attempt = 0
+        while True:
+            scenario = _build_blocker_scenario(
+                scene_type,
+                ordinal=ordinal,
+                type_index=type_index + attempt * max(1, counts[scene_type]),
+                seed=scenario_seed + seed_offsets[ordinal - 1] + attempt,
+                capture=normalized_capture,
+            )
+            if scenario['scenario_family'] not in seen_families:
+                break
+            attempt += 1
+            if attempt > 1000:
+                raise VisualScenarioError(
+                    f'could not generate a unique {scene_type} scenario'
+                )
+        validate_scenario(scenario)
+        seen_families.add(scenario['scenario_family'])
+        scenarios.append(scenario)
+    return scenarios
+
+
 def _interleaved_scene_types(counts: dict[str, int]) -> list[str]:
     remaining = dict(counts)
     result = []
@@ -354,6 +630,11 @@ def generate_scenarios(
     count: int | None = None,
     seed: int | None = None,
 ) -> list[dict[str, Any]]:
+    profile = str(config.get('scenario_profile') or 'general_visual_state').strip()
+    if profile == 'blocker_localization':
+        return _generate_blocker_scenarios(config, count=count, seed=seed)
+    if profile != 'general_visual_state':
+        raise VisualScenarioError(f'unsupported scenario_profile: {profile!r}')
     generator = config.get('generator')
     capture = config.get('capture')
     if not isinstance(generator, dict):
@@ -431,7 +712,7 @@ def validate_scenario(scenario: dict[str, Any]) -> None:
     leaked = sorted(_walk_keys(scenario) & LEGACY_KEYS)
     if leaked:
         raise VisualScenarioError(f'scenario contains legacy fields: {leaked}')
-    if scenario.get('scene_type') not in SCENE_TYPES:
+    if scenario.get('scene_type') not in ALL_SCENE_TYPES:
         raise VisualScenarioError('scenario has an unsupported scene_type')
     if not str(scenario.get('scenario_id') or '').strip():
         raise VisualScenarioError('scenario is missing scenario_id')
@@ -470,6 +751,7 @@ def validate_scenario(scenario: dict[str, Any]) -> None:
         if not isinstance(shuttles, list) or len(shuttles) > 4:
             raise VisualScenarioError(f'{side} shuttles must be a list of at most four')
         slots = []
+        continuous_positions = []
         for expected_index, shuttle in enumerate(shuttles, start=1):
             expected_id = _shuttle_id(side, expected_index)
             if shuttle.get('id') != expected_id:
@@ -487,8 +769,41 @@ def validate_scenario(scenario: dict[str, Any]) -> None:
                 raise VisualScenarioError(
                     f'{shuttle["id"]} loaded_state must be loaded or empty'
                 )
+            start_position = shuttle.get('start_position')
+            if start_position is not None:
+                if not isinstance(start_position, dict):
+                    raise VisualScenarioError(
+                        f'{shuttle["id"]} start_position must be an object'
+                    )
+                segment = str(start_position.get('segment') or '').strip().upper()
+                if not segment:
+                    raise VisualScenarioError(
+                        f'{shuttle["id"]} start_position is missing segment'
+                    )
+                try:
+                    s_ratio = float(start_position.get('s_ratio'))
+                except (TypeError, ValueError) as exc:
+                    raise VisualScenarioError(
+                        f'{shuttle["id"]} start_position.s_ratio must be numeric'
+                    ) from exc
+                if not 0.0 <= s_ratio <= 1.0:
+                    raise VisualScenarioError(
+                        f'{shuttle["id"]} start_position.s_ratio must be in [0, 1]'
+                    )
+                continuous_positions.append((shuttle['id'], segment, s_ratio))
         if len(slots) != len(set(slots)):
             raise VisualScenarioError(f'{side} contains duplicate start slots')
+        for first, second in itertools.combinations(continuous_positions, 2):
+            if first[1] != second[1]:
+                continue
+            separation = abs(first[2] - second[2])
+            if separation < MIN_SAME_SEGMENT_START_SEPARATION_RATIO:
+                raise VisualScenarioError(
+                    f'{first[0]} and {second[0]} are only {separation:.6f} apart '
+                    f'on {first[1]}; require at least '
+                    f'{MIN_SAME_SEGMENT_START_SEPARATION_RATIO:.2f} normalized '
+                    'rail distance to avoid overlapping shuttle geometry'
+                )
 
 
 def validate_scenarios(scenarios: list[dict[str, Any]]) -> None:

@@ -59,6 +59,7 @@ def _matching_snapshot(scenario):
             'z': 0.8393,
             'yaw': -0.0004,
             'segment': 'A12E',
+            's': 0.9172,
         }
     }
     snapshot.payloads['right'] = {
@@ -124,7 +125,14 @@ def test_projects_and_validates_matching_simulator_snapshot():
     snapshot = _matching_snapshot(scenario)
     cameras = capture.load_camera_projections(capture._default_camera_model_path())
 
-    labels = capture.visual_labels_from_snapshot(snapshot, cameras)
+    labels = capture.visual_labels_from_snapshot(
+        snapshot,
+        cameras,
+        {
+            side: capture.public_rail_segment_lengths(side)
+            for side in ('left', 'right')
+        },
+    )
     capture.validate_snapshot(
         snapshot,
         scenario,
@@ -137,6 +145,8 @@ def test_projects_and_validates_matching_simulator_snapshot():
         'block': 'A12E',
         'side': 'right',
     }
+    assert labels['shuttles'][0]['rail_position']['available'] is True
+    assert labels['shuttles'][0]['rail_position']['s_ratio'] > 0.4
     assert len(labels['switches']) == 8
 
 
@@ -144,7 +154,14 @@ def test_writes_new_capture_layout_and_validation(tmp_path):
     scenario = _right_single_scenario()
     snapshot = _matching_snapshot(scenario)
     cameras = capture.load_camera_projections(capture._default_camera_model_path())
-    labels = capture.visual_labels_from_snapshot(snapshot, cameras)
+    labels = capture.visual_labels_from_snapshot(
+        snapshot,
+        cameras,
+        {
+            side: capture.public_rail_segment_lengths(side)
+            for side in ('left', 'right')
+        },
+    )
 
     result = capture.write_capture(
         tmp_path,

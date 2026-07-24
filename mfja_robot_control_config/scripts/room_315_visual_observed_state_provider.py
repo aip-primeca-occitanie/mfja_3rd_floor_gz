@@ -260,6 +260,10 @@ class VisualObservedStateProvider(ObservedStateProvider):
         )
         self.min_identity_confidence = float(thresholds.get('min_identity_confidence', 0.65))
         self.min_loaded_confidence = float(thresholds.get('min_loaded_confidence', 0.65))
+        self.rail_position_uncertainty_m = max(
+            0.0,
+            float(thresholds.get('rail_position_uncertainty_m', 0.05)),
+        )
         self.compact_model = compact_model
         self.compact_adapter = compact_adapter or StrictJsonCompactModelAdapter()
         self.trusted_status_snapshot = copy.deepcopy(trusted_status_snapshot or {})
@@ -466,6 +470,10 @@ class VisualObservedStateProvider(ObservedStateProvider):
             base_meta['rail_distance_m'] = round(detection.projection.distance_m, 6)
         if detection.projection.s_ratio is not None:
             base_meta['s_ratio'] = round(detection.projection.s_ratio, 6)
+            base_meta['position_uncertainty_m'] = round(
+                self.rail_position_uncertainty_m,
+                6,
+            )
         if detection.projection.segment:
             base_meta['segment'] = detection.projection.segment
         if detection.projection.slot:
@@ -486,6 +494,10 @@ class VisualObservedStateProvider(ObservedStateProvider):
                 'segment': detection.projection.segment,
                 's_ratio': round(detection.projection.s_ratio, 6)
                 if detection.projection.s_ratio is not None else None,
+                'position_uncertainty_m': round(
+                    self.rail_position_uncertainty_m,
+                    6,
+                ),
                 'slot': detection.projection.slot,
             } if known else None,
             'location_block': detection.projection.block_id if known else None,

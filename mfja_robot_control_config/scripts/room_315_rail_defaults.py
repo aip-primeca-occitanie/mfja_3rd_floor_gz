@@ -4,6 +4,8 @@
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 
@@ -67,6 +69,51 @@ LEFT_ENTITY_DEFAULTS = {
     'gazebo_entity_name': 'room315_left_shuttle_1',
     'entity_name_prefix': 'room315_left_shuttle_',
 }
+
+
+def default_rail_network_path(side: str) -> Path:
+    normalized = str(side or '').strip().lower()
+    if normalized not in {'right', 'left'}:
+        raise ValueError(f'unsupported rail side: {side!r}')
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        config_root = (
+            Path(get_package_share_directory('mfja_robot_control_config'))
+            / 'config'
+            / 'room_315_kinematics'
+        )
+    except Exception:
+        config_root = Path(__file__).resolve().parents[1] / 'config' / 'room_315_kinematics'
+    return config_root / f'rail_network_{normalized}.yaml'
+
+
+@lru_cache(maxsize=2)
+def rail_segment_lengths(side: str) -> dict[str, float]:
+    """Load calibrated cubic-path segment lengths for one Room 315 rail."""
+    from room_315_kinematic_shuttle import CUBIC_HERMITE_PATH_BACKEND
+    from room_315_kinematic_shuttle import RailNetwork
+
+    network = RailNetwork.from_yaml(
+        default_rail_network_path(side),
+        path_backend=CUBIC_HERMITE_PATH_BACKEND,
+    )
+    return {
+        str(name).upper(): float(segment.length)
+        for name, segment in network.segments.items()
+    }
+
+
+@lru_cache(maxsize=2)
+def public_rail_segment_lengths(side: str) -> dict[str, float]:
+    """Return segment lengths using names published on the side's ROS topics."""
+    lengths = rail_segment_lengths(side)
+    if str(side or '').strip().lower() != 'left':
+        return lengths
+    return {
+        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(name, name): length
+        for name, length in lengths.items()
+    }
 
 RIGHT_CALIBRATION_DEFAULTS = {
     'pose_transform_a': -0.893249246800,

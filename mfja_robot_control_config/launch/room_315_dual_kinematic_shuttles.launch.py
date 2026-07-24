@@ -50,6 +50,7 @@ def generate_launch_description():
                 'rail_side': 'right',
                 'start_slot': LaunchConfiguration('right_start_slot'),
                 'start_slots': LaunchConfiguration('right_start_slots'),
+                'start_positions': LaunchConfiguration('right_start_positions'),
                 'shuttle_count': LaunchConfiguration('right_shuttle_count'),
                 'loaded_shuttles': LaunchConfiguration('right_loaded_shuttles'),
             },
@@ -69,6 +70,7 @@ def generate_launch_description():
                 'rail_side': 'left',
                 'start_slot': LaunchConfiguration('left_start_slot'),
                 'start_slots': LaunchConfiguration('left_start_slots'),
+                'start_positions': LaunchConfiguration('left_start_positions'),
                 'shuttle_count': LaunchConfiguration('left_shuttle_count'),
                 'loaded_shuttles': LaunchConfiguration('left_loaded_shuttles'),
             },
@@ -188,6 +190,13 @@ def generate_launch_description():
             description='Comma-separated startup slots for right-rail multi-shuttle mode.',
         ),
         DeclareLaunchArgument(
+            'right_start_positions',
+            default_value='',
+            description=(
+                'Optional comma-separated SEGMENT@S_RATIO positions for right shuttles.'
+            ),
+        ),
+        DeclareLaunchArgument(
             'right_shuttle_count',
             default_value='0',
             description='Number of initial right-rail shuttles. Use 0 to start the rail with no shuttle.',
@@ -206,6 +215,13 @@ def generate_launch_description():
             'left_start_slots',
             default_value='',
             description='Comma-separated startup slots for left-rail multi-shuttle mode.',
+        ),
+        DeclareLaunchArgument(
+            'left_start_positions',
+            default_value='',
+            description=(
+                'Optional comma-separated SEGMENT@S_RATIO positions for left shuttles.'
+            ),
         ),
         DeclareLaunchArgument(
             'left_shuttle_count',

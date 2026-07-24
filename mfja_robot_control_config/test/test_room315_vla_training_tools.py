@@ -175,6 +175,35 @@ def test_visual_state_rejects_model_input_label_leakage():
         visual.validate_visual_model_input(row)
 
 
+def test_visual_state_v2_vectorizes_continuous_rail_position_and_reports_error():
+    visual = _load_module('room_315_visual_state_dataset_v2', VISUAL_STATE_SCRIPT)
+    label = _visual_labels()
+    label['schema_version'] = 'room315.visual_state.v2'
+    label['shuttles'][0]['rail_position'] = {
+        'available': True,
+        's_m': 0.92,
+        's_ratio': 0.412,
+        'segment_length_m': 2.23,
+        'position_uncertainty_m': 0.02,
+    }
+    normalized = visual.normalize_visual_state_labels(label)
+    vectorizer = visual.VisualStateLabelVectorizer.fit([normalized])
+    names = vectorizer.names
+    target = vectorizer.transform(normalized)
+    prediction = list(target)
+    prediction[names.index('shuttles.0.rail_position.s_m')] += 0.08
+    prediction[names.index('shuttles.0.rail_position.s_ratio')] += 0.04
+
+    metrics = visual.visual_state_metrics(
+        [{'true_raw': target, 'pred_raw': prediction}],
+        names,
+    )
+
+    assert normalized['shuttles'][0]['rail_position']['available'] is True
+    assert metrics['localization_metrics']['s_m_error']['p95'] == pytest.approx(0.08)
+    assert metrics['localization_metrics']['s_ratio_error']['p50'] == pytest.approx(0.04)
+
+
 def test_missing_images_fail_by_default_and_blank_images_are_debug_only(tmp_path):
     converter = _load_module('room_315_vla_to_lerobot_visual_images', LEROBOT_SCRIPT)
     trainer = _load_module('room_315_vla_train_local_visual_images', TRAIN_SCRIPT)

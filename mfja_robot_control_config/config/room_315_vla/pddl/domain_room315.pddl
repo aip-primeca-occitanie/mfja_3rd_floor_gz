@@ -42,6 +42,8 @@
     (connected ?side - rail_side ?from - station ?to - station)
     (path_ready ?side - rail_side ?from - station ?to - station)
     (route_clear_between ?from - slot ?to - slot)
+    (route_blocked_by ?from - slot ?to - slot ?blocker - shuttle)
+    (clearance_precedes ?blocker - shuttle ?selected - shuttle)
     (route_reserved_by ?from - slot ?to - slot ?s - shuttle)
 
     (switch_state_known ?switch - switch_device)

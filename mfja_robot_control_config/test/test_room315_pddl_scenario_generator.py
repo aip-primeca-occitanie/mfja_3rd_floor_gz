@@ -729,6 +729,8 @@ def test_four_shuttle_interior_loop_case_clears_blocker_before_loaded_move():
         's_ratio': 0.653074,
         'block_id': 'right:A12E',
         'reason': 'route_segment_overlap',
+        'occupancy_start_s_ratio': 0.653074,
+        'occupancy_end_s_ratio': 0.653074,
         'short_shuttle_id': 'R2',
         'start_slot': '2',
     }

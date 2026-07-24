@@ -13,6 +13,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -34,12 +35,16 @@ from room_315_contracts import ObservedFact
 from room_315_contracts import ObservedState
 from room_315_contracts import TaskGoal
 from room_315_multi_shuttle import DEVICE_NAMES
+from room_315_multi_shuttle import DEFAULT_ROUTE_SAFETY_MARGIN_M
+from room_315_multi_shuttle import DEFAULT_SHUTTLE_LENGTH_M
 from room_315_multi_shuttle import SIDES
 from room_315_multi_shuttle import all_shuttle_specs
 from room_315_multi_shuttle import load_rail_topology
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import route_blockers_from_rails
 from room_315_multi_shuttle import route_blocks_between_slots
+from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import rail_segment_lengths
 
 
 REPO_ROOT = SCRIPT_DIR.parents[1]
@@ -65,6 +70,16 @@ RAIL_DEVICES_PATH_BY_SIDE = {
     'right': KINEMATICS_DIR / 'rail_devices_right.yaml',
     'left': KINEMATICS_DIR / 'rail_devices_left.yaml',
 }
+
+
+@lru_cache(maxsize=2)
+def _planning_rail_topology(side: str) -> Any:
+    side = _normalise_planning_side(side)
+    return load_rail_topology(
+        RAIL_NETWORK_PATH_BY_SIDE[side],
+        RAIL_DEVICES_PATH_BY_SIDE[side],
+        side=side,
+    )
 
 SUPPORTED_SYMBOLIC_ACTIONS = {
     'prepare_switches',
@@ -2713,6 +2728,16 @@ def _route_blocker_metadata(blocker: Any, *, side: str, start_slots: dict[str, s
         ),
         'block_id': blocker.block_id,
         'reason': blocker.reason,
+        'occupancy_start_s_ratio': (
+            round(float(blocker.occupancy_start_s_ratio), 6)
+            if blocker.occupancy_start_s_ratio is not None
+            else None
+        ),
+        'occupancy_end_s_ratio': (
+            round(float(blocker.occupancy_end_s_ratio), 6)
+            if blocker.occupancy_end_s_ratio is not None
+            else None
+        ),
     }
     if blocker.shuttle_id != shuttle_id:
         entry['short_shuttle_id'] = blocker.shuttle_id
@@ -2926,6 +2951,12 @@ def build_pddl_problem_from_observed_state_task_goal(
         goal_type=goal_type,
         fleet=fleet,
     )
+    route_clearance = _route_clearance_snapshot(fleet=fleet)
+    route_clearance['target_clearance_plan'] = _target_blocker_clearance_plan(
+        fleet=fleet,
+        goal_data=goal_data,
+        route_clearance=route_clearance,
+    )
 
     init_facts = _pddl_init_facts(
         fleet=fleet,
@@ -2933,6 +2964,7 @@ def build_pddl_problem_from_observed_state_task_goal(
         obstacles=obstacles,
         blocks=blocks,
         goal_data=goal_data,
+        route_clearance=route_clearance,
     )
     objects = _pddl_objects(
         fleet=fleet,
@@ -2958,6 +2990,8 @@ def build_pddl_problem_from_observed_state_task_goal(
         'model_input_exposure': 'excluded',
         'oracle_test_fixture_used': False,
         'symbolic_action_mapping': dict(PDDL_ACTION_TRANSLATION_PROVENANCE),
+        'route_clearance': route_clearance['provenance'],
+        'target_blocker_clearance_plan': route_clearance['target_clearance_plan'],
     }
     if goal_data['selection_policy']:
         provenance['selection_policy'] = goal_data['selection_policy']
@@ -3229,6 +3263,8 @@ def _fleet_snapshot_from_observed_state(
     present_by_shuttle: dict[str, bool] = {}
     location_slot_by_shuttle: dict[str, str] = {}
     location_block_by_shuttle: dict[str, str] = {}
+    rail_position_by_shuttle: dict[str, dict[str, Any]] = {}
+    rail_position_facts: dict[str, ObservedFact] = {}
     slot_occupancy: dict[str, str] = {}
 
     for shuttle_spec in all_shuttle_specs():
@@ -3247,6 +3283,15 @@ def _fleet_snapshot_from_observed_state(
         block_fact = _known_fact(index, subjects, 'location_block', context='block location', required=False)
         if block_fact is not None and block_fact.value:
             location_block_by_shuttle[shuttle_id] = _pddl_symbol(block_fact.value)
+        rail_position_fact = _known_fact(
+            index,
+            subjects,
+            'rail_position',
+            context='continuous rail position',
+            required=False,
+        )
+        if rail_position_fact is not None:
+            rail_position_facts[shuttle_id] = rail_position_fact
 
     for rail_side in SIDES:
         for slot in ('1', '2', '3', '4'):
@@ -3263,12 +3308,122 @@ def _fleet_snapshot_from_observed_state(
             if occupant:
                 location_slot_by_shuttle.setdefault(occupant, slot_symbol)
 
+    topologies = {side: _planning_rail_topology(side) for side in SIDES}
+    lengths_by_side = {
+        side: rail_segment_lengths(side)
+        for side in SIDES
+    }
+    for shuttle_spec in all_shuttle_specs():
+        shuttle_id = shuttle_spec.shuttle_id
+        if not present_by_shuttle[shuttle_id]:
+            continue
+        raw_fact = rail_position_facts.get(shuttle_id)
+        if raw_fact is not None:
+            rail_position_by_shuttle[shuttle_id] = _rail_position_from_fact(
+                raw_fact,
+                shuttle_id=shuttle_id,
+                expected_side=shuttle_spec.side,
+                segment_lengths=lengths_by_side[shuttle_spec.side],
+            )
+            continue
+        slot_object = location_slot_by_shuttle.get(shuttle_id)
+        if slot_object:
+            slot_number = _slot_number_from_object(slot_object)
+            slot_location = topologies[shuttle_spec.side].slots[slot_number]
+            rail_position_by_shuttle[shuttle_id] = {
+                'side': shuttle_spec.side,
+                'segment': slot_location.segment,
+                's_ratio': slot_location.s_ratio,
+                'segment_length_m': lengths_by_side[shuttle_spec.side].get(
+                    slot_location.segment
+                ),
+                'position_uncertainty_m': 0.0,
+                'source': 'derived_from_known_slot',
+            }
+            continue
+        raise PddlProblemBuildError(
+            f'present shuttle {shuttle_id!r} has neither a known continuous '
+            'rail position nor a known slot; observation is required before planning'
+        )
+
     return {
         'loaded_by_shuttle': loaded_by_shuttle,
         'present_by_shuttle': present_by_shuttle,
         'location_slot_by_shuttle': location_slot_by_shuttle,
         'location_block_by_shuttle': location_block_by_shuttle,
+        'rail_position_by_shuttle': rail_position_by_shuttle,
         'slot_occupancy': slot_occupancy,
+    }
+
+
+def _rail_position_from_fact(
+    fact: ObservedFact,
+    *,
+    shuttle_id: str,
+    expected_side: str,
+    segment_lengths: dict[str, float],
+) -> dict[str, Any]:
+    raw = fact.value if isinstance(fact.value, dict) else {}
+    metadata = fact.metadata if isinstance(fact.metadata, dict) else {}
+    if raw.get('available') is False:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} is unavailable'
+        )
+    raw_side = raw.get('side') or metadata.get('side') or expected_side
+    side = _normalise_planning_side(raw_side)
+    if side != expected_side:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} reports side '
+            f'{side!r}, expected {expected_side!r}'
+        )
+    segment = str(
+        raw.get('segment')
+        or metadata.get('segment')
+        or ''
+    ).strip().upper()
+    if expected_side == 'left':
+        segment = LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
+    if segment not in segment_lengths:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} has unknown '
+            f'segment {segment!r}'
+        )
+    try:
+        s_ratio = float(
+            raw.get('s_ratio')
+            if raw.get('s_ratio') is not None
+            else metadata.get('s_ratio')
+        )
+    except (TypeError, ValueError) as exc:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} requires numeric s_ratio'
+        ) from exc
+    if not 0.0 <= s_ratio <= 1.0:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} has s_ratio '
+            f'{s_ratio!r} outside [0.0, 1.0]'
+        )
+    raw_uncertainty = raw.get(
+        'position_uncertainty_m',
+        metadata.get('position_uncertainty_m', 0.0),
+    )
+    try:
+        uncertainty_m = float(raw_uncertainty or 0.0)
+    except (TypeError, ValueError) as exc:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} has invalid uncertainty'
+        ) from exc
+    if uncertainty_m < 0.0:
+        raise PddlProblemBuildError(
+            f'continuous rail position for {shuttle_id!r} has negative uncertainty'
+        )
+    return {
+        'side': side,
+        'segment': segment,
+        's_ratio': s_ratio,
+        'segment_length_m': float(segment_lengths[segment]),
+        'position_uncertainty_m': uncertainty_m,
+        'source': fact.source,
     }
 
 
@@ -3504,6 +3659,238 @@ def _pddl_objects(
     return typed_objects
 
 
+def _route_clearance_snapshot(
+    *,
+    fleet: dict[str, Any],
+) -> dict[str, Any]:
+    rails = {
+        side: {'shuttles': {}}
+        for side in SIDES
+    }
+    for shuttle, position in fleet['rail_position_by_shuttle'].items():
+        side = position['side']
+        rails[side]['shuttles'][shuttle] = {
+            'current_segment': position['segment'],
+            'rail_position': {
+                'available': True,
+                's_ratio': position['s_ratio'],
+                'segment_length_m': position['segment_length_m'],
+                'position_uncertainty_m': position['position_uncertainty_m'],
+            },
+        }
+
+    clear_pairs: set[tuple[str, str]] = set()
+    blockers_by_pair: dict[tuple[str, str], tuple[str, ...]] = {}
+    pair_provenance: list[dict[str, Any]] = []
+    exterior_switches = {device: 'E' for device in DEVICE_NAMES}
+    for side in SIDES:
+        topology = _planning_rail_topology(side)
+        for from_slot in ('1', '2', '3', '4'):
+            from_object = _slot_object(side, from_slot)
+            selected_shuttle = fleet['slot_occupancy'].get(from_object, '')
+            for to_slot in ('1', '2', '3', '4'):
+                to_object = _slot_object(side, to_slot)
+                pair = (from_object, to_object)
+                try:
+                    blockers = route_blockers_from_rails(
+                        rails,
+                        topology,
+                        from_slot,
+                        to_slot,
+                        selected_shuttle=selected_shuttle,
+                        side=side,
+                        switch_states=exterior_switches,
+                    )
+                    route_blocks = route_blocks_between_slots(
+                        topology,
+                        from_slot,
+                        to_slot,
+                        switch_states=exterior_switches,
+                    )
+                    error = ''
+                except ValueError as exc:
+                    blockers = []
+                    route_blocks = []
+                    error = str(exc)
+                blocker_ids = tuple(
+                    sorted({
+                        _canonical_planning_shuttle_id(
+                            blocker.shuttle_id,
+                            side=side,
+                        )
+                        for blocker in blockers
+                    })
+                )
+                blockers_by_pair[pair] = blocker_ids
+                if not blocker_ids and not error:
+                    clear_pairs.add(pair)
+                pair_provenance.append({
+                    'side': side,
+                    'from_slot': from_object,
+                    'to_slot': to_object,
+                    'clear': pair in clear_pairs,
+                    'selected_shuttle': selected_shuttle,
+                    'blocker_shuttles': list(blocker_ids),
+                    'route_blocks': [
+                        {
+                            'segment': block.segment,
+                            'start_s_ratio': round(block.start_s_ratio, 6),
+                            'end_s_ratio': round(block.end_s_ratio, 6),
+                        }
+                        for block in route_blocks
+                    ],
+                    'error': error,
+                })
+
+    ordering_pairs: set[tuple[str, str]] = set()
+    for side in SIDES:
+        by_segment: dict[str, list[tuple[str, float, float, float]]] = {}
+        for shuttle, position in fleet['rail_position_by_shuttle'].items():
+            if position['side'] != side:
+                continue
+            length_m = max(float(position['segment_length_m']), 1e-9)
+            half_extent = (
+                DEFAULT_SHUTTLE_LENGTH_M / 2.0
+                + DEFAULT_ROUTE_SAFETY_MARGIN_M
+                + float(position['position_uncertainty_m'])
+            ) / length_m
+            ratio = float(position['s_ratio'])
+            by_segment.setdefault(position['segment'], []).append((
+                shuttle,
+                ratio,
+                max(0.0, ratio - half_extent),
+                min(1.0, ratio + half_extent),
+            ))
+        for segment_positions in by_segment.values():
+            ordered = sorted(segment_positions, key=lambda item: (item[1], item[0]))
+            for rear_index, rear in enumerate(ordered):
+                for front in ordered[rear_index + 1:]:
+                    if rear[3] < front[2]:
+                        ordering_pairs.add((front[0], rear[0]))
+
+    return {
+        'clear_pairs': clear_pairs,
+        'blockers_by_pair': blockers_by_pair,
+        'ordering_pairs': ordering_pairs,
+        'provenance': {
+            'method': 'continuous_segment_occupancy_intervals_v1',
+            'planned_switch_configuration': 'all_exterior',
+            'shuttle_length_m': DEFAULT_SHUTTLE_LENGTH_M,
+            'safety_margin_m': DEFAULT_ROUTE_SAFETY_MARGIN_M,
+            'pairs': pair_provenance,
+            'ordering': [
+                {'front': front, 'rear': rear}
+                for front, rear in sorted(ordering_pairs)
+            ],
+        },
+    }
+
+
+def _target_blocker_clearance_plan(
+    *,
+    fleet: dict[str, Any],
+    goal_data: dict[str, Any],
+    route_clearance: dict[str, Any],
+) -> dict[str, Any]:
+    base = {
+        'required': False,
+        'selected_shuttle': goal_data.get('selected_shuttle', ''),
+        'source_slot': '',
+        'target_slot': '',
+        'ordered_relocations': [],
+        'execution_policy': (
+            'execute one supervised relocation, reobserve, and rebuild PDDL '
+            'before any selected-shuttle movement'
+        ),
+        'continuous_motion_owner': 'supervisor_and_kinematic_safety_layer',
+    }
+    if goal_data.get('goal_type') != 'transport' or not goal_data.get('target_slot'):
+        return base
+    if goal_data.get('planner_selects_candidate'):
+        base['selection_deferred_to_plansys2'] = True
+        base['candidate_specific_route_facts_emitted'] = True
+        base['clearance_plan_is_provisional_until_candidate_selection'] = True
+    side = goal_data['side']
+    selected = goal_data['selected_shuttle']
+    source = fleet['location_slot_by_shuttle'].get(selected, '')
+    target = _slot_object(side, goal_data['target_slot'])
+    base['source_slot'] = source
+    base['target_slot'] = target
+    blocker_ids = list(
+        route_clearance['blockers_by_pair'].get((source, target), ())
+    )
+    if not blocker_ids:
+        return base
+
+    route_pair = next(
+        (
+            pair
+            for pair in route_clearance['provenance']['pairs']
+            if pair['from_slot'] == source and pair['to_slot'] == target
+        ),
+        {},
+    )
+    segment_order = {
+        block['segment']: index
+        for index, block in enumerate(route_pair.get('route_blocks') or [])
+    }
+    positions = fleet['rail_position_by_shuttle']
+    blocker_ids.sort(
+        key=lambda shuttle: (
+            segment_order.get(positions[shuttle]['segment'], -1),
+            float(positions[shuttle]['s_ratio']),
+            shuttle,
+        ),
+        reverse=True,
+    )
+    slot_four = _slot_object(side, '4')
+    slot_four_available = (
+        goal_data['target_slot'] != '4'
+        and not fleet['slot_occupancy'].get(slot_four)
+    )
+    relocations = []
+    for index, blocker in enumerate(blocker_ids):
+        position = positions[blocker]
+        if index == 0 and slot_four_available:
+            destination = {
+                'kind': 'slot',
+                'target_slot': slot_four,
+                'target_station': _station_object(
+                    side,
+                    _station_for_slot(side, '4'),
+                ),
+            }
+        else:
+            public_segment = (
+                LEFT_PUBLIC_SEGMENT_NAME_MAP.get('A34I', 'A34I')
+                if side == 'left'
+                else 'A34I'
+            )
+            destination = {
+                'kind': 'interior_loop',
+                'gate_switch': 'A3',
+                'target_segment': public_segment,
+                'target_s_m': INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE[
+                    (side, 'A3')
+                ][1],
+            }
+        relocations.append({
+            'order': index + 1,
+            'shuttle': blocker,
+            'reason': 'blocks_selected_shuttle_route',
+            'current_segment': position['segment'],
+            'current_s_ratio': round(float(position['s_ratio']), 6),
+            'destination': destination,
+        })
+    base.update({
+        'required': True,
+        'ordered_relocations': relocations,
+        'route_must_be_reobserved_after_each_relocation': True,
+        'unsupported_if_more_than_two_blockers': len(relocations) > 2,
+    })
+    return base
+
+
 def _pddl_init_facts(
     *,
     fleet: dict[str, Any],
@@ -3511,6 +3898,7 @@ def _pddl_init_facts(
     obstacles: dict[str, list[str]],
     blocks: dict[str, Any],
     goal_data: dict[str, Any],
+    route_clearance: dict[str, Any],
 ) -> list[str]:
     facts: list[str] = ['(= (total-cost) 0)', '(validated_state)']
     for side in SIDES:
@@ -3559,14 +3947,43 @@ def _pddl_init_facts(
                 if cost == 0:
                     cost = 1
                 facts.append(f'(= (route_cost {from_object} {to_object}) {cost})')
-                if not side_has_obstacle:
+                if (
+                    not side_has_obstacle
+                    and (from_object, to_object) in route_clearance['clear_pairs']
+                ):
                     facts.append(f'(route_clear_between {from_object} {to_object})')
+                for blocker in route_clearance['blockers_by_pair'].get(
+                    (from_object, to_object),
+                    (),
+                ):
+                    facts.append(
+                        f'(route_blocked_by {from_object} {to_object} {blocker})'
+                    )
+    for front, rear in sorted(route_clearance['ordering_pairs']):
+        facts.extend([
+            f'(front_of {front} {rear})',
+            f'(behind {rear} {front})',
+        ])
+    if goal_data['goal_type'] == 'transport' and goal_data['target_slot']:
+        target = _slot_object(goal_data['side'], goal_data['target_slot'])
+        for selected in goal_data['candidate_shuttles']:
+            source = fleet['location_slot_by_shuttle'].get(selected, '')
+            for blocker in route_clearance['blockers_by_pair'].get(
+                (source, target),
+                (),
+            ):
+                facts.append(f'(clearance_precedes {blocker} {selected})')
     for slot_object, occupant in sorted(fleet['slot_occupancy'].items()):
         if occupant:
             facts.append(f'(slot_occupied_by {slot_object} {occupant})')
         else:
             facts.append(f'(slot_free {slot_object})')
     for block_object in sorted(blocks['blocks']):
+        block_metadata = blocks['blocks'][block_object]
+        if not block_metadata.get('slot'):
+            facts.append(
+                f'(block_on_side {block_object} {block_metadata["side"]})'
+            )
         occupant = blocks['block_occupancy'].get(block_object, '')
         reservation = blocks['block_reservations'].get(block_object, '')
         if occupant:

@@ -101,6 +101,35 @@ def test_marker_spawn_rejection_does_not_delete_unknown_gazebo_entity():
     assert marker.next_spawn_attempt_time > 0.0
 
 
+def test_continuous_start_positions_parse_public_segment_and_ratio():
+    module = _load_module()
+    parser = module.Room315KinematicShuttleNode._resolve_start_position_overrides
+    splitter = module.Room315KinematicShuttleNode._split_list_parameter
+    right = SimpleNamespace(
+        rail_side='right',
+        network=SimpleNamespace(segments={
+            'A12E': SimpleNamespace(length=2.0),
+            'A23': SimpleNamespace(length=0.3),
+        }),
+        _split_list_parameter=splitter,
+    )
+    left = SimpleNamespace(
+        rail_side='left',
+        network=SimpleNamespace(segments={
+            'A34E': SimpleNamespace(length=2.4),
+        }),
+        _split_list_parameter=splitter,
+    )
+
+    assert parser(right, 'A12E@0.25,A23@0.5', shuttle_count=2) == [
+        ('A12E', 0.5),
+        ('A23', 0.15),
+    ]
+    assert parser(left, 'A12E@0.25', shuttle_count=1) == [
+        ('A34E', 0.6),
+    ]
+
+
 def test_marker_spawn_warning_state_does_not_block_future_retries(monkeypatch):
     module = _load_module()
     marker = _marker(

@@ -18,13 +18,19 @@ model input
   right overhead image
 
 oracle label
-  shuttle identities, bounding boxes, rail blocks, and payload states
+  shuttle identities, bounding boxes, rail blocks, payload states
+  continuous rail position: s_m, s_ratio, segment length, and uncertainty
   switch states
   obstacle bounding boxes when obstacle labelling is enabled
 ```
 
 The current pilot deliberately sets `obstacles: []`. Obstacle scenes must not be
 added until the exporter can provide a real bounding box or segmentation mask.
+
+The blocker-localization profile adds route-specific hard negatives. A shuttle
+behind the selected shuttle or on the unused interior branch is labelled with
+its exact position but is not considered a route blocker. The `planning_probe`
+field exists only in the simulator manifest and is excluded from model input.
 
 ## Generate a pilot
 
@@ -49,6 +55,19 @@ Validate it at any time:
 ros2 run mfja_robot_control_config room_315_visual_scenario_generator.py \
   --validate-manifest ~/room315_visual_state_v3/scenarios/scenario_manifest.jsonl
 ```
+
+## Generate the blocker-localization pilot
+
+```bash
+ros2 run mfja_robot_control_config room_315_visual_scenario_generator.py \
+  --config "$(ros2 pkg prefix mfja_robot_control_config)/share/mfja_robot_control_config/config/room_315_visual_state/blocker_training_scenarios.yaml" \
+  --output-dir ~/room315_visual_state_v4_blockers/scenarios \
+  --count 50
+```
+
+This profile starts shuttles at continuous `SEGMENT@S_RATIO` positions and
+balances five cases: blocker ahead, blocker on an intermediate segment,
+non-blocker behind, non-blocker on the adjacent branch, and multiple blockers.
 
 ## Capture the pilot
 

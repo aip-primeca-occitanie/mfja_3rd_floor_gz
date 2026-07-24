@@ -23,6 +23,7 @@ install(
 install(
   FILES
     config/room_315_visual_state/README.md
+    config/room_315_visual_state/blocker_training_scenarios.yaml
     config/room_315_visual_state/training_scenarios.yaml
   DESTINATION share/${PROJECT_NAME}/config/room_315_visual_state
 )

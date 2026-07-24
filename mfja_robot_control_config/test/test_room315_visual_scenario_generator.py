@@ -17,6 +17,7 @@ CONFIG_PATH = (
     / 'room_315_visual_state'
     / 'training_scenarios.yaml'
 )
+BLOCKER_CONFIG_PATH = CONFIG_PATH.with_name('blocker_training_scenarios.yaml')
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
@@ -25,6 +26,10 @@ import room_315_visual_scenario_generator as generator
 
 def _config():
     return yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8'))
+
+
+def _blocker_config():
+    return yaml.safe_load(BLOCKER_CONFIG_PATH.read_text(encoding='utf-8'))
 
 
 def test_allocates_exact_balanced_pilot_counts():
@@ -98,11 +103,57 @@ def test_launch_setup_matches_scene_payloads_and_slots():
             )
 
 
+def test_generates_continuous_blocker_and_hard_negative_scenarios():
+    scenarios = generator.generate_scenarios(
+        _blocker_config(),
+        count=50,
+        seed=315,
+    )
+
+    assert len(scenarios) == 50
+    assert len({row['scenario_family'] for row in scenarios}) == 50
+    assert Counter(row['scene_type'] for row in scenarios) == {
+        'blocker_ahead_same_segment': 13,
+        'blocker_intermediate_segment': 10,
+        'nonblocker_adjacent_branch': 10,
+        'nonblocker_behind_same_segment': 10,
+        'multi_blocker': 7,
+    }
+    for scenario in scenarios:
+        probe = scenario['planning_probe']
+        shuttles = scenario['scene']['rails'][probe['side']]['shuttles']
+        arguments = scenario['setup']['launch_arguments']
+        assert all('start_position' in shuttle for shuttle in shuttles)
+        assert arguments[f'room315_{probe["side"]}_start_positions']
+        assert probe['model_input_exposure'] == 'excluded'
+        assert probe['expected_route_clear'] == (
+            not probe['expected_blocker_ids']
+        )
+        assert not (generator._walk_keys(scenario) & generator.LEGACY_KEYS)
+
+
 def test_rejects_legacy_task_field():
     scenario = generator.generate_scenarios(_config(), count=1, seed=315)[0]
     scenario['task'] = 'legacy'
 
     with pytest.raises(generator.VisualScenarioError, match='legacy fields'):
+        generator.validate_scenario(scenario)
+
+
+def test_rejects_overlapping_continuous_start_positions():
+    scenario = generator.generate_scenarios(
+        _blocker_config(),
+        count=1,
+        seed=315,
+    )[0]
+    side = scenario['planning_probe']['side']
+    shuttles = scenario['scene']['rails'][side]['shuttles']
+    shuttles[1]['start_position'] = {
+        'segment': shuttles[0]['start_position']['segment'],
+        's_ratio': shuttles[0]['start_position']['s_ratio'] + 0.05,
+    }
+
+    with pytest.raises(generator.VisualScenarioError, match='overlapping shuttle geometry'):
         generator.validate_scenario(scenario)
 
 

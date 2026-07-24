@@ -177,6 +177,14 @@ def generate_floor_launch_description(profile_name):
             description='Comma-separated startup slots for Room 315 right rail shuttles.',
         ),
         DeclareLaunchArgument(
+            'room315_right_start_positions',
+            default_value='',
+            description=(
+                'Optional comma-separated SEGMENT@S_RATIO positions for Room 315 '
+                'right rail shuttles.'
+            ),
+        ),
+        DeclareLaunchArgument(
             'room315_left_start_slot',
             default_value='2',
             description='Startup slot for the Room 315 left rail shuttle.',
@@ -185,6 +193,14 @@ def generate_floor_launch_description(profile_name):
             'room315_left_start_slots',
             default_value='',
             description='Comma-separated startup slots for Room 315 left rail shuttles.',
+        ),
+        DeclareLaunchArgument(
+            'room315_left_start_positions',
+            default_value='',
+            description=(
+                'Optional comma-separated SEGMENT@S_RATIO positions for Room 315 '
+                'left rail shuttles.'
+            ),
         ),
         DeclareLaunchArgument(
             'room315_shuttle_speed',
@@ -417,11 +433,17 @@ def generate_floor_launch_description(profile_name):
                         'right_start_slots': LaunchConfiguration(
                             'room315_right_start_slots'
                         ),
+                        'right_start_positions': LaunchConfiguration(
+                            'room315_right_start_positions'
+                        ),
                         'left_start_slot': LaunchConfiguration(
                             'room315_left_start_slot'
                         ),
                         'left_start_slots': LaunchConfiguration(
                             'room315_left_start_slots'
+                        ),
+                        'left_start_positions': LaunchConfiguration(
+                            'room315_left_start_positions'
                         ),
                         'right_shuttle_count': LaunchConfiguration(
                             'room315_right_shuttle_count'

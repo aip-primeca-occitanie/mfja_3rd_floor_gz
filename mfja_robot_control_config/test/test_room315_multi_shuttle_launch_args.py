@@ -70,6 +70,8 @@ def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
     for text in (control, room_only, full_floor):
         assert 'right_start_slots' in text
         assert 'left_start_slots' in text
+        assert 'right_start_positions' in text
+        assert 'left_start_positions' in text
         assert 'right_shuttle_count' in text
         assert 'left_shuttle_count' in text
         assert 'falling_stop_offset_m' in text
@@ -80,6 +82,8 @@ def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
 
     assert 'room315_right_start_slots' in room_only
     assert 'room315_left_start_slots' in room_only
+    assert 'room315_right_start_positions' in room_only
+    assert 'room315_left_start_positions' in room_only
     assert 'room315_falling_stop_offset_m' in room_only
     assert 'room315_shuttle_collision_distance_m' in room_only
     assert 'room315_enable_payload_visuals' in room_only
@@ -88,6 +92,8 @@ def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
     assert 'room315_left_loaded_shuttles' in room_only
     assert 'room315_right_start_slots' in full_floor
     assert 'room315_left_start_slots' in full_floor
+    assert 'room315_right_start_positions' in full_floor
+    assert 'room315_left_start_positions' in full_floor
     assert 'room315_falling_stop_offset_m' in full_floor
     assert 'room315_shuttle_collision_distance_m' in full_floor
     assert 'room315_enable_payload_visuals' in full_floor

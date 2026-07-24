@@ -33,6 +33,7 @@ from room_315_rail_defaults import LEFT_CALIBRATION_DEFAULTS
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import RIGHT_CALIBRATION_DEFAULTS
 from room_315_rail_defaults import apply_rail_pose_calibration
+from room_315_rail_defaults import public_rail_segment_lengths
 from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
 from room_315_visual_state_dataset import VISUAL_STATE_SCHEMA_VERSION
 from room_315_visual_state_dataset import normalize_visual_state_labels
@@ -335,6 +336,10 @@ def visual_labels_from_event(
         and isinstance(payload_state.get('by_shuttle'), dict)
         else {}
     )
+    segment_lengths_by_side = {
+        side: public_rail_segment_lengths(side)
+        for side in ('right', 'left')
+    }
     shuttles = []
     for side in ('right', 'left'):
         side_states = raw_states.get(side)
@@ -361,12 +366,33 @@ def visual_labels_from_event(
             location = {'side': side}
             if segment:
                 location['block'] = segment
+            segment_length_m = float(
+                segment_lengths_by_side[side].get(segment, 0.0)
+            )
+            try:
+                s_m = float(state.get('s'))
+            except (TypeError, ValueError):
+                s_m = 0.0
+            position_available = segment_length_m > 0.0 and state.get('s') not in (None, '')
             shuttles.append({
                 'id': short_id,
                 'visually_available_identity': short_id,
                 'identity_available': True,
                 'bbox': bbox,
                 'location': location,
+                'rail_position': {
+                    'available': position_available,
+                    's_m': round(s_m, 6) if position_available else 0.0,
+                    's_ratio': (
+                        round(max(0.0, min(1.0, s_m / segment_length_m)), 6)
+                        if position_available
+                        else 0.0
+                    ),
+                    'segment_length_m': (
+                        round(segment_length_m, 6) if position_available else 0.0
+                    ),
+                    'position_uncertainty_m': 0.0,
+                },
                 'loaded_state': loaded_state,
                 'confidence': 1.0,
             })

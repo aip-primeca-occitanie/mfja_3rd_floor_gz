@@ -33,6 +33,7 @@ from room_315_visual_label_exporter import rail_pose_to_gazebo
 from room_315_visual_label_exporter import shuttle_bbox
 from room_315_visual_scenario_generator import REQUIRED_CAMERAS
 from room_315_visual_scenario_generator import _read_manifest
+from room_315_rail_defaults import public_rail_segment_lengths
 from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
 from room_315_visual_state_dataset import VISUAL_STATE_SCHEMA_VERSION
 from room_315_visual_state_dataset import normalize_visual_state_labels
@@ -129,7 +130,9 @@ def _switch_state(raw: Any) -> str:
 def visual_labels_from_snapshot(
     snapshot: CaptureSnapshot,
     cameras: dict[str, Any],
+    segment_lengths_by_side: dict[str, dict[str, float]] | None = None,
 ) -> dict[str, Any]:
+    segment_lengths_by_side = segment_lengths_by_side or {}
     shuttles = []
     for side in ('right', 'left'):
         camera = cameras[side]
@@ -143,12 +146,30 @@ def visual_labels_from_snapshot(
             block = str(state.get('segment') or '').strip().upper()
             if block:
                 location['block'] = block
+            segment_length_m = float(
+                segment_lengths_by_side.get(side, {}).get(block, 0.0)
+            )
+            s_m = float(state.get('s') or 0.0)
+            position_available = segment_length_m > 0.0
             shuttles.append({
                 'id': short_id,
                 'visually_available_identity': short_id,
                 'identity_available': True,
                 'bbox': bbox,
                 'location': location,
+                'rail_position': {
+                    'available': position_available,
+                    's_m': round(s_m, 6) if position_available else 0.0,
+                    's_ratio': (
+                        round(max(0.0, min(1.0, s_m / segment_length_m)), 6)
+                        if position_available
+                        else 0.0
+                    ),
+                    'segment_length_m': (
+                        round(segment_length_m, 6) if position_available else 0.0
+                    ),
+                    'position_uncertainty_m': 0.0,
+                },
                 'loaded_state': (
                     'loaded' if loaded is True else 'empty' if loaded is False else 'unknown'
                 ),
@@ -229,6 +250,45 @@ def validate_snapshot(
             f'simulator shuttle/payload state does not match scenario; '
             f'expected={expected}, actual={actual}'
         )
+    for side in ('right', 'left'):
+        scenario_shuttles = scenario['scene']['rails'][side]['shuttles']
+        for shuttle in scenario_shuttles:
+            start_position = shuttle.get('start_position')
+            if not isinstance(start_position, dict):
+                continue
+            entity_name = (
+                f'room315_{side}_shuttle_'
+                f'{shuttle["id"].removeprefix("R").removeprefix("L")}'
+            )
+            state = snapshot.shuttles[side].get(entity_name) or {}
+            actual_segment = str(state.get('segment') or '').strip().upper()
+            expected_segment = str(start_position.get('segment') or '').strip().upper()
+            if actual_segment != expected_segment:
+                raise VisualCaptureError(
+                    f'{shuttle["id"]} segment mismatch; '
+                    f'expected={expected_segment}, actual={actual_segment}'
+                )
+            segment_length = float(
+                next(
+                    (
+                        label['rail_position']['segment_length_m']
+                        for label in labels['shuttles']
+                        if label['id'] == shuttle['id']
+                    ),
+                    0.0,
+                )
+            )
+            if segment_length <= 0.0:
+                raise VisualCaptureError(
+                    f'{shuttle["id"]} has no calibrated segment length'
+                )
+            actual_ratio = float(state.get('s') or 0.0) / segment_length
+            expected_ratio = float(start_position['s_ratio'])
+            if abs(actual_ratio - expected_ratio) > 0.015:
+                raise VisualCaptureError(
+                    f'{shuttle["id"]} s_ratio mismatch; '
+                    f'expected={expected_ratio:.6f}, actual={actual_ratio:.6f}'
+                )
     if len(labels['shuttles']) != sum(len(value) for value in expected.values()):
         raise VisualCaptureError(
             'one or more expected shuttles are outside the calibrated camera view'
@@ -299,6 +359,7 @@ class VisualStateCaptureNode(Node):
             'z': float(message.z),
             'yaw': float(message.yaw),
             'segment': str(message.current_segment or ''),
+            's': float(message.s),
         }
 
     def _on_payload(self, side: str, message: String) -> None:
@@ -459,6 +520,10 @@ def capture_scenario(
     camera_model_sdf: Path | None = None,
 ) -> dict[str, Any]:
     cameras = load_camera_projections(camera_model_sdf or _default_camera_model_path())
+    segment_lengths_by_side = {
+        side: public_rail_segment_lengths(side)
+        for side in ('right', 'left')
+    }
     rclpy.init(args=None)
     node = VisualStateCaptureNode()
     deadline = time.monotonic() + timeout_seconds
@@ -468,7 +533,11 @@ def capture_scenario(
         while time.monotonic() < deadline:
             rclpy.spin_once(node, timeout_sec=0.1)
             try:
-                labels = visual_labels_from_snapshot(node.snapshot, cameras)
+                labels = visual_labels_from_snapshot(
+                    node.snapshot,
+                    cameras,
+                    segment_lengths_by_side,
+                )
                 validate_snapshot(
                     node.snapshot,
                     scenario,

@@ -1,0 +1,18 @@
+schema_version: room315.visual_capture_scenario.v1
+scenario_profile: blocker_localization
+
+generator:
+  scenario_count: 120
+  seed: 31520260725
+
+scene_type_weights:
+  blocker_ahead_same_segment: 0.25
+  nonblocker_behind_same_segment: 0.20
+  blocker_intermediate_segment: 0.20
+  nonblocker_adjacent_branch: 0.20
+  multi_blocker: 0.15
+
+capture:
+  frames_per_scenario: 1
+  settle_seconds: 1.5
+  frame_interval_seconds: 0.25

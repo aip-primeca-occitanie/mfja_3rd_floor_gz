@@ -209,6 +209,11 @@ def test_visual_provider_outputs_visual_facts_and_fuses_trusted_stoppers():
     assert _fact(state, 'room315_right_shuttle_2', 'rail_side').value == 'right'
     assert _fact(state, 'room315_right_shuttle_2', 'location_slot').value == 'right:slot:2'
     assert _fact(state, 'room315_right_shuttle_2', 'location_block').value == 'right:A12E'
+    assert (
+        _fact(state, 'room315_right_shuttle_2', 'rail_position')
+        .value['position_uncertainty_m']
+        == 0.05
+    )
     assert _fact(state, 'room315_right_shuttle_2', 'loaded').value is True
 
     switch_state = _fact(state, 'right:switch:A2', 'state')

@@ -267,6 +267,7 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('start_enabled', False)
         self.declare_parameter('start_slot', 2)
         self.declare_parameter('start_slots', '')
+        self.declare_parameter('start_positions', '')
         self.declare_parameter('start_snap_tolerance_m', 0.25)
         self.declare_parameter('initial_segment', 'A23')
         self.declare_parameter('initial_s', 0.0)
@@ -394,6 +395,7 @@ class Room315KinematicShuttleNode(Node):
         start_enabled = bool(self.get_parameter('start_enabled').value)
         start_slot = self.get_parameter('start_slot').value
         start_slots = str(self.get_parameter('start_slots').value)
+        start_positions = str(self.get_parameter('start_positions').value)
         start_snap_tolerance_m = float(
             self.get_parameter('start_snap_tolerance_m').value
         )
@@ -849,6 +851,10 @@ class Room315KinematicShuttleNode(Node):
             default_entity_name=self.gazebo_entity_name,
             raw_entity_names=gazebo_entity_names,
         )
+        position_overrides = self._resolve_start_position_overrides(
+            start_positions,
+            shuttle_count=len(shuttle_specs),
+        )
         self.shuttles: list[ManagedShuttle] = []
         for shuttle_index, (entity_name, slot) in enumerate(shuttle_specs):
             self.shuttles.append(
@@ -858,6 +864,7 @@ class Room315KinematicShuttleNode(Node):
                     speed=speed,
                     enabled=start_enabled,
                     deployed=True,
+                    start_position=position_overrides[shuttle_index],
                     pose_topic_override=pose_topic if shuttle_index == 0 else None,
                 )
             )
@@ -1459,6 +1466,56 @@ class Room315KinematicShuttleNode(Node):
             for shuttle in self.shuttles
         )
 
+    def _resolve_start_position_overrides(
+        self,
+        raw_positions: str,
+        *,
+        shuttle_count: int,
+    ) -> list[tuple[str, float] | None]:
+        tokens = self._split_list_parameter(raw_positions)
+        if not tokens:
+            return [None] * shuttle_count
+        if len(tokens) != shuttle_count:
+            raise ValueError(
+                f'shuttle_count={shuttle_count} but start_positions has '
+                f'{len(tokens)} value(s): {tokens}.'
+            )
+        resolved: list[tuple[str, float] | None] = []
+        for token in tokens:
+            if '@' not in token:
+                raise ValueError(
+                    f'Invalid start position {token!r}; use SEGMENT@S_RATIO.'
+                )
+            requested_segment, ratio_text = token.split('@', 1)
+            requested_segment = requested_segment.strip().upper()
+            segment_name = (
+                LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
+                    requested_segment,
+                    requested_segment,
+                )
+                if self.rail_side == 'left'
+                else requested_segment
+            )
+            if segment_name not in self.network.segments:
+                raise ValueError(
+                    f'Unknown start position segment {requested_segment!r}.'
+                )
+            try:
+                s_ratio = float(ratio_text)
+            except ValueError as exc:
+                raise ValueError(
+                    f'Invalid start position ratio in {token!r}.'
+                ) from exc
+            if not 0.0 <= s_ratio <= 1.0:
+                raise ValueError(
+                    f'Start position ratio must be in [0, 1]: {token!r}.'
+                )
+            resolved.append((
+                segment_name,
+                s_ratio * self.network.segments[segment_name].length,
+            ))
+        return resolved
+
     def _create_managed_shuttle(
         self,
         entity_name: str,
@@ -1467,6 +1524,7 @@ class Room315KinematicShuttleNode(Node):
         enabled: bool = True,
         deployed: bool = True,
         payload_loaded: bool | None = None,
+        start_position: tuple[str, float] | None = None,
         pose_topic_override: str | None = None,
     ) -> ManagedShuttle:
         (
@@ -1476,6 +1534,13 @@ class Room315KinematicShuttleNode(Node):
             initial_segment,
             initial_s,
         ) = self._resolve_allowed_start_slot(slot, self.start_snap_tolerance_m)
+        if start_position is not None:
+            initial_segment, initial_s = start_position
+            segment = self.network.segments.get(initial_segment)
+            if segment is None:
+                raise ValueError(f'Unknown initial segment: {initial_segment!r}')
+            initial_s = max(0.0, min(float(initial_s), segment.length))
+            start_snap_distance_m = 0.0
         pose_topic = (
             pose_topic_override
             if pose_topic_override is not None

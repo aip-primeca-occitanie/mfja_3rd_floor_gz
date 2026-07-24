@@ -42,6 +42,8 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
         'move_shuttle_to_slot',
         'finish_candidate_task',
         'route_cost',
+        'route_blocked_by',
+        'clearance_precedes',
         'inspection_done',
         'front_of',
         'waiting_for_clearance',

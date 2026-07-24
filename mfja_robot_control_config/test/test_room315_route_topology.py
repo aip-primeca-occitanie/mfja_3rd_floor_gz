@@ -90,6 +90,40 @@ def test_route_blockers_ignore_known_shuttle_behind_source_on_same_segment():
     assert blockers == []
 
 
+def test_route_blockers_use_physical_occupancy_interval_at_route_boundary():
+    multi = _load_module()
+    topology = _right_topology(multi)
+    rails = {
+        'right': {
+            'shuttles': {
+                'R1': {'segment': 'A12E', 's_ratio': 0.411866742},
+                'R2': {
+                    'segment': 'A12E',
+                    'rail_position': {
+                        'available': True,
+                        's_ratio': 0.32,
+                        'segment_length_m': 2.228,
+                        'position_uncertainty_m': 0.01,
+                    },
+                },
+            },
+        },
+    }
+
+    blockers = multi.route_blockers_from_rails(
+        rails,
+        topology,
+        source_slot='1',
+        target_slot='3',
+        selected_shuttle='R1',
+    )
+
+    assert [blocker.shuttle_id for blocker in blockers] == ['R2']
+    assert blockers[0].reason == 'route_occupancy_interval_overlap'
+    assert blockers[0].s_ratio == pytest.approx(0.32)
+    assert blockers[0].occupancy_end_s_ratio > topology.slots['1'].s_ratio
+
+
 def test_route_blockers_detect_known_shuttle_ahead_on_source_segment():
     multi = _load_module()
     topology = _right_topology(multi)

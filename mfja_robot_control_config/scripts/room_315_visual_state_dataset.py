@@ -24,7 +24,11 @@ from room_315_json_io import iter_jsonl_objects
 
 DATASET_MODE_VISUAL_STATE = 'visual_state'
 DATASET_MODES = (DATASET_MODE_VISUAL_STATE,)
-VISUAL_STATE_SCHEMA_VERSION = 'room315.visual_state.v1'
+VISUAL_STATE_SCHEMA_VERSION = 'room315.visual_state.v2'
+SUPPORTED_VISUAL_STATE_SCHEMA_VERSIONS = {
+    'room315.visual_state.v1',
+    VISUAL_STATE_SCHEMA_VERSION,
+}
 VISUAL_LABEL_SUFFIX = '_visual_labels.jsonl'
 VISUAL_MODEL_INPUT_KEYS = {'overhead_images'}
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
@@ -37,6 +41,11 @@ SHUTTLE_LABEL_FIELDS = {
     'loaded_state',
     'loaded',
     'payload_state',
+    'rail_position',
+    's_m',
+    's_ratio',
+    'segment_length_m',
+    'position_uncertainty_m',
 }
 LABEL_LEAKAGE_KEYS = {
     'visual_state_labels',
@@ -48,6 +57,11 @@ LABEL_LEAKAGE_KEYS = {
     'location',
     'loaded_state',
     'payload_state',
+    'rail_position',
+    's_m',
+    's_ratio',
+    'segment_length_m',
+    'position_uncertainty_m',
     'visually_available_identity',
     'visible_identity',
     'obstacles',
@@ -218,6 +232,80 @@ def _location(raw: Any) -> dict[str, Any]:
     return dict(sorted(location.items()))
 
 
+def _optional_nonnegative_float(
+    raw: Any,
+    *,
+    context: str,
+    fallback: float = 0.0,
+) -> float:
+    if raw in (None, ''):
+        return float(fallback)
+    value = _finite_float(raw, context=context)
+    if value < 0.0:
+        raise VisualStateValidationError(f'{context} must be non-negative')
+    return round(value, 6)
+
+
+def _rail_position(raw_shuttle: dict[str, Any], *, context: str) -> dict[str, Any]:
+    raw = raw_shuttle.get('rail_position')
+    if raw is None:
+        raw = {
+            key: raw_shuttle.get(key)
+            for key in (
+                'available',
+                's_m',
+                's_ratio',
+                'segment_length_m',
+                'position_uncertainty_m',
+            )
+            if key in raw_shuttle
+        }
+    if not isinstance(raw, dict):
+        raise VisualStateValidationError(f'{context}.rail_position must be an object')
+    available = bool(
+        raw.get(
+            'available',
+            raw.get('s_ratio') not in (None, '') and raw.get('s_m') not in (None, ''),
+        )
+    )
+    s_ratio = _optional_nonnegative_float(
+        raw.get('s_ratio'),
+        context=f'{context}.rail_position.s_ratio',
+    )
+    if s_ratio > 1.0:
+        raise VisualStateValidationError(
+            f'{context}.rail_position.s_ratio must be in [0, 1]'
+        )
+    s_m = _optional_nonnegative_float(
+        raw.get('s_m'),
+        context=f'{context}.rail_position.s_m',
+    )
+    segment_length_m = _optional_nonnegative_float(
+        raw.get('segment_length_m'),
+        context=f'{context}.rail_position.segment_length_m',
+    )
+    uncertainty_m = _optional_nonnegative_float(
+        raw.get('position_uncertainty_m', raw.get('uncertainty_m')),
+        context=f'{context}.rail_position.position_uncertainty_m',
+    )
+    if available:
+        if segment_length_m <= 0.0:
+            raise VisualStateValidationError(
+                f'{context}.rail_position.segment_length_m must be positive when available'
+            )
+        if s_m > segment_length_m + 1e-6:
+            raise VisualStateValidationError(
+                f'{context}.rail_position.s_m exceeds segment_length_m'
+            )
+    return {
+        'available': available,
+        's_m': s_m,
+        's_ratio': s_ratio,
+        'segment_length_m': segment_length_m,
+        'position_uncertainty_m': uncertainty_m,
+    }
+
+
 def _raw_label_payload(row: dict[str, Any]) -> dict[str, Any]:
     for key in ('visual_state_labels', 'oracle_visual_state', 'labels'):
         value = row.get(key)
@@ -257,6 +345,10 @@ def _iter_entities(raw: Any, *, entity_name: str) -> list[dict[str, Any]]:
 def normalize_visual_state_labels(row_or_label: dict[str, Any], *, context: str = 'row') -> dict[str, Any]:
     raw = _raw_label_payload(row_or_label)
     schema_version = _clean_text(raw.get('schema_version'), VISUAL_STATE_SCHEMA_VERSION)
+    if schema_version not in SUPPORTED_VISUAL_STATE_SCHEMA_VERSIONS:
+        raise VisualStateValidationError(
+            f'{context}.schema_version is unsupported: {schema_version!r}'
+        )
     calibration_version = _clean_text(raw.get('calibration_version'))
     confidence = _confidence(raw.get('confidence'), context=context)
 
@@ -275,6 +367,7 @@ def normalize_visual_state_labels(row_or_label: dict[str, Any], *, context: str 
             'identity_available': bool(shuttle.get('identity_available', identity != 'unknown')),
             'bbox': _bbox(shuttle.get('bbox') or shuttle.get('bounding_box'), context=item_context),
             'location': _location(shuttle.get('location')),
+            'rail_position': _rail_position(shuttle, context=item_context),
             'loaded_state': _loaded_state(
                 shuttle.get('loaded_state', shuttle.get('payload_state', shuttle.get('loaded')))
             ),
@@ -570,6 +663,7 @@ def visual_state_class_balance(labels: list[dict[str, Any]]) -> dict[str, Any]:
     obstacle_counts = Counter()
     schema_versions = Counter()
     calibration_versions = Counter()
+    position_available = Counter()
     for label in labels:
         schema_versions[str(label.get('schema_version') or '')] += 1
         calibration_versions[str(label.get('calibration_version') or '')] += 1
@@ -577,6 +671,8 @@ def visual_state_class_balance(labels: list[dict[str, Any]]) -> dict[str, Any]:
         for shuttle in label.get('shuttles') or []:
             loaded[str(shuttle.get('loaded_state') or 'unknown')] += 1
             identities[str(shuttle.get('visually_available_identity') or 'unknown')] += 1
+            position = shuttle.get('rail_position') or {}
+            position_available[str(bool(position.get('available'))).lower()] += 1
         for switch in label.get('switches') or []:
             switch_states[str(switch.get('state') or 'unknown')] += 1
     return {
@@ -584,6 +680,7 @@ def visual_state_class_balance(labels: list[dict[str, Any]]) -> dict[str, Any]:
         'loaded_state': dict(sorted(loaded.items())),
         'visually_available_identity': dict(sorted(identities.items())),
         'visible_switch_state': dict(sorted(switch_states.items())),
+        'continuous_position_available': dict(sorted(position_available.items())),
         'obstacle_count': dict(sorted(obstacle_counts.items())),
         'schema_version': dict(sorted(schema_versions.items())),
         'calibration_version': dict(sorted(calibration_versions.items())),
@@ -722,6 +819,38 @@ def _mae(records: list[dict[str, Any]], indexes: list[int]) -> float | None:
     return round(total / max(1, count), 6)
 
 
+def _absolute_error_distribution(
+    records: list[dict[str, Any]],
+    indexes: list[int],
+) -> dict[str, float | None]:
+    errors = []
+    for record in records:
+        true = record['true_raw']
+        pred = record['pred_raw']
+        errors.extend(
+            abs(float(pred[index]) - float(true[index]))
+            for index in indexes
+        )
+    if not errors:
+        return {'mean': None, 'p50': None, 'p95': None}
+    ordered = sorted(errors)
+
+    def percentile(fraction: float) -> float:
+        position = (len(ordered) - 1) * fraction
+        lower = math.floor(position)
+        upper = math.ceil(position)
+        if lower == upper:
+            return ordered[lower]
+        weight = position - lower
+        return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+    return {
+        'mean': round(sum(ordered) / len(ordered), 6),
+        'p50': round(percentile(0.50), 6),
+        'p95': round(percentile(0.95), 6),
+    }
+
+
 def _binary_accuracy(records: list[dict[str, Any]], indexes: list[int]) -> float | None:
     if not records or not indexes:
         return None
@@ -832,6 +961,16 @@ def visual_state_metrics(records: list[dict[str, Any]], label_names: list[str]) 
     all_indexes = list(range(len(label_names)))
     bbox_indexes = [idx for idx, name in enumerate(label_names) if '.bbox.' in name]
     confidence_indexes = [idx for idx, name in enumerate(label_names) if name.endswith('.confidence') or name == 'confidence']
+    s_m_indexes = [
+        idx
+        for idx, name in enumerate(label_names)
+        if name.endswith('.rail_position.s_m')
+    ]
+    s_ratio_indexes = [
+        idx
+        for idx, name in enumerate(label_names)
+        if name.endswith('.rail_position.s_ratio')
+    ]
     obstacle_presence = [
         idx
         for idx, name in enumerate(label_names)
@@ -864,6 +1003,8 @@ def visual_state_metrics(records: list[dict[str, Any]], label_names: list[str]) 
         'localization_metrics': {
             'bbox_mae': bbox_mae,
             'location_accuracy': location_accuracy,
+            's_m_error': _absolute_error_distribution(records, s_m_indexes),
+            's_ratio_error': _absolute_error_distribution(records, s_ratio_indexes),
         },
         'loaded_state_metrics': {
             'accuracy': loaded_state_accuracy,
