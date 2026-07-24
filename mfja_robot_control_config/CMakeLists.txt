@@ -22,6 +22,13 @@ install(
 
 install(
   FILES
+    config/room_315_visual_state/README.md
+    config/room_315_visual_state/training_scenarios.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_visual_state
+)
+
+install(
+  FILES
     config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
@@ -72,6 +79,7 @@ install(
     scripts/room_315_pddl_language_generator.py
     scripts/room_315_pddl_plan_translator.py
     scripts/room_315_pddl_scenario_generator.py
+    scripts/room_315_pddl_validation_gate.py
     scripts/room_315_rail_devices.py
     scripts/room_315_rail_defaults.py
     scripts/room_315_payload_case_batch_runner.py
@@ -96,7 +104,11 @@ install(
     scripts/room_315_vla_train_local.py
     scripts/room_315_vla_to_lerobot.py
     scripts/room_315_visual_observed_state_provider.py
+    scripts/room_315_visual_label_exporter.py
+    scripts/room_315_visual_state_capture.py
     scripts/room_315_visual_state_dataset.py
+    scripts/room_315_visual_scenario_generator.py
+    scripts/room_315_visual_scenario_runner.py
     scripts/room_315_visual_state_smoke.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -260,6 +272,22 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_visual_observed_state_provider
     test/test_room315_visual_observed_state_provider.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_label_exporter
+    test/test_room315_visual_label_exporter.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_scenario_generator
+    test/test_room315_visual_scenario_generator.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_state_capture
+    test/test_room315_visual_state_capture.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_scenario_runner
+    test/test_room315_visual_scenario_runner.py
   )
   ament_add_pytest_test(
     test_room315_visual_debug_colors

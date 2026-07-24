@@ -26,7 +26,6 @@ DATASET_MODE_VISUAL_STATE = 'visual_state'
 DATASET_MODES = (DATASET_MODE_VISUAL_STATE,)
 VISUAL_STATE_SCHEMA_VERSION = 'room315.visual_state.v1'
 VISUAL_LABEL_SUFFIX = '_visual_labels.jsonl'
-VISUAL_STATE_NAMES = ('visual_state.constant_zero_no_privileged_state',)
 VISUAL_MODEL_INPUT_KEYS = {'overhead_images'}
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
 SHUTTLE_LABEL_FIELDS = {
@@ -462,21 +461,10 @@ def image_integrity_report(
     }
 
 
-def scenario_family_from_row(row: dict[str, Any], label: dict[str, Any] | None = None) -> str:
-    for key in ('scenario_family', 'family_id', 'task_family', 'base_case_id'):
-        value = str(row.get(key) or '').strip()
-        if value:
-            return value
-    problem = str(row.get('pddl_problem') or '').strip()
-    if problem:
-        if 'room315-' in problem:
-            problem = problem.split('room315-', 1)[1]
-        return problem.rsplit('_speed', 1)[0]
-    payload = label or _raw_label_payload(row)
-    for key in ('scenario_family', 'family_id', 'task_family', 'base_case_id'):
-        value = str(payload.get(key) or '').strip()
-        if value:
-            return value
+def scenario_family_from_row(row: dict[str, Any]) -> str:
+    value = str(row.get('scenario_family') or '').strip()
+    if value:
+        return value
     raise VisualStateValidationError('visual-state row is missing scenario family')
 
 
@@ -488,8 +476,7 @@ def sanitized_visual_state_row(row: dict[str, Any], row_index: int) -> tuple[dic
         'sample_id': sample_id,
         'episode_id': str(row.get('episode_id') or ''),
         'step_index': row.get('step_index', row.get('event_index', row_index)),
-        'task': str(row.get('task') or ''),
-        'scenario_family': scenario_family_from_row(row, labels),
+        'scenario_family': scenario_family_from_row(row),
         'model_input': {
             'overhead_images': dict(
                 (

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Static Room 315 rail defaults shared by the kinematic runtime."""
 
+import math
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -106,6 +109,92 @@ LEFT_CALIBRATION_DEFAULTS = {
     'pose_offset_y': 0.0,
     'pose_offset_z': 0.0,
 }
+
+
+def _calibration_value(calibration: Any, name: str) -> float:
+    raw = calibration[name] if isinstance(calibration, Mapping) else getattr(calibration, name)
+    return float(raw)
+
+
+def apply_rail_point_calibration(
+    x: float,
+    y: float,
+    z: float,
+    calibration: Any,
+) -> tuple[float, float, float]:
+    """Transform one rail-coordinate point into the calibrated Gazebo frame."""
+    base_x = (
+        _calibration_value(calibration, 'pose_transform_a') * x
+        + _calibration_value(calibration, 'pose_transform_b') * y
+        + _calibration_value(calibration, 'pose_transform_tx')
+    )
+    base_y = (
+        _calibration_value(calibration, 'pose_transform_c') * x
+        + _calibration_value(calibration, 'pose_transform_d') * y
+        + _calibration_value(calibration, 'pose_transform_ty')
+    )
+    scale_origin_x = _calibration_value(calibration, 'pose_scale_origin_x')
+    scale_origin_y = _calibration_value(calibration, 'pose_scale_origin_y')
+    scaled_x = scale_origin_x + (
+        base_x - scale_origin_x
+    ) * _calibration_value(calibration, 'pose_scale_x')
+    scaled_y = scale_origin_y + (
+        base_y - scale_origin_y
+    ) * _calibration_value(calibration, 'pose_scale_y')
+
+    rotation = math.radians(_calibration_value(calibration, 'pose_rotation_deg'))
+    rotation_origin_x = _calibration_value(calibration, 'pose_rotation_origin_x')
+    rotation_origin_y = _calibration_value(calibration, 'pose_rotation_origin_y')
+    dx = scaled_x - rotation_origin_x
+    dy = scaled_y - rotation_origin_y
+    cos_rotation = math.cos(rotation)
+    sin_rotation = math.sin(rotation)
+    return (
+        rotation_origin_x
+        + cos_rotation * dx
+        - sin_rotation * dy
+        + _calibration_value(calibration, 'pose_offset_x'),
+        rotation_origin_y
+        + sin_rotation * dx
+        + cos_rotation * dy
+        + _calibration_value(calibration, 'pose_offset_y'),
+        z
+        + _calibration_value(calibration, 'pose_transform_z_offset')
+        + _calibration_value(calibration, 'pose_offset_z'),
+    )
+
+
+def apply_rail_pose_calibration(
+    x: float,
+    y: float,
+    z: float,
+    yaw: float,
+    calibration: Any,
+) -> tuple[float, float, float, float]:
+    """Transform a rail-coordinate pose into the calibrated Gazebo frame."""
+    gazebo_x, gazebo_y, gazebo_z = apply_rail_point_calibration(
+        x,
+        y,
+        z,
+        calibration,
+    )
+    direction_x = math.cos(yaw)
+    direction_y = math.sin(yaw)
+    transformed_x = (
+        _calibration_value(calibration, 'pose_transform_a') * direction_x
+        + _calibration_value(calibration, 'pose_transform_b') * direction_y
+    ) * _calibration_value(calibration, 'pose_scale_x')
+    transformed_y = (
+        _calibration_value(calibration, 'pose_transform_c') * direction_x
+        + _calibration_value(calibration, 'pose_transform_d') * direction_y
+    ) * _calibration_value(calibration, 'pose_scale_y')
+    gazebo_yaw = (
+        math.atan2(transformed_y, transformed_x)
+        + math.radians(_calibration_value(calibration, 'pose_rotation_deg'))
+        + _calibration_value(calibration, 'pose_transform_yaw_offset')
+    )
+    return gazebo_x, gazebo_y, gazebo_z, gazebo_yaw
+
 
 RAIL_SENSOR_TYPE = 'sensor'
 MARKER_VISUAL_DEFAULT = 'default'

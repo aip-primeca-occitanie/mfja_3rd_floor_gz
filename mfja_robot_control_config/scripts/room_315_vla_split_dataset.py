@@ -6,7 +6,6 @@ import os
 import random
 import re
 import sys
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -126,20 +125,6 @@ def _episode_number(episode_id: str) -> int:
     return int(match.group(1)) if match else 0
 
 
-def _case_id_from_problem(problem: str) -> str:
-    case_id = str(problem or '').strip()
-    if not case_id:
-        return ''
-    if 'room315-' in case_id:
-        case_id = case_id.split('room315-', 1)[1]
-    return re.sub(r'_speed\d+$', '', case_id)
-
-
-def _speed_id_from_problem(problem: str) -> str:
-    match = re.search(r'_speed(\d+)$', str(problem or '').strip())
-    return match.group(1) if match else ''
-
-
 def _episode_validation_path(dataset_root: Path, episode_id: str) -> Path:
     return dataset_root / 'episodes' / episode_id / 'validation.json'
 
@@ -159,9 +144,13 @@ def _approved_validation(validation: dict[str, Any] | None) -> bool:
     if validation is None:
         return False
     status = str(validation.get('validation_status') or '').strip().lower()
+    visual_capture_approved = (
+        validation.get('capture_complete') is True
+        and validation.get('labels_valid') is True
+    )
     return (
         validation.get('approved_for_training') is True
-        and validation.get('task_success') is True
+        and visual_capture_approved
         and status in {'', 'approved'}
     )
 
@@ -171,7 +160,6 @@ def _build_episode_index(
     dataset_root: Path,
     *,
     allow_unvalidated: bool,
-    dataset_mode: str,
 ) -> dict[str, dict[str, Any]]:
     episodes: dict[str, dict[str, Any]] = {}
     for row_index, row in enumerate(rows):
@@ -183,46 +171,22 @@ def _build_episode_index(
             {
                 'episode_id': episode_id,
                 'row_indices': [],
-                'problems': Counter(),
-                'tasks': Counter(),
+                'families': set(),
             },
         )
         entry['row_indices'].append(row_index)
-        problem = str(row.get('pddl_problem') or '').strip()
-        if problem:
-            entry['problems'][problem] += 1
-        task = str(row.get('task') or '').strip()
-        if task:
-            entry['tasks'][task] += 1
-        if dataset_mode == DATASET_MODE_VISUAL_STATE:
-            entry.setdefault('families', Counter())
-            entry['families'][scenario_family_from_row(row)] += 1
+        entry['families'].add(scenario_family_from_row(row))
 
     for episode_id, entry in episodes.items():
-        if dataset_mode == DATASET_MODE_VISUAL_STATE:
-            families = entry.get('families') or Counter()
-            if not families:
-                raise ValueError(f'episode {episode_id!r} has no scenario family')
-            if len(families) > 1:
-                formatted = ', '.join(sorted(families))
-                raise ValueError(f'episode {episode_id!r} has multiple scenario families: {formatted}')
-            family_id = next(iter(families))
-            problem = next(iter(entry['problems'])) if entry['problems'] else family_id
-            entry['pddl_problem'] = problem
-            entry['base_case_id'] = family_id
-            entry['speed_id'] = _speed_id_from_problem(problem)
-            entry['task'] = entry['tasks'].most_common(1)[0][0] if entry['tasks'] else ''
-        elif not entry['problems']:
-            raise ValueError(f'episode {episode_id!r} has no pddl_problem in any row')
-        else:
-            if len(entry['problems']) > 1:
-                problems = ', '.join(sorted(entry['problems']))
-                raise ValueError(f'episode {episode_id!r} has multiple pddl_problem values: {problems}')
-            problem = next(iter(entry['problems']))
-            entry['pddl_problem'] = problem
-            entry['base_case_id'] = _case_id_from_problem(problem)
-            entry['speed_id'] = _speed_id_from_problem(problem)
-            entry['task'] = entry['tasks'].most_common(1)[0][0] if entry['tasks'] else ''
+        families = entry['families']
+        if not families:
+            raise ValueError(f'episode {episode_id!r} has no scenario family')
+        if len(families) > 1:
+            formatted = ', '.join(sorted(families))
+            raise ValueError(
+                f'episode {episode_id!r} has multiple scenario families: {formatted}'
+            )
+        entry['scenario_family'] = next(iter(families))
         validation = _read_validation(dataset_root, episode_id)
         entry['validation'] = validation or {}
         if not allow_unvalidated and not _approved_validation(validation):
@@ -264,7 +228,7 @@ def _split_rows(
     episode_to_split: dict[str, str] = {}
     for split_name, family_ids in family_splits.items():
         for episode_id, entry in episodes.items():
-            if entry['base_case_id'] in family_ids:
+            if entry['scenario_family'] in family_ids:
                 episode_to_split[episode_id] = split_name
     missing = sorted(set(episodes) - set(episode_to_split))
     if missing:
@@ -319,7 +283,7 @@ def _manifest_for_split(
         [
             episode_id
             for episode_id, entry in episodes.items()
-            if entry['base_case_id'] in family_ids
+            if entry['scenario_family'] in family_ids
         ],
         key=lambda episode_id: (_episode_number(episode_id), episode_id),
     )
@@ -338,9 +302,7 @@ def _manifest_for_split(
         'episodes': [
             {
                 'episode_id': episode_id,
-                'base_case_id': episodes[episode_id]['base_case_id'],
-                'speed_id': episodes[episode_id]['speed_id'],
-                'pddl_problem': episodes[episode_id]['pddl_problem'],
+                'scenario_family': episodes[episode_id]['scenario_family'],
                 'row_count': len(episodes[episode_id]['row_indices']),
             }
             for episode_id in split_episode_ids
@@ -401,7 +363,7 @@ def _split_integrity_report(
         'unexpected_episode_assignments': sorted(assigned_episode_ids - source_episode_ids),
         'families_disjoint': not overlapping_families,
         'overlapping_families': overlapping_families,
-        'speed_variants_grouped_by_family': not overlapping_families,
+        'episode_variants_grouped_by_family': not overlapping_families,
     }
 
 
@@ -429,9 +391,8 @@ def split_dataset(
         rows,
         dataset_root,
         allow_unvalidated=allow_unvalidated,
-        dataset_mode=dataset_mode,
     )
-    family_ids = sorted({entry['base_case_id'] for entry in episodes.values()})
+    family_ids = sorted({entry['scenario_family'] for entry in episodes.values()})
     family_splits = _split_family_ids(
         family_ids,
         seed=seed,

@@ -1,0 +1,22 @@
+schema_version: room315.visual_capture_scenario.v1
+
+generator:
+  # The default full plan is large enough for family-disjoint train/val/test
+  # splits. Use --count 50 for a fast pilot before capturing the full plan.
+  scenario_count: 320
+  seed: 31520260724
+
+# These weights intentionally balance negative, single-object, crowded, and
+# simultaneous two-camera scenes.
+scene_type_weights:
+  empty: 0.08
+  single: 0.32
+  multi_same_rail: 0.36
+  dual_rail: 0.24
+
+capture:
+  # Static duplicate frames are not useful. Keep one settled pair per unique
+  # scene; later motion scenarios should use distinct physical checkpoints.
+  frames_per_scenario: 1
+  settle_seconds: 1.5
+  frame_interval_seconds: 0.25

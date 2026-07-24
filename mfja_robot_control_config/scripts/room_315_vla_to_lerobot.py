@@ -6,7 +6,6 @@ import os
 import re
 import shutil
 import sys
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +20,6 @@ from room_315_visual_state_dataset import DATASET_MODES
 from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
 from room_315_visual_state_dataset import IMAGE_KEYS
 from room_315_visual_state_dataset import VISUAL_LABEL_SUFFIX
-from room_315_visual_state_dataset import VISUAL_STATE_NAMES
 from room_315_visual_state_dataset import VISUAL_STATE_SCHEMA_VERSION
 from room_315_visual_state_dataset import VisualStateLabelVectorizer
 from room_315_visual_state_dataset import file_fingerprint as _file_fingerprint
@@ -66,27 +64,21 @@ def _episode_number(episode_id: str) -> int:
 
 def build_lerobot_features(
     *,
-    state_names: list[str],
-    action_names: list[str],
+    visual_target_names: list[str],
     image_height: int,
     image_width: int,
     use_videos: bool,
     dataset_mode: str = DATASET_MODE_VISUAL_STATE,
 ) -> dict[str, dict[str, Any]]:
     image_dtype = 'video' if use_videos else 'image'
-    action_feature = {
+    visual_target_feature = {
         'dtype': 'float32',
-        'shape': (len(action_names),),
-        'names': action_names,
+        'shape': (len(visual_target_names),),
+        'names': visual_target_names,
         'output_semantics': 'visual_state_labels_not_rail_commands',
     }
     features: dict[str, dict[str, Any]] = {
-        'observation.state': {
-            'dtype': 'float32',
-            'shape': (len(state_names),),
-            'names': state_names,
-        },
-        'action': action_feature,
+        'action': visual_target_feature,
     }
     for image_key in IMAGE_KEYS:
         features[f'observation.images.{image_key}'] = {
@@ -210,9 +202,6 @@ def convert_room315_to_lerobot(
     output_root: Path,
     name: str,
     repo_id: str,
-    state_mode: str,
-    state_vectorizer_path: Path | None,
-    state_vectorizer_out: Path | None,
     image_width: int,
     image_height: int,
     fps: int,
@@ -254,20 +243,15 @@ def convert_room315_to_lerobot(
         dataset_mode=dataset_mode,
     )
 
-    _ = state_vectorizer_path, state_vectorizer_out
-    fitted_state_vectorizer = False
     if visual_label_vectorizer_path is not None:
         label_vectorizer = load_visual_label_vectorizer(visual_label_vectorizer_path)
         fitted_label_vectorizer = False
     else:
         label_vectorizer = VisualStateLabelVectorizer.fit(labels)
         fitted_label_vectorizer = True
-    action_names = label_vectorizer.names
-    state_names = list(VISUAL_STATE_NAMES)
-    state_mode = DATASET_MODE_VISUAL_STATE
+    visual_target_names = label_vectorizer.names
     features = build_lerobot_features(
-        state_names=state_names,
-        action_names=action_names,
+        visual_target_names=visual_target_names,
         image_height=image_height,
         image_width=image_width,
         use_videos=use_videos,
@@ -286,21 +270,17 @@ def convert_room315_to_lerobot(
         image_writer_threads=4,
     )
     frame_count = 0
-    task_counts: Counter[str] = Counter()
+    lerobot_task = 'visual_state_perception'
     labels_by_sample = {
         str(row.get('sample_id') or f'{row.get("episode_id", "")}:step:{row.get("step_index", "")}'): label
         for row, label in zip(rows, labels)
     }
     for episode_id, episode_rows in episodes:
         for row in episode_rows:
-            task = str(row.get('task') or 'visual_state')
-            task_counts[task] += 1
             sample_id = str(row.get('sample_id') or f'{row.get("episode_id", "")}:step:{row.get("step_index", "")}')
             target = np.asarray(label_vectorizer.transform(labels_by_sample[sample_id]), dtype=np.float32)
-            state = np.zeros((len(VISUAL_STATE_NAMES),), dtype=np.float32)
             frame = {
-                'task': task,
-                'observation.state': state,
+                'task': lerobot_task,
                 'action': target,
             }
             for image_key in IMAGE_KEYS:
@@ -352,15 +332,12 @@ def convert_room315_to_lerobot(
         'name': name,
         'frames': frame_count,
         'episodes': len(episodes),
-        'tasks': len(task_counts),
+        'lerobot_task': lerobot_task,
         'fps': fps,
         'use_videos': use_videos,
         'image_width': image_width,
         'image_height': image_height,
-        'state_mode': state_mode,
-        'state_dim': len(state_names),
-        'action_dim': len(action_names),
-        'state_vectorizer': None,
+        'visual_target_dim': len(visual_target_names),
         'visual_label_vectorizer': str(
             visual_label_vectorizer_path.expanduser().resolve()
             if visual_label_vectorizer_path is not None
@@ -372,7 +349,6 @@ def convert_room315_to_lerobot(
         'oracle_label_fingerprint': _rows_fingerprint(
             [{'visual_state_labels': label} for label in labels]
         ),
-        'state_vectorizer_fitted_from_input': fitted_state_vectorizer,
         'visual_label_vectorizer_fitted_from_input': fitted_label_vectorizer,
         'feature_keys': sorted(features),
         'model_input_integrity': model_input_integrity,
@@ -429,24 +405,6 @@ def main() -> None:
         ),
     )
     parser.add_argument(
-        '--state-mode',
-        choices=(DATASET_MODE_VISUAL_STATE,),
-        default=DATASET_MODE_VISUAL_STATE,
-        help='Compatibility option; visual-state conversion writes a constant non-privileged state.',
-    )
-    parser.add_argument(
-        '--state-vectorizer',
-        type=Path,
-        default=None,
-        help='Compatibility option ignored by visual-state conversion.',
-    )
-    parser.add_argument(
-        '--state-vectorizer-out',
-        type=Path,
-        default=None,
-        help='Compatibility option ignored by visual-state conversion.',
-    )
-    parser.add_argument(
         '--visual-labels',
         type=Path,
         default=None,
@@ -484,9 +442,6 @@ def main() -> None:
         output_root=args.output_root,
         name=args.name,
         repo_id=args.repo_id,
-        state_mode=args.state_mode,
-        state_vectorizer_path=args.state_vectorizer,
-        state_vectorizer_out=args.state_vectorizer_out,
         image_width=args.image_width,
         image_height=args.image_height,
         fps=args.fps,

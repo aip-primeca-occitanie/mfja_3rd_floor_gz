@@ -71,6 +71,8 @@ from room_315_rail_defaults import (
     VISUAL_SWITCH_SELECTOR_MAP,
     VISUAL_SWITCH_SELECTOR_MAP_BY_SIDE,
     AllowedStartPose,
+    apply_rail_point_calibration,
+    apply_rail_pose_calibration,
 )
 from room_315_rail_devices import (
     PositionSensorConfig,
@@ -3225,39 +3227,7 @@ class Room315KinematicShuttleNode(Node):
         if not self.enable_gazebo_pose_transform:
             return x, y, z
 
-        base_x = self.pose_transform_a * x + self.pose_transform_b * y + self.pose_transform_tx
-        base_y = self.pose_transform_c * x + self.pose_transform_d * y + self.pose_transform_ty
-        scaled_x = (
-            self.pose_scale_origin_x
-            + (base_x - self.pose_scale_origin_x) * self.pose_scale_x
-        )
-        scaled_y = (
-            self.pose_scale_origin_y
-            + (base_y - self.pose_scale_origin_y) * self.pose_scale_y
-        )
-        rotated_x, rotated_y = self._apply_planar_rotation(scaled_x, scaled_y)
-        return (
-            rotated_x + self.pose_offset_x,
-            rotated_y + self.pose_offset_y,
-            z + self.pose_transform_z_offset + self.pose_offset_z,
-        )
-
-    def _pose_rotation_rad(self) -> float:
-        return math.radians(self.pose_rotation_deg)
-
-    def _apply_planar_rotation(self, x: float, y: float) -> tuple[float, float]:
-        rotation_rad = self._pose_rotation_rad()
-        if abs(rotation_rad) <= 1e-12:
-            return x, y
-
-        dx = x - self.pose_rotation_origin_x
-        dy = y - self.pose_rotation_origin_y
-        cos_theta = math.cos(rotation_rad)
-        sin_theta = math.sin(rotation_rad)
-        return (
-            self.pose_rotation_origin_x + cos_theta * dx - sin_theta * dy,
-            self.pose_rotation_origin_y + sin_theta * dx + cos_theta * dy,
-        )
+        return apply_rail_point_calibration(x, y, z, self)
 
     def _on_pose_offset_command(self, message: String) -> None:
         try:
@@ -4566,49 +4536,18 @@ class Room315KinematicShuttleNode(Node):
         if not self.enable_gazebo_pose_transform:
             return pose
 
-        base_x = (
-            self.pose_transform_a * pose.x
-            + self.pose_transform_b * pose.y
-            + self.pose_transform_tx
+        x, y, z, yaw = apply_rail_pose_calibration(
+            pose.x,
+            pose.y,
+            pose.z,
+            pose.yaw,
+            self,
         )
-        base_y = (
-            self.pose_transform_c * pose.x
-            + self.pose_transform_d * pose.y
-            + self.pose_transform_ty
-        )
-        x = (
-            self.pose_scale_origin_x
-            + (base_x - self.pose_scale_origin_x) * self.pose_scale_x
-        )
-        y = (
-            self.pose_scale_origin_y
-            + (base_y - self.pose_scale_origin_y) * self.pose_scale_y
-        )
-        x, y = self._apply_planar_rotation(x, y)
-        x += self.pose_offset_x
-        y += self.pose_offset_y
-
-        raw_direction_x = math.cos(pose.yaw)
-        raw_direction_y = math.sin(pose.yaw)
-        transformed_direction_x = (
-            self.pose_transform_a * raw_direction_x
-            + self.pose_transform_b * raw_direction_y
-        )
-        transformed_direction_y = (
-            self.pose_transform_c * raw_direction_x
-            + self.pose_transform_d * raw_direction_y
-        )
-        yaw = math.atan2(
-            transformed_direction_y * self.pose_scale_y,
-            transformed_direction_x * self.pose_scale_x,
-        )
-        yaw += self._pose_rotation_rad()
-        yaw += self.pose_transform_yaw_offset
 
         return ShuttlePose(
             x=x,
             y=y,
-            z=pose.z + self.pose_transform_z_offset + self.pose_offset_z,
+            z=z,
             yaw=yaw,
             current_segment=pose.current_segment,
             s=pose.s,

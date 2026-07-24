@@ -10,6 +10,9 @@ from typing import Any
 import yaml
 
 from room_315_kinematic_shuttle import CUBIC_HERMITE_PATH_BACKEND, Point3D, RailNetwork
+from room_315_rail_defaults import LEFT_CALIBRATION_DEFAULTS
+from room_315_rail_defaults import RIGHT_CALIBRATION_DEFAULTS
+from room_315_rail_defaults import apply_rail_point_calibration
 
 
 DEVICE_CATEGORIES = {
@@ -17,47 +20,6 @@ DEVICE_CATEGORIES = {
     'position_sensors',
     'stoppers',
 }
-
-RIGHT_CALIBRATION_DEFAULTS = {
-    'pose_transform_a': -0.893249246800,
-    'pose_transform_b': 0.005839516878,
-    'pose_transform_tx': -26.921427375871,
-    'pose_transform_c': 0.001889497475,
-    'pose_transform_d': 1.308619216904,
-    'pose_transform_ty': 0.666926143808,
-    'pose_transform_z_offset': 0.0,
-    'pose_scale_x': 1.0,
-    'pose_scale_y': 1.0,
-    'pose_scale_origin_x': -15.855195431322,
-    'pose_scale_origin_y': -4.525523413467,
-    'pose_rotation_deg': 0.0,
-    'pose_rotation_origin_x': -15.855195431322,
-    'pose_rotation_origin_y': -4.525523413467,
-    'pose_offset_x': 0.0,
-    'pose_offset_y': 0.0,
-    'pose_offset_z': 0.0,
-}
-
-LEFT_CALIBRATION_DEFAULTS = {
-    'pose_transform_a': -0.8938584503560025,
-    'pose_transform_b': 0.005001975618640809,
-    'pose_transform_tx': -22.47198317328330,
-    'pose_transform_c': 0.001348127530438647,
-    'pose_transform_d': 1.255463611604302,
-    'pose_transform_ty': 0.4431777232193935,
-    'pose_transform_z_offset': 0.0,
-    'pose_scale_x': 0.98,
-    'pose_scale_y': 1.041,
-    'pose_scale_origin_x': -10.6365565,
-    'pose_scale_origin_y': -4.6995835,
-    'pose_rotation_deg': 180.0,
-    'pose_rotation_origin_x': -10.6365565,
-    'pose_rotation_origin_y': -4.6995835,
-    'pose_offset_x': 0.14,
-    'pose_offset_y': 0.0,
-    'pose_offset_z': 0.0,
-}
-
 
 @dataclass(frozen=True)
 class ClosestRailPosition:
@@ -95,48 +57,15 @@ def _calibration_for_side(side: str) -> dict[str, float]:
     return dict(LEFT_CALIBRATION_DEFAULTS if side == 'left' else RIGHT_CALIBRATION_DEFAULTS)
 
 
-def _apply_planar_rotation(x: float, y: float, calibration: dict[str, float]) -> tuple[float, float]:
-    rotation_rad = math.radians(calibration['pose_rotation_deg'])
-    if abs(rotation_rad) <= 1e-12:
-        return x, y
-
-    dx = x - calibration['pose_rotation_origin_x']
-    dy = y - calibration['pose_rotation_origin_y']
-    cos_theta = math.cos(rotation_rad)
-    sin_theta = math.sin(rotation_rad)
-    return (
-        calibration['pose_rotation_origin_x'] + cos_theta * dx - sin_theta * dy,
-        calibration['pose_rotation_origin_y'] + sin_theta * dx + cos_theta * dy,
-    )
-
-
 def _to_gazebo_point(
     point: Point3D,
     calibration: dict[str, float],
 ) -> tuple[float, float, float]:
-    base_x = (
-        calibration['pose_transform_a'] * point.x
-        + calibration['pose_transform_b'] * point.y
-        + calibration['pose_transform_tx']
-    )
-    base_y = (
-        calibration['pose_transform_c'] * point.x
-        + calibration['pose_transform_d'] * point.y
-        + calibration['pose_transform_ty']
-    )
-    scaled_x = (
-        calibration['pose_scale_origin_x']
-        + (base_x - calibration['pose_scale_origin_x']) * calibration['pose_scale_x']
-    )
-    scaled_y = (
-        calibration['pose_scale_origin_y']
-        + (base_y - calibration['pose_scale_origin_y']) * calibration['pose_scale_y']
-    )
-    rotated_x, rotated_y = _apply_planar_rotation(scaled_x, scaled_y, calibration)
-    return (
-        rotated_x + calibration['pose_offset_x'],
-        rotated_y + calibration['pose_offset_y'],
-        point.z + calibration['pose_transform_z_offset'] + calibration['pose_offset_z'],
+    return apply_rail_point_calibration(
+        point.x,
+        point.y,
+        point.z,
+        calibration,
     )
 
 

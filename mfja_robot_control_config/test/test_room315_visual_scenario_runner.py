@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+
+import sys
+from pathlib import Path
+
+import yaml
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
+CONFIG_PATH = (
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'config'
+    / 'room_315_visual_state'
+    / 'training_scenarios.yaml'
+)
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import room_315_visual_scenario_generator as generator
+import room_315_visual_scenario_runner as runner
+
+
+def _scenarios():
+    config = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8'))
+    return generator.generate_scenarios(config, count=8, seed=315)
+
+
+def test_builds_clean_launch_switch_and_capture_commands(tmp_path):
+    scenario = _scenarios()[0]
+    launch = runner.launch_command(scenario, gui=False)
+    switch = runner.switch_command(scenario)
+    capture = runner.capture_command(
+        scenario,
+        manifest=tmp_path / 'manifest.jsonl',
+        output_dataset=tmp_path / 'dataset',
+        timeout_seconds=30.0,
+        max_camera_skew_seconds=0.15,
+    )
+
+    assert launch[:5] == [
+        'ros2',
+        'launch',
+        'mfja_3rd_floor_bringup',
+        'room_315_only.launch.py',
+        'gui:=false',
+    ]
+    assert 'enable_room315_vla_dataset_recorder:=false' in launch
+    assert 'robots:=none' in launch
+    assert not any("'none'" in argument for argument in launch)
+    assert not any(argument.endswith(':=') for argument in launch)
+    assert all(
+        argument.split(':=', 1)[1].startswith("'")
+        for argument in launch
+        if '_start_slots:=' in argument
+    )
+    assert switch[:4] == ['ros2', 'topic', 'pub', '--once']
+    assert '/mfja/conveyor/switch_cmd' in switch
+    assert capture[:4] == [
+        'ros2',
+        'run',
+        'mfja_robot_control_config',
+        'room_315_visual_state_capture.py',
+    ]
+
+
+def test_selects_requested_range_and_rejects_unknown_ids():
+    scenarios = _scenarios()
+    selected = runner.select_scenarios(
+        scenarios,
+        scenario_ids=[],
+        start=2,
+        limit=3,
+    )
+    assert selected == scenarios[2:5]
+
+    try:
+        runner.select_scenarios(
+            scenarios,
+            scenario_ids=['missing'],
+            start=0,
+            limit=None,
+        )
+    except runner.VisualScenarioRunError as exc:
+        assert 'unknown scenario ids' in str(exc)
+    else:
+        raise AssertionError('unknown scenario id was accepted')

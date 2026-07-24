@@ -28,7 +28,6 @@ from room_315_visual_state_dataset import DATASET_MODES
 from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
 from room_315_visual_state_dataset import IMAGE_KEYS
 from room_315_visual_state_dataset import VISUAL_LABEL_SUFFIX
-from room_315_visual_state_dataset import VISUAL_STATE_NAMES
 from room_315_visual_state_dataset import VISUAL_STATE_SCHEMA_VERSION
 from room_315_visual_state_dataset import VisualStateLabelVectorizer
 from room_315_visual_state_dataset import file_fingerprint as _file_fingerprint
@@ -67,8 +66,6 @@ VISUAL_ADAPTATION_MODES = (
     VISUAL_ADAPTATION_COMPARE,
 )
 VISUAL_MODEL_KIND = 'structured_visual_state_compact_backbone_v1'
-TEXT_PAD = '<pad>'
-TEXT_UNK = '<unk>'
 
 
 def _require_torch():
@@ -228,7 +225,6 @@ class Room315VisualStateDataset:
         label_vectorizer: VisualStateLabelVectorizer,
         target_mean: np.ndarray,
         target_std: np.ndarray,
-        max_tokens: int,
         image_width: int,
         image_height: int,
         torch_module: Any,
@@ -242,7 +238,6 @@ class Room315VisualStateDataset:
         self.label_vectorizer = label_vectorizer
         self.target_mean = target_mean
         self.target_std = target_std
-        self.max_tokens = max_tokens
         self.image_width = image_width
         self.image_height = image_height
         self.torch = torch_module
@@ -256,8 +251,6 @@ class Room315VisualStateDataset:
         target = np.asarray(self.label_vectorizer.transform(self.labels[index]), dtype=np.float32)
         normalized_target = (target - self.target_mean) / self.target_std
         return {
-            'text': self.torch.zeros((self.max_tokens,), dtype=self.torch.long),
-            'state': self.torch.zeros((len(VISUAL_STATE_NAMES),), dtype=self.torch.float32),
             'image': self.torch.as_tensor(
                 load_paired_images(
                     row,
@@ -363,8 +356,7 @@ def _build_visual_state_model(
                 nn.Linear(128, output_dim),
             )
 
-        def forward(self, text, state, image):
-            del text, state
+        def forward(self, image):
             features = self.backbone(image)
             if self.lora_down is not None and self.lora_up is not None:
                 features = features + self.lora_up(self.lora_down(features)) / float(rank)
@@ -499,12 +491,10 @@ def _evaluate_visual_state(
     records: list[dict[str, Any]] = []
     with torch_module.no_grad():
         for batch in loader:
-            text = batch['text'].to(device)
-            state = batch['state'].to(device)
             image = batch['image'].to(device)
             target = batch['target'].to(device)
             raw_target = batch['raw_target'].to(device)
-            pred_norm = model(text, state, image)
+            pred_norm = model(image)
             loss_total += float(loss_fn(pred_norm, target).item())
             pred = pred_norm * std_tensor + mean_tensor
             batch_size = int(raw_target.shape[0])
@@ -619,7 +609,6 @@ def _write_visual_training_artifacts(
     output_dir: Path,
     *,
     dataset_report: dict[str, Any],
-    vocab: dict[str, int],
     label_vectorizer: VisualStateLabelVectorizer,
     target_mean: np.ndarray,
     target_std: np.ndarray,
@@ -630,18 +619,7 @@ def _write_visual_training_artifacts(
         _pretty_json(dataset_report) + '\n',
         encoding='utf-8',
     )
-    (output_dir / 'vocab.json').write_text(_pretty_json(vocab) + '\n', encoding='utf-8')
     _save_visual_label_vectorizer(label_vectorizer, output_dir / 'visual_label_vectorizer.json')
-    (output_dir / 'state_vectorizer.json').write_text(
-        _pretty_json({
-            'kind': 'room315_visual_state_constant_state',
-            'dataset_mode': DATASET_MODE_VISUAL_STATE,
-            'names': list(VISUAL_STATE_NAMES),
-            'dim': len(VISUAL_STATE_NAMES),
-            'model_input_exposure': 'constant_placeholder_not_privileged_state',
-        }) + '\n',
-        encoding='utf-8',
-    )
     (output_dir / 'target_stats.json').write_text(
         _pretty_json({
             'mean': target_mean.tolist(),
@@ -660,7 +638,6 @@ def _visual_model_from_config(
     *,
     config: dict[str, Any],
     output_dim: int,
-    vocab_size: int,
 ) -> tuple[Any, dict[str, Any]]:
     if config.get('visual_model_kind') != VISUAL_MODEL_KIND:
         raise ValueError(
@@ -749,7 +726,6 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
     output_dir = args.output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    vocab = {TEXT_PAD: 0, TEXT_UNK: 1}
     dataset_report = {
         'tool': 'room_315_vla_train_local',
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
@@ -815,12 +791,9 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         'weight_decay': args.weight_decay,
         'image_width': args.image_width,
         'image_height': args.image_height,
-        'max_tokens': args.max_tokens,
         'train_rows': len(train_rows),
         'val_rows': len(val_rows),
         'output_dim': output_dim,
-        'state_dim': len(VISUAL_STATE_NAMES),
-        'vocab_size': len(vocab),
         'allow_blank_images': bool(args.allow_blank_images),
         'debug_blank_image_mode': bool(args.allow_blank_images),
         'production_feature_source': 'model_input.overhead_images only',
@@ -835,18 +808,8 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
     }
 
     (output_dir / 'dataset_report.json').write_text(_pretty_json(dataset_report) + '\n', encoding='utf-8')
-    (output_dir / 'vocab.json').write_text(_pretty_json(vocab) + '\n', encoding='utf-8')
     (output_dir / 'visual_label_vectorizer.json').write_text(
         _pretty_json(label_vectorizer.to_json()) + '\n',
-        encoding='utf-8',
-    )
-    (output_dir / 'state_vectorizer.json').write_text(
-        _pretty_json({
-            'kind': 'room315_visual_state_constant_state',
-            'dataset_mode': DATASET_MODE_VISUAL_STATE,
-            'names': list(VISUAL_STATE_NAMES),
-            'dim': len(VISUAL_STATE_NAMES),
-        }) + '\n',
         encoding='utf-8',
     )
     (output_dir / 'target_stats.json').write_text(
@@ -865,7 +828,6 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         label_vectorizer=label_vectorizer,
         target_mean=target_mean,
         target_std=target_std,
-        max_tokens=args.max_tokens,
         image_width=args.image_width,
         image_height=args.image_height,
         torch_module=torch_module,
@@ -878,7 +840,6 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         label_vectorizer=label_vectorizer,
         target_mean=target_mean,
         target_std=target_std,
-        max_tokens=args.max_tokens,
         image_width=args.image_width,
         image_height=args.image_height,
         torch_module=torch_module,
@@ -937,7 +898,6 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         _write_visual_training_artifacts(
             run_dir,
             dataset_report=dataset_report,
-            vocab=vocab,
             label_vectorizer=label_vectorizer,
             target_mean=target_mean,
             target_std=target_std,
@@ -961,12 +921,10 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             running_loss = 0.0
             seen = 0
             for batch in train_loader:
-                text = batch['text'].to(device)
-                state = batch['state'].to(device)
                 image = batch['image'].to(device)
                 target = batch['target'].to(device)
                 optimizer.zero_grad(set_to_none=True)
-                pred = model(text, state, image)
+                pred = model(image)
                 loss = loss_fn(pred, target)
                 loss.backward()
                 optimizer.step()
@@ -1040,9 +998,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'best.pt',
             'last.pt',
             'dataset_report.json',
-            'vocab.json',
             'visual_label_vectorizer.json',
-            'state_vectorizer.json',
             'target_stats.json',
             'training_config.json',
         ):
@@ -1093,7 +1049,6 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
 
     checkpoint = _torch_load_checkpoint(torch_module, checkpoint_path)
     config = _checkpoint_training_config(checkpoint, checkpoint_path)
-    vocab = _load_json(_artifact_path(checkpoint_path, 'vocab.json'))
     label_vectorizer = _load_visual_label_vectorizer(
         _artifact_path(checkpoint_path, 'visual_label_vectorizer.json')
     )
@@ -1104,7 +1059,6 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
         torch_module,
         config=config,
         output_dim=int(target_mean.shape[0]),
-        vocab_size=max(2, len(vocab)),
     )
     model = model.to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -1124,7 +1078,6 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
 
     image_width = _safe_int(config.get('image_width'), args.image_width)
     image_height = _safe_int(config.get('image_height'), args.image_height)
-    max_tokens = _safe_int(config.get('max_tokens'), args.max_tokens)
     mean_tensor = torch_module.as_tensor(target_mean, dtype=torch_module.float32, device=device)
     std_tensor = torch_module.as_tensor(target_std, dtype=torch_module.float32, device=device)
     started = time.perf_counter()
@@ -1152,8 +1105,6 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
             split_records: list[dict[str, Any]] = []
             for sample_index, (row, label) in enumerate(zip(rows, labels)):
                 cycle_start = time.perf_counter()
-                text = torch_module.zeros((1, max_tokens), dtype=torch_module.long, device=device)
-                state = torch_module.zeros((1, len(VISUAL_STATE_NAMES)), dtype=torch_module.float32, device=device)
                 image = torch_module.as_tensor(
                     load_paired_images(
                         row,
@@ -1169,7 +1120,7 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                 if device == 'cuda' and torch_module.cuda.is_available():
                     torch_module.cuda.synchronize()
                 inference_start = time.perf_counter()
-                pred_norm = model(text, state, image)
+                pred_norm = model(image)
                 if device == 'cuda' and torch_module.cuda.is_available():
                     torch_module.cuda.synchronize()
                 inference_latency = time.perf_counter() - inference_start
@@ -1179,14 +1130,14 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                     'split': split_name,
                     'sample_index': sample_index,
                     'episode_id': str(row.get('episode_id') or ''),
-                    'task_family': str(row.get('scenario_family') or ''),
+                    'scenario_family': str(row.get('scenario_family') or ''),
                     'true_raw': true_raw.tolist(),
                     'pred_raw': pred[: len(true_raw)].astype(np.float32).tolist(),
                     'inference_latency_seconds': inference_latency,
                     'cycle_time_seconds': time.perf_counter() - cycle_start,
                 }
                 split_records.append(record)
-                family_key = record['task_family'] or 'unknown'
+                family_key = record['scenario_family'] or 'unknown'
                 family_records.setdefault(family_key, []).append(record)
             splits[split_name] = {
                 'source_file': _file_fingerprint(splits_dir / split_file),
@@ -1236,7 +1187,6 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
             name: _file_fingerprint(path)
             for name, path in {
                 'checkpoint': checkpoint_path,
-                'vocab': _artifact_path(checkpoint_path, 'vocab.json'),
                 'visual_label_vectorizer': _artifact_path(checkpoint_path, 'visual_label_vectorizer.json'),
                 'target_stats': _artifact_path(checkpoint_path, 'target_stats.json'),
                 'training_config': _artifact_path(checkpoint_path, 'training_config.json'),
@@ -1326,7 +1276,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument('--weight-decay', type=float, default=1e-4)
     parser.add_argument('--image-width', type=int, default=160)
     parser.add_argument('--image-height', type=int, default=120)
-    parser.add_argument('--max-tokens', type=int, default=32)
     parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--device', default='auto', help='auto, cuda, or cpu')
     parser.add_argument('--seed', type=int, default=13)

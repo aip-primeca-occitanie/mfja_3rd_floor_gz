@@ -72,7 +72,8 @@ def _visual_row(tmp_path, *, episode_id, family, step=0, missing_images=False):
         json.dumps({
             'episode_id': episode_id,
             'approved_for_training': True,
-            'task_success': True,
+            'capture_complete': True,
+            'labels_valid': True,
             'validation_status': 'approved',
         }),
         encoding='utf-8',
@@ -81,13 +82,8 @@ def _visual_row(tmp_path, *, episode_id, family, step=0, missing_images=False):
         'sample_id': f'{episode_id}:step:{step}',
         'episode_id': episode_id,
         'step_index': step,
-        'task': f'observe {family}',
         'scenario_family': family,
-        'pddl_problem': f'room315-{family}_speed008',
         'model_input': {
-            'language': 'this field is stripped by the visual-state split',
-            'last_command': {'action': 'START'},
-            'observable_state': {'right': {'sensors': {'DZI1R': 1}}},
             'overhead_images': {
                 'left_rail_rgb': left,
                 'right_rail_rgb': right,
@@ -150,6 +146,14 @@ def test_split_dataset_writes_visual_inputs_and_separate_oracle_labels(tmp_path)
     assert summary['visual_state_model_input_integrity']['oracle_labels_physically_separate'] is True
     assert summary['camera_completeness']['complete_rows'] == 6
     assert summary['visual_state_class_balance']['loaded_state']['loaded'] == 6
+    assert set(train_rows[0]) == {
+        'dataset_mode',
+        'sample_id',
+        'episode_id',
+        'step_index',
+        'scenario_family',
+        'model_input',
+    }
     assert set(train_rows[0]['model_input']) == {'overhead_images'}
     assert 'visual_state_labels' not in train_rows[0]
     assert 'action_vector' not in json.dumps(train_rows)
@@ -229,7 +233,6 @@ def test_lerobot_converter_visual_state_mode_uses_label_targets_and_sidecar(tmp_
         'sample_id': row['sample_id'],
         'episode_id': row['episode_id'],
         'step_index': row['step_index'],
-        'task': row['task'],
         'scenario_family': row['scenario_family'],
         'model_input': {'overhead_images': row['model_input']['overhead_images']},
     }
@@ -274,9 +277,6 @@ def test_lerobot_converter_visual_state_mode_uses_label_targets_and_sidecar(tmp_
         output_root=tmp_path / 'lerobot',
         name='room315_visual_state_train',
         repo_id='room315/visual_state_train',
-        state_mode='ignored',
-        state_vectorizer_path=None,
-        state_vectorizer_out=tmp_path / 'unused_state_vectorizer.json',
         image_width=4,
         image_height=3,
         fps=10,
@@ -291,7 +291,12 @@ def test_lerobot_converter_visual_state_mode_uses_label_targets_and_sidecar(tmp_
     assert summary['purpose'] == 'visual-state label dataset conversion; labels are not rail commands'
     assert summary['model_input_integrity']['oracle_labels_physically_separate'] is True
     assert features['action']['output_semantics'] == 'visual_state_labels_not_rail_commands'
-    assert features['observation.state']['names'] == ['visual_state.constant_zero_no_privileged_state']
+    assert 'observation.state' not in features
+    assert set(features) == {
+        'action',
+        'observation.images.left_rail_rgb',
+        'observation.images.right_rail_rgb',
+    }
     assert Path(summary['structured_visual_labels']).exists()
     assert Path(summary['visual_label_vectorizer']).exists()
     assert 'loaded_state' in json.dumps(summary['class_balance'])
@@ -341,6 +346,9 @@ def test_visual_state_training_models_compare_frozen_backbone_and_lora():
         adaptation_mode='lora',
         lora_rank=2,
     )
+    image = torch.zeros((1, 6, 32, 32), dtype=torch.float32)
+    assert frozen(image).shape == (1, 8)
+    assert lora(image).shape == (1, 8)
 
     frozen_counts = trainer.parameter_report(frozen)
     lora_counts = trainer.parameter_report(lora)
