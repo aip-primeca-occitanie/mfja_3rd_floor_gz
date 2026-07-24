@@ -1,0 +1,21 @@
+source install/setup.bash
+
+1 :
+ros2 launch staubli_tx2_60l_moveit_config staubli_tx2_60l_planning_execution_real.launch.py
+
+2 :
+ros2 launch staubli_val3_driver robot_interface_streaming.launch.py robot_ip:=172.31.0.1
+
+3 :
+ros2 run real_commander cartesian_converter 
+
+4 :
+ros2 run real_commander sensor
+
+5 :
+ros2 bag record /Fz_raw /Fz /cartesian_target /joint_path_command /joint_states /cartesian_state 
+
+
+sudo tcpdump -i enp0s31f6 host 172.31.0.1 -w capture.pcap
+
+tcpdump -nn -r capture.pcap

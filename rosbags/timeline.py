@@ -19,8 +19,8 @@ from scapy.all import rdpcap, IP, Raw
 # CONFIGURATION
 # ==========================
 
-BAG_PATH  = "timing_record_2"
-PCAP_PATH = "timing_record_2.pcap"
+BAG_PATH  = "timing_record_4"
+PCAP_PATH = "timing_record_4.pcap"
 OUT_PATH  = "timeline_events.txt"
 
 IP_1 = "172.31.0.1"

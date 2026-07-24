@@ -99,7 +99,7 @@ def generate_launch_description():
             "KD": 0., #4.24e-5,
             "MAX_OUTPUT": 0.05,
             "TARGET": 300.0,
-            "FREQ": 250
+            "FREQ": 80
             }]
         )
 
