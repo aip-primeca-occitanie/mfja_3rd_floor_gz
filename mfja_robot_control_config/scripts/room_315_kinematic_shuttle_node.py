@@ -88,6 +88,7 @@ from room_315_rail_devices import (
     normalize_rail_side as _normalize_rail_side,
     ordered_switch_states as _ordered_switch_states,
 )
+from room_315_multi_shuttle import shuttle_specs_for_identities
 
 
 def _default_network_path() -> Path:
@@ -264,6 +265,8 @@ class Room315KinematicShuttleNode(Node):
         self.declare_parameter('path_backend', CUBIC_HERMITE_PATH_BACKEND)
         self.declare_parameter('arc_length_samples_per_edge', 16)
         self.declare_parameter('shuttle_count', 1)
+        self.declare_parameter('identity_selection_mode', 'count_prefix')
+        self.declare_parameter('active_identities', '')
         self.declare_parameter('start_enabled', False)
         self.declare_parameter('start_slot', 2)
         self.declare_parameter('start_slots', '')
@@ -392,6 +395,12 @@ class Room315KinematicShuttleNode(Node):
             self.get_parameter('arc_length_samples_per_edge').value
         )
         shuttle_count = int(self.get_parameter('shuttle_count').value)
+        identity_selection_mode = str(
+            self.get_parameter('identity_selection_mode').value
+        )
+        active_identities = str(
+            self.get_parameter('active_identities').value
+        )
         start_enabled = bool(self.get_parameter('start_enabled').value)
         start_slot = self.get_parameter('start_slot').value
         start_slots = str(self.get_parameter('start_slots').value)
@@ -846,6 +855,8 @@ class Room315KinematicShuttleNode(Node):
         self.pending_stopper_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
         shuttle_specs = self._resolve_shuttle_specs(
             shuttle_count=shuttle_count,
+            identity_selection_mode=identity_selection_mode,
+            raw_active_identities=active_identities,
             raw_start_slot=start_slot,
             raw_start_slots=start_slots,
             default_entity_name=self.gazebo_entity_name,
@@ -1390,6 +1401,8 @@ class Room315KinematicShuttleNode(Node):
     def _resolve_shuttle_specs(
         self,
         shuttle_count: int,
+        identity_selection_mode: str,
+        raw_active_identities: str,
         raw_start_slot,
         raw_start_slots: str,
         default_entity_name: str,
@@ -1399,6 +1412,33 @@ class Room315KinematicShuttleNode(Node):
             raise ValueError('shuttle_count must be greater than or equal to 0.')
         if shuttle_count > 4:
             raise ValueError('Room 315 supports at most 4 shuttles per rail side.')
+        identity_selection_mode = identity_selection_mode.strip().casefold()
+        if identity_selection_mode not in {'count_prefix', 'explicit'}:
+            raise ValueError(
+                'identity_selection_mode must be count_prefix or explicit.'
+            )
+
+        explicit_entity_names: list[str] | None = None
+        if identity_selection_mode == 'explicit':
+            identity_specs = shuttle_specs_for_identities(
+                self.rail_side,
+                raw_active_identities,
+            )
+            if len(identity_specs) != shuttle_count:
+                raise ValueError(
+                    f'explicit {self.rail_side} active_identities resolves to '
+                    f'{len(identity_specs)} shuttle(s), but shuttle_count='
+                    f'{shuttle_count}.'
+                )
+            explicit_entity_names = [
+                spec.gazebo_entity_name
+                for spec in identity_specs
+            ]
+        elif str(raw_active_identities or '').strip():
+            raise ValueError(
+                'active_identities was supplied while identity_selection_mode '
+                'is count_prefix; set identity_selection_mode=explicit.'
+            )
         if shuttle_count == 0:
             return []
 
@@ -1431,7 +1471,14 @@ class Room315KinematicShuttleNode(Node):
             )
 
         entity_names = self._split_list_parameter(raw_entity_names)
-        if not entity_names:
+        if explicit_entity_names is not None:
+            if entity_names and entity_names != explicit_entity_names:
+                raise ValueError(
+                    'gazebo_entity_names does not exactly match the entities '
+                    'resolved from active_identities.'
+                )
+            entity_names = explicit_entity_names
+        elif not entity_names:
             entity_names = (
                 [default_entity_name]
                 if shuttle_count == 1

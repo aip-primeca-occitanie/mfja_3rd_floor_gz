@@ -12,6 +12,11 @@ scene_type_weights:
   nonblocker_adjacent_branch: 0.20
   multi_blocker: 0.15
 
+rail_scope_weights:
+  left_four: 0.40
+  right_four: 0.40
+  dual_four_plus_four: 0.20
+
 capture:
   frames_per_scenario: 1
   settle_seconds: 1.5

@@ -52,6 +52,12 @@ def generate_launch_description():
                 'start_slots': LaunchConfiguration('right_start_slots'),
                 'start_positions': LaunchConfiguration('right_start_positions'),
                 'shuttle_count': LaunchConfiguration('right_shuttle_count'),
+                'identity_selection_mode': LaunchConfiguration(
+                    'identity_selection_mode'
+                ),
+                'active_identities': LaunchConfiguration(
+                    'right_active_identities'
+                ),
                 'loaded_shuttles': LaunchConfiguration('right_loaded_shuttles'),
             },
         ],
@@ -72,6 +78,12 @@ def generate_launch_description():
                 'start_slots': LaunchConfiguration('left_start_slots'),
                 'start_positions': LaunchConfiguration('left_start_positions'),
                 'shuttle_count': LaunchConfiguration('left_shuttle_count'),
+                'identity_selection_mode': LaunchConfiguration(
+                    'identity_selection_mode'
+                ),
+                'active_identities': LaunchConfiguration(
+                    'left_active_identities'
+                ),
                 'loaded_shuttles': LaunchConfiguration('left_loaded_shuttles'),
             },
         ],
@@ -202,6 +214,14 @@ def generate_launch_description():
             description='Number of initial right-rail shuttles. Use 0 to start the rail with no shuttle.',
         ),
         DeclareLaunchArgument(
+            'right_active_identities',
+            default_value='',
+            description=(
+                'Exact comma-separated right identities when '
+                'identity_selection_mode=explicit, e.g. R2,R4.'
+            ),
+        ),
+        DeclareLaunchArgument(
             'right_loaded_shuttles',
             default_value='',
             description='Comma-separated loaded right shuttles at startup, e.g. R2,4,all.',
@@ -227,6 +247,23 @@ def generate_launch_description():
             'left_shuttle_count',
             default_value='0',
             description='Number of initial left-rail shuttles. Use 0 to start the rail with no shuttle.',
+        ),
+        DeclareLaunchArgument(
+            'left_active_identities',
+            default_value='',
+            description=(
+                'Exact comma-separated left identities when '
+                'identity_selection_mode=explicit, e.g. L1,L3.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'identity_selection_mode',
+            default_value='count_prefix',
+            choices=['count_prefix', 'explicit'],
+            description=(
+                'Select legacy count-prefix entities or fail-closed explicit '
+                'active identity subsets.'
+            ),
         ),
         DeclareLaunchArgument(
             'left_loaded_shuttles',

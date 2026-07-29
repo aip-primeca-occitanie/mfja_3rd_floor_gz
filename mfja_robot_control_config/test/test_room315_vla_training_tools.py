@@ -3,7 +3,9 @@
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -31,17 +33,26 @@ def _write_image(path: Path) -> None:
 
 
 def _visual_labels(*, family='visual_case', shuttle='R1', loaded_state='loaded'):
+    side = 'left' if shuttle.startswith('L') else 'right'
     return {
-        'schema_version': 'room315.visual_state.v1',
+        'schema_version': 'room315.visual_state.v3',
         'calibration_version': 'calib-2026-07',
         'scenario_family': family,
         'confidence': 0.95,
         'shuttles': [
             {
                 'id': shuttle,
-                'visually_available_identity': shuttle,
+                'presence': True,
+                'visually_available': True,
                 'bbox': [1.0, 2.0, 10.0, 12.0],
-                'location': {'side': 'right', 'slot': 'A1'},
+                'location': {'side': side, 'block': 'A12E'},
+                'rail_position': {
+                    'available': True,
+                    's_m': 0.5,
+                    's_ratio': 0.25,
+                    'segment_length_m': 2.0,
+                    'position_uncertainty_m': 0.0,
+                },
                 'loaded_state': loaded_state,
                 'confidence': 0.9,
             }
@@ -175,31 +186,39 @@ def test_visual_state_rejects_model_input_label_leakage():
         visual.validate_visual_model_input(row)
 
 
-def test_visual_state_v2_vectorizes_continuous_rail_position_and_reports_error():
+def test_visual_state_v3_vectorizes_continuous_rail_position_and_reports_error():
     visual = _load_module('room_315_visual_state_dataset_v2', VISUAL_STATE_SCRIPT)
     label = _visual_labels()
-    label['schema_version'] = 'room315.visual_state.v2'
+    label['schema_version'] = 'room315.visual_state.v3'
+    segment_length_m = 2.23
+    s_m = 0.92
     label['shuttles'][0]['rail_position'] = {
         'available': True,
-        's_m': 0.92,
-        's_ratio': 0.412,
-        'segment_length_m': 2.23,
+        's_m': s_m,
+        's_ratio': s_m / segment_length_m,
+        'segment_length_m': segment_length_m,
         'position_uncertainty_m': 0.02,
     }
     normalized = visual.normalize_visual_state_labels(label)
     vectorizer = visual.VisualStateLabelVectorizer.fit([normalized])
     names = vectorizer.names
+    assert not any('position_uncertainty_m' in name for name in names)
+    assert all(visual.is_model_prediction_target(name.split('==')[0]) for name in names)
     target = vectorizer.transform(normalized)
     prediction = list(target)
-    prediction[names.index('shuttles.0.rail_position.s_m')] += 0.08
-    prediction[names.index('shuttles.0.rail_position.s_ratio')] += 0.04
+    prediction[names.index('shuttles.4.rail_position.s_m')] += 0.08
+    prediction[names.index('shuttles.4.rail_position.s_ratio')] += 0.04
 
     metrics = visual.visual_state_metrics(
-        [{'true_raw': target, 'pred_raw': prediction}],
+        [{
+            'true_raw': target,
+            'pred_raw': prediction,
+            'target_mask': vectorizer.target_mask(normalized),
+        }],
         names,
     )
 
-    assert normalized['shuttles'][0]['rail_position']['available'] is True
+    assert normalized['shuttles'][4]['rail_position']['available'] is True
     assert metrics['localization_metrics']['s_m_error']['p95'] == pytest.approx(0.08)
     assert metrics['localization_metrics']['s_ratio_error']['p50'] == pytest.approx(0.04)
 
@@ -340,9 +359,7 @@ def test_visual_state_vectorizer_round_trip_and_metrics():
     true_vector = restored.transform(label)
     pred_vector = list(true_vector)
     bbox_index = next(index for index, name in enumerate(restored.names) if '.bbox.0' in name)
-    confidence_index = restored.names.index('confidence')
     pred_vector[bbox_index] += 2.0
-    pred_vector[confidence_index] -= 0.05
 
     metrics = visual.visual_state_metrics(
         [{'true_raw': true_vector, 'pred_raw': pred_vector}],
@@ -353,14 +370,15 @@ def test_visual_state_vectorizer_round_trip_and_metrics():
     assert any('loaded_state==loaded' in name for name in restored.names)
     assert metrics['dataset_mode'] == 'visual_state'
     assert metrics['bbox_mae'] > 0.0
-    assert metrics['confidence_mae'] > 0.0
+    assert metrics['confidence_mae'] is None
     assert metrics['loaded_state_accuracy'] == 1.0
-    assert metrics['obstacle_metrics']['presence_accuracy'] == 1.0
-    assert metrics['confidence_calibration']['mean_abs_calibration_error'] > 0.0
+    assert metrics['obstacle_metrics']['presence_accuracy'] is None
+    assert metrics['confidence_calibration']['mean_abs_calibration_error'] is None
 
 
-def test_visual_state_training_models_compare_frozen_backbone_and_lora():
+def test_visual_state_training_models_use_resnet18_and_supported_adaptations():
     torch = pytest.importorskip('torch')
+    torchvision = pytest.importorskip('torchvision')
     trainer = _load_module('room_315_vla_train_local_visual_models', TRAIN_SCRIPT)
 
     frozen = trainer._build_visual_state_model(
@@ -368,32 +386,287 @@ def test_visual_state_training_models_compare_frozen_backbone_and_lora():
         output_dim=8,
         adaptation_mode='frozen_backbone',
         lora_rank=2,
+        torchvision_module=torchvision,
     )
     lora = trainer._build_visual_state_model(
         torch,
         output_dim=8,
         adaptation_mode='lora',
         lora_rank=2,
+        torchvision_module=torchvision,
     )
-    image = torch.zeros((1, 6, 32, 32), dtype=torch.float32)
-    assert frozen(image).shape == (1, 8)
-    assert lora(image).shape == (1, 8)
+    partial = trainer._build_visual_state_model(
+        torch,
+        output_dim=8,
+        adaptation_mode='partial_finetune',
+        lora_rank=2,
+        torchvision_module=torchvision,
+    )
+    image = torch.zeros((2, 6, 64, 64), dtype=torch.float32)
+    assert frozen(image).shape == (2, 8)
+    assert lora(image).shape == (2, 8)
+    assert partial(image).shape == (2, 8)
 
     frozen_counts = trainer.parameter_report(frozen)
     lora_counts = trainer.parameter_report(lora)
+    partial_counts = trainer.parameter_report(partial)
+    pretrained_report = {
+        'checkpoint_source': 'https://download.pytorch.org/models/resnet18-f37072fd.pth',
+        'checkpoint_identifier': 'ResNet18_Weights.IMAGENET1K_V1',
+        'checkpoint_sha256': 'abc123',
+        'pretrained_requested': True,
+        'pretrained_loaded': True,
+    }
     metadata = trainer.visual_state_model_metadata(
         adaptation_mode='lora',
         lora_rank=2,
         parameter_counts=lora_counts,
+        pretrained_backbone_report=pretrained_report,
+        torchvision_version=torchvision.__version__,
     )
 
     assert trainer.visual_adaptation_variants('compare') == ['frozen_backbone', 'lora']
     assert all(not parameter.requires_grad for parameter in frozen.backbone.parameters())
     assert all(not parameter.requires_grad for parameter in lora.backbone.parameters())
+    assert all(parameter.requires_grad for parameter in partial.backbone.layer4.parameters())
     assert lora_counts['trainable_parameters'] > frozen_counts['trainable_parameters']
+    assert partial_counts['trainable_parameters'] > lora_counts['trainable_parameters']
+    assert metadata['backbone_architecture'] == 'resnet18'
+    assert metadata['backbone_library'] == 'torchvision'
+    assert metadata['pretrained_requested'] is True
+    assert metadata['pretrained_loaded'] is True
+    assert metadata['checkpoint_sha256'] == 'abc123'
+    assert metadata['image_preprocessing']['input_resolution'] == [224, 224]
+    assert metadata['image_preprocessing']['normalization_mean_per_rgb_view'] == [
+        0.485,
+        0.456,
+        0.406,
+    ]
     assert metadata['diffusion_policy_head'] is False
     assert metadata['direct_command_capability'] is False
     assert metadata['output_semantics'] == 'visual_facts_for_state_fusion_not_rail_commands'
+
+
+def test_pretrained_backbone_load_is_fail_closed(monkeypatch):
+    torch = pytest.importorskip('torch')
+    torchvision = pytest.importorskip('torchvision')
+    trainer = _load_module('room_315_vla_train_local_pretrained_failure', TRAIN_SCRIPT)
+    model = trainer._build_visual_state_model(
+        torch,
+        output_dim=8,
+        adaptation_mode='frozen_backbone',
+        lora_rank=2,
+        torchvision_module=torchvision,
+    )
+
+    class BrokenWeights:
+        url = 'https://download.pytorch.org/models/resnet18-f37072fd.pth'
+
+        @staticmethod
+        def get_state_dict(*, progress, check_hash):
+            _ = progress, check_hash
+            raise OSError('simulated official checkpoint failure')
+
+    broken_torchvision = SimpleNamespace(
+        __version__='test',
+        models=SimpleNamespace(
+            ResNet18_Weights=SimpleNamespace(IMAGENET1K_V1=BrokenWeights()),
+            resnet18=torchvision.models.resnet18,
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match='strict loading failed'):
+        trainer._load_visual_pretrained_backbone(
+            torch,
+            model,
+            trainer.VISUAL_BACKBONE_SOURCE,
+            torchvision_module=broken_torchvision,
+        )
+    with pytest.raises(ValueError, match='unsupported pretrained backbone'):
+        trainer._load_visual_pretrained_backbone(
+            torch,
+            model,
+            'not-a-real-backbone',
+            torchvision_module=torchvision,
+        )
+
+
+def test_large_dataset_seed_is_normalized_reproducibly_for_numpy():
+    trainer = _load_module('room_315_vla_train_local_seed', TRAIN_SCRIPT)
+
+    report = trainer._seed_report(31520260726)
+
+    assert report == {
+        'requested': 31520260726,
+        'python': 31520260726,
+        'numpy': 1455489654,
+        'torch': 31520260726,
+    }
+
+
+def test_visual_target_stats_exclude_absent_shuttle_slots():
+    visual = _load_module('room_315_visual_state_dataset_masked_stats', VISUAL_STATE_SCRIPT)
+    one_shuttle = _visual_labels(shuttle='L1')
+    two_shuttles = _visual_labels(shuttle='L1')
+    second = json.loads(json.dumps(two_shuttles['shuttles'][0]))
+    second['id'] = 'R1'
+    second['bbox'] = [101.0, 102.0, 110.0, 112.0]
+    second['location'] = {'side': 'right', 'block': 'A12E'}
+    two_shuttles['shuttles'].append(second)
+    labels = [
+        visual.normalize_visual_state_labels(one_shuttle),
+        visual.normalize_visual_state_labels(two_shuttles),
+    ]
+    vectorizer = visual.VisualStateLabelVectorizer.fit(labels)
+    masks = [vectorizer.target_mask(label) for label in labels]
+    means, _ = visual.visual_target_stats(labels, vectorizer, masks=masks)
+    second_bbox_x = vectorizer.names.index('shuttles.4.bbox.0')
+
+    assert masks[0][second_bbox_x] == 0.0
+    assert masks[1][second_bbox_x] == 1.0
+    assert means[second_bbox_x] == pytest.approx(101.0)
+
+
+def test_identical_predictions_and_targets_have_identical_train_and_validation_losses():
+    torch = pytest.importorskip('torch')
+    trainer = _load_module('room_315_vla_train_local_loss_identity', TRAIN_SCRIPT)
+    names = [
+        'shuttles.0.location.block==A14',
+        'shuttles.0.rail_position.segment_length_m',
+        'shuttles.0.loaded_state==loaded',
+        'shuttles.0.bbox.0',
+        'shuttles.0.rail_position.s_m',
+        'shuttles.0.rail_position.s_ratio',
+    ]
+    target = torch.tensor(
+        [
+            [1.0, 2.23, 1.0, 30.0, 0.3, 0.13],
+            [0.0, 1.50, 0.0, 42.0, 1.1, 0.73],
+        ],
+        dtype=torch.float32,
+    )
+    prediction = target.clone()
+    mask = torch.ones_like(target)
+
+    train_components = trainer.visual_loss_components(
+        torch,
+        prediction,
+        target,
+        mask,
+        names,
+    )
+    validation_components = trainer.visual_loss_components(
+        torch,
+        prediction.clone(),
+        target.clone(),
+        mask.clone(),
+        names,
+    )
+    train_accumulator = trainer._new_visual_loss_accumulator()
+    validation_accumulator = trainer._new_visual_loss_accumulator()
+    trainer._accumulate_visual_loss(train_accumulator, train_components)
+    trainer._accumulate_visual_loss(validation_accumulator, validation_components)
+    train_loss = trainer._summarize_visual_loss(train_accumulator)
+    validation_loss = trainer._summarize_visual_loss(validation_accumulator)
+
+    assert train_loss == validation_loss
+    assert train_loss['total_weighted_loss'] == 0.0
+    assert all(
+        train_loss[f'{head}_loss'] == 0.0
+        for head in trainer.VISUAL_LOSS_HEADS
+    )
+
+    class FixedPredictionModel:
+        def eval(self):
+            return self
+
+        def __call__(self, _image):
+            return prediction
+
+    batch = {
+        'image': torch.zeros((2, 6, 2, 2), dtype=torch.float32),
+        'target': target,
+        'target_mask': mask,
+        'raw_target': target,
+    }
+    evaluation_arguments = {
+        'device': 'cpu',
+        'target_mean': np.zeros(len(names), dtype=np.float32),
+        'target_std': np.ones(len(names), dtype=np.float32),
+        'label_names': names,
+    }
+    train_evaluation = trainer._evaluate_visual_state(
+        torch,
+        FixedPredictionModel(),
+        [batch],
+        **evaluation_arguments,
+    )
+    validation_evaluation = trainer._evaluate_visual_state(
+        torch,
+        FixedPredictionModel(),
+        [batch],
+        **evaluation_arguments,
+    )
+    assert train_evaluation['per_head'] == validation_evaluation['per_head']
+    assert (
+        train_evaluation['total_weighted_loss']
+        == validation_evaluation['total_weighted_loss']
+        == 0.0
+    )
+
+
+def test_visual_loss_reduction_is_independent_of_evaluation_batch_partition():
+    torch = pytest.importorskip('torch')
+    trainer = _load_module('room_315_vla_train_local_loss_partition', TRAIN_SCRIPT)
+    names = [
+        'shuttles.0.location.block==A14',
+        'shuttles.0.rail_position.segment_length_m',
+        'shuttles.0.loaded_state==loaded',
+        'shuttles.0.bbox.0',
+        'shuttles.0.rail_position.s_m',
+        'shuttles.0.rail_position.s_ratio',
+    ]
+    target = torch.zeros((4, len(names)), dtype=torch.float32)
+    prediction = torch.tensor(
+        [
+            [0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            [0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            [0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        ],
+        dtype=torch.float32,
+    )
+    mask = torch.ones_like(target)
+
+    whole = trainer._new_visual_loss_accumulator()
+    trainer._accumulate_visual_loss(
+        whole,
+        trainer.visual_loss_components(torch, prediction, target, mask, names),
+    )
+    partitioned = trainer._new_visual_loss_accumulator()
+    for start, stop in ((0, 1), (1, 4)):
+        trainer._accumulate_visual_loss(
+            partitioned,
+            trainer.visual_loss_components(
+                torch,
+                prediction[start:stop],
+                target[start:stop],
+                mask[start:stop],
+                names,
+            ),
+        )
+
+    whole_summary = trainer._summarize_visual_loss(whole)
+    partitioned_summary = trainer._summarize_visual_loss(partitioned)
+    assert whole_summary['total_weighted_loss'] == pytest.approx(
+        partitioned_summary['total_weighted_loss'],
+        abs=1e-6,
+    )
+    for head in trainer.VISUAL_LOSS_HEADS:
+        assert whole_summary[f'{head}_loss'] == pytest.approx(
+            partitioned_summary[f'{head}_loss'],
+            abs=1e-6,
+        )
 
 
 def test_visual_state_compact_scene_is_provider_compatible_and_command_free():

@@ -53,6 +53,11 @@ def visual_label_to_provider_compact_scene(
     switches: list[dict[str, Any]] = []
     obstacles: list[dict[str, Any]] = []
     for shuttle in normalized.get('shuttles') or []:
+        if not (
+            shuttle.get('presence')
+            and shuttle.get('visually_available')
+        ):
+            continue
         identity = str(
             shuttle.get('visually_available_identity')
             or shuttle.get('id')
@@ -191,9 +196,17 @@ def _room315_smoke_visual_label() -> dict[str, Any]:
             'shuttles': [
                 {
                     'id': 'R1',
-                    'visually_available_identity': 'R1',
+                    'presence': True,
+                    'visually_available': True,
                     'bbox': [55.0, 45.0, 10.0, 10.0],
-                    'location': {'side': 'right', 'slot': '1'},
+                    'location': {'side': 'right', 'block': 'A1E'},
+                    'rail_position': {
+                        'available': True,
+                        's_m': 0.5,
+                        's_ratio': 0.5,
+                        'segment_length_m': 1.0,
+                        'position_uncertainty_m': 0.0,
+                    },
                     'loaded_state': 'loaded',
                     'confidence': 0.94,
                 }

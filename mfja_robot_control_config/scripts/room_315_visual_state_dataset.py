@@ -21,17 +21,49 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from room_315_json_io import iter_jsonl_objects
+from room_315_visual_fleet import AUTHORITATIVE_GLOBAL_BLOCK_VOCABULARY
+from room_315_visual_fleet import AUTHORITATIVE_VISUAL_FLEET
+from room_315_visual_fleet import FIXED_VISUAL_SHUTTLE_IDENTITIES
+from room_315_visual_fleet import block_vocabulary_metadata
+from room_315_visual_fleet import identity_side
 
 DATASET_MODE_VISUAL_STATE = 'visual_state'
 DATASET_MODES = (DATASET_MODE_VISUAL_STATE,)
-VISUAL_STATE_SCHEMA_VERSION = 'room315.visual_state.v2'
+VISUAL_STATE_SCHEMA_VERSION = 'room315.visual_state.v3'
 SUPPORTED_VISUAL_STATE_SCHEMA_VERSIONS = {
     'room315.visual_state.v1',
+    'room315.visual_state.v2',
     VISUAL_STATE_SCHEMA_VERSION,
 }
 VISUAL_LABEL_SUFFIX = '_visual_labels.jsonl'
 VISUAL_MODEL_INPUT_KEYS = {'overhead_images'}
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
+RAIL_POSITION_RATIO_TOLERANCE = 1e-5
+MODEL_TARGET_SHUTTLE_FIELDS = {
+    'location.side',
+    'location.block',
+    'rail_position.s_m',
+    'rail_position.s_ratio',
+    'rail_position.segment_length_m',
+    'loaded_state',
+}
+FIXED_VISUAL_NUMERIC_FIELDS = (
+    'bbox.0',
+    'bbox.1',
+    'bbox.2',
+    'bbox.3',
+    'rail_position.s_m',
+    'rail_position.s_ratio',
+    'rail_position.segment_length_m',
+)
+FIXED_VISUAL_CATEGORICAL_FIELDS = {
+    'location.side': ('left', 'right'),
+    'location.block': AUTHORITATIVE_GLOBAL_BLOCK_VOCABULARY,
+    'loaded_state': ('empty', 'loaded'),
+}
+MODEL_TARGET_EXCLUDED_ORACLE_FIELDS = {
+    'rail_position.position_uncertainty_m',
+}
 SHUTTLE_LABEL_FIELDS = {
     'bbox',
     'location',
@@ -297,6 +329,12 @@ def _rail_position(raw_shuttle: dict[str, Any], *, context: str) -> dict[str, An
             raise VisualStateValidationError(
                 f'{context}.rail_position.s_m exceeds segment_length_m'
             )
+        expected_ratio = s_m / segment_length_m
+        if abs(s_ratio - expected_ratio) > RAIL_POSITION_RATIO_TOLERANCE:
+            raise VisualStateValidationError(
+                f'{context}.rail_position.s_ratio is inconsistent with '
+                's_m / segment_length_m'
+            )
     return {
         'available': available,
         's_m': s_m,
@@ -342,6 +380,145 @@ def _iter_entities(raw: Any, *, entity_name: str) -> list[dict[str, Any]]:
     raise VisualStateValidationError(f'{entity_name} must be a list or mapping')
 
 
+def _explicit_bool(raw: Any, *, context: str, default: bool) -> bool:
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, (int, float)) and raw in {0, 1}:
+        return bool(raw)
+    text = str(raw).strip().lower()
+    if text in {'true', 'yes', '1'}:
+        return True
+    if text in {'false', 'no', '0'}:
+        return False
+    raise VisualStateValidationError(f'{context} must be boolean')
+
+
+def _empty_fixed_shuttle(identity: str) -> dict[str, Any]:
+    return {
+        'id': identity,
+        'presence': False,
+        'visually_available': False,
+        'bbox': [0.0, 0.0, 0.0, 0.0],
+        'location': {
+            'side': identity_side(identity),
+            'block': 'unknown',
+        },
+        'rail_position': {
+            'available': False,
+            's_m': 0.0,
+            's_ratio': 0.0,
+            'segment_length_m': 0.0,
+            'position_uncertainty_m': 0.0,
+        },
+        'loaded_state': 'unknown',
+        'confidence': 0.0,
+    }
+
+
+def _normalize_fixed_shuttles(raw_shuttles: Any, *, context: str) -> list[dict[str, Any]]:
+    by_identity: dict[str, dict[str, Any]] = {}
+    for index, shuttle in enumerate(
+        _iter_entities(raw_shuttles, entity_name='shuttles')
+    ):
+        item_context = f'{context}.shuttles[{index}]'
+        identity = _clean_text(
+            shuttle.get('id')
+            or shuttle.get('shuttle_id')
+            or shuttle.get('identity')
+            or shuttle.get('visually_available_identity')
+        ).upper()
+        if identity not in FIXED_VISUAL_SHUTTLE_IDENTITIES:
+            raise VisualStateValidationError(
+                f'{item_context}.id is not in the authoritative fixed fleet: '
+                f'{identity!r}'
+            )
+        if identity in by_identity:
+            raise VisualStateValidationError(
+                f'{context} contains duplicate fixed shuttle entry {identity}'
+            )
+        present = _explicit_bool(
+            shuttle.get('presence', shuttle.get('present')),
+            context=f'{item_context}.presence',
+            default=True,
+        )
+        bbox_raw = shuttle.get('bbox', shuttle.get('bounding_box'))
+        visually_available = _explicit_bool(
+            shuttle.get(
+                'visually_available',
+                shuttle.get('visual_availability', bbox_raw is not None),
+            ),
+            context=f'{item_context}.visually_available',
+            default=bbox_raw is not None,
+        )
+        if visually_available and not present:
+            raise VisualStateValidationError(
+                f'{item_context} cannot be visually available while absent'
+            )
+        if not present:
+            by_identity[identity] = _empty_fixed_shuttle(identity)
+            continue
+        expected_side = identity_side(identity)
+        location = _location(
+            shuttle.get('location', {'side': expected_side, 'block': 'unknown'})
+        )
+        side = str(location.get('side') or '').strip().lower()
+        if side != expected_side:
+            raise VisualStateValidationError(
+                f'{item_context}.location.side must be {expected_side!r}'
+            )
+        block = str(location.get('block') or 'unknown').strip().upper()
+        rail_position = _rail_position(shuttle, context=item_context)
+        loaded_state = _loaded_state(
+            shuttle.get(
+                'loaded_state',
+                shuttle.get('payload_state', shuttle.get('loaded')),
+            )
+        )
+        if visually_available:
+            bbox = _bbox(bbox_raw, context=item_context)
+            if bbox[2] <= 0.0 or bbox[3] <= 0.0:
+                raise VisualStateValidationError(
+                    f'{item_context}.bbox width and height must be positive when visible'
+                )
+            if block not in AUTHORITATIVE_GLOBAL_BLOCK_VOCABULARY:
+                raise VisualStateValidationError(
+                    f'{item_context}.location.block is not representable in the '
+                    f'authoritative global vocabulary: {block!r}'
+                )
+            if not rail_position['available']:
+                raise VisualStateValidationError(
+                    f'{item_context}.rail_position must be available when visible'
+                )
+            if loaded_state not in {'loaded', 'empty'}:
+                raise VisualStateValidationError(
+                    f'{item_context}.loaded_state must be loaded or empty when visible'
+                )
+        else:
+            bbox = [0.0, 0.0, 0.0, 0.0]
+        by_identity[identity] = {
+            'id': identity,
+            'presence': True,
+            'visually_available': visually_available,
+            'bbox': bbox,
+            'location': {
+                'side': expected_side,
+                'block': block,
+            },
+            'rail_position': rail_position,
+            'loaded_state': loaded_state,
+            'confidence': _confidence(
+                shuttle.get('confidence', 1.0 if visually_available else 0.0),
+                context=item_context,
+            ),
+        }
+    return [
+        by_identity.get(identity, _empty_fixed_shuttle(identity))
+        for identity in FIXED_VISUAL_SHUTTLE_IDENTITIES
+    ]
+
+
 def normalize_visual_state_labels(row_or_label: dict[str, Any], *, context: str = 'row') -> dict[str, Any]:
     raw = _raw_label_payload(row_or_label)
     schema_version = _clean_text(raw.get('schema_version'), VISUAL_STATE_SCHEMA_VERSION)
@@ -352,27 +529,48 @@ def normalize_visual_state_labels(row_or_label: dict[str, Any], *, context: str 
     calibration_version = _clean_text(raw.get('calibration_version'))
     confidence = _confidence(raw.get('confidence'), context=context)
 
-    shuttles = []
-    for index, shuttle in enumerate(_iter_entities(raw.get('shuttles'), entity_name='shuttles')):
-        item_context = f'{context}.shuttles[{index}]'
-        identity = _clean_text(
-            shuttle.get('visually_available_identity')
-            or shuttle.get('visible_identity')
-            or shuttle.get('identity')
-            or shuttle.get('id')
+    if schema_version == VISUAL_STATE_SCHEMA_VERSION:
+        shuttles = _normalize_fixed_shuttles(
+            raw.get('shuttles'),
+            context=context,
         )
-        shuttles.append({
-            'id': _clean_text(shuttle.get('id') or shuttle.get('shuttle_id') or identity),
-            'visually_available_identity': identity,
-            'identity_available': bool(shuttle.get('identity_available', identity != 'unknown')),
-            'bbox': _bbox(shuttle.get('bbox') or shuttle.get('bounding_box'), context=item_context),
-            'location': _location(shuttle.get('location')),
-            'rail_position': _rail_position(shuttle, context=item_context),
-            'loaded_state': _loaded_state(
-                shuttle.get('loaded_state', shuttle.get('payload_state', shuttle.get('loaded')))
-            ),
-            'confidence': _confidence(shuttle.get('confidence'), context=item_context),
-        })
+    else:
+        shuttles = []
+        for index, shuttle in enumerate(
+            _iter_entities(raw.get('shuttles'), entity_name='shuttles')
+        ):
+            item_context = f'{context}.shuttles[{index}]'
+            identity = _clean_text(
+                shuttle.get('visually_available_identity')
+                or shuttle.get('visible_identity')
+                or shuttle.get('identity')
+                or shuttle.get('id')
+            )
+            shuttles.append({
+                'id': _clean_text(
+                    shuttle.get('id') or shuttle.get('shuttle_id') or identity
+                ),
+                'visually_available_identity': identity,
+                'identity_available': bool(
+                    shuttle.get('identity_available', identity != 'unknown')
+                ),
+                'bbox': _bbox(
+                    shuttle.get('bbox') or shuttle.get('bounding_box'),
+                    context=item_context,
+                ),
+                'location': _location(shuttle.get('location')),
+                'rail_position': _rail_position(shuttle, context=item_context),
+                'loaded_state': _loaded_state(
+                    shuttle.get(
+                        'loaded_state',
+                        shuttle.get('payload_state', shuttle.get('loaded')),
+                    )
+                ),
+                'confidence': _confidence(
+                    shuttle.get('confidence'),
+                    context=item_context,
+                ),
+            })
 
     switches = []
     raw_switches = raw.get('switches', raw.get('switch_states'))
@@ -394,7 +592,10 @@ def normalize_visual_state_labels(row_or_label: dict[str, Any], *, context: str 
             'confidence': _confidence(obstacle.get('confidence'), context=item_context),
         })
 
-    shuttles.sort(key=lambda item: (item['id'], item['visually_available_identity']))
+    if schema_version != VISUAL_STATE_SCHEMA_VERSION:
+        shuttles.sort(
+            key=lambda item: (item['id'], item['visually_available_identity'])
+        )
     switches.sort(key=lambda item: item['id'])
     obstacles.sort(key=lambda item: item['id'])
     return {
@@ -669,8 +870,10 @@ def visual_state_class_balance(labels: list[dict[str, Any]]) -> dict[str, Any]:
         calibration_versions[str(label.get('calibration_version') or '')] += 1
         obstacle_counts[str(len(label.get('obstacles') or []))] += 1
         for shuttle in label.get('shuttles') or []:
+            if not shuttle.get('presence'):
+                continue
             loaded[str(shuttle.get('loaded_state') or 'unknown')] += 1
-            identities[str(shuttle.get('visually_available_identity') or 'unknown')] += 1
+            identities[str(shuttle.get('id') or 'unknown')] += 1
             position = shuttle.get('rail_position') or {}
             position_available[str(bool(position.get('available'))).lower()] += 1
         for switch in label.get('switches') or []:
@@ -678,7 +881,7 @@ def visual_state_class_balance(labels: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         'labels': len(labels),
         'loaded_state': dict(sorted(loaded.items())),
-        'visually_available_identity': dict(sorted(identities.items())),
+        'fixed_identity_presence': dict(sorted(identities.items())),
         'visible_switch_state': dict(sorted(switch_states.items())),
         'continuous_position_available': dict(sorted(position_available.items())),
         'obstacle_count': dict(sorted(obstacle_counts.items())),
@@ -715,45 +918,85 @@ def _label_values(label: dict[str, Any]) -> dict[str, Any]:
     return values
 
 
+def is_model_prediction_target(key: str) -> bool:
+    """Return whether a flattened oracle-label field is a model target."""
+    parts = str(key).split('.')
+    if len(parts) < 3 or parts[0] != 'shuttles' or not parts[1].isdigit():
+        return False
+    field = '.'.join(parts[2:])
+    if field.startswith('bbox.') and field[5:].isdigit():
+        return True
+    return field in MODEL_TARGET_SHUTTLE_FIELDS
+
+
 class VisualStateLabelVectorizer:
-    def __init__(self, numeric_keys: list[str], categorical_values: dict[str, list[str]]) -> None:
-        self.numeric_keys = list(numeric_keys)
+    """Fixed eight-entry vectorizer; capacity is never fit from dataset rows."""
+
+    KIND = 'room315_visual_state_fixed_eight_label_vectorizer'
+
+    def __init__(self) -> None:
+        self.numeric_keys = [
+            f'shuttles.{slot}.{field}'
+            for slot in range(len(FIXED_VISUAL_SHUTTLE_IDENTITIES))
+            for field in FIXED_VISUAL_NUMERIC_FIELDS
+        ]
         self.categorical_values = {
-            str(key): list(values)
-            for key, values in categorical_values.items()
+            f'shuttles.{slot}.{field}': list(values)
+            for slot in range(len(FIXED_VISUAL_SHUTTLE_IDENTITIES))
+            for field, values in FIXED_VISUAL_CATEGORICAL_FIELDS.items()
         }
 
     @classmethod
     def fit(cls, labels: list[dict[str, Any]]) -> 'VisualStateLabelVectorizer':
-        numeric_keys: set[str] = set()
-        categorical_values: dict[str, set[str]] = {}
+        if not labels:
+            raise VisualStateValidationError(
+                'cannot initialize the fixed visual vectorizer from empty labels'
+            )
         for label in labels:
-            for key, value in _label_values(label).items():
-                if _to_float(value) is None:
-                    categorical_values.setdefault(key, set()).add(str(value).strip().lower())
-                else:
-                    numeric_keys.add(key)
-        return cls(
-            sorted(numeric_keys),
-            {key: sorted(values) for key, values in sorted(categorical_values.items())},
-        )
+            normalized = normalize_visual_state_labels(label)
+            if normalized['schema_version'] != VISUAL_STATE_SCHEMA_VERSION:
+                raise VisualStateValidationError(
+                    'dataset-fitted shuttle capacity is forbidden; training requires '
+                    f'{VISUAL_STATE_SCHEMA_VERSION} fixed-eight labels'
+                )
+            identities = tuple(item['id'] for item in normalized['shuttles'])
+            if identities != FIXED_VISUAL_SHUTTLE_IDENTITIES:
+                raise VisualStateValidationError(
+                    'fixed visual label identity order is invalid: '
+                    f'{identities}'
+                )
+        return cls()
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> 'VisualStateLabelVectorizer':
-        if data.get('kind') != 'room315_visual_state_label_vectorizer':
+        if data.get('kind') != cls.KIND:
             raise VisualStateValidationError('visual label vectorizer JSON has unexpected kind')
-        numeric_keys = data.get('numeric_keys')
-        categorical_values = data.get('categorical_values')
-        if not isinstance(numeric_keys, list) or not isinstance(categorical_values, dict):
-            raise VisualStateValidationError('visual label vectorizer is missing numeric/categorical keys')
-        return cls(
-            [str(key) for key in numeric_keys],
-            {
-                str(key): [str(value) for value in values]
-                for key, values in categorical_values.items()
-                if isinstance(values, list)
-            },
-        )
+        vectorizer = cls()
+        if data.get('fixed_identity_order') != list(FIXED_VISUAL_SHUTTLE_IDENTITIES):
+            raise VisualStateValidationError(
+                'visual label vectorizer fixed identity order does not match '
+                'the authoritative fleet'
+            )
+        if data.get('global_block_vocabulary') != list(
+            AUTHORITATIVE_GLOBAL_BLOCK_VOCABULARY
+        ):
+            raise VisualStateValidationError(
+                'visual label vectorizer block vocabulary does not match '
+                'the authoritative topology'
+            )
+        if data.get('numeric_keys') != vectorizer.numeric_keys:
+            raise VisualStateValidationError(
+                'visual label vectorizer numeric targets are not the fixed schema'
+            )
+        if data.get('categorical_values') != vectorizer.categorical_values:
+            raise VisualStateValidationError(
+                'visual label vectorizer categorical targets are not the fixed schema'
+            )
+        if int(data.get('dim', -1)) != vectorizer.dim:
+            raise VisualStateValidationError(
+                'visual label vectorizer dimension does not match the fixed schema'
+            )
+        return vectorizer
 
     @property
     def names(self) -> list[str]:
@@ -767,42 +1010,154 @@ class VisualStateLabelVectorizer:
         return len(self.names)
 
     def transform(self, label: dict[str, Any]) -> list[float]:
-        values = _label_values(label)
+        normalized = normalize_visual_state_labels(label)
+        if normalized['schema_version'] != VISUAL_STATE_SCHEMA_VERSION:
+            raise VisualStateValidationError(
+                f'fixed vectorizer requires {VISUAL_STATE_SCHEMA_VERSION}'
+            )
+        values: dict[str, Any] = {}
+        _flatten('', normalized, values)
         vector: list[float] = []
         for key in self.numeric_keys:
             vector.append(_to_float(values.get(key)) or 0.0)
         for key, allowed_values in self.categorical_values.items():
             raw = str(values.get(key, '')).strip().lower()
-            vector.extend(1.0 if raw == allowed else 0.0 for allowed in allowed_values)
+            vector.extend(
+                1.0 if raw == str(allowed).strip().lower() else 0.0
+                for allowed in allowed_values
+            )
         return vector
+
+    def target_mask(self, label: dict[str, Any]) -> list[float]:
+        """Mask every absent or not-visually-available fixed identity entry."""
+        normalized = normalize_visual_state_labels(label)
+        mask: list[float] = []
+        for name in self.names:
+            parts = name.split('.')
+            shuttle_index = (
+                int(parts[1])
+                if len(parts) >= 3 and parts[0] == 'shuttles' and parts[1].isdigit()
+                else None
+            )
+            mask.append(
+                1.0
+                if (
+                    shuttle_index is not None
+                    and normalized['shuttles'][shuttle_index]['presence']
+                    and normalized['shuttles'][shuttle_index]['visually_available']
+                )
+                else 0.0
+            )
+        return mask
+
+    def validate_target(self, label: dict[str, Any]) -> None:
+        """Fail if a visible fixed entry lacks exactly one categorical target."""
+        normalized = normalize_visual_state_labels(label)
+        vector = self.transform(normalized)
+        mask = self.target_mask(normalized)
+        for slot, shuttle in enumerate(normalized['shuttles']):
+            visible = shuttle['presence'] and shuttle['visually_available']
+            for field, allowed in FIXED_VISUAL_CATEGORICAL_FIELDS.items():
+                base = f'shuttles.{slot}.{field}'
+                indexes = [
+                    self.names.index(f'{base}=={value}')
+                    for value in allowed
+                ]
+                one_count = sum(
+                    float(vector[index]) == 1.0
+                    for index in indexes
+                )
+                if visible and (
+                    one_count != 1
+                    or not all(mask[index] == 1.0 for index in indexes)
+                ):
+                    raise VisualStateValidationError(
+                        f'visible fixed entry {shuttle["id"]} must have exactly '
+                        f'one {field} target'
+                    )
+                if not visible and any(mask[index] != 0.0 for index in indexes):
+                    raise VisualStateValidationError(
+                        f'unavailable fixed entry {shuttle["id"]} is not fully masked'
+                    )
 
     def to_json(self) -> dict[str, Any]:
         return {
-            'kind': 'room315_visual_state_label_vectorizer',
+            'kind': self.KIND,
             'dataset_mode': DATASET_MODE_VISUAL_STATE,
             'schema_version': VISUAL_STATE_SCHEMA_VERSION,
+            'fixed_identity_order': list(FIXED_VISUAL_SHUTTLE_IDENTITIES),
+            'authoritative_fleet': AUTHORITATIVE_VISUAL_FLEET,
+            'global_block_vocabulary': list(
+                AUTHORITATIVE_GLOBAL_BLOCK_VOCABULARY
+            ),
+            'block_vocabulary_metadata': block_vocabulary_metadata(),
+            'capacity_source': 'authoritative_repository_configuration',
+            'capacity_inferred_from_dataset': False,
             'numeric_keys': self.numeric_keys,
             'categorical_values': self.categorical_values,
             'names': self.names,
             'dim': self.dim,
             'output_semantics': 'visual_state_labels_not_rail_commands',
+            'prediction_target_fields': sorted(
+                MODEL_TARGET_SHUTTLE_FIELDS | {'bbox'}
+            ),
+            'excluded_oracle_fields': sorted(
+                MODEL_TARGET_EXCLUDED_ORACLE_FIELDS
+            ),
+            'target_mask': {
+                'kind': 'fixed_identity_presence_and_visual_availability',
+                'absent_fixed_entries_masked': True,
+                'not_visually_available_entries_masked': True,
+            },
+            'identity_prediction': {
+                'supported': False,
+                'reason': 'identity is defined by the fixed entry index',
+                'classification_metric_reported': False,
+            },
         }
 
 
 def visual_target_stats(
     labels: list[dict[str, Any]],
     vectorizer: VisualStateLabelVectorizer,
+    masks: list[list[float]] | None = None,
 ) -> tuple[list[float], list[float]]:
     if not labels:
         raise VisualStateValidationError('cannot compute visual target stats from empty labels')
-    columns = list(zip(*(vectorizer.transform(label) for label in labels)))
-    mean = [sum(column) / len(column) for column in columns]
+    vectors = [vectorizer.transform(label) for label in labels]
+    effective_masks = masks or [vectorizer.target_mask(label) for label in labels]
+    if len(effective_masks) != len(vectors):
+        raise VisualStateValidationError('visual target masks must match label count')
+    columns: list[list[float]] = [[] for _ in range(vectorizer.dim)]
+    for row_index, (vector, mask) in enumerate(zip(vectors, effective_masks)):
+        if len(mask) != vectorizer.dim:
+            raise VisualStateValidationError(
+                f'visual target mask {row_index} has dimension {len(mask)}, '
+                f'expected {vectorizer.dim}'
+            )
+        for index, (value, available) in enumerate(zip(vector, mask)):
+            if float(available) > 0.0:
+                columns[index].append(float(value))
+    mean = [
+        sum(column) / len(column) if column else 0.0
+        for column in columns
+    ]
     std = []
     for column, avg in zip(columns, mean):
+        if not column:
+            std.append(1.0)
+            continue
         variance = sum((value - avg) ** 2 for value in column) / len(column)
         sigma = math.sqrt(variance)
         std.append(sigma if sigma >= 1e-6 else 1.0)
     return mean, std
+
+
+def _target_available(record: dict[str, Any], index: int) -> bool:
+    mask = record.get('target_mask')
+    if not isinstance(mask, (list, tuple)):
+        return True
+    return index < len(mask) and float(mask[index]) > 0.0
 
 
 def _mae(records: list[dict[str, Any]], indexes: list[int]) -> float | None:
@@ -814,9 +1169,11 @@ def _mae(records: list[dict[str, Any]], indexes: list[int]) -> float | None:
         true = record['true_raw']
         pred = record['pred_raw']
         for index in indexes:
+            if not _target_available(record, index):
+                continue
             total += abs(float(pred[index]) - float(true[index]))
             count += 1
-    return round(total / max(1, count), 6)
+    return round(total / count, 6) if count else None
 
 
 def _absolute_error_distribution(
@@ -830,6 +1187,7 @@ def _absolute_error_distribution(
         errors.extend(
             abs(float(pred[index]) - float(true[index]))
             for index in indexes
+            if _target_available(record, index)
         )
     if not errors:
         return {'mean': None, 'p50': None, 'p95': None}
@@ -860,9 +1218,11 @@ def _binary_accuracy(records: list[dict[str, Any]], indexes: list[int]) -> float
         true = record['true_raw']
         pred = record['pred_raw']
         for index in indexes:
+            if not _target_available(record, index):
+                continue
             correct += int((float(pred[index]) >= 0.5) == (float(true[index]) >= 0.5))
             total += 1
-    return round(correct / max(1, total), 6)
+    return round(correct / total, 6) if total else None
 
 
 def _distribution(records: list[dict[str, Any]], key: str) -> dict[str, float | None]:
@@ -916,6 +1276,8 @@ def _confidence_calibration(
         true = record['true_raw']
         pred = record['pred_raw']
         for index in indexes:
+            if not _target_available(record, index):
+                continue
             predicted_confidence = max(0.0, min(1.0, float(pred[index])))
             target_confidence = max(0.0, min(1.0, float(true[index])))
             total_error += abs(predicted_confidence - target_confidence)
@@ -948,11 +1310,98 @@ def _categorical_group_accuracy(
         true = record['true_raw']
         pred = record['pred_raw']
         for indexes in groups.values():
+            if not any(_target_available(record, index) for index in indexes):
+                continue
             true_index = max(indexes, key=lambda idx: float(true[idx]))
             pred_index = max(indexes, key=lambda idx: float(pred[idx]))
             correct += int(true_index == pred_index)
             total += 1
-    return round(correct / max(1, total), 6)
+    return round(correct / total, 6) if total else None
+
+
+def _categorical_groups(
+    names: list[str],
+    token: str,
+) -> dict[str, list[int]]:
+    groups: dict[str, list[int]] = {}
+    for index, name in enumerate(names):
+        if token in name and '==' in name:
+            groups.setdefault(name.split('==', 1)[0], []).append(index)
+    return groups
+
+
+def _categorical_group_results(
+    record: dict[str, Any],
+    groups: dict[str, list[int]],
+    *,
+    top_k: int = 1,
+) -> dict[str, bool]:
+    true = record['true_raw']
+    pred = record['pred_raw']
+    results = {}
+    for base, indexes in groups.items():
+        if not any(_target_available(record, index) for index in indexes):
+            continue
+        active_targets = [
+            index
+            for index in indexes
+            if float(true[index]) == 1.0
+        ]
+        if len(active_targets) != 1:
+            # A malformed all-zero or multi-hot present target is never
+            # interpreted as a correct argmax classification.
+            results[base] = False
+            continue
+        ranked = sorted(
+            indexes,
+            key=lambda index: float(pred[index]),
+            reverse=True,
+        )
+        results[base] = active_targets[0] in ranked[:max(1, top_k)]
+    return results
+
+
+def _fixed_location_metrics(
+    records: list[dict[str, Any]],
+    label_names: list[str],
+) -> dict[str, float | None]:
+    side_groups = _categorical_groups(label_names, '.location.side')
+    block_groups = _categorical_groups(label_names, '.location.block')
+    side_correct = 0
+    block_correct = 0
+    full_correct = 0
+    top2_block_correct = 0
+    total = 0
+    for record in records:
+        side_results = _categorical_group_results(record, side_groups)
+        block_results = _categorical_group_results(record, block_groups)
+        top2_results = _categorical_group_results(
+            record,
+            block_groups,
+            top_k=2,
+        )
+        for slot in range(len(FIXED_VISUAL_SHUTTLE_IDENTITIES)):
+            side_base = f'shuttles.{slot}.location.side'
+            block_base = f'shuttles.{slot}.location.block'
+            if side_base not in side_results or block_base not in block_results:
+                continue
+            side_ok = side_results[side_base]
+            block_ok = block_results[block_base]
+            side_correct += int(side_ok)
+            block_correct += int(block_ok)
+            full_correct += int(side_ok and block_ok)
+            top2_block_correct += int(top2_results[block_base])
+            total += 1
+
+    def accuracy(correct: int) -> float | None:
+        return round(correct / total, 6) if total else None
+
+    return {
+        'side_accuracy': accuracy(side_correct),
+        'block_accuracy': accuracy(block_correct),
+        'full_location_accuracy': accuracy(full_correct),
+        'top2_block_accuracy': accuracy(top2_block_correct),
+    }
 
 
 def visual_state_metrics(records: list[dict[str, Any]], label_names: list[str]) -> dict[str, Any]:
@@ -977,32 +1426,35 @@ def visual_state_metrics(records: list[dict[str, Any]], label_names: list[str]) 
         if name.startswith('obstacles.') and name.endswith('.confidence')
     ]
     bbox_mae = _mae(records, bbox_indexes)
+    s_m_mae = _mae(records, s_m_indexes)
+    s_ratio_mae = _mae(records, s_ratio_indexes)
     confidence_mae = _mae(records, confidence_indexes)
     loaded_state_accuracy = _categorical_group_accuracy(
         records,
         label_names,
         '.loaded_state',
     )
-    location_accuracy = _categorical_group_accuracy(records, label_names, '.location.')
+    location_metrics = _fixed_location_metrics(records, label_names)
     obstacle_presence_accuracy = _binary_accuracy(records, obstacle_presence)
     return {
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
         'samples': len(records),
         'label_mae': _mae(records, all_indexes),
         'bbox_mae': bbox_mae,
+        's_m_mae': s_m_mae,
+        's_ratio_mae': s_ratio_mae,
         'confidence_mae': confidence_mae,
-        'identity_accuracy': _categorical_group_accuracy(
-            records,
-            label_names,
-            '.visually_available_identity',
+        'identity_classification_supported': False,
+        'identity_semantics': (
+            'identity is defined by the fixed L1-L4,R1-R4 entry index'
         ),
         'loaded_state_accuracy': loaded_state_accuracy,
         'switch_state_accuracy': _categorical_group_accuracy(records, label_names, '.state'),
-        'location_accuracy': location_accuracy,
+        **location_metrics,
         'obstacle_presence_accuracy': obstacle_presence_accuracy,
         'localization_metrics': {
             'bbox_mae': bbox_mae,
-            'location_accuracy': location_accuracy,
+            **location_metrics,
             's_m_error': _absolute_error_distribution(records, s_m_indexes),
             's_ratio_error': _absolute_error_distribution(records, s_ratio_indexes),
         },

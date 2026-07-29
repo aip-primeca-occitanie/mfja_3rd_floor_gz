@@ -229,9 +229,34 @@ def generate_floor_launch_description(profile_name):
             description='Number of initial shuttles on the Room 315 right rail.',
         ),
         DeclareLaunchArgument(
+            'room315_right_active_identities',
+            default_value='',
+            description=(
+                'Exact comma-separated right identities in explicit mode, '
+                'e.g. R2,R4.'
+            ),
+        ),
+        DeclareLaunchArgument(
             'room315_left_shuttle_count',
             default_value='0',
             description='Number of initial shuttles on the Room 315 left rail.',
+        ),
+        DeclareLaunchArgument(
+            'room315_left_active_identities',
+            default_value='',
+            description=(
+                'Exact comma-separated left identities in explicit mode, '
+                'e.g. L1,L3.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'room315_identity_selection_mode',
+            default_value='count_prefix',
+            choices=['count_prefix', 'explicit'],
+            description=(
+                'Use legacy prefix-by-count selection or exact explicit '
+                'Room 315 identity subsets.'
+            ),
         ),
         DeclareLaunchArgument(
             'room315_switch_motion_delay_s',
@@ -450,6 +475,15 @@ def generate_floor_launch_description(profile_name):
                         ),
                         'left_shuttle_count': LaunchConfiguration(
                             'room315_left_shuttle_count'
+                        ),
+                        'right_active_identities': LaunchConfiguration(
+                            'room315_right_active_identities'
+                        ),
+                        'left_active_identities': LaunchConfiguration(
+                            'room315_left_active_identities'
+                        ),
+                        'identity_selection_mode': LaunchConfiguration(
+                            'room315_identity_selection_mode'
                         ),
                         'enable_right': LaunchConfiguration('enable_room315_right_rail'),
                         'enable_left': LaunchConfiguration('enable_room315_left_rail'),

@@ -6,13 +6,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import shutil
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import cv2
+import numpy as np
 import rclpy
 from cv_bridge import CvBridge
 from mfja_rail_interfaces.msg import ShuttleState as RailShuttleState
@@ -36,6 +40,7 @@ from room_315_visual_scenario_generator import _read_manifest
 from room_315_rail_defaults import public_rail_segment_lengths
 from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
 from room_315_visual_state_dataset import VISUAL_STATE_SCHEMA_VERSION
+from room_315_visual_state_dataset import VisualStateValidationError
 from room_315_visual_state_dataset import normalize_visual_state_labels
 from room_315_visual_state_dataset import pretty_json
 
@@ -137,9 +142,11 @@ def visual_labels_from_snapshot(
     for side in ('right', 'left'):
         camera = cameras[side]
         for entity_name, state in sorted(snapshot.shuttles[side].items()):
-            bbox = shuttle_bbox(camera, rail_pose_to_gazebo(side, state))
-            if bbox is None:
+            if float(state.get('z') or 0.0) <= -5.0:
+                # Preloaded-but-disabled world entities are parked at z=-10.
+                # They are absent, never valid visible training instances.
                 continue
+            bbox = shuttle_bbox(camera, rail_pose_to_gazebo(side, state))
             loaded = snapshot.payloads[side].get(entity_name)
             short_id = _short_id(entity_name, side)
             location = {'side': side}
@@ -153,9 +160,9 @@ def visual_labels_from_snapshot(
             position_available = segment_length_m > 0.0
             shuttles.append({
                 'id': short_id,
-                'visually_available_identity': short_id,
-                'identity_available': True,
-                'bbox': bbox,
+                'presence': True,
+                'visually_available': bbox is not None,
+                'bbox': bbox or [0.0, 0.0, 0.0, 0.0],
                 'location': location,
                 'rail_position': {
                     'available': position_available,
@@ -289,9 +296,30 @@ def validate_snapshot(
                     f'{shuttle["id"]} s_ratio mismatch; '
                     f'expected={expected_ratio:.6f}, actual={actual_ratio:.6f}'
                 )
-    if len(labels['shuttles']) != sum(len(value) for value in expected.values()):
+    expected_ids = {
+        identity
+        for identities in expected.values()
+        for identity in identities
+    }
+    present_ids = {
+        label['id']
+        for label in labels['shuttles']
+        if label['presence']
+    }
+    visible_ids = {
+        label['id']
+        for label in labels['shuttles']
+        if label['presence'] and label['visually_available']
+    }
+    if present_ids != expected_ids:
         raise VisualCaptureError(
-            'one or more expected shuttles are outside the calibrated camera view'
+            'fixed schema presence does not match the manifest; '
+            f'expected={sorted(expected_ids)}, actual={sorted(present_ids)}'
+        )
+    if visible_ids != expected_ids:
+        raise VisualCaptureError(
+            'one or more present manifest shuttles are outside the calibrated '
+            f'camera view; expected={sorted(expected_ids)}, visible={sorted(visible_ids)}'
         )
     expected_switches = {
         f'{side}:{name}': state
@@ -433,6 +461,68 @@ def _encode_images(node: VisualStateCaptureNode) -> dict[str, bytes]:
     return encoded
 
 
+def _validate_encoded_images(images: dict[str, bytes]) -> None:
+    missing = sorted(set(REQUIRED_CAMERAS) - set(images))
+    if missing:
+        raise VisualCaptureError(f'encoded camera images are missing: {missing}')
+    for camera in REQUIRED_CAMERAS:
+        encoded = images[camera]
+        array = cv2.imdecode(
+            np.frombuffer(encoded, dtype='uint8'),
+            cv2.IMREAD_COLOR,
+        )
+        if array is None or array.size == 0:
+            raise VisualCaptureError(f'{camera} encoded image is unreadable')
+        if int(array.max()) - int(array.min()) <= 1:
+            raise VisualCaptureError(f'{camera} encoded image is blank')
+
+
+def _atomic_append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding='utf-8') if path.is_file() else ''
+    if existing and not existing.endswith('\n'):
+        raise VisualCaptureError(f'{path} ends with an incomplete JSONL row')
+    for line_number, line in enumerate(existing.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise VisualCaptureError(
+                f'{path}:{line_number}: invalid existing JSONL'
+            ) from exc
+    rendered = (
+        existing
+        + json.dumps(row, ensure_ascii=False, separators=(',', ':'))
+        + '\n'
+    )
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f'.{path.name}.',
+        suffix='.tmp',
+        dir=path.parent,
+    )
+    try:
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
+            stream.write(rendered)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, path)
+    except BaseException:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def _write_synced_file(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open('wb') as stream:
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def write_capture(
     dataset_root: Path,
     scenario: dict[str, Any],
@@ -452,13 +542,17 @@ def write_capture(
             f'exact camera pair already exists in dataset: {image_fingerprint}'
         )
 
-    image_refs = {}
-    for camera in REQUIRED_CAMERAS:
-        relative = Path('episodes') / episode_id / 'images' / camera / 'frame_000000.jpg'
-        destination = dataset_root / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(images[camera])
-        image_refs[camera] = relative.as_posix()
+    _validate_encoded_images(images)
+    image_refs = {
+        camera: (
+            Path('episodes')
+            / episode_id
+            / 'images'
+            / camera
+            / 'frame_000000.jpg'
+        ).as_posix()
+        for camera in REQUIRED_CAMERAS
+    }
 
     row = {
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
@@ -488,19 +582,62 @@ def write_capture(
         'camera_skew_seconds': round(camera_skew_seconds, 6),
         'image_pair_sha256': image_fingerprint,
     }
-    (episode_dir / 'validation.json').write_text(
-        pretty_json(validation) + '\n',
-        encoding='utf-8',
-    )
     meta_dir = dataset_root / 'meta'
     meta_dir.mkdir(parents=True, exist_ok=True)
-    with (meta_dir / 'training_events.jsonl').open('a', encoding='utf-8') as stream:
-        stream.write(json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n')
-    with (meta_dir / 'capture_fingerprints.jsonl').open('a', encoding='utf-8') as stream:
-        stream.write(json.dumps({
-            'sample_id': row['sample_id'],
-            'image_pair_sha256': image_fingerprint,
-        }, separators=(',', ':')) + '\n')
+    training_events = meta_dir / 'training_events.jsonl'
+    if training_events.is_file():
+        for line in training_events.read_text(encoding='utf-8').splitlines():
+            if line.strip() and json.loads(line).get('episode_id') == episode_id:
+                raise VisualCaptureError(
+                    f'training event already exists for {episode_id}'
+                )
+
+    episodes_root = dataset_root / 'episodes'
+    temporary_root = episodes_root / '.capture_tmp'
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    temporary_episode = Path(tempfile.mkdtemp(
+        prefix=f'{episode_id}.',
+        dir=temporary_root,
+    ))
+    committed = False
+    try:
+        for camera in REQUIRED_CAMERAS:
+            _write_synced_file(
+                temporary_episode
+                / 'images'
+                / camera
+                / 'frame_000000.jpg',
+                images[camera],
+            )
+        _write_synced_file(
+            temporary_episode / 'validation.json',
+            (pretty_json(validation) + '\n').encode('utf-8'),
+        )
+        _write_synced_file(
+            temporary_episode / 'event.json',
+            (
+                json.dumps(
+                    row,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + '\n'
+            ).encode('utf-8'),
+        )
+        os.replace(temporary_episode, episode_dir)
+        committed = True
+        _atomic_append_jsonl(training_events, row)
+        _atomic_append_jsonl(
+            meta_dir / 'capture_fingerprints.jsonl',
+            {
+                'sample_id': row['sample_id'],
+                'image_pair_sha256': image_fingerprint,
+            },
+        )
+    finally:
+        if not committed and temporary_episode.exists():
+            shutil.rmtree(temporary_episode)
     return {
         'dataset_root': str(dataset_root),
         'episode_id': episode_id,
@@ -545,7 +682,11 @@ def capture_scenario(
                     max_camera_skew_seconds=max_camera_skew_seconds,
                 )
                 break
-            except (KeyError, VisualCaptureError) as exc:
+            except (
+                KeyError,
+                VisualCaptureError,
+                VisualStateValidationError,
+            ) as exc:
                 last_error = str(exc)
         else:
             raise VisualCaptureError(

@@ -74,6 +74,9 @@ def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
         assert 'left_start_positions' in text
         assert 'right_shuttle_count' in text
         assert 'left_shuttle_count' in text
+        assert 'right_active_identities' in text
+        assert 'left_active_identities' in text
+        assert 'identity_selection_mode' in text
         assert 'falling_stop_offset_m' in text
         assert 'shuttle_collision_distance_m' in text
         assert 'enable_payload_visuals' in text or 'room315_enable_payload_visuals' in text
@@ -100,6 +103,12 @@ def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
     assert 'room315_payload_pose_x_offset_m' in full_floor
     assert 'room315_right_loaded_shuttles' in full_floor
     assert 'room315_left_loaded_shuttles' in full_floor
+    assert 'room315_right_active_identities' in room_only
+    assert 'room315_left_active_identities' in room_only
+    assert 'room315_identity_selection_mode' in room_only
+    assert 'room315_right_active_identities' in full_floor
+    assert 'room315_left_active_identities' in full_floor
+    assert 'room315_identity_selection_mode' in full_floor
 
 
 def test_payload_x_offset_defaults_center_the_payload():

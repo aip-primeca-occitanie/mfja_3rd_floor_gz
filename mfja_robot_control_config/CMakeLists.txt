@@ -73,6 +73,7 @@ install(
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
+    scripts/room_315_kairos_package_checks.py
     scripts/room_315_json_io.py
     scripts/room_315_multi_shuttle.py
     scripts/room_315_observed_state_provider.py
@@ -83,6 +84,7 @@ install(
     scripts/room_315_pddl_validation_gate.py
     scripts/room_315_rail_devices.py
     scripts/room_315_rail_defaults.py
+    scripts/room_315_shuttle_geometry.py
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
     scripts/room_315_task_goal_builder.py
@@ -104,12 +106,19 @@ install(
     scripts/room_315_vla_supervisor.py
     scripts/room_315_vla_train_local.py
     scripts/room_315_vla_to_lerobot.py
+    scripts/room_315_arbitrary_subset_visual.py
+    scripts/room_315_arbitrary_subset_visual_v2.py
     scripts/room_315_visual_observed_state_provider.py
+    scripts/room_315_visual_error_analysis.py
+    scripts/room_315_visual_fleet.py
+    scripts/room_315_visual_manual_review.py
     scripts/room_315_visual_label_exporter.py
+    scripts/room_315_visual_dataset_audit.py
     scripts/room_315_visual_state_capture.py
     scripts/room_315_visual_state_dataset.py
     scripts/room_315_visual_scenario_generator.py
     scripts/room_315_visual_scenario_runner.py
+    scripts/room_315_visual_smoke_report.py
     scripts/room_315_visual_state_smoke.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -275,12 +284,41 @@ if(BUILD_TESTING)
     test/test_room315_visual_observed_state_provider.py
   )
   ament_add_pytest_test(
+    test_room315_arbitrary_subset_visual
+    test/test_room315_arbitrary_subset_visual.py
+  )
+  ament_add_pytest_test(
+    test_room315_arbitrary_subset_visual_v2
+    test/test_room315_arbitrary_subset_visual_v2.py
+    TIMEOUT 180
+  )
+  ament_add_pytest_test(
+    test_room315_eight_shuttle_visual_pipeline
+    test/test_room315_eight_shuttle_visual_pipeline.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_manual_review
+    test/test_room315_visual_manual_review.py
+  )
+  ament_add_pytest_test(
+    test_room315_full_package_static
+    test/test_room315_full_package_static.py
+  )
+  ament_add_pytest_test(
     test_room315_visual_label_exporter
     test/test_room315_visual_label_exporter.py
   )
   ament_add_pytest_test(
     test_room315_visual_scenario_generator
     test/test_room315_visual_scenario_generator.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_dataset_audit
+    test/test_room315_visual_dataset_audit.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_error_analysis
+    test/test_room315_visual_error_analysis.py
   )
   ament_add_pytest_test(
     test_room315_visual_state_capture

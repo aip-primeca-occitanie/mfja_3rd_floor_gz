@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import signal
@@ -13,6 +14,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -20,6 +23,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from room_315_visual_scenario_generator import _read_manifest
 from room_315_visual_state_dataset import pretty_json
+from room_315_visual_state_dataset import normalize_visual_state_labels
 
 
 REQUIRED_TOPICS = {
@@ -108,26 +112,65 @@ def capture_command(
     ]
 
 
+def _process_group_exists(group_id: int) -> bool:
+    proc_root = Path('/proc')
+    if proc_root.is_dir():
+        try:
+            for entry in proc_root.iterdir():
+                if not entry.name.isdigit():
+                    continue
+                stat = (entry / 'stat').read_text(encoding='utf-8')
+                fields = stat.rsplit(') ', 1)[1].split()
+                state = fields[0]
+                process_group = int(fields[2])
+                if process_group == group_id and state != 'Z':
+                    return True
+            return False
+        except (IndexError, OSError, ValueError):
+            # Fall back to the portable signal probe if /proc changes while
+            # processes are being reaped.
+            pass
+    try:
+        os.killpg(group_id, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def _wait_for_process_group_exit(group_id: int, timeout_seconds: float) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if not _process_group_exists(group_id):
+            return True
+        time.sleep(0.1)
+    return not _process_group_exists(group_id)
+
+
 def _terminate_process(process: subprocess.Popen[Any] | None) -> None:
-    if process is None or process.poll() is not None:
+    if process is None:
         return
-    try:
-        os.killpg(process.pid, signal.SIGINT)
-        process.wait(timeout=15.0)
-        return
-    except (ProcessLookupError, subprocess.TimeoutExpired):
-        pass
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-        process.wait(timeout=5.0)
-        return
-    except (ProcessLookupError, subprocess.TimeoutExpired):
-        pass
-    try:
-        os.killpg(process.pid, signal.SIGKILL)
-        process.wait(timeout=2.0)
-    except (ProcessLookupError, subprocess.TimeoutExpired):
-        pass
+    # The ros2 launch parent can exit before a detached Gazebo child. Always
+    # signal and wait for the complete session process group, even when the
+    # parent has already returned.
+    group_id = process.pid
+    for shutdown_signal, timeout_seconds in (
+        (signal.SIGINT, 15.0),
+        (signal.SIGTERM, 5.0),
+        (signal.SIGKILL, 2.0),
+    ):
+        try:
+            os.killpg(group_id, shutdown_signal)
+        except ProcessLookupError:
+            break
+        if _wait_for_process_group_exit(group_id, timeout_seconds):
+            break
+    if process.poll() is None:
+        try:
+            process.wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            pass
 
 
 def _topic_names() -> set[str]:
@@ -194,7 +237,13 @@ def run_scenario(
 ) -> dict[str, Any]:
     scenario_id = scenario['scenario_id']
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f'{scenario_id}.log'
+    attempt = (
+        dt.datetime.now(dt.timezone.utc)
+        .strftime('%Y%m%dT%H%M%S.%fZ')
+    )
+    attempt_dir = log_dir / scenario_id
+    attempt_dir.mkdir(parents=True, exist_ok=True)
+    log_path = attempt_dir / f'attempt_{attempt}_{os.getpid()}.log'
     launch_process = None
     started_at = time.monotonic()
     with log_path.open('w', encoding='utf-8') as log:
@@ -268,8 +317,74 @@ def select_scenarios(
     return selected
 
 
-def _episode_exists(output_dataset: Path, scenario_id: str) -> bool:
-    return (output_dataset.expanduser() / 'episodes' / scenario_id).is_dir()
+def _episode_exists(
+    output_dataset: Path,
+    scenario: dict[str, Any],
+) -> bool:
+    scenario_id = scenario['scenario_id']
+    episode = output_dataset.expanduser() / 'episodes' / scenario_id
+    if not episode.exists():
+        return False
+    required = [
+        episode / 'validation.json',
+        episode / 'event.json',
+        *[
+            episode / 'images' / camera / 'frame_000000.jpg'
+            for camera in ('left_rail_rgb', 'right_rail_rgb')
+        ],
+    ]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise VisualScenarioRunError(
+            f'incomplete existing episode {scenario_id}: missing={missing}'
+        )
+    try:
+        validation = json.loads(
+            (episode / 'validation.json').read_text(encoding='utf-8')
+        )
+        event = json.loads(
+            (episode / 'event.json').read_text(encoding='utf-8')
+        )
+        labels = normalize_visual_state_labels(event)
+        expected = {
+            shuttle['id']
+            for side in ('left', 'right')
+            for shuttle in scenario['scene']['rails'][side]['shuttles']
+        }
+        present = {
+            shuttle['id']
+            for shuttle in labels['shuttles']
+            if shuttle['presence']
+        }
+        visible = {
+            shuttle['id']
+            for shuttle in labels['shuttles']
+            if shuttle['presence'] and shuttle['visually_available']
+        }
+        if (
+            validation.get('validation_status') != 'approved'
+            or validation.get('capture_complete') is not True
+            or validation.get('labels_valid') is not True
+            or present != expected
+            or visible != expected
+        ):
+            raise VisualScenarioRunError(
+                f'existing episode {scenario_id} failed completion validation'
+            )
+        for path in required[2:]:
+            with Image.open(path) as image:
+                image.verify()
+            with Image.open(path) as image:
+                extrema = image.convert('RGB').getextrema()
+            if all(maximum - minimum <= 1 for minimum, maximum in extrema):
+                raise VisualScenarioRunError(
+                    f'existing episode {scenario_id} contains a blank image'
+                )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise VisualScenarioRunError(
+            f'existing episode {scenario_id} is invalid: {exc}'
+        ) from exc
+    return True
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -327,7 +442,7 @@ def main(argv: list[str] | None = None) -> int:
     failures = []
     for scenario in scenarios:
         scenario_id = scenario['scenario_id']
-        if args.resume and _episode_exists(output_dataset, scenario_id):
+        if args.resume and _episode_exists(output_dataset, scenario):
             results.append({'scenario_id': scenario_id, 'status': 'already_captured'})
             continue
         try:

@@ -6,6 +6,7 @@ produces PDDL, plans, primitive commands, device commands, or rail commands.
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -16,6 +17,7 @@ import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import numpy as np
 from PIL import Image
@@ -59,13 +61,39 @@ DEFAULT_OUTPUT_DIR = _env_path('ROOM315_VISUAL_STATE_OUTPUT_DIR', 'room315_local
 DEFAULT_DATASET_ROOT = _env_path('ROOM315_VLA_DATASET_ROOT', 'room315_payload_dataset')
 VISUAL_ADAPTATION_FROZEN_BACKBONE = 'frozen_backbone'
 VISUAL_ADAPTATION_LORA = 'lora'
+VISUAL_ADAPTATION_PARTIAL_FINETUNE = 'partial_finetune'
 VISUAL_ADAPTATION_COMPARE = 'compare'
 VISUAL_ADAPTATION_MODES = (
     VISUAL_ADAPTATION_FROZEN_BACKBONE,
     VISUAL_ADAPTATION_LORA,
+    VISUAL_ADAPTATION_PARTIAL_FINETUNE,
     VISUAL_ADAPTATION_COMPARE,
 )
-VISUAL_MODEL_KIND = 'structured_visual_state_compact_backbone_v1'
+VISUAL_MODEL_KIND = 'structured_visual_state_torchvision_resnet18_fixed8_v3'
+VISUAL_BACKBONE_ARCHITECTURE = 'resnet18'
+VISUAL_BACKBONE_LIBRARY = 'torchvision'
+VISUAL_BACKBONE_WEIGHTS_IDENTIFIER = 'ResNet18_Weights.IMAGENET1K_V1'
+VISUAL_BACKBONE_SOURCE = (
+    f'{VISUAL_BACKBONE_LIBRARY}:{VISUAL_BACKBONE_ARCHITECTURE}:IMAGENET1K_V1'
+)
+VISUAL_BACKBONE_INPUT_WIDTH = 224
+VISUAL_BACKBONE_INPUT_HEIGHT = 224
+VISUAL_BACKBONE_NORMALIZATION_MEAN = (0.485, 0.456, 0.406)
+VISUAL_BACKBONE_NORMALIZATION_STD = (0.229, 0.224, 0.225)
+VISUAL_IMAGE_RESIZE = 'direct_bilinear_resize'
+VISUAL_AUGMENTATIONS: tuple[str, ...] = ()
+VISUAL_LOSS_HEADS = (
+    'segment_location',
+    'loaded_state',
+    'bbox',
+    's_m',
+    's_ratio',
+)
+VISUAL_LOSS_HEAD_WEIGHTS = {
+    name: 1.0
+    for name in VISUAL_LOSS_HEADS
+}
+VISUAL_LOSS_KIND = 'masked_per_sample_smooth_l1_equal_head_weight_v1'
 
 
 def _require_torch():
@@ -79,6 +107,17 @@ def _require_torch():
             'Or choose the current command from https://pytorch.org/get-started/locally/.'
         ) from exc
     return torch
+
+
+def _require_torchvision():
+    try:
+        import torchvision
+    except ImportError as exc:
+        raise SystemExit(
+            'TorchVision is required for the official pretrained visual backbone but is not '
+            'installed. Install the version matching PyTorch from the official PyTorch index.'
+        ) from exc
+    return torchvision
 
 
 def _load_manifest(splits_dir: Path) -> dict[str, Any]:
@@ -155,6 +194,8 @@ def load_paired_images(
     height: int,
     allow_blank_images: bool = False,
     dataset_mode: str = DATASET_MODE_VISUAL_STATE,
+    normalization_mean: tuple[float, float, float] | None = None,
+    normalization_std: tuple[float, float, float] | None = None,
 ) -> np.ndarray:
     refs = _image_refs(row, dataset_mode=dataset_mode)
     left = load_image_tensor(
@@ -175,7 +216,16 @@ def load_paired_images(
         image_key='right_rail_rgb',
         allow_blank_images=allow_blank_images,
     )
-    return np.concatenate([left, right], axis=0).astype(np.float32)
+    paired = np.concatenate([left, right], axis=0).astype(np.float32)
+    if normalization_mean is None and normalization_std is None:
+        return paired
+    if normalization_mean is None or normalization_std is None:
+        raise ValueError('normalization mean and std must be provided together')
+    mean = np.asarray(normalization_mean * 2, dtype=np.float32).reshape(6, 1, 1)
+    std = np.asarray(normalization_std * 2, dtype=np.float32).reshape(6, 1, 1)
+    if np.any(std <= 0.0):
+        raise ValueError('normalization std values must be positive')
+    return ((paired - mean) / std).astype(np.float32)
 
 
 def image_integrity_report(
@@ -229,6 +279,8 @@ class Room315VisualStateDataset:
         image_height: int,
         torch_module: Any,
         allow_blank_images: bool = False,
+        normalization_mean: tuple[float, float, float] = VISUAL_BACKBONE_NORMALIZATION_MEAN,
+        normalization_std: tuple[float, float, float] = VISUAL_BACKBONE_NORMALIZATION_STD,
     ) -> None:
         if len(rows) != len(labels):
             raise ValueError('visual-state rows and labels must have the same length')
@@ -242,6 +294,8 @@ class Room315VisualStateDataset:
         self.image_height = image_height
         self.torch = torch_module
         self.allow_blank_images = allow_blank_images
+        self.normalization_mean = normalization_mean
+        self.normalization_std = normalization_std
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -249,6 +303,10 @@ class Room315VisualStateDataset:
     def __getitem__(self, index: int) -> dict[str, Any]:
         row = self.rows[index]
         target = np.asarray(self.label_vectorizer.transform(self.labels[index]), dtype=np.float32)
+        target_mask = np.asarray(
+            self.label_vectorizer.target_mask(self.labels[index]),
+            dtype=np.float32,
+        )
         normalized_target = (target - self.target_mean) / self.target_std
         return {
             'image': self.torch.as_tensor(
@@ -259,10 +317,13 @@ class Room315VisualStateDataset:
                     height=self.image_height,
                     allow_blank_images=self.allow_blank_images,
                     dataset_mode=DATASET_MODE_VISUAL_STATE,
+                    normalization_mean=self.normalization_mean,
+                    normalization_std=self.normalization_std,
                 ),
                 dtype=self.torch.float32,
             ),
             'target': self.torch.as_tensor(normalized_target, dtype=self.torch.float32),
+            'target_mask': self.torch.as_tensor(target_mask, dtype=self.torch.float32),
             'raw_target': self.torch.as_tensor(target, dtype=self.torch.float32),
         }
 
@@ -271,7 +332,11 @@ def visual_adaptation_variants(mode: str) -> list[str]:
     mode = str(mode or VISUAL_ADAPTATION_FROZEN_BACKBONE).strip().lower()
     if mode == VISUAL_ADAPTATION_COMPARE:
         return [VISUAL_ADAPTATION_FROZEN_BACKBONE, VISUAL_ADAPTATION_LORA]
-    if mode in {VISUAL_ADAPTATION_FROZEN_BACKBONE, VISUAL_ADAPTATION_LORA}:
+    if mode in {
+        VISUAL_ADAPTATION_FROZEN_BACKBONE,
+        VISUAL_ADAPTATION_LORA,
+        VISUAL_ADAPTATION_PARTIAL_FINETUNE,
+    }:
         return [mode]
     raise ValueError(f'unsupported visual adaptation mode: {mode!r}')
 
@@ -307,62 +372,67 @@ def _build_visual_state_model(
     output_dim: int,
     adaptation_mode: str,
     lora_rank: int,
+    torchvision_module: Any | None = None,
 ):
+    torchvision_module = torchvision_module or _require_torchvision()
     nn = torch_module.nn
     mode = visual_adaptation_variants(adaptation_mode)[0]
     rank = max(1, int(lora_rank))
-    feature_dim = 128
+    per_camera_feature_dim = 512
+    paired_feature_dim = per_camera_feature_dim * 2
 
-    class VisualStateCompactBackbone(nn.Module):
+    class VisualStateResNet18WithAdaptation(nn.Module):
         def __init__(self) -> None:
             super().__init__()
-            self.encoder = nn.Sequential(
-                nn.Conv2d(6, 32, kernel_size=5, stride=2, padding=2),
-                nn.BatchNorm2d(32),
-                nn.SiLU(inplace=True),
-                nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-                nn.BatchNorm2d(64),
-                nn.SiLU(inplace=True),
-                nn.Conv2d(64, feature_dim, kernel_size=3, stride=2, padding=1),
-                nn.BatchNorm2d(feature_dim),
-                nn.SiLU(inplace=True),
-                nn.AdaptiveAvgPool2d((1, 1)),
-                nn.Flatten(),
-            )
-
-        def forward(self, image):
-            return self.encoder(image)
-
-    class VisualStateBackboneWithOptionalLora(nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
-            self.backbone = VisualStateCompactBackbone()
+            self.backbone = torchvision_module.models.resnet18(weights=None)
+            self.backbone.fc = nn.Identity()
             for parameter in self.backbone.parameters():
                 parameter.requires_grad = False
             self.adaptation_mode = mode
             if mode == VISUAL_ADAPTATION_LORA:
-                self.lora_down = nn.Linear(feature_dim, rank, bias=False)
-                self.lora_up = nn.Linear(rank, feature_dim, bias=False)
+                self.lora_down = nn.Linear(paired_feature_dim, rank, bias=False)
+                self.lora_up = nn.Linear(rank, paired_feature_dim, bias=False)
                 nn.init.kaiming_uniform_(self.lora_down.weight, a=math.sqrt(5))
                 nn.init.zeros_(self.lora_up.weight)
             else:
                 self.lora_down = None
                 self.lora_up = None
+            if mode == VISUAL_ADAPTATION_PARTIAL_FINETUNE:
+                for parameter in self.backbone.layer4.parameters():
+                    parameter.requires_grad = True
             self.head = nn.Sequential(
-                nn.LayerNorm(feature_dim),
-                nn.Linear(feature_dim, 128),
+                nn.LayerNorm(paired_feature_dim),
+                nn.Linear(paired_feature_dim, 128),
                 nn.SiLU(inplace=True),
                 nn.Dropout(0.05),
                 nn.Linear(128, output_dim),
             )
 
         def forward(self, image):
-            features = self.backbone(image)
+            if image.ndim != 4 or image.shape[1] != 6:
+                raise ValueError(
+                    f'expected paired RGB input shaped (N, 6, H, W), got {tuple(image.shape)}'
+                )
+            left_features = self.backbone(image[:, :3])
+            right_features = self.backbone(image[:, 3:])
+            features = torch_module.cat([left_features, right_features], dim=1)
             if self.lora_down is not None and self.lora_up is not None:
                 features = features + self.lora_up(self.lora_down(features)) / float(rank)
             return self.head(features)
 
-    return VisualStateBackboneWithOptionalLora()
+        def train(self, train_mode: bool = True):
+            super().train(train_mode)
+            if train_mode and self.adaptation_mode in {
+                VISUAL_ADAPTATION_FROZEN_BACKBONE,
+                VISUAL_ADAPTATION_LORA,
+            }:
+                self.backbone.eval()
+            elif train_mode and self.adaptation_mode == VISUAL_ADAPTATION_PARTIAL_FINETUNE:
+                self.backbone.eval()
+                self.backbone.layer4.train()
+            return self
+
+    return VisualStateResNet18WithAdaptation()
 
 
 def visual_state_model_metadata(
@@ -372,81 +442,130 @@ def visual_state_model_metadata(
     parameter_counts: dict[str, Any] | None = None,
     pretrained_backbone: str | None = None,
     pretrained_backbone_report: dict[str, Any] | None = None,
+    torchvision_version: str = '',
 ) -> dict[str, Any]:
+    report = pretrained_backbone_report or {}
     return {
         'model_kind': VISUAL_MODEL_KIND,
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
         'adaptation_mode': adaptation_mode,
-        'pretrained_backbone': pretrained_backbone or 'compact_pretrained_backbone_v1',
-        'pretrained_backbone_report': pretrained_backbone_report or {},
-        'backbone_trainable': False,
+        'backbone_architecture': VISUAL_BACKBONE_ARCHITECTURE,
+        'backbone_library': VISUAL_BACKBONE_LIBRARY,
+        'backbone_library_version': torchvision_version,
+        'checkpoint_source': report.get('checkpoint_source'),
+        'checkpoint_identifier': report.get('checkpoint_identifier'),
+        'checkpoint_sha256': report.get('checkpoint_sha256'),
+        'pretrained_backbone': pretrained_backbone or VISUAL_BACKBONE_SOURCE,
+        'pretrained_requested': bool(report.get('pretrained_requested')),
+        'pretrained_loaded': bool(report.get('pretrained_loaded')),
+        'pretrained_backbone_report': report,
+        'backbone_trainable': adaptation_mode == VISUAL_ADAPTATION_PARTIAL_FINETUNE,
+        'backbone_trainable_scope': (
+            'layer4'
+            if adaptation_mode == VISUAL_ADAPTATION_PARTIAL_FINETUNE
+            else 'none'
+        ),
         'lora_rank': max(1, int(lora_rank)) if adaptation_mode == VISUAL_ADAPTATION_LORA else 0,
+        'parameter_efficient_method': (
+            'low_rank_paired_feature_adapter'
+            if adaptation_mode == VISUAL_ADAPTATION_LORA
+            else None
+        ),
         'policy_head': 'linear_structured_visual_state_regression',
         'diffusion_policy_head': False,
         'output_semantics': 'visual_facts_for_state_fusion_not_rail_commands',
         'direct_command_capability': False,
         'parameter_counts': parameter_counts or {},
+        'image_preprocessing': {
+            'input_resolution': [
+                VISUAL_BACKBONE_INPUT_HEIGHT,
+                VISUAL_BACKBONE_INPUT_WIDTH,
+            ],
+            'resize': VISUAL_IMAGE_RESIZE,
+            'value_range': [0.0, 1.0],
+            'normalization_mean_per_rgb_view': list(VISUAL_BACKBONE_NORMALIZATION_MEAN),
+            'normalization_std_per_rgb_view': list(VISUAL_BACKBONE_NORMALIZATION_STD),
+            'augmentations': list(VISUAL_AUGMENTATIONS),
+        },
     }
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _pretrained_requested(source: str | None) -> bool:
+    return str(source or '').strip().casefold() not in {'', 'none', 'random', 'false'}
 
 
 def _load_visual_pretrained_backbone(
     torch_module: Any,
     model: Any,
     source: str | None,
+    *,
+    torchvision_module: Any | None = None,
 ) -> dict[str, Any]:
+    torchvision_module = torchvision_module or _require_torchvision()
     source_text = str(source or '').strip()
-    if not source_text or source_text == 'compact_pretrained_backbone_v1':
+    requested = _pretrained_requested(source_text)
+    if not requested:
         return {
-            'source': source_text or 'compact_pretrained_backbone_v1',
-            'loaded': False,
-            'source_kind': 'reported_compact_pretrained_backbone_label',
+            'backbone_architecture': VISUAL_BACKBONE_ARCHITECTURE,
+            'backbone_library': VISUAL_BACKBONE_LIBRARY,
+            'backbone_library_version': str(torchvision_module.__version__),
+            'checkpoint_source': None,
+            'checkpoint_identifier': None,
+            'checkpoint_path': None,
+            'checkpoint_sha256': None,
+            'pretrained_requested': False,
+            'pretrained_loaded': False,
+            'strict_load': False,
         }
-    path = Path(source_text).expanduser()
-    if not path.exists():
-        if path.suffix in {'.pt', '.pth', '.ckpt'} or '/' in source_text:
-            raise FileNotFoundError(f'visual pretrained backbone checkpoint not found: {path}')
-        return {
-            'source': source_text,
-            'loaded': False,
-            'source_kind': 'reported_external_backbone_label',
-        }
-    try:
-        loaded = torch_module.load(path, map_location='cpu', weights_only=False)
-    except TypeError:
-        loaded = torch_module.load(path, map_location='cpu')
-    raw_state = loaded
-    if isinstance(loaded, dict):
-        raw_state = (
-            loaded.get('backbone_state_dict')
-            or loaded.get('image_backbone_state_dict')
-            or loaded.get('model_state_dict')
-            or loaded
-        )
-    if not isinstance(raw_state, dict):
-        raise ValueError(f'visual pretrained backbone checkpoint has no state dict: {path}')
-    backbone_state: dict[str, Any] = {}
-    for key, value in raw_state.items():
-        key_text = str(key)
-        if key_text.startswith('module.backbone.'):
-            backbone_state[key_text.removeprefix('module.backbone.')] = value
-        elif key_text.startswith('backbone.'):
-            backbone_state[key_text.removeprefix('backbone.')] = value
-        elif key_text.startswith('image_encoder.'):
-            backbone_state[key_text.removeprefix('image_encoder.')] = value
-        elif key_text.startswith('encoder.'):
-            backbone_state[key_text] = value
-    if not backbone_state:
-        raise ValueError(f'visual pretrained backbone checkpoint has no backbone weights: {path}')
-    missing, unexpected = model.backbone.load_state_dict(backbone_state, strict=False)
-    for parameter in model.backbone.parameters():
-        parameter.requires_grad = False
-    return {
-        'source': str(path.resolve()),
-        'loaded': True,
-        'source_kind': 'torch_state_dict',
-        'missing_keys': list(missing),
-        'unexpected_keys': list(unexpected),
+    aliases = {
+        VISUAL_BACKBONE_SOURCE.casefold(),
+        VISUAL_BACKBONE_WEIGHTS_IDENTIFIER.casefold(),
+        'resnet18_weights.imagenet1k_v1',
+        'imagenet1k_v1',
     }
+    if source_text.casefold() not in aliases:
+        raise ValueError(
+            f'unsupported pretrained backbone {source_text!r}; expected '
+            f'{VISUAL_BACKBONE_SOURCE!r} or "none"'
+        )
+    weights = torchvision_module.models.ResNet18_Weights.IMAGENET1K_V1
+    checkpoint_url = str(weights.url)
+    try:
+        state_dict = weights.get_state_dict(progress=True, check_hash=True)
+        official_model = torchvision_module.models.resnet18(weights=None)
+        official_model.load_state_dict(state_dict, strict=True)
+        official_model.fc = torch_module.nn.Identity()
+        model.backbone.load_state_dict(official_model.state_dict(), strict=True)
+    except Exception as exc:
+        raise RuntimeError(
+            f'pretrained weights were requested from {checkpoint_url}, but strict loading failed'
+        ) from exc
+    checkpoint_name = Path(urlparse(checkpoint_url).path).name
+    checkpoint_path = Path(torch_module.hub.get_dir()) / 'checkpoints' / checkpoint_name
+    checkpoint_sha256 = _sha256_file(checkpoint_path) if checkpoint_path.is_file() else None
+    report = {
+        'backbone_architecture': VISUAL_BACKBONE_ARCHITECTURE,
+        'backbone_library': VISUAL_BACKBONE_LIBRARY,
+        'backbone_library_version': str(torchvision_module.__version__),
+        'checkpoint_source': checkpoint_url,
+        'checkpoint_identifier': VISUAL_BACKBONE_WEIGHTS_IDENTIFIER,
+        'checkpoint_path': str(checkpoint_path.resolve()) if checkpoint_path.is_file() else None,
+        'checkpoint_sha256': checkpoint_sha256,
+        'pretrained_requested': True,
+        'pretrained_loaded': True,
+        'strict_load': True,
+    }
+    if not report['pretrained_loaded']:
+        raise RuntimeError('pretrained weights were requested but were not loaded')
+    return report
 
 
 def _choose_device(torch_module: Any, requested: str) -> str:
@@ -458,18 +577,197 @@ def _choose_device(torch_module: Any, requested: str) -> str:
     return requested
 
 
-def _set_seed(torch_module: Any, seed: int) -> None:
-    random.seed(seed)
-    np.random.seed(seed)
-    torch_module.manual_seed(seed)
+def _seed_report(seed: int) -> dict[str, int]:
+    requested_seed = int(seed)
+    return {
+        'requested': requested_seed,
+        'python': requested_seed,
+        'numpy': requested_seed % (2 ** 32),
+        'torch': requested_seed % (2 ** 63),
+    }
+
+
+def _set_seed(torch_module: Any, seed: int) -> dict[str, int]:
+    report = _seed_report(seed)
+    random.seed(report['python'])
+    np.random.seed(report['numpy'])
+    torch_module.manual_seed(report['torch'])
     if torch_module.cuda.is_available():
-        torch_module.cuda.manual_seed_all(seed)
+        torch_module.cuda.manual_seed_all(report['torch'])
+        torch_module.backends.cudnn.benchmark = False
+        torch_module.backends.cudnn.deterministic = True
+    torch_module.use_deterministic_algorithms(True, warn_only=True)
+    return report
 
 
 def _row_limit(rows: list[dict[str, Any]], limit: int | None) -> list[dict[str, Any]]:
     if limit is None or limit <= 0:
         return rows
     return rows[:limit]
+
+
+def visual_loss_head_indexes(label_names: list[str]) -> dict[str, list[int]]:
+    groups = {name: [] for name in VISUAL_LOSS_HEADS}
+    for index, name in enumerate(label_names):
+        if '.location.' in name or name.endswith('.rail_position.segment_length_m'):
+            head = 'segment_location'
+        elif '.loaded_state==' in name:
+            head = 'loaded_state'
+        elif '.bbox.' in name:
+            head = 'bbox'
+        elif name.endswith('.rail_position.s_m'):
+            head = 's_m'
+        elif name.endswith('.rail_position.s_ratio'):
+            head = 's_ratio'
+        else:
+            raise ValueError(f'visual target is not assigned to a loss head: {name}')
+        groups[head].append(index)
+    missing = [name for name, indexes in groups.items() if not indexes]
+    if missing:
+        raise ValueError(f'visual loss heads have no target indexes: {missing}')
+    return groups
+
+
+def visual_loss_components(
+    torch_module: Any,
+    prediction: Any,
+    target: Any,
+    target_mask: Any,
+    label_names: list[str],
+    *,
+    head_weights: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    if prediction.shape != target.shape or prediction.shape != target_mask.shape:
+        raise ValueError(
+            'prediction, target, and target_mask must have identical shapes; '
+            f'got {tuple(prediction.shape)}, {tuple(target.shape)}, '
+            f'{tuple(target_mask.shape)}'
+        )
+    if prediction.ndim != 2 or prediction.shape[1] != len(label_names):
+        raise ValueError('visual loss expects a batch by target-dimension tensor')
+    groups = visual_loss_head_indexes(label_names)
+    weights = dict(VISUAL_LOSS_HEAD_WEIGHTS)
+    if head_weights is not None:
+        weights.update({str(key): float(value) for key, value in head_weights.items()})
+    element_loss = torch_module.nn.functional.smooth_l1_loss(
+        prediction,
+        target,
+        reduction='none',
+    )
+    head_losses: dict[str, Any] = {}
+    head_loss_sums: dict[str, Any] = {}
+    head_sample_counts: dict[str, int] = {}
+    weighted_terms: list[Any] = []
+    active_weight = 0.0
+    for head in VISUAL_LOSS_HEADS:
+        indexes = groups[head]
+        head_mask = target_mask[:, indexes]
+        per_sample_elements = head_mask.sum(dim=1)
+        valid_samples = per_sample_elements > 0
+        sample_count = int(valid_samples.sum().item())
+        if sample_count <= 0:
+            raise ValueError(f'loss head {head!r} has no valid samples in this batch')
+        per_sample_loss = (
+            (element_loss[:, indexes] * head_mask).sum(dim=1)
+            / per_sample_elements.clamp_min(1.0)
+        )
+        loss_sum = per_sample_loss[valid_samples].sum()
+        head_loss = loss_sum / float(sample_count)
+        head_losses[head] = head_loss
+        head_loss_sums[head] = loss_sum
+        head_sample_counts[head] = sample_count
+        weight = float(weights[head])
+        if weight < 0.0:
+            raise ValueError(f'loss head weight must be non-negative: {head}={weight}')
+        weighted_terms.append(head_loss * weight)
+        active_weight += weight
+    if active_weight <= 0.0:
+        raise ValueError('at least one visual loss head weight must be positive')
+    total_weighted_loss = sum(weighted_terms) / active_weight
+    return {
+        'kind': VISUAL_LOSS_KIND,
+        'head_losses': head_losses,
+        'head_loss_sums': head_loss_sums,
+        'head_sample_counts': head_sample_counts,
+        'head_weights': weights,
+        'total_weighted_loss': total_weighted_loss,
+    }
+
+
+def _new_visual_loss_accumulator() -> dict[str, Any]:
+    return {
+        'head_loss_sums': {head: 0.0 for head in VISUAL_LOSS_HEADS},
+        'head_sample_counts': {head: 0 for head in VISUAL_LOSS_HEADS},
+    }
+
+
+def _accumulate_visual_loss(accumulator: dict[str, Any], components: dict[str, Any]) -> None:
+    for head in VISUAL_LOSS_HEADS:
+        accumulator['head_loss_sums'][head] += float(
+            components['head_loss_sums'][head].detach().item()
+        )
+        accumulator['head_sample_counts'][head] += int(
+            components['head_sample_counts'][head]
+        )
+
+
+def _summarize_visual_loss(
+    accumulator: dict[str, Any],
+    *,
+    head_weights: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    weights = dict(VISUAL_LOSS_HEAD_WEIGHTS)
+    if head_weights is not None:
+        weights.update({str(key): float(value) for key, value in head_weights.items()})
+    head_losses: dict[str, float] = {}
+    weighted_total = 0.0
+    active_weight = 0.0
+    for head in VISUAL_LOSS_HEADS:
+        count = int(accumulator['head_sample_counts'][head])
+        if count <= 0:
+            raise ValueError(f'loss accumulator has no samples for head {head!r}')
+        value = float(accumulator['head_loss_sums'][head]) / count
+        head_losses[head] = value
+        weighted_total += value * weights[head]
+        active_weight += weights[head]
+    total = weighted_total / active_weight
+    return {
+        **{f'{head}_loss': round(value, 6) for head, value in head_losses.items()},
+        'total_weighted_loss': total,
+        'loss': total,
+        'loss_kind': VISUAL_LOSS_KIND,
+        'loss_head_weights': weights,
+        'loss_sample_counts': dict(accumulator['head_sample_counts']),
+    }
+
+
+def _add_visual_per_head_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
+    metrics['per_head'] = {
+        'segment_location': {
+            'loss': metrics['segment_location_loss'],
+            'side_accuracy': metrics.get('side_accuracy'),
+            'block_accuracy': metrics.get('block_accuracy'),
+            'full_location_accuracy': metrics.get('full_location_accuracy'),
+            'top2_block_accuracy': metrics.get('top2_block_accuracy'),
+        },
+        'loaded_state': {
+            'loss': metrics['loaded_state_loss'],
+            'accuracy': metrics.get('loaded_state_accuracy'),
+        },
+        'bbox': {
+            'loss': metrics['bbox_loss'],
+            'mae': metrics.get('bbox_mae'),
+        },
+        's_m': {
+            'loss': metrics['s_m_loss'],
+            'mae': metrics.get('s_m_mae'),
+        },
+        's_ratio': {
+            'loss': metrics['s_ratio_loss'],
+            'mae': metrics.get('s_ratio_mae'),
+        },
+    }
+    return metrics
 
 
 def _evaluate_visual_state(
@@ -483,30 +781,39 @@ def _evaluate_visual_state(
     label_names: list[str],
 ) -> dict[str, Any]:
     model.eval()
-    loss_fn = torch_module.nn.SmoothL1Loss(reduction='sum')
     mean_tensor = torch_module.as_tensor(target_mean, dtype=torch_module.float32, device=device)
     std_tensor = torch_module.as_tensor(target_std, dtype=torch_module.float32, device=device)
-    rows = 0
-    loss_total = 0.0
+    loss_accumulator = _new_visual_loss_accumulator()
     records: list[dict[str, Any]] = []
     with torch_module.no_grad():
         for batch in loader:
             image = batch['image'].to(device)
             target = batch['target'].to(device)
+            target_mask = batch['target_mask'].to(device)
             raw_target = batch['raw_target'].to(device)
             pred_norm = model(image)
-            loss_total += float(loss_fn(pred_norm, target).item())
+            loss_components = visual_loss_components(
+                torch_module,
+                pred_norm,
+                target,
+                target_mask,
+                label_names,
+            )
+            _accumulate_visual_loss(loss_accumulator, loss_components)
             pred = pred_norm * std_tensor + mean_tensor
-            batch_size = int(raw_target.shape[0])
-            rows += batch_size
-            for true_row, pred_row in zip(raw_target.detach().cpu().numpy(), pred.detach().cpu().numpy()):
+            for true_row, pred_row, mask_row in zip(
+                raw_target.detach().cpu().numpy(),
+                pred.detach().cpu().numpy(),
+                target_mask.detach().cpu().numpy(),
+            ):
                 records.append({
                     'true_raw': true_row.astype(np.float32).tolist(),
                     'pred_raw': pred_row.astype(np.float32).tolist(),
+                    'target_mask': mask_row.astype(np.float32).tolist(),
                 })
     metrics = visual_state_metrics(records, label_names)
-    metrics['loss'] = round(loss_total / max(1, rows), 6)
-    return metrics
+    metrics.update(_summarize_visual_loss(loss_accumulator))
+    return _add_visual_per_head_metrics(metrics)
 
 
 def _save_checkpoint(
@@ -631,6 +938,12 @@ def _write_visual_training_artifacts(
         _pretty_json(config) + '\n',
         encoding='utf-8',
     )
+    run_metadata = config.get('run_metadata')
+    if isinstance(run_metadata, dict):
+        (output_dir / 'run_metadata.json').write_text(
+            _pretty_json(run_metadata) + '\n',
+            encoding='utf-8',
+        )
 
 
 def _visual_model_from_config(
@@ -639,6 +952,7 @@ def _visual_model_from_config(
     config: dict[str, Any],
     output_dim: int,
 ) -> tuple[Any, dict[str, Any]]:
+    torchvision_module = _require_torchvision()
     if config.get('visual_model_kind') != VISUAL_MODEL_KIND:
         raise ValueError(
             f'checkpoint is not a {VISUAL_MODEL_KIND} visual-state model; '
@@ -654,12 +968,14 @@ def _visual_model_from_config(
         output_dim=output_dim,
         adaptation_mode=adaptation_mode,
         lora_rank=lora_rank,
+        torchvision_module=torchvision_module,
     )
     metadata = visual_state_model_metadata(
         adaptation_mode=adaptation_mode,
         lora_rank=lora_rank,
         pretrained_backbone=str(config.get('visual_pretrained_backbone') or ''),
         pretrained_backbone_report=dict(config.get('visual_pretrained_backbone_report') or {}),
+        torchvision_version=str(torchvision_module.__version__),
     )
     return model, metadata
 
@@ -685,8 +1001,20 @@ def _select_visual_adaptation_variant(
 
 def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
     torch_module = _require_torch()
+    torchvision_module = _require_torchvision()
+    if args.early_stopping_patience < 0:
+        raise ValueError('--early-stopping-patience must be non-negative')
     splits_dir = args.splits_dir.expanduser().resolve()
     dataset_root = _resolve_dataset_root(args.dataset_root, splits_dir)
+    if _pretrained_requested(args.visual_pretrained_backbone) and (
+        args.image_width != VISUAL_BACKBONE_INPUT_WIDTH
+        or args.image_height != VISUAL_BACKBONE_INPUT_HEIGHT
+    ):
+        raise ValueError(
+            'the official pretrained ResNet-18 pipeline requires '
+            f'{VISUAL_BACKBONE_INPUT_WIDTH}x{VISUAL_BACKBONE_INPUT_HEIGHT} input; '
+            f'got {args.image_width}x{args.image_height}'
+        )
     train_labels_path = _visual_labels_path_for(splits_dir, args.train_file, args.visual_train_labels)
     val_labels_path = _visual_labels_path_for(splits_dir, args.val_file, args.visual_val_labels)
     train_rows, train_labels, train_input = _load_visual_split(
@@ -716,10 +1044,18 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         dataset_mode=DATASET_MODE_VISUAL_STATE,
     )
 
-    _set_seed(torch_module, args.seed)
+    seed_report = _set_seed(torch_module, args.seed)
     device = _choose_device(torch_module, args.device)
     label_vectorizer = VisualStateLabelVectorizer.fit(train_labels)
-    target_mean_list, target_std_list = visual_target_stats(train_labels, label_vectorizer)
+    train_target_masks = [
+        label_vectorizer.target_mask(label)
+        for label in train_labels
+    ]
+    target_mean_list, target_std_list = visual_target_stats(
+        train_labels,
+        label_vectorizer,
+        masks=train_target_masks,
+    )
     target_mean = np.asarray(target_mean_list, dtype=np.float32)
     target_std = np.asarray(target_std_list, dtype=np.float32)
     output_dim = int(target_mean.shape[0])
@@ -772,6 +1108,20 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'visual_state_schema_version': VISUAL_STATE_SCHEMA_VERSION,
             'label_vector_names': label_vectorizer.names,
         },
+        'target_normalization': {
+            'source_split': 'train',
+            'kind': 'per_target_mean_and_population_std',
+            'absent_shuttle_slots_excluded': True,
+            'oracle_position_uncertainty_excluded': True,
+        },
+        'image_preprocessing': {
+            'input_resolution': [args.image_height, args.image_width],
+            'resize': VISUAL_IMAGE_RESIZE,
+            'value_range': [0.0, 1.0],
+            'normalization_mean_per_rgb_view': list(VISUAL_BACKBONE_NORMALIZATION_MEAN),
+            'normalization_std_per_rgb_view': list(VISUAL_BACKBONE_NORMALIZATION_STD),
+            'augmentations': list(VISUAL_AUGMENTATIONS),
+        },
     }
     config = {
         'tool': 'room_315_vla_train_local',
@@ -784,6 +1134,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         'train_labels': str(train_labels_path),
         'val_labels': str(val_labels_path),
         'seed': args.seed,
+        'seed_report': seed_report,
         'device': device,
         'epochs': args.epochs,
         'batch_size': args.batch_size,
@@ -802,24 +1153,48 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         'visual_lora_rank': args.visual_lora_rank,
         'visual_selected_adaptation': args.visual_selected_adaptation,
         'visual_pretrained_backbone': args.visual_pretrained_backbone,
+        'backbone_architecture': VISUAL_BACKBONE_ARCHITECTURE,
+        'backbone_library': VISUAL_BACKBONE_LIBRARY,
+        'backbone_library_version': str(torchvision_module.__version__),
+        'image_normalization': {
+            'mean_per_rgb_view': list(VISUAL_BACKBONE_NORMALIZATION_MEAN),
+            'std_per_rgb_view': list(VISUAL_BACKBONE_NORMALIZATION_STD),
+        },
+        'image_resize': VISUAL_IMAGE_RESIZE,
+        'augmentations': list(VISUAL_AUGMENTATIONS),
+        'loss': {
+            'kind': VISUAL_LOSS_KIND,
+            'element_loss': 'SmoothL1Loss',
+            'element_reduction': 'none',
+            'head_reduction': 'mean over valid elements per sample, then mean over samples',
+            'sample_weighting': 'uniform',
+            'head_weights': dict(VISUAL_LOSS_HEAD_WEIGHTS),
+            'total_reduction': 'weighted mean over six heads',
+            'absent_shuttle_slots_masked': True,
+            'segment_length_m_head': 'segment_location',
+            'target_normalization': (
+                'train-split per-target mean/population-std over valid shuttle slots only'
+            ),
+            'output_decoding': 'pred_raw = pred_normalized * target_std + target_mean',
+        },
+        'early_stopping': {
+            'patience': args.early_stopping_patience,
+            'criterion': 'validation_total_weighted_loss',
+            'best_checkpoint_uses_validation_only': True,
+            'test_split_used_during_training': False,
+        },
+        'dataset_split_paths': {
+            'train': str((splits_dir / args.train_file).resolve()),
+            'validation': str((splits_dir / args.val_file).resolve()),
+            'test': str((splits_dir / 'test.jsonl').resolve()),
+            'train_labels': str(train_labels_path),
+            'validation_labels': str(val_labels_path),
+            'test_labels': str(visual_label_path_for_split(splits_dir / 'test.jsonl')),
+        },
         'diffusion_policy_head': False,
         'learned_output_boundary': 'visual facts only; cannot publish rail commands',
         'dataset_report': str(output_dir / 'dataset_report.json'),
     }
-
-    (output_dir / 'dataset_report.json').write_text(_pretty_json(dataset_report) + '\n', encoding='utf-8')
-    (output_dir / 'visual_label_vectorizer.json').write_text(
-        _pretty_json(label_vectorizer.to_json()) + '\n',
-        encoding='utf-8',
-    )
-    (output_dir / 'target_stats.json').write_text(
-        _pretty_json({
-            'mean': target_mean.tolist(),
-            'std': target_std.tolist(),
-        }) + '\n',
-        encoding='utf-8',
-    )
-    (output_dir / 'training_config.json').write_text(_pretty_json(config) + '\n', encoding='utf-8')
 
     train_dataset = Room315VisualStateDataset(
         train_rows,
@@ -832,6 +1207,8 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         image_height=args.image_height,
         torch_module=torch_module,
         allow_blank_images=args.allow_blank_images,
+        normalization_mean=VISUAL_BACKBONE_NORMALIZATION_MEAN,
+        normalization_std=VISUAL_BACKBONE_NORMALIZATION_STD,
     )
     val_dataset = Room315VisualStateDataset(
         val_rows,
@@ -844,11 +1221,20 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         image_height=args.image_height,
         torch_module=torch_module,
         allow_blank_images=args.allow_blank_images,
+        normalization_mean=VISUAL_BACKBONE_NORMALIZATION_MEAN,
+        normalization_std=VISUAL_BACKBONE_NORMALIZATION_STD,
     )
     train_loader = torch_module.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
+        num_workers=args.num_workers,
+        pin_memory=(device == 'cuda'),
+    )
+    train_eval_loader = torch_module.utils.data.DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
         num_workers=args.num_workers,
         pin_memory=(device == 'cuda'),
     )
@@ -862,6 +1248,10 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
     variant_results: dict[str, Any] = {}
     requested_variants = visual_adaptation_variants(args.visual_adaptation)
     for adaptation_mode in requested_variants:
+        _set_seed(torch_module, args.seed)
+        if device == 'cuda' and torch_module.cuda.is_available():
+            torch_module.cuda.empty_cache()
+            torch_module.cuda.reset_peak_memory_stats()
         run_dir = (
             output_dir / adaptation_mode
             if args.visual_adaptation == VISUAL_ADAPTATION_COMPARE
@@ -880,12 +1270,20 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             output_dim=output_dim,
             adaptation_mode=adaptation_mode,
             lora_rank=args.visual_lora_rank,
-        ).to(device)
+            torchvision_module=torchvision_module,
+        )
         pretrained_report = _load_visual_pretrained_backbone(
             torch_module,
             model,
             args.visual_pretrained_backbone,
+            torchvision_module=torchvision_module,
         )
+        if (
+            pretrained_report.get('pretrained_requested')
+            and not pretrained_report.get('pretrained_loaded')
+        ):
+            raise RuntimeError('pretrained weights were requested but were not loaded')
+        model = model.to(device)
         variant_config['visual_pretrained_backbone_report'] = pretrained_report
         counts = parameter_report(model)
         variant_config['visual_model'] = visual_state_model_metadata(
@@ -894,6 +1292,40 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             parameter_counts=counts,
             pretrained_backbone=args.visual_pretrained_backbone,
             pretrained_backbone_report=pretrained_report,
+            torchvision_version=str(torchvision_module.__version__),
+        )
+        variant_config['run_metadata'] = {
+            'schema_version': 'room315.visual_training_run.v2',
+            'backbone': {
+                'architecture': VISUAL_BACKBONE_ARCHITECTURE,
+                'library': VISUAL_BACKBONE_LIBRARY,
+                'library_version': str(torchvision_module.__version__),
+                'checkpoint_source': pretrained_report.get('checkpoint_source'),
+                'checkpoint_identifier': pretrained_report.get('checkpoint_identifier'),
+                'checkpoint_path': pretrained_report.get('checkpoint_path'),
+                'checkpoint_sha256': pretrained_report.get('checkpoint_sha256'),
+                'pretrained_requested': bool(pretrained_report.get('pretrained_requested')),
+                'pretrained_loaded': bool(pretrained_report.get('pretrained_loaded')),
+            },
+            'adaptation': {
+                'mode': adaptation_mode,
+                'lora_rank': args.visual_lora_rank if adaptation_mode == VISUAL_ADAPTATION_LORA else 0,
+                'trainable_scope': variant_config['visual_model']['backbone_trainable_scope'],
+            },
+            'parameters': counts,
+            'image_preprocessing': variant_config['visual_model']['image_preprocessing'],
+            'seed': seed_report,
+            'dataset_split_paths': config['dataset_split_paths'],
+            'loss': config['loss'],
+            'augmentations': config['augmentations'],
+        }
+        print(
+            _pretty_json({
+                'event': 'pretrained_backbone_verified',
+                'visual_adaptation': adaptation_mode,
+                **variant_config['run_metadata']['backbone'],
+            }),
+            flush=True,
         )
         _write_visual_training_artifacts(
             run_dir,
@@ -911,27 +1343,57 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             lr=args.learning_rate,
             weight_decay=args.weight_decay,
         )
-        loss_fn = torch_module.nn.SmoothL1Loss()
         history: list[dict[str, Any]] = []
         best_val_loss = float('inf')
         best_epoch = 0
+        epochs_without_improvement = 0
+        stopped_early = False
+        training_started = time.perf_counter()
+        overall_peak_gpu_memory = {
+            'device': device,
+            'cuda_available': bool(torch_module.cuda.is_available()),
+            'allocated_bytes': None,
+            'reserved_bytes': None,
+        }
 
         for epoch in range(1, args.epochs + 1):
+            epoch_started = time.perf_counter()
+            if device == 'cuda' and torch_module.cuda.is_available():
+                torch_module.cuda.reset_peak_memory_stats()
             model.train()
-            running_loss = 0.0
-            seen = 0
+            optimization_loss_accumulator = _new_visual_loss_accumulator()
             for batch in train_loader:
                 image = batch['image'].to(device)
                 target = batch['target'].to(device)
+                target_mask = batch['target_mask'].to(device)
                 optimizer.zero_grad(set_to_none=True)
                 pred = model(image)
-                loss = loss_fn(pred, target)
+                loss_components = visual_loss_components(
+                    torch_module,
+                    pred,
+                    target,
+                    target_mask,
+                    label_vectorizer.names,
+                )
+                loss = loss_components['total_weighted_loss']
                 loss.backward()
                 optimizer.step()
-                batch_size = int(target.shape[0])
-                running_loss += float(loss.item()) * batch_size
-                seen += batch_size
-            train_loss = running_loss / max(1, seen)
+                _accumulate_visual_loss(
+                    optimization_loss_accumulator,
+                    loss_components,
+                )
+            optimization_metrics = _summarize_visual_loss(
+                optimization_loss_accumulator
+            )
+            train_metrics = _evaluate_visual_state(
+                torch_module,
+                model,
+                train_eval_loader,
+                device=device,
+                target_mean=target_mean,
+                target_std=target_std,
+                label_names=label_vectorizer.names,
+            )
             val_metrics = _evaluate_visual_state(
                 torch_module,
                 model,
@@ -941,11 +1403,35 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
                 target_std=target_std,
                 label_names=label_vectorizer.names,
             )
+            if device == 'cuda' and torch_module.cuda.is_available():
+                torch_module.cuda.synchronize()
+            epoch_peak_gpu_memory = _peak_gpu_memory(torch_module, device)
+            for memory_key in ('allocated_bytes', 'reserved_bytes'):
+                value = epoch_peak_gpu_memory.get(memory_key)
+                if value is not None:
+                    previous = overall_peak_gpu_memory.get(memory_key)
+                    overall_peak_gpu_memory[memory_key] = max(
+                        int(previous or 0),
+                        int(value),
+                    )
             epoch_metrics = {
                 'epoch': epoch,
                 'visual_adaptation': adaptation_mode,
-                'train_loss': round(train_loss, 6),
+                'epoch_runtime_seconds': round(
+                    time.perf_counter() - epoch_started,
+                    3,
+                ),
+                'learning_rates': [
+                    float(group['lr'])
+                    for group in optimizer.param_groups
+                ],
+                'epoch_peak_gpu_memory': epoch_peak_gpu_memory,
                 'parameter_counts': counts,
+                **{
+                    f'optimization_{key}': value
+                    for key, value in optimization_metrics.items()
+                },
+                **{f'train_{key}': value for key, value in train_metrics.items()},
                 **{f'val_{key}': value for key, value in val_metrics.items()},
             }
             history.append(epoch_metrics)
@@ -959,9 +1445,11 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
                 metrics=epoch_metrics,
                 config=variant_config,
             )
-            if float(val_metrics['loss']) < best_val_loss:
-                best_val_loss = float(val_metrics['loss'])
+            current_val_loss = float(val_metrics['total_weighted_loss'])
+            if current_val_loss < best_val_loss:
+                best_val_loss = current_val_loss
                 best_epoch = epoch
+                epochs_without_improvement = 0
                 _save_checkpoint(
                     torch_module,
                     run_dir / 'best.pt',
@@ -971,17 +1459,52 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
                     metrics=epoch_metrics,
                     config=variant_config,
                 )
+            else:
+                epochs_without_improvement += 1
+            if (
+                args.early_stopping_patience > 0
+                and epochs_without_improvement >= args.early_stopping_patience
+            ):
+                stopped_early = True
+                print(
+                    _pretty_json({
+                        'event': 'early_stopping',
+                        'epoch': epoch,
+                        'patience': args.early_stopping_patience,
+                        'best_epoch': best_epoch,
+                        'best_validation_total_weighted_loss': best_val_loss,
+                    }),
+                    flush=True,
+                )
+                break
+
+        checkpoint_fingerprints = {
+            'best': _file_fingerprint(run_dir / 'best.pt'),
+            'last': _file_fingerprint(run_dir / 'last.pt'),
+        }
 
         variant_summary = {
             'visual_adaptation': adaptation_mode,
             'output_dir': str(run_dir),
             'best_checkpoint': str(run_dir / 'best.pt'),
             'last_checkpoint': str(run_dir / 'last.pt'),
+            'checkpoint_fingerprints': checkpoint_fingerprints,
             'best_epoch': best_epoch,
             'best_val_loss': best_val_loss,
+            'best_checkpoint_selection': 'validation_total_weighted_loss_only',
+            'test_evaluations_during_training': 0,
+            'epochs_completed': len(history),
+            'early_stopping_patience': args.early_stopping_patience,
+            'stopped_early': stopped_early,
+            'training_runtime_seconds': round(
+                time.perf_counter() - training_started,
+                3,
+            ),
             'history': history,
             'parameter_counts': counts,
             'visual_model': variant_config['visual_model'],
+            'run_metadata': variant_config['run_metadata'],
+            'peak_gpu_memory': overall_peak_gpu_memory,
             'config': variant_config,
         }
         (run_dir / 'metrics.json').write_text(_pretty_json(variant_summary) + '\n', encoding='utf-8')
@@ -1001,6 +1524,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'visual_label_vectorizer.json',
             'target_stats.json',
             'training_config.json',
+            'run_metadata.json',
         ):
             shutil.copy2(selected_dir / name, output_dir / name)
     smoke = visual_state_plansys2_smoke()
@@ -1014,10 +1538,22 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         'selected_visual_adaptation': selected_variant,
         'best_epoch': selected['best_epoch'],
         'best_val_loss': selected['best_val_loss'],
+        'best_checkpoint_selection': selected['best_checkpoint_selection'],
+        'test_evaluations_during_training': selected['test_evaluations_during_training'],
+        'checkpoint_fingerprints': {
+            'best': _file_fingerprint(output_dir / 'best.pt'),
+            'last': _file_fingerprint(output_dir / 'last.pt'),
+        },
+        'epochs_completed': selected['epochs_completed'],
+        'early_stopping_patience': selected['early_stopping_patience'],
+        'stopped_early': selected['stopped_early'],
+        'training_runtime_seconds': selected['training_runtime_seconds'],
         'history': selected['history'],
         'variant_results': variant_results,
         'parameter_counts': selected['parameter_counts'],
         'visual_model': selected['visual_model'],
+        'run_metadata': selected['run_metadata'],
+        'peak_gpu_memory': selected['peak_gpu_memory'],
         'diffusion_policy_head': False,
         'direct_command_capability': False,
         'state_fusion_to_plansys2': smoke,
@@ -1103,6 +1639,7 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                 dataset_mode=DATASET_MODE_VISUAL_STATE,
             )
             split_records: list[dict[str, Any]] = []
+            split_loss_accumulator = _new_visual_loss_accumulator()
             for sample_index, (row, label) in enumerate(zip(rows, labels)):
                 cycle_start = time.perf_counter()
                 image = torch_module.as_tensor(
@@ -1113,6 +1650,8 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                         height=image_height,
                         allow_blank_images=args.allow_blank_images,
                         dataset_mode=DATASET_MODE_VISUAL_STATE,
+                        normalization_mean=VISUAL_BACKBONE_NORMALIZATION_MEAN,
+                        normalization_std=VISUAL_BACKBONE_NORMALIZATION_STD,
                     ),
                     dtype=torch_module.float32,
                     device=device,
@@ -1126,6 +1665,30 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                 inference_latency = time.perf_counter() - inference_start
                 pred = (pred_norm[0] * std_tensor + mean_tensor).detach().cpu().numpy()
                 true_raw = np.asarray(label_vectorizer.transform(label), dtype=np.float32)
+                target_mask = np.asarray(
+                    label_vectorizer.target_mask(label),
+                    dtype=np.float32,
+                )
+                true_normalized = (true_raw - target_mean) / target_std
+                loss_components = visual_loss_components(
+                    torch_module,
+                    pred_norm,
+                    torch_module.as_tensor(
+                        true_normalized,
+                        dtype=torch_module.float32,
+                        device=device,
+                    ).unsqueeze(0),
+                    torch_module.as_tensor(
+                        target_mask,
+                        dtype=torch_module.float32,
+                        device=device,
+                    ).unsqueeze(0),
+                    label_vectorizer.names,
+                )
+                _accumulate_visual_loss(
+                    split_loss_accumulator,
+                    loss_components,
+                )
                 record = {
                     'split': split_name,
                     'sample_index': sample_index,
@@ -1133,12 +1696,21 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                     'scenario_family': str(row.get('scenario_family') or ''),
                     'true_raw': true_raw.tolist(),
                     'pred_raw': pred[: len(true_raw)].astype(np.float32).tolist(),
+                    'target_mask': target_mask.tolist(),
                     'inference_latency_seconds': inference_latency,
                     'cycle_time_seconds': time.perf_counter() - cycle_start,
                 }
                 split_records.append(record)
                 family_key = record['scenario_family'] or 'unknown'
                 family_records.setdefault(family_key, []).append(record)
+            split_metrics = visual_state_metrics(
+                split_records,
+                label_vectorizer.names,
+            )
+            split_metrics.update(
+                _summarize_visual_loss(split_loss_accumulator)
+            )
+            _add_visual_per_head_metrics(split_metrics)
             splits[split_name] = {
                 'source_file': _file_fingerprint(splits_dir / split_file),
                 'label_file': _file_fingerprint(labels_path),
@@ -1151,7 +1723,7 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                 'model_input_integrity': input_integrity,
                 'image_integrity': image_report,
                 'class_balance': visual_state_class_balance(labels),
-                'metrics': visual_state_metrics(split_records, label_vectorizer.names),
+                'metrics': split_metrics,
             }
             all_records.extend(split_records)
 
@@ -1161,6 +1733,7 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
         'dataset_mode': DATASET_MODE_VISUAL_STATE,
         'purpose': 'small custom visual-state label checkpoint evaluation',
         'checkpoint': str(checkpoint_path),
+        'checkpoint_fingerprint': _file_fingerprint(checkpoint_path),
         'checkpoint_epoch': checkpoint.get('epoch'),
         'checkpoint_metrics': checkpoint.get('metrics'),
         'checkpoint_training_config': config,
@@ -1190,6 +1763,7 @@ def evaluate_visual_state_checkpoint(args: argparse.Namespace) -> dict[str, Any]
                 'visual_label_vectorizer': _artifact_path(checkpoint_path, 'visual_label_vectorizer.json'),
                 'target_stats': _artifact_path(checkpoint_path, 'target_stats.json'),
                 'training_config': _artifact_path(checkpoint_path, 'training_config.json'),
+                'run_metadata': _artifact_path(checkpoint_path, 'run_metadata.json'),
             }.items()
             if path.exists()
         },
@@ -1272,10 +1846,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument(
+        '--early-stopping-patience',
+        type=int,
+        default=0,
+        help=(
+            'Stop after this many consecutive epochs without validation total-loss '
+            'improvement. Zero disables early stopping.'
+        ),
+    )
     parser.add_argument('--learning-rate', type=float, default=1e-3)
     parser.add_argument('--weight-decay', type=float, default=1e-4)
-    parser.add_argument('--image-width', type=int, default=160)
-    parser.add_argument('--image-height', type=int, default=120)
+    parser.add_argument('--image-width', type=int, default=VISUAL_BACKBONE_INPUT_WIDTH)
+    parser.add_argument('--image-height', type=int, default=VISUAL_BACKBONE_INPUT_HEIGHT)
     parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--device', default='auto', help='auto, cuda, or cpu')
     parser.add_argument('--seed', type=int, default=13)
@@ -1291,8 +1874,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=VISUAL_ADAPTATION_MODES,
         default=VISUAL_ADAPTATION_COMPARE,
         help=(
-            'Visual-state only: train a frozen compact backbone, LoRA adaptation, '
-            'or both for comparison.'
+            'Visual-state only: train the official pretrained backbone frozen, with a '
+            'low-rank feature adapter, with ResNet layer4 trainable, or compare frozen/LoRA.'
         ),
     )
     parser.add_argument(
@@ -1303,14 +1886,22 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--visual-selected-adaptation',
-        choices=('best_val_loss', VISUAL_ADAPTATION_FROZEN_BACKBONE, VISUAL_ADAPTATION_LORA),
+        choices=(
+            'best_val_loss',
+            VISUAL_ADAPTATION_FROZEN_BACKBONE,
+            VISUAL_ADAPTATION_LORA,
+            VISUAL_ADAPTATION_PARTIAL_FINETUNE,
+        ),
         default='best_val_loss',
         help='Visual-state only: selected checkpoint copied to the root output directory after compare.',
     )
     parser.add_argument(
         '--visual-pretrained-backbone',
-        default='compact_pretrained_backbone_v1',
-        help='Visual-state only: label/path for the frozen compact pretrained backbone in reports.',
+        default=VISUAL_BACKBONE_SOURCE,
+        help=(
+            f'Official pretrained identifier (default: {VISUAL_BACKBONE_SOURCE}). '
+            'Use "none" only for an explicit random-weight ablation.'
+        ),
     )
     parser.add_argument(
         '--eval-checkpoint',

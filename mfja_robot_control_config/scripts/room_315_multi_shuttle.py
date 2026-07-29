@@ -156,18 +156,66 @@ def gazebo_entity_name(side: str, shuttle_index: int) -> str:
     return f'room315_{shuttle_id(side, shuttle_index)}'
 
 
+def shuttle_spec(side: str, shuttle_index: int) -> ShuttleSpec:
+    side = normalize_side(side)
+    index = validate_shuttle_index(shuttle_index)
+    return ShuttleSpec(
+        shuttle_id=shuttle_id(side, index),
+        short_id=short_shuttle_id(side, index),
+        side=side,
+        shuttle_index=index - 1,
+        gazebo_entity_name=gazebo_entity_name(side, index),
+    )
+
+
 def shuttle_specs_for_side(side: str, count: Any) -> list[ShuttleSpec]:
     count = validate_shuttle_count(count)
     return [
-        ShuttleSpec(
-            shuttle_id=shuttle_id(side, index),
-            short_id=short_shuttle_id(side, index),
-            side=normalize_side(side),
-            shuttle_index=index - 1,
-            gazebo_entity_name=gazebo_entity_name(side, index),
-        )
+        shuttle_spec(side, index)
         for index in range(1, count + 1)
     ]
+
+
+def shuttle_specs_for_identities(
+    side: str,
+    identities: Any,
+    *,
+    allow_empty: bool = True,
+) -> list[ShuttleSpec]:
+    """Resolve an explicit identity subset without count/prefix substitution."""
+    side = normalize_side(side)
+    if isinstance(identities, str):
+        raw_identities = [
+            token.strip()
+            for token in identities.split(',')
+            if token.strip()
+        ]
+    elif identities is None:
+        raw_identities = []
+    else:
+        raw_identities = list(identities)
+    if not raw_identities and not allow_empty:
+        raise ValueError(f'{side}_active_identities cannot be empty')
+
+    resolved: list[ShuttleSpec] = []
+    seen: set[str] = set()
+    for raw_identity in raw_identities:
+        spec = normalize_shuttle_ref(raw_identity)
+        if spec is None:
+            raise ValueError(
+                f'invalid Room 315 shuttle identity {raw_identity!r}'
+            )
+        if spec.side != side:
+            raise ValueError(
+                f'{raw_identity!r} belongs to {spec.side}, not {side}'
+            )
+        if spec.shuttle_id in seen:
+            raise ValueError(
+                f'duplicate {side} shuttle identity: {spec.short_id}'
+            )
+        seen.add(spec.shuttle_id)
+        resolved.append(spec)
+    return resolved
 
 
 def all_shuttle_specs() -> list[ShuttleSpec]:
@@ -223,32 +271,55 @@ def normalize_shuttle_ref(raw: Any, *, side: str | None = None) -> ShuttleSpec |
     match = re.fullmatch(r'([rl])([1-4])', lowered)
     if match:
         ref_side = 'right' if match.group(1) == 'r' else 'left'
-        return shuttle_specs_for_side(ref_side, int(match.group(2)))[-1]
+        return shuttle_spec(ref_side, int(match.group(2)))
     match = re.fullmatch(r'(?:room315_)?(right|left)_shuttle_?([1-4])', lowered)
     if match:
-        return shuttle_specs_for_side(match.group(1), int(match.group(2)))[-1]
+        return shuttle_spec(match.group(1), int(match.group(2)))
     match = re.fullmatch(r'(right|left)_shuttle', lowered)
     if match and side:
-        return shuttle_specs_for_side(side, 1)[0]
+        return shuttle_spec(side, 1)
     return None
 
 
 class ShuttleRegistry:
-    def __init__(self, *, right_count: int = 1, left_count: int = 1) -> None:
+    def __init__(
+        self,
+        *,
+        right_count: int = 1,
+        left_count: int = 1,
+        right_identities: Any = None,
+        left_identities: Any = None,
+    ) -> None:
+        right_specs = (
+            shuttle_specs_for_side('right', right_count)
+            if right_identities is None
+            else shuttle_specs_for_identities('right', right_identities)
+        )
+        left_specs = (
+            shuttle_specs_for_side('left', left_count)
+            if left_identities is None
+            else shuttle_specs_for_identities('left', left_identities)
+        )
         self.specs = {
             spec.shuttle_id: spec
-            for side, count in (('right', right_count), ('left', left_count))
-            for spec in shuttle_specs_for_side(side, count)
+            for spec in right_specs + left_specs
         }
         self._by_short = {spec.short_id: spec for spec in self.specs.values()}
 
     @classmethod
     def from_rails(cls, rails: dict[str, Any]) -> 'ShuttleRegistry':
-        counts = {}
+        identities = {}
         for side in SIDES:
             shuttles = (rails.get(side, {}) or {}).get('shuttles', {})
-            counts[side] = len(shuttles) if isinstance(shuttles, dict) else 0
-        return cls(right_count=counts.get('right', 0), left_count=counts.get('left', 0))
+            identities[side] = (
+                list(shuttles)
+                if isinstance(shuttles, dict)
+                else []
+            )
+        return cls(
+            right_identities=identities.get('right', []),
+            left_identities=identities.get('left', []),
+        )
 
     def resolve(self, raw: Any, *, side: str | None = None) -> ShuttleSpec | None:
         spec = normalize_shuttle_ref(raw, side=side)

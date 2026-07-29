@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import signal
 from pathlib import Path
 
 import yaml
@@ -86,3 +87,54 @@ def test_selects_requested_range_and_rejects_unknown_ids():
         assert 'unknown scenario ids' in str(exc)
     else:
         raise AssertionError('unknown scenario id was accepted')
+
+
+def test_resume_never_accepts_an_incomplete_episode(tmp_path):
+    scenario = _scenarios()[0]
+    dataset = tmp_path / 'dataset'
+
+    assert runner._episode_exists(dataset, scenario) is False
+
+    incomplete = (
+        dataset / 'episodes' / scenario['scenario_id']
+    )
+    incomplete.mkdir(parents=True)
+    (incomplete / 'validation.json').write_text(
+        '{}\n',
+        encoding='utf-8',
+    )
+
+    try:
+        runner._episode_exists(dataset, scenario)
+    except runner.VisualScenarioRunError as exc:
+        assert 'incomplete existing episode' in str(exc)
+    else:
+        raise AssertionError('incomplete episode was accepted as complete')
+
+
+def test_cleanup_signals_process_group_after_launch_parent_exits(monkeypatch):
+    signals = []
+
+    class ExitedProcess:
+        pid = 4242
+
+        @staticmethod
+        def poll():
+            return 0
+
+    monkeypatch.setattr(
+        runner.os,
+        'killpg',
+        lambda group_id, shutdown_signal: signals.append(
+            (group_id, shutdown_signal)
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        '_wait_for_process_group_exit',
+        lambda _group_id, _timeout: True,
+    )
+
+    runner._terminate_process(ExitedProcess())
+
+    assert signals == [(4242, signal.SIGINT)]

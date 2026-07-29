@@ -110,14 +110,14 @@ def test_builds_visual_labels_without_exposing_oracle_model_inputs():
     cameras = exporter.load_camera_projections(exporter._default_camera_model_path())
     labels = exporter.visual_labels_from_event(_oracle_event(), cameras)
 
-    assert labels['schema_version'] == 'room315.visual_state.v2'
+    assert labels['schema_version'] == 'room315.visual_state.v3'
     assert labels['calibration_version'] == exporter.CALIBRATION_VERSION
-    assert labels['shuttles'][0]['id'] == 'R1'
-    assert labels['shuttles'][0]['location'] == {'block': 'A12E', 'side': 'right'}
-    assert labels['shuttles'][0]['loaded_state'] == 'loaded'
-    assert labels['shuttles'][0]['rail_position']['available'] is True
-    assert labels['shuttles'][0]['rail_position']['s_m'] == pytest.approx(0.9172)
-    assert labels['shuttles'][0]['rail_position']['s_ratio'] == pytest.approx(
+    r1 = next(shuttle for shuttle in labels['shuttles'] if shuttle['id'] == 'R1')
+    assert r1['location'] == {'block': 'A12E', 'side': 'right'}
+    assert r1['loaded_state'] == 'loaded'
+    assert r1['rail_position']['available'] is True
+    assert r1['rail_position']['s_m'] == pytest.approx(0.9172)
+    assert r1['rail_position']['s_ratio'] == pytest.approx(
         0.4118,
         abs=0.001,
     )

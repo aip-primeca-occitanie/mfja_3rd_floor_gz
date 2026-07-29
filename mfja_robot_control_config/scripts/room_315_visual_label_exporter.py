@@ -34,6 +34,8 @@ from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import RIGHT_CALIBRATION_DEFAULTS
 from room_315_rail_defaults import apply_rail_pose_calibration
 from room_315_rail_defaults import public_rail_segment_lengths
+from room_315_shuttle_geometry import SHUTTLE_COLLISION_CENTER_X_M
+from room_315_shuttle_geometry import SHUTTLE_COLLISION_SIZE_M
 from room_315_visual_state_dataset import DATASET_MODE_VISUAL_STATE
 from room_315_visual_state_dataset import VISUAL_STATE_SCHEMA_VERSION
 from room_315_visual_state_dataset import normalize_visual_state_labels
@@ -45,8 +47,6 @@ from room_315_visual_state_dataset import write_jsonl
 
 REQUIRED_CAMERAS = ('left_rail_rgb', 'right_rail_rgb')
 CALIBRATION_VERSION = 'room315.gazebo_pinhole.v1'
-SHUTTLE_COLLISION_CENTER_X_M = -0.078417048
-SHUTTLE_SIZE_M = (0.36, 0.22, 0.17)
 SHUTTLE_NAME_PATTERN = re.compile(
     r'(?:room315_)?(?P<side>right|left)_shuttle_?(?P<index>[1-4])$',
     re.IGNORECASE,
@@ -222,7 +222,9 @@ def shuttle_bbox(
     margin_px: float = 4.0,
 ) -> list[float] | None:
     center_x, center_y, center_z, yaw = gazebo_pose
-    half_x, half_y, half_z = (dimension / 2.0 for dimension in SHUTTLE_SIZE_M)
+    half_x, half_y, half_z = (
+        dimension / 2.0 for dimension in SHUTTLE_COLLISION_SIZE_M
+    )
     cos_yaw = math.cos(yaw)
     sin_yaw = math.sin(yaw)
     projected = []
@@ -349,9 +351,11 @@ def visual_labels_from_event(
             if not isinstance(state, dict):
                 continue
             _, short_id = _short_shuttle_id(entity_name, side)
-            bbox = shuttle_bbox(cameras[side], rail_pose_to_gazebo(side, state))
-            if bbox is None:
+            if float(state.get('z') or 0.0) <= -5.0:
+                # Disabled preloaded entities are parked below the world.
+                # They are absent and must not become visible examples.
                 continue
+            bbox = shuttle_bbox(cameras[side], rail_pose_to_gazebo(side, state))
             payload = payload_by_shuttle.get(entity_name)
             loaded_state = (
                 'loaded'
@@ -376,9 +380,9 @@ def visual_labels_from_event(
             position_available = segment_length_m > 0.0 and state.get('s') not in (None, '')
             shuttles.append({
                 'id': short_id,
-                'visually_available_identity': short_id,
-                'identity_available': True,
-                'bbox': bbox,
+                'presence': True,
+                'visually_available': bbox is not None,
+                'bbox': bbox or [0.0, 0.0, 0.0, 0.0],
                 'location': location,
                 'rail_position': {
                     'available': position_available,

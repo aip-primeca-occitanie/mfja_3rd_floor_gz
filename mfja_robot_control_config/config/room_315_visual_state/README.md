@@ -18,19 +18,36 @@ model input
   right overhead image
 
 oracle label
-  shuttle identities, bounding boxes, rail blocks, payload states
-  continuous rail position: s_m, s_ratio, segment length, and uncertainty
-  switch states
-  obstacle bounding boxes when obstacle labelling is enabled
+  fixed L1-L4/R1-R4 entry, presence/visibility masks
+  side, global rail block, bounding box, and payload state
+  continuous rail position: s_m, s_ratio, and segment length
 ```
 
-The current pilot deliberately sets `obstacles: []`. Obstacle scenes must not be
-added until the exporter can provide a real bounding box or segmentation mask.
+The current label schema is `room315.visual_state.v3`. Every label contains
+exactly eight entries in this order:
+
+```text
+L1, L2, L3, L4, R1, R2, R3, R4
+```
+
+Entry identity is structural and is not a classification target. Every entry
+uses the same 14-block vocabulary loaded from the authoritative left/right
+rail topology. Present visible entries must have one valid block, bbox,
+payload state, `s_m`, `s_ratio`, and segment length. Absent or off-camera
+entries remain in the fixed schema but are excluded by explicit masks. The
+resulting model target has 200 outputs; its capacity is not fit from a dataset
+subset.
+
+`position_uncertainty_m = 0.0` is retained in the separated oracle file only as
+Gazebo provenance. The visual target vectorizer explicitly excludes it, along
+with confidence, switches, obstacles, planning fields, and safety-derived
+fields.
 
 The blocker-localization profile adds route-specific hard negatives. A shuttle
 behind the selected shuttle or on the unused interior branch is labelled with
-its exact position but is not considered a route blocker. The `planning_probe`
-field exists only in the simulator manifest and is excluded from model input.
+its exact position but is not considered a route blocker. The `relation_probe`
+field exists only in the simulator setup manifest and is excluded from model
+input and visual labels.
 
 ## Generate a pilot
 
@@ -68,6 +85,44 @@ ros2 run mfja_robot_control_config room_315_visual_scenario_generator.py \
 This profile starts shuttles at continuous `SEGMENT@S_RATIO` positions and
 balances five cases: blocker ahead, blocker on an intermediate segment,
 non-blocker behind, non-blocker on the adjacent branch, and multiple blockers.
+Every active relation rail launches all four of its physical shuttles. Targets
+rotate across suffixes 1-4, required relation actors are assigned separately,
+and remaining shuttles are placed as collision-free relation-neutral actors.
+The configured rail scopes are 40% left-only 4+0, 40% right-only 0+4, and 20%
+simultaneous 4+4. All shuttles receive seeded randomized positions. The full
+configuration covers all 14 public segments on both rails and
+balances targets across boundaries, switches, slots, merge/conflict zones,
+buffers, and ordinary segment regions.
+
+Every generated continuous position is also projected through the calibrated
+rail geometry into Gazebo world coordinates. The generator rejects and
+deterministically resamples any pair whose oriented `0.36 m x 0.22 m` shuttle
+footprints do not retain at least `0.04 m` clearance. This applies across
+different segments as well as on the same segment. Alternative paths inside
+the short A1-A4 switch pieces are not treated as simultaneously occupiable;
+adjacent-branch negatives use the physically separable A12/A34 branches.
+The dataset audit repeats this geometry check on both the scenario manifest
+and the captured oracle-label JSONL.
+
+Audit the generated scenario plan without changing it:
+
+```bash
+ros2 run mfja_robot_control_config room_315_visual_dataset_audit.py \
+  --config "$(ros2 pkg prefix mfja_robot_control_config)/share/mfja_robot_control_config/config/room_315_visual_state/blocker_training_scenarios.yaml" \
+  --scenario-manifest ~/room315_visual_state_v4_blockers/scenarios/scenario_manifest.jsonl
+```
+
+After capture and splitting, run the complete audit, including label JSONL and
+train/validation/test scenario-family isolation:
+
+```bash
+ros2 run mfja_robot_control_config room_315_visual_dataset_audit.py \
+  --config "$(ros2 pkg prefix mfja_robot_control_config)/share/mfja_robot_control_config/config/room_315_visual_state/blocker_training_scenarios.yaml" \
+  --scenario-manifest ~/room315_visual_state_v4_blockers/scenarios/scenario_manifest.jsonl \
+  --splits-dir ~/room315_visual_state_v4_blockers/splits \
+  --require-complete \
+  --report ~/room315_visual_state_v4_blockers/dataset_audit.json
+```
 
 ## Capture the pilot
 

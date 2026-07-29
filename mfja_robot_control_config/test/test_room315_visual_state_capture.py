@@ -6,6 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import yaml
+import cv2
+import numpy as np
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -140,13 +142,13 @@ def test_projects_and_validates_matching_simulator_snapshot():
         max_camera_skew_seconds=0.15,
     )
 
-    assert labels['shuttles'][0]['id'] == 'R1'
-    assert labels['shuttles'][0]['location'] == {
+    r1 = next(shuttle for shuttle in labels['shuttles'] if shuttle['id'] == 'R1')
+    assert r1['location'] == {
         'block': 'A12E',
         'side': 'right',
     }
-    assert labels['shuttles'][0]['rail_position']['available'] is True
-    assert labels['shuttles'][0]['rail_position']['s_ratio'] > 0.4
+    assert r1['rail_position']['available'] is True
+    assert r1['rail_position']['s_ratio'] > 0.4
     assert len(labels['switches']) == 8
 
 
@@ -163,13 +165,18 @@ def test_writes_new_capture_layout_and_validation(tmp_path):
         },
     )
 
+    frame = np.zeros((48, 64, 3), dtype=np.uint8)
+    frame[:, :, 1] = np.arange(64, dtype=np.uint8)
+    encoded_ok, encoded = cv2.imencode('.jpg', frame)
+    assert encoded_ok
+
     result = capture.write_capture(
         tmp_path,
         scenario,
         labels,
         {
-            'left_rail_rgb': b'left-jpeg',
-            'right_rail_rgb': b'right-jpeg',
+            'left_rail_rgb': encoded.tobytes(),
+            'right_rail_rgb': encoded.tobytes(),
         },
         camera_skew_seconds=0.01,
     )
@@ -178,9 +185,21 @@ def test_writes_new_capture_layout_and_validation(tmp_path):
         (tmp_path / 'meta' / 'training_events.jsonl').read_text(encoding='utf-8')
     )
     validation = json.loads(Path(result['validation']).read_text(encoding='utf-8'))
+    episode_event = json.loads(
+        (
+            tmp_path
+            / 'episodes'
+            / scenario['scenario_id']
+            / 'event.json'
+        ).read_text(encoding='utf-8')
+    )
     assert set(training_row['model_input']) == {'overhead_images'}
     assert 'task' not in training_row
     assert validation['schema_version'] == 'room315.visual_capture_validation.v1'
     assert validation['capture_complete'] is True
     assert validation['labels_valid'] is True
     assert 'task_success' not in validation
+    assert episode_event == training_row
+    assert not list(
+        (tmp_path / 'episodes' / '.capture_tmp').iterdir()
+    )
