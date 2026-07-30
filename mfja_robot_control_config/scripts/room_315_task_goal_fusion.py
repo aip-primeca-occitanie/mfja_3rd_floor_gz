@@ -255,7 +255,11 @@ class EvidenceAwareFusionResolver:
         _merge_draft(values, provenance, structured_draft, 'structured_form')
         explicit_values = _facts_to_values(explicit_facts)
         _merge_values(values, provenance, explicit_values, 'explicit_text')
-        confirmed_context = confirmed_draft if _uses_confirmed_context(request_text, confirmed_draft) else None
+        confirmed_context = (
+            confirmed_draft
+            if uses_confirmed_context(request_text, confirmed_draft)
+            else None
+        )
         _merge_draft(values, provenance, confirmed_context, 'confirmed_context', only_missing=True)
 
         semantic_patch = semantic_envelope.draft_patch if semantic_envelope and semantic_envelope.draft_patch else {}
@@ -508,6 +512,12 @@ def _sanitize_semantic_patch(
             continue
         if field == 'target_shuttle' and not _has_authority('target_shuttle', explicit_values, confirmed_draft):
             continue
+        if field == 'target_station' and not _has_authority(
+            'target_station',
+            explicit_values,
+            confirmed_draft,
+        ):
+            continue
         if field == 'target_slot' and not (
             explicit_values.get('target_slot')
             or (confirmed_draft is not None and confirmed_draft.target_slot)
@@ -553,7 +563,11 @@ def _has_generic_shuttle_reference(text: str) -> bool:
     return bool(GENERIC_SHUTTLE_TERMS.search(text))
 
 
-def _uses_confirmed_context(text: str, confirmed_draft: TaskGoalDraft | None) -> bool:
+def uses_confirmed_context(
+    text: str,
+    confirmed_draft: TaskGoalDraft | None,
+) -> bool:
+    """Return whether this utterance explicitly refers to confirmed context."""
     return confirmed_draft is not None and bool(REFERENCE_TERMS.search(text))
 
 

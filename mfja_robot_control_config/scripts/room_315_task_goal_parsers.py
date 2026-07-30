@@ -11,6 +11,7 @@ from typing import Protocol
 
 from room_315_task_goal_fusion import EvidenceAwareFusionResolver
 from room_315_task_goal_fusion import ExplicitFactExtractor
+from room_315_task_goal_fusion import uses_confirmed_context
 from room_315_task_goal_semantic import LocalSemanticBackend
 from room_315_task_goal_semantic import LocalSemanticModelConfig
 from room_315_task_goal_semantic import SemanticParseEnvelope
@@ -452,9 +453,18 @@ class ConversationalIntentGatewayParser:
         if self.deterministic_only:
             fallback_reason = 'deterministic_only'
         else:
+            semantic_context = (
+                confirmed_draft
+                if uses_confirmed_context(request, confirmed_draft)
+                else None
+            )
             backend_result = self.backend.infer(
                 request,
-                confirmed_context=confirmed_draft.to_dict() if confirmed_draft else None,
+                confirmed_context=(
+                    semantic_context.to_dict()
+                    if semantic_context is not None
+                    else None
+                ),
             )
             if backend_result.ok:
                 envelope_result = strict_semantic_envelope_from_json(backend_result.text)

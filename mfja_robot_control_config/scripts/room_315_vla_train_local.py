@@ -374,65 +374,17 @@ def _build_visual_state_model(
     lora_rank: int,
     torchvision_module: Any | None = None,
 ):
+    from room_315_visual_model import build_visual_state_model
+
     torchvision_module = torchvision_module or _require_torchvision()
-    nn = torch_module.nn
     mode = visual_adaptation_variants(adaptation_mode)[0]
-    rank = max(1, int(lora_rank))
-    per_camera_feature_dim = 512
-    paired_feature_dim = per_camera_feature_dim * 2
-
-    class VisualStateResNet18WithAdaptation(nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
-            self.backbone = torchvision_module.models.resnet18(weights=None)
-            self.backbone.fc = nn.Identity()
-            for parameter in self.backbone.parameters():
-                parameter.requires_grad = False
-            self.adaptation_mode = mode
-            if mode == VISUAL_ADAPTATION_LORA:
-                self.lora_down = nn.Linear(paired_feature_dim, rank, bias=False)
-                self.lora_up = nn.Linear(rank, paired_feature_dim, bias=False)
-                nn.init.kaiming_uniform_(self.lora_down.weight, a=math.sqrt(5))
-                nn.init.zeros_(self.lora_up.weight)
-            else:
-                self.lora_down = None
-                self.lora_up = None
-            if mode == VISUAL_ADAPTATION_PARTIAL_FINETUNE:
-                for parameter in self.backbone.layer4.parameters():
-                    parameter.requires_grad = True
-            self.head = nn.Sequential(
-                nn.LayerNorm(paired_feature_dim),
-                nn.Linear(paired_feature_dim, 128),
-                nn.SiLU(inplace=True),
-                nn.Dropout(0.05),
-                nn.Linear(128, output_dim),
-            )
-
-        def forward(self, image):
-            if image.ndim != 4 or image.shape[1] != 6:
-                raise ValueError(
-                    f'expected paired RGB input shaped (N, 6, H, W), got {tuple(image.shape)}'
-                )
-            left_features = self.backbone(image[:, :3])
-            right_features = self.backbone(image[:, 3:])
-            features = torch_module.cat([left_features, right_features], dim=1)
-            if self.lora_down is not None and self.lora_up is not None:
-                features = features + self.lora_up(self.lora_down(features)) / float(rank)
-            return self.head(features)
-
-        def train(self, train_mode: bool = True):
-            super().train(train_mode)
-            if train_mode and self.adaptation_mode in {
-                VISUAL_ADAPTATION_FROZEN_BACKBONE,
-                VISUAL_ADAPTATION_LORA,
-            }:
-                self.backbone.eval()
-            elif train_mode and self.adaptation_mode == VISUAL_ADAPTATION_PARTIAL_FINETUNE:
-                self.backbone.eval()
-                self.backbone.layer4.train()
-            return self
-
-    return VisualStateResNet18WithAdaptation()
+    return build_visual_state_model(
+        torch_module,
+        torchvision_module,
+        output_dim=output_dim,
+        adaptation_mode=mode,
+        lora_rank=lora_rank,
+    )
 
 
 def visual_state_model_metadata(
@@ -1169,7 +1121,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'head_reduction': 'mean over valid elements per sample, then mean over samples',
             'sample_weighting': 'uniform',
             'head_weights': dict(VISUAL_LOSS_HEAD_WEIGHTS),
-            'total_reduction': 'weighted mean over six heads',
+            'total_reduction': 'weighted mean over five heads',
             'absent_shuttle_slots_masked': True,
             'segment_length_m_head': 'segment_location',
             'target_normalization': (
@@ -1183,6 +1135,11 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'best_checkpoint_uses_validation_only': True,
             'test_split_used_during_training': False,
         },
+        'resume_checkpoint': (
+            str(args.resume_checkpoint.expanduser().resolve())
+            if args.resume_checkpoint is not None
+            else None
+        ),
         'dataset_split_paths': {
             'train': str((splits_dir / args.train_file).resolve()),
             'validation': str((splits_dir / args.val_file).resolve()),
@@ -1247,6 +1204,10 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
     )
     variant_results: dict[str, Any] = {}
     requested_variants = visual_adaptation_variants(args.visual_adaptation)
+    if args.resume_checkpoint is not None and len(requested_variants) != 1:
+        raise ValueError(
+            '--resume-checkpoint requires one explicit visual adaptation'
+        )
     for adaptation_mode in requested_variants:
         _set_seed(torch_module, args.seed)
         if device == 'cuda' and torch_module.cuda.is_available():
@@ -1347,6 +1308,90 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
         best_val_loss = float('inf')
         best_epoch = 0
         epochs_without_improvement = 0
+        start_epoch = 1
+        resume_report: dict[str, Any] = {
+            'requested': False,
+            'loaded': False,
+        }
+        if args.resume_checkpoint is not None:
+            resume_path = args.resume_checkpoint.expanduser().resolve()
+            if not resume_path.is_file():
+                raise FileNotFoundError(
+                    f'resume checkpoint not found: {resume_path}'
+                )
+            resume_checkpoint = _torch_load_checkpoint(
+                torch_module,
+                resume_path,
+            )
+            resume_config = _checkpoint_training_config(
+                resume_checkpoint,
+                resume_path,
+            )
+            if (
+                resume_config.get('visual_model_kind')
+                != VISUAL_MODEL_KIND
+                or resume_config.get('visual_adaptation')
+                != adaptation_mode
+                or int(resume_config.get('output_dim', -1))
+                != output_dim
+            ):
+                raise ValueError(
+                    'resume checkpoint model contract does not match '
+                    'the requested fixed-eight run'
+                )
+            model.load_state_dict(
+                resume_checkpoint['model_state_dict'],
+                strict=True,
+            )
+            optimizer.load_state_dict(
+                resume_checkpoint['optimizer_state_dict'],
+            )
+            resumed_epoch = int(resume_checkpoint.get('epoch') or 0)
+            start_epoch = resumed_epoch + 1
+            prior_summary_path = resume_path.parent / 'metrics.json'
+            if prior_summary_path.is_file():
+                prior_summary = _load_json(prior_summary_path)
+                history = list(prior_summary.get('history') or [])
+                best_val_loss = float(
+                    prior_summary.get('best_val_loss', float('inf'))
+                )
+                best_epoch = int(
+                    prior_summary.get('best_epoch') or 0
+                )
+                prior_best = resume_path.parent / 'best.pt'
+                if prior_best.is_file():
+                    shutil.copy2(prior_best, run_dir / 'best.pt')
+            if not (run_dir / 'best.pt').is_file():
+                shutil.copy2(resume_path, run_dir / 'best.pt')
+                metrics = resume_checkpoint.get('metrics') or {}
+                best_val_loss = float(
+                    metrics.get(
+                        'val_total_weighted_loss',
+                        best_val_loss,
+                    )
+                )
+                best_epoch = resumed_epoch
+            if start_epoch > args.epochs:
+                raise ValueError(
+                    '--epochs must exceed the resume checkpoint epoch'
+                )
+            resume_report = {
+                'requested': True,
+                'loaded': True,
+                'checkpoint_path': str(resume_path),
+                'checkpoint_sha256': _sha256_file(resume_path),
+                'checkpoint_epoch': resumed_epoch,
+                'next_epoch': start_epoch,
+            }
+            variant_config['resume'] = resume_report
+            _write_visual_training_artifacts(
+                run_dir,
+                dataset_report=dataset_report,
+                label_vectorizer=label_vectorizer,
+                target_mean=target_mean,
+                target_std=target_std,
+                config=variant_config,
+            )
         stopped_early = False
         training_started = time.perf_counter()
         overall_peak_gpu_memory = {
@@ -1356,7 +1401,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
             'reserved_bytes': None,
         }
 
-        for epoch in range(1, args.epochs + 1):
+        for epoch in range(start_epoch, args.epochs + 1):
             epoch_started = time.perf_counter()
             if device == 'cuda' and torch_module.cuda.is_available():
                 torch_module.cuda.reset_peak_memory_stats()
@@ -1501,6 +1546,7 @@ def train_visual_state(args: argparse.Namespace) -> dict[str, Any]:
                 3,
             ),
             'history': history,
+            'resume': resume_report,
             'parameter_counts': counts,
             'visual_model': variant_config['visual_model'],
             'run_metadata': variant_config['run_metadata'],
@@ -1791,6 +1837,48 @@ def train_local(args: argparse.Namespace) -> dict[str, Any]:
     return train_visual_state(args)
 
 
+def validate_test_lock(args: argparse.Namespace) -> dict[str, Any]:
+    """Fail closed unless test evaluation is explicit and unlocked."""
+    if args.eval_checkpoint is None:
+        selected = {
+            Path(str(args.train_file)).name.casefold(),
+            Path(str(args.val_file)).name.casefold(),
+        }
+        if any(name.startswith('test') for name in selected):
+            raise ValueError(
+                'normal training may not load test split files'
+            )
+        if args.unlock_test:
+            raise ValueError(
+                '--unlock-test is valid only for explicit checkpoint evaluation'
+            )
+        return {
+            'mode': 'training',
+            'test_loaded': False,
+            'test_unlocked': False,
+        }
+    evaluated = {
+        name.strip().casefold()
+        for name in str(args.eval_splits or '').split(',')
+        if name.strip()
+    }
+    test_selected = 'test' in evaluated
+    if test_selected and not args.unlock_test:
+        raise ValueError(
+            'test evaluation is locked; pass --unlock-test explicitly'
+        )
+    if args.unlock_test and not test_selected:
+        raise ValueError(
+            '--unlock-test requires test in --eval-splits'
+        )
+    return {
+        'mode': 'evaluation',
+        'test_loaded': test_selected,
+        'test_unlocked': bool(args.unlock_test),
+        'evaluated_splits': sorted(evaluated),
+    }
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -1865,6 +1953,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument('--limit-train-rows', type=int, default=None)
     parser.add_argument('--limit-val-rows', type=int, default=None)
     parser.add_argument(
+        '--resume-checkpoint',
+        type=Path,
+        default=None,
+        help=(
+            'Resume one explicit adaptation from a prior last.pt/best.pt. '
+            '--epochs is the maximum total epoch number.'
+        ),
+    )
+    parser.add_argument(
         '--allow-blank-images',
         action='store_true',
         help='Debug only: substitute zero tensors for missing/unreadable required images.',
@@ -1917,8 +2014,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--eval-splits',
-        default='train,val,test',
+        default='val',
         help='Comma-separated JSONL split names to evaluate with --eval-checkpoint.',
+    )
+    parser.add_argument(
+        '--unlock-test',
+        action='store_true',
+        help=(
+            'Explicitly unlock test evaluation. This is rejected during '
+            'training and is required when --eval-splits contains test.'
+        ),
     )
     parser.add_argument(
         '--limit-eval-rows',
@@ -1930,11 +2035,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
-    args = build_arg_parser().parse_args(argv)
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    try:
+        test_lock = validate_test_lock(args)
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.eval_checkpoint is not None:
         summary = evaluate_checkpoint(args)
     else:
         summary = train_visual_state(args)
+    if isinstance(summary, dict):
+        summary['test_lock'] = test_lock
     print(_pretty_json(summary))
 
 

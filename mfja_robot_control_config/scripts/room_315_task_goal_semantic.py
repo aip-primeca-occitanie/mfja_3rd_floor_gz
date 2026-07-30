@@ -579,12 +579,14 @@ class FakeSemanticBackend(LocalSemanticBackend):
         self.timeout = timeout
         self.fingerprint = fingerprint
         self.calls: list[str] = []
+        self.confirmed_contexts: list[dict[str, Any] | None] = []
 
     def load(self) -> None:
         return
 
     def infer(self, user_text: str, *, confirmed_context: dict[str, Any] | None = None) -> SemanticBackendResult:
         self.calls.append(user_text)
+        self.confirmed_contexts.append(copy.deepcopy(confirmed_context))
         if self.unhealthy:
             return SemanticBackendResult(
                 status='unavailable',
@@ -840,6 +842,8 @@ def build_semantic_prompt(
         'Vocabulary: closest/nearest/whichever carrier is closest -> selection_strategy nearest; '
         'holding/carrying a component/load/part -> payload_filter loaded; without a component -> empty; '
         'right-hand line -> side right; left-hand line -> side left; third position -> target_kind slot, target_slot 3.\n'
+        'Set target_station only when the current user_text explicitly names yaskawa, '
+        'staubli, or kuka. Never infer a station from a slot, rail side, or confirmed_context.\n'
         'For "whichever carrier is closest and holding a component", output '
         '"selection_strategy":"nearest" and "payload_filter":"loaded"; do not set target_shuttle.\n'
         'Correct indirect-nearest output example: '

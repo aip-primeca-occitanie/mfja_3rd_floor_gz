@@ -33,8 +33,10 @@ install(
     config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
+    config/room_315_vla/task_execution_runtime.yaml
     config/room_315_vla/task_goal_english_benchmark.yaml
     config/room_315_vla/task_goal_understanding.yaml
+    config/room_315_vla/visual_state_runtime.yaml
     config/room_315_vla/visual_observed_state_calibration.yaml
     config/room_315_vla/vla_supervisor.yaml
   DESTINATION share/${PROJECT_NAME}/config/room_315_vla
@@ -87,6 +89,7 @@ install(
     scripts/room_315_shuttle_geometry.py
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
+    scripts/room_315_presence_provider.py
     scripts/room_315_task_goal_builder.py
     scripts/room_315_task_goal_benchmark.py
     scripts/room_315_task_goal_cli.py
@@ -97,6 +100,8 @@ install(
     scripts/room_315_task_goal_semantic.py
     scripts/room_315_task_goal_semantic_smoke.py
     scripts/room_315_task_goal_validation.py
+    scripts/room_315_task_execution.py
+    scripts/room_315_task_execution_node.py
     scripts/room_315_vla_benchmark_suite.py
     scripts/room_315_vla_dataset_recorder.py
     scripts/room_315_vla_event_extractor.py
@@ -108,6 +113,9 @@ install(
     scripts/room_315_vla_to_lerobot.py
     scripts/room_315_arbitrary_subset_visual.py
     scripts/room_315_arbitrary_subset_visual_v2.py
+    scripts/room_315_arbitrary_subset_capture_v2.py
+    scripts/room_315_grouped_visual_splits.py
+    scripts/room_315_kairos_visual_training_package.py
     scripts/room_315_visual_observed_state_provider.py
     scripts/room_315_visual_error_analysis.py
     scripts/room_315_visual_fleet.py
@@ -116,9 +124,15 @@ install(
     scripts/room_315_visual_dataset_audit.py
     scripts/room_315_visual_state_capture.py
     scripts/room_315_visual_state_dataset.py
+    scripts/room_315_visual_model.py
+    scripts/room_315_visual_runtime.py
+    scripts/room_315_visual_runtime_cpu_smoke.py
+    scripts/room_315_visual_runtime_fusion.py
+    scripts/room_315_visual_runtime_validation.py
     scripts/room_315_visual_scenario_generator.py
     scripts/room_315_visual_scenario_runner.py
     scripts/room_315_visual_smoke_report.py
+    scripts/room_315_visual_state_inference_node.py
     scripts/room_315_visual_state_smoke.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -149,6 +163,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_task_goal_semantic_gateway
     test/test_room315_task_goal_semantic_gateway.py
+  )
+  ament_add_pytest_test(
+    test_room315_task_execution
+    test/test_room315_task_execution.py
   )
   ament_add_pytest_test(
     test_room315_closed_loop_executive
@@ -293,6 +311,26 @@ if(BUILD_TESTING)
     TIMEOUT 180
   )
   ament_add_pytest_test(
+    test_room315_arbitrary_subset_capture_v2
+    test/test_room315_arbitrary_subset_capture_v2.py
+    TIMEOUT 600
+  )
+  ament_add_pytest_test(
+    test_room315_camera_bbox_semantics
+    test/test_room315_camera_bbox_semantics.py
+    TIMEOUT 120
+  )
+  ament_add_pytest_test(
+    test_room315_grouped_visual_splits
+    test/test_room315_grouped_visual_splits.py
+    TIMEOUT 420
+  )
+  ament_add_pytest_test(
+    test_room315_kairos_visual_training_package
+    test/test_room315_kairos_visual_training_package.py
+    TIMEOUT 180
+  )
+  ament_add_pytest_test(
     test_room315_eight_shuttle_visual_pipeline
     test/test_room315_eight_shuttle_visual_pipeline.py
   )
@@ -323,6 +361,16 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_visual_state_capture
     test/test_room315_visual_state_capture.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_runtime
+    test/test_room315_visual_runtime.py
+    TIMEOUT 180
+  )
+  ament_add_pytest_test(
+    test_room315_visual_runtime_ros_integration
+    test/test_room315_visual_runtime_ros_integration.py
+    TIMEOUT 30
   )
   ament_add_pytest_test(
     test_room315_visual_scenario_runner

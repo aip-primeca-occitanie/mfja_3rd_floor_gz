@@ -254,6 +254,10 @@ def test_postcondition_mismatch_replans_before_next_command():
     assert result.replans == 1
     assert any('target_slot_expected' in reason for reason in result.replan_reasons)
     assert [command['action'] for command in transport.commands] == ['shuttle', 'shuttle']
+    assert all(
+        command['target_slot'] == '3'
+        for command in transport.commands
+    )
     assert all(record.plan_length >= 1 for record in result.executed_steps)
 
 

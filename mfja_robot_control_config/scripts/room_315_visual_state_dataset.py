@@ -38,6 +38,10 @@ SUPPORTED_VISUAL_STATE_SCHEMA_VERSIONS = {
 VISUAL_LABEL_SUFFIX = '_visual_labels.jsonl'
 VISUAL_MODEL_INPUT_KEYS = {'overhead_images'}
 IMAGE_KEYS = ('left_rail_rgb', 'right_rail_rgb')
+CAMERA_SIDE = {
+    'left_rail_rgb': 'left',
+    'right_rail_rgb': 'right',
+}
 RAIL_POSITION_RATIO_TOLERANCE = 1e-5
 MODEL_TARGET_SHUTTLE_FIELDS = {
     'location.side',
@@ -66,6 +70,8 @@ MODEL_TARGET_EXCLUDED_ORACLE_FIELDS = {
 }
 SHUTTLE_LABEL_FIELDS = {
     'bbox',
+    'bbox_camera',
+    'camera_observations',
     'location',
     'visually_available_identity',
     'visible_identity',
@@ -86,6 +92,8 @@ LABEL_LEAKAGE_KEYS = {
     'privileged_eval',
     'bbox',
     'bounding_box',
+    'bbox_camera',
+    'camera_observations',
     'location',
     'loaded_state',
     'payload_state',
@@ -395,12 +403,248 @@ def _explicit_bool(raw: Any, *, context: str, default: bool) -> bool:
     raise VisualStateValidationError(f'{context} must be boolean')
 
 
+def canonical_camera_for_identity(identity: str) -> str:
+    """Return the only overhead camera that can contain this identity."""
+    side = identity_side(str(identity).strip().upper())
+    return f'{side}_rail_rgb'
+
+
+def valid_bbox(value: Any) -> bool:
+    """Return whether a value is a finite positive XYWH bounding box."""
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return False
+    try:
+        bbox = [float(item) for item in value]
+    except (TypeError, ValueError):
+        return False
+    return (
+        all(math.isfinite(item) for item in bbox)
+        and bbox[2] > 0.0
+        and bbox[3] > 0.0
+    )
+
+
+def _zero_bbox(value: Any) -> bool:
+    if value is None:
+        return True
+    try:
+        bbox = _bbox(value, context='masked camera bbox')
+    except VisualStateValidationError:
+        return False
+    return all(abs(item) <= 1e-12 for item in bbox)
+
+
+def _normalize_camera_observations(
+    shuttle: dict[str, Any],
+    *,
+    identity: str,
+    present: bool,
+    canonical_visible: bool,
+    canonical_bbox: list[float],
+    context: str,
+) -> dict[str, dict[str, Any]]:
+    canonical_camera = canonical_camera_for_identity(identity)
+    declared_camera = shuttle.get('bbox_camera')
+    if (
+        declared_camera is not None
+        and str(declared_camera).strip() != canonical_camera
+    ):
+        raise VisualStateValidationError(
+            f'{context}.bbox_camera must be {canonical_camera!r}'
+        )
+    raw_observations = shuttle.get('camera_observations')
+    if raw_observations is not None and not isinstance(
+        raw_observations,
+        dict,
+    ):
+        raise VisualStateValidationError(
+            f'{context}.camera_observations must be an object'
+        )
+    unknown = (
+        set(raw_observations or {})
+        - set(IMAGE_KEYS)
+    )
+    if unknown:
+        raise VisualStateValidationError(
+            f'{context}.camera_observations has unknown cameras: '
+            f'{sorted(unknown)}'
+        )
+
+    normalized = {}
+    for camera in IMAGE_KEYS:
+        applicable = camera == canonical_camera
+        raw = (
+            (raw_observations or {}).get(camera)
+            if raw_observations is not None
+            else None
+        )
+        if raw is not None and not isinstance(raw, dict):
+            raise VisualStateValidationError(
+                f'{context}.camera_observations.{camera} must be an object'
+            )
+        raw = raw or {}
+        declared_applicable = _explicit_bool(
+            raw.get('applicable'),
+            context=(
+                f'{context}.camera_observations.{camera}.applicable'
+            ),
+            default=applicable,
+        )
+        if declared_applicable != applicable:
+            raise VisualStateValidationError(
+                f'{context}.camera_observations.{camera}.applicable '
+                f'must be {applicable}'
+            )
+        visual_available = _explicit_bool(
+            raw.get(
+                'visual_available',
+                raw.get('visually_available'),
+            ),
+            context=(
+                f'{context}.camera_observations.{camera}.visual_available'
+            ),
+            default=(
+                present and canonical_visible and applicable
+                if raw_observations is None
+                else False
+            ),
+        )
+        raw_bbox = raw.get('bbox')
+        if visual_available:
+            if not present or not applicable:
+                raise VisualStateValidationError(
+                    f'{context}.camera_observations.{camera} cannot be '
+                    'available for an absent or opposite-rail identity'
+                )
+            bbox = _bbox(
+                raw_bbox if raw_bbox is not None else canonical_bbox,
+                context=(
+                    f'{context}.camera_observations.{camera}'
+                ),
+            )
+            if not valid_bbox(bbox):
+                raise VisualStateValidationError(
+                    f'{context}.camera_observations.{camera}.bbox must '
+                    'be positive when visible'
+                )
+        else:
+            if raw_bbox is not None and not _zero_bbox(raw_bbox):
+                raise VisualStateValidationError(
+                    f'{context}.camera_observations.{camera}.bbox must '
+                    'be fully masked when unavailable'
+                )
+            bbox = [0.0, 0.0, 0.0, 0.0]
+
+        expected_visible = (
+            present and canonical_visible and applicable
+        )
+        if visual_available != expected_visible:
+            raise VisualStateValidationError(
+                f'{context}.camera_observations.{camera}.visual_available '
+                f'must be {expected_visible}'
+            )
+        if visual_available and any(
+            abs(float(first) - float(second)) > 1e-6
+            for first, second in zip(bbox, canonical_bbox)
+        ):
+            raise VisualStateValidationError(
+                f'{context}.camera_observations.{camera}.bbox does not '
+                'match the canonical own-camera bbox'
+            )
+        expected_bbox_mask = (
+            [1.0, 1.0, 1.0, 1.0]
+            if visual_available
+            else [0.0, 0.0, 0.0, 0.0]
+        )
+        declared_bbox_mask = raw.get('bbox_target_mask')
+        if declared_bbox_mask is not None:
+            if (
+                not isinstance(declared_bbox_mask, (list, tuple))
+                or len(declared_bbox_mask) != 4
+            ):
+                raise VisualStateValidationError(
+                    f'{context}.camera_observations.{camera}.'
+                    'bbox_target_mask must contain four values'
+                )
+            try:
+                parsed_bbox_mask = [
+                    float(value) for value in declared_bbox_mask
+                ]
+            except (TypeError, ValueError) as exc:
+                raise VisualStateValidationError(
+                    f'{context}.camera_observations.{camera}.'
+                    'bbox_target_mask must be numeric'
+                ) from exc
+            if parsed_bbox_mask != expected_bbox_mask:
+                raise VisualStateValidationError(
+                    f'{context}.camera_observations.{camera}.'
+                    f'bbox_target_mask must be {expected_bbox_mask}'
+                )
+        normalized[camera] = {
+            'applicable': applicable,
+            'visual_available': visual_available,
+            'bbox': bbox,
+            'bbox_target_mask': expected_bbox_mask,
+        }
+    return normalized
+
+
+def camera_observation_for_shuttle(
+    shuttle: dict[str, Any],
+    camera: str,
+) -> dict[str, Any]:
+    """Return normalized per-camera availability for a fixed shuttle slot."""
+    if camera not in CAMERA_SIDE:
+        raise VisualStateValidationError(
+            f'unsupported Room 315 camera: {camera!r}'
+        )
+    identity = str(shuttle.get('id') or '').strip().upper()
+    observations = shuttle.get('camera_observations')
+    if isinstance(observations, dict) and isinstance(
+        observations.get(camera),
+        dict,
+    ):
+        return dict(observations[camera])
+    applicable = canonical_camera_for_identity(identity) == camera
+    visible = bool(
+        shuttle.get('presence')
+        and shuttle.get('visually_available')
+        and applicable
+        and valid_bbox(shuttle.get('bbox'))
+    )
+    return {
+        'applicable': applicable,
+        'visual_available': visible,
+        'bbox': (
+            list(shuttle['bbox'])
+            if visible
+            else [0.0, 0.0, 0.0, 0.0]
+        ),
+        'bbox_target_mask': (
+            [1.0, 1.0, 1.0, 1.0]
+            if visible
+            else [0.0, 0.0, 0.0, 0.0]
+        ),
+    }
+
+
 def _empty_fixed_shuttle(identity: str) -> dict[str, Any]:
+    canonical_camera = canonical_camera_for_identity(identity)
     return {
         'id': identity,
         'presence': False,
         'visually_available': False,
         'bbox': [0.0, 0.0, 0.0, 0.0],
+        'bbox_camera': canonical_camera,
+        'camera_observations': {
+            camera: {
+                'applicable': camera == canonical_camera,
+                'visual_available': False,
+                'bbox': [0.0, 0.0, 0.0, 0.0],
+                'bbox_target_mask': [0.0, 0.0, 0.0, 0.0],
+            }
+            for camera in IMAGE_KEYS
+        },
         'location': {
             'side': identity_side(identity),
             'block': 'unknown',
@@ -457,7 +701,16 @@ def _normalize_fixed_shuttles(raw_shuttles: Any, *, context: str) -> list[dict[s
                 f'{item_context} cannot be visually available while absent'
             )
         if not present:
-            by_identity[identity] = _empty_fixed_shuttle(identity)
+            empty = _empty_fixed_shuttle(identity)
+            empty['camera_observations'] = _normalize_camera_observations(
+                shuttle,
+                identity=identity,
+                present=False,
+                canonical_visible=False,
+                canonical_bbox=[0.0, 0.0, 0.0, 0.0],
+                context=item_context,
+            )
+            by_identity[identity] = empty
             continue
         expected_side = identity_side(identity)
         location = _location(
@@ -497,11 +750,21 @@ def _normalize_fixed_shuttles(raw_shuttles: Any, *, context: str) -> list[dict[s
                 )
         else:
             bbox = [0.0, 0.0, 0.0, 0.0]
+        camera_observations = _normalize_camera_observations(
+            shuttle,
+            identity=identity,
+            present=True,
+            canonical_visible=visually_available,
+            canonical_bbox=bbox,
+            context=item_context,
+        )
         by_identity[identity] = {
             'id': identity,
             'presence': True,
             'visually_available': visually_available,
             'bbox': bbox,
+            'bbox_camera': canonical_camera_for_identity(identity),
+            'camera_observations': camera_observations,
             'location': {
                 'side': expected_side,
                 'block': block,
@@ -1028,9 +1291,17 @@ class VisualStateLabelVectorizer:
             )
         return vector
 
-    def target_mask(self, label: dict[str, Any]) -> list[float]:
-        """Mask every absent or not-visually-available fixed identity entry."""
+    def target_mask(
+        self,
+        label: dict[str, Any],
+        camera: str | None = None,
+    ) -> list[float]:
+        """Mask unavailable slots globally or for one explicit camera view."""
         normalized = normalize_visual_state_labels(label)
+        if camera is not None and camera not in CAMERA_SIDE:
+            raise VisualStateValidationError(
+                f'unsupported Room 315 camera: {camera!r}'
+            )
         mask: list[float] = []
         for name in self.names:
             parts = name.split('.')
@@ -1039,16 +1310,35 @@ class VisualStateLabelVectorizer:
                 if len(parts) >= 3 and parts[0] == 'shuttles' and parts[1].isdigit()
                 else None
             )
+            available = (
+                shuttle_index is not None
+                and normalized['shuttles'][shuttle_index]['presence']
+                and normalized['shuttles'][shuttle_index][
+                    'visually_available'
+                ]
+            )
+            if available and camera is not None:
+                available = bool(
+                    normalized['shuttles'][shuttle_index][
+                        'camera_observations'
+                    ][camera]['visual_available']
+                )
             mask.append(
                 1.0
-                if (
-                    shuttle_index is not None
-                    and normalized['shuttles'][shuttle_index]['presence']
-                    and normalized['shuttles'][shuttle_index]['visually_available']
-                )
+                if available
                 else 0.0
             )
         return mask
+
+    def camera_target_masks(
+        self,
+        label: dict[str, Any],
+    ) -> dict[str, list[float]]:
+        """Return fail-closed masks for camera-specific loss computation."""
+        return {
+            camera: self.target_mask(label, camera=camera)
+            for camera in IMAGE_KEYS
+        }
 
     def validate_target(self, label: dict[str, Any]) -> None:
         """Fail if a visible fixed entry lacks exactly one categorical target."""
@@ -1108,6 +1398,17 @@ class VisualStateLabelVectorizer:
                 'kind': 'fixed_identity_presence_and_visual_availability',
                 'absent_fixed_entries_masked': True,
                 'not_visually_available_entries_masked': True,
+                'camera_specific_masks_supported': True,
+                'opposite_rail_entries_masked_per_camera': True,
+            },
+            'bbox_semantics': {
+                'kind': 'canonical_own_camera_bbox_with_per_camera_masks',
+                'camera_by_identity_side': {
+                    'left': 'left_rail_rgb',
+                    'right': 'right_rail_rgb',
+                },
+                'global_pair_loss_uses_each_identity_once': True,
+                'camera_specific_loss_requires_camera_target_masks': True,
             },
             'identity_prediction': {
                 'supported': False,

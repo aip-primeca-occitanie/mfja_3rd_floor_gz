@@ -238,6 +238,7 @@ class PlanSys2GetPlanClient:
         self._closed = False
         try:
             self.rclpy = importlib.import_module('rclpy')
+            executors_module = importlib.import_module('rclpy.executors')
             srv_module = importlib.import_module('plansys2_msgs.srv')
         except ModuleNotFoundError as exc:
             missing = str(exc).split("'")
@@ -253,7 +254,18 @@ class PlanSys2GetPlanClient:
         self._shutdown_on_close = not self.rclpy.ok()
         if self._shutdown_on_close:
             self.rclpy.init(args=ros_args)
-        self.node = self.rclpy.create_node('room_315_plansys2_planner_client')
+        # This adapter can run from a worker thread while the owning ROS node
+        # is spinning. It must not share rclpy's global executor, and launch
+        # remaps such as ``__node:=...`` must not rename this private client
+        # to the owning gateway's name.
+        self.node = self.rclpy.create_node(
+            'room_315_plansys2_planner_client',
+            use_global_arguments=False,
+        )
+        self.executor = executors_module.SingleThreadedExecutor(
+            context=self.node.context,
+        )
+        self.executor.add_node(self.node)
         self.client = self.node.create_client(self.GetPlan, self.service_name)
         if not self.client.wait_for_service(timeout_sec=self.timeout_s):
             self.close()
@@ -269,8 +281,7 @@ class PlanSys2GetPlanClient:
         request.domain = str(domain)
         request.problem = str(problem)
         future = self.client.call_async(request)
-        self.rclpy.spin_until_future_complete(
-            self.node,
+        self.executor.spin_until_future_complete(
             future,
             timeout_sec=self.timeout_s,
         )
@@ -296,10 +307,14 @@ class PlanSys2GetPlanClient:
             return
         self._closed = True
         try:
+            self.executor.remove_node(self.node)
             self.node.destroy_node()
         finally:
-            if self._shutdown_on_close:
-                self.rclpy.try_shutdown()
+            try:
+                self.executor.shutdown(timeout_sec=1.0)
+            finally:
+                if self._shutdown_on_close:
+                    self.rclpy.try_shutdown()
 
 
 class PlanSysPlannerBackend(BasePlannerBackend):
@@ -3270,10 +3285,16 @@ def _fleet_snapshot_from_observed_state(
     for shuttle_spec in all_shuttle_specs():
         shuttle_id = shuttle_spec.shuttle_id
         subjects = (shuttle_spec.gazebo_entity_name, shuttle_id)
-        loaded_fact = _known_fact(index, subjects, 'loaded', context='payload')
-        loaded_by_shuttle[shuttle_id] = bool(loaded_fact.value)
         present_fact = _known_fact(index, subjects, 'present', context='presence', required=False)
         present_by_shuttle[shuttle_id] = True if present_fact is None else bool(present_fact.value)
+        if not present_by_shuttle[shuttle_id]:
+            # Presence is the runtime gate.  An explicitly absent shuttle has
+            # no accepted visual payload/location facts and must not require
+            # them merely to build the planner snapshot.
+            loaded_by_shuttle[shuttle_id] = False
+            continue
+        loaded_fact = _known_fact(index, subjects, 'loaded', context='payload')
+        loaded_by_shuttle[shuttle_id] = bool(loaded_fact.value)
         slot_fact = _known_fact(index, subjects, 'location_slot', context='slot location', required=False)
         if slot_fact is not None and slot_fact.value:
             location_slot_by_shuttle[shuttle_id] = _slot_symbol_from_observation(
@@ -3918,6 +3939,8 @@ def _pddl_init_facts(
             ])
     for shuttle_spec in all_shuttle_specs():
         shuttle = shuttle_spec.shuttle_id
+        if not fleet['present_by_shuttle'][shuttle]:
+            continue
         facts.append(f'(shuttle_on_side {shuttle} {shuttle_spec.side})')
         if fleet['loaded_by_shuttle'][shuttle]:
             facts.append(f'(loaded {shuttle})')
@@ -3998,6 +4021,44 @@ def _pddl_init_facts(
     for stopper, state in sorted(devices['stoppers'].items()):
         facts.append(f'(stopper_state_known {stopper})')
         facts.append(f'(stopper_{state} {stopper})')
+    # The executive rebuilds the PDDL problem after every supervised atomic
+    # step.  Persist readiness predicates from the freshly observed physical
+    # device state; otherwise every replan starts again with
+    # prepare_switches/open_stoppers and can never reach a move action.
+    for side in SIDES:
+        side_switches = {
+            _switch_object(side, device)
+            for device in DEVICE_NAMES
+        }
+        side_stoppers = {
+            _stopper_object(side, device)
+            for device in DEVICE_NAMES
+        }
+        switches_ready = all(
+            devices['switches'].get(name) == 'exterior'
+            for name in side_switches
+        )
+        stoppers_open = all(
+            devices['stoppers'].get(name) == 'open'
+            for name in side_stoppers
+        )
+        if switches_ready:
+            facts.append(f'(switches_ready {side})')
+        if stoppers_open:
+            facts.append(f'(stoppers_open {side})')
+        if switches_ready and stoppers_open:
+            stations = (
+                ('yaskawa', 'staubli')
+                if side == 'right'
+                else ('yaskawa', 'kuka')
+            )
+            for source in stations:
+                for target in stations:
+                    facts.append(
+                        f'(path_ready {side} '
+                        f'{_station_object(side, source)} '
+                        f'{_station_object(side, target)})'
+                    )
     for side, side_obstacles in sorted(obstacles.items()):
         for obstacle in side_obstacles:
             facts.append(f'(obstacle_present {obstacle} {side})')

@@ -244,6 +244,7 @@ class ClosedLoopExecutive:
             supervisor_status = self._execute_first_atomic_step(
                 translated_step=translated_step,
                 problem=problem,
+                task_goal=task_goal,
                 plan_length=len(plan),
                 step_index=step_index,
             )
@@ -379,11 +380,28 @@ class ClosedLoopExecutive:
         *,
         translated_step: TranslatedPlanStep,
         problem: Room315PddlProblem,
+        task_goal: TaskGoal,
         plan_length: int,
         step_index: int,
     ) -> str:
         previous_count = self.transport.supervisor_decision_count()
         command = dict(translated_step.command)
+        target_slot = _target_slot_for_step(
+            translated_step.pddl_step,
+            task_goal,
+            problem,
+        )
+        if (
+            str(command.get('action') or '').strip() == 'shuttle'
+            and str(command.get('command') or '').strip().upper() == 'ON'
+            and target_slot
+        ):
+            target_side, target_slot_number = _split_slot_id(
+                target_slot,
+                default_side=problem.side,
+            )
+            command['side'] = target_side
+            command['target_slot'] = target_slot_number
         command['closed_loop_executive'] = {
             'mode': 'plansys2_first_atomic_step',
             'problem_name': problem.problem_name,

@@ -1,0 +1,10 @@
+string identity
+string presence_state
+bool visual_facts_valid
+string side
+string block
+float32[4] bbox_xywh
+float64 s_m
+float64 s_ratio
+float64 segment_length_m
+string loaded_state

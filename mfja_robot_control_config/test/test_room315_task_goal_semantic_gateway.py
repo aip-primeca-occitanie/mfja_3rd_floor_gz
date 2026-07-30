@@ -199,7 +199,7 @@ def test_unresolved_reference_does_not_auto_resolve_without_context():
 
 def test_grounded_reference_uses_confirmed_dialogue_context():
     builder = _load_builder()
-    pipeline, _backend = _pipeline(_envelope(goal_type='transport'))
+    pipeline, backend = _pipeline(_envelope(goal_type='transport'))
     manager = builder.TaskGoalDialogueManager(parser=pipeline)
 
     first = manager.handle('move R2 to the right slot 3', timestamp=1.0)
@@ -211,6 +211,50 @@ def test_grounded_reference_uses_confirmed_dialogue_context():
     assert follow_up.status == 'confirmation_required'
     assert follow_up.draft.target_shuttle in {'R2', 'room315_right_shuttle_2'}
     assert follow_up.draft.target_slot == '4'
+    assert backend.confirmed_contexts[-1] is not None
+    assert backend.confirmed_contexts[-1]['target_shuttle'] == 'R2'
+
+
+def test_new_goal_drops_hallucinated_station_and_does_not_send_old_context():
+    builder = _load_builder()
+    pipeline, backend = _pipeline(_envelope(
+        goal_type='transport',
+        selection_strategy='explicit',
+        payload_filter='loaded',
+        side='left',
+        target_kind='slot',
+        target_slot='1',
+        target_station='staubli',
+    ))
+    previous = builder.TaskGoalDraft(
+        goal_type='transport',
+        selection_strategy='explicit',
+        side='right',
+        target_kind='slot',
+        target_slot='1',
+        target_shuttle='R4',
+    )
+
+    parsed = pipeline.parse(
+        'move loaded shuttle to slot 1 on left rail',
+        confirmed_draft=previous,
+    )
+
+    assert parsed.ok, parsed.to_dict()
+    assert backend.confirmed_contexts[-1] is None
+    assert parsed.draft.side == 'left'
+    assert parsed.draft.target_kind == 'slot'
+    assert parsed.draft.target_slot == '1'
+    assert parsed.draft.target_station is None
+    assert parsed.draft.target_shuttle is None
+    assert parsed.draft.selection_strategy == 'any'
+    assert parsed.draft.payload_filter == 'loaded'
+    validation = builder.Room315DomainValidator().validate(
+        parsed.draft,
+        require_confirmation=True,
+    )
+    assert validation.status == 'confirmation_required'
+    assert not validation.errors
 
 
 def test_room315_intent_model_path_env_overrides_config(tmp_path, monkeypatch):

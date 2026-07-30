@@ -1,10 +1,8 @@
-; Room 315 high-level shuttle planning domain.
+; Room 315 production runtime planning domain.
 ;
-; Production problems are built from validated ObservedState + TaskGoal
-; contracts. Unknown, stale, or conflicting state is handled before this domain
-; is called, so absence of a predicate here is never used as a perception
-; default. The symbolic actions below map either to a real supervisor primitive
-; or to a documented deterministic macro in room_315_pddl_plan_translator.py.
+; This is the POPF-safe execution subset. Dataset/scenario tooling keeps the
+; broader expert domain in domain_room315.pddl, while the live gateway accepts
+; explicit transport goals and executes only these supervised primitives.
 
 (define (domain room315-shuttle)
   (:requirements :strips :typing :negative-preconditions :fluents)
@@ -17,7 +15,6 @@
   (:predicates
     (validated_state)
     (observation_required)
-
     (shuttle_on_side ?s - shuttle ?side - rail_side)
     (shuttle_at ?s - shuttle ?station - station)
     (shuttle_stopped_at ?s - shuttle ?station - station)
@@ -25,26 +22,22 @@
     (shuttle_in_block ?s - shuttle ?block - block)
     (loaded ?s - shuttle)
     (empty ?s - shuttle)
-
     (slot_on_side ?slot - slot ?side - rail_side)
     (slot_at_station ?slot - slot ?station - station)
     (slot_in_block ?slot - slot ?block - block)
     (slot_free ?slot - slot)
     (slot_occupied_by ?slot - slot ?s - shuttle)
     (slot_reserved_by ?slot - slot ?s - shuttle)
-
     (block_on_side ?block - block ?side - rail_side)
     (block_free ?block - block)
     (block_occupied_by ?block - block ?s - shuttle)
     (block_reserved_by ?block - block ?s - shuttle)
-
     (connected ?side - rail_side ?from - station ?to - station)
     (path_ready ?side - rail_side ?from - station ?to - station)
     (route_clear_between ?from - slot ?to - slot)
     (route_blocked_by ?from - slot ?to - slot ?blocker - shuttle)
     (clearance_precedes ?blocker - shuttle ?selected - shuttle)
     (route_reserved_by ?from - slot ?to - slot ?s - shuttle)
-
     (switch_state_known ?switch - switch_device)
     (switch_exterior ?switch - switch_device)
     (switch_interior ?switch - switch_device)
@@ -55,12 +48,10 @@
     (stoppers_open ?side - rail_side)
     (switches_ready_for ?s - shuttle)
     (stoppers_open_for ?s - shuttle)
-
     (obstacle_present ?obs - obstacle ?side - rail_side)
     (waiting_for_clearance ?s - shuttle)
     (front_of ?front - shuttle ?rear - shuttle)
     (behind ?rear - shuttle ?front - shuttle)
-
     (goal_candidate ?s - shuttle)
     (target_slot_for_goal ?slot - slot)
     (target_station_for_goal ?station - station)
@@ -68,7 +59,6 @@
     (task_done ?s - shuttle ?station - station)
     (transport_goal_done ?station - station)
     (goal_slot_reached ?slot - slot)
-
     (inspection_required ?target - inspection_target)
     (inspection_done ?target - inspection_target)
   )
@@ -114,30 +104,6 @@
     )
   )
 
-  (:action move_shuttle
-    :parameters (
-      ?s - shuttle
-      ?side - rail_side
-      ?from - station
-      ?to - station
-    )
-    :precondition (and
-      (validated_state)
-      (shuttle_on_side ?s ?side)
-      (shuttle_at ?s ?from)
-      (connected ?side ?from ?to)
-      (path_ready ?side ?from ?to)
-      (switches_ready ?side)
-      (stoppers_open ?side)
-    )
-    :effect (and
-      (not (shuttle_at ?s ?from))
-      (not (shuttle_stopped_at ?s ?from))
-      (shuttle_at ?s ?to)
-      (increase (total-cost) 10)
-    )
-  )
-
   (:action move_shuttle_to_slot
     :parameters (
       ?s - shuttle
@@ -175,7 +141,7 @@
       (route_reserved_by ?from_slot ?to_slot ?s)
       (shuttle_at_slot ?s ?to_slot)
       (shuttle_at ?s ?to)
-      (increase (total-cost) (route_cost ?from_slot ?to_slot))
+      (increase (total-cost) 10)
     )
   )
 
@@ -211,127 +177,6 @@
     )
     :effect (and
       (task_done ?s ?station)
-      (increase (total-cost) 1)
-    )
-  )
-
-  (:action finish_candidate_task
-    :parameters (
-      ?s - shuttle
-      ?station - station
-      ?slot - slot
-    )
-    :precondition (and
-      (validated_state)
-      (goal_candidate ?s)
-      (target_station_for_goal ?station)
-      (target_slot_for_goal ?slot)
-      (shuttle_at ?s ?station)
-      (shuttle_stopped_at ?s ?station)
-      (shuttle_at_slot ?s ?slot)
-    )
-    :effect (and
-      (task_done ?s ?station)
-      (transport_goal_done ?station)
-      (goal_slot_reached ?slot)
-      (increase (total-cost) 1)
-    )
-  )
-
-  (:action assign_task
-    :parameters (
-      ?s - shuttle
-      ?station - station
-    )
-    :precondition (and
-      (validated_state)
-      (not (task_done ?s ?station))
-    )
-    :effect (task_assigned ?s ?station)
-  )
-
-  (:action prepare_switches_for_shuttle
-    :parameters (
-      ?s - shuttle
-      ?side - rail_side
-      ?from - station
-      ?to - station
-      ?switches - switch_group
-    )
-    :precondition (and
-      (validated_state)
-      (shuttle_on_side ?s ?side)
-      (connected ?side ?from ?to)
-    )
-    :effect (and
-      (switches_ready_for ?s)
-      (switches_ready ?side)
-      (increase (total-cost) 1)
-    )
-  )
-
-  (:action open_stoppers_for_shuttle
-    :parameters (
-      ?s - shuttle
-      ?side - rail_side
-      ?from - station
-      ?to - station
-      ?stoppers - stopper_group
-    )
-    :precondition (and
-      (validated_state)
-      (shuttle_on_side ?s ?side)
-      (switches_ready_for ?s)
-    )
-    :effect (and
-      (stoppers_open_for ?s)
-      (stoppers_open ?side)
-      (path_ready ?side ?from ?to)
-      (increase (total-cost) 1)
-    )
-  )
-
-  (:action stop_shuttle_at_slot
-    :parameters (
-      ?s - shuttle
-      ?slot - slot
-    )
-    :precondition (and
-      (validated_state)
-      (slot_reserved_by ?slot ?s)
-      (shuttle_at_slot ?s ?slot)
-    )
-    :effect (and
-      (shuttle_at_slot ?s ?slot)
-      (not (slot_reserved_by ?slot ?s))
-    )
-  )
-
-  (:action wait_for_clearance
-    :parameters (
-      ?s - shuttle
-      ?slot - slot
-    )
-    :precondition (and
-      (validated_state)
-      (not (slot_free ?slot))
-    )
-    :effect (and
-      (waiting_for_clearance ?s)
-      (increase (total-cost) 5)
-    )
-  )
-
-  (:action inspect_state
-    :parameters (
-      ?target - inspection_target
-    )
-    :precondition (and
-      (validated_state)
-      (inspection_required ?target)
-    )
-    :effect (and
-      (inspection_done ?target)
       (increase (total-cost) 1)
     )
   )
