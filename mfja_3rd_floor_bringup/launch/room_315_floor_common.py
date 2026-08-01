@@ -46,7 +46,7 @@ FLOOR_PROFILES = {
             'Start Gazebo paused so the user can press play manually. '
             'Room 315 defaults to running so shuttle timers publish visible poses.'
         ),
-        'gui_config': None,
+        'gui_config': 'config/room315_runtime_safe.gui.config',
     },
     'full_floor': {
         'world_name': 'mfja_3rd_floor',

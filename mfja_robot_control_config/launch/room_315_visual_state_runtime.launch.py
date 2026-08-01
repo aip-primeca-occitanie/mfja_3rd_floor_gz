@@ -23,6 +23,20 @@ def _launch_inference(context):
         overrides['checkpoint_path'] = checkpoint
     if sidecars:
         overrides['sidecar_directory'] = sidecars
+    for argument, parameter in (
+        ('checkpoint_sha256', 'expected_checkpoint_sha256'),
+        ('target_stats_sha256', 'expected_target_stats_sha256'),
+        ('vectorizer_sha256', 'expected_vectorizer_sha256'),
+        ('training_config_sha256', 'expected_training_config_sha256'),
+        ('run_metadata_sha256', 'expected_run_metadata_sha256'),
+        (
+            'runtime_configuration_sha256',
+            'expected_runtime_configuration_sha256',
+        ),
+    ):
+        value = LaunchConfiguration(argument).perform(context).strip()
+        if value:
+            overrides[parameter] = value
     return [Node(
         package='mfja_robot_control_config',
         executable='room_315_visual_state_inference_node.py',
@@ -75,6 +89,15 @@ def generate_launch_description():
             'sidecar_directory',
             default_value='',
             description='Optional override; empty keeps the YAML value.',
+        ),
+        DeclareLaunchArgument('checkpoint_sha256', default_value=''),
+        DeclareLaunchArgument('target_stats_sha256', default_value=''),
+        DeclareLaunchArgument('vectorizer_sha256', default_value=''),
+        DeclareLaunchArgument('training_config_sha256', default_value=''),
+        DeclareLaunchArgument('run_metadata_sha256', default_value=''),
+        DeclareLaunchArgument(
+            'runtime_configuration_sha256',
+            default_value='',
         ),
         DeclareLaunchArgument(
             'device',

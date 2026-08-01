@@ -10,6 +10,10 @@ room_315_task_execution_node:
     accepted_observed_state_topic: /room_315/visual_state/observed_state
     supervisor_command_topic: /room_315/vla/command
     supervisor_status_topic: /room_315/vla/status
+    # Direct 30 Hz deterministic binary feedback anchors exact slot occupancy
+    # and gates final arrival. Its segment/s/s_ratio fields are ignored.
+    left_sensor_feedback_topic: /room_315/rails/left/sensors/feedback
+    right_sensor_feedback_topic: /room_315/rails/right/sensors/feedback
     diagnostics_topic: /diagnostics
 
     planner_service: /planner/get_plan
@@ -17,6 +21,10 @@ room_315_task_execution_node:
 
     observation_timeout_s: 1.5
     supervisor_status_timeout_s: 1.5
+    # Fresh binary DZI sensor occupancy may anchor an exact slot using only
+    # sensor name, active state, and shuttle identity. Position fields remain
+    # excluded and learned block/s_m/s_ratio predictions remain unchanged.
+    slot_sensor_state_timeout_s: 1.0
     observation_wait_s: 2.0
     # Broad enough to derive initial planner occupancy from learned position.
     planning_slot_tolerance_ratio: 0.12
@@ -25,6 +33,8 @@ room_315_task_execution_node:
     target_arrival_tolerance_ratio: 0.05
     # Must match the accepted visual-state validator.
     position_consistency_tolerance_m: 0.08
+    slot_sensor_confirmation_frames: 2
+    # Deprecated: retained only so older launch overrides do not fail.
     arrival_confirmation_frames: 3
     controller_stop_timeout_s: 3.0
 
@@ -34,6 +44,8 @@ room_315_task_execution_node:
     max_unknown_retries: 3
     supervisor_timeout_s: 5.0
     effect_timeout_s: 30.0
+    # Interior blocker relocation may traverse more than one ordinary block.
+    clearance_effect_timeout_s: 60.0
 
     # This must match the Gazebo launch setting
     # enable_room315_vla_obstacles:=false. Shuttle blockers are still derived

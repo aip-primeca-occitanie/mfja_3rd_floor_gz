@@ -130,6 +130,73 @@ def test_continuous_start_positions_parse_public_segment_and_ratio():
     ]
 
 
+def test_commanded_slot_setpoint_stops_at_exact_center_without_overshoot():
+    module = _load_module()
+    state = SimpleNamespace(
+        current_segment='A34E',
+        s=0.90,
+        speed=0.20,
+        mode=module.MOVING,
+    )
+    core = SimpleNamespace(state=state, pose=lambda: state)
+    shuttle = SimpleNamespace(
+        core=core,
+        enabled=True,
+        blocked_by=None,
+        collision_distance_m=None,
+        stopped_by=None,
+        stopper_distance_m=None,
+        motion_target_slot='1',
+        motion_target_segment='A34E',
+        motion_target_s=0.9534,
+        reached_target_slot='',
+    )
+
+    def step_without_collision(*, shuttle, dt, occupied_poses):
+        del occupied_poses
+        shuttle.core.state.s += shuttle.core.state.speed * dt
+        return shuttle.core.state
+
+    fake_node = SimpleNamespace(
+        _active_stopper_ahead=lambda _shuttle: None,
+        _active_motion_target_ahead=(
+            module.Room315KinematicShuttleNode._active_motion_target_ahead
+        ),
+        _step_with_collision_avoidance=step_without_collision,
+    )
+
+    pose = module.Room315KinematicShuttleNode._step_with_motion_guards(
+        fake_node,
+        shuttle,
+        dt=1.0,
+        occupied_poses={},
+    )
+
+    assert pose.s == 0.9534
+    assert pose.mode == module.WAITING
+    assert shuttle.enabled is False
+    assert shuttle.stopped_by == 'TARGET_SLOT_1'
+    assert shuttle.reached_target_slot == '1'
+
+
+def test_slot_setpoint_behind_shuttle_waits_for_next_rail_loop():
+    module = _load_module()
+    shuttle = SimpleNamespace(
+        core=SimpleNamespace(state=SimpleNamespace(
+            current_segment='A34E',
+            s=1.10,
+        )),
+        motion_target_slot='1',
+        motion_target_segment='A34E',
+        motion_target_s=0.9534,
+    )
+
+    assert (
+        module.Room315KinematicShuttleNode._active_motion_target_ahead(shuttle)
+        is None
+    )
+
+
 def test_marker_spawn_warning_state_does_not_block_future_retries(monkeypatch):
     module = _load_module()
     marker = _marker(
@@ -469,7 +536,7 @@ def test_parked_start_shuttle_does_not_light_position_sensor_marker():
     assert not shuttle.sensor_markers_armed
 
 
-def test_parked_start_shuttle_does_not_publish_active_sensor_feedback():
+def test_parked_start_shuttle_publishes_binary_occupancy_without_lighting_marker():
     module = _load_module()
     shuttle = _shuttle(module)
     point = module.PositionSensorPoint(
@@ -518,8 +585,8 @@ def test_parked_start_shuttle_does_not_publish_active_sensor_feedback():
     )
 
     assert readings[0].name == 'DZI2L'
-    assert readings[0].active == 0
-    assert readings[0].shuttle_name == ''
+    assert readings[0].active == 1
+    assert readings[0].shuttle_name == 'room315_left_shuttle_1'
     assert not shuttle.sensor_markers_armed
 
 

@@ -9,10 +9,12 @@ supervisor, execute Gazebo directly, or modify model_input.
 import argparse
 import importlib
 import json
+import math
 import re
 import sys
 import time
 from dataclasses import dataclass
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -87,6 +89,9 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'set_stoppers',
     'move_shuttle',
     'move_shuttle_to_slot',
+    'begin_route_clearance',
+    'relocate_blocker_to_interior',
+    'finish_route_clearance',
     'stop_shuttle',
     'finish_task',
     'finish_candidate_task',
@@ -99,6 +104,17 @@ PDDL_ACTION_TRANSLATION_PROVENANCE = {
     'set_stoppers': 'primitive:SET_STOPPERS',
     'move_shuttle': 'primitive:SHUTTLE_ON',
     'move_shuttle_to_slot': 'deterministic_macro:move_shuttle with slot metadata',
+    'begin_route_clearance': (
+        'supervised_macro:hold A3/A4 on the interior route and close A4 stopper'
+    ),
+    'relocate_blocker_to_interior': (
+        'supervised_macro:A3 sensor-certified interior entry with '
+        'accepted-visual longitudinal stop confirmation'
+    ),
+    'finish_route_clearance': (
+        'supervised_macro:restore exterior switches/open stoppers once after '
+        'all blocker relocations'
+    ),
     'stop_shuttle': 'primitive:STOP_NOW',
     'finish_task': 'primitive:DONE',
     'finish_candidate_task': 'deterministic_macro:finish_task for selected candidate',
@@ -418,6 +434,23 @@ class ScenarioTransport:
         target_tolerance_m: float | None = None,
     ) -> dict[str, Any]:
         return {'arrived': True, 'reason': ''}
+
+    def wait_for_visual_position_and_stop(
+        self,
+        *,
+        side: str,
+        shuttle: str,
+        target_segment: str,
+        target_s_m: float,
+        tolerance_m: float,
+        entry_sensor: str = '',
+        minimum_clearance_delay_s: float = 0.0,
+        timeout_s: float,
+    ) -> dict[str, Any]:
+        return {
+            'arrived': False,
+            'reason': 'visual position stop is not implemented by this transport',
+        }
 
     def wait_for_stopper_state(
         self,
@@ -2507,6 +2540,36 @@ def _canonical_symbolic_step(
     if step.name == 'inspect_state':
         target = step.args[0] if step.args else 'room315'
         return f'inspect_state {target}'
+    if step.name in {'begin_route_clearance', 'finish_route_clearance'}:
+        if len(step.args) != 4:
+            return ''
+        selected, side, from_slot, to_slot = step.args
+        if side not in SIDES:
+            return ''
+        if normalize_shuttle_ref(selected, side=side) is None:
+            return ''
+        return (
+            f'{step.name} {selected} {side} {from_slot} {to_slot}'
+        )
+    if step.name == 'relocate_blocker_to_interior':
+        if len(step.args) != 5:
+            return ''
+        blocker, selected, side, from_slot, to_slot = step.args
+        if side not in SIDES:
+            return ''
+        if normalize_shuttle_ref(blocker, side=side) is None:
+            return ''
+        if normalize_shuttle_ref(selected, side=side) is None:
+            return ''
+        speed_text = (
+            step.kwargs.get('speed')
+            or step.kwargs.get('speed_mps')
+            or f'{float(speed):.4g}'
+        )
+        return (
+            f'relocate_blocker_to_interior {blocker} {selected} {side} '
+            f'{from_slot} {to_slot} speed={speed_text}'
+        )
     side, shuttle, source, target = _route_parts_from_step(step, spec, problem)
     if step.name == 'prepare_switches':
         return f'prepare_switches {side} {source} {target}'
@@ -2930,6 +2993,7 @@ def build_pddl_problem_from_observed_state_task_goal(
     task_goal: TaskGoal,
     *,
     problem_name: str | None = None,
+    runtime_clearance_certificates: dict[str, dict[str, Any]] | None = None,
 ) -> Room315PddlProblem:
     """Convert validated planner state and a high-level goal into PDDL.
 
@@ -2956,7 +3020,10 @@ def build_pddl_problem_from_observed_state_task_goal(
     )
 
     fact_index = _observed_fact_index(observed_state)
-    fleet = _fleet_snapshot_from_observed_state(fact_index)
+    fleet = _fleet_snapshot_from_observed_state(
+        fact_index,
+        runtime_clearance_certificates=runtime_clearance_certificates,
+    )
     devices = _device_snapshot_from_observed_state(fact_index)
     obstacles = _obstacle_snapshot_from_observed_state(fact_index)
     blocks = _block_snapshot_from_observed_state(fact_index, fleet)
@@ -2972,6 +3039,23 @@ def build_pddl_problem_from_observed_state_task_goal(
         goal_data=goal_data,
         route_clearance=route_clearance,
     )
+    target_clearance = route_clearance['target_clearance_plan']
+    if target_clearance.get('unsupported_if_more_than_two_blockers'):
+        raise PddlProblemBuildError(
+            'more than two route blockers exceed the physically separated '
+            'A34I staging capacity'
+        )
+    unavailable = [
+        relocation
+        for relocation in target_clearance.get('ordered_relocations') or []
+        if str((relocation.get('destination') or {}).get('kind') or '')
+        == 'unavailable'
+    ]
+    if unavailable:
+        raise PddlProblemBuildError(
+            'no physically separated A34I staging pose is available for all '
+            'route blockers'
+        )
 
     init_facts = _pddl_init_facts(
         fleet=fleet,
@@ -3027,6 +3111,147 @@ def build_pddl_problem_from_observed_state_task_goal(
         selected_shuttle=goal_data.get('selected_shuttle', ''),
         selection_policy=goal_data.get('selection_policy', ''),
         provenance=provenance,
+    )
+
+
+def build_first_blocker_clearance_problem(
+    problem: Room315PddlProblem,
+) -> Room315PddlProblem:
+    """Build the next one-relocation PlanSys2 problem from frozen provenance.
+
+    The normal transport goal remains untouched.  The closed-loop executive
+    invokes this helper only when the state-derived route analysis says that a
+    blocker must move first.  Exactly one relocation is planned, followed by a
+    fresh visual observation and a complete rebuild of the transport problem.
+    """
+
+    provenance = dict(problem.provenance or {})
+    clearance = dict(provenance.get('target_blocker_clearance_plan') or {})
+    relocations = clearance.get('ordered_relocations') or []
+    if not clearance.get('required') or not relocations:
+        raise PddlProblemBuildError('blocker-clearance problem requested without a blocker')
+    if clearance.get('unsupported_if_more_than_two_blockers'):
+        raise PddlProblemBuildError(
+            'more than two route blockers require operator recovery'
+        )
+
+    relocation = dict(relocations[0])
+    raw_blocker = str(relocation.get('shuttle') or '').strip()
+    if not raw_blocker:
+        raise PddlProblemBuildError('clearance relocation has no blocker identity')
+    blocker = _pddl_symbol(raw_blocker)
+    destination = dict(relocation.get('destination') or {})
+    destination_kind = str(destination.get('kind') or '').strip().casefold()
+    if destination_kind == 'slot':
+        raw_target_slot = str(destination.get('target_slot') or '').strip()
+        if not raw_target_slot:
+            raise PddlProblemBuildError('slot clearance relocation has no target slot')
+        target_slot = _pddl_symbol(raw_target_slot)
+        goal_text = f'(shuttle_at_slot {blocker} {target_slot})'
+        phase = 'clear_blocker_to_slot'
+    elif destination_kind == 'interior_loop':
+        goal_text = f'(clearance_relocated {blocker})'
+        phase = 'clear_blocker_to_interior_loop'
+    else:
+        raise PddlProblemBuildError(
+            f'unsupported blocker-clearance destination {destination_kind!r}'
+        )
+
+    old_goal = f'  (:goal\n    {problem.goal_text}\n  )'
+    new_goal = f'  (:goal\n    {goal_text}\n  )'
+    if problem.problem_text.count(old_goal) != 1:
+        raise PddlProblemBuildError('could not replace the transport PDDL goal safely')
+    clearance_provenance = dict(provenance)
+    clearance_provenance.update({
+        'planning_phase': phase,
+        'clearance_relocation': relocation,
+        'parent_problem_name': problem.problem_name,
+    })
+    clearance_problem_name = (
+        f'{problem.problem_name}-clearance-{int(relocation.get("order") or 1)}'
+    )
+    problem_text = problem.problem_text.replace(old_goal, new_goal, 1).replace(
+        f'(problem {problem.problem_name})',
+        f'(problem {clearance_problem_name})',
+        1,
+    )
+    if destination_kind == 'slot':
+        # pending_clearances describes the parent selected-shuttle route. A
+        # free-slot parking subgoal is itself a normal-route move and must not
+        # be blocked by that parent's pending count. The parent problem is
+        # rebuilt from a fresh observation immediately after this one move.
+        pending_pattern = re.compile(
+            rf'\(= \(pending_clearances {re.escape(problem.side)}\) \d+\)'
+        )
+        problem_text, replacements = pending_pattern.subn(
+            f'(= (pending_clearances {problem.side}) 0)',
+            problem_text,
+            count=1,
+        )
+        if replacements != 1:
+            raise PddlProblemBuildError(
+                'could not isolate slot-clearance pending count safely'
+            )
+        clearance_provenance['parent_pending_clearances_suspended'] = True
+
+        # The executive deliberately executes only the first action from each
+        # plan and then re-observes.  If other known-free slots remain exposed,
+        # POPF may legally use one of them as an intermediate waypoint instead
+        # of moving directly to the audited parking destination.  Withhold
+        # those alternatives from this one-action subproblem so its first
+        # action has the same destination as the frozen clearance provenance.
+        # Withholding a free fact is fail-closed; no occupied slot is presented
+        # as free, and the complete state is rebuilt after the move.
+        free_slot_pattern = re.compile(
+            rf'(?m)^\s*\(slot_free ({re.escape(problem.side)}_slot_\d+)\)\s*$'
+        )
+        exposed_free_slots = free_slot_pattern.findall(problem_text)
+        if target_slot not in exposed_free_slots:
+            raise PddlProblemBuildError(
+                f'clearance parking target {target_slot!r} is not known free'
+            )
+        withheld_free_slots = sorted(
+            slot for slot in exposed_free_slots if slot != target_slot
+        )
+        for withheld_slot in withheld_free_slots:
+            problem_text, replacements = re.subn(
+                rf'(?m)^\s*\(slot_free {re.escape(withheld_slot)}\)\s*\n?',
+                '',
+                problem_text,
+                count=1,
+            )
+            if replacements != 1:
+                raise PddlProblemBuildError(
+                    f'could not withhold intermediate parking slot '
+                    f'{withheld_slot!r} safely'
+                )
+        clearance_provenance.update({
+            'first_action_destination_constrained': True,
+            'parking_target_free_fact_retained': target_slot,
+            'temporarily_withheld_known_free_slots': withheld_free_slots,
+            'free_fact_policy': (
+                'fail_closed_one_action_subproblem_then_fresh_reobservation'
+            ),
+        })
+    return replace(
+        problem,
+        problem_name=clearance_problem_name,
+        problem_text=problem_text,
+        goal_text=goal_text,
+        target_station=(
+            SLOT_STATION_BY_SIDE_AND_SLOT[
+                (problem.side, _slot_number_from_object(target_slot))
+            ]
+            if destination_kind == 'slot'
+            else problem.target_station
+        ),
+        target_slot=(
+            _slot_number_from_object(target_slot)
+            if destination_kind == 'slot'
+            else problem.target_slot
+        ),
+        selected_shuttle=blocker,
+        provenance=clearance_provenance,
     )
 
 
@@ -3273,6 +3498,8 @@ def _known_fact(
 
 def _fleet_snapshot_from_observed_state(
     index: dict[tuple[str, str], ObservedFact],
+    *,
+    runtime_clearance_certificates: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     loaded_by_shuttle: dict[str, bool] = {}
     present_by_shuttle: dict[str, bool] = {}
@@ -3374,7 +3601,90 @@ def _fleet_snapshot_from_observed_state(
         'location_block_by_shuttle': location_block_by_shuttle,
         'rail_position_by_shuttle': rail_position_by_shuttle,
         'slot_occupancy': slot_occupancy,
+        'runtime_clearance_certificates': (
+            _validated_runtime_clearance_certificates(
+                runtime_clearance_certificates
+            )
+        ),
     }
+
+
+def _validated_runtime_clearance_certificates(
+    raw: dict[str, dict[str, Any]] | None,
+) -> dict[str, dict[str, Any]]:
+    """Validate task-runtime clearance proof without replacing visual facts."""
+
+    certificates: dict[str, dict[str, Any]] = {}
+    for raw_identity, raw_certificate in dict(raw or {}).items():
+        if not isinstance(raw_certificate, dict):
+            raise PddlProblemBuildError(
+                'runtime clearance certificate must be an object'
+            )
+        spec = normalize_shuttle_ref(raw_identity)
+        if spec is None:
+            spec = normalize_shuttle_ref(raw_certificate.get('identity'))
+        if spec is None:
+            raise PddlProblemBuildError(
+                f'unknown runtime clearance identity {raw_identity!r}'
+            )
+        certificate = dict(raw_certificate)
+        side = _normalise_planning_side(certificate.get('side') or spec.side)
+        if side != spec.side:
+            raise PddlProblemBuildError(
+                f'runtime clearance side conflict for {spec.short_id}'
+            )
+        if not bool(certificate.get('entry_sensor_identity_confirmed')):
+            raise PddlProblemBuildError(
+                f'runtime clearance lacks entry sensor proof for {spec.short_id}'
+            )
+        if not bool(certificate.get('controller_stop_confirmed')):
+            raise PddlProblemBuildError(
+                f'runtime clearance lacks stop proof for {spec.short_id}'
+            )
+        if certificate.get('matched_by') != (
+            'interior_entry_sensor_plus_bounded_travel_time'
+        ):
+            raise PddlProblemBuildError(
+                'runtime clearance lacks bounded-motion proof for '
+                f'{spec.short_id}'
+            )
+        if not bool(certificate.get('bounded_commanded_motion_completed')):
+            raise PddlProblemBuildError(
+                'runtime clearance lacks completed bounded motion for '
+                f'{spec.short_id}'
+            )
+        if (
+            certificate.get('clearance_mode_held') is not True
+            or certificate.get('normal_route_restored') is not False
+        ):
+            raise PddlProblemBuildError(
+                f'runtime clearance lacks held-route proof for {spec.short_id}'
+            )
+        if (
+            certificate.get('controller_position_fields_used_for_localization')
+            is not False
+        ):
+            raise PddlProblemBuildError(
+                f'runtime clearance used controller position for {spec.short_id}'
+            )
+        try:
+            target_s_m = float(certificate['target_s_m'])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PddlProblemBuildError(
+                f'runtime clearance target_s_m invalid for {spec.short_id}'
+            ) from exc
+        if not math.isfinite(target_s_m) or target_s_m < 0.0:
+            raise PddlProblemBuildError(
+                f'runtime clearance target_s_m invalid for {spec.short_id}'
+            )
+        certificate.update({
+            'identity': spec.short_id,
+            'shuttle': spec.shuttle_id,
+            'side': side,
+            'target_s_m': target_s_m,
+        })
+        certificates[spec.shuttle_id] = certificate
+    return certificates
 
 
 def _rail_position_from_fact(
@@ -3688,7 +3998,15 @@ def _route_clearance_snapshot(
         side: {'shuttles': {}}
         for side in SIDES
     }
+    certified_clearances = dict(
+        fleet.get('runtime_clearance_certificates') or {}
+    )
     for shuttle, position in fleet['rail_position_by_shuttle'].items():
+        if shuttle in certified_clearances:
+            # The exact A3 interior-entry sensor and confirmed OFF effect prove
+            # that this shuttle left the exterior route. Its raw visual
+            # position is retained elsewhere; it is not rewritten here.
+            continue
         side = position['side']
         rails[side]['shuttles'][shuttle] = {
             'current_segment': position['segment'],
@@ -3767,6 +4085,8 @@ def _route_clearance_snapshot(
     for side in SIDES:
         by_segment: dict[str, list[tuple[str, float, float, float]]] = {}
         for shuttle, position in fleet['rail_position_by_shuttle'].items():
+            if shuttle in certified_clearances:
+                continue
             if position['side'] != side:
                 continue
             length_m = max(float(position['segment_length_m']), 1e-9)
@@ -3796,6 +4116,17 @@ def _route_clearance_snapshot(
         'provenance': {
             'method': 'continuous_segment_occupancy_intervals_v1',
             'planned_switch_configuration': 'all_exterior',
+            'sensor_certified_interior_clearances': [
+                {
+                    'shuttle': shuttle,
+                    'target_s_m': certificate['target_s_m'],
+                    'entry_sensor': certificate.get('entry_sensor', ''),
+                    'controller_position_fields_used_for_localization': False,
+                }
+                for shuttle, certificate in sorted(
+                    certified_clearances.items()
+                )
+            ],
             'shuttle_length_m': DEFAULT_SHUTTLE_LENGTH_M,
             'safety_margin_m': DEFAULT_ROUTE_SAFETY_MARGIN_M,
             'pairs': pair_provenance,
@@ -3820,8 +4151,9 @@ def _target_blocker_clearance_plan(
         'target_slot': '',
         'ordered_relocations': [],
         'execution_policy': (
-            'execute one supervised relocation, reobserve, and rebuild PDDL '
-            'before any selected-shuttle movement'
+            'enter clearance mode once, execute supervised relocations with '
+            'fresh re-observation after each, restore the normal route once '
+            'after the pending-clearance count reaches zero'
         ),
         'continuous_motion_owner': 'supervisor_and_kinematic_safety_layer',
     }
@@ -3864,36 +4196,170 @@ def _target_blocker_clearance_plan(
         ),
         reverse=True,
     )
-    slot_four = _slot_object(side, '4')
-    slot_four_available = (
-        goal_data['target_slot'] != '4'
-        and not fleet['slot_occupancy'].get(slot_four)
+    # Reuse a verified free exterior slot when prior sequential goals already
+    # left shuttles in A34I. A target-slot occupant can then park outside and
+    # must not be forced into an already-full interior buffer. In a fresh task
+    # with no staged interior shuttle, retain the established A34I clearance
+    # strategy. Only routes clear in the accepted state are eligible.
+    target_occupant = fleet['slot_occupancy'].get(target, '')
+    runtime_clearances = dict(
+        fleet.get('runtime_clearance_certificates') or {}
     )
-    relocations = []
-    for index, blocker in enumerate(blocker_ids):
-        position = positions[blocker]
-        if index == 0 and slot_four_available:
-            destination = {
-                'kind': 'slot',
-                'target_slot': slot_four,
-                'target_station': _station_object(
-                    side,
-                    _station_for_slot(side, '4'),
+    has_staged_interior_shuttles = any(
+        certificate.get('side') == side
+        for certificate in runtime_clearances.values()
+    ) or any(
+        position.get('side') == side
+        and str(position.get('segment') or '').upper() == 'A34I'
+        for position in positions.values()
+    )
+    free_parking_slots = {
+        slot
+        for slot, occupant in fleet['slot_occupancy'].items()
+        if has_staged_interior_shuttles
+        and not occupant
+        and slot.startswith(f'{side}_slot_')
+        and slot != target
+    }
+    parking_destination_by_blocker: dict[str, dict[str, Any]] = {}
+    parking_order = sorted(
+        blocker_ids,
+        key=lambda blocker: (
+            0 if blocker == target_occupant else 1,
+            blocker_ids.index(blocker),
+        ),
+    )
+    for blocker in parking_order:
+        blocker_slot = fleet['location_slot_by_shuttle'].get(blocker, '')
+        if not blocker_slot:
+            continue
+        candidates = sorted(
+            (
+                slot
+                for slot in free_parking_slots
+                if (blocker_slot, slot) in route_clearance['clear_pairs']
+            ),
+            key=lambda slot: (
+                (
+                    -int(_slot_number_from_object(slot))
+                    if has_staged_interior_shuttles
+                    else 0
                 ),
+                abs(
+                    int(_slot_number_from_object(blocker_slot))
+                    - int(_slot_number_from_object(slot))
+                ),
+                int(_slot_number_from_object(slot)),
+            ),
+        )
+        if not candidates:
+            continue
+        parking_slot = candidates[0]
+        free_parking_slots.remove(parking_slot)
+        # The blocker source becomes free after this supervised move. It is
+        # intentionally not reused in this frozen planning pass because route
+        # clearance is recomputed from a fresh observation after every move.
+        parking_destination_by_blocker[blocker] = {
+            'kind': 'slot',
+            'source_slot': blocker_slot,
+            'target_slot': parking_slot,
+            'target_sensor': SLOT_SENSOR_BY_SIDE_AND_SLOT[
+                (side, _slot_number_from_object(parking_slot))
+            ],
+            'selection_policy': (
+                'recovery_aware_highest_reachable_free_exterior_slot'
+                if has_staged_interior_shuttles
+                else 'nearest_reachable_known_free_exterior_slot'
+            ),
+        }
+
+    relocations = []
+    existing_interior_s_m = [
+        float(certificate['target_s_m'])
+        for certificate in runtime_clearances.values()
+        if certificate.get('side') == side
+    ] + [
+        float(position['s_ratio']) * float(position['segment_length_m'])
+        for shuttle, position in positions.items()
+        if shuttle not in blocker_ids
+        and shuttle not in runtime_clearances
+        and position.get('side') == side
+        and str(position.get('segment') or '').upper() == 'A34I'
+    ]
+    reserved_interior_s_m = list(existing_interior_s_m)
+    interior_blocker_ids = [
+        blocker
+        for blocker in blocker_ids
+        if blocker not in parking_destination_by_blocker
+    ]
+    interior_blocker_count = len(interior_blocker_ids)
+    clearance_spacing_m = (
+        DEFAULT_SHUTTLE_LENGTH_M
+        + DEFAULT_ROUTE_SAFETY_MARGIN_M
+        + 2.0 * INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
+    )
+    ordered_blockers = [
+        blocker
+        for blocker in blocker_ids
+        if blocker in parking_destination_by_blocker
+    ] + interior_blocker_ids
+    for index, blocker in enumerate(ordered_blockers):
+        position = positions[blocker]
+        parking_destination = parking_destination_by_blocker.get(blocker)
+        if parking_destination is not None:
+            relocations.append({
+                'order': index + 1,
+                'shuttle': blocker,
+                'reason': (
+                    'occupies_goal_target_slot'
+                    if blocker == target_occupant
+                    else 'blocks_selected_shuttle_route'
+                ),
+                'current_segment': position['segment'],
+                'current_s_ratio': round(float(position['s_ratio']), 6),
+                'destination': parking_destination,
+            })
+            continue
+        public_segment = (
+            LEFT_PUBLIC_SEGMENT_NAME_MAP.get('A34I', 'A34I')
+            if side == 'left'
+            else 'A34I'
+        )
+        default_s_m = INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE[
+            (side, 'A3')
+        ][1]
+        candidate_s_m = (
+            [0.95, 0.35, default_s_m]
+            if interior_blocker_count > 1
+            else [default_s_m, 0.95, 0.35]
+        )
+        target_s_m = next(
+            (
+                candidate
+                for candidate in candidate_s_m
+                if all(
+                    abs(candidate - occupied) >= clearance_spacing_m
+                    for occupied in reserved_interior_s_m
+                )
+            ),
+            None,
+        )
+        if target_s_m is None:
+            destination = {
+                'kind': 'unavailable',
+                'reason': 'no_physically_separated_a3_interior_staging_pose',
+                'gate_switch': 'A3',
+                'target_segment': public_segment,
+                'required_center_spacing_m': round(clearance_spacing_m, 6),
             }
         else:
-            public_segment = (
-                LEFT_PUBLIC_SEGMENT_NAME_MAP.get('A34I', 'A34I')
-                if side == 'left'
-                else 'A34I'
-            )
+            reserved_interior_s_m.append(float(target_s_m))
             destination = {
                 'kind': 'interior_loop',
                 'gate_switch': 'A3',
                 'target_segment': public_segment,
-                'target_s_m': INTERIOR_LOOP_CLEAR_POSE_BY_SIDE_AND_GATE[
-                    (side, 'A3')
-                ][1],
+                'target_s_m': float(target_s_m),
+                'required_center_spacing_m': round(clearance_spacing_m, 6),
             }
         relocations.append({
             'order': index + 1,
@@ -3907,7 +4373,16 @@ def _target_blocker_clearance_plan(
         'required': True,
         'ordered_relocations': relocations,
         'route_must_be_reobserved_after_each_relocation': True,
-        'unsupported_if_more_than_two_blockers': len(relocations) > 2,
+        'exterior_slot_relocations_precede_interior_clearance': True,
+        'switch_restore_policy': 'once_after_all_relocations',
+        'unsupported_if_more_than_two_blockers': (
+            sum(
+                1
+                for relocation in relocations
+                if (relocation.get('destination') or {}).get('kind')
+                == 'interior_loop'
+            ) > 2
+        ),
     })
     return base
 
@@ -3922,6 +4397,27 @@ def _pddl_init_facts(
     route_clearance: dict[str, Any],
 ) -> list[str]:
     facts: list[str] = ['(= (total-cost) 0)', '(validated_state)']
+    target_clearance = dict(
+        route_clearance.get('target_clearance_plan') or {}
+    )
+    clearance_side = str(goal_data.get('side') or '')
+    relocations = list(target_clearance.get('ordered_relocations') or [])
+    for side in SIDES:
+        pending = len(relocations) if side == clearance_side else 0
+        facts.extend([
+            f'(= (pending_clearances {side}) {pending})',
+            f'(= (clearance_cursor {side}) 1)',
+        ])
+    for relocation in relocations:
+        blocker = str(relocation.get('shuttle') or '')
+        destination = dict(relocation.get('destination') or {})
+        if destination.get('kind') != 'interior_loop':
+            continue
+        facts.extend([
+            f'(clearance_destination_ready {blocker})',
+            f'(= (clearance_order {blocker}) '
+            f'{int(relocation.get("order") or 1)})',
+        ])
     for side in SIDES:
         stations = ('yaskawa', 'staubli') if side == 'right' else ('yaskawa', 'kuka')
         for source in stations:
@@ -4047,6 +4543,7 @@ def _pddl_init_facts(
         if stoppers_open:
             facts.append(f'(stoppers_open {side})')
         if switches_ready and stoppers_open:
+            facts.append(f'(normal_route {side})')
             stations = (
                 ('yaskawa', 'staubli')
                 if side == 'right'
@@ -4059,6 +4556,20 @@ def _pddl_init_facts(
                         f'{_station_object(side, source)} '
                         f'{_station_object(side, target)})'
                     )
+        clearance_switches = (
+            devices['switches'].get(_switch_object(side, 'A1')) == 'exterior'
+            and devices['switches'].get(_switch_object(side, 'A2')) == 'exterior'
+            and devices['switches'].get(_switch_object(side, 'A3')) == 'interior'
+            and devices['switches'].get(_switch_object(side, 'A4')) == 'interior'
+        )
+        clearance_stoppers = (
+            devices['stoppers'].get(_stopper_object(side, 'A1')) == 'open'
+            and devices['stoppers'].get(_stopper_object(side, 'A2')) == 'open'
+            and devices['stoppers'].get(_stopper_object(side, 'A3')) == 'open'
+            and devices['stoppers'].get(_stopper_object(side, 'A4')) == 'closed'
+        )
+        if clearance_switches and clearance_stoppers:
+            facts.append(f'(clearance_mode {side})')
     for side, side_obstacles in sorted(obstacles.items()):
         for obstacle in side_obstacles:
             facts.append(f'(obstacle_present {obstacle} {side})')
@@ -4067,6 +4578,8 @@ def _pddl_init_facts(
         facts.append(f'(target_station_for_goal {target_station})')
         if goal_data['target_slot']:
             facts.append(f'(target_slot_for_goal {_slot_object(goal_data["side"], goal_data["target_slot"])})')
+        else:
+            facts.append('(station_only_goal)')
         for shuttle in goal_data['candidate_shuttles']:
             facts.append(f'(goal_candidate {shuttle})')
     else:

@@ -218,3 +218,19 @@ def test_light_gui_keeps_entity_selection_inspection_tools():
     assert 'EntityContextMenuPlugin' in text
     assert 'ComponentInspector' in text
     assert 'EntityTree' in text
+
+
+def test_room315_runtime_gui_excludes_crashing_entity_context_menu():
+    text = (
+        CONFIG_DIR / 'room315_runtime_safe.gui.config'
+    ).read_text(encoding='utf-8')
+    common = (
+        BRINGUP_LAUNCH_DIR / 'room_315_floor_common.py'
+    ).read_text(encoding='utf-8')
+
+    assert 'MinimalScene' in text
+    assert 'GzSceneManager' in text
+    assert 'InteractiveViewControl' in text
+    assert 'WorldControl' in text
+    assert 'EntityContextMenuPlugin' not in text.split('-->')[-1]
+    assert "'gui_config': 'config/room315_runtime_safe.gui.config'" in common

@@ -274,3 +274,51 @@ def test_wait_for_clearance_is_safe_stop_macro():
     assert translated.event_action['primitive'] == 'STOP_NOW'
     assert translated.event_action['wait_condition'] == 'block_clearance'
     assert translated.event_action['reason'] == 'wait_for_block_clearance'
+
+
+def test_interior_blocker_relocation_translates_to_executive_guarded_macro():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        '(relocate_blocker_to_interior right_shuttle_2 right_shuttle_4 '
+        'right right_slot_4 right_slot_2)'
+    )
+
+    assert translated.command == {
+        'action': 'clearance_relocation',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'selected_shuttle': 'right_shuttle_4',
+        'command': 'ON',
+        'speed': 0.3,
+        'deterministic_macro': 'supervised_a3_interior_visual_stop',
+    }
+    assert translated.event_action['primitive'] == 'SHUTTLE_ON'
+    assert translated.event_action['wait_condition'] == (
+        'accepted_visual_interior_pose_then_controller_stop'
+    )
+
+
+def test_clearance_phase_boundaries_translate_without_per_blocker_restore():
+    translator = _load_module()
+
+    begin = translator.translate_step(
+        '(begin_route_clearance right_shuttle_4 right '
+        'right_slot_4 right_slot_2)'
+    )
+    finish = translator.translate_step(
+        '(finish_route_clearance right_shuttle_4 right '
+        'right_slot_4 right_slot_2)'
+    )
+
+    assert begin.command['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'INTERIOR',
+        'A4': 'INTERIOR',
+    }
+    assert begin.command['deterministic_macro'] == (
+        'hold_interior_route_for_all_blockers'
+    )
+    assert finish.command['switches'] == {'ALL': 'EXTERIOR'}
+    assert finish.command['deterministic_macro'] == 'restore_normal_route_once'

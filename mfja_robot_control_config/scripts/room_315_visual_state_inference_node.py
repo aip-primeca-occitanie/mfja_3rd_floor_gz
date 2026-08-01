@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -20,7 +21,6 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import message_filters
 import rclpy
-from cv_bridge import CvBridge
 from diagnostic_msgs.msg import DiagnosticArray
 from diagnostic_msgs.msg import DiagnosticStatus
 from diagnostic_msgs.msg import KeyValue
@@ -55,6 +55,47 @@ from room_315_visual_runtime_validation import DeterministicTemporalStabilizer
 from room_315_visual_runtime_validation import ValidationConfig
 from room_315_visual_runtime_validation import ValidationResult
 from room_315_visual_runtime_validation import validate_prediction
+
+
+def image_message_to_rgb8(message: Image) -> np.ndarray:
+    """Decode common 8-bit ROS image encodings without the cv_bridge ABI."""
+
+    height = int(message.height)
+    width = int(message.width)
+    step = int(message.step)
+    encoding = str(message.encoding or '').strip().lower()
+    channels_by_encoding = {
+        'mono8': 1,
+        'rgb8': 3,
+        'bgr8': 3,
+        'rgba8': 4,
+        'bgra8': 4,
+    }
+    channels = channels_by_encoding.get(encoding)
+    if channels is None:
+        raise ValueError(f'unsupported ROS image encoding: {encoding!r}')
+    row_bytes = width * channels
+    if height <= 0 or width <= 0 or step < row_bytes:
+        raise ValueError(
+            f'invalid ROS image dimensions/step: {width}x{height}, step={step}'
+        )
+    data = np.frombuffer(message.data, dtype=np.uint8)
+    required = height * step
+    if data.size < required:
+        raise ValueError(
+            f'ROS image data is truncated: {data.size} bytes, expected {required}'
+        )
+    pixels = data[:required].reshape(height, step)[:, :row_bytes]
+    pixels = pixels.reshape(height, width, channels)
+    if encoding == 'mono8':
+        rgb = np.repeat(pixels, 3, axis=2)
+    elif encoding in {'rgba8', 'bgra8'}:
+        rgb = pixels[:, :, :3]
+    else:
+        rgb = pixels
+    if encoding in {'bgr8', 'bgra8'}:
+        rgb = rgb[:, :, ::-1]
+    return np.ascontiguousarray(rgb, dtype=np.uint8)
 
 
 class PlanSys2PredicateClient:
@@ -122,7 +163,6 @@ class Room315VisualStateInferenceNode(Node):
     def __init__(self) -> None:
         super().__init__('room_315_visual_state_inference_node')
         self._declare_parameters()
-        self.bridge = CvBridge()
         self.presence = ShuttleStatePresenceProvider(
             timeout_s=self._float('presence_state_timeout_s'),
             warmup_s=self._float('presence_warmup_s'),
@@ -143,6 +183,9 @@ class Room315VisualStateInferenceNode(Node):
             max_position_reconciliation_error_m=self._float(
                 'max_position_reconciliation_error_m'
             ),
+            position_reconciliation_policy=self._string(
+                'position_reconciliation_policy'
+            ),
         )
         self.stabilizer = DeterministicTemporalStabilizer(
             enabled=self._bool('temporal_filter_enabled'),
@@ -159,6 +202,11 @@ class Room315VisualStateInferenceNode(Node):
         self.raw_pub = self.create_publisher(
             VisualStateObservation,
             self._string('raw_observation_topic'),
+            10,
+        )
+        self.raw_model_prediction_pub = self.create_publisher(
+            String,
+            self._string('raw_model_prediction_topic'),
             10,
         )
         self.validation_pub = self.create_publisher(
@@ -220,7 +268,9 @@ class Room315VisualStateInferenceNode(Node):
         self.model_runtime: Room315VisualModelRuntime | None = None
         self.artifacts = None
         self.artifact_error = ''
-        self.checkpoint_sha256 = self._string('expected_checkpoint_sha256')
+        self.checkpoint_sha256 = self._artifact_string(
+            'expected_checkpoint_sha256'
+        )
         self.last_inference_stamp_s: float | None = None
         self.last_accepted_stamp_s: float | None = None
         self.last_pair_receive_s: float | None = None
@@ -256,6 +306,7 @@ class Room315VisualStateInferenceNode(Node):
             'expected_vectorizer_sha256': '',
             'expected_training_config_sha256': '',
             'expected_run_metadata_sha256': '',
+            'expected_runtime_configuration_sha256': '',
             'device': 'auto',
             'synchronization_queue_size': 10,
             'maximum_timestamp_difference_s': 0.1,
@@ -268,6 +319,7 @@ class Room315VisualStateInferenceNode(Node):
             'position_consistency_tolerance_m': 0.08,
             'reconcile_position_consistency': False,
             'max_position_reconciliation_error_m': 0.40,
+            'position_reconciliation_policy': 'canonical_s_m',
             'temporal_filter_enabled': False,
             'temporal_majority_window': 3,
             'temporal_ema_alpha': 0.5,
@@ -278,6 +330,8 @@ class Room315VisualStateInferenceNode(Node):
             'safety_status_topic': '/room_315/vla/status',
             'safety_status_timeout_s': 1.5,
             'raw_observation_topic': '/room_315/visual_state/raw',
+            'raw_model_prediction_topic':
+                '/room_315/visual_state/raw_model_prediction',
             'validation_topic': '/room_315/visual_state/validation',
             'accepted_observed_state_topic': '/room_315/visual_state/observed_state',
             'diagnostics_topic': '/diagnostics',
@@ -288,11 +342,13 @@ class Room315VisualStateInferenceNode(Node):
 
     def _load_artifacts_and_model(self) -> None:
         try:
-            checkpoint = Path(self._string('checkpoint_path')).expanduser()
-            sidecars = Path(self._string('sidecar_directory')).expanduser()
-            if not str(checkpoint) or not self._string('checkpoint_path'):
+            checkpoint_value = self._artifact_string('checkpoint_path')
+            sidecar_value = self._artifact_string('sidecar_directory')
+            checkpoint = Path(checkpoint_value).expanduser()
+            sidecars = Path(sidecar_value).expanduser()
+            if not checkpoint_value:
                 raise VisualRuntimeError('checkpoint_path parameter is empty')
-            if not self._string('sidecar_directory'):
+            if not sidecar_value:
                 raise VisualRuntimeError('sidecar_directory parameter is empty')
             self.artifacts = verify_artifacts(
                 ArtifactPaths(
@@ -300,15 +356,27 @@ class Room315VisualStateInferenceNode(Node):
                     sidecar_directory=sidecars.resolve(),
                 ),
                 ArtifactHashes(
-                    checkpoint=self._string('expected_checkpoint_sha256'),
-                    target_stats=self._string('expected_target_stats_sha256'),
-                    vectorizer=self._string('expected_vectorizer_sha256'),
-                    training_config=self._string(
+                    checkpoint=self._artifact_string(
+                        'expected_checkpoint_sha256'
+                    ),
+                    target_stats=self._artifact_string(
+                        'expected_target_stats_sha256'
+                    ),
+                    vectorizer=self._artifact_string(
+                        'expected_vectorizer_sha256'
+                    ),
+                    training_config=self._artifact_string(
                         'expected_training_config_sha256'
                     ),
-                    run_metadata=self._string('expected_run_metadata_sha256'),
+                    run_metadata=self._artifact_string(
+                        'expected_run_metadata_sha256'
+                    ),
+                    runtime_configuration=self._artifact_string(
+                        'expected_runtime_configuration_sha256'
+                    ),
                 ),
             )
+            self.checkpoint_sha256 = self.artifacts.hashes['best.pt']
             runtime = Room315VisualModelRuntime(
                 self.artifacts,
                 device=self._string('device'),
@@ -387,16 +455,24 @@ class Room315VisualStateInferenceNode(Node):
         self.last_inference_stamp_s = now_s
 
         try:
-            left_rgb = np.asarray(
-                self.bridge.imgmsg_to_cv2(left_message, desired_encoding='rgb8')
-            )
-            right_rgb = np.asarray(
-                self.bridge.imgmsg_to_cv2(right_message, desired_encoding='rgb8')
-            )
+            left_rgb = image_message_to_rgb8(left_message)
+            right_rgb = image_message_to_rgb8(right_message)
             if self.model_runtime is None or self.artifacts is None:
                 raise VisualRuntimeError('model runtime is not ready')
             raw, timings = self.model_runtime.infer(left_rgb, right_rgb)
             self.last_timings = timings
+            raw_message = String()
+            raw_message.data = json.dumps({
+                'schema_version': 'room315.raw_model_prediction.v1',
+                'checkpoint_sha256': self.checkpoint_sha256,
+                'timestamp_s': now_s,
+                'left_image_stamp_s': left_stamp,
+                'right_image_stamp_s': right_stamp,
+                'output_dimension': int(raw.shape[0]),
+                'denormalized_output': [float(value) for value in raw],
+                'control_input': False,
+            }, sort_keys=True)
+            self.raw_model_prediction_pub.publish(raw_message)
             prediction = decode_active_slots(
                 raw,
                 vectorizer=self.artifacts.vectorizer,
@@ -679,6 +755,9 @@ class Room315VisualStateInferenceNode(Node):
             'stale_frames': self.stale_frames,
             'last_validation_reasons': list(self.last_validation_reasons),
             'rejection_counts': self.rejection_counts,
+            'position_reconciliation_policy': (
+                self.validator_config.position_reconciliation_policy
+            ),
             'presence_reasons': list(presence.reasons),
             'safety_ready': self._safety_ready(),
             'plansys2_update_enabled': self._bool('plansys2_update_enabled'),
@@ -699,6 +778,30 @@ class Room315VisualStateInferenceNode(Node):
 
     def _string(self, name: str) -> str:
         return str(self.get_parameter(name).value)
+
+    def _artifact_string(self, name: str) -> str:
+        environment_names = {
+            'checkpoint_path': 'ROOM315_VISUAL_MODEL_PATH',
+            'sidecar_directory': 'ROOM315_VISUAL_SIDECAR_DIRECTORY',
+            'expected_checkpoint_sha256':
+                'ROOM315_VISUAL_EXPECTED_CHECKPOINT_SHA256',
+            'expected_target_stats_sha256':
+                'ROOM315_VISUAL_EXPECTED_TARGET_STATS_SHA256',
+            'expected_vectorizer_sha256':
+                'ROOM315_VISUAL_EXPECTED_VECTORIZER_SHA256',
+            'expected_training_config_sha256':
+                'ROOM315_VISUAL_EXPECTED_TRAINING_CONFIG_SHA256',
+            'expected_run_metadata_sha256':
+                'ROOM315_VISUAL_EXPECTED_RUN_METADATA_SHA256',
+            'expected_runtime_configuration_sha256':
+                'ROOM315_VISUAL_EXPECTED_RUNTIME_CONFIGURATION_SHA256',
+        }
+        environment_name = environment_names.get(name)
+        if environment_name:
+            override = os.environ.get(environment_name, '').strip()
+            if override:
+                return override
+        return self._string(name).strip()
 
     def _float(self, name: str) -> float:
         return float(self.get_parameter(name).value)

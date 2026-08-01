@@ -13,6 +13,7 @@ import re
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -1076,6 +1077,63 @@ def load_identity_config(path: Path | str) -> dict[str, Any]:
     if not isinstance(loaded, dict):
         raise ValueError(f'{path} must contain a YAML mapping')
     return loaded
+
+
+def default_identity_config_path() -> Path:
+    """Return the authoritative shuttle identity configuration in source/install trees."""
+    source_path = (
+        Path(__file__).resolve().parents[1]
+        / 'config'
+        / 'room_315_vla'
+        / 'shuttle_identity.yaml'
+    )
+    if source_path.is_file():
+        return source_path
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return (
+            Path(get_package_share_directory('mfja_robot_control_config'))
+            / 'config'
+            / 'room_315_vla'
+            / 'shuttle_identity.yaml'
+        )
+    except Exception:
+        return source_path
+
+
+def identity_color_registry(
+    path: Path | str | None = None,
+) -> dict[str, tuple[ShuttleSpec, ...]]:
+    """Build color -> shuttle candidates from the authoritative identity file.
+
+    Returning tuples preserves ambiguity instead of silently selecting one shuttle
+    if a future configuration assigns the same color to multiple identities.
+    """
+    config_path = Path(path).expanduser() if path is not None else default_identity_config_path()
+    config = load_identity_config(config_path)
+    validate_identity_config(config)
+    by_color: dict[str, list[ShuttleSpec]] = {}
+    for entry in config['shuttles']:
+        color = str(entry.get('color_name') or '').strip().casefold()
+        if not color:
+            raise ValueError(
+                f'identity config shuttle {entry.get("shuttle_id")!r} has no color_name'
+            )
+        spec = normalize_shuttle_ref(entry.get('shuttle_id'), side=entry.get('side'))
+        if spec is None:  # validate_identity_config already guards this boundary.
+            raise ValueError(f'invalid shuttle_id {entry.get("shuttle_id")!r}')
+        by_color.setdefault(color, []).append(spec)
+    return {
+        color: tuple(sorted(specs, key=lambda item: item.short_id))
+        for color, specs in sorted(by_color.items())
+    }
+
+
+@lru_cache(maxsize=1)
+def authoritative_identity_color_registry() -> dict[str, tuple[ShuttleSpec, ...]]:
+    """Cached runtime view of the versioned identity/color configuration."""
+    return identity_color_registry()
 
 
 def validate_identity_config(config: dict[str, Any]) -> None:

@@ -28,9 +28,14 @@ room_315_visual_state_inference_node:
     s_ratio_tolerance: 0.02
     s_m_tolerance_m: 0.02
     position_consistency_tolerance_m: 0.08
-    # Bound a projection of the redundant ratio using only learned s_m and
-    # learned segment length. No ShuttleState/Gazebo position is consulted.
+    # s_m is the canonical learned physical coordinate. The redundant ratio
+    # is projected from learned s_m / learned segment length; raw model output
+    # remains published for diagnostics. No controller/Gazebo position is used.
     reconcile_position_consistency: true
+    position_reconciliation_policy: canonical_s_m
+    # Under bounded_s_m this is a hard rejection bound. Under canonical_s_m it
+    # marks a large raw-head disagreement in clamped_fields without replacing
+    # the learned canonical coordinate.
     max_position_reconciliation_error_m: 0.40
 
     temporal_filter_enabled: false

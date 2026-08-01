@@ -111,6 +111,33 @@ def test_multi_shuttle_launch_arguments_are_exposed_and_forwarded():
     assert 'room315_identity_selection_mode' in full_floor
 
 
+def test_single_value_list_parameters_are_forced_to_ros_strings():
+    control = CONTROL_LAUNCH.read_text(encoding='utf-8')
+
+    assert 'from launch_ros.parameter_descriptions import ParameterValue' in control
+    wrapped_names = {
+        node.args[0].value
+        for node in ast.walk(ast.parse(control))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == '_string_launch_parameter'
+        and len(node.args) == 1
+        and isinstance(node.args[0], ast.Constant)
+    }
+    assert {
+        'right_start_slots',
+        'right_start_positions',
+        'right_active_identities',
+        'right_loaded_shuttles',
+        'left_start_slots',
+        'left_start_positions',
+        'left_active_identities',
+        'left_loaded_shuttles',
+        'identity_selection_mode',
+    } <= wrapped_names
+    assert 'value_type=str' in control
+
+
 def test_payload_x_offset_defaults_center_the_payload():
     control = CONTROL_LAUNCH.read_text(encoding='utf-8')
     room_only = _bringup_launch_text(ROOM_ONLY_LAUNCH)

@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from typing import Any
 
+from room_315_multi_shuttle import ShuttleSpec
+from room_315_multi_shuttle import authoritative_identity_color_registry
 from room_315_task_goal_schema import PAYLOAD_FILTERS
 from room_315_task_goal_schema import SELECTION_STRATEGIES
 from room_315_task_goal_schema import SIDES
@@ -44,6 +46,24 @@ LOADED_TERMS = re.compile(
 )
 EMPTY_TERMS = re.compile(r'\b(?:empty|unloaded|without\s+(?:a\s+)?(?:payload|part|load|component))\b', re.I)
 SLOT_TARGET_TERMS = re.compile(r'\b(?:slot|position|place)\b', re.I)
+COMMON_COLOR_WORDS = frozenset({
+    'black',
+    'blue',
+    'brown',
+    'cyan',
+    'gray',
+    'green',
+    'grey',
+    'magenta',
+    'orange',
+    'pink',
+    'purple',
+    'red',
+    'turquoise',
+    'violet',
+    'white',
+    'yellow',
+})
 
 
 @dataclass(frozen=True)
@@ -135,10 +155,35 @@ class ExplicitFactExtractor:
     grounded text and leaves indirect meaning to the semantic model.
     """
 
+    def __init__(
+        self,
+        *,
+        color_registry: dict[str, tuple[ShuttleSpec, ...]] | None = None,
+    ) -> None:
+        self.color_registry = (
+            authoritative_identity_color_registry()
+            if color_registry is None
+            else {
+                str(color).strip().casefold(): tuple(candidates)
+                for color, candidates in color_registry.items()
+            }
+        )
+        color_terms = sorted(
+            COMMON_COLOR_WORDS | set(self.color_registry),
+            key=lambda item: (-len(item), item),
+        )
+        alternatives = '|'.join(re.escape(item) for item in color_terms)
+        self._color_shuttle_pattern = re.compile(
+            rf'\b(?P<color>{alternatives})(?:(?:\s+|-)colou?red)?\s+'
+            r'(?:shuttle|carrier)\b',
+            re.I,
+        )
+
     def extract(self, text: str) -> tuple[ExplicitFact, ...]:
         facts: list[ExplicitFact] = []
         provenance = 'explicit_correction' if CORRECTION_TERMS.search(text) else 'explicit_text'
         facts.extend(self._extract_shuttles(text, provenance))
+        facts.extend(self._extract_color_shuttles(text, provenance))
         facts.extend(self._extract_sides(text, provenance))
         facts.extend(self._extract_slots(text, provenance))
         facts.extend(self._extract_stations(text, provenance))
@@ -156,6 +201,26 @@ class ExplicitFactExtractor:
         for match in pattern.finditer(text):
             facts.append(_fact('target_shuttle', match.group('value'), match, provenance))
             facts.append(_fact('selection_strategy', 'explicit', match, provenance))
+        return facts
+
+    def _extract_color_shuttles(self, text: str, provenance: str) -> list[ExplicitFact]:
+        facts = []
+        for match in self._color_shuttle_pattern.finditer(text):
+            color = match.group('color').casefold()
+            candidates = self.color_registry.get(color, ())
+            # A color phrase is an explicit identity selector. If it is missing
+            # or ambiguous in the authoritative registry, preserve the explicit
+            # selection while leaving target_shuttle unset so validation asks
+            # for the exact identity instead of asking an unrelated payload
+            # question or accepting a model guess.
+            facts.append(_fact('selection_strategy', 'explicit', match, provenance))
+            if len(candidates) == 1:
+                facts.append(_fact(
+                    'target_shuttle',
+                    candidates[0].short_id,
+                    match,
+                    'authoritative_identity_color',
+                ))
         return facts
 
     def _extract_sides(self, text: str, provenance: str) -> list[ExplicitFact]:

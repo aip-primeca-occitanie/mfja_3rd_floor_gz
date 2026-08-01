@@ -19,6 +19,7 @@ import rclpy
 from diagnostic_msgs.msg import DiagnosticArray
 from diagnostic_msgs.msg import DiagnosticStatus
 from diagnostic_msgs.msg import KeyValue
+from mfja_rail_interfaces.msg import SensorFeedback
 from mfja_rail_interfaces.msg import VisualStateObservation
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -53,6 +54,9 @@ class Room315TaskExecutionNode(Node):
             observation_timeout_s=self._float('observation_timeout_s'),
             supervisor_status_timeout_s=self._float(
                 'supervisor_status_timeout_s'
+            ),
+            slot_sensor_state_timeout_s=self._float(
+                'slot_sensor_state_timeout_s'
             ),
             planning_slot_tolerance_ratio=self._float(
                 'planning_slot_tolerance_ratio'
@@ -90,8 +94,8 @@ class Room315TaskExecutionNode(Node):
         self.transport = VisualSupervisorTransport(
             provider=self.state_provider,
             publish_callback=self._publish_supervisor_command,
-            arrival_confirmation_frames=self._int(
-                'arrival_confirmation_frames'
+            slot_sensor_confirmation_frames=self._int(
+                'slot_sensor_confirmation_frames'
             ),
             controller_stop_timeout_s=self._float(
                 'controller_stop_timeout_s'
@@ -115,6 +119,18 @@ class Room315TaskExecutionNode(Node):
             self._on_supervisor_status,
             10,
         )
+        self.slot_sensor_subscriptions = [
+            self.create_subscription(
+                SensorFeedback,
+                self._string(f'{side}_sensor_feedback_topic'),
+                lambda message, rail_side=side: self._on_sensor_feedback(
+                    rail_side,
+                    message,
+                ),
+                10,
+            )
+            for side in ('left', 'right')
+        ]
 
         self._lock = threading.Lock()
         self._worker: threading.Thread | None = None
@@ -134,8 +150,9 @@ class Room315TaskExecutionNode(Node):
         )
         self.get_logger().info(
             'Room 315 TaskGoal execution gateway initialized. '
-            'Shuttle localization and target arrival are accepted only from '
-            'the validated visual-state topic.'
+            'Planning localization comes from validated visual state; final '
+            'slot arrival requires deterministic sensor identity plus '
+            'controller-stop confirmation.'
         )
 
     def _declare_parameters(self) -> None:
@@ -148,16 +165,24 @@ class Room315TaskExecutionNode(Node):
                 '/room_315/visual_state/observed_state',
             'supervisor_command_topic': '/room_315/vla/command',
             'supervisor_status_topic': '/room_315/vla/status',
+            'left_sensor_feedback_topic':
+                '/room_315/rails/left/sensors/feedback',
+            'right_sensor_feedback_topic':
+                '/room_315/rails/right/sensors/feedback',
             'diagnostics_topic': '/diagnostics',
             'planner_service': '/planner/get_plan',
             'planner_domain_path': str(RUNTIME_PDDL_DOMAIN_PATH),
             'planner_timeout_s': 10.0,
             'observation_timeout_s': 1.5,
             'supervisor_status_timeout_s': 1.5,
+            'slot_sensor_state_timeout_s': 1.0,
             'observation_wait_s': 2.0,
             'planning_slot_tolerance_ratio': 0.12,
             'target_arrival_tolerance_ratio': 0.05,
             'position_consistency_tolerance_m': 0.08,
+            'slot_sensor_confirmation_frames': 2,
+            # Deprecated compatibility parameter. Final arrival no longer
+            # uses visual confirmation frames.
             'arrival_confirmation_frames': 3,
             'controller_stop_timeout_s': 3.0,
             'speed_mps': 0.2,
@@ -166,6 +191,7 @@ class Room315TaskExecutionNode(Node):
             'max_unknown_retries': 3,
             'supervisor_timeout_s': 5.0,
             'effect_timeout_s': 30.0,
+            'clearance_effect_timeout_s': 60.0,
             'external_obstacles_disabled': True,
             'diagnostic_period_s': 1.0,
         }
@@ -200,6 +226,26 @@ class Room315TaskExecutionNode(Node):
             receive_s=receive_s,
         )
         self.transport.update_supervisor(payload)
+
+    def _on_sensor_feedback(
+        self,
+        side: str,
+        message: SensorFeedback,
+    ) -> None:
+        readings = [
+            {
+                'active': bool(reading.active),
+                'name': str(reading.name),
+                'shuttle': str(reading.shuttle_name),
+            }
+            for reading in message.readings
+        ]
+        self.transport.update_sensor_feedback(side, readings)
+        self.state_provider.update_slot_sensor_feedback(
+            side,
+            readings,
+            receive_s=time.monotonic(),
+        )
 
     def _on_task_goal(self, message: String) -> None:
         if not self._bool('execution_enabled'):
@@ -306,6 +352,9 @@ class Room315TaskExecutionNode(Node):
                         'supervisor_timeout_s'
                     ),
                     effect_timeout_s=self._float('effect_timeout_s'),
+                    clearance_effect_timeout_s=self._float(
+                        'clearance_effect_timeout_s'
+                    ),
                     planning_timeout_s=self._float('planner_timeout_s'),
                 ),
             )

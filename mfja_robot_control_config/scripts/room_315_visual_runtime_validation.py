@@ -32,6 +32,14 @@ class PredictionValidationError(ValueError):
     """Raised for invalid validator configuration."""
 
 
+POSITION_RECONCILIATION_CANONICAL_S_M = 'canonical_s_m'
+POSITION_RECONCILIATION_BOUNDED_S_M = 'bounded_s_m'
+POSITION_RECONCILIATION_POLICIES = frozenset({
+    POSITION_RECONCILIATION_CANONICAL_S_M,
+    POSITION_RECONCILIATION_BOUNDED_S_M,
+})
+
+
 @dataclass(frozen=True)
 class ValidationConfig:
     stale_image_timeout_s: float = 1.0
@@ -41,6 +49,7 @@ class ValidationConfig:
     position_consistency_tolerance_m: float = 0.08
     reconcile_position_consistency: bool = False
     max_position_reconciliation_error_m: float = 0.40
+    position_reconciliation_policy: str = POSITION_RECONCILIATION_CANONICAL_S_M
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -63,6 +72,12 @@ class ValidationConfig:
             raise PredictionValidationError(
                 'max_position_reconciliation_error_m must be greater than '
                 'or equal to position_consistency_tolerance_m'
+            )
+        if self.position_reconciliation_policy not in POSITION_RECONCILIATION_POLICIES:
+            raise PredictionValidationError(
+                'position_reconciliation_policy must be one of '
+                f'{sorted(POSITION_RECONCILIATION_POLICIES)}, found '
+                f'{self.position_reconciliation_policy!r}'
             )
 
 
@@ -236,20 +251,37 @@ def validate_prediction(
             consistency_error_m = abs(s_m - expected_s_m)
             if consistency_error_m > cfg.position_consistency_tolerance_m:
                 projected_ratio = s_m / length
+                canonical_s_m = (
+                    cfg.position_reconciliation_policy
+                    == POSITION_RECONCILIATION_CANONICAL_S_M
+                )
                 can_reconcile = (
                     cfg.reconcile_position_consistency
-                    and consistency_error_m
-                    <= cfg.max_position_reconciliation_error_m
                     and 0.0 <= projected_ratio <= 1.0
+                    and (
+                        canonical_s_m
+                        or consistency_error_m
+                        <= cfg.max_position_reconciliation_error_m
+                    )
                 )
                 if can_reconcile:
-                    # s_ratio is redundant. This bounded projection uses only
-                    # learned visual outputs (s_m and segment_length_m); it
-                    # never reads controller/Gazebo pose or oracle labels.
+                    # s_ratio is redundant by schema. The canonical policy
+                    # derives it from the learned physical arclength and the
+                    # learned segment length. It never reads controller,
+                    # Gazebo-pose, sensor, or oracle position fields. Raw
+                    # model output remains available on the raw topics.
                     s_ratio = projected_ratio
                     clamped.append(
                         f'{prefix}.s_ratio_consistency_projection'
                     )
+                    if (
+                        canonical_s_m
+                        and consistency_error_m
+                        > cfg.max_position_reconciliation_error_m
+                    ):
+                        clamped.append(
+                            f'{prefix}.s_ratio_large_disagreement_projected'
+                        )
                 else:
                     reasons.append(f's_m_s_ratio_inconsistent:{prefix}')
         validated.append(replace(shuttle, s_m=s_m, s_ratio=s_ratio))

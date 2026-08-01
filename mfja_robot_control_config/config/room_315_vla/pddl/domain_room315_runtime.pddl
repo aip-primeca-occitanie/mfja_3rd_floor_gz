@@ -37,6 +37,10 @@
     (route_clear_between ?from - slot ?to - slot)
     (route_blocked_by ?from - slot ?to - slot ?blocker - shuttle)
     (clearance_precedes ?blocker - shuttle ?selected - shuttle)
+    (clearance_relocated ?blocker - shuttle)
+    (clearance_destination_ready ?blocker - shuttle)
+    (normal_route ?side - rail_side)
+    (clearance_mode ?side - rail_side)
     (route_reserved_by ?from - slot ?to - slot ?s - shuttle)
     (switch_state_known ?switch - switch_device)
     (switch_exterior ?switch - switch_device)
@@ -53,6 +57,7 @@
     (front_of ?front - shuttle ?rear - shuttle)
     (behind ?rear - shuttle ?front - shuttle)
     (goal_candidate ?s - shuttle)
+    (station_only_goal)
     (target_slot_for_goal ?slot - slot)
     (target_station_for_goal ?station - station)
     (task_assigned ?s - shuttle ?station - station)
@@ -66,6 +71,9 @@
   (:functions
     (total-cost)
     (route_cost ?from - slot ?to - slot)
+    (pending_clearances ?side - rail_side)
+    (clearance_cursor ?side - rail_side)
+    (clearance_order ?blocker - shuttle)
   )
 
   (:action prepare_switches
@@ -78,6 +86,7 @@
     :precondition (and
       (validated_state)
       (connected ?side ?from ?to)
+      (normal_route ?side)
     )
     :effect (and
       (switches_ready ?side)
@@ -96,6 +105,7 @@
       (validated_state)
       (connected ?side ?from ?to)
       (switches_ready ?side)
+      (normal_route ?side)
     )
     :effect (and
       (stoppers_open ?side)
@@ -126,6 +136,8 @@
       (path_ready ?side ?from ?to)
       (switches_ready ?side)
       (stoppers_open ?side)
+      (normal_route ?side)
+      (= (pending_clearances ?side) 0)
       (route_clear_between ?from_slot ?to_slot)
       (slot_free ?to_slot)
     )
@@ -142,6 +154,95 @@
       (shuttle_at_slot ?s ?to_slot)
       (shuttle_at ?s ?to)
       (increase (total-cost) 10)
+    )
+  )
+
+  ; Enter once and keep the A3/A4 interior route held for the complete
+  ; multi-blocker clearance phase.
+  (:action begin_route_clearance
+    :parameters (
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_slot - slot
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (normal_route ?side)
+      (shuttle_on_side ?selected ?side)
+      (goal_candidate ?selected)
+      (shuttle_at_slot ?selected ?from_slot)
+      (target_slot_for_goal ?to_slot)
+      (> (pending_clearances ?side) 0)
+    )
+    :effect (and
+      (not (normal_route ?side))
+      (clearance_mode ?side)
+      (not (switches_ready ?side))
+      (not (stoppers_open ?side))
+      (increase (total-cost) 1)
+    )
+  )
+
+  ; One ordered PlanSys2-owned blocker relocation. The runtime expands this
+  ; into a supervised shuttle command and independently verified stop. It
+  ; deliberately does not restore any switch or stopper.
+  (:action relocate_blocker_to_interior
+    :parameters (
+      ?blocker - shuttle
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_slot - slot
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?blocker ?side)
+      (shuttle_on_side ?selected ?side)
+      (shuttle_at_slot ?selected ?from_slot)
+      (target_slot_for_goal ?to_slot)
+      (clearance_mode ?side)
+      (clearance_precedes ?blocker ?selected)
+      (route_blocked_by ?from_slot ?to_slot ?blocker)
+      (clearance_destination_ready ?blocker)
+      (> (pending_clearances ?side) 0)
+      (= (clearance_order ?blocker) (clearance_cursor ?side))
+    )
+    :effect (and
+      (clearance_relocated ?blocker)
+      (not (route_blocked_by ?from_slot ?to_slot ?blocker))
+      (decrease (pending_clearances ?side) 1)
+      (increase (clearance_cursor ?side) 1)
+      (increase (total-cost) 4)
+    )
+  )
+
+  ; Restore the normal exterior route exactly once, and only after every
+  ; ordered blocker relocation has completed.
+  (:action finish_route_clearance
+    :parameters (
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_slot - slot
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (clearance_mode ?side)
+      (shuttle_on_side ?selected ?side)
+      (goal_candidate ?selected)
+      (shuttle_at_slot ?selected ?from_slot)
+      (target_slot_for_goal ?to_slot)
+      (= (pending_clearances ?side) 0)
+    )
+    :effect (and
+      (not (clearance_mode ?side))
+      (normal_route ?side)
+      (switches_ready ?side)
+      (stoppers_open ?side)
+      (route_clear_between ?from_slot ?to_slot)
+      (slot_free ?to_slot)
+      (increase (total-cost) 1)
     )
   )
 
@@ -172,11 +273,36 @@
     )
     :precondition (and
       (validated_state)
+      (station_only_goal)
+      (target_station_for_goal ?station)
       (shuttle_at ?s ?station)
       (shuttle_stopped_at ?s ?station)
     )
     :effect (and
       (task_done ?s ?station)
+      (increase (total-cost) 1)
+    )
+  )
+
+  (:action finish_candidate_task
+    :parameters (
+      ?s - shuttle
+      ?station - station
+      ?slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (goal_candidate ?s)
+      (target_station_for_goal ?station)
+      (target_slot_for_goal ?slot)
+      (shuttle_at ?s ?station)
+      (shuttle_stopped_at ?s ?station)
+      (shuttle_at_slot ?s ?slot)
+    )
+    :effect (and
+      (task_done ?s ?station)
+      (transport_goal_done ?station)
+      (goal_slot_reached ?slot)
       (increase (total-cost) 1)
     )
   )

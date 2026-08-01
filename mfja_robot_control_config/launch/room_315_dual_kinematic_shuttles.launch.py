@@ -3,6 +3,19 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
+
+
+def _string_launch_parameter(name: str) -> ParameterValue:
+    """Keep scalar-looking comma-list launch arguments as ROS strings.
+
+    ROS parameter-file serialization otherwise turns a single value such as
+    ``right_start_slots:=4`` into an integer.  The kinematic node deliberately
+    declares these values as comma-separated strings, so that implicit type
+    conversion makes a one-shuttle rail fail during parameter declaration.
+    """
+
+    return ParameterValue(LaunchConfiguration(name), value_type=str)
 
 
 def generate_launch_description():
@@ -49,16 +62,20 @@ def generate_launch_description():
             {
                 'rail_side': 'right',
                 'start_slot': LaunchConfiguration('right_start_slot'),
-                'start_slots': LaunchConfiguration('right_start_slots'),
-                'start_positions': LaunchConfiguration('right_start_positions'),
+                'start_slots': _string_launch_parameter('right_start_slots'),
+                'start_positions': _string_launch_parameter(
+                    'right_start_positions'
+                ),
                 'shuttle_count': LaunchConfiguration('right_shuttle_count'),
-                'identity_selection_mode': LaunchConfiguration(
+                'identity_selection_mode': _string_launch_parameter(
                     'identity_selection_mode'
                 ),
-                'active_identities': LaunchConfiguration(
+                'active_identities': _string_launch_parameter(
                     'right_active_identities'
                 ),
-                'loaded_shuttles': LaunchConfiguration('right_loaded_shuttles'),
+                'loaded_shuttles': _string_launch_parameter(
+                    'right_loaded_shuttles'
+                ),
             },
         ],
     )
@@ -75,16 +92,20 @@ def generate_launch_description():
             {
                 'rail_side': 'left',
                 'start_slot': LaunchConfiguration('left_start_slot'),
-                'start_slots': LaunchConfiguration('left_start_slots'),
-                'start_positions': LaunchConfiguration('left_start_positions'),
+                'start_slots': _string_launch_parameter('left_start_slots'),
+                'start_positions': _string_launch_parameter(
+                    'left_start_positions'
+                ),
                 'shuttle_count': LaunchConfiguration('left_shuttle_count'),
-                'identity_selection_mode': LaunchConfiguration(
+                'identity_selection_mode': _string_launch_parameter(
                     'identity_selection_mode'
                 ),
-                'active_identities': LaunchConfiguration(
+                'active_identities': _string_launch_parameter(
                     'left_active_identities'
                 ),
-                'loaded_shuttles': LaunchConfiguration('left_loaded_shuttles'),
+                'loaded_shuttles': _string_launch_parameter(
+                    'left_loaded_shuttles'
+                ),
             },
         ],
     )

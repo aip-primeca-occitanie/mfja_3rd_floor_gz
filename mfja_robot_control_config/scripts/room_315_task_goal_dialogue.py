@@ -447,7 +447,7 @@ def question_for_issue(issue: GoalIssue) -> str:
     if field == 'payload_filter':
         return 'Which payload filter should be used: loaded, empty, or any?'
     if field == 'target_shuttle':
-        return 'Which exact Room 315 shuttle should be used, for example R1, R2, L1, or L2?'
+        return 'Which exact Room 315 shuttle should be used: R1-R4 or L1-L4?'
     if field == 'target_slot':
         return 'Which target slot should be used: 1, 2, 3, or 4?'
     if field == 'target_station':

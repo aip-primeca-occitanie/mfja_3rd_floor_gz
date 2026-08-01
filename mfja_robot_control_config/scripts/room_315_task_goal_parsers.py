@@ -574,6 +574,11 @@ def _selection_strategy_from_text(text: str, *, shuttle: bool) -> str | None:
         return 'nearest'
     if shuttle:
         return 'explicit'
+    if any(
+        fact.field == 'selection_strategy' and fact.value == 'explicit'
+        for fact in ExplicitFactExtractor().extract(text)
+    ):
+        return 'explicit'
     if re.search(r'\b(?:any\s+)?(?:shuttle|carrier)\b', text):
         return 'any'
     return None
@@ -597,7 +602,15 @@ def _shuttle_from_text(text: str) -> str | None:
         r'\b(?P<shuttle>(?:room315_)?(?:right|left)_shuttle_?[1-4]|[rl][1-4])\b',
         text,
     )
-    return match.group('shuttle') if match else None
+    if match:
+        return match.group('shuttle')
+    color_identities = {
+        str(fact.value)
+        for fact in ExplicitFactExtractor().extract(text)
+        if fact.field == 'target_shuttle'
+        and fact.provenance == 'authoritative_identity_color'
+    }
+    return next(iter(color_identities)) if len(color_identities) == 1 else None
 
 
 def _slot_from_text(text: str) -> tuple[GoalIssue | None, str | None, str | None]:

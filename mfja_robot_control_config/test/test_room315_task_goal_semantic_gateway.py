@@ -551,3 +551,70 @@ def test_station_slot_mismatch_fails_closed():
     result = builder.Room315DomainValidator().validate(draft, require_confirmation=True)
     assert result.status == 'error'
     assert result.errors[0].code == 'station_slot_mismatch'
+
+
+def test_authoritative_yellow_color_resolves_to_r4_without_payload_question():
+    builder = _load_builder()
+    pipeline, _backend = _pipeline(_envelope(
+        goal_type='transport',
+        selection_strategy='any',
+        payload_filter='loaded',
+        side='left',
+        target_kind='slot',
+        target_slot='3',
+        target_shuttle='L2',
+    ))
+    manager = builder.TaskGoalDialogueManager(parser=pipeline)
+
+    first = manager.handle(
+        'move yellow shuttle to slot 3 in the right rail',
+        timestamp=1.0,
+    )
+
+    assert first.status == 'confirmation_required', first.to_dict()
+    assert first.draft.target_shuttle == 'R4'
+    assert first.draft.side == 'right'
+    assert first.draft.selection_strategy == 'explicit'
+    assert first.draft.payload_filter is None
+    assert 'room315_right_shuttle_4' in first.confirmation_prompt
+    assert not any(
+        'payload filter' in question.casefold()
+        for question in first.questions
+    )
+
+    final = manager.handle('yes', state=first.state, timestamp=2.0)
+    assert final.ok, final.to_dict()
+    assert final.task_goal.constraints['target_shuttle'] == 'room315_right_shuttle_4'
+    assert final.task_goal.constraints['side'] == 'right'
+    assert final.task_goal.constraints['payload_filter'] == 'any'
+
+
+def test_unconfigured_color_asks_for_identity_not_payload_state():
+    builder = _load_builder()
+    pipeline, _backend = _pipeline(_envelope(
+        goal_type='transport',
+        selection_strategy='any',
+        payload_filter='loaded',
+        side='right',
+        target_kind='slot',
+        target_slot='3',
+        target_shuttle='R4',
+    ))
+    manager = builder.TaskGoalDialogueManager(parser=pipeline)
+
+    result = manager.handle(
+        'move purple shuttle to slot 3 in the right rail',
+        timestamp=1.0,
+    )
+
+    assert result.status == 'clarification_required', result.to_dict()
+    assert result.draft.selection_strategy == 'explicit'
+    assert result.draft.target_shuttle is None
+    assert [issue.code for issue in result.clarifications] == ['missing_shuttle']
+    assert result.questions == (
+        'Which exact Room 315 shuttle should be used: R1-R4 or L1-L4?',
+    )
+    assert not any(
+        'payload filter' in question.casefold()
+        for question in result.questions
+    )

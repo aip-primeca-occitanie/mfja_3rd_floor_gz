@@ -23,6 +23,9 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'set_stoppers',
     'move_shuttle',
     'move_shuttle_to_slot',
+    'begin_route_clearance',
+    'relocate_blocker_to_interior',
+    'finish_route_clearance',
     'stop_shuttle',
     'finish_task',
     'finish_candidate_task',
@@ -393,14 +396,22 @@ def _validate_primitive_command(
     if 'action_vector' in command:
         issues.append(f'primitive command at index {index} contains removed action_vector')
     action = str(command.get('action') or '').strip()
-    if action not in {'switches', 'stoppers', 'shuttle', 'DONE', 'stop_all', 'emergency_stop'}:
+    if action not in {
+        'switches',
+        'stoppers',
+        'shuttle',
+        'clearance_relocation',
+        'DONE',
+        'stop_all',
+        'emergency_stop',
+    }:
         issues.append(f'primitive command at index {index} has unknown action {action!r}')
         return issues
-    if action in {'switches', 'stoppers', 'shuttle'}:
+    if action in {'switches', 'stoppers', 'shuttle', 'clearance_relocation'}:
         side = str(command.get('side') or '').strip().casefold()
         if side not in SIDE_IDS:
             issues.append(f'primitive command at index {index} has invalid side {side!r}')
-    if action == 'shuttle':
+    if action in {'shuttle', 'clearance_relocation'}:
         command_name = str(command.get('command') or '').strip().upper()
         if command_name not in {'ON', 'OFF'}:
             issues.append(f'shuttle command at index {index} has invalid command {command_name!r}')

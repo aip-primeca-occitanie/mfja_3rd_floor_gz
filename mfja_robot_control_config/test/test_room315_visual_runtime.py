@@ -387,6 +387,7 @@ def test_position_consistency_projection_still_fails_above_bound():
         config=ValidationConfig(
             reconcile_position_consistency=True,
             max_position_reconciliation_error_m=0.4,
+            position_reconciliation_policy='bounded_s_m',
         ),
     )
 
@@ -395,6 +396,62 @@ def test_position_consistency_projection_still_fails_above_bound():
         's_m_s_ratio_inconsistent' in reason
         for reason in result.reasons
     )
+
+
+def test_canonical_s_m_reconciles_live_r1_disagreement_without_oracle_position():
+    prediction = _prediction(
+        identities=('R1',),
+        block='A12E',
+        s_m=1.025031328201294,
+        s_ratio=0.2509480118751526,
+        segment_length_m=2.4118762016296387,
+    )
+    result = validate_prediction(
+        prediction,
+        _ready_snapshot(present=('R1',)),
+        now_s=10.0,
+        config=ValidationConfig(
+            reconcile_position_consistency=True,
+            max_position_reconciliation_error_m=0.4,
+            position_reconciliation_policy='canonical_s_m',
+        ),
+    )
+
+    assert result.accepted
+    assert result.prediction is not None
+    assert prediction.shuttles[0].s_ratio == pytest.approx(0.2509480118751526)
+    assert result.prediction.shuttles[0].s_ratio == pytest.approx(
+        1.025031328201294 / 2.4118762016296387
+    )
+    assert result.prediction.shuttles[0].s_m == pytest.approx(
+        1.025031328201294
+    )
+    assert 'R1.s_ratio_consistency_projection' in result.clamped_fields
+    assert 'R1.s_ratio_large_disagreement_projected' in result.clamped_fields
+    assert not any('s_m_s_ratio_inconsistent' in reason for reason in result.reasons)
+
+
+def test_canonical_s_m_still_rejects_physical_arclength_outside_segment():
+    result = validate_prediction(
+        _prediction(s_m=1.2, s_ratio=0.2, segment_length_m=1.0),
+        _ready_snapshot(),
+        now_s=10.0,
+        config=ValidationConfig(
+            reconcile_position_consistency=True,
+            position_reconciliation_policy='canonical_s_m',
+        ),
+    )
+
+    assert not result.accepted
+    assert any('s_m_exceeds_segment_length' in reason for reason in result.reasons)
+
+
+def test_unknown_position_reconciliation_policy_fails_configuration():
+    with pytest.raises(
+        ValueError,
+        match='position_reconciliation_policy',
+    ):
+        ValidationConfig(position_reconciliation_policy='oracle')
 
 
 def test_stale_and_skewed_inputs_fail_closed():

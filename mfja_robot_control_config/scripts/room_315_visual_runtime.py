@@ -65,15 +65,19 @@ class ArtifactHashes:
     vectorizer: str
     training_config: str
     run_metadata: str
+    runtime_configuration: str = ''
 
     def as_filenames(self) -> dict[str, str]:
-        return {
+        result = {
             'best.pt': self.checkpoint,
             'target_stats.json': self.target_stats,
             'visual_label_vectorizer.json': self.vectorizer,
             'training_config.json': self.training_config,
             'run_metadata.json': self.run_metadata,
         }
+        if self.runtime_configuration:
+            result['runtime_configuration.json'] = self.runtime_configuration
+        return result
 
 
 @dataclass(frozen=True)
@@ -86,6 +90,8 @@ class VerifiedArtifacts:
     vectorizer_json: dict[str, Any]
     training_config: dict[str, Any]
     run_metadata: dict[str, Any]
+    runtime_configuration: dict[str, Any]
+    expected_checkpoint_epoch: int
 
 
 @dataclass(frozen=True)
@@ -152,6 +158,11 @@ def verify_artifacts(
     vectorizer_json = _load_json(paths.path_for('visual_label_vectorizer.json'))
     training_config = _load_json(paths.path_for('training_config.json'))
     run_metadata = _load_json(paths.path_for('run_metadata.json'))
+    runtime_configuration: dict[str, Any] = {}
+    if expected_hashes.runtime_configuration:
+        runtime_configuration = _load_json(
+            paths.path_for('runtime_configuration.json')
+        )
 
     vectorizer = VisualStateLabelVectorizer.from_json(vectorizer_json)
     if vectorizer_json.get('schema_version') != MODEL_SCHEMA:
@@ -195,6 +206,13 @@ def verify_artifacts(
     if np.any(std <= 0.0):
         raise VisualRuntimeError('all target standard deviations must be positive')
 
+    expected_checkpoint_epoch = 14
+    if runtime_configuration:
+        expected_checkpoint_epoch = _verify_runtime_configuration(
+            runtime_configuration,
+            actual_hashes=actual,
+        )
+
     return VerifiedArtifacts(
         paths=paths,
         hashes=actual,
@@ -204,6 +222,8 @@ def verify_artifacts(
         vectorizer_json=vectorizer_json,
         training_config=training_config,
         run_metadata=run_metadata,
+        runtime_configuration=runtime_configuration,
+        expected_checkpoint_epoch=expected_checkpoint_epoch,
     )
 
 
@@ -439,10 +459,23 @@ class Room315VisualModelRuntime:
             lora_rank=int(config.get('visual_lora_rank', 4)),
         )
         checkpoint = _torch_load(torch, self.artifacts.paths.checkpoint)
-        if int(checkpoint.get('epoch', -1)) != 14:
+        if int(checkpoint.get('epoch', -1)) != self.artifacts.expected_checkpoint_epoch:
             raise VisualRuntimeError(
-                f'approved checkpoint epoch must be 14, got {checkpoint.get("epoch")!r}'
+                'checkpoint epoch does not match the signed runtime contract: '
+                f'expected {self.artifacts.expected_checkpoint_epoch}, '
+                f'got {checkpoint.get("epoch")!r}'
             )
+        if self.artifacts.runtime_configuration:
+            if checkpoint.get('label_vectorizer') != self.artifacts.vectorizer_json:
+                raise VisualRuntimeError(
+                    'checkpoint-embedded vectorizer does not match the signed sidecar'
+                )
+            if checkpoint.get('target_stats') != _load_json(
+                self.artifacts.paths.path_for('target_stats.json')
+            ):
+                raise VisualRuntimeError(
+                    'checkpoint-embedded target statistics do not match the signed sidecar'
+                )
         state = checkpoint.get('model_state_dict')
         if not isinstance(state, dict):
             raise VisualRuntimeError('checkpoint does not contain model_state_dict')
@@ -450,6 +483,12 @@ class Room315VisualModelRuntime:
             model.load_state_dict(state, strict=True)
         except Exception as exc:
             raise VisualRuntimeError('checkpoint strict model loading failed') from exc
+        first_convolution = getattr(model.backbone, 'conv1', None)
+        if first_convolution is None or int(first_convolution.in_channels) != 3:
+            raise VisualRuntimeError('each paired-image branch must accept exactly RGB')
+        final_head = model.head[-1]
+        if int(getattr(final_head, 'out_features', -1)) != OUTPUT_DIM:
+            raise VisualRuntimeError('strictly loaded prediction head is not dimension 200')
         for name, parameter in model.named_parameters():
             if not bool(torch.isfinite(parameter.detach()).all().item()):
                 raise VisualRuntimeError(f'model parameter is non-finite: {name}')
@@ -515,6 +554,46 @@ def _finite_vector(value: Any, name: str) -> np.ndarray:
     if result.ndim != 1 or not np.all(np.isfinite(result)):
         raise VisualRuntimeError(f'{name} must be a finite one-dimensional vector')
     return result
+
+
+def _verify_runtime_configuration(
+    configuration: dict[str, Any],
+    *,
+    actual_hashes: dict[str, str],
+) -> int:
+    if configuration.get('schema_version') != 'room315.visual_runtime_candidate.v1':
+        raise VisualRuntimeError('runtime configuration schema is unsupported')
+    if configuration.get('deployment_state') != 'candidate':
+        raise VisualRuntimeError('runtime configuration must remain a candidate')
+    contract = configuration.get('model_contract') or {}
+    if int(contract.get('output_dimension', -1)) != OUTPUT_DIM:
+        raise VisualRuntimeError('runtime contract output dimension is not 200')
+    if tuple(contract.get('identity_order') or ()) != FIXED_IDENTITY_ORDER:
+        raise VisualRuntimeError('runtime contract identity order is incompatible')
+    if tuple(contract.get('paired_rgb_input_shape') or ()) != ('B', 6, 224, 224):
+        raise VisualRuntimeError('runtime contract input must be [B,6,224,224]')
+    if contract.get('vectorizer_schema') != MODEL_SCHEMA:
+        raise VisualRuntimeError('runtime contract vectorizer schema is incompatible')
+    if contract.get('checkpoint_loading') != 'strict':
+        raise VisualRuntimeError('runtime contract must require strict checkpoint loading')
+
+    configured_hashes = configuration.get('artifact_sha256') or {}
+    for filename, actual_digest in actual_hashes.items():
+        if filename == 'runtime_configuration.json':
+            continue
+        if configured_hashes.get(filename) != actual_digest:
+            raise VisualRuntimeError(
+                f'runtime configuration hash mismatch for {filename}'
+            )
+    try:
+        epoch = int(configuration['checkpoint']['epoch'])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise VisualRuntimeError(
+            'runtime configuration checkpoint epoch is missing or invalid'
+        ) from exc
+    if epoch < 0:
+        raise VisualRuntimeError('runtime configuration checkpoint epoch is negative')
+    return epoch
 
 
 def _torch_load(torch_module: Any, path: Path) -> dict[str, Any]:

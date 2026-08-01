@@ -447,13 +447,72 @@ def _existing_image_fingerprints(dataset_root: Path) -> set[str]:
     return fingerprints
 
 
-def _encode_images(node: VisualStateCaptureNode) -> dict[str, bytes]:
+def _apply_render_variation(
+    frame: np.ndarray,
+    variation: dict[str, Any] | None,
+    *,
+    camera: str,
+) -> np.ndarray:
+    """Apply a small deterministic camera-domain variation for V3 only."""
+    if not variation:
+        return frame
+    bucket = str(variation.get('bucket') or 'nominal')
+    seed = int(variation.get('deterministic_seed', 0))
+    result = frame
+    if bucket == 'nominal':
+        pass
+    elif bucket == 'light_low':
+        result = cv2.convertScaleAbs(frame, alpha=0.94, beta=0)
+    elif bucket == 'light_high':
+        result = cv2.convertScaleAbs(frame, alpha=1.06, beta=0)
+    elif bucket == 'exposure_low':
+        result = cv2.convertScaleAbs(frame, alpha=1.0, beta=-7)
+    elif bucket == 'exposure_high':
+        result = cv2.convertScaleAbs(frame, alpha=1.0, beta=7)
+    elif bucket == 'shadow_soft':
+        result = cv2.convertScaleAbs(frame, alpha=0.97, beta=-3)
+    elif bucket == 'noise_low':
+        pass
+    elif bucket == 'antialias_variant':
+        height, width = frame.shape[:2]
+        reduced = cv2.resize(
+            frame,
+            (max(1, width - 2), max(1, height - 2)),
+            interpolation=cv2.INTER_AREA,
+        )
+        result = cv2.resize(
+            reduced,
+            (width, height),
+            interpolation=cv2.INTER_LINEAR,
+        )
+    else:
+        raise VisualCaptureError(f'unsupported render variation bucket: {bucket}')
+    # Every V3 capture receives a tiny deterministic sensor-noise realization.
+    # The seed is metadata, never part of the grouping signature, so random
+    # pixels cannot manufacture family isolation.
+    camera_seed = seed + (0 if camera == 'left_rail_rgb' else 1)
+    rng = np.random.default_rng(camera_seed)
+    sigma = 1.25 if bucket == 'noise_low' else 0.55
+    noise = rng.normal(0.0, sigma, size=result.shape)
+    return np.clip(result.astype(np.float32) + noise, 0, 255).astype(np.uint8)
+
+
+def _encode_images(
+    node: VisualStateCaptureNode,
+    scenario: dict[str, Any] | None = None,
+) -> dict[str, bytes]:
     encoded = {}
+    variation = (
+        scenario.get('render_variation')
+        if isinstance(scenario, dict)
+        else None
+    )
     for camera in REQUIRED_CAMERAS:
         frame = node.bridge.imgmsg_to_cv2(
             node.snapshot.images[camera],
             desired_encoding='bgr8',
         )
+        frame = _apply_render_variation(frame, variation, camera=camera)
         success, payload = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
         if not success:
             raise VisualCaptureError(f'could not JPEG-encode {camera}')
@@ -692,7 +751,7 @@ def capture_scenario(
             raise VisualCaptureError(
                 f'capture timed out after {timeout_seconds:.1f}s: {last_error}'
             )
-        images = _encode_images(node)
+        images = _encode_images(node, scenario)
         skew = max(node.snapshot.image_stamps.values()) - min(
             node.snapshot.image_stamps.values()
         )

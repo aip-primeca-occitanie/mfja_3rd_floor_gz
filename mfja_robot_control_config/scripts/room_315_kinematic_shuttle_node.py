@@ -216,6 +216,10 @@ class ManagedShuttle:
     payload_delete_warning_logged: bool = False
     payload_set_pose_warning_logged: bool = False
     payload_set_pose_timeout_warning_logged: bool = False
+    motion_target_slot: str = ''
+    motion_target_segment: str = ''
+    motion_target_s: float | None = None
+    reached_target_slot: str = ''
 
 
 @dataclass
@@ -3683,10 +3687,10 @@ class Room315KinematicShuttleNode(Node):
 
     def _apply_shuttle_control_updates(
         self,
-        updates: Dict[str, tuple[str, float | None]],
+        updates: Dict[str, tuple[str, float | None, str]],
     ) -> None:
         applied_updates: Dict[str, str] = {}
-        for entity_name, (action, speed) in updates.items():
+        for entity_name, (action, speed, target_slot) in updates.items():
             shuttle = self._find_shuttle(entity_name)
             if shuttle is None:
                 self.get_logger().warn(
@@ -3694,10 +3698,17 @@ class Room315KinematicShuttleNode(Node):
                 )
                 continue
             try:
-                self._apply_shuttle_action(shuttle, action, speed)
-                applied_updates[entity_name] = (
-                    action if speed is None else f'{action}@{speed:.3f}m/s'
+                self._apply_shuttle_action(
+                    shuttle,
+                    action,
+                    speed,
+                    target_slot=target_slot,
                 )
+                applied_updates[entity_name] = action
+                if speed is not None:
+                    applied_updates[entity_name] += f'@{speed:.3f}m/s'
+                if target_slot:
+                    applied_updates[entity_name] += f'->slot{target_slot}'
             except ValueError as error:
                 self.get_logger().error(str(error))
 
@@ -3710,7 +3721,7 @@ class Room315KinematicShuttleNode(Node):
     def _parse_shuttle_control_typed_command(
         self,
         command: RailShuttleCommand,
-    ) -> Dict[str, tuple[str, float | None]]:
+    ) -> Dict[str, tuple[str, float | None, str]]:
         raw_selector = command.name.strip()
         raw_action = command.command.strip()
         if not raw_action:
@@ -3719,7 +3730,15 @@ class Room315KinematicShuttleNode(Node):
             )
         action = self._normalize_shuttle_action(raw_action)
         speed = float(command.speed) if command.speed > 0.0 else None
-        update = (action, speed)
+        raw_target_slot = str(command.target_slot or '').strip()
+        target_slot = (
+            self._normalize_start_slot(raw_target_slot)
+            if raw_target_slot
+            else ''
+        )
+        if target_slot and action != 'ENABLE':
+            raise ValueError('target_slot is valid only with an ON command.')
+        update = (action, speed, target_slot)
         if raw_selector.upper() == 'ALL':
             return {shuttle.entity_name: update for shuttle in self.shuttles}
         if not raw_selector:
@@ -3755,9 +3774,16 @@ class Room315KinematicShuttleNode(Node):
         shuttle: ManagedShuttle,
         action: str,
         speed: float | None = None,
+        *,
+        target_slot: str = '',
     ) -> None:
         if action == 'ENABLE':
-            self._set_shuttle_enabled(shuttle, True, speed)
+            self._set_shuttle_enabled(
+                shuttle,
+                True,
+                speed,
+                target_slot=target_slot,
+            )
             return
         if action == 'DISABLE':
             self._set_shuttle_enabled(shuttle, False)
@@ -3775,15 +3801,36 @@ class Room315KinematicShuttleNode(Node):
         shuttle: ManagedShuttle,
         enabled: bool,
         speed: float | None = None,
+        *,
+        target_slot: str = '',
     ) -> None:
+        target_device = None
+        if enabled and target_slot:
+            target_device = self.rail_devices.slots.get(str(target_slot))
+            if target_device is None:
+                raise ValueError(
+                    f'Unknown target_slot {target_slot!r}; use slot 1, 2, 3, or 4.'
+                )
         shuttle.enabled = enabled
         shuttle.blocked_by = None
         shuttle.collision_distance_m = None
         if not enabled:
+            shuttle.motion_target_slot = ''
+            shuttle.motion_target_segment = ''
+            shuttle.motion_target_s = None
             shuttle.core.state.mode = WAITING
             shuttle.stopped_by = 'NOT_DEPLOYED' if not shuttle.deployed else 'DISABLED'
             shuttle.stopper_distance_m = 0.0
             return
+
+        shuttle.reached_target_slot = ''
+        shuttle.motion_target_slot = ''
+        shuttle.motion_target_segment = ''
+        shuttle.motion_target_s = None
+        if target_device is not None:
+            shuttle.motion_target_slot = str(target_slot)
+            shuttle.motion_target_segment = str(target_device.segment)
+            shuttle.motion_target_s = float(target_device.s)
 
         if not shuttle.deployed:
             shuttle.deployed = True
@@ -3832,6 +3879,10 @@ class Room315KinematicShuttleNode(Node):
         shuttle.start_segment = initial_segment
         shuttle.start_s = initial_s
         shuttle.sensor_markers_armed = False
+        shuttle.motion_target_slot = ''
+        shuttle.motion_target_segment = ''
+        shuttle.motion_target_s = None
+        shuttle.reached_target_slot = ''
         shuttle.previous_sensor_segment = initial_segment
         shuttle.previous_sensor_s = initial_s
         shuttle.core.state = ShuttleState(
@@ -4483,8 +4534,10 @@ class Room315KinematicShuttleNode(Node):
         shuttle.stopped_by = None
         shuttle.stopper_distance_m = None
         active_stop = self._active_stopper_ahead(shuttle)
+        active_target = self._active_motion_target_ahead(shuttle)
         effective_dt = dt
         stop_reached = False
+        target_reached = False
         if active_stop is not None and shuttle.core.state.speed > 0.0:
             stopper_name, stop_point, target_s, distance_m = active_stop
             if distance_m <= 1e-6:
@@ -4501,6 +4554,14 @@ class Room315KinematicShuttleNode(Node):
                 effective_dt = time_to_stop
                 stop_reached = True
 
+        if active_target is not None and shuttle.core.state.speed > 0.0:
+            target_slot, target_segment, target_s, distance_m = active_target
+            time_to_target = distance_m / shuttle.core.state.speed
+            if time_to_target <= effective_dt:
+                effective_dt = time_to_target
+                stop_reached = False
+                target_reached = True
+
         pose = self._step_with_collision_avoidance(
             shuttle=shuttle,
             dt=effective_dt,
@@ -4508,6 +4569,17 @@ class Room315KinematicShuttleNode(Node):
         )
         if shuttle.blocked_by is not None or pose.mode == FALLING:
             return pose
+
+        if target_reached and active_target is not None:
+            target_slot, target_segment, target_s, _distance_m = active_target
+            if shuttle.core.state.current_segment == target_segment:
+                shuttle.core.state.s = target_s
+            shuttle.core.state.mode = WAITING
+            shuttle.enabled = False
+            shuttle.reached_target_slot = target_slot
+            shuttle.stopped_by = f'TARGET_SLOT_{target_slot}'
+            shuttle.stopper_distance_m = 0.0
+            return shuttle.core.pose()
 
         if stop_reached and active_stop is not None:
             stopper_name, stop_point, target_s, _distance_m = active_stop
@@ -4521,6 +4593,35 @@ class Room315KinematicShuttleNode(Node):
         shuttle.stopped_by = None
         shuttle.stopper_distance_m = None
         return pose
+
+    @staticmethod
+    def _active_motion_target_ahead(
+        shuttle: ManagedShuttle,
+    ) -> tuple[str, str, float, float] | None:
+        """Return the exact commanded slot setpoint when it is ahead.
+
+        This is low-level trajectory control using the controller's internal
+        state. It does not publish or substitute a visual localization fact.
+        """
+
+        if (
+            not shuttle.motion_target_slot
+            or not shuttle.motion_target_segment
+            or shuttle.motion_target_s is None
+        ):
+            return None
+        state = shuttle.core.state
+        if state.current_segment != shuttle.motion_target_segment:
+            return None
+        distance_m = float(shuttle.motion_target_s) - float(state.s)
+        if distance_m < -1e-9:
+            return None
+        return (
+            shuttle.motion_target_slot,
+            shuttle.motion_target_segment,
+            float(shuttle.motion_target_s),
+            max(distance_m, 0.0),
+        )
 
     def _active_stopper_ahead(
         self,
@@ -4756,11 +4857,20 @@ class Room315KinematicShuttleNode(Node):
             active_point = None
             fallback_point = sensor_config.points[0]
             for point in sensor_config.points:
-                active_shuttle = self._shuttle_on_sensor_for_marker(
+                # Sensor feedback is continuous binary occupancy. Marker
+                # arming exists only to suppress startup visualization and
+                # must never suppress the physical sensor message itself.
+                active_shuttle = self._shuttle_on_sensor(
                     point.segment,
                     point.sensor_s,
                     point.radius_m,
                 )
+                if active_shuttle is None:
+                    active_shuttle = self._shuttle_crossed_sensor_since_last_tick(
+                        point.segment,
+                        point.sensor_s,
+                        point.radius_m,
+                    )
                 if active_shuttle is not None:
                     active_point = point
                     break
@@ -4838,6 +4948,7 @@ class Room315KinematicShuttleNode(Node):
                     'speed': shuttle.core.state.speed,
                     'start_slot': shuttle.start_slot,
                     'start_snap_distance_m': shuttle.start_snap_distance_m,
+                    'reached_target_slot': shuttle.reached_target_slot,
                 }
             )
             self.state_publisher.publish(self._make_shuttle_state_message(pose_payload))
@@ -4857,6 +4968,7 @@ class Room315KinematicShuttleNode(Node):
                 'speed': shuttle.core.state.speed,
                 'start_slot': shuttle.start_slot,
                 'start_snap_distance_m': shuttle.start_snap_distance_m,
+                'reached_target_slot': shuttle.reached_target_slot,
                 'x': fallback_pose.x,
                 'y': fallback_pose.y,
                 'yaw': fallback_pose.yaw,
@@ -4876,6 +4988,9 @@ class Room315KinematicShuttleNode(Node):
         message.z = float(payload.get('z') or 0.0)
         message.yaw = float(payload.get('yaw') or 0.0)
         message.speed = float(payload.get('speed') or 0.0)
+        message.reached_target_slot = str(
+            payload.get('reached_target_slot') or ''
+        )
         return message
 
 

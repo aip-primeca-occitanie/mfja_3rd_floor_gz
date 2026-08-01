@@ -1442,6 +1442,7 @@ class Room315VlaSupervisor(Node):
             'z': round(float(msg.z), 4),
             'yaw': round(float(msg.yaw), 4),
             'speed': round(float(msg.speed), 4),
+            'reached_target_slot': str(msg.reached_target_slot or ''),
         }
 
     def _on_payload_state(self, side: str, msg: String) -> None:
@@ -1992,6 +1993,7 @@ class Room315VlaSupervisor(Node):
             shuttle_command,
             start_slot=str(command.get('start_slot', '')),
             speed=float(command.get('speed', self._default_speed())),
+            target_slot=_slot_number(command.get('target_slot') or ''),
         )
         self._set_result(f'shuttle command sent on {side}')
 
@@ -2279,6 +2281,7 @@ class Room315VlaSupervisor(Node):
         command: str,
         *,
         start_slot: str = '',
+        target_slot: str = '',
         speed: float | None = None,
         task_id: str = '',
     ) -> None:
@@ -2288,11 +2291,13 @@ class Room315VlaSupervisor(Node):
         msg.command = command.upper()
         msg.start_slot = start_slot
         msg.speed = float(self._default_speed() if speed is None else speed)
+        msg.target_slot = str(target_slot)
         self.shuttle_command_pubs[side].publish(msg)
         payload = {
             'shuttle': msg.name,
             'command': msg.command,
             'start_slot': msg.start_slot,
+            'target_slot': msg.target_slot,
             'speed': round(float(msg.speed), 4),
         }
         self._record_primitive_command(task_id, 'shuttle', side, payload)

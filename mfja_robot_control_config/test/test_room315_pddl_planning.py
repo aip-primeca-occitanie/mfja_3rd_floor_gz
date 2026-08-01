@@ -20,6 +20,8 @@ EXPECTED_ACTIONS = {
     'finish_task',
 }
 
+RUNTIME_DOMAIN_PATH = PDDL_DIR / 'domain_room315_runtime.pddl'
+
 
 def _without_comments(text: str) -> str:
     return '\n'.join(line.split(';', 1)[0] for line in text.splitlines())
@@ -75,3 +77,19 @@ def test_room315_pddl_finish_requires_stopped_shuttle():
 
 def test_room315_static_pddl_problems_are_not_committed():
     assert sorted(PDDL_DIR.glob('problem_' + '*.pddl')) == []
+
+
+def test_runtime_slot_goal_cannot_finish_before_exact_slot_is_reached():
+    text = _without_comments(RUNTIME_DOMAIN_PATH.read_text(encoding='utf-8').casefold())
+
+    assert _balanced_parentheses(text)
+    finish_body = text.split('(:action finish_task', 1)[1].split(
+        '(:action finish_candidate_task', 1
+    )[0]
+    assert '(station_only_goal)' in finish_body
+    assert '(target_station_for_goal ?station)' in finish_body
+
+    slot_finish_body = text.split('(:action finish_candidate_task', 1)[1]
+    assert '(target_slot_for_goal ?slot)' in slot_finish_body
+    assert '(shuttle_at_slot ?s ?slot)' in slot_finish_body
+    assert '(shuttle_stopped_at ?s ?station)' in slot_finish_body

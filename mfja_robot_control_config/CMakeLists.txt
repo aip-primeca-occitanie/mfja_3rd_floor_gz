@@ -15,6 +15,7 @@ install(
     config/gazebo_params.yaml
     config/mfja_default.gui.config
     config/mfja_light.gui.config
+    config/room315_runtime_safe.gui.config
     config/robots.yaml
     config/robots_room_315_only.yaml
   DESTINATION share/${PROJECT_NAME}/config
@@ -90,6 +91,10 @@ install(
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
     scripts/room_315_presence_provider.py
+    scripts/room_315_build_runtime_candidate.py
+    scripts/room_315_runtime_acceptance_readiness.py
+    scripts/room_315_runtime_acceptance_recorder.py
+    scripts/room_315_runtime_acceptance_report.py
     scripts/room_315_task_goal_builder.py
     scripts/room_315_task_goal_benchmark.py
     scripts/room_315_task_goal_cli.py
@@ -115,6 +120,8 @@ install(
     scripts/room_315_arbitrary_subset_visual_v2.py
     scripts/room_315_arbitrary_subset_capture_v2.py
     scripts/room_315_grouped_visual_splits.py
+    scripts/room_315_experiment_a_v3r1_package.py
+    scripts/room_315_experiment_a_v3r1_corrected_package.py
     scripts/room_315_kairos_visual_training_package.py
     scripts/room_315_visual_observed_state_provider.py
     scripts/room_315_visual_error_analysis.py
@@ -134,12 +141,51 @@ install(
     scripts/room_315_visual_smoke_report.py
     scripts/room_315_visual_state_inference_node.py
     scripts/room_315_visual_state_smoke.py
+    scripts/room_315_visual_v3_audit.py
+    scripts/room_315_visual_v3_capture.py
+    scripts/room_315_visual_v3_common.py
+    scripts/room_315_visual_v3_generator.py
+    scripts/room_315_visual_v3_pipeline.py
+    scripts/room_315_visual_v3_quota_planner.py
+    scripts/room_315_visual_v3_splitter.py
+    scripts/room_315_visual_v3r1_audit.py
+    scripts/room_315_visual_v3r1_capture.py
+    scripts/room_315_visual_v3r1_common.py
+    scripts/room_315_visual_v3r1_generator.py
+    scripts/room_315_visual_v3r1_pipeline.py
+    scripts/room_315_visual_v3r1_quota_planner.py
+    scripts/room_315_visual_v3r1_reuse.py
+    scripts/room_315_visual_v3r1_splitter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
 
+  ament_add_pytest_test(
+    test_room315_runtime_candidate
+    test/test_room315_runtime_candidate.py
+  )
+
+  ament_add_pytest_test(
+    test_room315_runtime_acceptance
+    test/test_room315_runtime_acceptance.py
+    TIMEOUT 60
+  )
+
+  ament_add_pytest_test(
+    test_room315_experiment_a_v3r1
+    test/test_room315_experiment_a_v3r1.py
+  )
+
+  ament_add_pytest_test(
+    test_room315_visual_v3r1_dataset
+    test/test_room315_visual_v3r1_dataset.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_v3_dataset
+    test/test_room315_visual_v3_dataset.py
+  )
   ament_add_pytest_test(
     test_robot_joint_command
     test/test_robot_joint_command.py

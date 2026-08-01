@@ -40,6 +40,9 @@ SYMBOLIC_ACTION_PRIMITIVE_MAP = {
     'set_stoppers': 'SET_STOPPERS',
     'move_shuttle': 'SHUTTLE_ON',
     'move_shuttle_to_slot': 'SHUTTLE_ON',
+    'begin_route_clearance': 'SET_SWITCHES',
+    'relocate_blocker_to_interior': 'SHUTTLE_ON',
+    'finish_route_clearance': 'SET_SWITCHES',
     'stop_shuttle': 'STOP_NOW',
     'finish_task': 'DONE',
     'finish_candidate_task': 'DONE',
@@ -142,6 +145,12 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
         command, event_action = _translate_set_stoppers(parsed)
     elif parsed.name in {'move_shuttle', 'move_shuttle_to_slot'}:
         command, event_action = _translate_move_shuttle(parsed)
+    elif parsed.name == 'begin_route_clearance':
+        command, event_action = _translate_clearance_mode(parsed, begin=True)
+    elif parsed.name == 'relocate_blocker_to_interior':
+        command, event_action = _translate_interior_clearance(parsed)
+    elif parsed.name == 'finish_route_clearance':
+        command, event_action = _translate_clearance_mode(parsed, begin=False)
     elif parsed.name == 'stop_shuttle':
         command, event_action = _translate_stop_shuttle(parsed)
     elif parsed.name in {'finish_task', 'finish_candidate_task'}:
@@ -279,6 +288,83 @@ def _translate_move_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[st
         reason='shuttle_start',
     )
     event_action.update(_multi_shuttle_fields(side=side, shuttle=shuttle))
+    return command, event_action
+
+
+def _translate_interior_clearance(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Translate the symbolic relocation into an executive-owned safe macro."""
+
+    side, blocker = _side_and_shuttle_from_args(step.args)
+    selected = next(
+        (
+            value
+            for value in step.args
+            if value != blocker
+            and normalize_shuttle_ref(value, side=side) is not None
+        ),
+        '',
+    )
+    speed = _float_kwarg(step.kwargs, 'speed', 'speed_mps', default=0.3)
+    command = {
+        'action': 'clearance_relocation',
+        'side': side,
+        'shuttle': blocker,
+        'selected_shuttle': selected,
+        'command': 'ON',
+        'speed': speed,
+        'deterministic_macro': 'supervised_a3_interior_visual_stop',
+    }
+    event_action = _blank_event_action(
+        primitive='SHUTTLE_ON',
+        side=side,
+        speed_mps=speed,
+        wait_condition='accepted_visual_interior_pose_then_controller_stop',
+        target_id=f'{side}_interior_clearance',
+        reason='route_blocker_relocation',
+    )
+    event_action.update(_multi_shuttle_fields(side=side, shuttle=blocker))
+    return command, event_action
+
+
+def _translate_clearance_mode(
+    step: PddlPlanStep,
+    *,
+    begin: bool,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Translate PDDL clearance phase boundaries for executive expansion."""
+
+    side = _side_from_args(step.args)
+    command = {
+        'action': 'switches',
+        'side': side,
+        'switches': (
+            {
+                'A1': 'EXTERIOR',
+                'A2': 'EXTERIOR',
+                'A3': 'INTERIOR',
+                'A4': 'INTERIOR',
+            }
+            if begin
+            else {'ALL': 'EXTERIOR'}
+        ),
+        'deterministic_macro': (
+            'hold_interior_route_for_all_blockers'
+            if begin
+            else 'restore_normal_route_once'
+        ),
+    }
+    event_action = _blank_event_action(
+        primitive='SET_SWITCHES',
+        side=side,
+        wait_condition='switch_state_match',
+        target_id='ALL_SWITCHES',
+        reason='switch_update',
+    )
+    event_action['coordination_mode'] = (
+        'route_clearance_begin' if begin else 'route_clearance_finish'
+    )
     return command, event_action
 
 

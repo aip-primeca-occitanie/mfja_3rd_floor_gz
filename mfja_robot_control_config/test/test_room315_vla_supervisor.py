@@ -78,7 +78,17 @@ def _fake_supervisor(module):
     def publish_stoppers(self, side, assignments, *, task_id=''):
         self._record_primitive_command(task_id, 'stoppers', side, {'stoppers': assignments})
 
-    def publish_shuttle(self, side, name, command, *, start_slot='', speed=None, task_id=''):
+    def publish_shuttle(
+        self,
+        side,
+        name,
+        command,
+        *,
+        start_slot='',
+        target_slot='',
+        speed=None,
+        task_id='',
+    ):
         self._record_primitive_command(
             task_id,
             'shuttle',
@@ -87,6 +97,7 @@ def _fake_supervisor(module):
                 'shuttle': str(name),
                 'command': str(command).upper(),
                 'start_slot': start_slot,
+                'target_slot': target_slot,
                 'speed': float(speed or self._default_speed()),
             },
         )
@@ -144,6 +155,22 @@ def test_supervisor_primitive_commands_remain_backward_compatible():
     })
 
     assert called['switches']['switches'] == {'ALL': 'EXTERIOR'}
+
+
+def test_supervisor_propagates_target_slot_to_low_level_controller():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+
+    supervisor._execute_shuttle_command({
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+        'speed': 0.2,
+        'target_slot': '3',
+    })
+
+    assert supervisor.last_primitive_command['target_slot'] == '3'
 
 
 def test_safety_decoder_accepts_safe_partial_switch_action():
