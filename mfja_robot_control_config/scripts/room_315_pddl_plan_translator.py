@@ -40,6 +40,8 @@ SYMBOLIC_ACTION_PRIMITIVE_MAP = {
     'set_stoppers': 'SET_STOPPERS',
     'move_shuttle': 'SHUTTLE_ON',
     'move_shuttle_to_slot': 'SHUTTLE_ON',
+    'prepare_topology_route': 'SET_SWITCHES',
+    'move_shuttle_from_segment_to_slot': 'SHUTTLE_ON',
     'begin_route_clearance': 'SET_SWITCHES',
     'relocate_blocker_to_interior': 'SHUTTLE_ON',
     'finish_route_clearance': 'SET_SWITCHES',
@@ -145,6 +147,10 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
         command, event_action = _translate_set_stoppers(parsed)
     elif parsed.name in {'move_shuttle', 'move_shuttle_to_slot'}:
         command, event_action = _translate_move_shuttle(parsed)
+    elif parsed.name == 'prepare_topology_route':
+        command, event_action = _translate_topology_route(parsed)
+    elif parsed.name == 'move_shuttle_from_segment_to_slot':
+        command, event_action = _translate_segment_origin_move(parsed)
     elif parsed.name == 'begin_route_clearance':
         command, event_action = _translate_clearance_mode(parsed, begin=True)
     elif parsed.name == 'relocate_blocker_to_interior':
@@ -288,6 +294,78 @@ def _translate_move_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[st
         reason='shuttle_start',
     )
     event_action.update(_multi_shuttle_fields(side=side, shuttle=shuttle))
+    return command, event_action
+
+
+def _translate_topology_route(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Preserve the route identity for executive topology expansion."""
+
+    side, shuttle = _side_and_shuttle_from_args(step.args)
+    if len(step.args) < 4:
+        raise ValueError('prepare_topology_route requires shuttle, side, block, and slot')
+    source_block = step.args[2]
+    target_slot = step.args[3]
+    command = {
+        'action': 'topology_route',
+        'side': side,
+        'shuttle': shuttle,
+        'source_block': source_block,
+        'target_slot': target_slot,
+        'deterministic_macro': 'authoritative_topology_switches_and_open_stoppers',
+    }
+    event_action = _blank_event_action(
+        primitive='SET_SWITCHES',
+        side=side,
+        wait_condition='switch_state_match',
+        target_id='ALL_SWITCHES',
+        reason='switch_update',
+    )
+    shuttle_fields = _multi_shuttle_fields(side=side, shuttle=shuttle)
+    # This event configures the complete switch group.  Preserve the shuttle
+    # identity as audit metadata without changing the physical event target
+    # from ALL_SWITCHES or weakening its route-reservation semantics.
+    shuttle_fields.pop('target_id', None)
+    shuttle_fields.pop('coordination_mode', None)
+    event_action.update(shuttle_fields)
+    event_action['coordination_mode'] = 'reservation_based_move'
+    return command, event_action
+
+
+def _translate_segment_origin_move(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Translate a topology-preserving move without dropping PDDL endpoints."""
+
+    side, shuttle = _side_and_shuttle_from_args(step.args)
+    if len(step.args) < 5:
+        raise ValueError(
+            'move_shuttle_from_segment_to_slot requires shuttle, side, '
+            'source block, target station, and target slot'
+        )
+    speed = _float_kwarg(step.kwargs, 'speed', 'speed_mps', default=0.3)
+    command = {
+        'action': 'shuttle',
+        'side': side,
+        'shuttle': shuttle,
+        'command': 'ON',
+        'speed': speed,
+        'source_block': step.args[2],
+        'target_station': step.args[3],
+        'target_slot': step.args[4],
+        'topology_route_move': True,
+    }
+    event_action = _blank_event_action(
+        primitive='SHUTTLE_ON',
+        side=side,
+        speed_mps=speed,
+        wait_condition='target_sensor_active',
+        target_id=f'{side}_shuttle',
+        reason='shuttle_start',
+    )
+    event_action.update(_multi_shuttle_fields(side=side, shuttle=shuttle))
+    event_action['coordination_mode'] = 'reservation_based_move'
     return command, event_action
 
 

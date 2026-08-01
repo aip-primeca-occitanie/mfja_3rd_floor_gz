@@ -20,6 +20,7 @@
     (shuttle_stopped_at ?s - shuttle ?station - station)
     (shuttle_at_slot ?s - shuttle ?slot - slot)
     (shuttle_in_block ?s - shuttle ?block - block)
+    (shuttle_at_topology_block ?s - shuttle ?block - block)
     (loaded ?s - shuttle)
     (empty ?s - shuttle)
     (slot_on_side ?slot - slot ?side - rail_side)
@@ -36,6 +37,10 @@
     (path_ready ?side - rail_side ?from - station ?to - station)
     (route_clear_between ?from - slot ?to - slot)
     (route_blocked_by ?from - slot ?to - slot ?blocker - shuttle)
+    (topology_route_available ?s - shuttle ?from - block ?to - slot)
+    (topology_route_clear ?s - shuttle ?from - block ?to - slot)
+    (topology_route_blocked_by ?s - shuttle ?from - block ?to - slot ?blocker - shuttle)
+    (topology_route_configured ?s - shuttle ?from - block ?to - slot)
     (clearance_precedes ?blocker - shuttle ?selected - shuttle)
     (clearance_relocated ?blocker - shuttle)
     (clearance_destination_ready ?blocker - shuttle)
@@ -153,6 +158,74 @@
       (route_reserved_by ?from_slot ?to_slot ?s)
       (shuttle_at_slot ?s ?to_slot)
       (shuttle_at ?s ?to)
+      (increase (total-cost) 10)
+    )
+  )
+
+  ; Compile a route from the shuttle's accepted visual segment/position to
+  ; the requested slot.  The executive expands this symbolic action into the
+  ; exact mixed switch configuration derived from the authoritative rail
+  ; topology, followed by opening the stoppers.  Re-observation must confirm
+  ; that physical configuration before the move action becomes applicable.
+  (:action prepare_topology_route
+    :parameters (
+      ?s - shuttle
+      ?side - rail_side
+      ?from_block - block
+      ?to_slot - slot
+      ?switches - switch_group
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?s ?side)
+      (shuttle_at_topology_block ?s ?from_block)
+      (block_on_side ?from_block ?side)
+      (slot_on_side ?to_slot ?side)
+      (topology_route_available ?s ?from_block ?to_slot)
+      (topology_route_clear ?s ?from_block ?to_slot)
+      (slot_free ?to_slot)
+      (= (pending_clearances ?side) 0)
+    )
+    :effect (and
+      (topology_route_configured ?s ?from_block ?to_slot)
+      (switches_ready ?side)
+      (stoppers_open ?side)
+      (increase (total-cost) 2)
+    )
+  )
+
+  ; Move a shuttle whose learned location is a valid topology segment but is
+  ; not close enough to any exterior slot.  Final stopping remains guarded by
+  ; the identity-bearing deterministic sensor of the requested slot.
+  (:action move_shuttle_from_segment_to_slot
+    :parameters (
+      ?s - shuttle
+      ?side - rail_side
+      ?from_block - block
+      ?to - station
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?s ?side)
+      (shuttle_at_topology_block ?s ?from_block)
+      (block_on_side ?from_block ?side)
+      (slot_on_side ?to_slot ?side)
+      (slot_at_station ?to_slot ?to)
+      (topology_route_available ?s ?from_block ?to_slot)
+      (topology_route_clear ?s ?from_block ?to_slot)
+      (topology_route_configured ?s ?from_block ?to_slot)
+      (= (pending_clearances ?side) 0)
+      (slot_free ?to_slot)
+    )
+    :effect (and
+      (not (shuttle_at_topology_block ?s ?from_block))
+      (not (slot_free ?to_slot))
+      (slot_occupied_by ?to_slot ?s)
+      (slot_reserved_by ?to_slot ?s)
+      (shuttle_at_slot ?s ?to_slot)
+      (shuttle_at ?s ?to)
+      (shuttle_stopped_at ?s ?to)
       (increase (total-cost) 10)
     )
   )

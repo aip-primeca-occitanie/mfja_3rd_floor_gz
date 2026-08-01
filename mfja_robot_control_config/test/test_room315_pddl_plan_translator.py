@@ -3,6 +3,8 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = (
@@ -166,6 +168,87 @@ def test_move_shuttle_preserves_target_stopper_for_guarded_stopper_motion():
     }
     assert translated.event_action['primitive'] == 'SHUTTLE_ON'
     assert translated.event_action['target_id'] == 'right_shuttle_2'
+
+
+def test_prepare_topology_route_preserves_audited_route_endpoints():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        '(prepare_topology_route right_shuttle_2 right '
+        'right_topology_a34i right_slot_1 right_switch_group)'
+    )
+
+    assert translator.SYMBOLIC_ACTION_PRIMITIVE_MAP[
+        'prepare_topology_route'
+    ] == 'SET_SWITCHES'
+    assert translated.command == {
+        'action': 'topology_route',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'source_block': 'right_topology_a34i',
+        'target_slot': 'right_slot_1',
+        'deterministic_macro': (
+            'authoritative_topology_switches_and_open_stoppers'
+        ),
+    }
+    assert translated.event_action['primitive'] == 'SET_SWITCHES'
+    assert translated.event_action['wait_condition'] == 'switch_state_match'
+    assert translated.event_action['target_id'] == 'ALL_SWITCHES'
+    assert translated.event_action['coordination_mode'] == (
+        'reservation_based_move'
+    )
+    assert translated.event_action['shuttle_id'] == 'R2'
+    assert translated.event_action['shuttle_index'] == 1
+
+
+def test_segment_origin_move_preserves_block_station_slot_and_speed():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        '(move_shuttle_from_segment_to_slot right_shuttle_2 right '
+        'right_topology_a34i right_yaskawa right_slot_1 speed=0.2)'
+    )
+
+    assert translator.SYMBOLIC_ACTION_PRIMITIVE_MAP[
+        'move_shuttle_from_segment_to_slot'
+    ] == 'SHUTTLE_ON'
+    assert translated.command == {
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'command': 'ON',
+        'speed': 0.2,
+        'source_block': 'right_topology_a34i',
+        'target_station': 'right_yaskawa',
+        'target_slot': 'right_slot_1',
+        'topology_route_move': True,
+    }
+    assert translated.event_action['primitive'] == 'SHUTTLE_ON'
+    assert translated.event_action['wait_condition'] == 'target_sensor_active'
+    assert translated.event_action['target_id'] == 'right_shuttle_2'
+    assert translated.event_action['coordination_mode'] == (
+        'reservation_based_move'
+    )
+    assert translated.event_action['shuttle_id'] == 'R2'
+    assert translated.event_action['shuttle_index'] == 1
+    assert translated.event_action['speed_mps'] == 0.2
+
+
+@pytest.mark.parametrize(
+    'step',
+    [
+        'prepare_topology_route right_shuttle_2 right right_topology_a34i',
+        (
+            'move_shuttle_from_segment_to_slot right_shuttle_2 right '
+            'right_topology_a34i right_yaskawa'
+        ),
+    ],
+)
+def test_topology_actions_reject_missing_route_endpoints(step):
+    translator = _load_module()
+
+    with pytest.raises(ValueError, match='requires'):
+        translator.translate_step(step)
 
 
 def test_stop_shuttle_translates_to_stop_now():

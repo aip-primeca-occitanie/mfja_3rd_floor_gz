@@ -295,6 +295,13 @@ class ClosedLoopExecutive:
                         symbolic_step=_step_text(first_step),
                     ),
                 )
+            elif first_step.name == 'prepare_topology_route':
+                supervisor_status, wait_check = self._prepare_topology_route(
+                    translated_step=translated_step,
+                    problem=problem,
+                    plan_length=len(plan),
+                    step_index=step_index,
+                )
             else:
                 supervisor_status = self._execute_first_atomic_step(
                     translated_step=translated_step,
@@ -321,6 +328,7 @@ class ClosedLoopExecutive:
                 'begin_route_clearance',
                 'relocate_blocker_to_interior',
                 'finish_route_clearance',
+                'prepare_topology_route',
             }:
                 wait_check = self._wait_for_expected_effects(
                     step=first_step,
@@ -396,6 +404,7 @@ class ClosedLoopExecutive:
             elif first_step.name in {
                 'begin_route_clearance',
                 'finish_route_clearance',
+                'prepare_topology_route',
             }:
                 postcondition = wait_check
             else:
@@ -770,6 +779,154 @@ class ClosedLoopExecutive:
                 **dict(clearance_wait.details),
                 'clearance_mode_held': True,
                 'normal_route_restored': False,
+            },
+        )
+
+    def _prepare_topology_route(
+        self,
+        *,
+        translated_step: TranslatedPlanStep,
+        problem: Room315PddlProblem,
+        plan_length: int,
+        step_index: int,
+    ) -> tuple[str, PostconditionCheck]:
+        """Apply and verify the exact topology-derived mixed route state."""
+
+        command = dict(translated_step.command)
+        side = str(command.get('side') or problem.side).strip().casefold()
+        shuttle = _canonical_shuttle_id(
+            str(command.get('shuttle') or ''),
+            side=side,
+        )
+        source_block = str(command.get('source_block') or '').strip().casefold()
+        raw_target_slot = str(command.get('target_slot') or '').strip()
+        try:
+            target_side, target_number = _split_slot_id(
+                raw_target_slot,
+                default_side=side,
+            )
+        except ValueError:
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='topology_route_has_invalid_target_slot',
+            )
+        target_slot = _contract_slot_id(target_side, target_number).replace(':', '_')
+        route = next(
+            (
+                item
+                for item in (
+                    (problem.provenance or {})
+                    .get('topology_routes', {})
+                    .get('routes', [])
+                )
+                if _canonical_shuttle_id(
+                    str(item.get('shuttle') or ''),
+                    side=side,
+                ) == shuttle
+                and str(item.get('source_block') or '').casefold() == source_block
+                and str(item.get('target_slot_object') or '').casefold()
+                == target_slot
+            ),
+            None,
+        )
+        if route is None:
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='topology_route_missing_from_audited_problem_provenance',
+            )
+        if not bool(route.get('route_clear')) or route.get('blockers'):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='topology_route_is_not_clear',
+                details={'blockers': list(route.get('blockers') or [])},
+            )
+        if route.get('controller_position_fields_used_for_localization') is not False:
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='topology_route_used_forbidden_controller_position',
+            )
+        raw_switches = dict(route.get('required_switches') or {})
+        if set(raw_switches) != set(DEVICE_NAMES):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='topology_route_switch_assignment_is_incomplete',
+            )
+        switches = {
+            device: (
+                'INTERIOR'
+                if str(raw_switches[device]).strip().upper() == 'I'
+                else 'EXTERIOR'
+            )
+            for device in DEVICE_NAMES
+        }
+        if any(
+            str(raw_switches[device]).strip().upper() not in {'E', 'I'}
+            for device in DEVICE_NAMES
+        ):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='topology_route_switch_assignment_is_invalid',
+            )
+        stoppers = {device: '0' for device in DEVICE_NAMES}
+        common = {
+            'mode': 'plansys2_authoritative_topology_route_setup',
+            'problem_name': problem.problem_name,
+            'plan_length': plan_length,
+            'step_index': step_index,
+            'symbolic_step': _step_text(translated_step.pddl_step),
+            'shuttle': shuttle,
+            'source_block': source_block,
+            'target_slot': _contract_slot_id(target_side, target_number),
+            'topology_network_source': (
+                (problem.provenance or {})
+                .get('topology_routes', {})
+                .get('network_sources', {})
+                .get(side, '')
+            ),
+            'localization_source': 'accepted_visual_state',
+            'controller_position_fields_used_for_localization': False,
+        }
+        operations = (
+            (
+                {'action': 'switches', 'side': side, 'switches': switches},
+                lambda: self.transport.wait_for_switch_state(
+                    side=side,
+                    switches=switches,
+                    timeout_s=self.config.effect_timeout_s,
+                ),
+                'topology_route_switches',
+            ),
+            (
+                {'action': 'stoppers', 'side': side, 'stoppers': stoppers},
+                lambda: self.transport.wait_for_stopper_state(
+                    side=side,
+                    stoppers=stoppers,
+                    timeout_s=self.config.effect_timeout_s,
+                ),
+                'topology_route_stoppers',
+            ),
+        )
+        for physical_command, wait, label in operations:
+            status = self._publish_supervised_macro_command(
+                physical_command,
+                common,
+            )
+            if status != 'accepted':
+                return status, PostconditionCheck(
+                    status='unknown',
+                    reason=f'{label}_supervisor_{status}',
+                )
+            check = _wait_result_check(wait(), ready_key='ready', label=label)
+            if not check.satisfied:
+                return 'accepted', check
+        return 'accepted', PostconditionCheck(
+            status='satisfied',
+            reason='authoritative_topology_route_configured',
+            details={
+                **common,
+                'switches': switches,
+                'stoppers': stoppers,
+                'route_blocks': list(route.get('route_blocks') or []),
             },
         )
 
@@ -1695,7 +1852,10 @@ def _target_slot_for_step(
             default_side=problem.side,
         )
         audited_target = _contract_slot_id(parking_side, parking_slot)
-        if step.name == 'move_shuttle_to_slot' and len(step.args) >= 4:
+        if step.name in {
+            'move_shuttle_to_slot',
+            'move_shuttle_from_segment_to_slot',
+        } and len(step.args) >= 4:
             planned_target = _contract_slot_id(problem.side, step.args[-1])
             if planned_target != audited_target:
                 raise RuntimeError(
@@ -1708,7 +1868,10 @@ def _target_slot_for_step(
         # isolated phase the frozen clearance provenance, not the parent
         # TaskGoal destination, is therefore authoritative for stopping.
         return audited_target
-    if step.name == 'move_shuttle_to_slot' and len(step.args) >= 4:
+    if step.name in {
+        'move_shuttle_to_slot',
+        'move_shuttle_from_segment_to_slot',
+    } and len(step.args) >= 4:
         return _contract_slot_id(problem.side, step.args[-1])
     constraints = dict(task_goal.constraints or {})
     if constraints.get('target_slot'):

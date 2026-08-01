@@ -45,6 +45,7 @@ from room_315_multi_shuttle import load_rail_topology
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import route_blockers_from_rails
 from room_315_multi_shuttle import route_blocks_between_slots
+from room_315_multi_shuttle import route_plan_from_position_to_slot
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import rail_segment_lengths
 
@@ -89,6 +90,8 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'set_stoppers',
     'move_shuttle',
     'move_shuttle_to_slot',
+    'prepare_topology_route',
+    'move_shuttle_from_segment_to_slot',
     'begin_route_clearance',
     'relocate_blocker_to_interior',
     'finish_route_clearance',
@@ -104,6 +107,13 @@ PDDL_ACTION_TRANSLATION_PROVENANCE = {
     'set_stoppers': 'primitive:SET_STOPPERS',
     'move_shuttle': 'primitive:SHUTTLE_ON',
     'move_shuttle_to_slot': 'deterministic_macro:move_shuttle with slot metadata',
+    'prepare_topology_route': (
+        'supervised_macro:authoritative topology switch configuration and '
+        'open stoppers'
+    ),
+    'move_shuttle_from_segment_to_slot': (
+        'deterministic_macro:visual segment origin to identity-bearing slot sensor'
+    ),
     'begin_route_clearance': (
         'supervised_macro:hold A3/A4 on the interior route and close A4 stopper'
     ),
@@ -2471,11 +2481,22 @@ def _symbolic_plan_from_plansys_plan(
     problem: Room315PddlProblem,
     speed: float,
 ) -> list[str]:
+    raw_actions = _plansys_action_strings(plan_msg)
     plan = [
         _canonical_symbolic_step(step, spec=spec, problem=problem, speed=speed)
-        for step in _plansys_action_strings(plan_msg)
+        for step in raw_actions
     ]
-    plan = [step for step in plan if step]
+    rejected = [
+        str(raw).strip() or '<empty>'
+        for raw, canonical in zip(raw_actions, plan)
+        if not canonical
+    ]
+    if rejected:
+        raise RuntimeError(
+            'PlanSys2 returned unsupported or malformed Room 315 actions; '
+            'the complete plan is rejected fail-closed: '
+            + '; '.join(rejected)
+        )
     if not plan:
         raise RuntimeError(
             'PlanSys2 generated no supported Room 315 symbolic plan steps. '
@@ -2569,6 +2590,32 @@ def _canonical_symbolic_step(
         return (
             f'relocate_blocker_to_interior {blocker} {selected} {side} '
             f'{from_slot} {to_slot} speed={speed_text}'
+        )
+    if step.name == 'prepare_topology_route':
+        if len(step.args) != 5:
+            return ''
+        shuttle, side, source_block, target_slot, _switch_group = step.args
+        if side not in SIDES or normalize_shuttle_ref(shuttle, side=side) is None:
+            return ''
+        return (
+            f'prepare_topology_route {shuttle} {side} '
+            f'{source_block} {target_slot}'
+        )
+    if step.name == 'move_shuttle_from_segment_to_slot':
+        if len(step.args) != 5:
+            return ''
+        shuttle, side, source_block, target_station, target_slot = step.args
+        if side not in SIDES or normalize_shuttle_ref(shuttle, side=side) is None:
+            return ''
+        speed_text = (
+            step.kwargs.get('speed')
+            or step.kwargs.get('speed_mps')
+            or f'{float(speed):.4g}'
+        )
+        return (
+            f'move_shuttle_from_segment_to_slot {shuttle} {side} '
+            f'{source_block} {target_station} {target_slot} '
+            f'speed={speed_text}'
         )
     side, shuttle, source, target = _route_parts_from_step(step, spec, problem)
     if step.name == 'prepare_switches':
@@ -3034,11 +3081,20 @@ def build_pddl_problem_from_observed_state_task_goal(
         fleet=fleet,
     )
     route_clearance = _route_clearance_snapshot(fleet=fleet)
+    route_clearance['topology_routes'] = _topology_route_snapshot(
+        fleet=fleet,
+        devices=devices,
+        obstacles=obstacles,
+        goal_data=goal_data,
+    )
     route_clearance['target_clearance_plan'] = _target_blocker_clearance_plan(
         fleet=fleet,
+        devices=devices,
+        obstacles=obstacles,
         goal_data=goal_data,
         route_clearance=route_clearance,
     )
+    _append_topology_clearance_routes(route_clearance)
     target_clearance = route_clearance['target_clearance_plan']
     if target_clearance.get('unsupported_if_more_than_two_blockers'):
         raise PddlProblemBuildError(
@@ -3052,9 +3108,13 @@ def build_pddl_problem_from_observed_state_task_goal(
         == 'unavailable'
     ]
     if unavailable:
+        unavailable_reasons = sorted({
+            str((item.get('destination') or {}).get('reason') or 'unknown')
+            for item in unavailable
+        })
         raise PddlProblemBuildError(
-            'no physically separated A34I staging pose is available for all '
-            'route blockers'
+            'no safe reachable relocation destination is available for all '
+            'route blockers: ' + ','.join(unavailable_reasons)
         )
 
     init_facts = _pddl_init_facts(
@@ -3090,6 +3150,7 @@ def build_pddl_problem_from_observed_state_task_goal(
         'oracle_test_fixture_used': False,
         'symbolic_action_mapping': dict(PDDL_ACTION_TRANSLATION_PROVENANCE),
         'route_clearance': route_clearance['provenance'],
+        'topology_routes': route_clearance['topology_routes']['provenance'],
         'target_blocker_clearance_plan': route_clearance['target_clearance_plan'],
     }
     if goal_data['selection_policy']:
@@ -3800,6 +3861,21 @@ def _block_snapshot_from_observed_state(
         for side in SIDES
         for slot in ('1', '2', '3', '4')
     }
+    for side in SIDES:
+        topology = _planning_rail_topology(side)
+        topology_segments = (
+            set(topology.routing_table)
+            | set(topology.fixed_transitions)
+            | set(topology.fixed_transitions.values())
+            | {location.segment for location in topology.slots.values()}
+        )
+        for segment in sorted(topology_segments):
+            if segment and str(segment).upper() != 'FALLING':
+                blocks[_topology_block_object(side, segment)] = {
+                    'side': side,
+                    'slot': '',
+                    'topology_segment': str(segment).upper(),
+                }
     for shuttle, block in fleet['location_block_by_shuttle'].items():
         block_symbol = _pddl_symbol(block)
         blocks.setdefault(block_symbol, {'side': _shuttle_side(shuttle), 'slot': ''})
@@ -3924,11 +4000,14 @@ def _goal_data_from_task_goal(
                 f'no {selection} shuttle candidates with known state on {side} rail'
             )
         if selection == 'nearest' and target_slot:
-            target_index = int(target_slot)
             candidates_list = sorted(
                 candidates_list,
                 key=lambda shuttle: (
-                    abs(int(_slot_number_from_object(fleet['location_slot_by_shuttle'][shuttle])) - target_index),
+                    _goal_candidate_route_cost(
+                        fleet,
+                        shuttle=shuttle,
+                        target_slot=target_slot,
+                    ),
                     _shuttle_sort_key(shuttle),
                 ),
             )
@@ -4138,9 +4217,216 @@ def _route_clearance_snapshot(
     }
 
 
+def _topology_route_snapshot(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    goal_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Compile non-slot visual locations through the authoritative rail graph."""
+
+    entries: list[dict[str, Any]] = []
+    if (
+        goal_data.get('goal_type') == 'transport'
+        and goal_data.get('target_slot')
+    ):
+        for shuttle in goal_data.get('candidate_shuttles') or ():
+            if shuttle in fleet['location_slot_by_shuttle']:
+                continue
+            entries.append(_topology_route_entry(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                shuttle=shuttle,
+                target_slot=str(goal_data['target_slot']),
+            ))
+    return {
+        'routes': entries,
+        'by_shuttle_and_slot': {
+            (entry['shuttle'], entry['target_slot_object']): entry
+            for entry in entries
+        },
+        'provenance': {
+            'method': 'authoritative_position_to_slot_topology_v1',
+            'network_sources': {
+                side: str(RAIL_NETWORK_PATH_BY_SIDE[side]) for side in SIDES
+            },
+            'device_sources': {
+                side: str(RAIL_DEVICES_PATH_BY_SIDE[side]) for side in SIDES
+            },
+            'controller_position_fields_used_for_localization': False,
+            'routes': [
+                {
+                    key: value
+                    for key, value in entry.items()
+                    if key not in {'configured'}
+                }
+                for entry in entries
+            ],
+        },
+    }
+
+
+def _topology_route_entry(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    shuttle: str,
+    target_slot: str,
+) -> dict[str, Any]:
+    position = fleet['rail_position_by_shuttle'].get(shuttle)
+    if not isinstance(position, dict):
+        raise PddlProblemBuildError(
+            f'goal candidate {shuttle!r} has no accepted visual rail position'
+        )
+    side = _shuttle_side(shuttle)
+    if position.get('side') != side:
+        raise PddlProblemBuildError(
+            f'goal candidate {shuttle!r} has a side-conflicting rail position'
+        )
+    clearance_certificate = (
+        fleet.get('runtime_clearance_certificates') or {}
+    ).get(shuttle)
+    certificate_consistency: dict[str, Any] = {
+        'required': False,
+        'satisfied': True,
+    }
+    if clearance_certificate is not None:
+        certified_public_segment = str(
+            clearance_certificate.get('target_segment') or ''
+        ).strip().upper()
+        if not certified_public_segment:
+            raise PddlProblemBuildError(
+                f'runtime clearance for {shuttle!r} has no target segment'
+            )
+        certified_internal_segment = (
+            LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
+                certified_public_segment,
+                certified_public_segment,
+            )
+            if side == 'left'
+            else certified_public_segment
+        )
+        visual_segment = str(position.get('segment') or '').strip().upper()
+        if visual_segment != certified_internal_segment:
+            raise PddlProblemBuildError(
+                'runtime clearance and accepted visual segment disagree for '
+                f'{shuttle!r}: certificate={certified_public_segment}, '
+                f'visual={visual_segment}; re-observation is required before '
+                'topology motion'
+            )
+        certificate_consistency = {
+            'required': True,
+            'satisfied': True,
+            'certificate_target_public_segment': certified_public_segment,
+            'certificate_target_internal_segment': certified_internal_segment,
+            'accepted_visual_internal_segment': visual_segment,
+            'certificate_used_as_localization': False,
+        }
+    topology = _planning_rail_topology(side)
+    try:
+        route = route_plan_from_position_to_slot(
+            topology,
+            position['segment'],
+            position['s_ratio'],
+            target_slot,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PddlProblemBuildError(
+            f'no safe authoritative topology route for {shuttle!r}: {exc}'
+        ) from exc
+
+    blockers: list[tuple[int, float, str]] = []
+    for other, other_position in fleet['rail_position_by_shuttle'].items():
+        if other == shuttle or other_position.get('side') != side:
+            continue
+        length_m = max(float(other_position['segment_length_m']), 1e-9)
+        half_extent = (
+            DEFAULT_SHUTTLE_LENGTH_M / 2.0
+            + DEFAULT_ROUTE_SAFETY_MARGIN_M
+            + float(other_position.get('position_uncertainty_m') or 0.0)
+        ) / length_m
+        ratio = float(other_position['s_ratio'])
+        occupied_start = max(0.0, ratio - half_extent)
+        occupied_end = min(1.0, ratio + half_extent)
+        for route_index, block in enumerate(route.blocks):
+            if block.overlaps(
+                other_position['segment'],
+                occupied_start,
+                occupied_end,
+            ):
+                blockers.append((route_index, ratio, other))
+                break
+    # Clear the nearest forward obstruction first. Re-observation after each
+    # atomic relocation rebuilds this ordering from the learned state.
+    blocker_ids = [
+        item[2]
+        for item in sorted(blockers, key=lambda item: (item[0], item[1], item[2]))
+    ]
+    target_object = _slot_object(side, target_slot)
+    target_occupant = fleet['slot_occupancy'].get(target_object, '')
+    if target_occupant and target_occupant != shuttle and target_occupant not in blocker_ids:
+        blocker_ids.append(target_occupant)
+
+    expected_switches = dict(route.switch_states)
+    switches_match = all(
+        devices['switches'].get(_switch_object(side, device))
+        == ('interior' if state == 'I' else 'exterior')
+        for device, state in expected_switches.items()
+    )
+    stoppers_open = all(
+        devices['stoppers'].get(_stopper_object(side, device)) == 'open'
+        for device in DEVICE_NAMES
+    )
+    public_segment = (
+        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(route.source_segment, route.source_segment)
+        if side == 'left'
+        else route.source_segment
+    )
+    return {
+        'shuttle': shuttle,
+        'side': side,
+        'source_kind': 'accepted_visual_continuous_position',
+        'source_segment': route.source_segment,
+        'source_public_segment': public_segment,
+        'source_s_ratio': round(float(route.source_s_ratio), 9),
+        'source_block': _topology_block_object(side, route.source_segment),
+        'target_slot': route.target_slot,
+        'target_slot_object': target_object,
+        'target_station': _station_for_slot(side, route.target_slot),
+        'target_sensor': SLOT_SENSOR_BY_SIDE_AND_SLOT[(side, route.target_slot)],
+        'required_switches': expected_switches,
+        'required_stoppers': {device: '0' for device in DEVICE_NAMES},
+        'route_blocks': [
+            {
+                'segment': block.segment,
+                'public_segment': (
+                    LEFT_PUBLIC_SEGMENT_NAME_MAP.get(block.segment, block.segment)
+                    if side == 'left'
+                    else block.segment
+                ),
+                'start_s_ratio': round(float(block.start_s_ratio), 9),
+                'end_s_ratio': round(float(block.end_s_ratio), 9),
+            }
+            for block in route.blocks
+        ],
+        'blockers': blocker_ids,
+        'route_clear': not blocker_ids and not bool(obstacles.get(side)),
+        'configured': switches_match and stoppers_open,
+        'switches_match': switches_match,
+        'stoppers_open': stoppers_open,
+        'controller_position_fields_used_for_localization': False,
+        'runtime_clearance_visual_consistency': certificate_consistency,
+    }
+
+
 def _target_blocker_clearance_plan(
     *,
     fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
     goal_data: dict[str, Any],
     route_clearance: dict[str, Any],
 ) -> dict[str, Any]:
@@ -4169,20 +4455,39 @@ def _target_blocker_clearance_plan(
     target = _slot_object(side, goal_data['target_slot'])
     base['source_slot'] = source
     base['target_slot'] = target
-    blocker_ids = list(
-        route_clearance['blockers_by_pair'].get((source, target), ())
+    topology_route = (
+        route_clearance.get('topology_routes', {})
+        .get('by_shuttle_and_slot', {})
+        .get((selected, target))
     )
+    if source:
+        blocker_ids = list(
+            route_clearance['blockers_by_pair'].get((source, target), ())
+        )
+        route_pair = next(
+            (
+                pair
+                for pair in route_clearance['provenance']['pairs']
+                if pair['from_slot'] == source and pair['to_slot'] == target
+            ),
+            {},
+        )
+        base['source_kind'] = 'slot'
+    elif topology_route:
+        blocker_ids = list(topology_route.get('blockers') or [])
+        route_pair = topology_route
+        base.update({
+            'source_kind': 'accepted_visual_continuous_position',
+            'source_block': topology_route['source_block'],
+            'source_segment': topology_route['source_segment'],
+            'source_public_segment': topology_route['source_public_segment'],
+            'source_s_ratio': topology_route['source_s_ratio'],
+        })
+    else:
+        blocker_ids = []
+        route_pair = {}
     if not blocker_ids:
         return base
-
-    route_pair = next(
-        (
-            pair
-            for pair in route_clearance['provenance']['pairs']
-            if pair['from_slot'] == source and pair['to_slot'] == target
-        ),
-        {},
-    )
     segment_order = {
         block['segment']: index
         for index, block in enumerate(route_pair.get('route_blocks') or [])
@@ -4213,10 +4518,11 @@ def _target_blocker_clearance_plan(
         and str(position.get('segment') or '').upper() == 'A34I'
         for position in positions.values()
     )
+    topology_recovery = not bool(source)
     free_parking_slots = {
         slot
         for slot, occupant in fleet['slot_occupancy'].items()
-        if has_staged_interior_shuttles
+        if (has_staged_interior_shuttles or topology_recovery)
         and not occupant
         and slot.startswith(f'{side}_slot_')
         and slot != target
@@ -4231,27 +4537,48 @@ def _target_blocker_clearance_plan(
     )
     for blocker in parking_order:
         blocker_slot = fleet['location_slot_by_shuttle'].get(blocker, '')
-        if not blocker_slot:
-            continue
-        candidates = sorted(
-            (
-                slot
-                for slot in free_parking_slots
-                if (blocker_slot, slot) in route_clearance['clear_pairs']
-            ),
-            key=lambda slot: (
+        topology_candidates: dict[str, dict[str, Any]] = {}
+        if blocker_slot:
+            candidates = sorted(
                 (
-                    -int(_slot_number_from_object(slot))
-                    if has_staged_interior_shuttles
-                    else 0
+                    slot
+                    for slot in free_parking_slots
+                    if (blocker_slot, slot) in route_clearance['clear_pairs']
                 ),
-                abs(
-                    int(_slot_number_from_object(blocker_slot))
-                    - int(_slot_number_from_object(slot))
+                key=lambda slot: (
+                    (
+                        -int(_slot_number_from_object(slot))
+                        if has_staged_interior_shuttles
+                        else 0
+                    ),
+                    abs(
+                        int(_slot_number_from_object(blocker_slot))
+                        - int(_slot_number_from_object(slot))
+                    ),
+                    int(_slot_number_from_object(slot)),
                 ),
-                int(_slot_number_from_object(slot)),
-            ),
-        )
+            )
+        else:
+            for parking_slot in sorted(free_parking_slots):
+                entry = _topology_route_entry(
+                    fleet=fleet,
+                    devices=devices,
+                    obstacles=obstacles,
+                    shuttle=blocker,
+                    target_slot=_slot_number_from_object(parking_slot),
+                )
+                # The selected shuttle may sit safely behind the blocker on
+                # the same segment. It is not a forward obstruction unless
+                # its physical interval actually overlaps the blocker route.
+                if entry['route_clear']:
+                    topology_candidates[parking_slot] = entry
+            candidates = sorted(
+                topology_candidates,
+                key=lambda slot: (
+                    len(topology_candidates[slot]['route_blocks']),
+                    int(_slot_number_from_object(slot)),
+                ),
+            )
         if not candidates:
             continue
         parking_slot = candidates[0]
@@ -4272,6 +4599,11 @@ def _target_blocker_clearance_plan(
                 else 'nearest_reachable_known_free_exterior_slot'
             ),
         }
+        if parking_slot in topology_candidates:
+            parking_destination_by_blocker[blocker].update({
+                'source_kind': 'accepted_visual_continuous_position',
+                'topology_route': topology_candidates[parking_slot],
+            })
 
     relocations = []
     existing_interior_s_m = [
@@ -4318,6 +4650,21 @@ def _target_blocker_clearance_plan(
                 'current_segment': position['segment'],
                 'current_s_ratio': round(float(position['s_ratio']), 6),
                 'destination': parking_destination,
+            })
+            continue
+        if topology_recovery:
+            relocations.append({
+                'order': index + 1,
+                'shuttle': blocker,
+                'reason': 'blocks_selected_shuttle_route',
+                'current_segment': position['segment'],
+                'current_s_ratio': round(float(position['s_ratio']), 6),
+                'destination': {
+                    'kind': 'unavailable',
+                    'reason': (
+                        'no_topology_reachable_free_exterior_slot_for_blocker'
+                    ),
+                },
             })
             continue
         public_segment = (
@@ -4385,6 +4732,37 @@ def _target_blocker_clearance_plan(
         ),
     })
     return base
+
+
+def _append_topology_clearance_routes(route_clearance: dict[str, Any]) -> None:
+    """Expose audited segment-origin blocker parking routes to PlanSys2."""
+
+    topology_routes = route_clearance.get('topology_routes') or {}
+    routes = topology_routes.get('routes')
+    by_key = topology_routes.get('by_shuttle_and_slot')
+    provenance = topology_routes.get('provenance') or {}
+    provenance_routes = provenance.get('routes')
+    if not isinstance(routes, list) or not isinstance(by_key, dict):
+        return
+    if not isinstance(provenance_routes, list):
+        provenance_routes = []
+        provenance['routes'] = provenance_routes
+    clearance = route_clearance.get('target_clearance_plan') or {}
+    for relocation in clearance.get('ordered_relocations') or []:
+        destination = relocation.get('destination') or {}
+        entry = destination.get('topology_route')
+        if not isinstance(entry, dict):
+            continue
+        key = (entry['shuttle'], entry['target_slot_object'])
+        if key in by_key:
+            continue
+        routes.append(entry)
+        by_key[key] = entry
+        provenance_routes.append({
+            field: value
+            for field, value in entry.items()
+            if field not in {'configured'}
+        })
 
 
 def _pddl_init_facts(
@@ -4456,6 +4834,12 @@ def _pddl_init_facts(
         block_object = fleet['location_block_by_shuttle'].get(shuttle)
         if block_object:
             facts.append(f'(shuttle_in_block {shuttle} {_pddl_symbol(block_object)})')
+        position = fleet['rail_position_by_shuttle'].get(shuttle)
+        if position:
+            facts.append(
+                f'(shuttle_at_topology_block {shuttle} '
+                f'{_topology_block_object(shuttle_spec.side, position["segment"])})'
+            )
     for side in SIDES:
         side_has_obstacle = bool(obstacles.get(side))
         for from_slot in ('1', '2', '3', '4'):
@@ -4483,6 +4867,29 @@ def _pddl_init_facts(
             f'(front_of {front} {rear})',
             f'(behind {rear} {front})',
         ])
+    for route in (
+        route_clearance.get('topology_routes', {}).get('routes') or []
+    ):
+        shuttle = route['shuttle']
+        source_block = route['source_block']
+        target_slot = route['target_slot_object']
+        facts.append(
+            f'(topology_route_available {shuttle} {source_block} {target_slot})'
+        )
+        if route.get('route_clear'):
+            facts.append(
+                f'(topology_route_clear {shuttle} {source_block} {target_slot})'
+            )
+        for blocker in route.get('blockers') or []:
+            facts.append(
+                f'(topology_route_blocked_by {shuttle} {source_block} '
+                f'{target_slot} {blocker})'
+            )
+        if route.get('configured'):
+            facts.append(
+                f'(topology_route_configured {shuttle} {source_block} '
+                f'{target_slot})'
+            )
     if goal_data['goal_type'] == 'transport' and goal_data['target_slot']:
         target = _slot_object(goal_data['side'], goal_data['target_slot'])
         for selected in goal_data['candidate_shuttles']:
@@ -4661,10 +5068,43 @@ def _task_goal_target_shuttle(constraints: dict[str, Any], *, side: str) -> str:
 
 
 def _require_goal_candidate_location(fleet: dict[str, Any], shuttle: str) -> None:
-    if shuttle not in fleet['location_slot_by_shuttle']:
+    if (
+        shuttle not in fleet['location_slot_by_shuttle']
+        and shuttle not in fleet['rail_position_by_shuttle']
+    ):
         raise PddlProblemBuildError(
-            f'goal candidate {shuttle!r} has no known slot; observation or recovery is required'
+            f'goal candidate {shuttle!r} has no known topology location; '
+            'observation or recovery is required'
         )
+
+
+def _goal_candidate_route_cost(
+    fleet: dict[str, Any],
+    *,
+    shuttle: str,
+    target_slot: str,
+) -> float:
+    """Rank candidates by authoritative forward route length, not slot index."""
+
+    position = fleet['rail_position_by_shuttle'].get(shuttle)
+    if not isinstance(position, dict):
+        return math.inf
+    side = _shuttle_side(shuttle)
+    try:
+        route = route_plan_from_position_to_slot(
+            _planning_rail_topology(side),
+            position['segment'],
+            position['s_ratio'],
+            target_slot,
+        )
+    except (KeyError, TypeError, ValueError):
+        return math.inf
+    segment_lengths = rail_segment_lengths(side)
+    return sum(
+        max(0.0, float(block.end_s_ratio) - float(block.start_s_ratio))
+        * float(segment_lengths[block.segment])
+        for block in route.blocks
+    )
 
 
 def _occupancy_shuttle_from_value(value: Any, *, side: str, slot: str) -> str:
@@ -4736,6 +5176,10 @@ def _slot_object(side: str, slot: str) -> str:
 
 def _block_object_for_slot(side: str, slot: str) -> str:
     return f'{side}_block_slot_{_slot_symbol_or_empty(slot)}'
+
+
+def _topology_block_object(side: str, segment: str) -> str:
+    return f'{_normalise_planning_side(side)}_topology_{_pddl_symbol(segment)}'
 
 
 def _station_object(side: str, station: str) -> str:

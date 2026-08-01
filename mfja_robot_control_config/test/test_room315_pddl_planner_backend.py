@@ -144,6 +144,84 @@ def test_plansys_backend_canonicalizes_costed_slot_plan_actions():
     ]
 
 
+def test_plansys_canonicalization_preserves_topology_route_and_move_endpoints():
+    generator = _load_module()
+    spec = generator.scenario_spec_from_case(RIGHT_CASE)
+    problem = generator.build_pddl_problem_from_spec(spec)
+    plan_msg = SimpleNamespace(items=[
+        SimpleNamespace(action=(
+            '(prepare_topology_route right_shuttle_2 right '
+            'right_topology_a34i right_slot_1 right_switch_group)'
+        )),
+        SimpleNamespace(action=(
+            '(move_shuttle_from_segment_to_slot right_shuttle_2 right '
+            'right_topology_a34i right_yaskawa right_slot_1)'
+        )),
+    ])
+
+    plan = generator._symbolic_plan_from_plansys_plan(
+        plan_msg,
+        spec=None,
+        problem=problem,
+        speed=0.2,
+    )
+
+    assert plan == [
+        'prepare_topology_route right_shuttle_2 right '
+        'right_topology_a34i right_slot_1',
+        'move_shuttle_from_segment_to_slot right_shuttle_2 right '
+        'right_topology_a34i right_yaskawa right_slot_1 speed=0.2',
+    ]
+    translated = generator.translate_plan(plan)
+    assert [step.pddl_step.name for step in translated] == [
+        'prepare_topology_route',
+        'move_shuttle_from_segment_to_slot',
+    ]
+    assert translated[0].command['source_block'] == 'right_topology_a34i'
+    assert translated[0].command['target_slot'] == 'right_slot_1'
+    assert translated[1].command['source_block'] == 'right_topology_a34i'
+    assert translated[1].command['target_station'] == 'right_yaskawa'
+    assert translated[1].command['target_slot'] == 'right_slot_1'
+    assert translated[1].command['speed'] == 0.2
+
+
+@pytest.mark.parametrize(
+    'malformed_action',
+    [
+        (
+            '(prepare_topology_route right_shuttle_2 right '
+            'right_topology_a34i right_slot_1)'
+        ),
+        (
+            '(move_shuttle_from_segment_to_slot right_shuttle_2 right '
+            'right_topology_a34i right_yaskawa)'
+        ),
+    ],
+)
+def test_plansys_topology_plan_fails_closed_instead_of_eliding_malformed_step(
+    malformed_action,
+):
+    generator = _load_module()
+    problem = generator.build_pddl_problem_from_spec(
+        generator.scenario_spec_from_case(RIGHT_CASE)
+    )
+    plan_msg = SimpleNamespace(items=[
+        SimpleNamespace(action=malformed_action),
+        SimpleNamespace(action=(
+            '(move_shuttle_from_segment_to_slot right_shuttle_2 right '
+            'right_topology_a34i right_yaskawa right_slot_1)'
+        )),
+    ])
+
+    with pytest.raises(RuntimeError, match='unsupported|canonical'):
+        generator._symbolic_plan_from_plansys_plan(
+            plan_msg,
+            spec=None,
+            problem=problem,
+            speed=0.2,
+        )
+
+
 def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     generator = _load_module()
     spec = generator.scenario_spec_from_case(RIGHT_CASE)

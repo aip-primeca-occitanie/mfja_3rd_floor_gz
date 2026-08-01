@@ -416,6 +416,26 @@ class RailRouteBlocker:
 
 
 @dataclass(frozen=True)
+class RailPositionRoute:
+    """A fail-closed static route from an observed rail position to a slot.
+
+    ``blocks`` is the exact forward-only occupancy trace. ``switch_states``
+    contains a complete A1--A4 assignment that may remain unchanged for the
+    entire trace; a route that would require one switch to change state while
+    the shuttle is moving is deliberately not representable here.
+    """
+
+    side: str
+    source_segment: str
+    source_s_ratio: float
+    target_slot: str
+    target_segment: str
+    target_s_ratio: float
+    blocks: tuple[RailRouteBlock, ...]
+    switch_states: dict[str, str]
+
+
+@dataclass(frozen=True)
 class RailTopology:
     side: str
     routing_table: dict[str, dict[str, Any]]
@@ -663,6 +683,105 @@ def route_blocks_between_slots(
         first_segment = False
     raise ValueError(
         f'no route from slot {source.slot} to slot {target.slot} within {max_segments} segments'
+    )
+
+
+def route_plan_from_position_to_slot(
+    topology: RailTopology,
+    source_segment: Any,
+    source_s_ratio: Any,
+    target_slot: Any,
+    *,
+    max_segments: int = 32,
+) -> RailPositionRoute:
+    """Resolve an arbitrary visual position to a slot using authoritative topology.
+
+    Room 315 motion is forward-only.  The route therefore either continues to
+    a later point on the same segment or follows the directed routing table,
+    wrapping around the rail when necessary.  Every possible static A1--A4
+    assignment is evaluated deterministically, preferring the all-exterior
+    configuration and then the fewest interior selections.  A candidate is
+    accepted only when it reaches the target without a ``FALLING`` edge or a
+    cycle and without changing a switch state during the route.
+
+    This helper intentionally consumes only the observed ``segment`` and
+    ``s_ratio``.  It does not infer position from controller state.
+    """
+
+    side = normalize_side(topology.side)
+    segment = _segment_name(source_segment)
+    ratio = _optional_float(source_s_ratio)
+    if ratio is None or ratio != ratio or ratio in {float('inf'), float('-inf')}:
+        raise ValueError(f'invalid source s_ratio {source_s_ratio!r}; expected a finite value in [0, 1]')
+    if not 0.0 <= ratio <= 1.0:
+        raise ValueError(f'invalid source s_ratio {source_s_ratio!r}; expected a finite value in [0, 1]')
+    if not segment or segment == 'FALLING':
+        raise ValueError(f'invalid source segment {source_segment!r}')
+    known_segments = _topology_segment_names(topology)
+    if segment not in known_segments:
+        raise ValueError(
+            f'unknown Room 315 segment {source_segment!r} on {side} rail'
+        )
+    target = _slot_location(topology, target_slot)
+    try:
+        segment_limit = int(max_segments)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('max_segments must be a positive integer') from exc
+    if segment_limit < 1:
+        raise ValueError('max_segments must be a positive integer')
+
+    default_state = str(topology.default_switch_state or 'E').strip().upper()
+    if default_state not in {'E', 'I'}:
+        raise ValueError(
+            f'invalid topology default switch state {topology.default_switch_state!r}'
+        )
+    for entry in topology.routing_table.values():
+        if not isinstance(entry, dict):
+            continue
+        switch_name = str(entry.get('switch') or '').strip().upper()
+        if switch_name and switch_name not in DEVICE_NAMES:
+            raise ValueError(
+                f'unsupported Room 315 topology switch {switch_name!r}; '
+                f'expected one of {DEVICE_NAMES}'
+            )
+
+    alternate_state = 'I' if default_state == 'E' else 'E'
+    assignments: list[dict[str, str]] = []
+    for mask in sorted(
+        range(1 << len(DEVICE_NAMES)),
+        key=lambda value: (value.bit_count(), value),
+    ):
+        assignments.append({
+            name: alternate_state if mask & (1 << index) else default_state
+            for index, name in enumerate(DEVICE_NAMES)
+        })
+
+    for switch_states in assignments:
+        blocks = _trace_position_route_with_static_switches(
+            topology,
+            segment,
+            ratio,
+            target,
+            switch_states,
+            max_segments=segment_limit,
+        )
+        if blocks is None:
+            continue
+        return RailPositionRoute(
+            side=side,
+            source_segment=segment,
+            source_s_ratio=ratio,
+            target_slot=target.slot,
+            target_segment=target.segment,
+            target_s_ratio=target.s_ratio,
+            blocks=blocks,
+            switch_states=dict(switch_states),
+        )
+
+    raise ValueError(
+        f'no non-FALLING static-switch route from {segment}@{ratio:.6f} '
+        f'to slot {target.slot} on {side} rail; the path is unreachable or '
+        'requires conflicting switch states'
     )
 
 
@@ -924,6 +1043,117 @@ def _next_route_segment(
         else:
             raw_next = entry.get('next_segment', '')
     if not raw_next:
+        raw_next = topology.fixed_transitions.get(segment_name, '')
+    next_segment = _segment_name(raw_next)
+    return '' if next_segment == 'FALLING' else next_segment
+
+
+def _topology_segment_names(topology: RailTopology) -> set[str]:
+    """Collect the public directed segments represented by a loaded topology."""
+
+    segments = {
+        _segment_name(segment)
+        for segment in (
+            set(topology.routing_table)
+            | set(topology.fixed_transitions)
+            | set(topology.fixed_transitions.values())
+        )
+    }
+    segments.update(location.segment for location in topology.slots.values())
+    for entry in topology.routing_table.values():
+        if not isinstance(entry, dict):
+            continue
+        segments.add(_segment_name(entry.get('next_segment')))
+        by_state = entry.get('by_state')
+        if isinstance(by_state, dict):
+            segments.update(_segment_name(value) for value in by_state.values())
+    return {segment for segment in segments if segment and segment != 'FALLING'}
+
+
+def _trace_position_route_with_static_switches(
+    topology: RailTopology,
+    source_segment: str,
+    source_s_ratio: float,
+    target: RailSlotLocation,
+    switch_states: dict[str, str],
+    *,
+    max_segments: int,
+) -> tuple[RailRouteBlock, ...] | None:
+    """Trace one complete static assignment, returning ``None`` on any hazard."""
+
+    if source_segment == target.segment and source_s_ratio <= target.s_ratio:
+        return (
+            RailRouteBlock(
+                side=topology.side,
+                segment=source_segment,
+                start_s_ratio=source_s_ratio,
+                end_s_ratio=target.s_ratio,
+            ),
+        )
+
+    blocks: list[RailRouteBlock] = []
+    visited: set[str] = set()
+    current_segment = source_segment
+    start_ratio = source_s_ratio
+    moved_to_successor = False
+    while len(blocks) < max_segments:
+        if current_segment == target.segment and moved_to_successor:
+            blocks.append(
+                RailRouteBlock(
+                    side=topology.side,
+                    segment=current_segment,
+                    start_s_ratio=0.0,
+                    end_s_ratio=target.s_ratio,
+                )
+            )
+            return tuple(blocks)
+        if current_segment in visited:
+            return None
+        visited.add(current_segment)
+        blocks.append(
+            RailRouteBlock(
+                side=topology.side,
+                segment=current_segment,
+                start_s_ratio=start_ratio,
+                end_s_ratio=1.0,
+            )
+        )
+        next_segment = _next_static_route_segment(
+            topology,
+            current_segment,
+            switch_states,
+        )
+        if not next_segment:
+            return None
+        current_segment = next_segment
+        start_ratio = 0.0
+        moved_to_successor = True
+    return None
+
+
+def _next_static_route_segment(
+    topology: RailTopology,
+    segment: Any,
+    switch_states: dict[str, str],
+) -> str:
+    """Resolve one static edge without bypassing an incomplete switch guard."""
+
+    segment_name = _segment_name(segment)
+    entry = topology.routing_table.get(segment_name)
+    if isinstance(entry, dict):
+        route_type = str(entry.get('type') or '').strip().casefold()
+        if route_type == 'fixed':
+            raw_next = entry.get('next_segment', '')
+        elif route_type in {'switch_select', 'switch_guard'}:
+            switch_name = str(entry.get('switch') or '').strip().upper()
+            state = str(switch_states.get(switch_name, '')).strip().upper()
+            by_state = entry.get('by_state')
+            if not switch_name or state not in {'E', 'I'} or not isinstance(by_state, dict):
+                return ''
+            raw_next = by_state.get(state, entry.get('on_unknown_state', ''))
+        else:
+            return ''
+    else:
         raw_next = topology.fixed_transitions.get(segment_name, '')
     next_segment = _segment_name(raw_next)
     return '' if next_segment == 'FALLING' else next_segment

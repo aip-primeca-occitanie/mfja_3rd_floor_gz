@@ -86,6 +86,8 @@ class RecordingTransport(ScenarioTransport):
         *,
         deterministic_arrival_proof: bool = False,
         clearance_observed_segment: str = '',
+        arrival_shuttle: str = 'room315_right_shuttle_1',
+        arrival_sensor: str = 'DZI3R',
     ) -> None:
         self.commands: list[dict] = []
         self.waits: list[tuple[str, dict]] = []
@@ -93,6 +95,8 @@ class RecordingTransport(ScenarioTransport):
         self._visual_count = 0
         self.deterministic_arrival_proof = deterministic_arrival_proof
         self.clearance_observed_segment = clearance_observed_segment
+        self.arrival_shuttle = arrival_shuttle
+        self.arrival_sensor = arrival_sensor
 
     def publish_command(self, command: dict) -> None:
         self.commands.append(dict(command))
@@ -113,6 +117,10 @@ class RecordingTransport(ScenarioTransport):
 
     def wait_for_switch_state(self, *, side: str, switches: dict, timeout_s: float) -> dict:
         self.waits.append(('switches', {'side': side, 'switches': dict(switches)}))
+        return {'ready': True, 'reason': ''}
+
+    def wait_for_stopper_state(self, *, side: str, stoppers: dict, timeout_s: float) -> dict:
+        self.waits.append(('stoppers', {'side': side, 'stoppers': dict(stoppers)}))
         return {'ready': True, 'reason': ''}
 
     def visual_observation_count(self) -> int:
@@ -162,9 +170,9 @@ class RecordingTransport(ScenarioTransport):
         if self.deterministic_arrival_proof:
             result.update({
                 'side': side,
-                'shuttle': 'room315_right_shuttle_1',
+                'shuttle': self.arrival_shuttle,
                 'target_slot': target_slot,
-                'target_sensor': 'DZI3R',
+                'target_sensor': self.arrival_sensor,
                 'matched_by': 'deterministic_slot_sensor',
                 'sensor_identity_confirmed': True,
                 'controller_stop_confirmed': True,
@@ -339,6 +347,24 @@ def _r4_goal() -> TaskGoal:
             'target_kind': 'slot',
             'target_slot': '2',
             'target_shuttle': 'right_shuttle_4',
+            'payload_filter': 'any',
+        },
+    )
+
+
+def _r2_slot1_goal() -> TaskGoal:
+    return TaskGoal(
+        goal_id='move-r2-a34i-slot1',
+        description='Move R2 from A34I to right slot 1',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '1',
+            'target_shuttle': 'right_shuttle_2',
             'payload_filter': 'any',
         },
     )
@@ -563,6 +589,79 @@ def test_exact_sensor_and_controller_stop_override_visual_arrival_bias():
         postcondition.details['arrival_verification']['matched_by']
         == 'deterministic_slot_sensor'
     )
+
+
+def test_r2_visual_a34i_to_slot1_executes_exact_authoritative_topology_route():
+    source = _with_r2_interior(
+        _r4_blocked_state('r2-a34i-source'),
+        'r2-a34i-source',
+        visual_s_m=1.4166 * 0.95,
+    )
+    provider = SequenceObservedStateProvider([source, source, source, source])
+    planner = SequencePlanner([
+        [
+            'prepare_topology_route right_shuttle_2 right '
+            'right_topology_a34i right_slot_1 right_switch_group',
+            'move_shuttle_from_segment_to_slot right_shuttle_2 right '
+            'right_topology_a34i right_yaskawa right_slot_1 speed=0.2',
+        ],
+        [
+            'move_shuttle_from_segment_to_slot right_shuttle_2 right '
+            'right_topology_a34i right_yaskawa right_slot_1 speed=0.2',
+        ],
+    ])
+    transport = RecordingTransport(
+        deterministic_arrival_proof=True,
+        arrival_shuttle='room315_right_shuttle_2',
+        arrival_sensor='DZI1R',
+    )
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=4),
+    ).run(_r2_slot1_goal())
+
+    assert result.succeeded
+    assert result.reason == 'task_goal_satisfied'
+    assert result.plan_attempts == 2
+    assert [command['action'] for command in transport.commands] == [
+        'switches',
+        'stoppers',
+        'shuttle',
+    ]
+    assert transport.commands[0]['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'INTERIOR',
+    }
+    assert transport.commands[1]['stoppers'] == {
+        device: '0'
+        for device in ('A1', 'A2', 'A3', 'A4')
+    }
+    moving_commands = [
+        command
+        for command in transport.commands
+        if command.get('action') == 'shuttle'
+        and command.get('command') == 'ON'
+    ]
+    assert len(moving_commands) == 1
+    assert moving_commands[0]['shuttle'] == 'right_shuttle_2'
+    assert moving_commands[0]['target_slot'] == '1'
+    target_wait = next(wait for wait in transport.waits if wait[0] == 'target_arrival')
+    assert target_wait[1]['target_sensors'] == ['DZI1R']
+    assert target_wait[1]['shuttle'] == 'right_shuttle_2'
+    assert target_wait[1]['target_slot'] == '1'
+    final_check = result.executed_steps[-1].postcondition
+    assert final_check.reason == 'target_slot_sensor_identity_and_stop_verified'
+    arrival = final_check.details['arrival_verification']
+    assert arrival['target_sensor'] == 'DZI1R'
+    assert arrival['shuttle_contract'] == 'right_shuttle_2'
+    assert arrival['sensor_identity_confirmed'] is True
+    assert arrival['controller_stop_confirmed'] is True
+    assert arrival['controller_position_fields_used_for_localization'] is False
 
 
 def test_new_executive_imports_persisted_clearance_before_first_problem():

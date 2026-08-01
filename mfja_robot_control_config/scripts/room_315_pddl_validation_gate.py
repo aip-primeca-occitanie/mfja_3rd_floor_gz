@@ -23,6 +23,8 @@ SUPPORTED_SYMBOLIC_ACTIONS = {
     'set_stoppers',
     'move_shuttle',
     'move_shuttle_to_slot',
+    'prepare_topology_route',
+    'move_shuttle_from_segment_to_slot',
     'begin_route_clearance',
     'relocate_blocker_to_interior',
     'finish_route_clearance',
