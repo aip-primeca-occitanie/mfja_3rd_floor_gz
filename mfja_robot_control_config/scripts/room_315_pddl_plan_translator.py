@@ -47,9 +47,11 @@ SYMBOLIC_ACTION_PRIMITIVE_MAP = {
     'move_shuttle_via_topology_to_slot': 'SHUTTLE_ON',
     'begin_route_clearance': 'SET_SWITCHES',
     'relocate_blocker_to_interior': 'SHUTTLE_ON',
+    'stage_selected_to_interior': 'SHUTTLE_ON',
     'finish_route_clearance': 'SET_SWITCHES',
     'begin_segment_route_clearance': 'SET_SWITCHES',
     'relocate_segment_blocker_to_interior': 'SHUTTLE_ON',
+    'stage_selected_segment_to_interior': 'SHUTTLE_ON',
     'finish_segment_route_clearance': 'SET_SWITCHES',
     'pause_route_clearance': 'SET_SWITCHES',
     'stop_shuttle': 'STOP_NOW',
@@ -172,6 +174,8 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
     elif parsed.name in {
         'relocate_blocker_to_interior',
         'relocate_segment_blocker_to_interior',
+        'stage_selected_to_interior',
+        'stage_selected_segment_to_interior',
     }:
         command, event_action = _translate_interior_clearance(parsed)
     elif parsed.name in {
@@ -563,7 +567,9 @@ def _translate_interior_clearance(
         'selected_shuttle': selected,
         'command': 'ON',
         'speed': speed,
-        'deterministic_macro': 'supervised_a3_interior_visual_stop',
+        'deterministic_macro': (
+            'supervised_authoritative_interior_branch_visual_stop'
+        ),
     }
     event_action = _blank_event_action(
         primitive='SHUTTLE_ON',
@@ -589,17 +595,13 @@ def _translate_clearance_mode(
         'action': 'switches',
         'side': side,
         'switches': (
-            {
-                'A1': 'EXTERIOR',
-                'A2': 'EXTERIOR',
-                'A3': 'INTERIOR',
-                'A4': 'INTERIOR',
-            }
+            {'FROM_PROBLEM_PROVENANCE': 'REQUIRED'}
             if begin
             else {'ALL': 'EXTERIOR'}
         ),
+        'branch_source': 'audited_problem_provenance' if begin else '',
         'deterministic_macro': (
-            'hold_interior_route_for_all_blockers'
+            'hold_selected_authoritative_interior_branch_for_all_blockers'
             if begin
             else 'restore_normal_route_once'
         ),

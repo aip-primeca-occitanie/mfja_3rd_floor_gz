@@ -115,25 +115,31 @@ def _fake_supervisor(module):
     return supervisor
 
 
-def _guarded_normalization_command(side='right'):
+def _guarded_normalization_command(side='right', public_segment='A34I'):
     short_id = 'R1' if side == 'right' else 'L1'
     shuttle_id = f'{side}_shuttle_1'
-    internal_segment = 'A34I' if side == 'right' else 'A12I'
-    entry_sensor = 'DA3IR' if side == 'right' else 'DA3IL'
+    gate = 'A1' if public_segment == 'A12I' else 'A3'
+    exit_gate = 'A2' if gate == 'A1' else 'A4'
+    internal_segment = (
+        public_segment
+        if side == 'right'
+        else {'A12I': 'A34I', 'A34I': 'A12I'}[public_segment]
+    )
+    entry_sensor = f'DA{gate[-1]}I{"R" if side == "right" else "L"}'
+    switches = {
+        'A1': 'interior' if gate == 'A1' else 'exterior',
+        'A2': 'interior' if gate == 'A1' else 'exterior',
+        'A3': 'interior' if gate == 'A3' else 'exterior',
+        'A4': 'interior' if gate == 'A3' else 'exterior',
+    }
+    stoppers = {
+        device: 'closed' if device == exit_gate else 'open'
+        for device in ('A1', 'A2', 'A3', 'A4')
+    }
     proof = {
         'side': side,
-        'switches': {
-            'A1': 'exterior',
-            'A2': 'exterior',
-            'A3': 'interior',
-            'A4': 'interior',
-        },
-        'stoppers': {
-            'A1': 'open',
-            'A2': 'open',
-            'A3': 'open',
-            'A4': 'closed',
-        },
+        'switches': switches,
+        'stoppers': stoppers,
         'normal_route': False,
         'clearance_mode': True,
         'all_stoppers_open': False,
@@ -150,7 +156,7 @@ def _guarded_normalization_command(side='right'):
             shuttle_id: {
                 'required': True,
                 'satisfied': True,
-                'certificate_target_public_segment': 'A34I',
+                'certificate_target_public_segment': public_segment,
                 'certificate_target_internal_segment': internal_segment,
                 'accepted_visual_internal_segment': internal_segment,
                 'certificate_used_as_localization': False,
@@ -163,7 +169,7 @@ def _guarded_normalization_command(side='right'):
         'identity': short_id,
         'shuttle': shuttle_id,
         'side': side,
-        'target_segment': 'A34I',
+        'target_segment': public_segment,
         'target_s_m': 0.75,
         'entry_sensor': entry_sensor,
         'entry_sensor_identity_confirmed': True,
@@ -201,9 +207,20 @@ def _guarded_normalization_command(side='right'):
     }
 
 
-def _stage_guarded_interior_shuttle(supervisor, *, side='right'):
+def _stage_guarded_interior_shuttle(
+    supervisor,
+    *,
+    side='right',
+    public_segment='A34I',
+):
     entity = f'room315_{side}_shuttle_1'
-    segment = 'A34I' if side == 'right' else 'A12I'
+    segment = (
+        public_segment
+        if side == 'right'
+        else {'A12I': 'A34I', 'A34I': 'A12I'}[public_segment]
+    )
+    gate = 'A1' if public_segment == 'A12I' else 'A3'
+    exit_gate = 'A2' if gate == 'A1' else 'A4'
     supervisor.rails[side]['shuttles'] = {
         entity: {
             'mode': 'DISABLED',
@@ -215,16 +232,14 @@ def _stage_guarded_interior_shuttle(supervisor, *, side='right'):
         },
     }
     supervisor.rails[side]['switches'] = {
-        'A1': 'E',
-        'A2': 'E',
-        'A3': 'I',
-        'A4': 'I',
+        'A1': 'I' if gate == 'A1' else 'E',
+        'A2': 'I' if gate == 'A1' else 'E',
+        'A3': 'I' if gate == 'A3' else 'E',
+        'A4': 'I' if gate == 'A3' else 'E',
     }
     supervisor.rails[side]['stoppers'] = {
-        'A1': '0',
-        'A2': '0',
-        'A3': '0',
-        'A4': '1',
+        device: '1' if device == exit_gate else '0'
+        for device in ('A1', 'A2', 'A3', 'A4')
     }
     supervisor.rails[side]['active_sensors'] = []
     supervisor.rails[side]['active_position_sensors'] = []
@@ -352,28 +367,36 @@ def test_safety_decoder_rejects_switch_change_on_stopped_guarded_segment():
     assert 'missing closed-loop route-normalization proof' in decision['reason']
 
 
-def test_safety_decoder_accepts_strict_guarded_normalization_proof_on_both_rails():
+def test_safety_decoder_accepts_both_interior_branches_on_both_rails():
     module = _load_supervisor_module()
     for side in ('right', 'left'):
-        supervisor = _fake_supervisor(module)
-        _stage_guarded_interior_shuttle(supervisor, side=side)
-        command = _guarded_normalization_command(side)
+        for public_segment in ('A12I', 'A34I'):
+            supervisor = _fake_supervisor(module)
+            _stage_guarded_interior_shuttle(
+                supervisor,
+                side=side,
+                public_segment=public_segment,
+            )
+            command = _guarded_normalization_command(
+                side,
+                public_segment,
+            )
 
-        decision = supervisor._safety_decode_command(command)
+            decision = supervisor._safety_decode_command(command)
 
-        assert decision['accepted'] is True
-        assert decision['corrected_action']['switches'] == {
-            'A1': 'EXTERIOR',
-            'A2': 'EXTERIOR',
-            'A3': 'EXTERIOR',
-            'A4': 'EXTERIOR',
-        }
-        assert (
-            decision['corrected_action']['closed_loop_executive'][
-                'controller_position_fields_used_for_localization'
-            ]
-            is False
-        )
+            assert decision['accepted'] is True
+            assert decision['corrected_action']['switches'] == {
+                'A1': 'EXTERIOR',
+                'A2': 'EXTERIOR',
+                'A3': 'EXTERIOR',
+                'A4': 'EXTERIOR',
+            }
+            assert (
+                decision['corrected_action']['closed_loop_executive'][
+                    'controller_position_fields_used_for_localization'
+                ]
+                is False
+            )
 
 
 def test_safety_decoder_requires_disabled_mode_not_retained_speed_for_stop_proof():

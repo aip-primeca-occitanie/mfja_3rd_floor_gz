@@ -75,6 +75,9 @@ class Room315TaskExecutionNode(Node):
         self.state_builder = VisualObservedStateBuilder(state_config)
         self.state_provider = LatestVisualObservedStateProvider(
             self.state_builder,
+            slot_sensor_confirmation_frames=self._int(
+                'slot_sensor_confirmation_frames'
+            ),
         )
         self.command_pub = self.create_publisher(
             String,

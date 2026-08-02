@@ -305,6 +305,9 @@ class VisualObservedStateBuilder:
         now_s: float,
         runtime_clearance_certificates: dict[str, dict[str, Any]] | None = None,
         slot_sensor_anchors: dict[str, dict[str, Any]] | None = None,
+        verified_slot_arrival_certificates: (
+            dict[str, dict[str, Any]] | None
+        ) = None,
     ) -> ObservedState:
         observation = copy.deepcopy(snapshot.observation)
         supervisor = copy.deepcopy(snapshot.supervisor_status)
@@ -316,6 +319,12 @@ class VisualObservedStateBuilder:
         )
         sensor_anchors = self._validated_slot_sensor_anchors(
             slot_sensor_anchors
+        )
+        verified_slot_arrivals = (
+            self._verified_slot_arrivals_by_identity(
+                verified_slot_arrival_certificates,
+                sensor_anchors=sensor_anchors,
+            )
         )
 
         timestamp_s = float(observation.get('timestamp_s') or now_s)
@@ -368,6 +377,11 @@ class VisualObservedStateBuilder:
                 },
             ))
             if presence_state == 'absent':
+                if spec.short_id in verified_slot_arrivals:
+                    raise TaskExecutionStateError(
+                        'verified slot arrival references absent shuttle:'
+                        f'{spec.short_id}'
+                    )
                 continue
 
             self._validate_present_visual_item(
@@ -385,6 +399,7 @@ class VisualObservedStateBuilder:
                 )
             clearance_certificate = clearance_certificates.get(spec.short_id)
             sensor_anchor = sensor_anchors.get(spec.short_id)
+            verified_slot_arrival = verified_slot_arrivals.get(spec.short_id)
             # A sensor-certified interior relocation means the shuttle cannot
             # physically occupy an exterior slot. Preserve the learned
             # block/position facts below, but suppress only their derived slot
@@ -451,6 +466,25 @@ class VisualObservedStateBuilder:
                             'ShuttleState.yaw',
                         ],
                         'raw_visual_location_replaced': False,
+                    },
+                ))
+
+            if verified_slot_arrival is not None:
+                trusted_facts.append(_fact(
+                    source='executor',
+                    subject=spec.gazebo_entity_name,
+                    predicate='verified_slot_arrival',
+                    value=verified_slot_arrival,
+                    timestamp_s=timestamp_s,
+                    metadata={
+                        'field_owner': 'verified_deterministic_slot_arrival',
+                        'identity': spec.short_id,
+                        'side': spec.side,
+                        'slot': slot,
+                        'sensor': sensor_anchor['sensor'],
+                        'categorical_location_scope_only': True,
+                        'model_prediction_replaced': False,
+                        'controller_position_fields_used_for_localization': False,
                     },
                 ))
 
@@ -593,6 +627,126 @@ class VisualObservedStateBuilder:
                 'sensor': sensor,
             }
         return anchors
+
+    @staticmethod
+    def _verified_slot_arrivals_by_identity(
+        raw: dict[str, dict[str, Any]] | None,
+        *,
+        sensor_anchors: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        """Validate executor proof without admitting controller localization.
+
+        A raw active DZI reading is deliberately insufficient.  The
+        certificate is created by the arrival transport, or reconstructed
+        after a runtime restart, only after the same identity-bearing DZI
+        stays active for the configured confirmation count and a fresh
+        controller status proves the shuttle is disabled at that slot.
+        """
+
+        certificates: dict[str, dict[str, Any]] = {}
+        for raw_identity, raw_certificate in dict(raw or {}).items():
+            if not isinstance(raw_certificate, dict):
+                raise TaskExecutionStateError(
+                    'verified slot arrival certificate must be an object'
+                )
+            certificate = copy.deepcopy(raw_certificate)
+            spec = normalize_shuttle_ref(raw_identity)
+            certificate_spec = normalize_shuttle_ref(
+                certificate.get('identity')
+            )
+            shuttle_spec = normalize_shuttle_ref(
+                certificate.get('shuttle')
+            )
+            if spec is None or certificate_spec is None or shuttle_spec is None:
+                raise TaskExecutionStateError(
+                    f'unknown verified slot arrival identity:{raw_identity}'
+                )
+            if not (
+                spec.short_id
+                == certificate_spec.short_id
+                == shuttle_spec.short_id
+            ):
+                raise TaskExecutionStateError(
+                    f'verified slot arrival identity conflict:{raw_identity}'
+                )
+            side = _side(certificate.get('side'))
+            slot = str(certificate.get('slot') or '').strip()
+            sensor = str(certificate.get('sensor') or '').strip().upper()
+            expected_sensor = SLOT_SENSOR_BY_SIDE_AND_SLOT.get((side, slot), '')
+            if side != spec.side:
+                raise TaskExecutionStateError(
+                    f'verified slot arrival side conflict:{spec.short_id}:{side}'
+                )
+            if not expected_sensor or sensor != expected_sensor.upper():
+                raise TaskExecutionStateError(
+                    f'verified slot arrival sensor conflict:{spec.short_id}:'
+                    f'{sensor or "missing"}'
+                )
+            anchor = sensor_anchors.get(spec.short_id)
+            if not isinstance(anchor, dict) or (
+                anchor.get('side') != side
+                or str(anchor.get('slot') or '') != slot
+                or str(anchor.get('sensor') or '').upper() != sensor
+            ):
+                raise TaskExecutionStateError(
+                    'verified slot arrival lacks matching fresh DZI anchor:'
+                    f'{spec.short_id}'
+                )
+            if (
+                certificate.get('matched_by') != 'deterministic_slot_sensor'
+                or certificate.get('proof_mode') not in {
+                    'supervised_command_arrival',
+                    'stable_stopped_dzi_runtime_recovery',
+                }
+                or certificate.get('sensor_identity_confirmed') is not True
+                or certificate.get('controller_stop_confirmed') is not True
+                or certificate.get('controller_target_slot_confirmed') is not True
+                or certificate.get('controller_mode') != CONTROLLER_DISABLED_MODE
+                or str(certificate.get('reached_target_slot') or '') != slot
+                or certificate.get('model_prediction_replaced') is not False
+                or certificate.get(
+                    'controller_position_fields_used_for_localization'
+                ) is not False
+            ):
+                raise TaskExecutionStateError(
+                    f'invalid verified slot arrival proof:{spec.short_id}'
+                )
+            try:
+                confirmation_frames = int(
+                    certificate.get('sensor_confirmation_frames')
+                )
+                sensor_sequence = int(certificate.get('sensor_sequence'))
+                supervisor_sequence = int(certificate.get('supervisor_sequence'))
+                motion_epoch = int(certificate.get('motion_epoch'))
+            except (TypeError, ValueError) as exc:
+                raise TaskExecutionStateError(
+                    f'invalid verified slot arrival sequence:{spec.short_id}'
+                ) from exc
+            if min(
+                confirmation_frames,
+                sensor_sequence,
+                supervisor_sequence,
+            ) < 1:
+                raise TaskExecutionStateError(
+                    f'invalid verified slot arrival sequence:{spec.short_id}'
+                )
+            if motion_epoch < 0:
+                raise TaskExecutionStateError(
+                    f'invalid verified slot arrival motion epoch:{spec.short_id}'
+                )
+            if spec.short_id in certificates:
+                raise TaskExecutionStateError(
+                    f'duplicate verified slot arrival identity:{spec.short_id}'
+                )
+            certificate.update({
+                'identity': spec.short_id,
+                'shuttle': spec.gazebo_entity_name,
+                'side': side,
+                'slot': slot,
+                'sensor': sensor,
+            })
+            certificates[spec.short_id] = certificate
+        return certificates
 
     @staticmethod
     def _clearance_certificates_by_identity(
@@ -894,21 +1048,42 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
         self,
         builder: VisualObservedStateBuilder,
         *,
+        slot_sensor_confirmation_frames: int = 2,
         monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self.builder = builder
+        self.slot_sensor_confirmation_frames = max(
+            int(slot_sensor_confirmation_frames),
+            1,
+        )
         self.monotonic = monotonic
         self._condition = threading.Condition()
         self._observation: dict[str, Any] = {}
         self._observation_receive_s = -1.0
         self._supervisor_status: dict[str, Any] = {}
         self._supervisor_receive_s = -1.0
+        self._supervisor_sequence = 0
         self._runtime_clearance_certificates: dict[str, dict[str, Any]] = {}
+        self._verified_slot_arrival_certificates: dict[
+            str,
+            dict[str, Any],
+        ] = {}
+        # Monotonic per-shuttle command generation.  An arrival proof is
+        # consumable only in the same generation in which its verification
+        # started.  This closes the interval between publishing a later
+        # motion command and receiving the first MOVING controller frame.
+        self._verified_slot_motion_epoch_by_identity: dict[str, int] = {}
+        self._verified_slot_bootstrap_suppressed: set[str] = set()
         self._slot_sensor_anchors_by_side: dict[
             str,
             dict[str, dict[str, Any]],
         ] = {'left': {}, 'right': {}}
         self._slot_sensor_receive_s = {'left': -1.0, 'right': -1.0}
+        self._slot_sensor_sequence = {'left': 0, 'right': 0}
+        self._slot_sensor_stability_by_side: dict[
+            str,
+            dict[str, dict[str, Any]],
+        ] = {'left': {}, 'right': {}}
         self._slot_sensor_error = {'left': '', 'right': ''}
 
     def update_observation(
@@ -922,6 +1097,16 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
             self._observation_receive_s = (
                 self.monotonic() if receive_s is None else float(receive_s)
             )
+            presence_by_identity = {
+                str(item.get('identity') or '').strip().upper(): str(
+                    item.get('presence_state') or ''
+                ).strip().lower()
+                for item in observation.get('shuttles', [])
+                if isinstance(item, dict)
+            }
+            for identity in list(self._verified_slot_arrival_certificates):
+                if presence_by_identity.get(identity) != 'present':
+                    self._verified_slot_arrival_certificates.pop(identity, None)
             self._condition.notify_all()
 
     def update_supervisor(
@@ -931,9 +1116,34 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
         receive_s: float | None = None,
     ) -> None:
         with self._condition:
-            self._supervisor_status = copy.deepcopy(status)
-            self._supervisor_receive_s = (
+            current_receive_s = (
                 self.monotonic() if receive_s is None else float(receive_s)
+            )
+            previous_age = current_receive_s - self._supervisor_receive_s
+            if (
+                self._supervisor_receive_s >= 0.0
+                and previous_age > self.builder.config.supervisor_status_timeout_s
+            ):
+                # A proof may not bridge a controller telemetry outage, even
+                # if the first frame after the outage repeats the old value.
+                self._verified_slot_arrival_certificates.clear()
+                self._slot_sensor_stability_by_side = {
+                    'left': {},
+                    'right': {},
+                }
+            self._supervisor_status = copy.deepcopy(status)
+            self._supervisor_receive_s = current_receive_s
+            self._supervisor_sequence += 1
+            for identity, certificate in list(
+                self._verified_slot_arrival_certificates.items()
+            ):
+                if not self._verified_slot_arrival_is_current_locked(
+                    certificate,
+                    now_s=current_receive_s,
+                ):
+                    self._verified_slot_arrival_certificates.pop(identity, None)
+            self._bootstrap_verified_slot_arrivals_locked(
+                now_s=current_receive_s
             )
             self._condition.notify_all()
 
@@ -975,6 +1185,243 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
     def runtime_clearance_certificates(self) -> dict[str, dict[str, Any]]:
         with self._condition:
             return copy.deepcopy(self._runtime_clearance_certificates)
+
+    def set_verified_slot_arrival_certificate(
+        self,
+        certificate: dict[str, Any],
+    ) -> None:
+        spec = normalize_shuttle_ref(certificate.get('identity'))
+        if spec is None:
+            raise TaskExecutionStateError('unknown verified slot arrival identity')
+        with self._condition:
+            if not self._verified_slot_arrival_is_current_locked(
+                certificate,
+                now_s=self.monotonic(),
+            ):
+                raise TaskExecutionStateError(
+                    'verified slot arrival proof is not current in provider:'
+                    f'{spec.short_id}'
+                )
+            self._verified_slot_arrival_certificates[
+                spec.short_id
+            ] = copy.deepcopy(certificate)
+            # A stopped, identity-bearing DZI arrival is the authoritative
+            # end of an earlier interior-staging effect.  Consume that effect
+            # only after the complete arrival proof is current; a single raw
+            # sensor frame is not sufficient to erase it.
+            self._runtime_clearance_certificates.pop(spec.short_id, None)
+            self._verified_slot_bootstrap_suppressed.discard(spec.short_id)
+            self._condition.notify_all()
+
+    def verified_slot_motion_epoch(
+        self,
+        shuttle: str,
+        *,
+        side: str | None = None,
+    ) -> int:
+        """Return the current local motion-command generation."""
+
+        spec = normalize_shuttle_ref(shuttle, side=side)
+        if spec is None:
+            raise TaskExecutionStateError(
+                f'unknown verified slot arrival identity:{shuttle}'
+            )
+        with self._condition:
+            return self._verified_slot_motion_epoch_by_identity.get(
+                spec.short_id,
+                0,
+            )
+
+    def invalidate_verified_slot_arrival_for_motion(
+        self,
+        shuttle: str,
+        *,
+        side: str | None = None,
+    ) -> int:
+        """Atomically consume proof and advance its command generation."""
+
+        spec = normalize_shuttle_ref(shuttle, side=side)
+        if spec is None:
+            raise TaskExecutionStateError(
+                f'unknown motion-capable shuttle identity:{shuttle}'
+            )
+        with self._condition:
+            next_epoch = (
+                self._verified_slot_motion_epoch_by_identity.get(
+                    spec.short_id,
+                    0,
+                )
+                + 1
+            )
+            self._verified_slot_motion_epoch_by_identity[
+                spec.short_id
+            ] = next_epoch
+            self._verified_slot_arrival_certificates.pop(spec.short_id, None)
+            self._verified_slot_bootstrap_suppressed.add(spec.short_id)
+            self._condition.notify_all()
+            return next_epoch
+
+    def clear_verified_slot_arrival_certificate(
+        self,
+        shuttle: str,
+        *,
+        side: str | None = None,
+    ) -> None:
+        spec = normalize_shuttle_ref(shuttle, side=side)
+        if spec is None:
+            return
+        with self._condition:
+            self._verified_slot_arrival_certificates.pop(spec.short_id, None)
+            self._verified_slot_bootstrap_suppressed.add(spec.short_id)
+            self._condition.notify_all()
+
+    def verified_slot_arrival_certificates(
+        self,
+        *,
+        now_s: float | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        """Return proof still bound to fresh matching DZI/controller state."""
+
+        current = self.monotonic() if now_s is None else float(now_s)
+        with self._condition:
+            for identity, certificate in list(
+                self._verified_slot_arrival_certificates.items()
+            ):
+                if not self._verified_slot_arrival_is_current_locked(
+                    certificate,
+                    now_s=current,
+                ):
+                    self._verified_slot_arrival_certificates.pop(identity, None)
+            return copy.deepcopy(self._verified_slot_arrival_certificates)
+
+    def _verified_slot_arrival_is_current_locked(
+        self,
+        certificate: dict[str, Any],
+        *,
+        now_s: float,
+    ) -> bool:
+        """Check both independent telemetry sources under the provider lock."""
+
+        spec = normalize_shuttle_ref(certificate.get('identity'))
+        if spec is None:
+            return False
+        try:
+            certificate_motion_epoch = int(certificate.get('motion_epoch'))
+        except (TypeError, ValueError):
+            return False
+        if certificate_motion_epoch != (
+            self._verified_slot_motion_epoch_by_identity.get(spec.short_id, 0)
+        ):
+            return False
+        side = str(certificate.get('side') or '').strip().casefold()
+        slot = str(certificate.get('slot') or '').strip()
+        sensor = str(certificate.get('sensor') or '').strip().upper()
+        if side != spec.side or not slot or not sensor:
+            return False
+        sensor_age = now_s - self._slot_sensor_receive_s.get(side, -1.0)
+        if (
+            sensor_age < 0.0
+            or sensor_age > self.builder.config.slot_sensor_state_timeout_s
+            or self._slot_sensor_error.get(side)
+        ):
+            return False
+        anchor = self._slot_sensor_anchors_by_side.get(side, {}).get(
+            spec.short_id
+        )
+        if not isinstance(anchor, dict) or (
+            str(anchor.get('slot') or '') != slot
+            or str(anchor.get('sensor') or '').upper() != sensor
+        ):
+            return False
+        supervisor_age = now_s - self._supervisor_receive_s
+        if (
+            supervisor_age < 0.0
+            or supervisor_age
+            > self.builder.config.supervisor_status_timeout_s
+        ):
+            return False
+        shuttles = _nested_dict(
+            self._supervisor_status,
+            'rails',
+            side,
+        ).get('shuttles')
+        controller_state = (
+            shuttles.get(spec.gazebo_entity_name, {})
+            if isinstance(shuttles, dict)
+            else {}
+        )
+        return bool(
+            str(controller_state.get('mode') or '').strip().upper()
+            == CONTROLLER_DISABLED_MODE
+            and str(
+                controller_state.get('reached_target_slot') or ''
+            ).strip() == slot
+        )
+
+    def _bootstrap_verified_slot_arrivals_locked(
+        self,
+        *,
+        now_s: float,
+    ) -> None:
+        """Recover proof after a runtime restart from stable stopped sources.
+
+        This never uses controller position fields.  Recovery requires the
+        same unique identity-bearing DZI for the full confirmation count plus
+        fresh ``DISABLED`` controller feedback whose discrete
+        ``reached_target_slot`` matches that DZI.  A locally issued motion
+        command suppresses bootstrap until the arrival transport registers
+        the new supervised result.
+        """
+
+        for side in ('left', 'right'):
+            for identity, stable in self._slot_sensor_stability_by_side[
+                side
+            ].items():
+                if (
+                    identity in self._verified_slot_arrival_certificates
+                    or identity in self._verified_slot_bootstrap_suppressed
+                    or int(stable.get('count') or 0)
+                    < self.slot_sensor_confirmation_frames
+                ):
+                    continue
+                spec = normalize_shuttle_ref(identity)
+                anchor = stable.get('anchor')
+                if spec is None or not isinstance(anchor, dict):
+                    continue
+                slot = str(anchor.get('slot') or '')
+                certificate = {
+                    'identity': spec.short_id,
+                    'shuttle': spec.gazebo_entity_name,
+                    'side': side,
+                    'slot': slot,
+                    'sensor': str(anchor.get('sensor') or '').upper(),
+                    'matched_by': 'deterministic_slot_sensor',
+                    'proof_mode': 'stable_stopped_dzi_runtime_recovery',
+                    'motion_epoch': (
+                        self._verified_slot_motion_epoch_by_identity.get(
+                            spec.short_id,
+                            0,
+                        )
+                    ),
+                    'sensor_identity_confirmed': True,
+                    'sensor_confirmation_frames': int(stable['count']),
+                    'sensor_sequence': self._slot_sensor_sequence[side],
+                    'controller_stop_confirmed': True,
+                    'controller_mode': CONTROLLER_DISABLED_MODE,
+                    'controller_target_slot_confirmed': True,
+                    'reached_target_slot': slot,
+                    'supervisor_sequence': self._supervisor_sequence,
+                    'model_prediction_replaced': False,
+                    'controller_position_fields_used_for_localization': False,
+                }
+                if self._verified_slot_arrival_is_current_locked(
+                    certificate,
+                    now_s=now_s,
+                ):
+                    self._verified_slot_arrival_certificates[
+                        identity
+                    ] = certificate
+                    self._runtime_clearance_certificates.pop(identity, None)
 
     def update_slot_sensor_feedback(
         self,
@@ -1030,11 +1477,65 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                 'sensor': sensor,
             }
         with self._condition:
-            self._slot_sensor_anchors_by_side[rail_side] = anchors
-            self._slot_sensor_receive_s[rail_side] = (
+            current_receive_s = (
                 self.monotonic() if receive_s is None else float(receive_s)
             )
+            previous_age = (
+                current_receive_s - self._slot_sensor_receive_s[rail_side]
+            )
+            source_gap = (
+                self._slot_sensor_receive_s[rail_side] >= 0.0
+                and previous_age > self.builder.config.slot_sensor_state_timeout_s
+            )
+            if source_gap:
+                # Do not let one repeated post-outage frame resurrect an old
+                # multi-frame arrival certificate.
+                for identity, certificate in list(
+                    self._verified_slot_arrival_certificates.items()
+                ):
+                    if certificate.get('side') == rail_side:
+                        self._verified_slot_arrival_certificates.pop(
+                            identity,
+                            None,
+                        )
+                self._slot_sensor_stability_by_side[rail_side] = {}
+            previous_stability = self._slot_sensor_stability_by_side[rail_side]
+            next_stability: dict[str, dict[str, Any]] = {}
+            if not error:
+                for identity, anchor in anchors.items():
+                    previous = previous_stability.get(identity, {})
+                    same_anchor = previous.get('anchor') == anchor
+                    next_stability[identity] = {
+                        'anchor': copy.deepcopy(anchor),
+                        'count': (
+                            int(previous.get('count') or 0) + 1
+                            if same_anchor and not source_gap
+                            else 1
+                        ),
+                    }
+            self._slot_sensor_stability_by_side[
+                rail_side
+            ] = next_stability
+            self._slot_sensor_anchors_by_side[rail_side] = anchors
+            self._slot_sensor_receive_s[rail_side] = current_receive_s
+            self._slot_sensor_sequence[rail_side] += 1
             self._slot_sensor_error[rail_side] = error
+            for identity, certificate in list(
+                self._verified_slot_arrival_certificates.items()
+            ):
+                if certificate.get('side') != rail_side:
+                    continue
+                anchor = anchors.get(identity)
+                if error or not isinstance(anchor, dict) or (
+                    str(anchor.get('slot') or '')
+                    != str(certificate.get('slot') or '')
+                    or str(anchor.get('sensor') or '').upper()
+                    != str(certificate.get('sensor') or '').upper()
+                ):
+                    self._verified_slot_arrival_certificates.pop(identity, None)
+            self._bootstrap_verified_slot_arrivals_locked(
+                now_s=current_receive_s
+            )
             self._condition.notify_all()
 
     def slot_sensor_anchors(self, *, now_s: float | None = None) -> dict[
@@ -1071,6 +1572,9 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                     self.runtime_clearance_certificates()
                 ),
                 slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
+                verified_slot_arrival_certificates=(
+                    self.verified_slot_arrival_certificates(now_s=now_s)
+                ),
             )
         except Exception as exc:  # noqa: BLE001 - readiness explanation
             return False, str(exc)
@@ -1089,6 +1593,9 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                         self.runtime_clearance_certificates()
                     ),
                     slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
+                    verified_slot_arrival_certificates=(
+                        self.verified_slot_arrival_certificates(now_s=now_s)
+                    ),
                 )
             except Exception as exc:  # noqa: BLE001 - bounded retry boundary
                 last_error = str(exc)
@@ -1130,6 +1637,9 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                         self.runtime_clearance_certificates()
                     ),
                     slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
+                    verified_slot_arrival_certificates=(
+                        self.verified_slot_arrival_certificates(now_s=now_s)
+                    ),
                 )
                 if state.state_id != previous_state_id:
                     return state
@@ -1180,6 +1690,7 @@ class VisualSupervisorTransport(ScenarioTransport):
         self._visual_sequence = 0
         self._sensor_feedback = {'left': [], 'right': []}
         self._sensor_sequence = {'left': 0, 'right': 0}
+        self._sensor_receive_s = {'left': -1.0, 'right': -1.0}
 
     def update_supervisor(self, status: dict[str, Any]) -> None:
         with self._condition:
@@ -1240,32 +1751,40 @@ class VisualSupervisorTransport(ScenarioTransport):
                 'name': str(reading.get('name') or '').strip(),
                 'shuttle': str(reading.get('shuttle') or '').strip(),
             })
-        slot_sensors = {
-            sensor.upper()
-            for sensor in SLOT_SENSOR_BY_SIDE_AND_SLOT.values()
-        }
-        for reading in sanitized:
-            if reading['name'].upper() in slot_sensors and reading['shuttle']:
-                self.provider.clear_runtime_clearance_certificate(
-                    reading['shuttle'],
-                    side=rail_side,
-                )
         with self._condition:
             self._sensor_feedback[rail_side] = sanitized
             self._sensor_sequence[rail_side] += 1
+            self._sensor_receive_s[rail_side] = self.monotonic()
             self._condition.notify_all()
 
     def publish_command(self, command: dict[str, Any]) -> None:
-        if (
-            str(command.get('action') or '').strip().casefold() == 'shuttle'
-            and str(command.get('command') or '').strip().upper() == 'ON'
-            and str(command.get('shuttle') or '').strip()
-        ):
+        action = str(command.get('action') or '').strip().casefold()
+        command_name = str(command.get('command') or '').strip().upper()
+        shuttle = str(
+            command.get('shuttle')
+            or command.get('shuttle_id')
+            or command.get('name')
+            or ''
+        ).strip()
+        if action == 'shuttle' and command_name == 'ON' and shuttle:
             # A bounded-stop certificate proves only the completed motion that
             # created it. Any later ON command invalidates that proof before
             # the command leaves this runtime boundary.
             self.provider.clear_runtime_clearance_certificate(
-                str(command['shuttle']),
+                shuttle,
+                side=str(command.get('side') or '').strip() or None,
+            )
+        if (
+            action == 'shuttle'
+            and command_name in {'ON', 'RESET', 'REMOVE', 'ADD_MOVING'}
+            and shuttle
+        ):
+            # The exact-slot proof is valid only while the same shuttle stays
+            # stopped on the same active DZI. Invalidate before any command
+            # that can move, reset, or remove it; never wait for a later
+            # visual disagreement to discover stale categorical state.
+            self.provider.invalidate_verified_slot_arrival_for_motion(
+                shuttle,
                 side=str(command.get('side') or '').strip() or None,
             )
         self.publish_callback(copy.deepcopy(command))
@@ -1397,19 +1916,36 @@ class VisualSupervisorTransport(ScenarioTransport):
                 ),
                 'target_sensors': sorted(wanted),
             }
+        # The ON command has already crossed publish_command(), which
+        # atomically advanced this generation.  Any later motion-capable
+        # command advances it again and makes this in-flight proof stale,
+        # even before controller telemetry changes from DISABLED to MOVING.
+        arrival_motion_epoch = self.provider.verified_slot_motion_epoch(
+            spec.short_id,
+            side=rail_side,
+        )
         deadline = self.monotonic() + max(float(timeout_s), 0.0)
         confirmed = 0
         last_sequence = -1
+        last_sensor_receive_s = -1.0
         while self.monotonic() <= deadline:
             with self._condition:
                 sequence = self._sensor_sequence[rail_side]
                 readings = copy.deepcopy(self._sensor_feedback[rail_side])
+                sensor_receive_s = self._sensor_receive_s[rail_side]
                 if sequence == last_sequence:
                     self._condition.wait(
                         timeout=min(0.1, max(0.0, deadline - self.monotonic()))
                     )
                     continue
                 last_sequence = sequence
+            if (
+                last_sensor_receive_s >= 0.0
+                and sensor_receive_s - last_sensor_receive_s
+                > self.provider.builder.config.slot_sensor_state_timeout_s
+            ):
+                confirmed = 0
+            last_sensor_receive_s = sensor_receive_s
             sensor_match = _exact_target_sensor_match(
                 readings,
                 sensor=expected_sensor,
@@ -1457,6 +1993,46 @@ class VisualSupervisorTransport(ScenarioTransport):
                     ),
                     'matched_by': 'deterministic_slot_sensor',
                 }
+            certificate = {
+                'identity': spec.short_id,
+                'shuttle': spec.gazebo_entity_name,
+                'side': rail_side,
+                'slot': str(target_slot),
+                'sensor': expected_sensor.upper(),
+                'matched_by': 'deterministic_slot_sensor',
+                'proof_mode': 'supervised_command_arrival',
+                'motion_epoch': arrival_motion_epoch,
+                'sensor_identity_confirmed': True,
+                'sensor_confirmation_frames': confirmed,
+                'sensor_sequence': last_sequence,
+                'controller_stop_confirmed': True,
+                'controller_mode': str(
+                    stop_result.get('mode') or ''
+                ).strip().upper(),
+                'controller_target_slot_confirmed': bool(
+                    stop_result.get('controller_target_slot_confirmed')
+                ),
+                'reached_target_slot': str(
+                    stop_result.get('reached_target_slot') or ''
+                ).strip(),
+                'supervisor_sequence': int(
+                    stop_result.get('supervisor_sequence') or 0
+                ),
+                'model_prediction_replaced': False,
+                'controller_position_fields_used_for_localization': False,
+            }
+            try:
+                self.provider.set_verified_slot_arrival_certificate(certificate)
+            except TaskExecutionStateError as exc:
+                return {
+                    'arrived': False,
+                    'reason': (
+                        'slot arrival proof became stale before registration: '
+                        f'{exc}'
+                    ),
+                    'matched_by': 'deterministic_slot_sensor',
+                    'controller_position_fields_used_for_localization': False,
+                }
             return {
                 'arrived': True,
                 'reason': '',
@@ -1473,6 +2049,9 @@ class VisualSupervisorTransport(ScenarioTransport):
                 'controller_target_slot_confirmed': True,
                 'controller_position_fields_used_for_localization': False,
                 'visual_localization_used_for_final_stop': False,
+                'verified_slot_arrival_certificate': copy.deepcopy(
+                    certificate
+                ),
             }
         return {
             'arrived': False,

@@ -52,6 +52,7 @@
     (clearance_precedes ?blocker - shuttle ?selected - shuttle)
     (clearance_relocated ?blocker - shuttle)
     (clearance_destination_ready ?blocker - shuttle)
+    (interior_entry_route_clear ?blocker - shuttle)
     (normal_route ?side - rail_side)
     (clearance_mode ?side - rail_side)
     (clearance_pause_safe ?side - rail_side)
@@ -401,12 +402,42 @@
       (clearance_precedes ?blocker ?selected)
       (route_blocked_by ?from_slot ?to_slot ?blocker)
       (clearance_destination_ready ?blocker)
+      (interior_entry_route_clear ?blocker)
       (> (pending_clearances ?side) 0)
       (= (clearance_order ?blocker) (clearance_cursor ?side))
     )
     :effect (and
       (clearance_relocated ?blocker)
       (not (route_blocked_by ?from_slot ?to_slot ?blocker))
+      (decrease (pending_clearances ?side) 1)
+      (increase (clearance_cursor ?side) 1)
+      (increase (total-cost) 4)
+    )
+  )
+
+  ; Topology-selected vacancy seed: stage the user's shuttle itself only when
+  ; it is the unique safe first mover before A3.
+  (:action stage_selected_to_interior
+    :parameters (
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_slot - slot
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?selected ?side)
+      (goal_candidate ?selected)
+      (shuttle_at_slot ?selected ?from_slot)
+      (target_slot_for_goal ?to_slot)
+      (clearance_mode ?side)
+      (clearance_destination_ready ?selected)
+      (interior_entry_route_clear ?selected)
+      (> (pending_clearances ?side) 0)
+      (= (clearance_order ?selected) (clearance_cursor ?side))
+    )
+    :effect (and
+      (clearance_relocated ?selected)
       (decrease (pending_clearances ?side) 1)
       (increase (clearance_cursor ?side) 1)
       (increase (total-cost) 4)
@@ -496,12 +527,42 @@
       (clearance_precedes ?blocker ?selected)
       (topology_route_blocked_by ?selected ?from_block ?to_slot ?blocker)
       (clearance_destination_ready ?blocker)
+      (interior_entry_route_clear ?blocker)
       (> (pending_clearances ?side) 0)
       (= (clearance_order ?blocker) (clearance_cursor ?side))
     )
     :effect (and
       (clearance_relocated ?blocker)
       (not (topology_route_blocked_by ?selected ?from_block ?to_slot ?blocker))
+      (decrease (pending_clearances ?side) 1)
+      (increase (clearance_cursor ?side) 1)
+      (increase (total-cost) 4)
+    )
+  )
+
+  (:action stage_selected_segment_to_interior
+    :parameters (
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_block - block
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?selected ?side)
+      (goal_candidate ?selected)
+      (segment_only_location ?selected)
+      (shuttle_at_topology_block ?selected ?from_block)
+      (block_on_side ?from_block ?side)
+      (target_slot_for_goal ?to_slot)
+      (clearance_mode ?side)
+      (clearance_destination_ready ?selected)
+      (interior_entry_route_clear ?selected)
+      (> (pending_clearances ?side) 0)
+      (= (clearance_order ?selected) (clearance_cursor ?side))
+    )
+    :effect (and
+      (clearance_relocated ?selected)
       (decrease (pending_clearances ?side) 1)
       (increase (clearance_cursor ?side) 1)
       (increase (total-cost) 4)

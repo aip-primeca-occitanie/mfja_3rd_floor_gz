@@ -41,6 +41,8 @@ from room_315_multi_shuttle import normalize_fleet_block_id
 from room_315_multi_shuttle import normalize_fleet_slot_id
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import validate_fleet_command
+from room_315_pddl_scenario_generator import INTERIOR_HOLDING_BRANCH_BY_GATE
+from room_315_pddl_scenario_generator import INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import default_rail_network_path
 
@@ -129,9 +131,9 @@ ROUTE_NORMALIZATION_SYMBOLIC_ACTION_ALIASES = {
     # macro as exact-slot clearance, while retaining distinct PDDL semantics.
     'finish_segment_route_clearance': 'finish_route_clearance',
 }
-INTERIOR_ENTRY_SENSOR_BY_SIDE = {
-    'right': 'DA3IR',
-    'left': 'DA3IL',
+INTERIOR_GATE_BY_PUBLIC_SEGMENT = {
+    str(branch['target_segment']): gate
+    for gate, branch in INTERIOR_HOLDING_BRANCH_BY_GATE.items()
 }
 CONTROLLER_DISABLED_MODE = 'DISABLED'
 SWITCH_VALUE_BY_ID = {
@@ -890,7 +892,10 @@ def _current_interior_safety_occupants(
     for raw_identity, state in _rail_shuttles(rails, side).items():
         if _shuttle_is_falling(state):
             continue
-        if 'A34I' not in _shuttle_safety_segments(state, side=side):
+        if not (
+            _shuttle_safety_segments(state, side=side)
+            & set(INTERIOR_GATE_BY_PUBLIC_SEGMENT)
+        ):
             continue
         spec = normalize_shuttle_ref(raw_identity, side=side)
         if spec is None or spec.side != side:
@@ -1007,14 +1012,25 @@ def _normalization_certificates_reason(
         consistency_by_id[spec.shuttle_id] = entry
     if set(consistency_by_id) != interior_ids:
         return 'certificate_segment_consistency does not match interior occupants'
-    expected_visual_segment = 'A34I' if side == 'right' else 'A12I'
     for identity, consistency in consistency_by_id.items():
+        expected_public_segment = _clean_token(
+            consistency.get('certificate_target_public_segment')
+        ).upper()
+        expected_visual_segment = (
+            LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
+                expected_public_segment,
+                expected_public_segment,
+            )
+            if side == 'left'
+            else expected_public_segment
+        )
         if (
             consistency.get('required') is not True
             or consistency.get('satisfied') is not True
+            or expected_public_segment not in INTERIOR_GATE_BY_PUBLIC_SEGMENT
             or _clean_token(
                 consistency.get('certificate_target_public_segment')
-            ).upper() != 'A34I'
+            ).upper() != expected_public_segment
             or _clean_token(
                 consistency.get('certificate_target_internal_segment')
             ).upper() != expected_visual_segment
@@ -1043,9 +1059,16 @@ def _normalization_certificates_reason(
         certificates[spec.shuttle_id] = certificate
     if set(certificates) != interior_ids:
         return 'runtime clearance certificates do not match interior occupants'
-    expected_sensor = INTERIOR_ENTRY_SENSOR_BY_SIDE[side]
     for identity, certificate in certificates.items():
         spec = normalize_shuttle_ref(identity, side=side)
+        target_segment = _clean_token(
+            certificate.get('target_segment')
+        ).upper()
+        gate = INTERIOR_GATE_BY_PUBLIC_SEGMENT.get(target_segment, '')
+        expected_sensor = INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE.get(
+            (side, gate),
+            '',
+        )
         try:
             target_s_m = float(certificate['target_s_m'])
         except (KeyError, TypeError, ValueError):
@@ -1055,7 +1078,8 @@ def _normalization_certificates_reason(
             or certificate.get('identity') != spec.short_id
             or certificate.get('shuttle') != spec.shuttle_id
             or certificate.get('side') != side
-            or _clean_token(certificate.get('target_segment')).upper() != 'A34I'
+            or not gate
+            or target_segment not in INTERIOR_GATE_BY_PUBLIC_SEGMENT
             or _clean_token(certificate.get('entry_sensor')).upper() != expected_sensor
             or certificate.get('entry_sensor_identity_confirmed') is not True
             or certificate.get('controller_stop_confirmed') is not True

@@ -24,6 +24,7 @@ from room_315_contracts import ObservedState
 from room_315_contracts import TaskGoal
 from room_315_observed_state_provider import ObservedStateProvider
 from room_315_pddl_scenario_generator import BasePlannerBackend
+from room_315_pddl_scenario_generator import PddlProblemBuildError
 from room_315_pddl_scenario_generator import ScenarioSpec
 from room_315_pddl_scenario_generator import ScenarioTransport
 from room_315_pddl_scenario_generator import _observed_state_from_scenario_spec
@@ -1061,16 +1062,25 @@ def test_new_executive_imports_persisted_clearance_before_first_problem():
     certificate = _persisted_r2_clearance_certificate()
 
     # Without the persisted certificate, the accepted visual branch error
-    # makes R2 a route blocker. This establishes that the first planning
-    # problem below can be direct only if the new executive synchronizes its
-    # provider-owned certificate before building that problem.
+    # makes R2 an exterior route blocker. Dual-branch recovery can now move
+    # that apparent blocker safely through A1, but it cannot manufacture a
+    # direct R4 route. This establishes that the first planning problem below
+    # can be direct only if the new executive synchronizes its provider-owned
+    # certificate before building that problem.
     uncertified = build_pddl_problem_from_observed_state_task_goal(
         cleared,
         _r4_goal(),
     )
-    assert uncertified.provenance[
+    uncertified_clearance = uncertified.provenance[
         'target_blocker_clearance_plan'
-    ]['required'] is True
+    ]
+    assert uncertified_clearance['required'] is True
+    assert uncertified_clearance['ordered_relocations'][0]['shuttle'] == (
+        'right_shuttle_2'
+    )
+    assert uncertified_clearance['ordered_relocations'][0]['destination'][
+        'target_segment'
+    ] == 'A12I'
 
     provider = PersistedCertificateObservedStateProvider(
         [cleared, arrived],
@@ -1166,7 +1176,7 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
     clearance_postcondition = result.executed_steps[1].postcondition
     assert clearance_postcondition.satisfied
     assert clearance_postcondition.reason == (
-        'blocker_visual_interior_clearance_verified'
+        'blocker_sensor_motion_certified_interior_clearance'
     )
     assert clearance_postcondition.details['target_segment'] == 'A34I'
     assert clearance_postcondition.details['observed_segment'] == 'A34I'
@@ -1208,7 +1218,9 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
     assert transport.commands[2]['target_stopper'] == 'A4'
     visual_wait = next(item for item in transport.waits if item[0] == 'visual_position_and_stop')
     assert visual_wait[1]['target_segment'] == 'A34I'
-    assert visual_wait[1]['target_s_m'] == 0.7083
+    assert visual_wait[1]['target_s_m'] == pytest.approx(
+        public_rail_segment_lengths('right')['A34I'] - 0.35
+    )
     assert visual_wait[1]['entry_sensor'] == 'DA3IR'
     restoration = [
         command
@@ -1220,6 +1232,8 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
         'switches',
         'stoppers',
     ]
+
+
     relocation_index = next(
         index
         for index, command in enumerate(transport.commands)
@@ -1249,6 +1263,111 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
     assert any(
         wait[0] == 'fresh_visual_observation'
         for wait in transport.waits
+    )
+
+
+@pytest.mark.parametrize('side', ('right', 'left'))
+def test_a12i_clearance_mode_uses_a1_a2_devices_from_provenance(side):
+    selected = f'{side}_shuttle_2'
+    spec = ScenarioSpec(
+        goal_id=f'{side}-a12i-executive-branch',
+        side=side,
+        shuttle=selected,
+        source='yaskawa',
+        target='staubli' if side == 'right' else 'kuka',
+        target_slot='4',
+        payload_condition='empty',
+        start_slots_by_shuttle=tuple(
+            (f'{side}_shuttle_{identity}', str(identity))
+            for identity in range(1, 5)
+        ),
+    )
+    state = _observed_state_from_scenario_spec(spec)
+    goal = TaskGoal(
+        goal_id=spec.goal_id,
+        description='Move slot 2 shuttle to slot 4',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': side,
+            'target_kind': 'slot',
+            'target_slot': '4',
+            'target_shuttle': selected,
+            'payload_filter': 'any',
+        },
+    )
+    parent = build_pddl_problem_from_observed_state_task_goal(state, goal)
+    problem = ClosedLoopExecutive._next_planning_problem(parent)
+    transport = RecordingTransport()
+    executive = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([state]),
+        planner=SequencePlanner([[]]),
+        transport=transport,
+    )
+
+    status, check = executive._enter_route_clearance_mode(
+        side=side,
+        problem=problem,
+        plan_length=2,
+        step_index=0,
+        symbolic_step=(
+            f'begin_route_clearance {selected} {side} '
+            f'{side}_slot_2 {side}_slot_4'
+        ),
+    )
+
+    assert status == 'accepted'
+    assert check.satisfied
+    assert transport.commands[0]['switches'] == {
+        'A1': 'INTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+    assert transport.commands[1]['stoppers'] == {
+        'A1': '0',
+        'A2': '1',
+        'A3': '0',
+        'A4': '0',
+    }
+    assert check.details['gate_switch'] == 'A1'
+    assert check.details['exit_switch'] == 'A2'
+    assert check.details['target_segment'] == 'A12I'
+
+    relocation = problem.provenance['clearance_relocation']
+    blocker = relocation['shuttle']
+    translated = translate_plan([(
+        f'relocate_blocker_to_interior {blocker} {selected} {side} '
+        f'{side}_slot_2 {side}_slot_4 speed=0.2'
+    )])[0]
+    relocation_status, relocation_check = (
+        executive._execute_interior_clearance(
+            translated_step=translated,
+            problem=problem,
+            plan_length=1,
+            step_index=1,
+        )
+    )
+
+    assert relocation_status == 'accepted'
+    assert relocation_check.satisfied
+    shuttle_on = next(
+        command
+        for command in transport.commands
+        if command.get('command') == 'ON'
+    )
+    assert shuttle_on['shuttle'] == blocker
+    assert shuttle_on['target_stopper'] == 'A2'
+    interior_wait = next(
+        details
+        for name, details in transport.waits
+        if name == 'visual_position_and_stop'
+    )
+    assert interior_wait['target_segment'] == 'A12I'
+    assert interior_wait['entry_sensor'] == (
+        'DA1IR' if side == 'right' else 'DA1IL'
     )
 
 

@@ -474,7 +474,9 @@ def test_interior_blocker_relocation_translates_to_executive_guarded_macro():
         'selected_shuttle': 'right_shuttle_4',
         'command': 'ON',
         'speed': 0.3,
-        'deterministic_macro': 'supervised_a3_interior_visual_stop',
+        'deterministic_macro': (
+            'supervised_authoritative_interior_branch_visual_stop'
+        ),
     }
     assert translated.event_action['primitive'] == 'SHUTTLE_ON'
     assert translated.event_action['wait_condition'] == (
@@ -495,13 +497,11 @@ def test_clearance_phase_boundaries_translate_without_per_blocker_restore():
     )
 
     assert begin.command['switches'] == {
-        'A1': 'EXTERIOR',
-        'A2': 'EXTERIOR',
-        'A3': 'INTERIOR',
-        'A4': 'INTERIOR',
+        'FROM_PROBLEM_PROVENANCE': 'REQUIRED',
     }
+    assert begin.command['branch_source'] == 'audited_problem_provenance'
     assert begin.command['deterministic_macro'] == (
-        'hold_interior_route_for_all_blockers'
+        'hold_selected_authoritative_interior_branch_for_all_blockers'
     )
     assert finish.command['switches'] == {'ALL': 'EXTERIOR'}
     assert finish.command['deterministic_macro'] == 'restore_normal_route_once'

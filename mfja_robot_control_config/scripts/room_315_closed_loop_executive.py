@@ -33,6 +33,7 @@ from room_315_pddl_plan_translator import TranslatedPlanStep
 from room_315_pddl_plan_translator import translate_plan
 from room_315_pddl_plan_translator import translate_step
 from room_315_pddl_scenario_generator import BasePlannerBackend
+from room_315_pddl_scenario_generator import INTERIOR_HOLDING_BRANCH_BY_GATE
 from room_315_pddl_scenario_generator import INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
 from room_315_pddl_scenario_generator import INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE
 from room_315_pddl_scenario_generator import PddlProblemBuildError
@@ -57,6 +58,8 @@ CLEARANCE_BEGIN_ACTIONS = frozenset({
 CLEARANCE_RELOCATE_ACTIONS = frozenset({
     'relocate_blocker_to_interior',
     'relocate_segment_blocker_to_interior',
+    'stage_selected_to_interior',
+    'stage_selected_segment_to_interior',
 })
 CLEARANCE_FINISH_ACTIONS = frozenset({
     'finish_route_clearance',
@@ -300,9 +303,28 @@ def _frozen_precondition_error(
             ('clearance_precedes', blocker, selected),
             ('route_blocked_by', source_slot, target_slot, blocker),
             ('clearance_destination_ready', blocker),
+            ('interior_entry_route_clear', blocker),
         ])
         pending_expectation = 'positive'
         order = _problem_numeric_value(text, 'clearance_order', blocker)
+        cursor = _problem_numeric_value(text, 'clearance_cursor', planned_side)
+        if order is None or cursor is None or order != cursor:
+            return 'clearance_order_cursor_mismatch'
+    elif step.name == 'stage_selected_to_interior':
+        if len(args) != 4:
+            return 'stage_selected_to_interior_arity'
+        selected, planned_side, source_slot, target_slot = args
+        required_atoms.extend([
+            ('shuttle_on_side', selected, planned_side),
+            ('goal_candidate', selected),
+            ('shuttle_at_slot', selected, source_slot),
+            ('target_slot_for_goal', target_slot),
+            ('clearance_mode', planned_side),
+            ('clearance_destination_ready', selected),
+            ('interior_entry_route_clear', selected),
+        ])
+        pending_expectation = 'positive'
+        order = _problem_numeric_value(text, 'clearance_order', selected)
         cursor = _problem_numeric_value(text, 'clearance_cursor', planned_side)
         if order is None or cursor is None or order != cursor:
             return 'clearance_order_cursor_mismatch'
@@ -357,9 +379,30 @@ def _frozen_precondition_error(
                 blocker,
             ),
             ('clearance_destination_ready', blocker),
+            ('interior_entry_route_clear', blocker),
         ])
         pending_expectation = 'positive'
         order = _problem_numeric_value(text, 'clearance_order', blocker)
+        cursor = _problem_numeric_value(text, 'clearance_cursor', planned_side)
+        if order is None or cursor is None or order != cursor:
+            return 'clearance_order_cursor_mismatch'
+    elif step.name == 'stage_selected_segment_to_interior':
+        if len(args) != 4:
+            return 'stage_selected_segment_to_interior_arity'
+        selected, planned_side, source_block, target_slot = args
+        required_atoms.extend([
+            ('shuttle_on_side', selected, planned_side),
+            ('goal_candidate', selected),
+            ('segment_only_location', selected),
+            ('shuttle_at_topology_block', selected, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('target_slot_for_goal', target_slot),
+            ('clearance_mode', planned_side),
+            ('clearance_destination_ready', selected),
+            ('interior_entry_route_clear', selected),
+        ])
+        pending_expectation = 'positive'
+        order = _problem_numeric_value(text, 'clearance_order', selected)
         cursor = _problem_numeric_value(text, 'clearance_cursor', planned_side)
         if order is None or cursor is None or order != cursor:
             return 'clearance_order_cursor_mismatch'
@@ -1459,10 +1502,18 @@ class ClosedLoopExecutive:
                 status='unknown',
                 reason='clearance_destination_has_no_valid_target_s_m',
             )
-        if gate != 'A3' or not target_segment:
+        branch = INTERIOR_HOLDING_BRANCH_BY_GATE.get(gate)
+        if (
+            not branch
+            or target_segment
+            != str(branch.get('target_segment') or '').strip().upper()
+        ):
             return 'rejected', PostconditionCheck(
                 status='unknown',
-                reason='clearance_destination_is_not_the_authoritative_a3_loop',
+                reason=(
+                    'clearance_destination_is_not_an_authoritative_'
+                    'interior_branch'
+                ),
             )
 
         common = {
@@ -1480,7 +1531,7 @@ class ClosedLoopExecutive:
             'shuttle': shuttle,
             'command': 'ON',
             'speed': float(translated_step.command.get('speed') or self.config.speed_mps),
-            'target_stopper': 'A4',
+            'target_stopper': str(branch['exit_switch']),
         }
         status = self._publish_supervised_macro_command(start_command, common)
         if status != 'accepted':
@@ -1736,13 +1787,38 @@ class ClosedLoopExecutive:
     ) -> tuple[str, PostconditionCheck]:
         """Hold the interior route until PDDL finishes every relocation."""
 
+        provenance = dict(problem.provenance or {})
+        relocation = dict(provenance.get('clearance_relocation') or {})
+        if not relocation:
+            clearance = dict(
+                provenance.get('target_blocker_clearance_plan') or {}
+            )
+            relocations = list(clearance.get('ordered_relocations') or [])
+            relocation = dict(relocations[0]) if len(relocations) == 1 else {}
+        destination = dict(relocation.get('destination') or {})
+        gate = str(destination.get('gate_switch') or '').strip().upper()
+        target_segment = str(
+            destination.get('target_segment') or ''
+        ).strip().upper()
+        branch = INTERIOR_HOLDING_BRANCH_BY_GATE.get(gate)
+        if (
+            not branch
+            or target_segment
+            != str(branch.get('target_segment') or '').strip().upper()
+        ):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='clearance_problem_has_no_authoritative_branch',
+            )
         switches = {
-            'A1': 'EXTERIOR',
-            'A2': 'EXTERIOR',
-            'A3': 'INTERIOR',
-            'A4': 'INTERIOR',
+            device: ('INTERIOR' if state == 'I' else 'EXTERIOR')
+            for device, state in dict(branch['switches']).items()
         }
-        stoppers = {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'}
+        exit_switch = str(branch['exit_switch'])
+        stoppers = {
+            device: ('1' if device == exit_switch else '0')
+            for device in DEVICE_NAMES
+        }
         common = self._clearance_phase_metadata(
             mode='begin_route_clearance_hold_interior',
             problem=problem,
@@ -1786,6 +1862,9 @@ class ClosedLoopExecutive:
             details={
                 'switches': switches,
                 'stoppers': stoppers,
+                'gate_switch': gate,
+                'exit_switch': exit_switch,
+                'target_segment': target_segment,
                 'restore_deferred_to_finish_route_clearance': True,
             },
         )
