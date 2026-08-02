@@ -1516,8 +1516,73 @@ class ClosedLoopExecutive:
                 ),
             )
 
+        motion_mode = str(
+            destination.get('motion_mode') or 'enter_interior_branch'
+        ).strip().casefold()
+        if motion_mode not in {
+            'enter_interior_branch',
+            'advance_within_interior_branch',
+        }:
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='unsupported_interior_clearance_motion_mode',
+            )
+        motion_origin_s_m: float | None = None
+        bounded_motion_distance_m = target_s_m
+        if motion_mode == 'advance_within_interior_branch':
+            origin_proof = dict(
+                destination.get('origin_clearance_proof') or {}
+            )
+            origin_spec = normalize_shuttle_ref(origin_proof.get('identity'))
+            expected_sensor = INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE.get(
+                (side, gate),
+                '',
+            )
+            try:
+                motion_origin_s_m = float(destination['motion_origin_s_m'])
+                bounded_motion_distance_m = float(
+                    destination['bounded_motion_distance_m']
+                )
+                proof_origin_s_m = float(origin_proof['target_s_m'])
+            except (KeyError, TypeError, ValueError):
+                return 'rejected', PostconditionCheck(
+                    status='unknown',
+                    reason='invalid_certified_interior_advance_origin',
+                )
+            if (
+                origin_spec is None
+                or origin_spec != normalize_shuttle_ref(expected)
+                or origin_proof.get('target_segment') != target_segment
+                or abs(proof_origin_s_m - motion_origin_s_m) > 1e-9
+                or str(origin_proof.get('entry_sensor') or '').upper()
+                != expected_sensor
+                or origin_proof.get('entry_sensor_identity_confirmed')
+                is not True
+                or origin_proof.get('controller_stop_confirmed') is not True
+                or origin_proof.get('bounded_commanded_motion_completed')
+                is not True
+                or origin_proof.get(
+                    'controller_position_fields_used_for_localization'
+                )
+                is not False
+                or target_s_m <= motion_origin_s_m
+                or abs(
+                    bounded_motion_distance_m
+                    - (target_s_m - motion_origin_s_m)
+                )
+                > 1e-9
+            ):
+                return 'rejected', PostconditionCheck(
+                    status='unknown',
+                    reason='incomplete_certified_interior_advance_origin',
+                )
+
         common = {
-            'mode': 'plansys2_supervised_interior_clearance',
+            'mode': (
+                'plansys2_supervised_interior_advance'
+                if motion_origin_s_m is not None
+                else 'plansys2_supervised_interior_clearance'
+            ),
             'problem_name': problem.problem_name,
             'plan_length': plan_length,
             'step_index': step_index,
@@ -1559,12 +1624,13 @@ class ClosedLoopExecutive:
                 (side, gate)
             ],
             minimum_clearance_delay_s=(
-                target_s_m
+                bounded_motion_distance_m
                 / float(
                     translated_step.command.get('speed')
                     or self.config.speed_mps
                 )
             ),
+            motion_origin_s_m=motion_origin_s_m,
             timeout_s=self.config.clearance_effect_timeout_s,
         )
         clearance_wait = _wait_result_check(
@@ -2197,23 +2263,36 @@ class ClosedLoopExecutive:
             (spec.side, str(destination.get('gate_switch') or '').upper()),
             '',
         )
+        motion_mode = str(
+            destination.get('motion_mode') or 'enter_interior_branch'
+        ).strip().casefold()
+        advance_within_interior = (
+            motion_mode == 'advance_within_interior_branch'
+        )
         required_true = (
-            'entry_sensor_identity_confirmed',
             'controller_stop_confirmed',
             'post_stop_visual_frame_received',
         )
         for name in required_true:
             if not bool(details.get(name)):
                 return None, f'missing_{name}'
+        if (
+            not advance_within_interior
+            and not bool(details.get('entry_sensor_identity_confirmed'))
+        ):
+            return None, 'missing_entry_sensor_identity_confirmed'
         if str(details.get('entry_sensor') or '').upper() != expected_sensor:
             return None, (
                 'wrong_entry_sensor:'
                 f'expected={expected_sensor},observed='
                 f'{str(details.get("entry_sensor") or "").upper()}'
             )
-        if details.get('matched_by') != (
-            'interior_entry_sensor_plus_bounded_travel_time'
-        ):
+        expected_match = (
+            'certified_interior_origin_plus_bounded_travel_time'
+            if advance_within_interior
+            else 'interior_entry_sensor_plus_bounded_travel_time'
+        )
+        if details.get('matched_by') != expected_match:
             return None, (
                 'wrong_stop_trigger:'
                 f'{details.get("matched_by") or "missing"}'
@@ -2237,6 +2316,45 @@ class ClosedLoopExecutive:
         if not observed_segment:
             return None, 'missing_raw_visual_segment'
         model_segment_disagreement = observed_segment != target_segment
+        origin_proof: dict[str, Any] = {}
+        motion_origin_s_m: float | None = None
+        bounded_motion_distance_m = target_s_m
+        if advance_within_interior:
+            origin_proof = dict(
+                destination.get('origin_clearance_proof') or {}
+            )
+            try:
+                motion_origin_s_m = float(destination['motion_origin_s_m'])
+                bounded_motion_distance_m = float(
+                    destination['bounded_motion_distance_m']
+                )
+                detail_origin_s_m = float(details['motion_origin_s_m'])
+                detail_distance_m = float(
+                    details['bounded_motion_distance_m']
+                )
+            except (KeyError, TypeError, ValueError):
+                return None, 'missing_or_invalid_interior_advance_distance'
+            if (
+                details.get('interior_advance_origin_certified') is not True
+                or abs(detail_origin_s_m - motion_origin_s_m) > 1e-9
+                or abs(detail_distance_m - bounded_motion_distance_m) > 1e-9
+                or origin_proof.get('entry_sensor_identity_confirmed')
+                is not True
+                or origin_proof.get('controller_stop_confirmed') is not True
+                or origin_proof.get('bounded_commanded_motion_completed')
+                is not True
+                or origin_proof.get(
+                    'controller_position_fields_used_for_localization'
+                )
+                is not False
+                or target_s_m <= motion_origin_s_m
+                or abs(
+                    bounded_motion_distance_m
+                    - (target_s_m - motion_origin_s_m)
+                )
+                > 1e-9
+            ):
+                return None, 'incomplete_interior_advance_origin_proof'
         certificate = {
             'identity': spec.short_id,
             'shuttle': spec.shuttle_id,
@@ -2253,6 +2371,10 @@ class ClosedLoopExecutive:
             'entry_sensor': expected_sensor,
             'matched_by': details['matched_by'],
             'entry_sensor_identity_confirmed': True,
+            'interior_advance_origin_certified': advance_within_interior,
+            'motion_origin_s_m': motion_origin_s_m,
+            'bounded_motion_distance_m': bounded_motion_distance_m,
+            'origin_clearance_proof': origin_proof,
             'controller_stop_confirmed': True,
             'post_stop_visual_frame_received': True,
             'post_stop_visual_confirmation': bool(
@@ -2277,6 +2399,11 @@ class ClosedLoopExecutive:
             'model_prediction_replaced': False,
             'controller_position_fields_used_for_localization': False,
             'proof': (
+                'certified_interior_origin+held_clearance_route+'
+                'bounded_forward_motion+controller_stop+'
+                'fresh_visual_prediction_preserved'
+                if advance_within_interior
+                else
                 'interior_entry_sensor_identity+held_clearance_route+'
                 'bounded_commanded_motion+controller_stop+'
                 'fresh_visual_prediction_preserved'
@@ -2368,8 +2495,15 @@ class ClosedLoopExecutive:
             and bool(certificate.get('bounded_commanded_motion_completed'))
             and certificate.get('clearance_mode_held') is True
             and certificate.get('normal_route_restored') is False
-            and certificate.get('matched_by') == (
-                'interior_entry_sensor_plus_bounded_travel_time'
+            and certificate.get('matched_by') in {
+                'interior_entry_sensor_plus_bounded_travel_time',
+                'certified_interior_origin_plus_bounded_travel_time',
+            }
+            and (
+                certificate.get('matched_by')
+                != 'certified_interior_origin_plus_bounded_travel_time'
+                or certificate.get('interior_advance_origin_certified')
+                is True
             )
             and certificate.get(
                 'controller_position_fields_used_for_localization'

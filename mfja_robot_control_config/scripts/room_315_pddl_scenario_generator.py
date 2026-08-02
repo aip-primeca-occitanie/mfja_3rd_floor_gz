@@ -555,6 +555,7 @@ class ScenarioTransport:
         tolerance_m: float,
         entry_sensor: str = '',
         minimum_clearance_delay_s: float = 0.0,
+        motion_origin_s_m: float | None = None,
         timeout_s: float,
     ) -> dict[str, Any]:
         return {
@@ -4725,13 +4726,52 @@ def _validated_runtime_clearance_certificates(
                 f'runtime clearance lacks post-stop visual proof for '
                 f'{spec.short_id}'
             )
-        if certificate.get('matched_by') != (
-            'interior_entry_sensor_plus_bounded_travel_time'
-        ):
+        matched_by = str(certificate.get('matched_by') or '')
+        if matched_by not in {
+            'interior_entry_sensor_plus_bounded_travel_time',
+            'certified_interior_origin_plus_bounded_travel_time',
+        }:
             raise PddlProblemBuildError(
                 'runtime clearance lacks bounded-motion proof for '
                 f'{spec.short_id}'
             )
+        if matched_by == (
+            'certified_interior_origin_plus_bounded_travel_time'
+        ):
+            origin_proof = dict(
+                certificate.get('origin_clearance_proof') or {}
+            )
+            try:
+                motion_origin_s_m = float(certificate['motion_origin_s_m'])
+                bounded_motion_distance_m = float(
+                    certificate['bounded_motion_distance_m']
+                )
+                origin_target_s_m = float(origin_proof['target_s_m'])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise PddlProblemBuildError(
+                    'runtime clearance lacks certified interior advance '
+                    f'origin for {spec.short_id}'
+                ) from exc
+            if (
+                certificate.get('interior_advance_origin_certified')
+                is not True
+                or origin_proof.get('identity') != spec.short_id
+                or origin_proof.get('entry_sensor_identity_confirmed')
+                is not True
+                or origin_proof.get('controller_stop_confirmed') is not True
+                or origin_proof.get('bounded_commanded_motion_completed')
+                is not True
+                or origin_proof.get(
+                    'controller_position_fields_used_for_localization'
+                )
+                is not False
+                or abs(origin_target_s_m - motion_origin_s_m) > 1e-9
+                or bounded_motion_distance_m <= 0.0
+            ):
+                raise PddlProblemBuildError(
+                    'runtime clearance interior advance origin proof is '
+                    f'incomplete for {spec.short_id}'
+                )
         if certificate.get('bounded_commanded_motion_completed') is not True:
             raise PddlProblemBuildError(
                 'runtime clearance lacks completed bounded motion for '
@@ -4785,6 +4825,20 @@ def _validated_runtime_clearance_certificates(
             raise PddlProblemBuildError(
                 f'runtime clearance target_s_m invalid for {spec.short_id}'
             ) from exc
+        if matched_by == (
+            'certified_interior_origin_plus_bounded_travel_time'
+        ) and (
+            target_s_m <= motion_origin_s_m
+            or abs(
+                bounded_motion_distance_m
+                - (target_s_m - motion_origin_s_m)
+            )
+            > 1e-9
+        ):
+            raise PddlProblemBuildError(
+                'runtime clearance interior advance distance is invalid for '
+                f'{spec.short_id}'
+            )
         segment_length_m = float(
             public_rail_segment_lengths(side)[target_segment]
         )
@@ -6172,6 +6226,259 @@ def _interior_holding_pose_candidates(
     ]
 
 
+def _resolve_selected_interior_buffer_choreography(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    primary_blocker: str,
+    selected_shuttle: str,
+    branch: dict[str, Any],
+    required_center_spacing_m: float,
+) -> dict[str, Any]:
+    """Open a second holding pose behind an interior goal shuttle.
+
+    On a full four-shuttle rail the user's shuttle can already be stopped in
+    A12I/A34I while the goal-slot occupant waits at the branch entrance.  The
+    physically shortest safe choreography is then:
+
+    1. advance the selected shuttle to the nearest forward holding pose;
+    2. reobserve;
+    3. move the goal-slot occupant into the newly opened rear holding pose;
+    4. reobserve and let the selected shuttle continue to the requested slot.
+
+    This search uses only authoritative topology, accepted visual positions,
+    and a validated executor-owned interior stop certificate.  Identity,
+    colour, payload, and shuttle number do not participate in the choice.
+    """
+
+    side = _shuttle_side(selected_shuttle)
+    if _shuttle_side(primary_blocker) != side or obstacles.get(side):
+        return {'resolved': False, 'reason': 'side_or_obstacle_conflict'}
+    public_segment = str(branch['target_segment']).strip().upper()
+    internal_segment = _interior_internal_segment(side, public_segment)
+    planning_positions = (
+        fleet.get('planning_rail_position_by_shuttle')
+        or fleet['rail_position_by_shuttle']
+    )
+    selected_position = planning_positions.get(selected_shuttle) or {}
+    if not _is_interior_holding_position(
+        side=side,
+        position=selected_position,
+        public_segment=public_segment,
+    ):
+        return {'resolved': False, 'reason': 'selected_not_on_target_branch'}
+    origin_certificate = dict(
+        (fleet.get('runtime_clearance_certificates') or {}).get(
+            selected_shuttle
+        )
+        or {}
+    )
+    if (
+        origin_certificate.get('target_segment') != public_segment
+        or origin_certificate.get('controller_stop_confirmed') is not True
+        or origin_certificate.get('bounded_commanded_motion_completed')
+        is not True
+        or origin_certificate.get(
+            'controller_position_fields_used_for_localization'
+        )
+        is not False
+    ):
+        return {
+            'resolved': False,
+            'reason': 'selected_interior_origin_is_not_certified_stopped',
+        }
+    segment_length_m = float(rail_segment_lengths(side)[internal_segment])
+    selected_origin_s_m = float(origin_certificate['target_s_m'])
+    occupied_other_s_m = [
+        float(position['s_ratio']) * float(position['segment_length_m'])
+        for shuttle, position in planning_positions.items()
+        if shuttle not in {selected_shuttle, primary_blocker}
+        and position.get('side') == side
+        and _is_interior_holding_position(
+            side=side,
+            position=position,
+            public_segment=public_segment,
+        )
+    ]
+
+    # First prefer the blocker itself when it can already use the rear pose.
+    direct_targets = _interior_holding_pose_candidates(
+        side=side,
+        public_segment=public_segment,
+        occupied_s_m=[*occupied_other_s_m, selected_origin_s_m],
+        required_center_spacing_m=required_center_spacing_m,
+    )
+    direct = _resolve_interior_clearance_dependency(
+        fleet=fleet,
+        devices=devices,
+        obstacles=obstacles,
+        primary_blocker=primary_blocker,
+        selected_shuttle=selected_shuttle,
+        branch=branch,
+        target_s_m_candidates=direct_targets,
+    )
+    if (
+        direct.get('resolved')
+        and direct.get('first_movable_shuttle') == primary_blocker
+    ):
+        return {
+            **direct,
+            'motion_mode': 'enter_interior_branch',
+            'selected_origin_s_m': selected_origin_s_m,
+            'selection_policy': (
+                'direct_rear_holding_pose_before_selected_goal_completion'
+            ),
+        }
+
+    # The blocker cannot enter yet. Find the *nearest* forward pose for the
+    # selected shuttle that leaves one physically separated rear pose.  The
+    # future route is checked on a copied state because execution still stops
+    # after the first move and requires a fresh accepted observation.
+    selected_targets = sorted(_interior_holding_pose_candidates(
+        side=side,
+        public_segment=public_segment,
+        occupied_s_m=occupied_other_s_m,
+        required_center_spacing_m=required_center_spacing_m,
+    ))
+    attempts: list[dict[str, Any]] = []
+    for selected_target_s_m in selected_targets:
+        if (
+            selected_target_s_m
+            <= selected_origin_s_m + INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
+        ):
+            continue
+        primary_targets = [
+            value
+            for value in _interior_holding_pose_candidates(
+                side=side,
+                public_segment=public_segment,
+                occupied_s_m=[*occupied_other_s_m, selected_target_s_m],
+                required_center_spacing_m=required_center_spacing_m,
+            )
+            if value < selected_target_s_m
+        ]
+        if not primary_targets:
+            attempts.append({
+                'selected_target_s_m': selected_target_s_m,
+                'reason': 'no_separated_rear_holding_pose',
+            })
+            continue
+        try:
+            selected_route = _topology_route_entry(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                shuttle=selected_shuttle,
+                target_slot='4',
+                target_position=(
+                    internal_segment,
+                    selected_target_s_m / segment_length_m,
+                ),
+                required_switch_states=dict(branch['switches']),
+            )
+        except PddlProblemBuildError as exc:
+            attempts.append({
+                'selected_target_s_m': selected_target_s_m,
+                'reason': str(exc),
+            })
+            continue
+        if selected_route.get('blockers'):
+            attempts.append({
+                'selected_target_s_m': selected_target_s_m,
+                'reason': 'selected_advance_route_blocked',
+                'blockers': list(selected_route['blockers']),
+            })
+            continue
+
+        for primary_target_s_m in primary_targets:
+            future_fleet = copy.deepcopy(fleet)
+            future_position = future_fleet[
+                'planning_rail_position_by_shuttle'
+            ][selected_shuttle]
+            future_ratio = selected_target_s_m / segment_length_m
+            future_position.update({
+                'segment': internal_segment,
+                's_ratio': future_ratio,
+                'segment_length_m': segment_length_m,
+                'effect_certificate_target_s_m': selected_target_s_m,
+                # This is a conditional topology proof, not a prediction. The
+                # actual next problem is rebuilt from a fresh visual frame.
+                'raw_visual_segment': internal_segment,
+                'raw_visual_s_ratio': future_ratio,
+            })
+            future_certificate = future_fleet[
+                'runtime_clearance_certificates'
+            ][selected_shuttle]
+            future_certificate.update({
+                'target_s_m': selected_target_s_m,
+                'observed_segment': public_segment,
+                'observed_s_m': selected_target_s_m,
+            })
+            try:
+                primary_route = _topology_route_entry(
+                    fleet=future_fleet,
+                    devices=devices,
+                    obstacles=obstacles,
+                    shuttle=primary_blocker,
+                    target_slot='4',
+                    target_position=(
+                        internal_segment,
+                        primary_target_s_m / segment_length_m,
+                    ),
+                    required_switch_states=dict(branch['switches']),
+                )
+            except PddlProblemBuildError:
+                continue
+            if primary_route.get('blockers'):
+                continue
+            return {
+                'resolved': True,
+                'primary_blocker': primary_blocker,
+                'first_movable_shuttle': selected_shuttle,
+                'target_s_m': selected_target_s_m,
+                'target_s_ratio': future_ratio,
+                'dependency_chain': [primary_blocker, selected_shuttle],
+                'route_entries': [selected_route],
+                'future_primary_route': primary_route,
+                'future_primary_target_s_m': primary_target_s_m,
+                'motion_mode': 'advance_within_interior_branch',
+                'motion_origin_s_m': selected_origin_s_m,
+                'bounded_motion_distance_m': (
+                    selected_target_s_m - selected_origin_s_m
+                ),
+                'origin_clearance_proof': {
+                    'identity': origin_certificate['identity'],
+                    'target_segment': public_segment,
+                    'target_s_m': selected_origin_s_m,
+                    'entry_sensor': origin_certificate['entry_sensor'],
+                    'entry_sensor_identity_confirmed': True,
+                    'controller_stop_confirmed': True,
+                    'bounded_commanded_motion_completed': True,
+                    'controller_position_fields_used_for_localization': False,
+                },
+                'gate_switch': str(branch['gate_switch']),
+                'target_segment': public_segment,
+                'required_switches': dict(branch['switches']),
+                'selection_policy': (
+                    'nearest_forward_selected_pose_that_opens_a_separated_'
+                    'rear_holding_pose'
+                ),
+                'controller_position_fields_used_for_localization': False,
+            }
+    return {
+        'resolved': False,
+        'primary_blocker': primary_blocker,
+        'first_movable_shuttle': '',
+        'dependency_chain': [primary_blocker],
+        'attempts': attempts,
+        'gate_switch': str(branch['gate_switch']),
+        'target_segment': public_segment,
+        'reason': 'no_safe_selected_interior_advance',
+        'controller_position_fields_used_for_localization': False,
+    }
+
+
 def _resolve_interior_clearance_dependency(
     *,
     fleet: dict[str, Any],
@@ -6579,12 +6886,152 @@ def _target_blocker_clearance_plan(
     # with no staged interior shuttle, retain the established A34I clearance
     # strategy. Only routes clear in the accepted state are eligible.
     target_occupant = fleet['slot_occupancy'].get(target, '')
-    has_staged_interior_shuttles = staged_interior_present
+    clearance_spacing_m = (
+        DEFAULT_SHUTTLE_LENGTH_M
+        + DEFAULT_ROUTE_SAFETY_MARGIN_M
+        + 2.0 * INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
+    )
+
+    # A dense full-rail state can use the already occupied interior buffer
+    # more efficiently than rotating every exterior slot. If the selected
+    # shuttle is stopped inside A12I/A34I, either move the goal-slot occupant
+    # directly into a separated rear pose or advance the selected shuttle by
+    # the minimum safe distance that creates such a pose. Execute only that
+    # first proved move, then reobserve. This is topology/geometry based and
+    # therefore independent of identity, colour, or payload.
+    occupied_side_slots = sum(
+        bool(occupant)
+        for slot_object, occupant in fleet['slot_occupancy'].items()
+        if slot_object.startswith(f'{side}_slot_')
+    )
+    primary_blocker = blocker_ids[0] if blocker_ids else ''
+    selected_position = positions.get(selected) or {}
+    selected_public_segment = _public_segment_for_side(
+        side,
+        selected_position.get('segment'),
+    )
+    selected_gate = INTERIOR_LOOP_GATE_BY_PUBLIC_SEGMENT.get(
+        selected_public_segment,
+        '',
+    )
     active_clearance_gate = _active_interior_clearance_gate(
         side=side,
         devices=devices,
     )
     clearance_mode_active = bool(active_clearance_gate)
+    if (
+        occupied_side_slots >= 3
+        and primary_blocker
+        and primary_blocker == target_occupant
+        and selected_gate
+        and active_clearance_gate in {'', selected_gate}
+    ):
+        selected_branch = dict(
+            INTERIOR_HOLDING_BRANCH_BY_GATE[selected_gate]
+        )
+        buffer_resolution = _resolve_selected_interior_buffer_choreography(
+            fleet=fleet,
+            devices=devices,
+            obstacles=obstacles,
+            primary_blocker=primary_blocker,
+            selected_shuttle=selected,
+            branch=selected_branch,
+            required_center_spacing_m=clearance_spacing_m,
+        )
+        if buffer_resolution.get('resolved'):
+            mover = str(buffer_resolution['first_movable_shuttle'])
+            route_entries = list(
+                buffer_resolution.get('route_entries') or []
+            )
+            motion_mode = str(buffer_resolution['motion_mode'])
+            destination = {
+                'kind': 'interior_loop',
+                'gate_switch': str(selected_branch['gate_switch']),
+                'exit_switch': str(selected_branch['exit_switch']),
+                'target_segment': selected_public_segment,
+                'target_s_m': float(buffer_resolution['target_s_m']),
+                'motion_mode': motion_mode,
+                'required_center_spacing_m': round(
+                    clearance_spacing_m,
+                    6,
+                ),
+                'interior_entry_route_proof': {
+                    'status': 'clear',
+                    'method': (
+                        'authoritative_dense_interior_buffer_choreography_v1'
+                    ),
+                    'checked_route_blocks': list(
+                        (route_entries[-1] if route_entries else {}).get(
+                            'route_blocks'
+                        )
+                        or []
+                    ),
+                    'required_switches': dict(selected_branch['switches']),
+                    'gate_switch': selected_gate,
+                    'target_segment': selected_public_segment,
+                    'blocking_shuttles': [],
+                    'dependency_chain': list(
+                        buffer_resolution['dependency_chain']
+                    ),
+                    'primary_blocker': primary_blocker,
+                    'first_movable_shuttle': mover,
+                },
+            }
+            if motion_mode == 'advance_within_interior_branch':
+                destination.update({
+                    'motion_origin_s_m': float(
+                        buffer_resolution['motion_origin_s_m']
+                    ),
+                    'bounded_motion_distance_m': float(
+                        buffer_resolution['bounded_motion_distance_m']
+                    ),
+                    'origin_clearance_proof': copy.deepcopy(
+                        buffer_resolution['origin_clearance_proof']
+                    ),
+                    'future_primary_target_s_m': float(
+                        buffer_resolution['future_primary_target_s_m']
+                    ),
+                })
+            relocation = {
+                'order': 1,
+                'shuttle': mover,
+                'reason': (
+                    'advance_selected_to_open_interior_entry_for_goal_occupant'
+                    if mover == selected
+                    else 'move_goal_occupant_to_open_selected_goal_slot'
+                ),
+                'current_segment': positions[mover]['segment'],
+                'current_s_ratio': round(
+                    float(positions[mover]['s_ratio']),
+                    6,
+                ),
+                'destination': destination,
+            }
+            base.update({
+                'required': True,
+                'observed_blockers': observed_blocker_ids,
+                'observed_blocker_count': len(observed_blocker_ids),
+                'planned_relocations_this_observation': 1,
+                'deferred_blockers_require_fresh_reobservation': (
+                    observed_blocker_ids
+                ),
+                'receding_horizon_clearance': True,
+                'ordered_relocations': [relocation],
+                'route_must_be_reobserved_after_each_relocation': True,
+                'exterior_slot_relocations_precede_interior_clearance': False,
+                'switch_restore_policy': 'once_after_all_relocations',
+                'clearance_mode_active': clearance_mode_active,
+                'unsupported_if_more_than_two_blockers': False,
+                'stale_multi_destination_preallocation_used': False,
+                'dense_interior_buffer_choreography': {
+                    **copy.deepcopy(buffer_resolution),
+                    'first_action_only': True,
+                    'fresh_reobservation_required_after_action': True,
+                    'exterior_slot_rotation_avoided': True,
+                },
+            })
+            return base
+    has_staged_interior_shuttles = staged_interior_present
     topology_recovery = not bool(source)
     free_parking_slots = {
         slot
@@ -6800,11 +7247,6 @@ def _target_blocker_clearance_plan(
         })
         return base
 
-    clearance_spacing_m = (
-        DEFAULT_SHUTTLE_LENGTH_M
-        + DEFAULT_ROUTE_SAFETY_MARGIN_M
-        + 2.0 * INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
-    )
     interior_target_by_blocker: dict[str, float] = {}
     interior_route_proof_by_blocker: dict[str, dict[str, Any]] = {}
     unresolved_interior_search: dict[str, Any] = {}

@@ -17,6 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from room_315_contracts import TaskGoal
 from room_315_closed_loop_executive import ClosedLoopExecutive
+from room_315_closed_loop_executive import PostconditionCheck
 from room_315_closed_loop_executive import _target_slot_for_step
 from room_315_multi_shuttle import all_shuttle_specs
 from room_315_multi_shuttle import DEFAULT_ROUTE_SAFETY_MARGIN_M
@@ -178,16 +179,20 @@ def _clearance_certificate(
     *,
     target_s_m: float = 0.95,
 ) -> dict:
+    spec = next(
+        item for item in all_shuttle_specs() if item.short_id == identity
+    )
+    suffix = 'R' if spec.side == 'right' else 'L'
     return {
         'identity': identity,
-        'shuttle': f'right_shuttle_{identity[-1]}',
-        'side': 'right',
+        'shuttle': spec.shuttle_id,
+        'side': spec.side,
         'target_segment': 'A34I',
         'target_s_m': target_s_m,
         'observed_segment': 'A34E',
         'observed_s_m': target_s_m,
         'absolute_error_m': 0.0,
-        'entry_sensor': 'DA3IR',
+        'entry_sensor': f'DA3I{suffix}',
         'matched_by': 'interior_entry_sensor_plus_bounded_travel_time',
         'entry_sensor_identity_confirmed': True,
         'controller_stop_confirmed': True,
@@ -201,24 +206,26 @@ def _clearance_certificate(
     }
 
 
-def _right_interior_slot_state(
+def _rail_interior_slot_state(
     *,
+    side: str,
     interior_s_m_by_identity: dict[str, float],
     slot_by_identity: dict[str, str],
 ):
-    """Build an identity-agnostic right-rail topology/slot arrangement."""
+    """Build an identity-agnostic single-rail topology/slot arrangement."""
 
-    expected = {'R1', 'R2', 'R3', 'R4'}
+    prefix = 'R' if side == 'right' else 'L'
+    expected = {f'{prefix}{number}' for number in range(1, 5)}
     if set(interior_s_m_by_identity) & set(slot_by_identity):
         raise AssertionError('one shuttle cannot be both interior and in a slot')
     if set(interior_s_m_by_identity) | set(slot_by_identity) != expected:
-        raise AssertionError('the helper requires all four right shuttles')
+        raise AssertionError(f'the helper requires all four {side} shuttles')
     present = {
         **{identity: '1' for identity in interior_s_m_by_identity},
         **slot_by_identity,
     }
     observation = _observation(present=present)
-    interior_length = public_rail_segment_lengths('right')['A34I']
+    interior_length = public_rail_segment_lengths(side)['A34I']
     for item in observation['shuttles']:
         target_s_m = interior_s_m_by_identity.get(item['identity'])
         if target_s_m is None:
@@ -244,14 +251,44 @@ def _right_interior_slot_state(
         slot_sensor_anchors={
             identity: {
                 'identity': identity,
-                'side': 'right',
+                'side': side,
                 'slot': slot,
-                'sensor': f'DZI{slot}R',
+                'sensor': f'DZI{slot}{prefix}',
             }
             for identity, slot in slot_by_identity.items()
         },
     )
     return state, certificates
+
+
+def _right_interior_slot_state(
+    *,
+    interior_s_m_by_identity: dict[str, float],
+    slot_by_identity: dict[str, str],
+):
+    return _rail_interior_slot_state(
+        side='right',
+        interior_s_m_by_identity=interior_s_m_by_identity,
+        slot_by_identity=slot_by_identity,
+    )
+
+
+def _with_a3_clearance_mode(state):
+    facts = []
+    for fact in state.fused_planner_state:
+        value = fact.value
+        if (
+            fact.subject in {'right:switch:A3', 'right:switch:A4'}
+            and fact.predicate == 'state'
+        ):
+            value = 'INTERIOR'
+        elif (
+            fact.subject == 'right:stopper:A4'
+            and fact.predicate == 'state'
+        ):
+            value = 'closed'
+        facts.append(replace(fact, value=value))
+    return replace(state, fused_planner_state=facts)
 
 
 def _verified_slot_arrival_certificate(
@@ -932,6 +969,325 @@ def test_live_blue_a34i_to_slot2_uses_complete_exterior_vacancy_rotation():
     assert final_route['route_clear'] is True
 
 
+@pytest.mark.parametrize(
+    (
+        'selected_identity',
+        'target_occupant_identity',
+        'slot3_identity',
+        'slot4_identity',
+    ),
+    list(itertools.permutations(('R1', 'R2', 'R3', 'R4'))),
+)
+def test_dense_interior_buffer_choreography_is_identity_agnostic(
+    selected_identity,
+    target_occupant_identity,
+    slot3_identity,
+    slot4_identity,
+):
+    """A dense rail advances its interior target, then parks the occupant."""
+
+    selected = f'right_shuttle_{selected_identity[-1]}'
+    target_occupant = f'right_shuttle_{target_occupant_identity[-1]}'
+    goal = TaskGoal(
+        goal_id=(
+            'dense-interior-buffer-'
+            f'{selected_identity}-{target_occupant_identity}'
+        ),
+        description=f'Move {selected_identity} to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_shuttle': (
+                f'room315_right_shuttle_{selected_identity[-1]}'
+            ),
+            'target_slot': '2',
+        },
+    )
+
+    initial, certificates = _right_interior_slot_state(
+        interior_s_m_by_identity={selected_identity: 0.49},
+        slot_by_identity={
+            target_occupant_identity: '2',
+            slot3_identity: '3',
+            slot4_identity: '4',
+        },
+    )
+    initial_problem = build_pddl_problem_from_observed_state_task_goal(
+        initial,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    initial_clearance = initial_problem.provenance[
+        'target_blocker_clearance_plan'
+    ]
+    first = initial_clearance['ordered_relocations'][0]
+    assert first['shuttle'] == selected
+    assert first['reason'] == (
+        'advance_selected_to_open_interior_entry_for_goal_occupant'
+    )
+    assert first['destination']['kind'] == 'interior_loop'
+    assert first['destination']['motion_mode'] == (
+        'advance_within_interior_branch'
+    )
+    assert first['destination']['motion_origin_s_m'] == pytest.approx(0.49)
+    assert first['destination']['target_s_m'] == pytest.approx(0.92)
+    assert first['destination']['future_primary_target_s_m'] == (
+        pytest.approx(0.35)
+    )
+    assert initial_clearance['dense_interior_buffer_choreography'][
+        'exterior_slot_rotation_avoided'
+    ] is True
+    initial_subproblem = ClosedLoopExecutive._next_planning_problem(
+        initial_problem
+    )
+    assert initial_subproblem.goal_text == (
+        f'(clearance_relocated {selected})'
+    )
+
+    after_selected, certificates = _right_interior_slot_state(
+        interior_s_m_by_identity={selected_identity: 0.92},
+        slot_by_identity={
+            target_occupant_identity: '2',
+            slot3_identity: '3',
+            slot4_identity: '4',
+        },
+    )
+    after_selected = _with_a3_clearance_mode(after_selected)
+    second_problem = build_pddl_problem_from_observed_state_task_goal(
+        after_selected,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    second = second_problem.provenance[
+        'target_blocker_clearance_plan'
+    ]['ordered_relocations'][0]
+    assert second['shuttle'] == target_occupant
+    assert second['reason'] == (
+        'move_goal_occupant_to_open_selected_goal_slot'
+    )
+    assert second['destination']['motion_mode'] == 'enter_interior_branch'
+    assert second['destination']['target_s_m'] == pytest.approx(0.35)
+    assert second_problem.provenance['target_blocker_clearance_plan'][
+        'clearance_mode_active'
+    ] is True
+
+    after_occupant, certificates = _right_interior_slot_state(
+        interior_s_m_by_identity={
+            selected_identity: 0.92,
+            target_occupant_identity: 0.35,
+        },
+        slot_by_identity={slot3_identity: '3', slot4_identity: '4'},
+    )
+    after_occupant = _with_a3_clearance_mode(after_occupant)
+    final_problem = build_pddl_problem_from_observed_state_task_goal(
+        after_occupant,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    final_clearance = final_problem.provenance[
+        'target_blocker_clearance_plan'
+    ]
+    assert final_clearance['required'] is False
+    final_route = final_problem.provenance['topology_routes']['routes'][0]
+    assert final_route['shuttle'] == selected
+    assert final_route['target_slot_object'] == 'right_slot_2'
+    assert final_route['route_clear'] is True
+    assert final_route['blockers'] == []
+    assert '(clearance_mode right)' in final_problem.problem_text
+    # The interior holding choreography deliberately keeps the clearance gate
+    # active until PlanSys2 executes finish_segment_route_clearance.  Restoring
+    # the switches before that action would reconnect the staged shuttles to
+    # the exterior route too early.
+    assert (
+        '(route_reconfiguration_safe right)'
+        not in final_problem.problem_text
+    )
+
+
+def test_dense_interior_buffer_choreography_mirrors_to_left_rail():
+    goal = TaskGoal(
+        goal_id='left-dense-interior-buffer',
+        description='Move L1 to left slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'left',
+            'target_kind': 'slot',
+            'target_shuttle': 'room315_left_shuttle_1',
+            'target_slot': '2',
+        },
+    )
+    state, certificates = _rail_interior_slot_state(
+        side='left',
+        interior_s_m_by_identity={'L1': 0.49},
+        slot_by_identity={'L2': '2', 'L3': '3', 'L4': '4'},
+    )
+
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    relocation = problem.provenance['target_blocker_clearance_plan'][
+        'ordered_relocations'
+    ][0]
+
+    assert relocation['shuttle'] == 'left_shuttle_1'
+    assert relocation['destination']['target_segment'] == 'A34I'
+    assert relocation['destination']['gate_switch'] == 'A3'
+    assert relocation['destination']['motion_mode'] == (
+        'advance_within_interior_branch'
+    )
+    assert relocation['destination']['target_s_m'] == pytest.approx(0.92)
+
+
+def test_certified_interior_advance_updates_runtime_effect_without_controller_position():
+    state, certificates = _right_interior_slot_state(
+        interior_s_m_by_identity={'R1': 0.92},
+        slot_by_identity={'R2': '2', 'R3': '3', 'R4': '4'},
+    )
+    advanced = dict(certificates['R1'])
+    advanced.update({
+        'target_s_m': 0.92,
+        'observed_s_m': 0.91,
+        'matched_by': (
+            'certified_interior_origin_plus_bounded_travel_time'
+        ),
+        'interior_advance_origin_certified': True,
+        'motion_origin_s_m': 0.49,
+        'bounded_motion_distance_m': 0.43,
+        'origin_clearance_proof': {
+            'identity': 'R1',
+            'target_segment': 'A34I',
+            'target_s_m': 0.49,
+            'entry_sensor': 'DA3IR',
+            'entry_sensor_identity_confirmed': True,
+            'controller_stop_confirmed': True,
+            'bounded_commanded_motion_completed': True,
+            'controller_position_fields_used_for_localization': False,
+        },
+    })
+    goal = TaskGoal(
+        goal_id='certified-red-interior-advance',
+        description='Move R1 to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_shuttle': 'room315_right_shuttle_1',
+            'target_slot': '2',
+        },
+    )
+
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates={'R1': advanced},
+    )
+
+    relocation = problem.provenance['target_blocker_clearance_plan'][
+        'ordered_relocations'
+    ][0]
+    assert relocation['shuttle'] == 'right_shuttle_2'
+    assert relocation['destination']['target_s_m'] == pytest.approx(0.35)
+    raw = _fact(state, 'room315_right_shuttle_1', 'rail_position')
+    assert raw.value['s_m'] == pytest.approx(0.92)
+    assert advanced['controller_position_fields_used_for_localization'] is False
+
+
+def test_executive_builds_narrow_certificate_for_selected_interior_advance():
+    state, certificates = _right_interior_slot_state(
+        interior_s_m_by_identity={'R1': 0.49},
+        slot_by_identity={'R2': '2', 'R3': '3', 'R4': '4'},
+    )
+    goal = TaskGoal(
+        goal_id='certificate-selected-interior-advance',
+        description='Move R1 to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_shuttle': 'room315_right_shuttle_1',
+            'target_slot': '2',
+        },
+    )
+    parent = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    problem = ClosedLoopExecutive._next_planning_problem(parent)
+    translated = translate_plan([
+        'stage_selected_segment_to_interior right_shuttle_1 right '
+        'right_topology_a34i right_slot_2 speed=0.2'
+    ])[0]
+    proof = PostconditionCheck(
+        status='satisfied',
+        reason='guarded_interior_stop_and_fresh_visual_frame_satisfied',
+        details={
+            'matched_by': (
+                'certified_interior_origin_plus_bounded_travel_time'
+            ),
+            'entry_sensor': 'DA3IR',
+            'entry_sensor_identity_confirmed': True,
+            'interior_advance_origin_certified': True,
+            'motion_origin_s_m': 0.49,
+            'bounded_motion_distance_m': 0.43,
+            'controller_stop_confirmed': True,
+            'post_stop_visual_frame_received': True,
+            'post_stop_visual_confirmation': True,
+            'clearance_mode_held': True,
+            'normal_route_restored': False,
+            'observed_segment': 'A34I',
+            'observed_s_m': 0.92,
+            'controller_position_fields_used_for_localization': False,
+        },
+    )
+    executive = ClosedLoopExecutive(
+        observed_state_provider=None,
+        planner=None,
+        transport=None,
+    )
+
+    certificate = executive._interior_clearance_certificate(
+        wait_check=proof,
+        problem=problem,
+        translated_step=translated,
+    )
+
+    assert certificate is not None
+    assert certificate['identity'] == 'R1'
+    assert certificate['target_s_m'] == pytest.approx(0.92)
+    assert certificate['motion_origin_s_m'] == pytest.approx(0.49)
+    assert certificate['bounded_motion_distance_m'] == pytest.approx(0.43)
+    assert certificate['interior_advance_origin_certified'] is True
+    assert certificate['controller_position_fields_used_for_localization'] is False
+
+
 def test_binary_slot_sensor_anchor_recovers_live_r4_position_outlier():
     builder = VisualObservedStateBuilder()
     observation = _observation(present={'R3': '3', 'R4': '4'})
@@ -1147,7 +1503,9 @@ def test_verified_arrival_replays_live_r2_ratio_bias_from_canonical_slot_origin(
 
     # The following user request in the captured sequence also used to fail
     # before planning on the same R2 ratio mismatch.  It must now identify R2
-    # as the exact slot-1 occupant and produce its first safe relocation.
+    # as the exact slot-1 occupant. On this dense rail the shortest safe first
+    # action is now the generalized bounded R1 interior advance; the next
+    # fresh problem can then move R2 into the opened rear holding pose.
     red_goal = TaskGoal(
         goal_id='replay-r1-a34i-to-slot1-after-r2-arrival',
         description='Move R1 from A34I to right slot 1',
@@ -1174,15 +1532,20 @@ def test_verified_arrival_replays_live_r2_ratio_bias_from_canonical_slot_origin(
         'target_blocker_clearance_plan'
     ]
     assert red_clearance['required'] is True
-    assert red_clearance['ordered_relocations'][0]['shuttle'] == (
-        'right_shuttle_2'
+    first_relocation = red_clearance['ordered_relocations'][0]
+    assert first_relocation['shuttle'] == 'right_shuttle_1'
+    assert first_relocation['reason'] == (
+        'advance_selected_to_open_interior_entry_for_goal_occupant'
     )
-    assert red_clearance['ordered_relocations'][0]['reason'] == (
-        'occupies_goal_target_slot'
+    assert first_relocation['destination']['motion_mode'] == (
+        'advance_within_interior_branch'
     )
-    assert red_clearance['ordered_relocations'][0]['destination'][
-        'target_slot'
-    ] == 'right_slot_2'
+    assert first_relocation['destination']['motion_origin_s_m'] == (
+        pytest.approx(0.35)
+    )
+    assert first_relocation['destination']['target_s_m'] == (
+        pytest.approx(0.92)
+    )
 
 
 def test_verified_arrival_never_overrides_visual_segment_disagreement():
@@ -4299,6 +4662,71 @@ def test_interior_clearance_sensor_stop_is_confirmed_by_fresh_visual_state():
     assert commands[0]['command'] == 'OFF'
     assert commands[0]['closed_loop_executive']['stop_trigger'] == (
         'interior_entry_sensor_plus_bounded_travel_time'
+    )
+
+
+def test_certified_interior_origin_allows_bounded_forward_advance_without_new_entry():
+    builder = VisualObservedStateBuilder()
+    provider = LatestVisualObservedStateProvider(builder)
+    commands: list[dict] = []
+    transport = None
+    observation = _observation(present={'R1': '1'})
+    r1 = next(
+        item for item in observation['shuttles']
+        if item['identity'] == 'R1'
+    )
+    length = public_rail_segment_lengths('right')['A34I']
+    r1.update({
+        'block': 'A34I',
+        's_m': 0.92,
+        's_ratio': 0.92 / length,
+        'segment_length_m': length,
+    })
+
+    def publish(command: dict) -> None:
+        commands.append(command)
+        transport.update_supervisor(
+            _supervisor(
+                decision_count=1,
+                mode='DISABLED',
+                shuttle_identity='R1',
+            )
+        )
+        transport.update_observation(observation)
+
+    transport = VisualSupervisorTransport(
+        provider=provider,
+        publish_callback=publish,
+        controller_stop_timeout_s=1.0,
+    )
+    transport.update_supervisor(
+        _supervisor(mode='MOVING', shuttle_identity='R1')
+    )
+    transport.update_observation(observation)
+
+    result = transport.wait_for_visual_position_and_stop(
+        side='right',
+        shuttle='right_shuttle_1',
+        target_segment='A34I',
+        target_s_m=0.92,
+        tolerance_m=0.08,
+        entry_sensor='DA3IR',
+        minimum_clearance_delay_s=0.01,
+        motion_origin_s_m=0.49,
+        timeout_s=1.0,
+    )
+
+    assert result['arrived'] is True
+    assert result['matched_by'] == (
+        'certified_interior_origin_plus_bounded_travel_time'
+    )
+    assert result['interior_advance_origin_certified'] is True
+    assert result['motion_origin_s_m'] == pytest.approx(0.49)
+    assert result['bounded_motion_distance_m'] == pytest.approx(0.43)
+    assert result['controller_position_fields_used_for_localization'] is False
+    assert commands[0]['command'] == 'OFF'
+    assert commands[0]['closed_loop_executive']['stop_trigger'] == (
+        'certified_interior_origin_plus_bounded_travel_time'
     )
 
 

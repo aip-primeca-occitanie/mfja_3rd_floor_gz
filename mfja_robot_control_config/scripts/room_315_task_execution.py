@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+import math
 import threading
 import time
 from dataclasses import dataclass
@@ -2085,6 +2086,7 @@ class VisualSupervisorTransport(ScenarioTransport):
         tolerance_m: float,
         entry_sensor: str = '',
         minimum_clearance_delay_s: float = 0.0,
+        motion_origin_s_m: float | None = None,
         timeout_s: float,
     ) -> dict[str, Any]:
         """Stop an interior relocation with an identity-bearing sensor guard.
@@ -2107,12 +2109,44 @@ class VisualSupervisorTransport(ScenarioTransport):
         wanted_sensor = str(entry_sensor or '').strip().upper()
         tolerance = max(float(tolerance_m), 0.0)
         clearance_delay_s = max(float(minimum_clearance_delay_s), 0.0)
-        deadline = self.monotonic() + max(float(timeout_s), 0.0)
+        started_at = self.monotonic()
+        deadline = started_at + max(float(timeout_s), 0.0)
+        advance_from_certified_origin = motion_origin_s_m is not None
+        certified_origin_s_m: float | None = None
+        if advance_from_certified_origin:
+            try:
+                certified_origin_s_m = float(motion_origin_s_m)
+            except (TypeError, ValueError):
+                return {
+                    'arrived': False,
+                    'reason': 'certified interior motion origin is invalid',
+                }
+            if (
+                not math.isfinite(certified_origin_s_m)
+                or float(target_s_m) <= certified_origin_s_m
+                or clearance_delay_s <= 0.0
+            ):
+                return {
+                    'arrived': False,
+                    'reason': (
+                        'certified interior advance requires a finite forward '
+                        'origin and positive bounded travel time'
+                    ),
+                }
         last_visual_sequence = -1
         last_sensor_sequence = -1
         last_position: dict[str, Any] = {}
-        entry_detected_at: float | None = None
-        entry_confirmation: dict[str, Any] = {}
+        entry_detected_at: float | None = (
+            started_at if advance_from_certified_origin else None
+        )
+        entry_confirmation: dict[str, Any] = (
+            {
+                'matched': True,
+                'source': 'validated_runtime_clearance_origin_certificate',
+            }
+            if advance_from_certified_origin
+            else {}
+        )
 
         def visual_position_match(
             observation: dict[str, Any],
@@ -2164,6 +2198,10 @@ class VisualSupervisorTransport(ScenarioTransport):
                     'tolerance_m': tolerance,
                     'entry_sensor': wanted_sensor,
                     'minimum_clearance_delay_s': clearance_delay_s,
+                    'motion_origin_s_m': certified_origin_s_m,
+                    'advance_from_certified_interior_origin': (
+                        advance_from_certified_origin
+                    ),
                     'stop_trigger': trigger,
                     'controller_position_fields_used_for_localization': False,
                 },
@@ -2229,7 +2267,11 @@ class VisualSupervisorTransport(ScenarioTransport):
                 and entry_detected_at is not None
                 and now - entry_detected_at >= clearance_delay_s
             ):
-                stop_trigger = 'interior_entry_sensor_plus_bounded_travel_time'
+                stop_trigger = (
+                    'certified_interior_origin_plus_bounded_travel_time'
+                    if advance_from_certified_origin
+                    else 'interior_entry_sensor_plus_bounded_travel_time'
+                )
 
             controller_state = _nested_dict(
                 supervisor,
@@ -2324,6 +2366,15 @@ class VisualSupervisorTransport(ScenarioTransport):
             'matched_by': stop_trigger,
             'entry_sensor': wanted_sensor,
             'entry_sensor_identity_confirmed': bool(entry_confirmation),
+            'interior_advance_origin_certified': (
+                advance_from_certified_origin
+            ),
+            'motion_origin_s_m': certified_origin_s_m,
+            'bounded_motion_distance_m': (
+                float(target_s_m) - certified_origin_s_m
+                if certified_origin_s_m is not None
+                else float(target_s_m)
+            ),
             'post_stop_visual_frame_received': True,
             'post_stop_visual_confirmation': bool(confirmed),
             'controller_stop_confirmed': True,

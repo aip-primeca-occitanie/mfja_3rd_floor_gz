@@ -208,6 +208,7 @@ class RecordingTransport(ScenarioTransport):
         tolerance_m: float,
         entry_sensor: str = '',
         minimum_clearance_delay_s: float = 0.0,
+        motion_origin_s_m: float | None = None,
         timeout_s: float,
     ) -> dict:
         self.waits.append((
@@ -220,6 +221,7 @@ class RecordingTransport(ScenarioTransport):
                 'tolerance_m': tolerance_m,
                 'entry_sensor': entry_sensor,
                 'minimum_clearance_delay_s': minimum_clearance_delay_s,
+                'motion_origin_s_m': motion_origin_s_m,
             },
         ))
         self.commands.append({
@@ -232,7 +234,11 @@ class RecordingTransport(ScenarioTransport):
         return {
             'arrived': True,
             'reason': '',
-            'matched_by': 'interior_entry_sensor_plus_bounded_travel_time',
+            'matched_by': (
+                'certified_interior_origin_plus_bounded_travel_time'
+                if motion_origin_s_m is not None
+                else 'interior_entry_sensor_plus_bounded_travel_time'
+            ),
             'target_segment': target_segment,
             'target_s_m': target_s_m,
             'observed_segment': (
@@ -242,6 +248,15 @@ class RecordingTransport(ScenarioTransport):
             'absolute_error_m': 0.0,
             'entry_sensor': entry_sensor,
             'entry_sensor_identity_confirmed': True,
+            'interior_advance_origin_certified': (
+                motion_origin_s_m is not None
+            ),
+            'motion_origin_s_m': motion_origin_s_m,
+            'bounded_motion_distance_m': (
+                target_s_m - motion_origin_s_m
+                if motion_origin_s_m is not None
+                else target_s_m
+            ),
             'post_stop_visual_frame_received': True,
             'post_stop_visual_confirmation': True,
             'controller_stop_confirmed': True,
