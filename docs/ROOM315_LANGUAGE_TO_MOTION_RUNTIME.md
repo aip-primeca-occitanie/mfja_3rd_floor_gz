@@ -13,9 +13,78 @@ English text
   -> replan or success
 ```
 
-The current runtime accepts transport goals to slots 1 through 4. Explicit
-identity, nearest, loaded, empty, and any-shuttle selection are grounded from
-the accepted visual facts before planning. Unsupported goals fail closed.
+The runtime deliberately exposes a finite, testable request contract. It does
+not claim that arbitrary English is automatically a safe robot program.
+
+Supported atomic requests are:
+
+- transport one present shuttle to an exact slot (`1` through `4`) or a
+  configured station;
+- select that shuttle by explicit identity (`L1` through `L4`, `R1` through
+  `R4`), `any`, or topology-nearest;
+- optionally require `loaded`, `empty`, or `any` payload state; and
+- inspect the Room 315 system, one rail, a present explicitly named shuttle,
+  a slot, a configured station, or any present shuttle matching an optional
+  payload filter, without actuating equipment.
+
+`nearest` inspection is intentionally rejected before confirmation because an
+atomic inspection goal has no separate slot/station reference from which
+nearest could be measured. Name the shuttle, or use `any` with `loaded`,
+`empty`, or `any`. Selector and payload fields are invalid for system, rail,
+slot, and station inspections; they are never silently ignored.
+
+Inspection is non-actuating and completes only after a newer accepted visual
+observation is received. Replaying the same state ID or timestamp is treated as
+unknown freshness and fails closed; it is never reported as a successful fresh
+inspection.
+
+An explicit identity determines its authoritative rail, so commands such as
+`Move L4 to slot 2` do not require the operator to repeat `left`. Colour aliases
+are resolved to an authoritative identity before PDDL grounding; colours are
+not PDDL objects. Station goals are grounded to a currently feasible,
+sensor-backed station slot. Selection, payload state, and location are grounded
+from one accepted visual observation before a planning problem is emitted.
+
+Compound agendas, swaps, “move all”, load/unload operations, arbitrary metric
+coordinates, deadlines, and unconstrained speed objectives are outside the
+current `TaskGoal` schema. They must be clarified or rejected, not approximated
+by an unrelated plan. A physically impossible request, insufficient rail
+capacity, stale observation, unknown presence, unresolved identity, or unsafe
+device state also fails closed.
+
+## Topology and blocker planning
+
+The planning problem is generated from the authoritative left/right rail
+networks. It covers all 14 public segments and all 16 assignments of the four
+switches on each rail. A shuttle observed only on a continuous segment uses a
+segment-origin topology action. A shuttle with an exact occupied slot uses a
+slot-origin topology action that removes the source occupancy atomically; this
+prevents the symbolic state from leaving one shuttle in two slots.
+
+Routes are occupancy-aware. For an obstructed route, the executive executes at
+most one supervised blocker relocation, obtains a fresh accepted visual frame,
+and replans. It never assumes that the rest of a stale multi-step plan is still
+valid. Segment-origin and slot-origin topology setup both require the verified
+normal route; after an interior relocation, PDDL must therefore emit the
+matching `finish_*_route_clearance` action before configuring the goal route.
+The A34I interior branch has bounded physical capacity. When a
+three-blocker route cannot safely stage another shuttle there, an explicit
+`pause_route_clearance` phase is permitted only after all staged shuttles have
+matching stop certificates. The normal route is then verified, a staged token
+is advanced to a free intermediate slot, and clearance resumes. This avoids
+overlapping shuttles in A34I while retaining a complete path for full-rail
+requests.
+
+The expert and runtime PDDL domains share one executable action surface. Every
+symbolic action is translated, validated, supervised, effect-checked, and
+followed by re-observation before subsequent motion.
+
+The switch supervisor independently measures each controller shuttle state's
+along-rail distance to the authoritative controlled switch node. A switch
+change is rejected at or below `0.35 m`; missing, invalid, or unmappable
+controller coordinates fail closed. These controller fields are a safety veto
+only and never replace or improve the learned visual localization used by the
+planner.
 
 ## Source ownership
 
@@ -28,8 +97,15 @@ the accepted visual facts before planning. Unsupported goals fail closed.
   state come from the visual model.
 - `ShuttleState.current_segment`, `s`, `x`, `y`, `z`, `yaw`, and `speed` are
   never used for visual localization.
-- Controller mode is used only to confirm that a supervised `OFF` command took
-  effect after visual arrival.
+- A fresh controller `DISABLED` mode is used only to confirm that a supervised
+  `OFF` command took effect after visual arrival. `WAITING` is not accepted as
+  that proof because an enabled shuttle held by a stopper or collision also
+  reports `WAITING`.
+- In the Gazebo controller, `ShuttleState.speed` is the retained travel-speed
+  setting for the next `ON` command, not an instantaneous velocity. It may
+  remain non-zero while mode is `DISABLED`; stop verification must therefore
+  require a fresh explicit `DISABLED` state and must not reinterpret this field
+  as motion evidence.
 - Switch and stopper state come from their deterministic controllers.
 
 The Gazebo `ShuttleState` topics are acceptable deterministic presence sources
@@ -55,11 +131,24 @@ learned `s_m` and learned segment length when their mismatch is no more than
 the configured bound. This projection does not read controller pose, Gazebo
 pose, slot priors, or oracle labels. Larger mismatches remain rejected.
 
-Initial planner occupancy and target stopping use separate visual tolerances.
-Target arrival requires the learned segment to match the target segment and
-the learned `s_ratio` to remain within `0.05` of the authoritative slot ratio
-for three consecutive accepted camera observations. Predicted segment length
-is not used to widen this stopping window.
+Initial planner occupancy comes from the accepted visual state. Final actuation
+stopping is a separate effect-verification boundary: the target's
+identity-bearing deterministic slot sensor and a confirmed controller `OFF`
+state must agree. A fresh visual observation is retained as model evidence and
+for replanning, but controller position fields never replace learned visual
+localization. Predicted segment length is not used to widen the target.
+
+When a completed topology-origin move leaves the rail in a mixed switch
+configuration, PlanSys2 may select `restore_normal_route` before the next slot
+motion. The executive expands that action into supervised all-exterior switch
+and all-open stopper commands, verifies both device effects, waits for a fresh
+accepted visual frame, and then replans. Ordinary recovery is unavailable
+during an active blocker-clearance phase; the bounded-capacity pause described
+above is a distinct guarded transition. Restoration is also unavailable with a
+non-open stopper, an external obstacle, or when an interior shuttle lacks a
+matching sensor-derived stop certificate. A certificate is bound to the
+current accepted visual segment and is invalidated before any later `ON`
+command for that shuttle.
 
 ## Terminal 1: Gazebo, cameras, supervisor, and deterministic presence
 
@@ -167,6 +256,10 @@ Examples:
 Move shuttle R4 to slot 3 on the right rail.
 Move the nearest loaded shuttle on the right rail to slot 3.
 Move an empty shuttle on the left rail to slot 2.
+Move L4 to slot 2.
+Inspect shuttle R2.
+Inspect any loaded shuttle on the right rail.
+Inspect the Room 315 system.
 ```
 
 Reply `yes` after checking the confirmation summary.

@@ -41,10 +41,12 @@ class ReplayPlanner(BasePlannerBackend):
         self.calls += 1
         if self.calls == 1:
             return [
-                'prepare_switches right switch=A1 state=INTERIOR',
-                'open_stoppers right',
+                'prepare_switches right right_yaskawa right_staubli '
+                'right_switch_group',
+                'open_stoppers right right_yaskawa right_staubli '
+                'right_stopper_group',
             ]
-        return ['inspect_state room315_system']
+        return ['inspect_state right_rail']
 
 
 class RosSupervisorLoopTransport(ScenarioTransport):
@@ -103,21 +105,26 @@ def _state(state_id: str, *, a1: str = 'EXTERIOR') -> ObservedState:
 def test_closed_loop_uses_supervisor_decision_and_wait_hooks_between_plans():
     provider = ReplayStateProvider([
         _state('before-switch', a1='EXTERIOR'),
-        _state('after-switch', a1='INTERIOR'),
-        _state('before-inspect', a1='INTERIOR'),
+        _state('after-switch', a1='EXTERIOR'),
+        _state('before-inspect', a1='EXTERIOR'),
+        replace(
+            _state('after-inspect', a1='EXTERIOR'),
+            timestamp=1.0,
+        ),
     ])
     planner = ReplayPlanner()
     transport = RosSupervisorLoopTransport()
     goal = TaskGoal(
-        goal_id='inspect-after-switch',
-        description='Inspect Room 315 after a supervised switch command',
+        goal_id='inspect-right-rail-after-switch',
+        description='Inspect the right rail after a supervised switch command',
         source='human',
         timestamp=0.0,
         confidence=1.0,
         constraints={
             'goal_type': 'inspection',
             'side': 'right',
-            'inspection_subject': 'room315_system',
+            'target_kind': 'rail',
+            'inspection_subject': 'right:rail',
         },
     )
 
@@ -130,11 +137,13 @@ def test_closed_loop_uses_supervisor_decision_and_wait_hooks_between_plans():
 
     assert result.succeeded
     assert planner.calls == 2
-    assert [command['action'] for command in transport.commands] == ['switches', 'DONE']
+    # inspect_state is a symbolic completion marker. It must never be sent to
+    # the physical supervisor as a fabricated actuator command.
+    assert [command['action'] for command in transport.commands] == ['switches']
     assert transport.commands[0]['closed_loop_executive']['plan_length'] == 2
     assert transport.commands[0]['closed_loop_executive']['symbolic_step'].startswith(
         'prepare_switches'
     )
     assert transport.switch_waits == [
-        {'side': 'right', 'switches': {'A1': 'INTERIOR'}},
+        {'side': 'right', 'switches': {'ALL': 'EXTERIOR'}},
     ]

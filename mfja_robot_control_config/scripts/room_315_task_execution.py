@@ -3,7 +3,8 @@
 
 The visual observation owns shuttle location and payload facts.  Controller
 state is admitted only for presence (upstream of this module), switch/stopper
-state, safety decisions, and confirmation that an OFF command took effect.
+state, safety decisions, and a fresh explicit ``DISABLED`` confirmation that
+an OFF command took effect.
 In particular, supervisor ShuttleState position fields are never read here.
 """
 
@@ -30,14 +31,17 @@ from room_315_multi_shuttle import DEVICE_NAMES
 from room_315_multi_shuttle import all_shuttle_specs
 from room_315_multi_shuttle import normalize_fleet_block_id
 from room_315_multi_shuttle import normalize_shuttle_ref
+from room_315_multi_shuttle import route_candidates_from_position_to_slot
 from room_315_observed_state_provider import ObservedStateProvider
 from room_315_observed_state_provider import fuse_observed_facts
 from room_315_pddl_scenario_generator import RAIL_DEVICES_PATH_BY_SIDE
 from room_315_pddl_scenario_generator import RAIL_NETWORK_PATH_BY_SIDE
 from room_315_pddl_scenario_generator import ScenarioTransport
 from room_315_pddl_scenario_generator import SLOT_SENSOR_BY_SIDE_AND_SLOT
+from room_315_pddl_scenario_generator import SLOT_STATION_BY_SIDE_AND_SLOT
 from room_315_multi_shuttle import load_rail_topology
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import rail_segment_lengths
 
 
 PRESENCE_STATES = frozenset({'present', 'absent', 'unknown'})
@@ -49,15 +53,7 @@ TERMINAL_SUPERVISOR_DECISIONS = frozenset({
     'rejected',
     'blocked',
 })
-STOPPED_MOTION_VALUES = frozenset({
-    'DISABLED',
-    'FALLING',
-    'HALTED',
-    'IDLE',
-    'OFF',
-    'STOPPED',
-    'WAITING',
-})
+CONTROLLER_DISABLED_MODE = 'DISABLED'
 
 
 class TaskExecutionStateError(RuntimeError):
@@ -1101,6 +1097,49 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                 self._condition.wait(timeout=min(remaining, 0.1))
         raise TaskExecutionStateError(last_error)
 
+    def observe_fresh_after(
+        self,
+        state_id: str,
+        *,
+        timestamp: float | None = None,
+    ) -> ObservedState:
+        """Wait for a valid observation whose visual state ID has advanced.
+
+        A PDDL input-consistency failure is recoverable only if another visual
+        inference result is actually available.  Rebuilding the same cached
+        snapshot several times creates fake retries and can exhaust recovery
+        in a few milliseconds.  Supervisor/status updates may wake this wait,
+        but only a different accepted visual ``state_id`` satisfies it.
+        """
+
+        previous_state_id = str(state_id or '').strip()
+        if not previous_state_id:
+            return self.observe(timestamp=timestamp)
+        deadline = self.monotonic() + self.builder.config.observation_wait_s
+        last_error = (
+            'accepted visual observation did not advance beyond '
+            f'{previous_state_id}'
+        )
+        while self.monotonic() <= deadline:
+            try:
+                now_s = self.monotonic()
+                state = self.builder.build(
+                    self.snapshot(),
+                    now_s=now_s,
+                    runtime_clearance_certificates=(
+                        self.runtime_clearance_certificates()
+                    ),
+                    slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
+                )
+                if state.state_id != previous_state_id:
+                    return state
+            except Exception as exc:  # noqa: BLE001 - bounded retry boundary
+                last_error = str(exc)
+            with self._condition:
+                remaining = max(0.0, deadline - self.monotonic())
+                self._condition.wait(timeout=min(remaining, 0.1))
+        raise TaskExecutionStateError(last_error)
+
 
 class VisualSupervisorTransport(ScenarioTransport):
     """Supervisor transport with deterministic final slot confirmation.
@@ -1217,6 +1256,18 @@ class VisualSupervisorTransport(ScenarioTransport):
             self._condition.notify_all()
 
     def publish_command(self, command: dict[str, Any]) -> None:
+        if (
+            str(command.get('action') or '').strip().casefold() == 'shuttle'
+            and str(command.get('command') or '').strip().upper() == 'ON'
+            and str(command.get('shuttle') or '').strip()
+        ):
+            # A bounded-stop certificate proves only the completed motion that
+            # created it. Any later ON command invalidates that proof before
+            # the command leaves this runtime boundary.
+            self.provider.clear_runtime_clearance_certificate(
+                str(command['shuttle']),
+                side=str(command.get('side') or '').strip() or None,
+            )
         self.publish_callback(copy.deepcopy(command))
 
     def supervisor_decision_count(self) -> int:
@@ -1227,6 +1278,12 @@ class VisualSupervisorTransport(ScenarioTransport):
                 'metrics',
             )
             return int(metrics.get('total_proposed_actions') or 0)
+
+    def supervisor_state_count(self) -> int:
+        """Return the received controller/supervisor snapshot sequence."""
+
+        with self._condition:
+            return self._supervisor_sequence
 
     def wait_for_supervisor_decision(
         self,
@@ -1458,8 +1515,9 @@ class VisualSupervisorTransport(ScenarioTransport):
         stop, so neither a false positive nor a false negative visual block can
         move the shuttle into FALLING. A disagreeing raw visual block/position
         is preserved for audit and is never rewritten by this execution-effect
-        proof. Controller mode is used only for FALLING detection and OFF
-        confirmation; controller segment/s fields are never read.
+        proof. Controller mode is used only for FALLING detection and fresh
+        explicit DISABLED confirmation after OFF; controller segment/s fields
+        are never read.
         """
 
         rail_side = _side(side)
@@ -1514,6 +1572,7 @@ class VisualSupervisorTransport(ScenarioTransport):
 
         def publish_off(trigger: str) -> dict[str, Any]:
             previous_count = self.supervisor_decision_count()
+            previous_state_sequence = self.supervisor_state_count()
             self.publish_command({
                 'action': 'shuttle',
                 'side': rail_side,
@@ -1548,6 +1607,7 @@ class VisualSupervisorTransport(ScenarioTransport):
                 side=rail_side,
                 shuttle=shuttle,
                 timeout_s=self.controller_stop_timeout_s,
+                after_supervisor_sequence=previous_state_sequence,
             )
 
         stop_trigger = ''
@@ -1744,6 +1804,7 @@ class VisualSupervisorTransport(ScenarioTransport):
         mode: str,
     ) -> dict[str, Any]:
         previous_count = self.supervisor_decision_count()
+        previous_state_sequence = self.supervisor_state_count()
         self.publish_command({
             'action': 'shuttle',
             'side': side,
@@ -1775,6 +1836,7 @@ class VisualSupervisorTransport(ScenarioTransport):
             side=side,
             shuttle=shuttle,
             timeout_s=self.controller_stop_timeout_s,
+            after_supervisor_sequence=previous_state_sequence,
             target_slot=(
                 target_slot
                 if mode == 'slot_sensor_target_arrival_finalize'
@@ -1789,6 +1851,7 @@ class VisualSupervisorTransport(ScenarioTransport):
         shuttle: str,
         timeout_s: float,
         target_slot: str = '',
+        after_supervisor_sequence: int | None = None,
     ) -> dict[str, Any]:
         spec = normalize_shuttle_ref(shuttle, side=side)
         if spec is None:
@@ -1796,6 +1859,17 @@ class VisualSupervisorTransport(ScenarioTransport):
         deadline = self.monotonic() + max(float(timeout_s), 0.0)
         while self.monotonic() <= deadline:
             with self._condition:
+                if (
+                    after_supervisor_sequence is not None
+                    and self._supervisor_sequence <= after_supervisor_sequence
+                ):
+                    self._condition.wait(
+                        timeout=min(
+                            0.1,
+                            max(0.0, deadline - self.monotonic()),
+                        )
+                    )
+                    continue
                 rail = _nested_dict(self._supervisor_status, 'rails', side)
                 shuttles = rail.get('shuttles')
                 state = (
@@ -1808,7 +1882,7 @@ class VisualSupervisorTransport(ScenarioTransport):
                     state.get('reached_target_slot') or ''
                 ).strip()
                 if (
-                    mode in STOPPED_MOTION_VALUES
+                    mode == CONTROLLER_DISABLED_MODE
                     and (
                         not target_slot
                         or reached_target_slot == str(target_slot)
@@ -1819,6 +1893,7 @@ class VisualSupervisorTransport(ScenarioTransport):
                         'reason': '',
                         'mode': mode,
                         'confirmation_source': 'controller_execution_feedback',
+                        'supervisor_sequence': self._supervisor_sequence,
                         'localization_source': 'not_used',
                         'reached_target_slot': reached_target_slot,
                     }
@@ -1828,7 +1903,7 @@ class VisualSupervisorTransport(ScenarioTransport):
         return {
             'ready': False,
             'reason': (
-                f'timeout confirming controller stop for {spec.short_id}'
+                f'timeout confirming fresh controller DISABLED state for {spec.short_id}'
                 + (
                     f' at target_slot {target_slot}'
                     if target_slot
@@ -1872,7 +1947,7 @@ def ground_transport_task_goal(
     task_goal: TaskGoal,
     observed_state: ObservedState,
 ) -> TaskGoal:
-    """Ground nearest/any language selection from accepted visual facts.
+    """Ground shuttle selection from accepted visual facts.
 
     This is deterministic goal grounding, not action planning. Location and
     payload eligibility come from the learned visual state; PlanSys2 still
@@ -1880,9 +1955,24 @@ def ground_transport_task_goal(
     """
 
     constraints = dict(task_goal.constraints or {})
-    if str(constraints.get('goal_type') or '').lower() != 'transport':
+    goal_type = str(constraints.get('goal_type') or '').strip().lower()
+    facts = {
+        (fact.subject, fact.predicate): fact
+        for fact in observed_state.fused_planner_state
+        if fact.status == 'known'
+    }
+    if goal_type == 'inspection':
+        return _ground_inspection_task_goal(
+            task_goal,
+            constraints=constraints,
+            facts=facts,
+        )
+    if goal_type != 'transport':
         raise TaskExecutionStateError('only transport TaskGoals can be grounded')
     side = _side(constraints.get('side'))
+    selection, payload_filter = _normalize_live_selection_contract(
+        constraints,
+    )
     existing = constraints.get('target_shuttle')
     if existing:
         spec = normalize_shuttle_ref(existing, side=side)
@@ -1890,9 +1980,35 @@ def ground_transport_task_goal(
             raise TaskExecutionStateError(
                 f'invalid explicit target shuttle:{existing!r}'
             )
+        present = facts.get((spec.gazebo_entity_name, 'present'))
+        if present is None or not bool(present.value):
+            raise TaskExecutionStateError(
+                f'explicit target shuttle is absent or presence is unknown:'
+                f'{spec.short_id}'
+            )
+        loaded = facts.get((spec.gazebo_entity_name, 'loaded'))
+        if payload_filter in {'loaded', 'empty'}:
+            if loaded is None:
+                raise TaskExecutionStateError(
+                    f'explicit target shuttle payload is unknown:{spec.short_id}'
+                )
+            if payload_filter == 'loaded' and not bool(loaded.value):
+                raise TaskExecutionStateError(
+                    f'explicit target shuttle is not loaded:{spec.short_id}'
+                )
+            if payload_filter == 'empty' and bool(loaded.value):
+                raise TaskExecutionStateError(
+                    f'explicit target shuttle is not empty:{spec.short_id}'
+                )
         constraints['target_shuttle'] = spec.gazebo_entity_name
         constraints['selection_strategy'] = 'explicit'
         constraints['shuttle_selection'] = 'explicit'
+        _ground_station_destination_for_selected_shuttle(
+            constraints,
+            facts=facts,
+            selected_spec=spec,
+            side=side,
+        )
         return TaskGoal(
             goal_id=task_goal.goal_id,
             description=task_goal.description,
@@ -1902,26 +2018,18 @@ def ground_transport_task_goal(
             constraints=constraints,
         )
 
-    selection = str(
-        constraints.get('selection_strategy')
-        or constraints.get('shuttle_selection')
-        or 'any'
-    ).lower()
-    payload_filter = str(
-        constraints.get('payload_filter')
-        or constraints.get('payload_required')
-        or 'any'
-    ).lower()
     target_slot = str(constraints.get('target_slot') or '')
-    if selection == 'nearest' and target_slot not in {'1', '2', '3', '4'}:
+    target_station = _station_name(constraints.get('target_station'), side=side)
+    station_slots = _station_slots(side=side, station=target_station)
+    if (
+        selection == 'nearest'
+        and target_slot not in {'1', '2', '3', '4'}
+        and not station_slots
+    ):
         raise TaskExecutionStateError(
-            'nearest selection requires target slot 1, 2, 3, or 4'
+            'nearest selection requires target slot 1, 2, 3, or 4, or a '
+            'valid target station on the selected rail'
         )
-    facts = {
-        (fact.subject, fact.predicate): fact
-        for fact in observed_state.fused_planner_state
-        if fact.status == 'known'
-    }
     candidates = []
     for spec in all_shuttle_specs():
         if spec.side != side:
@@ -1930,32 +2038,99 @@ def ground_transport_task_goal(
         if present is None or not bool(present.value):
             continue
         loaded = facts.get((spec.gazebo_entity_name, 'loaded'))
-        if loaded is None:
-            continue
-        if payload_filter == 'loaded' and not bool(loaded.value):
-            continue
-        if payload_filter == 'empty' and bool(loaded.value):
+        if not _payload_eligible(loaded, payload_filter=payload_filter):
             continue
         slot_fact = facts.get((spec.gazebo_entity_name, 'location_slot'))
         slot = _slot_number(slot_fact.value if slot_fact is not None else '')
-        if selection == 'nearest' and not slot:
-            continue
-        distance = (
-            abs(int(slot) - int(target_slot))
-            if selection == 'nearest'
-            else 0
-        )
-        candidates.append((distance, spec.short_id, spec))
+        selected_station_slot = ''
+        occupancy_penalty = 0.0
+        already_satisfied = False
+        if target_slot:
+            distance = _visual_route_distance_m(
+                facts,
+                spec=spec,
+                target_slot=target_slot,
+            )
+            if distance == float('inf'):
+                continue
+            already_satisfied = slot == target_slot
+            occupancy_penalty = _slot_occupancy_penalty(
+                facts,
+                side=side,
+                slot=target_slot,
+                spec=spec,
+            )
+            if occupancy_penalty == float('inf'):
+                continue
+        elif station_slots:
+            route_candidates = [
+                (
+                    _slot_occupancy_penalty(
+                        facts,
+                        side=side,
+                        slot=station_slot,
+                        spec=spec,
+                    ),
+                    _visual_route_distance_m(
+                        facts,
+                        spec=spec,
+                        target_slot=station_slot,
+                    ),
+                    station_slot,
+                )
+                for station_slot in station_slots
+            ]
+            route_candidates = [
+                item
+                for item in route_candidates
+                if item[0] != float('inf') and item[1] != float('inf')
+            ]
+            if not route_candidates:
+                continue
+            _occupancy_penalty, distance, selected_station_slot = min(
+                route_candidates,
+                key=lambda item: (item[0], item[1], int(item[2])),
+            )
+            occupancy_penalty = _occupancy_penalty
+            already_satisfied = slot == selected_station_slot
+        else:
+            distance = 0
+        # ``any`` is deterministic but not arbitrary: do no work when an
+        # eligible shuttle already satisfies the exact destination, otherwise
+        # prefer the least-cost feasible visual/topology route. ``nearest``
+        # uses the same authoritative route distance without requiring a
+        # derived exact-slot label at the source.
+        satisfied_rank = 0 if selection == 'any' and already_satisfied else 1
+        candidates.append((
+            satisfied_rank,
+            occupancy_penalty,
+            distance,
+            spec.short_id,
+            selected_station_slot,
+            spec,
+        ))
     if not candidates:
         raise TaskExecutionStateError(
             f'no visual candidate for selection={selection}, '
             f'payload_filter={payload_filter}, side={side}'
         )
-    candidates.sort(key=lambda item: (item[0], item[1]))
-    selected = candidates[0][2]
+    candidates.sort(key=lambda item: item[:4])
+    selected_station_slot = candidates[0][4]
+    selected = candidates[0][5]
     constraints['target_shuttle'] = selected.gazebo_entity_name
     constraints['selection_strategy'] = 'explicit'
     constraints['shuttle_selection'] = 'explicit'
+    if selected_station_slot:
+        constraints['target_kind'] = 'slot'
+        constraints['target_slot'] = selected_station_slot
+        constraints['target_station'] = target_station
+    else:
+        _ground_station_destination_for_selected_shuttle(
+            constraints,
+            facts=facts,
+            selected_spec=selected,
+            side=side,
+        )
     return TaskGoal(
         goal_id=task_goal.goal_id,
         description=task_goal.description,
@@ -1964,6 +2139,339 @@ def ground_transport_task_goal(
         confidence=task_goal.confidence,
         constraints=constraints,
     )
+
+
+def _normalize_live_selection_contract(
+    constraints: dict[str, Any],
+) -> tuple[str, str]:
+    """Canonicalize current and legacy selection fields before grounding."""
+
+    raw_payload = constraints.get('payload_filter')
+    payload_is_explicit = raw_payload is not None and str(raw_payload).strip() != ''
+    if payload_is_explicit:
+        payload_filter = str(raw_payload).strip().casefold()
+    else:
+        legacy_payload = constraints.get('payload_required')
+        legacy_selection = str(
+            constraints.get('shuttle_selection') or ''
+        ).strip().casefold()
+        if legacy_selection in {'loaded', 'empty'}:
+            payload_filter = legacy_selection
+        elif isinstance(legacy_payload, bool):
+            payload_filter = 'loaded' if legacy_payload else 'empty'
+        else:
+            legacy_text = str(
+                legacy_payload if legacy_payload is not None else ''
+            ).strip().casefold()
+            payload_filter = {
+                'true': 'loaded',
+                'yes': 'loaded',
+                '1': 'loaded',
+                'false': 'empty',
+                'no': 'empty',
+                '0': 'empty',
+            }.get(legacy_text, legacy_text or 'any')
+    if payload_filter not in {'loaded', 'empty', 'any'}:
+        raise TaskExecutionStateError(
+            f'invalid visual payload filter:{payload_filter!r}'
+        )
+
+    raw_selection = str(
+        constraints.get('selection_strategy')
+        or constraints.get('shuttle_selection')
+        or 'any'
+    ).strip().casefold()
+    selection = 'any' if raw_selection in {'loaded', 'empty'} else raw_selection
+    if constraints.get('target_shuttle'):
+        selection = 'explicit'
+    if selection not in {'explicit', 'nearest', 'any'}:
+        raise TaskExecutionStateError(
+            f'invalid shuttle selection strategy:{selection!r}'
+        )
+
+    constraints['payload_filter'] = payload_filter
+    constraints['selection_strategy'] = selection
+    constraints['shuttle_selection'] = selection
+    return selection, payload_filter
+
+
+def _payload_eligible(
+    loaded_fact: ObservedFact | None,
+    *,
+    payload_filter: str,
+) -> bool:
+    if payload_filter == 'any':
+        return True
+    if loaded_fact is None:
+        return False
+    loaded = bool(loaded_fact.value)
+    return loaded if payload_filter == 'loaded' else not loaded
+
+
+def _ground_inspection_task_goal(
+    task_goal: TaskGoal,
+    *,
+    constraints: dict[str, Any],
+    facts: dict[tuple[str, str], ObservedFact],
+) -> TaskGoal:
+    """Resolve shuttle inspection subjects against the fresh presence state."""
+
+    target_kind = str(constraints.get('target_kind') or '').strip().casefold()
+    raw_subject = constraints.get('target_shuttle') or constraints.get(
+        'inspection_subject'
+    )
+    explicit_spec = normalize_shuttle_ref(raw_subject)
+    needs_selection = target_kind == 'shuttle_selection'
+    if explicit_spec is None and not needs_selection:
+        # Room, rail, slot and station inspection subjects are already grounded
+        # and do not depend on live shuttle presence.
+        return task_goal
+
+    if explicit_spec is not None:
+        _selection, payload_filter = _normalize_live_selection_contract(
+            constraints,
+        )
+        supplied_side = str(constraints.get('side') or '').strip().casefold()
+        if supplied_side and _side(supplied_side) != explicit_spec.side:
+            raise TaskExecutionStateError(
+                f'inspection shuttle side conflicts with authoritative identity:'
+                f'{explicit_spec.short_id}'
+            )
+        present = facts.get((explicit_spec.gazebo_entity_name, 'present'))
+        if present is None or not bool(present.value):
+            raise TaskExecutionStateError(
+                f'explicit inspection shuttle is absent or presence is unknown:'
+                f'{explicit_spec.short_id}'
+            )
+        loaded = facts.get((explicit_spec.gazebo_entity_name, 'loaded'))
+        if not _payload_eligible(loaded, payload_filter=payload_filter):
+            state = (
+                'unknown'
+                if loaded is None
+                else ('loaded' if bool(loaded.value) else 'empty')
+            )
+            raise TaskExecutionStateError(
+                f'explicit inspection shuttle payload does not satisfy '
+                f'{payload_filter}:{explicit_spec.short_id}:{state}'
+            )
+        constraints['side'] = explicit_spec.side
+        constraints['target_kind'] = 'shuttle'
+        constraints['target_shuttle'] = explicit_spec.gazebo_entity_name
+        constraints['inspection_subject'] = explicit_spec.gazebo_entity_name
+        constraints['payload_filter'] = payload_filter
+        constraints['selection_strategy'] = 'explicit'
+        constraints['shuttle_selection'] = 'explicit'
+        return _copy_task_goal(task_goal, constraints=constraints)
+
+    side = _side(constraints.get('side'))
+    selection, payload_filter = _normalize_live_selection_contract(constraints)
+    if selection == 'explicit':
+        raise TaskExecutionStateError(
+            'explicit shuttle inspection requires a grounded shuttle identity'
+        )
+    target_slot = str(constraints.get('target_slot') or '')
+    target_station = _station_name(constraints.get('target_station'), side=side)
+    if selection == 'nearest' and not (
+        target_slot in {'1', '2', '3', '4'}
+        or _station_slots(side=side, station=target_station)
+    ):
+        raise TaskExecutionStateError(
+            'nearest shuttle inspection requires an exact slot or station '
+            'reference; ask the user to clarify the reference'
+        )
+
+    synthetic_constraints = dict(constraints)
+    synthetic_constraints['goal_type'] = 'transport'
+    synthetic = TaskGoal(
+        goal_id=task_goal.goal_id,
+        description=task_goal.description,
+        source=task_goal.source,
+        timestamp=task_goal.timestamp,
+        confidence=task_goal.confidence,
+        constraints=synthetic_constraints,
+    )
+    grounded = ground_transport_task_goal(
+        synthetic,
+        ObservedState(
+            state_id='inspection-grounding-view',
+            timestamp=task_goal.timestamp,
+            fused_planner_state=list(facts.values()),
+        ),
+    )
+    selected = str(grounded.constraints['target_shuttle'])
+    constraints.update({
+        'target_kind': 'shuttle',
+        'target_shuttle': selected,
+        'inspection_subject': selected,
+        'payload_filter': grounded.constraints['payload_filter'],
+        'selection_strategy': 'explicit',
+        'shuttle_selection': 'explicit',
+    })
+    return _copy_task_goal(task_goal, constraints=constraints)
+
+
+def _copy_task_goal(
+    task_goal: TaskGoal,
+    *,
+    constraints: dict[str, Any],
+) -> TaskGoal:
+    return TaskGoal(
+        goal_id=task_goal.goal_id,
+        description=task_goal.description,
+        source=task_goal.source,
+        timestamp=task_goal.timestamp,
+        confidence=task_goal.confidence,
+        constraints=constraints,
+    )
+
+
+def _ground_station_destination_for_selected_shuttle(
+    constraints: dict[str, Any],
+    *,
+    facts: dict[tuple[str, str], ObservedFact],
+    selected_spec: Any,
+    side: str,
+) -> None:
+    """Convert a station-only request into a deterministic sensor-backed slot."""
+
+    if str(constraints.get('target_slot') or '') in {'1', '2', '3', '4'}:
+        return
+    station = _station_name(constraints.get('target_station'), side=side)
+    slots = _station_slots(side=side, station=station)
+    if not slots:
+        return
+    candidates = [
+        (
+            _slot_occupancy_penalty(
+                facts,
+                side=side,
+                slot=slot,
+                spec=selected_spec,
+            ),
+            _visual_route_distance_m(
+                facts,
+                spec=selected_spec,
+                target_slot=slot,
+            ),
+            slot,
+        )
+        for slot in slots
+    ]
+    candidates = [
+        item
+        for item in candidates
+        if item[0] != float('inf') and item[1] != float('inf')
+    ]
+    if not candidates:
+        raise TaskExecutionStateError(
+            f'no reachable sensor-backed slot at target station:{side}:{station}'
+        )
+    _occupancy_penalty, _distance, slot = min(
+        candidates,
+        key=lambda item: (item[0], item[1], int(item[2])),
+    )
+    constraints['target_kind'] = 'slot'
+    constraints['target_slot'] = slot
+    constraints['target_station'] = station
+
+
+def _station_name(value: Any, *, side: str) -> str:
+    text = str(value or '').strip().lower().replace(':', '_')
+    if text.startswith(f'{side}_'):
+        text = text[len(side) + 1:]
+    allowed = {
+        station
+        for (station_side, _slot), station in SLOT_STATION_BY_SIDE_AND_SLOT.items()
+        if station_side == side
+    }
+    return text if text in allowed else ''
+
+
+def _station_slots(*, side: str, station: str) -> tuple[str, ...]:
+    if not station:
+        return ()
+    return tuple(
+        slot
+        for (slot_side, slot), slot_station in sorted(
+            SLOT_STATION_BY_SIDE_AND_SLOT.items()
+        )
+        if slot_side == side and slot_station == station
+    )
+
+
+def _slot_occupancy_penalty(
+    facts: dict[tuple[str, str], ObservedFact],
+    *,
+    side: str,
+    slot: str,
+    spec: Any,
+) -> float:
+    occupancy = facts.get((f'{side}:slot:{slot}', 'occupancy'))
+    if occupancy is None or not isinstance(occupancy.value, dict):
+        return float('inf')
+    if not bool(occupancy.value.get('occupied')):
+        return 0.0
+    occupant = normalize_shuttle_ref(
+        occupancy.value.get('shuttle') or occupancy.value.get('occupant'),
+        side=side,
+    )
+    if occupant is None:
+        return float('inf')
+    return 0.0 if occupant.short_id == spec.short_id else 1.0
+
+
+def _visual_route_distance_m(
+    facts: dict[tuple[str, str], ObservedFact],
+    *,
+    spec: Any,
+    target_slot: str,
+) -> float:
+    position = facts.get((spec.gazebo_entity_name, 'rail_position'))
+    try:
+        topology = load_rail_topology(
+            RAIL_NETWORK_PATH_BY_SIDE[spec.side],
+            RAIL_DEVICES_PATH_BY_SIDE[spec.side],
+            side=spec.side,
+        )
+        if position is not None and isinstance(position.value, dict):
+            raw = position.value
+            segment = str(raw.get('segment') or '').strip().upper()
+            if spec.side == 'left':
+                segment = LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
+            source_ratio = raw.get('s_ratio')
+        else:
+            # Static scenario states and deterministic slot-sensor anchors may
+            # legitimately omit a free-form rail_position. An exact accepted
+            # slot is still a safe topology source, but never substitute a
+            # guessed slot for a segment-only visual position.
+            slot_fact = facts.get((spec.gazebo_entity_name, 'location_slot'))
+            source_slot = _slot_number(
+                slot_fact.value if slot_fact is not None else ''
+            )
+            if not source_slot:
+                return float('inf')
+            source = topology.slots[source_slot]
+            segment = source.segment
+            source_ratio = source.s_ratio
+        routes = route_candidates_from_position_to_slot(
+            topology,
+            segment,
+            source_ratio,
+            target_slot,
+        )
+        if not routes:
+            return float('inf')
+        lengths = rail_segment_lengths(spec.side)
+        return min(
+            sum(
+                abs(float(block.end_s_ratio) - float(block.start_s_ratio))
+                * float(lengths[block.segment])
+                for block in route.blocks
+            )
+            for route in routes
+        )
+    except (KeyError, TypeError, ValueError):
+        return float('inf')
 
 
 def _fact(

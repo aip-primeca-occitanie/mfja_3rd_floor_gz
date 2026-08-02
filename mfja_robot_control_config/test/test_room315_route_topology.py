@@ -262,6 +262,107 @@ def test_position_route_on_same_segment_moves_forward_or_wraps_as_required():
     assert wrapped.blocks[-1].end_s_ratio == pytest.approx(0.411866742)
 
 
+def test_route_candidates_enumerate_exterior_and_interior_topology_alternatives():
+    multi = _load_module()
+    topology = _right_topology(multi)
+
+    candidates = multi.route_candidates_from_position_to_slot(
+        topology,
+        'A23',
+        0.5,
+        '1',
+    )
+    repeated = multi.route_candidates_from_position_to_slot(
+        topology,
+        'A23',
+        0.5,
+        '1',
+    )
+
+    assert candidates == repeated
+    assert len(candidates) == 4
+    assert candidates[0] == multi.route_plan_from_position_to_slot(
+        topology,
+        'A23',
+        0.5,
+        '1',
+    )
+    assert candidates[0].switch_states == {
+        'A1': 'E',
+        'A2': 'E',
+        'A3': 'E',
+        'A4': 'E',
+    }
+    traces = {
+        tuple(block.segment for block in candidate.blocks)
+        for candidate in candidates
+    }
+    assert traces == {
+        ('A23', 'A3E', 'A34E', 'A4E', 'A14', 'A1E', 'A12E'),
+        ('A23', 'A3I', 'A34I', 'A4I', 'A14', 'A1E', 'A12E'),
+    }
+    assert len({
+        tuple(candidate.switch_states.items())
+        for candidate in candidates
+    }) == len(candidates)
+
+
+def test_occupancy_aware_candidates_keep_blocked_and_clear_alternatives():
+    multi = _load_module()
+    topology = _right_topology(multi)
+    rails = {
+        'right': {
+            'shuttles': {
+                'R1': {'segment': 'A23', 's_ratio': 0.5},
+                'R2': {'segment': 'A34E', 's_ratio': 0.5},
+            },
+        },
+    }
+
+    candidates = multi.occupancy_aware_route_candidates_from_position_to_slot(
+        rails,
+        topology,
+        'A23',
+        0.5,
+        '1',
+        selected_shuttle='R1',
+    )
+
+    assert len(candidates) == 4
+    assert [candidate.clear for candidate in candidates] == [
+        False,
+        False,
+        True,
+        True,
+    ]
+    assert [
+        tuple(blocker.shuttle_id for blocker in candidate.blockers)
+        for candidate in candidates
+    ] == [('R2',), ('R2',), (), ()]
+    assert all(
+        'A34E' in {block.segment for block in candidate.route.blocks}
+        for candidate in candidates[:2]
+    )
+    assert all(
+        'A34I' in {block.segment for block in candidate.route.blocks}
+        for candidate in candidates[2:]
+    )
+
+
+@pytest.mark.parametrize('side', ('right', 'left'))
+def test_loaded_topology_records_authoritative_yaml_provenance(side):
+    multi = _load_module()
+    topology = _right_topology(multi) if side == 'right' else _left_topology(multi)
+
+    assert topology.network_id
+    assert Path(topology.network_source).resolve() == (
+        KINEMATICS_DIR / f'rail_network_{side}.yaml'
+    ).resolve()
+    assert Path(topology.devices_source).resolve() == (
+        KINEMATICS_DIR / f'rail_devices_{side}.yaml'
+    ).resolve()
+
+
 @pytest.mark.parametrize(
     ('segment', 's_ratio'),
     [
@@ -341,6 +442,18 @@ def test_every_authoritative_position_has_a_deterministic_safe_slot_route(
 
     for source_segment in segments:
         for target_slot, target in sorted(topology.slots.items()):
+            candidates = multi.route_candidates_from_position_to_slot(
+                topology,
+                source_segment,
+                source_s_ratio,
+                target_slot,
+            )
+            repeated_candidates = multi.route_candidates_from_position_to_slot(
+                topology,
+                source_segment,
+                source_s_ratio,
+                target_slot,
+            )
             route = multi.route_plan_from_position_to_slot(
                 topology,
                 source_segment,
@@ -354,29 +467,45 @@ def test_every_authoritative_position_has_a_deterministic_safe_slot_route(
                 target_slot,
             )
 
+            assert candidates == repeated_candidates
+            assert candidates
+            assert route == candidates[0]
             assert route == repeated
-            assert route.side == side
-            assert 1 <= len(route.blocks) <= 32
-            assert route.blocks[0].segment == source_segment
-            assert route.blocks[0].start_s_ratio == pytest.approx(source_s_ratio)
-            assert route.blocks[-1].segment == target.segment
-            assert route.blocks[-1].end_s_ratio == pytest.approx(target.s_ratio)
-            assert route.switch_states.keys() == set(multi.DEVICE_NAMES)
-            assert set(route.switch_states.values()) <= {'E', 'I'}
+            assert len({
+                tuple(candidate.switch_states.items())
+                for candidate in candidates
+            }) == len(candidates)
 
-            for block in route.blocks:
-                assert block.side == side
-                assert block.segment != 'FALLING'
-                assert block.segment in segments
-                assert math.isfinite(block.start_s_ratio)
-                assert math.isfinite(block.end_s_ratio)
-                assert 0.0 <= block.start_s_ratio <= block.end_s_ratio <= 1.0
+            for candidate in candidates:
+                assert candidate.side == side
+                assert 1 <= len(candidate.blocks) <= 32
+                assert candidate.blocks[0].segment == source_segment
+                assert candidate.blocks[0].start_s_ratio == pytest.approx(
+                    source_s_ratio
+                )
+                assert candidate.blocks[-1].segment == target.segment
+                assert candidate.blocks[-1].end_s_ratio == pytest.approx(
+                    target.s_ratio
+                )
+                assert candidate.switch_states.keys() == set(multi.DEVICE_NAMES)
+                assert set(candidate.switch_states.values()) <= {'E', 'I'}
 
-            for current, successor in zip(route.blocks, route.blocks[1:]):
-                assert current.end_s_ratio == pytest.approx(1.0)
-                assert successor.start_s_ratio == pytest.approx(0.0)
-                assert multi._next_static_route_segment(
-                    topology,
-                    current.segment,
-                    route.switch_states,
-                ) == successor.segment
+                for block in candidate.blocks:
+                    assert block.side == side
+                    assert block.segment != 'FALLING'
+                    assert block.segment in segments
+                    assert math.isfinite(block.start_s_ratio)
+                    assert math.isfinite(block.end_s_ratio)
+                    assert 0.0 <= block.start_s_ratio <= block.end_s_ratio <= 1.0
+
+                for current, successor in zip(
+                    candidate.blocks,
+                    candidate.blocks[1:],
+                ):
+                    assert current.end_s_ratio == pytest.approx(1.0)
+                    assert successor.start_s_ratio == pytest.approx(0.0)
+                    assert multi._next_static_route_segment(
+                        topology,
+                        current.segment,
+                        candidate.switch_states,
+                    ) == successor.segment

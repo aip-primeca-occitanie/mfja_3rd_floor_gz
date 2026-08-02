@@ -173,7 +173,7 @@ def test_commanded_slot_setpoint_stops_at_exact_center_without_overshoot():
     )
 
     assert pose.s == 0.9534
-    assert pose.mode == module.WAITING
+    assert pose.mode == module.DISABLED
     assert shuttle.enabled is False
     assert shuttle.stopped_by == 'TARGET_SLOT_1'
     assert shuttle.reached_target_slot == '1'

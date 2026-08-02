@@ -187,6 +187,7 @@ def test_prepare_topology_route_preserves_audited_route_endpoints():
         'shuttle': 'right_shuttle_2',
         'source_block': 'right_topology_a34i',
         'target_slot': 'right_slot_1',
+        'switch_group': 'right_switch_group',
         'deterministic_macro': (
             'authoritative_topology_switches_and_open_stoppers'
         ),
@@ -234,6 +235,71 @@ def test_segment_origin_move_preserves_block_station_slot_and_speed():
     assert translated.event_action['speed_mps'] == 0.2
 
 
+def test_slot_topology_prepare_preserves_source_slot_block_and_target():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        '(prepare_slot_topology_route right_shuttle_2 right right_slot_3 '
+        'right_topology_a34e right_slot_1 right_switch_group)'
+    )
+
+    assert translator.SYMBOLIC_ACTION_PRIMITIVE_MAP[
+        'prepare_slot_topology_route'
+    ] == 'SET_SWITCHES'
+    assert translated.command == {
+        'action': 'topology_route',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'source_slot': 'right_slot_3',
+        'source_block': 'right_topology_a34e',
+        'target_slot': 'right_slot_1',
+        'switch_group': 'right_switch_group',
+        'slot_topology_route': True,
+        'deterministic_macro': (
+            'authoritative_slot_origin_topology_switches_and_open_stoppers'
+        ),
+    }
+    assert translated.event_action['primitive'] == 'SET_SWITCHES'
+    assert translated.event_action['target_id'] == 'ALL_SWITCHES'
+    assert translated.event_action['shuttle_id'] == 'R2'
+    assert translated.event_action['coordination_mode'] == 'reservation_based_move'
+
+
+def test_slot_topology_move_preserves_all_endpoints_and_speed():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        '(move_shuttle_via_topology_to_slot right_shuttle_2 right '
+        'right_slot_3 right_topology_a34e right_staubli right_yaskawa '
+        'right_slot_1 '
+        'speed=0.2)'
+    )
+
+    assert translator.SYMBOLIC_ACTION_PRIMITIVE_MAP[
+        'move_shuttle_via_topology_to_slot'
+    ] == 'SHUTTLE_ON'
+    assert translated.command == {
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'command': 'ON',
+        'speed': 0.2,
+        'source_slot': 'right_slot_3',
+        'source_block': 'right_topology_a34e',
+        'source_station': 'right_staubli',
+        'target_station': 'right_yaskawa',
+        'target_slot': 'right_slot_1',
+        'topology_route_move': True,
+        'slot_topology_route_move': True,
+    }
+    assert translated.event_action['primitive'] == 'SHUTTLE_ON'
+    assert translated.event_action['wait_condition'] == 'target_sensor_active'
+    assert translated.event_action['target_id'] == 'right_shuttle_2'
+    assert translated.event_action['shuttle_id'] == 'R2'
+    assert translated.event_action['speed_mps'] == 0.2
+    assert translated.event_action['coordination_mode'] == 'reservation_based_move'
+
+
 @pytest.mark.parametrize(
     'step',
     [
@@ -242,6 +308,14 @@ def test_segment_origin_move_preserves_block_station_slot_and_speed():
             'move_shuttle_from_segment_to_slot right_shuttle_2 right '
             'right_topology_a34i right_yaskawa'
         ),
+        (
+            'prepare_slot_topology_route right_shuttle_2 right '
+            'right_slot_3 right_topology_a34e'
+        ),
+        (
+            'move_shuttle_via_topology_to_slot right_shuttle_2 right '
+            'right_slot_3 right_topology_a34e right_yaskawa'
+        ),
     ],
 )
 def test_topology_actions_reject_missing_route_endpoints(step):
@@ -249,6 +323,32 @@ def test_topology_actions_reject_missing_route_endpoints(step):
 
     with pytest.raises(ValueError, match='requires'):
         translator.translate_step(step)
+
+
+def test_restore_normal_route_preserves_slot_motion_endpoints():
+    translator = _load_module()
+
+    translated = translator.translate_step(
+        'restore_normal_route right right_staubli right_staubli'
+    )
+
+    assert translated.command == {
+        'action': 'restore_normal_route',
+        'side': 'right',
+        'source_station': 'right_staubli',
+        'target_station': 'right_staubli',
+        'deterministic_macro': 'verified_all_exterior_and_open_stoppers',
+    }
+    assert translated.event_action['primitive'] == 'SET_SWITCHES'
+    assert translated.event_action['target_id'] == 'ALL_SWITCHES'
+    assert translated.event_action['coordination_mode'] == 'route_normalization'
+
+
+def test_restore_normal_route_rejects_missing_endpoints():
+    translator = _load_module()
+
+    with pytest.raises(ValueError, match='requires'):
+        translator.translate_step('restore_normal_route right')
 
 
 def test_stop_shuttle_translates_to_stop_now():
@@ -405,3 +505,21 @@ def test_clearance_phase_boundaries_translate_without_per_blocker_restore():
     )
     assert finish.command['switches'] == {'ALL': 'EXTERIOR'}
     assert finish.command['deterministic_macro'] == 'restore_normal_route_once'
+
+
+def test_capacity_safe_clearance_pause_has_explicit_non_motion_macro():
+    translator = _load_module()
+
+    translated = translator.translate_step('(pause_route_clearance right)')
+
+    assert translated.command == {
+        'action': 'pause_route_clearance',
+        'side': 'right',
+        'deterministic_macro': (
+            'certified_capacity_safe_all_exterior_and_open_stoppers'
+        ),
+    }
+    assert translated.event_action['primitive'] == 'SET_SWITCHES'
+    assert translated.event_action['coordination_mode'] == (
+        'route_clearance_capacity_pause'
+    )

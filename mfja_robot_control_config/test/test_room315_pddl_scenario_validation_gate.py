@@ -151,6 +151,63 @@ def test_successful_scenario_is_approved():
     assert validation['failure_reason'] == ''
 
 
+def test_executive_macro_is_statically_valid_but_not_generic_executable():
+    gate = _load_script('room_315_pddl_validation_gate')
+    scenario = _scenario()
+    scenario['symbolic_plan'] = [
+        'prepare_topology_route right_shuttle_2 right '
+        'right_topology_a34i right_slot_1 right_switch_group'
+    ]
+    scenario['primitive_commands'] = [{
+        'action': 'topology_route',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+        'source_block': 'right_topology_a34i',
+        'target_slot': 'right_slot_1',
+        'switch_group': 'right_switch_group',
+        'deterministic_macro': (
+            'authoritative_topology_switches_and_open_stoppers'
+        ),
+    }]
+
+    static = gate.validate_candidate_scenario(scenario)
+    direct = gate.validate_generic_execution_boundary(scenario)
+
+    assert static['valid'] is True
+    assert direct['valid'] is False
+    assert direct['boundary'] == (
+        'generic_execute_scenario_no_executive_macros'
+    )
+    assert any(
+        'executive-only' in reason
+        for reason in direct['failure_reasons']
+    )
+    assert any(
+        'deterministic_macro' in reason
+        for reason in direct['failure_reasons']
+    )
+
+
+def test_enriched_deterministic_macro_payload_is_rejected_by_direct_boundary():
+    gate = _load_script('room_315_pddl_validation_gate')
+    scenario = _scenario()
+    enriched = [dict(command) for command in scenario['primitive_commands']]
+    enriched[0]['deterministic_macro'] = 'injected_after_static_validation'
+
+    assert gate.validate_candidate_scenario(scenario)['valid'] is True
+    direct = gate.validate_generic_execution_boundary(
+        scenario,
+        command_payloads=enriched,
+    )
+
+    assert direct['valid'] is False
+    assert direct['checked_command_payloads'] == len(enriched)
+    assert any(
+        'injected_after_static_validation' in reason
+        for reason in direct['failure_reasons']
+    )
+
+
 def test_supervisor_rejection_is_not_approved():
     validation = _approved_validation(
         execution_result={

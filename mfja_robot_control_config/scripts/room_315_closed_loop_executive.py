@@ -9,6 +9,7 @@ atomic symbolic step from each validated plan and then replans from fresh state.
 
 from __future__ import annotations
 
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -36,16 +37,394 @@ from room_315_pddl_scenario_generator import INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_
 from room_315_pddl_scenario_generator import INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE
 from room_315_pddl_scenario_generator import PddlProblemBuildError
 from room_315_pddl_scenario_generator import Room315PddlProblem
+from room_315_pddl_scenario_generator import RUNTIME_SYMBOLIC_ACTIONS
 from room_315_pddl_scenario_generator import ScenarioTransport
 from room_315_pddl_scenario_generator import SLOT_SENSOR_BY_SIDE_AND_SLOT
 from room_315_pddl_scenario_generator import SLOT_STATION_BY_SIDE_AND_SLOT
+from room_315_pddl_scenario_generator import build_clearance_pause_problem
 from room_315_pddl_scenario_generator import build_first_blocker_clearance_problem
+from room_315_pddl_scenario_generator import build_intermediate_selected_advance_problem
 from room_315_pddl_scenario_generator import build_pddl_problem_from_observed_state_task_goal
 
 
 TERMINAL_SUCCESS_STEPS = {'finish_task', 'finish_candidate_task', 'inspect_state'}
 RECOVERABLE_STATE_STATUSES = {'unknown', 'stale', 'conflicting'}
 STOPPED_MOTION_VALUES = {'STOPPED', 'OFF', 'IDLE', 'HALTED', 'stopped', 'off', 'idle', 'halted'}
+CLEARANCE_BEGIN_ACTIONS = frozenset({
+    'begin_route_clearance',
+    'begin_segment_route_clearance',
+})
+CLEARANCE_RELOCATE_ACTIONS = frozenset({
+    'relocate_blocker_to_interior',
+    'relocate_segment_blocker_to_interior',
+})
+CLEARANCE_FINISH_ACTIONS = frozenset({
+    'finish_route_clearance',
+    'finish_segment_route_clearance',
+})
+CLEARANCE_PHASE_ACTIONS = frozenset({
+    *CLEARANCE_BEGIN_ACTIONS,
+    *CLEARANCE_RELOCATE_ACTIONS,
+    *CLEARANCE_FINISH_ACTIONS,
+    'pause_route_clearance',
+})
+
+
+class _FreshObservationUnavailable(RuntimeError):
+    """A recovery retry could not obtain a newer accepted visual state."""
+
+
+def _pddl_contract_symbol(value: Any) -> str:
+    text = re.sub(r'[^a-zA-Z0-9_]+', '_', str(value or '').strip())
+    return re.sub(r'_+', '_', text).strip('_').casefold()
+
+
+def _problem_has_atom(
+    problem_text: str,
+    predicate: str,
+    *arguments: str,
+) -> bool:
+    """Return whether an exact grounded atom exists in the frozen problem."""
+
+    tokens = (predicate, *arguments)
+    expression = r'\(\s*' + r'\s+'.join(
+        re.escape(_pddl_contract_symbol(token)) for token in tokens
+    ) + r'\s*\)'
+    return re.search(expression, _problem_init_section(problem_text)) is not None
+
+
+def _problem_init_section(problem_text: str) -> str:
+    """Extract the balanced PDDL ``:init`` form for applicability checks."""
+
+    text = str(problem_text or '').casefold()
+    start = text.find('(:init')
+    if start < 0:
+        return ''
+    depth = 0
+    for index in range(start, len(text)):
+        if text[index] == '(':
+            depth += 1
+        elif text[index] == ')':
+            depth -= 1
+            if depth == 0:
+                return text[start:index + 1]
+    return ''
+
+
+def _problem_numeric_value(
+    problem_text: str,
+    function_name: str,
+    *arguments: str,
+) -> float | None:
+    function = r'\(\s*' + r'\s+'.join(
+        re.escape(_pddl_contract_symbol(token))
+        for token in (function_name, *arguments)
+    ) + r'\s*\)'
+    match = re.search(
+        r'\(\s*=\s*' + function + r'\s+([-+]?[0-9]+(?:\.[0-9]+)?)\s*\)',
+        _problem_init_section(problem_text),
+    )
+    return float(match.group(1)) if match else None
+
+
+def _frozen_precondition_error(
+    step: PddlPlanStep,
+    problem: Room315PddlProblem,
+) -> str:
+    """Recheck every state-bearing first action before physical execution.
+
+    PlanSys2 normally returns an applicable action.  This independent boundary
+    prevents malformed, stale, mocked, or compromised planner output from
+    reaching the supervisor merely because it has a recognized action name.
+    """
+
+    args = tuple(_pddl_contract_symbol(value) for value in step.args)
+    text = problem.problem_text
+    side = problem.side
+
+    required_atoms: list[tuple[str, ...]] = [('validated_state',)]
+    pending_expectation: str | None = None
+
+    if step.name == 'prepare_switches':
+        if len(args) != 4:
+            return 'prepare_switches_arity'
+        planned_side, source, target, switch_group = args
+        required_atoms.extend([
+            ('connected', planned_side, source, target),
+            ('switch_group_on_side', switch_group, planned_side),
+            ('normal_route', planned_side),
+        ])
+    elif step.name == 'open_stoppers':
+        if len(args) != 4:
+            return 'open_stoppers_arity'
+        planned_side, source, target, stopper_group = args
+        required_atoms.extend([
+            ('connected', planned_side, source, target),
+            ('stopper_group_on_side', stopper_group, planned_side),
+            ('switches_ready', planned_side),
+            ('normal_route', planned_side),
+        ])
+    elif step.name == 'move_shuttle_to_slot':
+        if len(args) != 6:
+            return 'move_shuttle_to_slot_arity'
+        shuttle, planned_side, source, target, source_slot, target_slot = args
+        required_atoms.extend([
+            ('shuttle_on_side', shuttle, planned_side),
+            ('slot_on_side', source_slot, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('slot_at_station', source_slot, source),
+            ('slot_at_station', target_slot, target),
+            ('shuttle_at', shuttle, source),
+            ('shuttle_at_slot', shuttle, source_slot),
+            ('slot_occupied_by', source_slot, shuttle),
+            ('connected', planned_side, source, target),
+            ('path_ready', planned_side, source, target),
+            ('switches_ready', planned_side),
+            ('stoppers_open', planned_side),
+            ('normal_route', planned_side),
+            ('route_clear_between', source_slot, target_slot),
+            ('slot_free', target_slot),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'prepare_topology_route':
+        if len(args) != 5:
+            return 'prepare_topology_route_arity'
+        shuttle, planned_side, source_block, target_slot, switch_group = args
+        required_atoms.extend([
+            ('shuttle_on_side', shuttle, planned_side),
+            ('segment_only_location', shuttle),
+            ('shuttle_at_topology_block', shuttle, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('topology_route_available', shuttle, source_block, target_slot),
+            ('topology_route_clear', shuttle, source_block, target_slot),
+            ('switch_group_on_side', switch_group, planned_side),
+            ('slot_free', target_slot),
+            ('normal_route', planned_side),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'move_shuttle_from_segment_to_slot':
+        if len(args) != 5:
+            return 'move_shuttle_from_segment_to_slot_arity'
+        shuttle, planned_side, source_block, target, target_slot = args
+        required_atoms.extend([
+            ('shuttle_on_side', shuttle, planned_side),
+            ('segment_only_location', shuttle),
+            ('shuttle_at_topology_block', shuttle, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('slot_at_station', target_slot, target),
+            ('topology_route_available', shuttle, source_block, target_slot),
+            ('topology_route_clear', shuttle, source_block, target_slot),
+            ('topology_route_configured', shuttle, source_block, target_slot),
+            ('slot_free', target_slot),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'prepare_slot_topology_route':
+        if len(args) != 6:
+            return 'prepare_slot_topology_route_arity'
+        (
+            shuttle,
+            planned_side,
+            source_slot,
+            source_block,
+            target_slot,
+            switch_group,
+        ) = args
+        required_atoms.extend([
+            ('shuttle_on_side', shuttle, planned_side),
+            ('slot_on_side', source_slot, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('shuttle_at_slot', shuttle, source_slot),
+            ('slot_occupied_by', source_slot, shuttle),
+            ('shuttle_at_topology_block', shuttle, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('topology_route_available', shuttle, source_block, target_slot),
+            ('topology_route_clear', shuttle, source_block, target_slot),
+            ('switch_group_on_side', switch_group, planned_side),
+            ('slot_free', target_slot),
+            ('normal_route', planned_side),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'move_shuttle_via_topology_to_slot':
+        if len(args) != 7:
+            return 'move_shuttle_via_topology_to_slot_arity'
+        (
+            shuttle,
+            planned_side,
+            source_slot,
+            source_block,
+            source,
+            target,
+            target_slot,
+        ) = args
+        required_atoms.extend([
+            ('shuttle_on_side', shuttle, planned_side),
+            ('slot_on_side', source_slot, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('slot_at_station', source_slot, source),
+            ('slot_at_station', target_slot, target),
+            ('shuttle_at_slot', shuttle, source_slot),
+            ('slot_occupied_by', source_slot, shuttle),
+            ('shuttle_at', shuttle, source),
+            ('shuttle_at_topology_block', shuttle, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('topology_route_available', shuttle, source_block, target_slot),
+            ('topology_route_clear', shuttle, source_block, target_slot),
+            ('topology_route_configured', shuttle, source_block, target_slot),
+            ('slot_free', target_slot),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'begin_route_clearance':
+        if len(args) != 4:
+            return 'begin_route_clearance_arity'
+        selected, planned_side, source_slot, target_slot = args
+        required_atoms.extend([
+            ('normal_route', planned_side),
+            ('shuttle_on_side', selected, planned_side),
+            ('goal_candidate', selected),
+            ('shuttle_at_slot', selected, source_slot),
+            ('target_slot_for_goal', target_slot),
+        ])
+        pending_expectation = 'positive'
+    elif step.name == 'relocate_blocker_to_interior':
+        if len(args) != 5:
+            return 'relocate_blocker_to_interior_arity'
+        blocker, selected, planned_side, source_slot, target_slot = args
+        required_atoms.extend([
+            ('shuttle_on_side', blocker, planned_side),
+            ('shuttle_on_side', selected, planned_side),
+            ('shuttle_at_slot', selected, source_slot),
+            ('target_slot_for_goal', target_slot),
+            ('clearance_mode', planned_side),
+            ('clearance_precedes', blocker, selected),
+            ('route_blocked_by', source_slot, target_slot, blocker),
+            ('clearance_destination_ready', blocker),
+        ])
+        pending_expectation = 'positive'
+        order = _problem_numeric_value(text, 'clearance_order', blocker)
+        cursor = _problem_numeric_value(text, 'clearance_cursor', planned_side)
+        if order is None or cursor is None or order != cursor:
+            return 'clearance_order_cursor_mismatch'
+    elif step.name == 'finish_route_clearance':
+        if len(args) != 4:
+            return 'finish_route_clearance_arity'
+        selected, planned_side, source_slot, target_slot = args
+        required_atoms.extend([
+            ('clearance_mode', planned_side),
+            ('shuttle_on_side', selected, planned_side),
+            ('goal_candidate', selected),
+            ('shuttle_at_slot', selected, source_slot),
+            ('target_slot_for_goal', target_slot),
+            ('clearance_pause_safe', planned_side),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'begin_segment_route_clearance':
+        if len(args) != 4:
+            return 'begin_segment_route_clearance_arity'
+        selected, planned_side, source_block, target_slot = args
+        required_atoms.extend([
+            ('normal_route', planned_side),
+            ('shuttle_on_side', selected, planned_side),
+            ('goal_candidate', selected),
+            ('segment_only_location', selected),
+            ('shuttle_at_topology_block', selected, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('target_slot_for_goal', target_slot),
+            ('topology_route_available', selected, source_block, target_slot),
+        ])
+        pending_expectation = 'positive'
+    elif step.name == 'relocate_segment_blocker_to_interior':
+        if len(args) != 5:
+            return 'relocate_segment_blocker_to_interior_arity'
+        blocker, selected, planned_side, source_block, target_slot = args
+        required_atoms.extend([
+            ('shuttle_on_side', blocker, planned_side),
+            ('shuttle_on_side', selected, planned_side),
+            ('segment_only_location', selected),
+            ('shuttle_at_topology_block', selected, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('target_slot_for_goal', target_slot),
+            ('clearance_mode', planned_side),
+            ('clearance_precedes', blocker, selected),
+            (
+                'topology_route_blocked_by',
+                selected,
+                source_block,
+                target_slot,
+                blocker,
+            ),
+            ('clearance_destination_ready', blocker),
+        ])
+        pending_expectation = 'positive'
+        order = _problem_numeric_value(text, 'clearance_order', blocker)
+        cursor = _problem_numeric_value(text, 'clearance_cursor', planned_side)
+        if order is None or cursor is None or order != cursor:
+            return 'clearance_order_cursor_mismatch'
+    elif step.name == 'finish_segment_route_clearance':
+        if len(args) != 4:
+            return 'finish_segment_route_clearance_arity'
+        selected, planned_side, source_block, target_slot = args
+        required_atoms.extend([
+            ('clearance_mode', planned_side),
+            ('shuttle_on_side', selected, planned_side),
+            ('goal_candidate', selected),
+            ('segment_only_location', selected),
+            ('shuttle_at_topology_block', selected, source_block),
+            ('block_on_side', source_block, planned_side),
+            ('slot_on_side', target_slot, planned_side),
+            ('target_slot_for_goal', target_slot),
+            ('topology_route_available', selected, source_block, target_slot),
+            ('clearance_pause_safe', planned_side),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'pause_route_clearance':
+        if len(args) != 1:
+            return 'pause_route_clearance_arity'
+        planned_side = args[0]
+        required_atoms.extend([
+            ('clearance_mode', planned_side),
+            ('clearance_pause_safe', planned_side),
+        ])
+        pending_expectation = 'positive'
+    elif step.name == 'restore_normal_route':
+        if len(args) != 3:
+            return 'restore_normal_route_arity'
+        planned_side, source, target = args
+        required_atoms.extend([
+            ('connected', planned_side, source, target),
+            ('route_reconfiguration_required', planned_side),
+            ('route_reconfiguration_safe', planned_side),
+        ])
+        pending_expectation = 'zero'
+    elif step.name == 'stop_shuttle':
+        if len(args) != 4:
+            return 'stop_shuttle_arity'
+        shuttle, planned_side, source, target = args
+        required_atoms.extend([
+            ('shuttle_on_side', shuttle, planned_side),
+            ('shuttle_at', shuttle, target),
+            ('path_ready', planned_side, source, target),
+        ])
+    else:
+        return ''
+
+    if 'planned_side' in locals() and planned_side != side:
+        return f'action_side_mismatch:problem={side},plan={planned_side}'
+    for atom in required_atoms:
+        if not _problem_has_atom(text, *atom):
+            return 'missing_frozen_precondition:' + ':'.join(atom)
+    if pending_expectation:
+        pending = _problem_numeric_value(text, 'pending_clearances', side)
+        if pending is None:
+            return 'missing_pending_clearances'
+        if pending_expectation == 'zero' and pending != 0:
+            return f'pending_clearances_not_zero:{pending:g}'
+        if pending_expectation == 'positive' and pending <= 0:
+            return f'pending_clearances_not_positive:{pending:g}'
+    return ''
 
 
 @dataclass(frozen=True)
@@ -175,16 +554,34 @@ class ClosedLoopExecutive:
         unknown_retries = 0
         replans = 0
         final_state_id = ''
+        require_fresh_after_state_id = ''
 
         for step_index in range(self.config.max_steps):
-            observed_state = self._observe()
+            try:
+                observed_state = self._observe(
+                    after_state_id=require_fresh_after_state_id,
+                )
+            except _FreshObservationUnavailable as exc:
+                self._safe_abort('persistent_uncertainty')
+                return self._result(
+                    status='aborted',
+                    reason=f'persistent_uncertainty:{exc}',
+                    replans=replans,
+                    unknown_retries=unknown_retries,
+                    final_state_id=final_state_id,
+                )
+            require_fresh_after_state_id = ''
             final_state_id = observed_state.state_id
             self._refresh_runtime_clearance_certificates()
 
             if self._task_goal_satisfied(observed_state, task_goal):
                 return self._result(
                     status='succeeded',
-                    reason='task_goal_already_satisfied',
+                    reason=(
+                        'task_goal_satisfied'
+                        if self._records
+                        else 'task_goal_already_satisfied'
+                    ),
                     replans=replans,
                     unknown_retries=unknown_retries,
                     final_state_id=final_state_id,
@@ -227,6 +624,7 @@ class ClosedLoopExecutive:
                         unknown_retries=unknown_retries,
                         final_state_id=final_state_id,
                     )
+                require_fresh_after_state_id = observed_state.state_id
                 continue
 
             try:
@@ -255,6 +653,11 @@ class ClosedLoopExecutive:
             translated_step = translated_plan[0]
             before_occupancy = _occupancy_snapshot(observed_state)
 
+            self._resume_clearance_phase_from_problem(
+                problem=problem,
+                first_step=first_step,
+            )
+
             phase_error = self._clearance_phase_plan_error(
                 first_step=first_step,
                 side=problem.side,
@@ -269,7 +672,33 @@ class ClosedLoopExecutive:
                     final_state_id=final_state_id,
                 )
 
-            if first_step.name == 'begin_route_clearance':
+            action_contract_error = self._first_action_contract_error(
+                first_step=first_step,
+                translated_step=translated_step,
+                problem=problem,
+                task_goal=task_goal,
+            )
+            if action_contract_error:
+                detailed_reason = (
+                    'planned_action_contract_violation:'
+                    f'{action_contract_error}'
+                )
+                abort_reason = detailed_reason
+                if first_step.name == 'restore_normal_route':
+                    abort_reason = (
+                        'route_normalization_rejected:'
+                        f'{detailed_reason}'
+                    )
+                self._safe_abort(abort_reason)
+                return self._result(
+                    status='aborted',
+                    reason=detailed_reason,
+                    replans=replans,
+                    unknown_retries=unknown_retries,
+                    final_state_id=final_state_id,
+                )
+
+            if first_step.name in CLEARANCE_BEGIN_ACTIONS:
                 supervisor_status, wait_check = self._enter_route_clearance_mode(
                     side=problem.side,
                     problem=problem,
@@ -277,14 +706,14 @@ class ClosedLoopExecutive:
                     step_index=step_index,
                     symbolic_step=_step_text(first_step),
                 )
-            elif first_step.name == 'relocate_blocker_to_interior':
+            elif first_step.name in CLEARANCE_RELOCATE_ACTIONS:
                 supervisor_status, wait_check = self._execute_interior_clearance(
                     translated_step=translated_step,
                     problem=problem,
                     plan_length=len(plan),
                     step_index=step_index,
                 )
-            elif first_step.name == 'finish_route_clearance':
+            elif first_step.name in CLEARANCE_FINISH_ACTIONS:
                 supervisor_status, wait_check = self._restore_normal_route_after_clearance(
                     side=problem.side,
                     common=self._clearance_phase_metadata(
@@ -295,12 +724,53 @@ class ClosedLoopExecutive:
                         symbolic_step=_step_text(first_step),
                     ),
                 )
-            elif first_step.name == 'prepare_topology_route':
+            elif first_step.name == 'pause_route_clearance':
+                supervisor_status, wait_check = self._restore_normal_route_after_clearance(
+                    side=problem.side,
+                    common=self._clearance_phase_metadata(
+                        mode='pause_clearance_for_exterior_choreography',
+                        problem=problem,
+                        plan_length=len(plan),
+                        step_index=step_index,
+                        symbolic_step=_step_text(first_step),
+                    ),
+                    restore_mode=(
+                        'pause_clearance_after_interior_capacity_exhausted'
+                    ),
+                    success_reason=(
+                        'clearance_paused_for_exterior_slot_choreography'
+                    ),
+                )
+            elif first_step.name == 'restore_normal_route':
+                supervisor_status, wait_check = (
+                    self._restore_normal_route_from_mixed_topology(
+                        problem=problem,
+                        translated_step=translated_step,
+                        plan_length=len(plan),
+                        step_index=step_index,
+                        symbolic_step=_step_text(first_step),
+                    )
+                )
+            elif first_step.name in {
+                'prepare_topology_route',
+                'prepare_slot_topology_route',
+            }:
                 supervisor_status, wait_check = self._prepare_topology_route(
                     translated_step=translated_step,
                     problem=problem,
                     plan_length=len(plan),
                     step_index=step_index,
+                )
+            elif first_step.name in TERMINAL_SUCCESS_STEPS:
+                # DONE is a symbolic completion marker, not a physical
+                # supervisor command.  The real supervisor intentionally has
+                # no DONE actuator action.  Completion is proved from the
+                # fresh observation below.
+                supervisor_status = 'accepted'
+                wait_check = PostconditionCheck(
+                    status='satisfied',
+                    reason='non_actuating_terminal_marker',
+                    details={'supervisor_command_published': False},
                 )
             else:
                 supervisor_status = self._execute_first_atomic_step(
@@ -315,20 +785,33 @@ class ClosedLoopExecutive:
                     reason='execution_accepted',
                 )
             if supervisor_status != 'accepted':
-                self._safe_abort(f'supervisor_{supervisor_status}')
+                rejection_reason = f'supervisor_{supervisor_status}'
+                if (
+                    first_step.name in {
+                        'restore_normal_route',
+                        'pause_route_clearance',
+                    }
+                    and wait_check.reason
+                ):
+                    rejection_reason = (
+                        'route_normalization_rejected:'
+                        f'{wait_check.reason}'
+                    )
+                self._safe_abort(rejection_reason)
                 return self._result(
                     status='aborted',
-                    reason=f'supervisor_{supervisor_status}',
+                    reason=rejection_reason,
                     replans=replans,
                     unknown_retries=unknown_retries,
                     final_state_id=final_state_id,
                 )
 
             if first_step.name not in {
-                'begin_route_clearance',
-                'relocate_blocker_to_interior',
-                'finish_route_clearance',
+                *CLEARANCE_PHASE_ACTIONS,
+                'restore_normal_route',
                 'prepare_topology_route',
+                'prepare_slot_topology_route',
+                *TERMINAL_SUCCESS_STEPS,
             }:
                 wait_check = self._wait_for_expected_effects(
                     step=first_step,
@@ -346,16 +829,18 @@ class ClosedLoopExecutive:
                     final_state_id=final_state_id,
                 )
 
-            if first_step.name == 'begin_route_clearance' and wait_check.satisfied:
+            if first_step.name in CLEARANCE_BEGIN_ACTIONS and wait_check.satisfied:
                 self._route_clearance_active_side = problem.side
             elif (
-                first_step.name == 'finish_route_clearance'
+                first_step.name in CLEARANCE_FINISH_ACTIONS | {
+                    'pause_route_clearance',
+                }
                 and wait_check.satisfied
             ):
                 self._route_clearance_active_side = ''
 
             clearance_certificate: dict[str, Any] | None = None
-            if first_step.name == 'relocate_blocker_to_interior':
+            if first_step.name in CLEARANCE_RELOCATE_ACTIONS:
                 (
                     clearance_certificate,
                     clearance_proof_failure,
@@ -394,7 +879,7 @@ class ClosedLoopExecutive:
             final_state_id = after_state.state_id
             after_occupancy = _occupancy_snapshot(after_state)
             occupancy_changed = before_occupancy != after_occupancy
-            if first_step.name == 'relocate_blocker_to_interior':
+            if first_step.name in CLEARANCE_RELOCATE_ACTIONS:
                 postcondition = self._verify_interior_clearance(
                     after_state=after_state,
                     problem=problem,
@@ -402,11 +887,22 @@ class ClosedLoopExecutive:
                     clearance_certificate=clearance_certificate,
                 )
             elif first_step.name in {
-                'begin_route_clearance',
-                'finish_route_clearance',
+                *CLEARANCE_BEGIN_ACTIONS,
+                *CLEARANCE_FINISH_ACTIONS,
+                'pause_route_clearance',
+                'restore_normal_route',
                 'prepare_topology_route',
+                'prepare_slot_topology_route',
             }:
                 postcondition = wait_check
+            elif first_step.name in TERMINAL_SUCCESS_STEPS:
+                postcondition = self._verify_terminal_completion(
+                    before_state=observed_state,
+                    observed_state=after_state,
+                    step=first_step,
+                    task_goal=task_goal,
+                    problem=problem,
+                )
             else:
                 postcondition = self._verify_expected_effects(
                     before_state=observed_state,
@@ -460,7 +956,7 @@ class ClosedLoopExecutive:
             )
 
             if (
-                first_step.name == 'relocate_blocker_to_interior'
+                first_step.name in CLEARANCE_RELOCATE_ACTIONS
                 and not postcondition.satisfied
             ):
                 # The binary entry sensor may have stopped the blocker safely,
@@ -540,32 +1036,257 @@ class ClosedLoopExecutive:
     ) -> str:
         """Reject any plan that could tear down an active clearance route."""
 
-        phase_actions = {
-            'begin_route_clearance',
-            'relocate_blocker_to_interior',
-            'finish_route_clearance',
-        }
+        phase_actions = CLEARANCE_PHASE_ACTIONS
         active_side = self._route_clearance_active_side
         if active_side:
             if side != active_side:
                 return f'active_side={active_side},planned_side={side}'
             if first_step.name not in {
-                'relocate_blocker_to_interior',
-                'finish_route_clearance',
+                *CLEARANCE_RELOCATE_ACTIONS,
+                *CLEARANCE_FINISH_ACTIONS,
+                'pause_route_clearance',
             }:
                 return (
                     f'active_side={active_side},forbidden_action='
                     f'{first_step.name}'
                 )
             return ''
-        if first_step.name in phase_actions - {'begin_route_clearance'}:
+        if first_step.name in phase_actions - CLEARANCE_BEGIN_ACTIONS:
             return f'clearance_not_started,action={first_step.name}'
         return ''
 
-    def _observe(self) -> ObservedState:
-        state = self.observed_state_provider.observe(timestamp=time.time())
+    def _resume_clearance_phase_from_problem(
+        self,
+        *,
+        problem: Room315PddlProblem,
+        first_step: PddlPlanStep,
+    ) -> None:
+        """Recover the executor latch from fail-closed observed provenance.
+
+        A new TaskGoal creates a new executive instance, while a prior verified
+        goal may have left the physical rail in clearance mode.  The latch is
+        therefore reconstructable only when the accepted device snapshot says
+        clearance mode is active and every visually/certifiably interior
+        shuttle has a consistent validated stop proof.
+        """
+
+        if self._route_clearance_active_side:
+            return
+        if first_step.name not in {
+            *CLEARANCE_RELOCATE_ACTIONS,
+            *CLEARANCE_FINISH_ACTIONS,
+            'pause_route_clearance',
+        }:
+            return
+        snapshot = dict(
+            (problem.provenance or {})
+            .get('route_normalization', {})
+            .get('by_side', {})
+            .get(problem.side, {})
+        )
+        if not snapshot.get('clearance_mode'):
+            return
+        unsafe = (
+            list(snapshot.get('uncertified_interior_shuttles') or [])
+            + list(snapshot.get('certificate_segment_mismatches') or [])
+        )
+        if unsafe:
+            return
+        clearance = dict(
+            (problem.provenance or {}).get(
+                'target_blocker_clearance_plan'
+            ) or {}
+        )
+        if first_step.name in CLEARANCE_RELOCATE_ACTIONS and not (
+            clearance.get('required')
+            and clearance.get('ordered_relocations')
+        ):
+            return
+        self._route_clearance_active_side = problem.side
+
+    @staticmethod
+    def _first_action_contract_error(
+        *,
+        first_step: PddlPlanStep,
+        translated_step: TranslatedPlanStep,
+        problem: Room315PddlProblem,
+        task_goal: TaskGoal,
+    ) -> str:
+        """Bind the first PlanSys action to the frozen problem and TaskGoal."""
+
+        command = dict(translated_step.command or {})
+        command_side = str(command.get('side') or '').strip().casefold()
+        if command_side and command_side != problem.side:
+            return f'side_mismatch:problem={problem.side},plan={command_side}'
+        if first_step.name not in RUNTIME_SYMBOLIC_ACTIONS:
+            return f'unsupported_runtime_action:{first_step.name or "missing"}'
+
+        applicability_error = _frozen_precondition_error(first_step, problem)
+        if applicability_error:
+            return applicability_error
+
+        if first_step.name == 'inspect_state':
+            expected = _pddl_contract_symbol(
+                (task_goal.constraints or {}).get('inspection_subject')
+                or 'room315_system'
+            )
+            planned = _pddl_contract_symbol(
+                first_step.args[0] if first_step.args else ''
+            )
+            if planned != expected:
+                return (
+                    f'inspection_subject_mismatch:expected={expected},'
+                    f'planned={planned}'
+                )
+            if not _problem_has_atom(
+                problem.problem_text,
+                'inspection_required',
+                planned,
+            ):
+                return f'missing_frozen_inspection_target:{planned}'
+            return ''
+
+        shuttle_bound_actions = {
+            'move_shuttle_to_slot',
+            'prepare_topology_route',
+            'prepare_slot_topology_route',
+            'move_shuttle_from_segment_to_slot',
+            'move_shuttle_via_topology_to_slot',
+            *CLEARANCE_BEGIN_ACTIONS,
+            *CLEARANCE_RELOCATE_ACTIONS,
+            *CLEARANCE_FINISH_ACTIONS,
+            'stop_shuttle',
+        }
+        provenance = dict(problem.provenance or {})
+        if first_step.name in CLEARANCE_FINISH_ACTIONS | {
+            'pause_route_clearance',
+        }:
+            normalization = dict(
+                provenance.get('route_normalization', {})
+                .get('by_side', {})
+                .get(problem.side, {})
+            )
+            unsafe = (
+                list(normalization.get('uncertified_interior_shuttles') or [])
+                + list(
+                    normalization.get('certificate_segment_mismatches') or []
+                )
+                + list(normalization.get('external_obstacles') or [])
+            )
+            if not normalization.get('clearance_mode'):
+                return 'clearance_restoration_without_active_mode'
+            if not normalization.get('clearance_pause_safe'):
+                return 'clearance_restoration_not_certified_safe'
+            if unsafe:
+                return f'clearance_restoration_unsafe:{sorted(set(unsafe))}'
+            if normalization.get(
+                'controller_position_fields_used_for_localization'
+            ) is not False:
+                return 'clearance_restoration_used_controller_localization'
+        if first_step.name not in shuttle_bound_actions:
+            return ''
+        planned_shuttle = _canonical_shuttle_id(
+            first_step.args[0] if first_step.args else '',
+            side=problem.side,
+        )
+        planning_phase = provenance.get('planning_phase')
+        if (
+            planning_phase == 'clear_blocker_to_interior_loop'
+            and first_step.name in CLEARANCE_BEGIN_ACTIONS
+        ):
+            # The phase subgoal belongs to the blocker, but entering the held
+            # route is explicitly anchored to the user's selected shuttle and
+            # its frozen source/target pair.  Only the following relocation
+            # action is blocker-bound.
+            expected_shuttles = {
+                _canonical_shuttle_id(
+                    str(
+                        provenance.get('target_blocker_clearance_plan', {})
+                        .get('selected_shuttle')
+                        or ''
+                    ),
+                    side=problem.side,
+                )
+            }
+        elif planning_phase in {
+            'clear_blocker_to_slot',
+            'clear_blocker_to_interior_loop',
+        }:
+            relocation = dict(provenance.get('clearance_relocation') or {})
+            expected_shuttles = {
+                _canonical_shuttle_id(
+                    str(relocation.get('shuttle') or ''),
+                    side=problem.side,
+                )
+            }
+        elif first_step.name in CLEARANCE_RELOCATE_ACTIONS:
+            expected_shuttles = {
+                _canonical_shuttle_id(
+                    str(relocation.get('shuttle') or ''),
+                    side=problem.side,
+                )
+                for relocation in (
+                    provenance.get('target_blocker_clearance_plan', {})
+                    .get('ordered_relocations', [])
+                )
+            }
+        else:
+            explicit = _canonical_shuttle_id(
+                str((task_goal.constraints or {}).get('target_shuttle') or ''),
+                side=problem.side,
+            )
+            expected_shuttles = {explicit} if explicit else {
+                _canonical_shuttle_id(str(candidate), side=problem.side)
+                for candidate in provenance.get('candidate_shuttles', [])
+            }
+            if not expected_shuttles and problem.selected_shuttle:
+                expected_shuttles = {
+                    _canonical_shuttle_id(
+                        problem.selected_shuttle,
+                        side=problem.side,
+                    )
+                }
+        expected_shuttles.discard('')
+        if not planned_shuttle or planned_shuttle not in expected_shuttles:
+            return (
+                f'shuttle_mismatch:allowed={sorted(expected_shuttles)},'
+                f'planned={planned_shuttle or "unknown"}'
+            )
+
+        return ''
+
+    def _observe(self, *, after_state_id: str = '') -> ObservedState:
+        previous_state_id = str(after_state_id or '').strip()
+        if previous_state_id:
+            observe_fresh_after = getattr(
+                self.observed_state_provider,
+                'observe_fresh_after',
+                None,
+            )
+            try:
+                if callable(observe_fresh_after):
+                    state = observe_fresh_after(
+                        previous_state_id,
+                        timestamp=time.time(),
+                    )
+                else:
+                    state = self.observed_state_provider.observe(
+                        timestamp=time.time()
+                    )
+            except Exception as exc:  # noqa: BLE001 - fail closed on no fresh state
+                raise _FreshObservationUnavailable(
+                    'fresh_visual_observation_unavailable_after:'
+                    f'{previous_state_id}:{exc}'
+                ) from exc
+        else:
+            state = self.observed_state_provider.observe(timestamp=time.time())
         if not isinstance(state, ObservedState):
             raise TypeError('ObservedStateProvider.observe() must return ObservedState')
+        if previous_state_id and state.state_id == previous_state_id:
+            raise _FreshObservationUnavailable(
+                'fresh_visual_observation_unavailable_after:'
+                f'{previous_state_id}:provider_replayed_same_state_id'
+            )
         self._observations += 1
         return state
 
@@ -594,20 +1315,51 @@ class ClosedLoopExecutive:
     def _next_planning_problem(
         problem: Room315PddlProblem,
     ) -> Room315PddlProblem:
-        """Isolate a free-slot blocker move before the parent transport."""
+        """Select one proved receding-horizon choreography subproblem."""
 
         clearance = dict(
             (problem.provenance or {}).get(
                 'target_blocker_clearance_plan'
             ) or {}
         )
+        if dict(clearance.get('intermediate_selected_advance') or {}).get(
+            'required'
+        ):
+            return build_intermediate_selected_advance_problem(problem)
         relocations = list(clearance.get('ordered_relocations') or [])
         if not relocations:
             return problem
         destination = dict(relocations[0].get('destination') or {})
-        if str(destination.get('kind') or '').strip().casefold() != 'slot':
-            return problem
-        return build_first_blocker_clearance_problem(problem)
+        destination_kind = str(
+            destination.get('kind') or ''
+        ).strip().casefold()
+        if destination_kind == 'unavailable':
+            normalization = dict(
+                (problem.provenance or {})
+                .get('route_normalization', {})
+                .get('by_side', {})
+                .get(problem.side, {})
+            )
+            if normalization.get('clearance_pause_safe'):
+                return build_clearance_pause_problem(problem)
+            raise PddlProblemBuildError(
+                'no safe blocker destination and clearance cannot be paused: '
+                f'{destination.get("reason") or "unknown"}'
+            )
+        if destination_kind in {'slot', 'interior_loop'}:
+            # Clearance is deliberately planned as a one-relocation
+            # receding-horizon subgoal.  A monolithic transport plan cannot
+            # soundly assume that the visual move, controller stop, and fresh
+            # effect verification will succeed.  Isolating the proved next
+            # relocation lets PlanSys2 produce ``begin``/``relocate`` now;
+            # after execution the complete transport problem is rebuilt from
+            # a new accepted observation before route restoration or target
+            # motion is considered.
+            return build_first_blocker_clearance_problem(problem)
+        raise PddlProblemBuildError(
+            'unsupported proved blocker destination for closed-loop '
+            f'planning: {destination_kind or "missing"}'
+        )
 
     def _request_and_validate_plan(
         self,
@@ -834,6 +1586,49 @@ class ClosedLoopExecutive:
                 status='unknown',
                 reason='topology_route_missing_from_audited_problem_provenance',
             )
+        raw_source_slot = str(command.get('source_slot') or '').strip()
+        if raw_source_slot:
+            try:
+                source_side, source_number = _split_slot_id(
+                    raw_source_slot,
+                    default_side=side,
+                )
+            except ValueError:
+                return 'rejected', PostconditionCheck(
+                    status='unknown',
+                    reason='slot_topology_route_has_invalid_source_slot',
+                )
+            audited_source = str(
+                route.get('source_slot_object') or ''
+            ).strip().casefold()
+            planned_source = _contract_slot_id(
+                source_side,
+                source_number,
+            ).replace(':', '_')
+            if planned_source != audited_source:
+                return 'rejected', PostconditionCheck(
+                    status='unknown',
+                    reason='slot_topology_route_source_slot_mismatch',
+                    details={
+                        'planned': planned_source,
+                        'audited': audited_source,
+                    },
+                )
+        clearance_consistency = dict(
+            route.get('runtime_clearance_visual_consistency') or {}
+        )
+        if (
+            clearance_consistency.get('required')
+            and not clearance_consistency.get('satisfied')
+        ):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason=(
+                    'topology_route_clearance_certificate_visual_'
+                    'consistency_failed'
+                ),
+                details=clearance_consistency,
+            )
         if not bool(route.get('route_clear')) or route.get('blockers'):
             return 'rejected', PostconditionCheck(
                 status='unknown',
@@ -995,8 +1790,8 @@ class ClosedLoopExecutive:
             },
         )
 
-    @staticmethod
     def _clearance_phase_metadata(
+        self,
         *,
         mode: str,
         problem: Room315PddlProblem,
@@ -1004,6 +1799,20 @@ class ClosedLoopExecutive:
         step_index: int,
         symbolic_step: str,
     ) -> dict[str, Any]:
+        normalization = dict(
+            (problem.provenance or {})
+            .get('route_normalization', {})
+            .get('by_side', {})
+            .get(problem.side, {})
+        )
+        certificates = {
+            str(identity): dict(certificate)
+            for identity, certificate in
+            self._runtime_clearance_certificates.items()
+            if isinstance(certificate, dict)
+            and str(certificate.get('side') or '').strip().casefold()
+            == problem.side
+        }
         return {
             'mode': mode,
             'problem_name': problem.problem_name,
@@ -1012,6 +1821,8 @@ class ClosedLoopExecutive:
             'symbolic_step': symbolic_step,
             'localization_source': 'accepted_visual_state',
             'controller_position_fields_used_for_localization': False,
+            'route_normalization_proof': normalization,
+            'runtime_clearance_certificates': certificates,
         }
 
     @staticmethod
@@ -1047,6 +1858,8 @@ class ClosedLoopExecutive:
         *,
         side: str,
         common: dict[str, Any],
+        restore_mode: str = 'restore_normal_route_after_interior_clearance',
+        success_reason: str = 'normal_route_restored_after_interior_clearance',
     ) -> tuple[str, PostconditionCheck]:
         """Restore canonical exterior/open routing before re-observation."""
 
@@ -1088,7 +1901,7 @@ class ClosedLoopExecutive:
         )
         restore_metadata = {
             **common,
-            'mode': 'restore_normal_route_after_interior_clearance',
+            'mode': restore_mode,
         }
         for command, wait, label in restoration_steps:
             status = self._publish_supervised_macro_command(
@@ -1135,12 +1948,114 @@ class ClosedLoopExecutive:
             return 'accepted', fresh_visual
         return 'accepted', PostconditionCheck(
             status='satisfied',
-            reason='normal_route_restored_after_interior_clearance',
+            reason=success_reason,
             details={
                 'switches': exterior_switches,
                 'stoppers': open_stoppers,
                 'fresh_visual_frame': dict(fresh_visual.details),
             },
+        )
+
+    def _restore_normal_route_from_mixed_topology(
+        self,
+        *,
+        problem: Room315PddlProblem,
+        translated_step: TranslatedPlanStep,
+        plan_length: int,
+        step_index: int,
+        symbolic_step: str,
+    ) -> tuple[str, PostconditionCheck]:
+        """Execute only a state-derived, certificate-safe route normalization."""
+
+        command = dict(translated_step.command or {})
+        planned_side = str(command.get('side') or '').strip().casefold()
+        if planned_side != problem.side:
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason=(
+                    'route_normalization_side_mismatch:'
+                    f'problem={problem.side},plan={planned_side or "missing"}'
+                ),
+            )
+        valid_stations = {
+            f'{problem.side}_{station}'
+            for station in (
+                ('yaskawa', 'staubli')
+                if problem.side == 'right'
+                else ('yaskawa', 'kuka')
+            )
+        }
+        source_station = str(command.get('source_station') or '').strip()
+        target_station = str(command.get('target_station') or '').strip()
+        if (
+            source_station not in valid_stations
+            or target_station not in valid_stations
+        ):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason=(
+                    'route_normalization_station_mismatch:'
+                    f'source={source_station or "missing"},'
+                    f'target={target_station or "missing"},'
+                    f'side={problem.side}'
+                ),
+            )
+        normalization = (
+            (problem.provenance or {})
+            .get('route_normalization', {})
+            .get('by_side', {})
+            .get(problem.side, {})
+        )
+        if not normalization.get('reconfiguration_required'):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='normal_route_reconfiguration_not_required',
+            )
+        if not normalization.get('reconfiguration_safe'):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='normal_route_reconfiguration_not_proven_safe',
+                details={
+                    'reason': normalization.get('reason', ''),
+                    'uncertified_interior_shuttles': list(
+                        normalization.get('uncertified_interior_shuttles') or []
+                    ),
+                    'external_obstacles': list(
+                        normalization.get('external_obstacles') or []
+                    ),
+                },
+            )
+        if normalization.get('clearance_mode'):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='active_clearance_must_finish_before_route_normalization',
+            )
+        if (
+            normalization.get(
+                'controller_position_fields_used_for_localization'
+            )
+            is not False
+        ):
+            return 'rejected', PostconditionCheck(
+                status='unknown',
+                reason='route_normalization_used_forbidden_controller_position',
+            )
+        common = self._clearance_phase_metadata(
+            mode='restore_normal_route_before_slot_motion',
+            problem=problem,
+            plan_length=plan_length,
+            step_index=step_index,
+            symbolic_step=symbolic_step,
+        )
+        common.update({
+            'route_normalization_proof': dict(normalization),
+            'controller_position_fields_used_for_localization': False,
+        })
+        return self._restore_normal_route_after_clearance(
+            side=problem.side,
+            common=common,
+            restore_mode='restore_normal_route_before_slot_motion',
+            success_reason='normal_route_restored_before_slot_motion',
         )
 
     def _publish_supervised_macro_command(
@@ -1507,11 +2422,87 @@ class ClosedLoopExecutive:
                 return _verify_slot_occupancy(after_state, target_slot, selected)
             return PostconditionCheck(status='satisfied', reason='shuttle_command_accepted')
         if action == 'DONE' and step.name in TERMINAL_SUCCESS_STEPS:
-            return PostconditionCheck(status='satisfied', reason=f'{step.name}_terminal')
+            return PostconditionCheck(
+                status='mismatch',
+                reason='terminal_marker_requires_fresh_goal_verification',
+            )
 
         if before_state.state_id == after_state.state_id:
             return PostconditionCheck(status='satisfied', reason='accepted_no_state_effect')
         return PostconditionCheck(status='satisfied', reason='accepted_and_reobserved')
+
+    def _verify_terminal_completion(
+        self,
+        *,
+        before_state: ObservedState,
+        observed_state: ObservedState,
+        step: PddlPlanStep,
+        task_goal: TaskGoal,
+        problem: Room315PddlProblem,
+    ) -> PostconditionCheck:
+        """Verify a symbolic terminal marker without publishing an actuator command."""
+
+        goal_type = str(
+            (task_goal.constraints or {}).get('goal_type') or ''
+        ).strip().casefold()
+        if step.name == 'inspect_state':
+            if goal_type != 'inspection' or problem.goal_type != 'inspection':
+                return PostconditionCheck(
+                    status='mismatch',
+                    reason='inspection_terminal_does_not_match_task_goal',
+                )
+            if (
+                observed_state.state_id == before_state.state_id
+                or float(observed_state.timestamp)
+                <= float(before_state.timestamp)
+            ):
+                return PostconditionCheck(
+                    status='unknown',
+                    reason='inspection_requires_fresh_observation',
+                    details={
+                        'before_state_id': before_state.state_id,
+                        'after_state_id': observed_state.state_id,
+                        'before_timestamp': float(before_state.timestamp),
+                        'after_timestamp': float(observed_state.timestamp),
+                        'supervisor_command_published': False,
+                    },
+                )
+            return PostconditionCheck(
+                status='satisfied',
+                reason='fresh_validated_observation_inspected',
+                details={
+                    'state_id': observed_state.state_id,
+                    'inspection_subject': (
+                        (task_goal.constraints or {}).get(
+                            'inspection_subject'
+                        )
+                        or 'room315_system'
+                    ),
+                    'supervisor_command_published': False,
+                },
+            )
+        if goal_type != 'transport':
+            return PostconditionCheck(
+                status='mismatch',
+                reason='transport_terminal_does_not_match_task_goal',
+            )
+        if not self._task_goal_satisfied(observed_state, task_goal):
+            return PostconditionCheck(
+                status='mismatch',
+                reason='terminal_plan_claimed_unsatisfied_transport_goal',
+                details={
+                    'state_id': observed_state.state_id,
+                    'supervisor_command_published': False,
+                },
+            )
+        return PostconditionCheck(
+            status='satisfied',
+            reason='fresh_observation_proves_transport_goal',
+            details={
+                'state_id': observed_state.state_id,
+                'supervisor_command_published': False,
+            },
+        )
 
     def _task_goal_satisfied(self, observed_state: ObservedState, task_goal: TaskGoal) -> bool:
         constraints = dict(task_goal.constraints or {})
@@ -1531,7 +2522,11 @@ class ClosedLoopExecutive:
                 return False
             if selected and occupant != selected:
                 return False
-            required_payload = str(constraints.get('payload_required') or '').casefold()
+            required_payload = str(
+                constraints.get('payload_filter')
+                or constraints.get('payload_required')
+                or 'any'
+            ).casefold()
             if required_payload in {'loaded', 'empty'}:
                 loaded = _loaded_state(observed_state, occupant, side=side)
                 if loaded is None:
@@ -1541,6 +2536,45 @@ class ClosedLoopExecutive:
                 if required_payload == 'empty' and loaded:
                     return False
             return True
+        target_station = str(
+            constraints.get('target_station') or ''
+        ).strip().casefold()
+        if target_station:
+            side = str(constraints.get('side') or 'right').casefold()
+            station_slots = [
+                slot
+                for (slot_side, slot), station in
+                SLOT_STATION_BY_SIDE_AND_SLOT.items()
+                if slot_side == side and station == target_station
+            ]
+            target_shuttle = constraints.get('target_shuttle') or ''
+            selected = (
+                _canonical_shuttle_id(target_shuttle, side=side)
+                if target_shuttle
+                else ''
+            )
+            required_payload = str(
+                constraints.get('payload_filter')
+                or constraints.get('payload_required')
+                or 'any'
+            ).casefold()
+            for slot in station_slots:
+                fact = _fact(
+                    observed_state,
+                    _contract_slot_id(side, slot),
+                    'occupancy',
+                )
+                if fact is None or fact.status != 'known':
+                    continue
+                occupant = _occupancy_shuttle(fact.value, side=side)
+                if not occupant or (selected and occupant != selected):
+                    continue
+                loaded = _loaded_state(observed_state, occupant, side=side)
+                if required_payload == 'loaded' and loaded is not True:
+                    continue
+                if required_payload == 'empty' and loaded is not False:
+                    continue
+                return True
         return False
 
     def _obstacle_reason(self, observed_state: ObservedState) -> str:
@@ -1788,7 +2822,10 @@ def _verify_shuttle_stopped(
         predicate='motion_mode',
     )
     if fact is None:
-        return PostconditionCheck(status='satisfied', reason='shuttle_stop_wait_verified')
+        return PostconditionCheck(
+            status='unknown',
+            reason='missing_shuttle_motion_mode_stop_proof',
+        )
     if fact.status != 'known':
         return PostconditionCheck(status='unknown', reason=f'shuttle_motion_{fact.status}')
     if str(fact.value) in STOPPED_MOTION_VALUES:
@@ -1855,6 +2892,7 @@ def _target_slot_for_step(
         if step.name in {
             'move_shuttle_to_slot',
             'move_shuttle_from_segment_to_slot',
+            'move_shuttle_via_topology_to_slot',
         } and len(step.args) >= 4:
             planned_target = _contract_slot_id(problem.side, step.args[-1])
             if planned_target != audited_target:
@@ -1871,6 +2909,7 @@ def _target_slot_for_step(
     if step.name in {
         'move_shuttle_to_slot',
         'move_shuttle_from_segment_to_slot',
+        'move_shuttle_via_topology_to_slot',
     } and len(step.args) >= 4:
         return _contract_slot_id(problem.side, step.args[-1])
     constraints = dict(task_goal.constraints or {})

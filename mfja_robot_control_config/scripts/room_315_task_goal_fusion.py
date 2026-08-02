@@ -187,6 +187,7 @@ class ExplicitFactExtractor:
         facts.extend(self._extract_sides(text, provenance))
         facts.extend(self._extract_slots(text, provenance))
         facts.extend(self._extract_stations(text, provenance))
+        facts.extend(self._extract_system_scope(text, provenance))
         facts.extend(self._extract_payloads(text, provenance))
         facts.extend(self._extract_selection(text, provenance))
         facts.extend(self._extract_goal_types(text, provenance))
@@ -243,6 +244,24 @@ class ExplicitFactExtractor:
             facts.append(_fact('target_station', station, match, provenance))
             facts.append(_fact('target_kind', 'station', match, provenance))
         return facts
+
+    def _extract_system_scope(
+        self,
+        text: str,
+        provenance: str,
+    ) -> list[ExplicitFact]:
+        if not re.search(
+            r'\b(?:inspect|inspection|check|observe|look\s+at)\b',
+            text,
+            flags=re.I,
+        ):
+            return []
+        match = re.search(
+            r'\b(?:room\s*315(?:\s+system)?|room315(?:_system)?|system)\b',
+            text,
+            flags=re.I,
+        )
+        return [_fact('target_kind', 'system', match, provenance)] if match else []
 
     def _extract_payloads(self, text: str, provenance: str) -> list[ExplicitFact]:
         facts = []
@@ -360,9 +379,6 @@ class EvidenceAwareFusionResolver:
                         'decision': 'shadow_only_disagreement',
                     })
 
-        self._prefer_explicit_inspection_subject(values, provenance, explicit_values)
-        self._drop_ungrounded_target_kind(values, provenance)
-        self._infer_target_kind(values)
         if values.get('target_shuttle') and not values.get('selection_strategy'):
             values['selection_strategy'] = 'explicit'
             provenance.setdefault('selection_strategy', provenance.get('target_shuttle', 'explicit_text'))
@@ -373,6 +389,16 @@ class EvidenceAwareFusionResolver:
         ):
             values['selection_strategy'] = 'any'
             provenance.setdefault('selection_strategy', 'explicit_text')
+
+        self._prefer_explicit_inspection_subject(values, provenance, explicit_values)
+        self._prefer_generic_shuttle_inspection(
+            values,
+            provenance,
+            request_text=request_text,
+            explicit_values=explicit_values,
+        )
+        self._drop_ungrounded_target_kind(values, provenance)
+        self._infer_target_kind(values)
 
         try:
             draft = TaskGoalDraft(
@@ -460,6 +486,38 @@ class EvidenceAwareFusionResolver:
         values['target_kind'] = 'shuttle'
         values['target_shuttle'] = explicit_values['target_shuttle']
         provenance['target_kind'] = provenance.get('target_shuttle', 'explicit_text')
+        values.pop('target_slot', None)
+        values.pop('target_station', None)
+        provenance.pop('target_slot', None)
+        provenance.pop('target_station', None)
+
+    def _prefer_generic_shuttle_inspection(
+        self,
+        values: dict[str, Any],
+        provenance: dict[str, str],
+        *,
+        request_text: str,
+        explicit_values: dict[str, Any],
+    ) -> None:
+        """Do not reinterpret a selected shuttle as the rail containing it."""
+
+        if values.get('goal_type') != 'inspection':
+            return
+        if not _has_generic_shuttle_reference(request_text):
+            return
+        if (
+            explicit_values.get('target_shuttle')
+            or explicit_values.get('target_slot')
+            or explicit_values.get('target_station')
+        ):
+            return
+        if not (
+            values.get('selection_strategy')
+            or values.get('payload_filter')
+        ):
+            return
+        values['target_kind'] = 'shuttle_selection'
+        provenance['target_kind'] = 'explicit_text'
         values.pop('target_slot', None)
         values.pop('target_station', None)
         provenance.pop('target_slot', None)

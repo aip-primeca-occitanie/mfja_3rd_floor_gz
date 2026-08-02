@@ -211,6 +211,14 @@ if(BUILD_TESTING)
     test/test_room315_task_goal_semantic_gateway.py
   )
   ament_add_pytest_test(
+    test_room315_task_goal_validation
+    test/test_room315_task_goal_validation.py
+  )
+  ament_add_pytest_test(
+    test_room315_pddl_runtime_input_hardening
+    test/test_room315_pddl_runtime_input_hardening.py
+  )
+  ament_add_pytest_test(
     test_room315_task_execution
     test/test_room315_task_execution.py
   )

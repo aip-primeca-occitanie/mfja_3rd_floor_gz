@@ -266,10 +266,15 @@ class Room315TaskExecutionNode(Node):
             )
             return
 
-        if str(task_goal.constraints.get('goal_type') or '') != 'transport':
+        goal_type = str(
+            task_goal.constraints.get('goal_type') or ''
+        ).strip().casefold()
+        if goal_type not in {'transport', 'inspection'}:
             self._reject_goal(
                 goal_id=task_goal.goal_id,
-                reason='runtime_currently_supports_transport_goals_only',
+                reason=(
+                    'runtime_supports_transport_or_inspection_goals_only'
+                ),
             )
             return
         ready, reason = self.state_provider.ready()
@@ -319,14 +324,20 @@ class Room315TaskExecutionNode(Node):
             goal_id=task_goal.goal_id,
         )
         try:
+            initial_state = self.state_provider.observe()
+            # Shuttle inspection selections require the same fresh presence
+            # and visual-payload grounding as transport selections. Non-shuttle
+            # inspection subjects pass through unchanged in the grounding
+            # helper.
             grounded_goal = ground_transport_task_goal(
                 task_goal,
-                self.state_provider.observe(),
+                initial_state,
             )
             self._publish_status(
                 status='running',
                 reason=(
-                    'TaskGoal grounded from accepted visual state; '
+                    'TaskGoal validated and grounded when required from '
+                    'accepted visual state; '
                     'requesting PlanSys2 plan'
                 ),
                 goal_id=task_goal.goal_id,

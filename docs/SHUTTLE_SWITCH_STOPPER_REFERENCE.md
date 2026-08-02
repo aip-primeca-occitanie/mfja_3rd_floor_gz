@@ -288,6 +288,11 @@ distance is used as a practical center-distance stop threshold. If a moving
 shuttle gets too close to another shuttle, it enters `WAITING` and stops at the
 last safe pose instead of merging through the other shuttle.
 
+`WAITING` still means the drive is enabled and may resume when the stopper or
+collision clears. An accepted `OFF` command instead reports `DISABLED`. The
+published `speed` remains the configured travel-speed setting in both states;
+it is retained for the next `ON` command and is not instantaneous velocity.
+
 You usually do not need to pass these parameters, but they can be overridden:
 
 ```bash
@@ -492,5 +497,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle.py \
 - If you need to compare the continuous path against the measured CSV path, rerun the shuttle node with `-p path_backend:=polyline`.
 - If a shuttle stops with `stopped_by` set to a stopper name, open that stopper with `/room_315/rails/right/stoppers/command`.
 - If a shuttle stops in `WAITING`, it is likely blocked by another shuttle within `shuttle_collision_distance_m`.
+- If a shuttle was commanded `OFF`, require a newer state with mode `DISABLED`;
+  `WAITING` is not a drive-disable acknowledgement.
 - If a shuttle enters `FALLING`, the graph has no valid successor for the current switch configuration. Reset it with `/room_315/rails/right/shuttles/command`, for example `room315_right_shuttle_2=RESET`.
 - If a switch moves visually but the shuttle route does not change, send commands to `/room_315/rails/right/switches/command`, not directly to `/mfja/conveyor/switch_cmd`.

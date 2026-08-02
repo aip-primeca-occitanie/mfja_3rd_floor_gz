@@ -138,6 +138,25 @@ def test_builds_inspection_goals_for_grounded_entities():
     assert structured_slot['target_kind'] == 'slot'
     assert structured_slot['inspection_subject'] == 'right:slot:2'
 
+    system = _constraints(builder.build_task_goal(
+        'inspect the Room 315 system',
+        timestamp=25.0,
+    ))
+    assert system == {
+        'goal_type': 'inspection',
+        'inspection_subject': 'room315_system',
+        'target_kind': 'system',
+    }
+
+    structured_system = _constraints(builder.build_task_goal(
+        {
+            'goal_type': 'inspection',
+            'inspection_subject': 'room315_system',
+        },
+        timestamp=26.0,
+    ))
+    assert structured_system == system
+
 
 def test_paraphrases_normalize_to_same_task_goal_id():
     builder = _load_builder()

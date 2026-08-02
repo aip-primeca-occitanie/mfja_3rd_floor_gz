@@ -77,7 +77,15 @@ SEMANTIC_RESPONSE_FORMAT: dict[str, Any] = {
                     'side': {'type': ['string', 'null'], 'enum': ['right', 'left', None]},
                     'target_kind': {
                         'type': ['string', 'null'],
-                        'enum': ['station', 'slot', 'shuttle', 'shuttle_selection', 'rail', None],
+                        'enum': [
+                            'station',
+                            'slot',
+                            'shuttle',
+                            'shuttle_selection',
+                            'rail',
+                            'system',
+                            None,
+                        ],
                     },
                     'target_station': {'type': ['string', 'null'], 'enum': ['yaskawa', 'staubli', 'kuka', None]},
                     'target_slot': {'type': ['string', 'null'], 'enum': ['1', '2', '3', '4', None]},
@@ -829,7 +837,7 @@ def build_semantic_prompt(
         'target_kind, target_station, target_slot, target_shuttle, inspection_subject, confidence.\n'
         'Use only these exact enum values. goal_type: transport, inspection. '
         'selection_strategy: nearest, explicit, any. payload_filter: loaded, empty, any. '
-        'side: right, left. target_kind: station, slot, shuttle, shuttle_selection, rail. '
+        'side: right, left. target_kind: station, slot, shuttle, shuttle_selection, rail, system. '
         'target_slot: "1", "2", "3", or "4". target_station: yaskawa, staubli, kuka. '
         'Never invent enum values such as whichever, carrier, holding, component, line, or position.\n'
         'target_shuttle may only be R1, R2, R3, R4, L1, L2, L3, L4, or a canonical '
@@ -842,6 +850,12 @@ def build_semantic_prompt(
         'Vocabulary: closest/nearest/whichever carrier is closest -> selection_strategy nearest; '
         'holding/carrying a component/load/part -> payload_filter loaded; without a component -> empty; '
         'right-hand line -> side right; left-hand line -> side left; third position -> target_kind slot, target_slot 3.\n'
+        'For an inspection of Room 315 as a whole, use target_kind system and '
+        'omit side, selection_strategy, payload_filter, and target_shuttle.\n'
+        'For inspection of an unnamed shuttle, use target_kind shuttle_selection. '
+        'Use selection_strategy any with an optional payload_filter. Nearest '
+        'shuttle inspection is not supported without an explicit reference, so '
+        'leave selection_strategy null and let validation request a safer goal.\n'
         'Set target_station only when the current user_text explicitly names yaskawa, '
         'staubli, or kuka. Never infer a station from a slot, rail side, or confirmed_context.\n'
         'For "whichever carrier is closest and holding a component", output '

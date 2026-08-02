@@ -163,12 +163,24 @@ class Room315DomainValidator:
                             'target_slot',
                             station_slots,
                         ))
-                elif goal_type == 'transport':
-                    target_slot = first_slot_for_station(side, draft.target_station) or target_slot
+                # A station request means either sensor-backed slot at that
+                # station.  Do not silently rewrite it to the first slot; the
+                # runtime grounds the request against current visual
+                # occupancy and authoritative forward-route cost.
 
         selection_strategy = draft.selection_strategy
         payload_filter = draft.payload_filter
         if shuttle is not None:
+            if selection_strategy not in {None, 'explicit'}:
+                errors.append(GoalIssue(
+                    'shuttle_selection_conflict',
+                    (
+                        f'Concrete shuttle {shuttle.short_id} conflicts with '
+                        f'selection_strategy {selection_strategy!r}.'
+                    ),
+                    'selection_strategy',
+                    ('explicit',),
+                ))
             selection_strategy = 'explicit'
             if payload_filter is None:
                 payload_filter = 'any'
@@ -350,10 +362,16 @@ class Room315DomainValidator:
         clarifications: list[GoalIssue],
     ) -> None:
         if draft.target_kind is None:
-            if shuttle is None:
-                clarifications.append(GoalIssue(
-                    'missing_inspection_subject',
-                    'Inspection goals need a shuttle, station, slot, rail, or shuttle selection.',
+            clarifications.append(GoalIssue(
+                'missing_inspection_subject',
+                'Inspection goals need one structured system, shuttle, station, slot, rail, or shuttle-selection target.',
+                'target_kind',
+                ('system', 'station', 'slot', 'shuttle', 'shuttle_selection', 'rail'),
+            ))
+            if draft.inspection_subject:
+                errors.append(GoalIssue(
+                    'ungrounded_inspection_subject',
+                    'inspection_subject cannot replace the structured inspection target.',
                     'inspection_subject',
                 ))
             return
@@ -366,21 +384,124 @@ class Room315DomainValidator:
                 'target_station',
                 ('yaskawa', 'staubli', 'kuka'),
             ))
+        if draft.target_kind == 'shuttle' and shuttle is None:
+            clarifications.append(GoalIssue(
+                'missing_shuttle',
+                'Shuttle inspection goals need one concrete Room 315 shuttle id.',
+                'target_shuttle',
+                tuple(spec.gazebo_entity_name for spec in all_shuttle_specs()),
+            ))
         if draft.target_kind in {'slot', 'rail', 'shuttle_selection'} and side is None:
             clarifications.append(GoalIssue('missing_side', 'This inspection target needs a Room 315 side.', 'side', SIDES))
-        if draft.target_kind == 'shuttle_selection' and selection_strategy is None and payload_filter is None:
-            clarifications.append(GoalIssue(
-                'missing_selection_strategy',
-                'Selected-shuttle inspection needs nearest, explicit, or any selection.',
-                'selection_strategy',
-                SELECTION_STRATEGIES,
+        if draft.target_kind == 'system' and side is not None:
+            errors.append(GoalIssue(
+                'system_inspection_side_conflict',
+                'A system inspection covers all of Room 315 and must not name one rail side.',
+                'side',
             ))
-        if draft.target_kind not in {'station', 'slot', 'shuttle', 'shuttle_selection', 'rail'}:
+        if draft.target_kind == 'shuttle_selection':
+            if selection_strategy is None and payload_filter is None:
+                clarifications.append(GoalIssue(
+                    'missing_selection_strategy',
+                    'Selected-shuttle inspection needs an explicit identity or any selection.',
+                    'selection_strategy',
+                    ('explicit', 'any'),
+                ))
+            elif selection_strategy == 'nearest':
+                errors.append(GoalIssue(
+                    'unsupported_nearest_inspection_reference',
+                    (
+                        'Nearest shuttle inspection is undefined without a '
+                        'separate slot or station reference, which this atomic '
+                        'inspection schema does not represent. Name a shuttle '
+                        'or use any with an optional payload filter.'
+                    ),
+                    'selection_strategy',
+                    ('explicit', 'any'),
+                ))
+            elif selection_strategy == 'explicit':
+                clarifications.append(GoalIssue(
+                    'missing_shuttle',
+                    'Explicit shuttle inspection requires one concrete Room 315 shuttle id.',
+                    'target_shuttle',
+                    tuple(spec.gazebo_entity_name for spec in all_shuttle_specs()),
+                ))
+        if (
+            draft.target_kind in {'system', 'station', 'slot', 'rail'}
+            and draft.selection_strategy is not None
+        ):
+            errors.append(GoalIssue(
+                'irrelevant_inspection_selection',
+                (
+                    f'selection_strategy is not valid for a '
+                    f'{draft.target_kind} inspection.'
+                ),
+                'selection_strategy',
+            ))
+        if (
+            draft.target_kind in {'system', 'station', 'slot', 'rail'}
+            and draft.payload_filter is not None
+        ):
+            errors.append(GoalIssue(
+                'irrelevant_inspection_payload_filter',
+                (
+                    f'payload_filter is not valid for a '
+                    f'{draft.target_kind} inspection.'
+                ),
+                'payload_filter',
+            ))
+        if draft.target_kind not in {'system', 'station', 'slot', 'shuttle', 'shuttle_selection', 'rail'}:
             errors.append(GoalIssue(
                 'unsupported_inspection_target',
                 'Unsupported Room 315 inspection target.',
                 'target_kind',
-                ('station', 'slot', 'shuttle', 'shuttle_selection', 'rail'),
+                ('system', 'station', 'slot', 'shuttle', 'shuttle_selection', 'rail'),
+            ))
+
+        target_fields = {
+            'station': draft.target_station is not None,
+            'slot': target_slot is not None,
+            'shuttle': shuttle is not None,
+        }
+        allowed_field = {
+            'station': 'station',
+            'slot': 'slot',
+            'shuttle': 'shuttle',
+            'shuttle_selection': None,
+            'rail': None,
+            'system': None,
+        }.get(draft.target_kind)
+        conflicting_fields = tuple(
+            field for field, present in target_fields.items()
+            if present and field != allowed_field
+        )
+        if conflicting_fields:
+            errors.append(GoalIssue(
+                'ambiguous_inspection_target',
+                (
+                    f'Inspection target kind {draft.target_kind!r} conflicts with '
+                    f'additional target fields: {", ".join(conflicting_fields)}.'
+                ),
+                'target_kind',
+                (draft.target_kind,),
+            ))
+
+        canonical_subject = self._canonical_inspection_subject(
+            draft,
+            side=side,
+            shuttle=shuttle,
+            selection_strategy=selection_strategy or 'any',
+            payload_filter=payload_filter or 'any',
+        )
+        if draft.inspection_subject and canonical_subject and draft.inspection_subject != canonical_subject:
+            errors.append(GoalIssue(
+                'inspection_subject_mismatch',
+                (
+                    f'Inspection subject {draft.inspection_subject!r} does not match '
+                    f'the grounded {draft.target_kind!r} target.'
+                ),
+                'inspection_subject',
+                (canonical_subject,),
             ))
 
     def _constraints(
@@ -396,11 +517,14 @@ class Room315DomainValidator:
         goal_type = draft.goal_type or 'transport'
         selection_strategy = selection_strategy or 'any'
         payload_filter = payload_filter or 'any'
-        constraints: dict[str, Any] = {
-            'goal_type': goal_type,
-            'selection_strategy': selection_strategy,
-            'payload_filter': payload_filter,
-        }
+        constraints: dict[str, Any] = {'goal_type': goal_type}
+        selection_is_relevant = (
+            goal_type == 'transport'
+            or draft.target_kind in {'shuttle', 'shuttle_selection'}
+        )
+        if selection_is_relevant:
+            constraints['selection_strategy'] = selection_strategy
+            constraints['payload_filter'] = payload_filter
         if side:
             constraints['side'] = side
         if draft.target_kind:
@@ -415,7 +539,8 @@ class Room315DomainValidator:
             subject = self._inspection_subject(draft, side=side, shuttle=shuttle, selection_strategy=selection_strategy, payload_filter=payload_filter)
             if subject:
                 constraints['inspection_subject'] = subject
-        constraints.update(_legacy_compatibility(selection_strategy, payload_filter, shuttle is not None))
+        if selection_is_relevant:
+            constraints.update(_legacy_compatibility(selection_strategy, payload_filter, shuttle is not None))
         return {key: value for key, value in constraints.items() if value not in (None, '')}
 
     def _inspection_subject(
@@ -427,9 +552,30 @@ class Room315DomainValidator:
         selection_strategy: str,
         payload_filter: str,
     ) -> str:
-        if draft.inspection_subject:
-            return draft.inspection_subject
-        if shuttle is not None:
+        return self._canonical_inspection_subject(
+            draft,
+            side=side,
+            shuttle=shuttle,
+            selection_strategy=selection_strategy,
+            payload_filter=payload_filter,
+        )
+
+    @staticmethod
+    def _canonical_inspection_subject(
+        draft: TaskGoalDraft,
+        *,
+        side: str | None,
+        shuttle: Any,
+        selection_strategy: str,
+        payload_filter: str,
+    ) -> str:
+        """Return the sole whitelisted subject for a grounded inspection target.
+
+        ``inspection_subject`` is redundant contract evidence, not an escape
+        hatch for introducing an arbitrary PDDL object.  The canonical value
+        is therefore derived only from validated structured fields.
+        """
+        if draft.target_kind == 'shuttle' and shuttle is not None:
             return shuttle.gazebo_entity_name
         if draft.target_kind == 'station' and side and draft.target_station:
             return f'{side}:station:{draft.target_station}'
@@ -437,13 +583,15 @@ class Room315DomainValidator:
             return f'{side}:slot:{draft.target_slot}'
         if draft.target_kind == 'rail' and side:
             return f'{side}:rail'
+        if draft.target_kind == 'system':
+            return 'room315_system'
         if draft.target_kind == 'shuttle_selection' and side:
             return f'{side}:shuttle_selection:{selection_strategy}:{payload_filter}'
         return ''
 
     def _description(self, constraints: dict[str, Any]) -> str:
         if constraints.get('goal_type') == 'inspection':
-            return f'inspect {constraints.get("inspection_subject", "room315_system")}'
+            return f'inspect {constraints["inspection_subject"]}'
         side = constraints.get('side')
         target = (
             (

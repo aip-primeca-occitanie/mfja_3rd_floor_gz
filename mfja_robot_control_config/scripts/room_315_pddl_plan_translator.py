@@ -37,14 +37,21 @@ from room_315_multi_shuttle import safe_int as _safe_int
 SYMBOLIC_ACTION_PRIMITIVE_MAP = {
     'prepare_switches': 'SET_SWITCHES',
     'open_stoppers': 'SET_STOPPERS',
+    'restore_normal_route': 'SET_SWITCHES',
     'set_stoppers': 'SET_STOPPERS',
     'move_shuttle': 'SHUTTLE_ON',
     'move_shuttle_to_slot': 'SHUTTLE_ON',
     'prepare_topology_route': 'SET_SWITCHES',
     'move_shuttle_from_segment_to_slot': 'SHUTTLE_ON',
+    'prepare_slot_topology_route': 'SET_SWITCHES',
+    'move_shuttle_via_topology_to_slot': 'SHUTTLE_ON',
     'begin_route_clearance': 'SET_SWITCHES',
     'relocate_blocker_to_interior': 'SHUTTLE_ON',
     'finish_route_clearance': 'SET_SWITCHES',
+    'begin_segment_route_clearance': 'SET_SWITCHES',
+    'relocate_segment_blocker_to_interior': 'SHUTTLE_ON',
+    'finish_segment_route_clearance': 'SET_SWITCHES',
+    'pause_route_clearance': 'SET_SWITCHES',
     'stop_shuttle': 'STOP_NOW',
     'finish_task': 'DONE',
     'finish_candidate_task': 'DONE',
@@ -145,18 +152,35 @@ def translate_step(step: str | PddlPlanStep) -> TranslatedPlanStep:
         command, event_action = _translate_open_stoppers(parsed)
     elif parsed.name == 'set_stoppers':
         command, event_action = _translate_set_stoppers(parsed)
+    elif parsed.name == 'restore_normal_route':
+        command, event_action = _translate_restore_normal_route(parsed)
     elif parsed.name in {'move_shuttle', 'move_shuttle_to_slot'}:
         command, event_action = _translate_move_shuttle(parsed)
     elif parsed.name == 'prepare_topology_route':
         command, event_action = _translate_topology_route(parsed)
     elif parsed.name == 'move_shuttle_from_segment_to_slot':
         command, event_action = _translate_segment_origin_move(parsed)
-    elif parsed.name == 'begin_route_clearance':
+    elif parsed.name == 'prepare_slot_topology_route':
+        command, event_action = _translate_slot_topology_route(parsed)
+    elif parsed.name == 'move_shuttle_via_topology_to_slot':
+        command, event_action = _translate_slot_topology_move(parsed)
+    elif parsed.name in {
+        'begin_route_clearance',
+        'begin_segment_route_clearance',
+    }:
         command, event_action = _translate_clearance_mode(parsed, begin=True)
-    elif parsed.name == 'relocate_blocker_to_interior':
+    elif parsed.name in {
+        'relocate_blocker_to_interior',
+        'relocate_segment_blocker_to_interior',
+    }:
         command, event_action = _translate_interior_clearance(parsed)
-    elif parsed.name == 'finish_route_clearance':
+    elif parsed.name in {
+        'finish_route_clearance',
+        'finish_segment_route_clearance',
+    }:
         command, event_action = _translate_clearance_mode(parsed, begin=False)
+    elif parsed.name == 'pause_route_clearance':
+        command, event_action = _translate_pause_route_clearance(parsed)
     elif parsed.name == 'stop_shuttle':
         command, event_action = _translate_stop_shuttle(parsed)
     elif parsed.name in {'finish_task', 'finish_candidate_task'}:
@@ -270,6 +294,58 @@ def _translate_set_stoppers(step: PddlPlanStep) -> tuple[dict[str, Any], dict[st
     return command, event_action
 
 
+def _translate_restore_normal_route(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Preserve the slot-motion endpoints for the executive-owned macro."""
+
+    if len(step.args) != 3:
+        raise ValueError(
+            'restore_normal_route requires side, source station, and target station'
+        )
+    side = _side_from_args(step.args)
+    command = {
+        'action': 'restore_normal_route',
+        'side': side,
+        'source_station': step.args[1],
+        'target_station': step.args[2],
+        'deterministic_macro': 'verified_all_exterior_and_open_stoppers',
+    }
+    event_action = _blank_event_action(
+        primitive='SET_SWITCHES',
+        side=side,
+        wait_condition='switch_state_match',
+        target_id='ALL_SWITCHES',
+        reason='switch_update',
+    )
+    event_action['coordination_mode'] = 'route_normalization'
+    return command, event_action
+
+
+def _translate_pause_route_clearance(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if len(step.args) != 1:
+        raise ValueError('pause_route_clearance requires exactly one rail side')
+    side = _side_from_args(step.args)
+    command = {
+        'action': 'pause_route_clearance',
+        'side': side,
+        'deterministic_macro': (
+            'certified_capacity_safe_all_exterior_and_open_stoppers'
+        ),
+    }
+    event_action = _blank_event_action(
+        primitive='SET_SWITCHES',
+        side=side,
+        wait_condition='switch_state_match',
+        target_id='ALL_SWITCHES',
+        reason='switch_update',
+    )
+    event_action['coordination_mode'] = 'route_clearance_capacity_pause'
+    return command, event_action
+
+
 def _translate_move_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[str, Any]]:
     side, shuttle = _side_and_shuttle_from_args(step.args)
     speed = _float_kwarg(step.kwargs, 'speed', 'speed_mps', default=0.3)
@@ -280,6 +356,19 @@ def _translate_move_shuttle(step: PddlPlanStep) -> tuple[dict[str, Any], dict[st
         'command': 'ON',
         'speed': speed,
     }
+    if step.name == 'move_shuttle_to_slot':
+        if len(step.args) != 6:
+            raise ValueError(
+                'move_shuttle_to_slot requires shuttle, side, source station, '
+                'target station, source slot, and target slot'
+            )
+        command.update({
+            'source_station': step.args[2],
+            'target_station': step.args[3],
+            'source_slot': step.args[4],
+            'target_slot': step.args[5],
+            'slot_route_move': True,
+        })
     target_stopper = _stopper_or_empty(
         step.kwargs.get('target_stopper') or step.kwargs.get('stopper_target')
     )
@@ -303,8 +392,11 @@ def _translate_topology_route(
     """Preserve the route identity for executive topology expansion."""
 
     side, shuttle = _side_and_shuttle_from_args(step.args)
-    if len(step.args) < 4:
-        raise ValueError('prepare_topology_route requires shuttle, side, block, and slot')
+    if len(step.args) != 5:
+        raise ValueError(
+            'prepare_topology_route requires shuttle, side, block, slot, '
+            'and switch group'
+        )
     source_block = step.args[2]
     target_slot = step.args[3]
     command = {
@@ -313,6 +405,7 @@ def _translate_topology_route(
         'shuttle': shuttle,
         'source_block': source_block,
         'target_slot': target_slot,
+        'switch_group': step.args[4],
         'deterministic_macro': 'authoritative_topology_switches_and_open_stoppers',
     }
     event_action = _blank_event_action(
@@ -339,7 +432,7 @@ def _translate_segment_origin_move(
     """Translate a topology-preserving move without dropping PDDL endpoints."""
 
     side, shuttle = _side_and_shuttle_from_args(step.args)
-    if len(step.args) < 5:
+    if len(step.args) != 5:
         raise ValueError(
             'move_shuttle_from_segment_to_slot requires shuttle, side, '
             'source block, target station, and target slot'
@@ -355,6 +448,84 @@ def _translate_segment_origin_move(
         'target_station': step.args[3],
         'target_slot': step.args[4],
         'topology_route_move': True,
+    }
+    event_action = _blank_event_action(
+        primitive='SHUTTLE_ON',
+        side=side,
+        speed_mps=speed,
+        wait_condition='target_sensor_active',
+        target_id=f'{side}_shuttle',
+        reason='shuttle_start',
+    )
+    event_action.update(_multi_shuttle_fields(side=side, shuttle=shuttle))
+    event_action['coordination_mode'] = 'reservation_based_move'
+    return command, event_action
+
+
+def _translate_slot_topology_route(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Preserve both the exact source slot and authoritative route block."""
+
+    side, shuttle = _side_and_shuttle_from_args(step.args)
+    if len(step.args) != 6:
+        raise ValueError(
+            'prepare_slot_topology_route requires shuttle, side, source slot, '
+            'source block, and target slot'
+        )
+    command = {
+        'action': 'topology_route',
+        'side': side,
+        'shuttle': shuttle,
+        'source_slot': step.args[2],
+        'source_block': step.args[3],
+        'target_slot': step.args[4],
+        'switch_group': step.args[5],
+        'slot_topology_route': True,
+        'deterministic_macro': (
+            'authoritative_slot_origin_topology_switches_and_open_stoppers'
+        ),
+    }
+    event_action = _blank_event_action(
+        primitive='SET_SWITCHES',
+        side=side,
+        wait_condition='switch_state_match',
+        target_id='ALL_SWITCHES',
+        reason='switch_update',
+    )
+    shuttle_fields = _multi_shuttle_fields(side=side, shuttle=shuttle)
+    shuttle_fields.pop('target_id', None)
+    shuttle_fields.pop('coordination_mode', None)
+    event_action.update(shuttle_fields)
+    event_action['coordination_mode'] = 'reservation_based_move'
+    return command, event_action
+
+
+def _translate_slot_topology_move(
+    step: PddlPlanStep,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Translate a slot-origin alternate route without losing either endpoint."""
+
+    side, shuttle = _side_and_shuttle_from_args(step.args)
+    if len(step.args) != 7:
+        raise ValueError(
+            'move_shuttle_via_topology_to_slot requires shuttle, side, source '
+            'slot, source block, source station, target station, and target slot'
+        )
+    speed = _float_kwarg(step.kwargs, 'speed', 'speed_mps', default=0.3)
+    command = {
+        'action': 'shuttle',
+        'side': side,
+        'shuttle': shuttle,
+        'command': 'ON',
+        'speed': speed,
+        'source_slot': step.args[2],
+        'source_block': step.args[3],
+        'source_station': step.args[4],
+        'target_station': step.args[5],
+        'target_slot': step.args[6],
+        'topology_route_move': True,
+        'slot_topology_route_move': True,
     }
     event_action = _blank_event_action(
         primitive='SHUTTLE_ON',

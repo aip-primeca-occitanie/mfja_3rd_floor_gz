@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import heapq
 import json
+import math
 import re
 import time
+from functools import lru_cache
 from pathlib import Path
 import sys
 from typing import Any
@@ -38,6 +41,8 @@ from room_315_multi_shuttle import normalize_fleet_block_id
 from room_315_multi_shuttle import normalize_fleet_slot_id
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import validate_fleet_command
+from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import default_rail_network_path
 
 
 SIDES = ('right', 'left')
@@ -98,12 +103,6 @@ SAFETY_ACTIONS = {
 }
 SAFE_STOPPED_MODES = {'', 'STOPPED', 'WAITING', 'DISABLED', 'OFF', 'IDLE'}
 FALLING_MODES = {'FALLING', 'FALLEN'}
-SWITCH_NEAR_SEGMENTS = {
-    'A1': {'A12', 'A12E', 'A12I', 'A14'},
-    'A2': {'A12', 'A12E', 'A12I', 'A23'},
-    'A3': {'A23', 'A34', 'A34E', 'A34I'},
-    'A4': {'A14', 'A34', 'A34E', 'A34I'},
-}
 SWITCH_SENSOR_PREFIX_BY_SIDE = {
     'right': {
         'A1': ('DZI1R', 'DA1R', 'DA1ER', 'DA1IR', 'A1_STOPPER_SENSOR'),
@@ -119,6 +118,22 @@ SWITCH_SENSOR_PREFIX_BY_SIDE = {
     },
 }
 SWITCH_CLEAR_DISTANCE_M = 0.35
+CONTROLLER_S_RANGE_TOLERANCE_M = 0.001
+ROUTE_NORMALIZATION_ACTION_BY_MODE = {
+    'restore_normal_route_before_slot_motion': 'restore_normal_route',
+    'restore_normal_route_after_interior_clearance': 'finish_route_clearance',
+    'pause_clearance_after_interior_capacity_exhausted': 'pause_route_clearance',
+}
+ROUTE_NORMALIZATION_SYMBOLIC_ACTION_ALIASES = {
+    # Segment-origin clearance has the same supervised physical restoration
+    # macro as exact-slot clearance, while retaining distinct PDDL semantics.
+    'finish_segment_route_clearance': 'finish_route_clearance',
+}
+INTERIOR_ENTRY_SENSOR_BY_SIDE = {
+    'right': 'DA3IR',
+    'left': 'DA3IL',
+}
+CONTROLLER_DISABLED_MODE = 'DISABLED'
 SWITCH_VALUE_BY_ID = {
     1: 'EXTERIOR',
     2: 'INTERIOR',
@@ -218,6 +233,18 @@ def _strict_side(raw: Any) -> str:
 def _normalize_safety_action(raw: Any) -> str:
     action = _clean_token(raw).lower()
     return SAFETY_ACTION_ALIASES.get(action, action)
+
+
+def _shuttle_command_speed(
+    command: Any,
+    requested_speed: float | None,
+    default_speed: float,
+) -> float:
+    """Return an ON-only typed-command speed without changing retained state."""
+
+    if _clean_token(command).upper() != 'ON':
+        return 0.0
+    return float(default_speed if requested_speed is None else requested_speed)
 
 
 def _empty_safety_metrics() -> dict[str, Any]:
@@ -472,45 +499,241 @@ def _active_sensor_readings_from_rail(rail: dict[str, Any]) -> list[dict[str, An
     return readings
 
 
-def _active_sensor_names(rail: dict[str, Any]) -> set[str]:
+def _shuttle_safety_segments(
+    shuttle_state: dict[str, Any],
+    *,
+    side: str,
+) -> set[str]:
+    """Return conservative segment aliases for switch-safety checks only.
+
+    ``ShuttleState.current_segment`` uses the public topology.  The left rail
+    has a mirrored internal topology, so keeping both aliases lets certificate
+    checks compare the two vocabularies. Neither value is exported to the
+    planner or used to replace visual localization.
+    """
+
+    segment = _clean_token(shuttle_state.get('segment', '')).upper()
+    if not segment:
+        return set()
+    segments = {segment}
+    if side == 'left':
+        segments.add(LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment))
+    return segments
+
+
+def _left_controller_segment_to_internal() -> dict[str, str]:
+    """Return the validated inverse of the public left-segment vocabulary."""
+
+    inverse = {
+        str(public).strip().upper(): str(internal).strip().upper()
+        for internal, public in LEFT_PUBLIC_SEGMENT_NAME_MAP.items()
+    }
+    if len(inverse) != len(LEFT_PUBLIC_SEGMENT_NAME_MAP):
+        raise ValueError('left public segment map is not one-to-one')
+    return inverse
+
+
+LEFT_CONTROLLER_SEGMENT_TO_INTERNAL = _left_controller_segment_to_internal()
+
+
+@lru_cache(maxsize=2)
+def _rail_switch_distance_geometry(side: str) -> dict[str, Any]:
+    """Load authoritative metric rail geometry for the safety veto only."""
+
+    from room_315_kinematic_shuttle import CUBIC_HERMITE_PATH_BACKEND
+    from room_315_kinematic_shuttle import RailNetwork
+
+    normalized_side = _strict_side(side)
+    if normalized_side not in SIDES:
+        raise ValueError(f'unsupported rail side {side!r}')
+    network = RailNetwork.from_yaml(
+        default_rail_network_path(normalized_side),
+        path_backend=CUBIC_HERMITE_PATH_BACKEND,
+    )
+    raw_segments = network.config.get('segments')
+    if not isinstance(raw_segments, dict):
+        raise ValueError('authoritative rail geometry has no segment definitions')
+
+    adjacency: dict[str, list[tuple[str, float]]] = {}
+    segments: dict[str, tuple[str, str, float]] = {}
+    for raw_name, raw_segment in raw_segments.items():
+        name = _clean_token(raw_name).upper()
+        if not isinstance(raw_segment, dict) or name not in network.segments:
+            raise ValueError(f'invalid authoritative segment definition {name!r}')
+        start = _clean_token(raw_segment.get('start_node')).upper()
+        end = _clean_token(raw_segment.get('end_node')).upper()
+        length = float(network.segments[name].length)
+        if not start or not end or not math.isfinite(length) or length <= 0.0:
+            raise ValueError(f'invalid authoritative segment geometry {name!r}')
+        segments[name] = (start, end, length)
+        adjacency.setdefault(start, []).append((end, length))
+        adjacency.setdefault(end, []).append((start, length))
+
+    switch_node_distances: dict[str, dict[str, float]] = {}
+    for switch_name in SWITCHES:
+        switch = network.switches.get(switch_name)
+        if not isinstance(switch, dict):
+            raise ValueError(f'missing authoritative switch {switch_name!r}')
+        target = _clean_token(switch.get('controlled_node')).upper()
+        if target not in adjacency:
+            raise ValueError(
+                f'authoritative switch {switch_name!r} has invalid controlled node'
+            )
+        distances = {target: 0.0}
+        queue: list[tuple[float, str]] = [(0.0, target)]
+        while queue:
+            distance, node = heapq.heappop(queue)
+            if distance > distances.get(node, math.inf):
+                continue
+            for neighbor, edge_length in adjacency.get(node, ()):
+                candidate = distance + edge_length
+                if candidate >= distances.get(neighbor, math.inf):
+                    continue
+                distances[neighbor] = candidate
+                heapq.heappush(queue, (candidate, neighbor))
+        switch_node_distances[switch_name] = distances
+
     return {
-        _clean_token(reading.get('name', '')).upper()
-        for reading in _active_sensor_readings_from_rail(rail)
-        if _clean_token(reading.get('name', ''))
+        'segments': segments,
+        'switch_node_distances': switch_node_distances,
+        'source': str(network.network_path),
     }
 
 
-def _shuttle_near_switch(shuttle_state: dict[str, Any], switch_name: str) -> bool:
-    segment = _clean_token(shuttle_state.get('segment', '')).upper()
-    if not segment:
-        return False
-    if _shuttle_segment_cleared_switch(shuttle_state, switch_name, segment):
-        return False
-    near_segments = SWITCH_NEAR_SEGMENTS.get(switch_name, set())
-    return segment in near_segments or any(segment.startswith(prefix) for prefix in near_segments)
+def _controller_segment_for_geometry(raw_segment: Any, *, side: str) -> str:
+    segment = _clean_token(raw_segment).upper()
+    if side == 'left':
+        return LEFT_CONTROLLER_SEGMENT_TO_INTERNAL.get(segment, '')
+    return segment
 
 
-def _shuttle_segment_cleared_switch(
+def _shuttle_switch_distance_m(
     shuttle_state: dict[str, Any],
     switch_name: str,
-    segment: str,
-) -> bool:
+    *,
+    side: str,
+) -> tuple[float | None, str]:
+    """Measure controller-state distance to a switch as an independent veto.
+
+    ``segment`` and ``s`` originate only from deterministic controller state.
+    This result is never exported as visual localization and never replaces the
+    model state used by the planner or state-fusion runtime.
+    """
+
+    raw_segment = shuttle_state.get('segment')
+    if raw_segment in (None, ''):
+        raw_segment = shuttle_state.get('current_segment')
+    if raw_segment in (None, ''):
+        return None, 'missing controller segment'
+    if 's' not in shuttle_state or shuttle_state.get('s') in (None, ''):
+        return None, 'missing controller s'
     try:
         s = float(shuttle_state.get('s'))
     except (TypeError, ValueError):
-        return False
-    if switch_name == 'A3' and segment in {'A34E', 'A34I'}:
-        return s > SWITCH_CLEAR_DISTANCE_M
-    return False
+        return None, 'invalid controller s'
+    if not math.isfinite(s):
+        return None, 'non-finite controller s'
+    try:
+        geometry = _rail_switch_distance_geometry(side)
+    except (OSError, TypeError, ValueError, yaml.YAMLError) as error:
+        return None, f'authoritative rail geometry unavailable: {error}'
+    segment = _controller_segment_for_geometry(raw_segment, side=side)
+    segment_geometry = geometry['segments'].get(segment)
+    if segment_geometry is None:
+        return None, f'unknown controller segment {_clean_token(raw_segment)!r}'
+    switch_distances = geometry['switch_node_distances'].get(switch_name)
+    if not isinstance(switch_distances, dict):
+        return None, f'unknown controlled switch {switch_name!r}'
+    start, end, length = segment_geometry
+    if (
+        s < -CONTROLLER_S_RANGE_TOLERANCE_M
+        or s > length + CONTROLLER_S_RANGE_TOLERANCE_M
+    ):
+        return None, (
+            f'controller s={s:.6g} is outside segment {segment} '
+            f'length={length:.6g}'
+        )
+    s = max(0.0, min(s, length))
+    start_distance = switch_distances.get(start)
+    end_distance = switch_distances.get(end)
+    if start_distance is None or end_distance is None:
+        return None, f'segment {segment} is disconnected from switch {switch_name}'
+    distance = min(s + start_distance, length - s + end_distance)
+    if not math.isfinite(distance):
+        return None, 'non-finite switch clearance distance'
+    return distance, ''
 
 
-def _active_sensor_near_switch(rail: dict[str, Any], side: str, switch_name: str) -> bool:
-    names = _active_sensor_names(rail)
+def _controller_state_for_sensor_identity(
+    rails: dict[str, Any],
+    *,
+    side: str,
+    raw_identity: Any,
+) -> tuple[str, dict[str, Any] | None, str]:
+    spec = normalize_shuttle_ref(raw_identity, side=side)
+    if spec is None or spec.side != side:
+        return '', None, 'unknown or wrong-side shuttle identity'
+    matches = []
+    for raw_name, state in _rail_shuttles(rails, side).items():
+        candidate = normalize_shuttle_ref(raw_name, side=side)
+        if candidate is None or candidate.shuttle_id != spec.shuttle_id:
+            continue
+        if isinstance(state, dict):
+            matches.append((str(raw_name), state))
+    if not matches:
+        return spec.shuttle_id, None, 'identity has no controller shuttle state'
+    if len(matches) != 1:
+        return spec.shuttle_id, None, 'identity has duplicate controller states'
+    return matches[0][0], matches[0][1], ''
+
+
+def _active_sensor_switch_occupancy_reason(
+    rails: dict[str, Any],
+    *,
+    side: str,
+    switch_name: str,
+) -> str:
+    rail = _rail_snapshot(rails, side)
     near_names = {
         name.upper()
         for name in SWITCH_SENSOR_PREFIX_BY_SIDE.get(side, {}).get(switch_name, ())
     }
-    return bool(names & near_names)
+    for reading in _active_sensor_readings_from_rail(rail):
+        sensor_name = _clean_token(reading.get('name')).upper()
+        if not sensor_name or sensor_name not in near_names:
+            continue
+        raw_identity = _clean_token(reading.get('shuttle'))
+        if not raw_identity:
+            return (
+                f'active {switch_name} guard sensor {sensor_name} has unknown '
+                'shuttle identity'
+            )
+        shuttle_name, state, reason = _controller_state_for_sensor_identity(
+            rails,
+            side=side,
+            raw_identity=raw_identity,
+        )
+        if reason or state is None:
+            return (
+                f'active {switch_name} guard sensor {sensor_name} is not '
+                f'identity-bound: {reason}'
+            )
+        distance, reason = _shuttle_switch_distance_m(
+            state,
+            switch_name,
+            side=side,
+        )
+        if reason or distance is None:
+            return (
+                f'active {switch_name} guard sensor {sensor_name} cannot prove '
+                f'{shuttle_name} clear: {reason}'
+            )
+        if distance <= SWITCH_CLEAR_DISTANCE_M:
+            return (
+                f'active {switch_name} guard sensor {sensor_name} is '
+                f'identity-bound to {shuttle_name} at {distance:.3f}m'
+            )
+    return ''
 
 
 def _unsafe_switch_change_reason(
@@ -518,27 +741,30 @@ def _unsafe_switch_change_reason(
     side: str,
     switch_name: str,
 ) -> str:
-    rail = _rail_snapshot(rails, side)
     moving_near = []
     for shuttle_name, shuttle_state in _rail_shuttles(rails, side).items():
-        if _shuttle_is_moving(shuttle_state) and _shuttle_near_switch(shuttle_state, switch_name):
-            moving_near.append(str(shuttle_name))
+        if _shuttle_is_falling(shuttle_state):
+            continue
+        distance, reason = _shuttle_switch_distance_m(
+            shuttle_state,
+            switch_name,
+            side=side,
+        )
+        if reason or distance is None:
+            return (
+                f'unsafe switch change: {side} switch {switch_name} cannot prove '
+                f'controller safety distance for {shuttle_name}: {reason}'
+            )
+        if (
+            _shuttle_is_moving(shuttle_state)
+            and distance <= SWITCH_CLEAR_DISTANCE_M
+        ):
+            moving_near.append(f'{shuttle_name}@{distance:.3f}m')
     if moving_near:
         return (
             f'unsafe switch change: {side} switch {switch_name} is near moving '
             f'shuttle(s) {", ".join(moving_near)}'
         )
-    if _active_sensor_near_switch(rail, side, switch_name):
-        moving = [
-            str(shuttle_name)
-            for shuttle_name, shuttle_state in _rail_shuttles(rails, side).items()
-            if _shuttle_is_moving(shuttle_state)
-        ]
-        if moving:
-            return (
-                f'unsafe switch change: {side} switch {switch_name} has active '
-                f'nearby sensors while shuttle(s) {", ".join(moving)} are moving'
-            )
     return ''
 
 
@@ -547,23 +773,426 @@ def _occupied_guarded_segment_reason(
     side: str,
     switch_name: str,
 ) -> str:
-    rail = _rail_snapshot(rails, side)
     occupied_shuttles = []
     for shuttle_name, shuttle_state in _rail_shuttles(rails, side).items():
         if _shuttle_is_falling(shuttle_state):
             continue
-        if _shuttle_near_switch(shuttle_state, switch_name):
-            occupied_shuttles.append(str(shuttle_name))
+        distance, reason = _shuttle_switch_distance_m(
+            shuttle_state,
+            switch_name,
+            side=side,
+        )
+        if reason or distance is None:
+            return (
+                f'{side} switch {switch_name} clearance is unknown for '
+                f'{shuttle_name}: {reason}'
+            )
+        if distance <= SWITCH_CLEAR_DISTANCE_M:
+            occupied_shuttles.append(f'{shuttle_name}@{distance:.3f}m')
     if occupied_shuttles:
         return (
             f'unsafe switch change: {side} switch {switch_name} guarded segment '
-            f'is occupied by shuttle(s) {", ".join(occupied_shuttles)}'
+            f'is occupied within {SWITCH_CLEAR_DISTANCE_M:.3f}m by shuttle(s) '
+            f'{", ".join(occupied_shuttles)}'
         )
-    if _active_sensor_near_switch(rail, side, switch_name):
+    sensor_reason = _active_sensor_switch_occupancy_reason(
+        rails,
+        side=side,
+        switch_name=switch_name,
+    )
+    if sensor_reason:
         return (
             f'unsafe switch change: {side} switch {switch_name} guarded segment '
-            'has active occupancy sensors'
+            f'has active occupancy evidence: {sensor_reason}'
         )
+    return ''
+
+
+def _changed_switch_names(
+    rails: dict[str, Any],
+    side: str,
+    expanded: dict[str, str],
+) -> tuple[str, ...]:
+    switches = _rail_snapshot(rails, side).get('switches', {})
+    switches = switches if isinstance(switches, dict) else {}
+    return tuple(
+        switch_name
+        for switch_name, desired_state in expanded.items()
+        if _canonical_switch_state(switches.get(switch_name)) != desired_state
+    )
+
+
+def _normalization_symbolic_step_reason(
+    metadata: dict[str, Any],
+    *,
+    side: str,
+    mode: str,
+) -> str:
+    expected_action = ROUTE_NORMALIZATION_ACTION_BY_MODE[mode]
+    text = _clean_token(metadata.get('symbolic_step')).lower()
+    text = re.sub(r'^\s*\d+(?:\.\d+)?\s*:\s*', '', text)
+    text = re.sub(r'\s*\[[^\]]*\]\s*$', '', text).strip()
+    if text.startswith('(') and text.endswith(')'):
+        text = text[1:-1].strip()
+    tokens = text.split()
+    actual_action = (
+        ROUTE_NORMALIZATION_SYMBOLIC_ACTION_ALIASES.get(tokens[0], tokens[0])
+        if tokens
+        else ''
+    )
+    if not tokens or actual_action != expected_action:
+        return (
+            f'symbolic_step must be {expected_action!r} for mode {mode!r}'
+        )
+    side_index = 2 if expected_action == 'finish_route_clearance' else 1
+    if len(tokens) <= side_index or tokens[side_index] != side:
+        return 'symbolic_step side does not match the switch command side'
+    return ''
+
+
+def _identity_set_for_normalization(
+    raw: Any,
+    *,
+    side: str,
+    field: str,
+) -> tuple[set[str], str]:
+    if not isinstance(raw, (list, tuple)):
+        return set(), f'{field} must be a list'
+    identities: set[str] = set()
+    for raw_identity in raw:
+        spec = normalize_shuttle_ref(raw_identity, side=side)
+        if spec is None or spec.side != side:
+            return set(), f'{field} contains an unknown or wrong-side identity'
+        if spec.shuttle_id in identities:
+            return set(), f'{field} contains duplicate identity {spec.short_id}'
+        identities.add(spec.shuttle_id)
+    return identities, ''
+
+
+def _current_interior_safety_occupants(
+    rails: dict[str, Any],
+    *,
+    side: str,
+) -> tuple[dict[str, dict[str, Any]], str]:
+    """Return controller-confirmed stopped shuttles on the interior branch.
+
+    ``ShuttleState.speed`` is the retained travel-speed setting used by the
+    Gazebo controller when a shuttle is enabled.  It intentionally remains
+    non-zero after an OFF command so the next ON command can reuse that speed;
+    it is not an instantaneous velocity measurement.  Consequently the
+    explicit ``DISABLED`` controller mode, not ``WAITING`` and not the
+    retained speed setting, is the authoritative OFF effect at this boundary.
+    An enabled shuttle held by a stopper or collision also reports ``WAITING``
+    and must not authorize a route change that could release it.
+    """
+
+    occupants: dict[str, dict[str, Any]] = {}
+    for raw_identity, state in _rail_shuttles(rails, side).items():
+        if _shuttle_is_falling(state):
+            continue
+        if 'A34I' not in _shuttle_safety_segments(state, side=side):
+            continue
+        spec = normalize_shuttle_ref(raw_identity, side=side)
+        if spec is None or spec.side != side:
+            return {}, 'current interior safety state has an unknown identity'
+        if spec.shuttle_id in occupants:
+            return {}, f'current interior safety state duplicates {spec.short_id}'
+        mode = _shuttle_mode_from_state(state)
+        if mode != CONTROLLER_DISABLED_MODE:
+            return {}, f'{spec.short_id} has no explicit disabled controller mode'
+        occupants[spec.shuttle_id] = state
+    if not occupants:
+        return {}, 'route-normalization exception has no stopped interior shuttle'
+    return occupants, ''
+
+
+def _normalization_device_snapshot_reason(
+    proof: dict[str, Any],
+    *,
+    rails: dict[str, Any],
+    side: str,
+) -> str:
+    rail = _rail_snapshot(rails, side)
+    current_switches = rail.get('switches', {})
+    current_stoppers = rail.get('stoppers', {})
+    proof_switches = proof.get('switches')
+    proof_stoppers = proof.get('stoppers')
+    if not all(
+        isinstance(value, dict)
+        for value in (
+            current_switches,
+            current_stoppers,
+            proof_switches,
+            proof_stoppers,
+        )
+    ):
+        return 'route-normalization device snapshots must be mappings'
+    expected_switches = {
+        name: _canonical_switch_state(current_switches.get(name)).lower()
+        for name in SWITCHES
+    }
+    certified_switches = {
+        _clean_token(name).upper(): _canonical_switch_state(value).lower()
+        for name, value in proof_switches.items()
+    }
+    if certified_switches != expected_switches:
+        return 'route-normalization switch snapshot does not match current state'
+    expected_stoppers = {
+        name: 'open' if _normalize_stopper_state(current_stoppers.get(name)) == '0'
+        else 'closed' if _normalize_stopper_state(current_stoppers.get(name)) == '1'
+        else _clean_token(current_stoppers.get(name)).lower()
+        for name in SWITCHES
+    }
+    certified_stoppers = {
+        _clean_token(name).upper(): (
+            'open' if _normalize_stopper_state(value) == '0'
+            else 'closed' if _normalize_stopper_state(value) == '1'
+            else _clean_token(value).lower()
+        )
+        for name, value in proof_stoppers.items()
+    }
+    if certified_stoppers != expected_stoppers:
+        return 'route-normalization stopper snapshot does not match current state'
+    return ''
+
+
+def _normalization_certificates_reason(
+    metadata: dict[str, Any],
+    proof: dict[str, Any],
+    *,
+    rails: dict[str, Any],
+    side: str,
+) -> str:
+    interior_states, reason = _current_interior_safety_occupants(
+        rails,
+        side=side,
+    )
+    if reason:
+        return reason
+    interior_ids = set(interior_states)
+    for field in (
+        'interior_shuttles',
+        'visually_interior_shuttles',
+        'certified_interior_shuttles',
+        'certified_stopped_interior_shuttles',
+    ):
+        identities, reason = _identity_set_for_normalization(
+            proof.get(field),
+            side=side,
+            field=field,
+        )
+        if reason:
+            return reason
+        if identities != interior_ids:
+            return f'{field} does not exactly match current interior occupants'
+    for field in (
+        'uncertified_interior_shuttles',
+        'certificate_segment_mismatches',
+        'external_obstacles',
+    ):
+        value = proof.get(field)
+        if not isinstance(value, list) or value:
+            return f'{field} must be an empty list'
+
+    raw_consistency = proof.get('certificate_segment_consistency')
+    if not isinstance(raw_consistency, dict):
+        return 'certificate_segment_consistency must be a mapping'
+    consistency_by_id: dict[str, dict[str, Any]] = {}
+    for raw_identity, entry in raw_consistency.items():
+        spec = normalize_shuttle_ref(raw_identity, side=side)
+        if spec is None or spec.side != side or not isinstance(entry, dict):
+            return 'certificate_segment_consistency contains an invalid identity'
+        if spec.shuttle_id in consistency_by_id:
+            return 'certificate_segment_consistency contains duplicate identities'
+        consistency_by_id[spec.shuttle_id] = entry
+    if set(consistency_by_id) != interior_ids:
+        return 'certificate_segment_consistency does not match interior occupants'
+    expected_visual_segment = 'A34I' if side == 'right' else 'A12I'
+    for identity, consistency in consistency_by_id.items():
+        if (
+            consistency.get('required') is not True
+            or consistency.get('satisfied') is not True
+            or _clean_token(
+                consistency.get('certificate_target_public_segment')
+            ).upper() != 'A34I'
+            or _clean_token(
+                consistency.get('certificate_target_internal_segment')
+            ).upper() != expected_visual_segment
+            or _clean_token(
+                consistency.get('accepted_visual_internal_segment')
+            ).upper() != expected_visual_segment
+            or consistency.get('certificate_used_as_localization') is not False
+        ):
+            return f'visual/certificate segment proof is invalid for {identity}'
+
+    raw_certificates = metadata.get('runtime_clearance_certificates')
+    if not isinstance(raw_certificates, dict):
+        return 'runtime_clearance_certificates must be a mapping'
+    certificates: dict[str, dict[str, Any]] = {}
+    for raw_identity, certificate in raw_certificates.items():
+        spec = normalize_shuttle_ref(raw_identity, side=side)
+        if spec is None and isinstance(certificate, dict):
+            spec = normalize_shuttle_ref(
+                certificate.get('identity') or certificate.get('shuttle'),
+                side=side,
+            )
+        if spec is None or spec.side != side or not isinstance(certificate, dict):
+            return 'runtime clearance certificate has an invalid identity'
+        if spec.shuttle_id in certificates:
+            return 'runtime clearance certificates contain duplicate identities'
+        certificates[spec.shuttle_id] = certificate
+    if set(certificates) != interior_ids:
+        return 'runtime clearance certificates do not match interior occupants'
+    expected_sensor = INTERIOR_ENTRY_SENSOR_BY_SIDE[side]
+    for identity, certificate in certificates.items():
+        spec = normalize_shuttle_ref(identity, side=side)
+        try:
+            target_s_m = float(certificate['target_s_m'])
+        except (KeyError, TypeError, ValueError):
+            return f'runtime clearance target_s_m is invalid for {identity}'
+        if (
+            spec is None
+            or certificate.get('identity') != spec.short_id
+            or certificate.get('shuttle') != spec.shuttle_id
+            or certificate.get('side') != side
+            or _clean_token(certificate.get('target_segment')).upper() != 'A34I'
+            or _clean_token(certificate.get('entry_sensor')).upper() != expected_sensor
+            or certificate.get('entry_sensor_identity_confirmed') is not True
+            or certificate.get('controller_stop_confirmed') is not True
+            or certificate.get('post_stop_visual_frame_received') is not True
+            or certificate.get('bounded_commanded_motion_completed') is not True
+            or certificate.get('clearance_mode_held') is not True
+            or certificate.get('normal_route_restored') is not False
+            or certificate.get('matched_by') != (
+                'interior_entry_sensor_plus_bounded_travel_time'
+            )
+            or certificate.get(
+                'controller_position_fields_used_for_localization'
+            ) is not False
+            or not math.isfinite(target_s_m)
+            or target_s_m < 0.0
+        ):
+            return f'runtime clearance certificate is invalid for {identity}'
+    return ''
+
+
+def _guarded_route_normalization_proof_reason(
+    command: dict[str, Any],
+    *,
+    rails: dict[str, Any],
+    side: str,
+    expanded: dict[str, str],
+    changed_switches: tuple[str, ...],
+) -> str:
+    if expanded != {name: 'EXTERIOR' for name in SWITCHES}:
+        return 'guarded occupancy permits only all-switch EXTERIOR normalization'
+    metadata = command.get('closed_loop_executive')
+    if not isinstance(metadata, dict):
+        return 'missing closed-loop route-normalization proof'
+    mode = _clean_token(metadata.get('mode'))
+    if mode not in ROUTE_NORMALIZATION_ACTION_BY_MODE:
+        return 'closed-loop mode is not authorized for route normalization'
+    if (
+        metadata.get('localization_source') != 'accepted_visual_state'
+        or metadata.get('controller_position_fields_used_for_localization') is not False
+    ):
+        return 'route normalization lacks accepted-visual localization provenance'
+    if not _clean_token(metadata.get('problem_name')):
+        return 'route normalization lacks a bound planning problem'
+    reason = _normalization_symbolic_step_reason(
+        metadata,
+        side=side,
+        mode=mode,
+    )
+    if reason:
+        return reason
+    proof = metadata.get('route_normalization_proof')
+    if not isinstance(proof, dict):
+        return 'route_normalization_proof must be a mapping'
+    if proof.get('side') != side:
+        return 'route-normalization proof side does not match command side'
+    if proof.get('controller_position_fields_used_for_localization') is not False:
+        return 'route-normalization proof used forbidden controller localization'
+    reason = _normalization_device_snapshot_reason(
+        proof,
+        rails=rails,
+        side=side,
+    )
+    if reason:
+        return reason
+    if _obstacle_appearance_reason(_rail_snapshot(rails, side), side):
+        return 'current rail has an obstacle during route normalization'
+    if mode == 'restore_normal_route_before_slot_motion':
+        if (
+            proof.get('reconfiguration_required') is not True
+            or proof.get('reconfiguration_safe') is not True
+            or proof.get('clearance_mode') is not False
+            or proof.get('all_stoppers_open') is not True
+        ):
+            return 'mixed-route normalization is not proven safe'
+    elif (
+        proof.get('clearance_mode') is not True
+        or proof.get('clearance_pause_safe') is not True
+    ):
+        return 'active-clearance normalization is not proven safe'
+    reason = _normalization_certificates_reason(
+        metadata,
+        proof,
+        rails=rails,
+        side=side,
+    )
+    if reason:
+        return reason
+
+    rail = _rail_snapshot(rails, side)
+    interior_ids, reason = _current_interior_safety_occupants(
+        rails,
+        side=side,
+    )
+    if reason:
+        return reason
+    interior_ids = set(interior_ids)
+    for switch_name in changed_switches:
+        near_names = {
+            name.upper()
+            for name in SWITCH_SENSOR_PREFIX_BY_SIDE.get(side, {}).get(
+                switch_name,
+                (),
+            )
+        }
+        for reading in _active_sensor_readings_from_rail(rail):
+            if _clean_token(reading.get('name')).upper() not in near_names:
+                continue
+            shuttle_name, state, sensor_reason = (
+                _controller_state_for_sensor_identity(
+                    rails,
+                    side=side,
+                    raw_identity=reading.get('shuttle'),
+                )
+            )
+            if sensor_reason or state is None:
+                return (
+                    f'active {switch_name} guard sensor is not identity-bound '
+                    f'to controller state: {sensor_reason}'
+                )
+            distance, distance_reason = _shuttle_switch_distance_m(
+                state,
+                switch_name,
+                side=side,
+            )
+            if distance_reason or distance is None:
+                return (
+                    f'active {switch_name} guard sensor cannot prove '
+                    f'{shuttle_name} clear: {distance_reason}'
+                )
+            if distance > SWITCH_CLEAR_DISTANCE_M:
+                continue
+            spec = normalize_shuttle_ref(shuttle_name, side=side)
+            if spec is None or spec.shuttle_id not in interior_ids:
+                return (
+                    f'active {switch_name} guard sensor is not identity-bound '
+                    'to a certified interior shuttle'
+                )
     return ''
 
 
@@ -823,39 +1452,6 @@ def _is_all_switch_loop_transition(expanded: dict[str, str]) -> bool:
     return len(set(expanded.values())) == 1
 
 
-def _single_gate_switch_change_is_staged(
-    expanded: dict[str, str],
-    *,
-    rails: dict[str, Any],
-    side: str,
-) -> bool:
-    if len(expanded) != 1:
-        return False
-    switch_name = next(iter(expanded))
-    if switch_name != _gate_for_side(side):
-        return False
-    if _rail_has_moving_shuttle(rails, side):
-        return False
-    return _rail_stopped_on_gate_approach(rails, side, switch_name)
-
-
-def _rail_stopped_on_gate_approach(rails: dict[str, Any], side: str, gate: str) -> bool:
-    approach_segments = {
-        ('right', 'A3'): {'A23'},
-        ('left', 'A3'): {'A23'},
-    }.get((side, gate), set())
-    for shuttle_state in _rail_shuttles(rails, side).values():
-        if _shuttle_is_moving(shuttle_state) or _shuttle_is_falling(shuttle_state):
-            continue
-        segment = _clean_token(shuttle_state.get('segment', '')).upper()
-        if segment in approach_segments:
-            return True
-    rail = _rail_snapshot(rails, side)
-    active_names = _active_sensor_names(rail)
-    gate_sensor = f'{gate}_STOPPER_SENSOR'
-    return gate_sensor in active_names
-
-
 def _switch_assignments_are_noop(
     rails: dict[str, Any],
     side: str,
@@ -869,24 +1465,6 @@ def _switch_assignments_are_noop(
         if current_state != desired_state:
             return False
     return True
-
-
-def _gate_for_side(side: str) -> str:
-    return {'right': 'A3', 'left': 'A3'}[side]
-
-
-def _rail_stopped_at_gate(rails: dict[str, Any], side: str, gate: str) -> bool:
-    for shuttle_state in _rail_shuttles(rails, side).values():
-        if _shuttle_is_moving(shuttle_state) or _shuttle_is_falling(shuttle_state):
-            continue
-        if _shuttle_near_switch(shuttle_state, gate):
-            return True
-    active_names = _active_sensor_names(_rail_snapshot(rails, side))
-    gate_sensors = {
-        name.upper()
-        for name in SWITCH_SENSOR_PREFIX_BY_SIDE.get(side, {}).get(gate, ())
-    }
-    return bool(active_names & gate_sensors)
 
 
 def _valid_slot(raw: Any) -> bool:
@@ -1020,6 +1598,7 @@ def _decode_room315_vla_action(
         if reason:
             return _safety_decision(accepted=False, original_action=command, reason=reason)
         assignments_are_noop = _switch_assignments_are_noop(rails, side, expanded)
+        changed_switches = _changed_switch_names(rails, side, expanded)
         if (
             _is_all_switch_loop_transition(expanded)
             and not assignments_are_noop
@@ -1031,10 +1610,42 @@ def _decode_room315_vla_action(
                 reason=f'unsafe loop transition: {side} shuttle must be staged/stopped before changing all switches',
             )
         if not assignments_are_noop:
-            for switch_name in expanded:
+            guarded_occupancy_reasons = []
+            for switch_name in changed_switches:
                 reason = _unsafe_switch_change_reason(rails, side, switch_name)
                 if reason:
                     return _safety_decision(accepted=False, original_action=command, reason=reason)
+                occupied_reason = _occupied_guarded_segment_reason(
+                    rails,
+                    side,
+                    switch_name,
+                )
+                if occupied_reason:
+                    guarded_occupancy_reasons.append(occupied_reason)
+            metadata = command.get('closed_loop_executive')
+            normalization_mode = (
+                _clean_token(metadata.get('mode'))
+                if isinstance(metadata, dict)
+                else ''
+            )
+            if (
+                guarded_occupancy_reasons
+                or normalization_mode in ROUTE_NORMALIZATION_ACTION_BY_MODE
+            ):
+                proof_reason = _guarded_route_normalization_proof_reason(
+                    command,
+                    rails=rails,
+                    side=side,
+                    expanded=expanded,
+                    changed_switches=changed_switches,
+                )
+                if proof_reason:
+                    reason_parts = [*guarded_occupancy_reasons, proof_reason]
+                    return _safety_decision(
+                        accepted=False,
+                        original_action=command,
+                        reason='; '.join(reason_parts),
+                    )
         corrected['switches'] = assignments
         return _safety_decision(accepted=True, original_action=command, corrected_action=corrected)
 
@@ -2290,7 +2901,15 @@ class Room315VlaSupervisor(Node):
         msg.name = _clean_token(name)
         msg.command = command.upper()
         msg.start_slot = start_slot
-        msg.speed = float(self._default_speed() if speed is None else speed)
+        # ShuttleCommand.speed is an ON travel-speed setting. Sending the
+        # retained/default value with OFF is physically harmless but makes
+        # logs look like a non-zero stop command and invites the same semantic
+        # confusion as the historical regression fixed at the state boundary.
+        msg.speed = _shuttle_command_speed(
+            msg.command,
+            speed,
+            self._default_speed(),
+        )
         msg.target_slot = str(target_slot)
         self.shuttle_command_pubs[side].publish(msg)
         payload = {

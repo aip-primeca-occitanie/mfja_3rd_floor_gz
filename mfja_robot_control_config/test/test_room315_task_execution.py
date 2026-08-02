@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -14,12 +15,16 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from room_315_contracts import TaskGoal
+from room_315_closed_loop_executive import ClosedLoopExecutive
 from room_315_closed_loop_executive import _target_slot_for_step
 from room_315_multi_shuttle import all_shuttle_specs
 from room_315_pddl_plan_translator import PddlPlanStep
+from room_315_pddl_plan_translator import translate_plan
 from room_315_pddl_scenario_generator import _planning_rail_topology
 from room_315_pddl_scenario_generator import PddlProblemBuildError
 from room_315_pddl_scenario_generator import build_first_blocker_clearance_problem
+from room_315_pddl_scenario_generator import build_clearance_pause_problem
+from room_315_pddl_scenario_generator import build_intermediate_selected_advance_problem
 from room_315_pddl_scenario_generator import build_pddl_problem_from_observed_state_task_goal
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import public_rail_segment_lengths
@@ -33,6 +38,9 @@ from room_315_task_execution import ground_transport_task_goal
 from room_315_task_goal_cli import _print_turn_result
 from room_315_task_goal_dialogue import DialogueTurnResult
 from room_315_task_goal_dialogue import TaskGoalDialogueState
+from room_315_task_goal_schema import STATIONS_BY_SIDE
+from room_315_task_goal_schema import TaskGoalDraft
+from room_315_task_goal_validation import Room315DomainValidator
 
 
 def _visual_item(identity: str, *, slot: str) -> dict:
@@ -184,16 +192,32 @@ def _clearance_certificate(
     }
 
 
-def _sequential_cutoff_state_and_certificates():
+def _sequential_cutoff_state_and_certificates(
+    *,
+    include_unrelated_left_anchor_mismatch: bool = False,
+):
     """Reproduce the accepted state before the live R3 slot-1 -> slot-2 failure."""
 
+    present = {'R1': '3', 'R2': '4', 'R3': '1', 'R4': '2'}
+    if include_unrelated_left_anchor_mismatch:
+        present['L2'] = '2'
     observation = _observation(
-        present={'R1': '3', 'R2': '4', 'R3': '1', 'R4': '2'}
+        present=present
     )
     segment_length_m = public_rail_segment_lengths('right')['A34I']
     staged_positions_m = {'R1': 0.35, 'R2': 0.95}
     for item in observation['shuttles']:
         target_s_m = staged_positions_m.get(item['identity'])
+        if (
+            include_unrelated_left_anchor_mismatch
+            and item['identity'] == 'L2'
+        ):
+            # Reproduce the exact live discrepancy.  L2 has a trusted DZI2L
+            # anchor but the learned longitudinal ratio is just outside the
+            # consistency tolerance.  It must remain a diagnostic for a
+            # right-rail task, not veto R3/R4 route planning.
+            item['s_ratio'] += 0.121590135
+            item['s_m'] = item['s_ratio'] * item['segment_length_m']
         if target_s_m is None:
             continue
         item.update({
@@ -211,6 +235,18 @@ def _sequential_cutoff_state_and_certificates():
         _snapshot(observation=observation),
         now_s=100.1,
         runtime_clearance_certificates=certificates,
+        slot_sensor_anchors=(
+            {
+                'L2': {
+                    'identity': 'L2',
+                    'side': 'left',
+                    'slot': '2',
+                    'sensor': 'DZI2L',
+                },
+            }
+            if include_unrelated_left_anchor_mismatch
+            else None
+        ),
     )
     goal = TaskGoal(
         goal_id='sequential-r3-slot1-to-slot2',
@@ -616,6 +652,35 @@ def test_slot_sensor_anchor_is_fresh_bounded_and_uses_no_position_fields():
     assert provider.slot_sensor_anchors(now_s=clock[0]) == {}
 
 
+def test_live_provider_recovery_requires_visual_state_id_advance():
+    provider = LatestVisualObservedStateProvider(
+        VisualObservedStateBuilder(LiveStateConfig(
+            observation_wait_s=0.02,
+        )),
+    )
+    first_observation = _observation()
+    provider.update_observation(first_observation)
+    provider.update_supervisor(_supervisor())
+    first_state = provider.observe()
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match=(
+            'accepted visual observation did not advance beyond '
+            'accepted-visual-10'
+        ),
+    ):
+        provider.observe_fresh_after(first_state.state_id)
+
+    second_observation = _observation()
+    second_observation['state_id'] = 'accepted-visual-11'
+    second_observation['timestamp_s'] = 10.1
+    provider.update_observation(second_observation)
+    second_state = provider.observe_fresh_after(first_state.state_id)
+
+    assert second_state.state_id == 'accepted-visual-11'
+
+
 def test_certified_first_blocker_is_excluded_and_second_staging_is_separated():
     builder = VisualObservedStateBuilder()
     observation = _observation(
@@ -669,6 +734,126 @@ def test_certified_first_blocker_is_excluded_and_second_staging_is_separated():
     assert abs(destination['target_s_m'] - 0.95) >= (
         destination['required_center_spacing_m']
     )
+
+
+def test_r4_slot4_to_slot2_receding_horizon_preserves_two_blocker_capacity():
+    """Regression for the live 0.7083 m midpoint-capacity dead end."""
+
+    goal = TaskGoal(
+        goal_id='live-r4-slot4-to-slot2-two-blocker-capacity',
+        description='Move R4 to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '2',
+            'target_shuttle': 'room315_right_shuttle_4',
+            'selection_strategy': 'explicit',
+            'payload_filter': 'any',
+        },
+    )
+    initial_state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(
+            present={'R1': '1', 'R2': '2', 'R3': '3', 'R4': '4'}
+        )),
+        now_s=100.1,
+    )
+
+    first_problem = build_pddl_problem_from_observed_state_task_goal(
+        initial_state,
+        goal,
+    )
+    first_clearance = first_problem.provenance[
+        'target_blocker_clearance_plan'
+    ]
+    first_relocation = first_clearance['ordered_relocations'][0]
+
+    assert first_clearance['observed_blockers'] == [
+        'right_shuttle_2',
+        'right_shuttle_1',
+    ]
+    assert first_clearance['deferred_blockers_require_fresh_reobservation'] == [
+        'right_shuttle_1',
+    ]
+    assert first_relocation['shuttle'] == 'right_shuttle_2'
+    assert first_relocation['destination']['target_s_m'] == pytest.approx(0.95)
+
+    # Reproduce the accepted frame after the first supervised relocation.  A
+    # sensor certificate may retain A34I even when the learned visual segment
+    # still disagrees as A34E, exactly as in the live failure report.
+    after_first_observation = _observation(
+        present={'R1': '1', 'R2': '2', 'R3': '3', 'R4': '4'}
+    )
+    r2_after_first = next(
+        item
+        for item in after_first_observation['shuttles']
+        if item['identity'] == 'R2'
+    )
+    exterior_length = public_rail_segment_lengths('right')['A34E']
+    r2_after_first.update({
+        'block': 'A34E',
+        's_m': 0.7369174957275391,
+        's_ratio': 0.7369174957275391 / exterior_length,
+        'segment_length_m': exterior_length,
+    })
+    supervisor = _supervisor()
+    supervisor['rails']['right']['switches'].update({
+        'A3': 'I',
+        'A4': 'I',
+    })
+    supervisor['rails']['right']['stoppers']['A4'] = '1'
+    certificate = _clearance_certificate('R2', target_s_m=0.95)
+    after_first_state = VisualObservedStateBuilder().build(
+        _snapshot(
+            observation=after_first_observation,
+            supervisor=supervisor,
+        ),
+        now_s=100.1,
+        runtime_clearance_certificates={'R2': certificate},
+    )
+
+    second_problem = build_pddl_problem_from_observed_state_task_goal(
+        after_first_state,
+        goal,
+        runtime_clearance_certificates={'R2': certificate},
+    )
+    second_relocation = second_problem.provenance[
+        'target_blocker_clearance_plan'
+    ]['ordered_relocations'][0]
+    second_destination = second_relocation['destination']
+
+    assert second_relocation['shuttle'] == 'right_shuttle_1'
+    assert second_destination['kind'] == 'interior_loop'
+    assert second_destination['target_s_m'] == pytest.approx(0.35)
+    assert abs(
+        second_destination['target_s_m']
+        - first_relocation['destination']['target_s_m']
+    ) >= second_destination['required_center_spacing_m']
+
+    # A process that already staged the first shuttle at the legacy midpoint
+    # must remain fail-closed.  Source changes cannot manufacture physical
+    # clearance around an already occupied pose.
+    legacy_certificate = _clearance_certificate('R2', target_s_m=0.7083)
+    legacy_state = VisualObservedStateBuilder().build(
+        _snapshot(
+            observation=after_first_observation,
+            supervisor=supervisor,
+        ),
+        now_s=100.1,
+        runtime_clearance_certificates={'R2': legacy_certificate},
+    )
+    with pytest.raises(
+        PddlProblemBuildError,
+        match='no_physically_separated_a3_interior_staging_pose',
+    ):
+        build_pddl_problem_from_observed_state_task_goal(
+            legacy_state,
+            goal,
+            runtime_clearance_certificates={'R2': legacy_certificate},
+        )
 
 
 def test_sequential_cutoff_parks_target_slot_blocker_in_free_exterior_slot():
@@ -741,6 +926,228 @@ def test_sequential_cutoff_parks_target_slot_blocker_in_free_exterior_slot():
         item['controller_position_fields_used_for_localization'] is False
         for item in certified
     )
+
+
+def test_live_sequential_cutoff_routes_around_unrelated_left_anchor_mismatch():
+    """Replay the complete attached state that previously died pre-planning."""
+
+    state, certificates, goal = _sequential_cutoff_state_and_certificates(
+        include_unrelated_left_anchor_mismatch=True,
+    )
+
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    scope = problem.provenance['planning_scope']
+    assert scope['goal_side'] == 'right'
+    assert scope['deferred_out_of_scope_location_issues'] == [{
+        'shuttle': 'left_shuttle_2',
+        'side': 'left',
+        'reason': (
+            'exact slot anchor and visual s_ratio disagree for '
+            "'left_shuttle_2': error 0.121590135 exceeds 0.120000000"
+        ),
+    }]
+
+    clearance = problem.provenance['target_blocker_clearance_plan']
+    assert clearance['required'] is True
+    assert clearance['ordered_relocations'][0] == {
+        'order': 1,
+        'shuttle': 'right_shuttle_4',
+        'reason': 'occupies_goal_target_slot',
+        'current_segment': 'A12E',
+        'current_s_ratio': 0.653074,
+        'destination': {
+            'kind': 'slot',
+            'source_slot': 'right_slot_2',
+            'target_slot': 'right_slot_4',
+            'target_sensor': 'DZI4R',
+            'selection_policy': (
+                'recovery_aware_highest_reachable_free_exterior_slot'
+            ),
+        },
+    }
+    isolated = build_first_blocker_clearance_problem(problem)
+    assert isolated.provenance['planning_phase'] == 'clear_blocker_to_slot'
+    assert isolated.selected_shuttle == 'right_shuttle_4'
+    assert isolated.goal_text == '(shuttle_at_slot right_shuttle_4 right_slot_4)'
+    assert isolated.provenance['parking_target_free_fact_retained'] == (
+        'right_slot_4'
+    )
+
+
+def test_live_any_loaded_slot3_replay_builds_normalize_then_parking_subgoal():
+    """Regression for the attached post-A34I ``any loaded`` Plan-not-found."""
+
+    observation = _observation(
+        present={'R1': '3', 'R2': '1', 'R3': '3', 'R4': '2'}
+    )
+    length = public_rail_segment_lengths('right')['A34I']
+    r1 = next(
+        item for item in observation['shuttles']
+        if item['identity'] == 'R1'
+    )
+    r1.update({
+        'block': 'A34I',
+        's_m': 0.35,
+        's_ratio': 0.35 / length,
+        'segment_length_m': length,
+    })
+    supervisor = _supervisor()
+    supervisor['rails']['right']['switches']['A4'] = 'I'
+    certificates = {
+        'R1': _clearance_certificate('R1', target_s_m=0.35),
+    }
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation, supervisor=supervisor),
+        now_s=100.1,
+        runtime_clearance_certificates=certificates,
+    )
+    goal = TaskGoal(
+        goal_id='replay-any-loaded-right-slot3',
+        description='Move any loaded shuttle to right slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'selection_strategy': 'any',
+            'shuttle_selection': 'loaded',
+            'payload_filter': 'loaded',
+            'payload_required': True,
+        },
+    )
+
+    parent = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    clearance = parent.provenance['target_blocker_clearance_plan']
+    normalization = parent.provenance['route_normalization']['by_side'][
+        'right'
+    ]
+    isolated = build_first_blocker_clearance_problem(parent)
+
+    assert parent.selected_shuttle == 'right_shuttle_4'
+    assert parent.provenance['eligible_candidate_shuttles'] == [
+        'right_shuttle_4'
+    ]
+    assert normalization['reconfiguration_required'] is True
+    assert normalization['reconfiguration_safe'] is True
+    assert normalization['certified_stopped_interior_shuttles'] == [
+        'right_shuttle_1'
+    ]
+    assert clearance['ordered_relocations'] == [{
+        'order': 1,
+        'shuttle': 'right_shuttle_3',
+        'reason': 'occupies_goal_target_slot',
+        'current_segment': 'A34E',
+        'current_s_ratio': pytest.approx(0.447469),
+        'destination': {
+            'kind': 'slot',
+            'source_slot': 'right_slot_3',
+            'target_slot': 'right_slot_4',
+            'target_sensor': 'DZI4R',
+            'selection_policy': (
+                'recovery_aware_highest_reachable_free_exterior_slot'
+            ),
+        },
+    }]
+    assert isolated.goal_text == (
+        '(shuttle_at_slot right_shuttle_3 right_slot_4)'
+    )
+    assert '(route_reconfiguration_required right)' in isolated.problem_text
+    assert '(route_reconfiguration_safe right)' in isolated.problem_text
+    assert '(slot_free right_slot_4)' in isolated.problem_text
+
+
+def test_segment_clearance_must_finish_before_topology_route_setup():
+    """A fresh post-relocation plan cannot bypass the clearance lifecycle."""
+
+    observation = _observation(present={'R2': '4', 'R4': '1'})
+    for item in observation['shuttles']:
+        if item['identity'] == 'R4':
+            length = public_rail_segment_lengths('right')['A23']
+            item.update({
+                'block': 'A23',
+                's_m': 0.2 * length,
+                's_ratio': 0.2,
+                'segment_length_m': length,
+            })
+        elif item['identity'] == 'R2':
+            length = public_rail_segment_lengths('right')['A34I']
+            item.update({
+                'block': 'A34I',
+                's_m': 0.7083,
+                's_ratio': 0.7083 / length,
+                'segment_length_m': length,
+            })
+    supervisor = _supervisor()
+    supervisor['rails']['right']['switches'].update({
+        'A3': 'I',
+        'A4': 'I',
+    })
+    supervisor['rails']['right']['stoppers']['A4'] = '1'
+    certificates = {
+        'R2': _clearance_certificate('R2', target_s_m=0.7083),
+    }
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation, supervisor=supervisor),
+        now_s=100.1,
+        runtime_clearance_certificates=certificates,
+    )
+    goal = TaskGoal(
+        goal_id='finish-segment-clearance-before-r4-slot2',
+        description='Move R4 from A23 to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '2',
+            'target_shuttle': 'room315_right_shuttle_4',
+            'selection_strategy': 'explicit',
+            'payload_filter': 'any',
+        },
+    )
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+
+    prepare = translate_plan([
+        'prepare_topology_route right_shuttle_4 right '
+        'right_topology_a23 right_slot_2 right_switch_group'
+    ])[0]
+    finish = translate_plan([
+        'finish_segment_route_clearance right_shuttle_4 right '
+        'right_topology_a23 right_slot_2'
+    ])[0]
+
+    assert '(clearance_mode right)' in problem.problem_text
+    assert '(clearance_pause_safe right)' in problem.problem_text
+    assert '(normal_route right)' not in problem.problem_text
+    assert ClosedLoopExecutive._first_action_contract_error(
+        first_step=prepare.pddl_step,
+        translated_step=prepare,
+        problem=problem,
+        task_goal=goal,
+    ) == 'missing_frozen_precondition:normal_route:right'
+    assert ClosedLoopExecutive._first_action_contract_error(
+        first_step=finish.pddl_step,
+        translated_step=finish,
+        problem=problem,
+        task_goal=goal,
+    ) == ''
 
 
 def test_certified_r2_a34i_builds_authoritative_topology_route_to_slot_1():
@@ -1015,6 +1422,440 @@ def test_a34i_ahead_blocker_gets_topology_parking_problem_first():
     ) == 'right:slot:2'
 
 
+def test_interior_blocker_isolated_before_final_transport_plan():
+    """Never make the initial plan assume a future visual relocation proof."""
+
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R2': '2', 'R4': '4'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='receding-horizon-r4-slot2',
+        description='Move R4 to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '2',
+            'target_shuttle': 'room315_right_shuttle_4',
+            'payload_filter': 'any',
+        },
+    )
+
+    parent = build_pddl_problem_from_observed_state_task_goal(state, goal)
+    relocation = parent.provenance['target_blocker_clearance_plan'][
+        'ordered_relocations'
+    ][0]
+    assert relocation['destination']['kind'] == 'interior_loop'
+
+    isolated = ClosedLoopExecutive._next_planning_problem(parent)
+
+    assert isolated.goal_text == '(clearance_relocated right_shuttle_2)'
+    assert isolated.provenance['planning_phase'] == (
+        'clear_blocker_to_interior_loop'
+    )
+    assert isolated.provenance['parent_problem_name'] == parent.problem_name
+
+
+def test_unknown_blocker_destination_fails_closed_before_planning():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R2': '2', 'R4': '4'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='unknown-clearance-destination',
+        description='Move R4 to right slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '2',
+            'target_shuttle': 'room315_right_shuttle_4',
+            'payload_filter': 'any',
+        },
+    )
+    parent = build_pddl_problem_from_observed_state_task_goal(state, goal)
+    provenance = dict(parent.provenance)
+    clearance = dict(provenance['target_blocker_clearance_plan'])
+    relocations = [dict(item) for item in clearance['ordered_relocations']]
+    relocations[0]['destination'] = {'kind': 'teleport'}
+    clearance['ordered_relocations'] = relocations
+    provenance['target_blocker_clearance_plan'] = clearance
+
+    with pytest.raises(
+        PddlProblemBuildError,
+        match='unsupported proved blocker destination.*teleport',
+    ):
+        ClosedLoopExecutive._next_planning_problem(
+            replace(parent, provenance=provenance)
+        )
+
+
+def test_loaded_any_slot_goal_recovers_mixed_topology_before_blocker_move():
+    """Replay the exact R2-topology -> loaded-R4 live failure."""
+
+    observation = _observation(
+        present={'R1': '4', 'R2': '1', 'R3': '3', 'R4': '2'}
+    )
+    length = public_rail_segment_lengths('right')['A34I']
+    r1 = next(
+        shuttle for shuttle in observation['shuttles']
+        if shuttle['identity'] == 'R1'
+    )
+    r1.update({
+        'block': 'A34I',
+        's_m': 0.5079,
+        's_ratio': 0.5079 / length,
+        'segment_length_m': length,
+    })
+    certificate = _clearance_certificate('R1', target_s_m=0.35)
+    supervisor = _supervisor()
+    supervisor['rails']['right']['switches']['A4'] = 'I'
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation, supervisor=supervisor),
+        now_s=100.1,
+        runtime_clearance_certificates={'R1': certificate},
+    )
+    goal = TaskGoal(
+        goal_id='loaded-r4-slot3-after-r2-topology-route',
+        description='Move any loaded right shuttle to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'selection_strategy': 'any',
+            'shuttle_selection': 'loaded',
+            'payload_filter': 'loaded',
+            'payload_required': True,
+        },
+    )
+
+    parent = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates={'R1': certificate},
+    )
+    isolated = build_first_blocker_clearance_problem(parent)
+    normalization = isolated.provenance['route_normalization'][
+        'by_side'
+    ]['right']
+
+    assert parent.selected_shuttle == 'right_shuttle_4'
+    relocation = parent.provenance['target_blocker_clearance_plan'][
+        'ordered_relocations'
+    ][0]
+    assert relocation['shuttle'] == 'right_shuttle_3'
+    assert relocation['destination']['target_slot'] == 'right_slot_4'
+    assert isolated.goal_text == '(shuttle_at_slot right_shuttle_3 right_slot_4)'
+    assert normalization['switches']['A4'] == 'interior'
+    assert normalization['normal_route'] is False
+    assert normalization['reconfiguration_required'] is True
+    assert normalization['reconfiguration_safe'] is True
+    assert normalization['certified_stopped_interior_shuttles'] == [
+        'right_shuttle_1'
+    ]
+    assert normalization['controller_position_fields_used_for_localization'] is False
+    assert '(route_reconfiguration_required right)' in isolated.problem_text
+    assert '(route_reconfiguration_safe right)' in isolated.problem_text
+    assert '(normal_route right)' not in isolated.problem_text
+    domain = (
+        Path(__file__).resolve().parents[1]
+        / 'config'
+        / 'room_315_vla'
+        / 'pddl'
+        / 'domain_room315_runtime.pddl'
+    ).read_text(encoding='utf-8')
+    action = domain[domain.index('(:action restore_normal_route'):]
+    action = action[:action.index('\n  (:action ', 1)]
+    assert '(route_reconfiguration_required ?side)' in action
+    assert '(route_reconfiguration_safe ?side)' in action
+    assert '(= (pending_clearances ?side) 0)' in action
+
+    with pytest.raises(
+        PddlProblemBuildError,
+        match=(
+            'mixed rail route requires normalization.*'
+            'interior_shuttle_has_no_validated_stop_certificate'
+        ),
+    ):
+        build_pddl_problem_from_observed_state_task_goal(
+            state,
+            goal,
+            runtime_clearance_certificates={},
+        )
+
+
+    mismatched_certificate = dict(certificate)
+    mismatched_certificate['target_segment'] = 'A12I'
+    with pytest.raises(
+        PddlProblemBuildError,
+        match='target segment invalid.*expected A34I.*A12I',
+    ):
+        build_pddl_problem_from_observed_state_task_goal(
+            state,
+            goal,
+            runtime_clearance_certificates={'R1': mismatched_certificate},
+        )
+
+    visual_disagreement_observation = _observation(
+        present={'R1': '4', 'R2': '1', 'R3': '3', 'R4': '2'}
+    )
+    visual_r1 = next(
+        shuttle
+        for shuttle in visual_disagreement_observation['shuttles']
+        if shuttle['identity'] == 'R1'
+    )
+    exterior_length = public_rail_segment_lengths('right')['A34E']
+    visual_r1.update({
+        'block': 'A34E',
+        's_m': 0.5079,
+        's_ratio': 0.5079 / exterior_length,
+        'segment_length_m': exterior_length,
+    })
+    visual_disagreement_state = VisualObservedStateBuilder().build(
+        _snapshot(
+            observation=visual_disagreement_observation,
+            supervisor=supervisor,
+        ),
+        now_s=100.1,
+        runtime_clearance_certificates={'R1': certificate},
+    )
+    with pytest.raises(
+        PddlProblemBuildError,
+        match=(
+            'mixed rail route requires normalization.*'
+            'interior_stop_certificate_segment_mismatch'
+        ),
+    ):
+        build_pddl_problem_from_observed_state_task_goal(
+            visual_disagreement_state,
+            goal,
+            runtime_clearance_certificates={'R1': certificate},
+        )
+
+    blocked_stopper_supervisor = _supervisor()
+    blocked_stopper_supervisor['rails']['right']['switches']['A4'] = 'I'
+    blocked_stopper_supervisor['rails']['right']['stoppers']['A2'] = '1'
+    blocked_stopper_state = VisualObservedStateBuilder().build(
+        _snapshot(
+            observation=observation,
+            supervisor=blocked_stopper_supervisor,
+        ),
+        now_s=100.1,
+        runtime_clearance_certificates={'R1': certificate},
+    )
+    with pytest.raises(
+        PddlProblemBuildError,
+        match=(
+            'mixed rail route requires normalization.*'
+            'mixed_route_has_non_open_stopper_state'
+        ),
+    ):
+        build_pddl_problem_from_observed_state_task_goal(
+            blocked_stopper_state,
+            goal,
+            runtime_clearance_certificates={'R1': certificate},
+        )
+
+
+def test_full_rail_three_blocker_choreography_has_safe_capacity_pause_and_advance():
+    """A four-shuttle rotation remains solvable after A34I reaches capacity."""
+
+    def staged_state(*, r1_slot: str, r2_slot: str, clearance_mode: bool):
+        observation = _observation(
+            present={'R1': r1_slot, 'R2': r2_slot, 'R3': '3', 'R4': '4'}
+        )
+        length = public_rail_segment_lengths('right')['A34I']
+        staged = {'R3': 0.35, 'R4': 0.95}
+        for item in observation['shuttles']:
+            if item['identity'] not in staged:
+                continue
+            s_m = staged[item['identity']]
+            item.update({
+                'block': 'A34I',
+                's_m': s_m,
+                's_ratio': s_m / length,
+                'segment_length_m': length,
+            })
+        supervisor = _supervisor()
+        if clearance_mode:
+            supervisor['rails']['right']['switches'].update({
+                'A1': 'E', 'A2': 'E', 'A3': 'I', 'A4': 'I',
+            })
+            supervisor['rails']['right']['stoppers']['A4'] = '1'
+        certificates = {
+            identity: _clearance_certificate(identity, target_s_m=s_m)
+            for identity, s_m in staged.items()
+        }
+        return (
+            VisualObservedStateBuilder().build(
+                _snapshot(observation=observation, supervisor=supervisor),
+                now_s=100.1,
+                runtime_clearance_certificates=certificates,
+            ),
+            certificates,
+        )
+
+    goal = TaskGoal(
+        goal_id='full-rail-r1-slot1-to-slot4',
+        description='Move R1 to right slot 4',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_shuttle': 'room315_right_shuttle_1',
+            'target_slot': '4',
+        },
+    )
+
+    active, certificates = staged_state(
+        r1_slot='1', r2_slot='2', clearance_mode=True
+    )
+    active_parent = build_pddl_problem_from_observed_state_task_goal(
+        active,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    active_clearance = active_parent.provenance[
+        'target_blocker_clearance_plan'
+    ]
+    assert active_clearance['ordered_relocations'][0]['destination'] == {
+        'kind': 'unavailable',
+        'reason': 'no_physically_separated_a3_interior_staging_pose',
+        'gate_switch': 'A3',
+        'target_segment': 'A34I',
+        'required_center_spacing_m': 0.57,
+    }
+    assert active_parent.provenance['route_normalization']['by_side']['right'][
+        'clearance_pause_safe'
+    ] is True
+    pause = ClosedLoopExecutive._next_planning_problem(active_parent)
+    assert pause.goal_text == '(normal_route right)'
+    assert pause.provenance['planning_phase'] == (
+        'pause_clearance_for_exterior_choreography'
+    )
+    assert '(clearance_pause_safe right)' in pause.problem_text
+    assert build_clearance_pause_problem(active_parent) == pause
+
+    normal, certificates = staged_state(
+        r1_slot='1', r2_slot='2', clearance_mode=False
+    )
+    park_parent = build_pddl_problem_from_observed_state_task_goal(
+        normal,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    park = ClosedLoopExecutive._next_planning_problem(park_parent)
+    assert park.provenance['planning_phase'] == 'clear_blocker_to_slot'
+    assert park.selected_shuttle == 'right_shuttle_2'
+    assert park.target_slot == '3'
+
+    advanced_source, certificates = staged_state(
+        r1_slot='1', r2_slot='3', clearance_mode=False
+    )
+    advance_parent = build_pddl_problem_from_observed_state_task_goal(
+        advanced_source,
+        goal,
+        runtime_clearance_certificates=certificates,
+    )
+    advance_proof = advance_parent.provenance[
+        'target_blocker_clearance_plan'
+    ]['intermediate_selected_advance']
+    assert advance_proof['source_slot'] == 'right_slot_1'
+    assert advance_proof['target_slot'] == 'right_slot_2'
+    assert advance_proof['final_target_slot'] == 'right_slot_4'
+    advance = ClosedLoopExecutive._next_planning_problem(advance_parent)
+    assert advance.goal_text == (
+        '(shuttle_at_slot right_shuttle_1 right_slot_2)'
+    )
+    assert advance.provenance['parent_final_target_slot'] == '4'
+    assert build_intermediate_selected_advance_problem(advance_parent) == advance
+
+
+def test_left_public_interior_certificate_maps_for_route_normalization():
+    observation = _observation(present={'L1': '4'})
+    length = public_rail_segment_lengths('left')['A34I']
+    l1 = next(
+        shuttle for shuttle in observation['shuttles']
+        if shuttle['identity'] == 'L1'
+    )
+    l1.update({
+        'block': 'A34I',
+        's_m': 0.35,
+        's_ratio': 0.35 / length,
+        'segment_length_m': length,
+    })
+    certificate = _clearance_certificate('R1', target_s_m=0.35)
+    certificate.update({
+        'identity': 'L1',
+        'shuttle': 'left_shuttle_1',
+        'side': 'left',
+        'entry_sensor': 'DA3IL',
+    })
+    supervisor = _supervisor()
+    supervisor['rails']['left']['switches']['A4'] = 'I'
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation, supervisor=supervisor),
+        now_s=100.1,
+        runtime_clearance_certificates={'L1': certificate},
+    )
+    goal = TaskGoal(
+        goal_id='left-public-certificate-route-normalization',
+        description='Move L1 to left slot 1',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'left',
+            'target_kind': 'slot',
+            'target_slot': '1',
+            'target_shuttle': 'room315_left_shuttle_1',
+            'payload_filter': 'any',
+        },
+    )
+
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+        runtime_clearance_certificates={'L1': certificate},
+    )
+    normalization = problem.provenance[
+        'route_normalization'
+    ]['by_side']['left']
+
+    assert normalization['interior_shuttles'] == ['left_shuttle_1']
+    assert normalization['certified_stopped_interior_shuttles'] == [
+        'left_shuttle_1'
+    ]
+    assert normalization['certificate_segment_mismatches'] == []
+    consistency = normalization['certificate_segment_consistency'][
+        'left_shuttle_1'
+    ]
+    assert consistency['certificate_target_public_segment'] == 'A34I'
+    assert consistency['certificate_target_internal_segment'] == 'A12I'
+    assert consistency['accepted_visual_internal_segment'] == 'A12I'
+    assert consistency['satisfied'] is True
+    assert normalization['reconfiguration_safe'] is True
+    assert '(route_reconfiguration_safe left)' in problem.problem_text
+
+
 def test_sequential_cutoff_isolates_one_r4_slot_parking_subproblem():
     state, certificates, goal = _sequential_cutoff_state_and_certificates()
     parent = build_pddl_problem_from_observed_state_task_goal(
@@ -1054,9 +1895,10 @@ def test_sequential_cutoff_isolates_one_r4_slot_parking_subproblem():
     assert isolated.provenance['clearance_relocation']['destination'][
         'target_slot'
     ] == 'right_slot_4'
-    # The real PlanSys2 backend canonicalizes move_shuttle_to_slot to this
-    # legacy spelling and drops the slot arguments. The isolated provenance
-    # must still override the user's R3 -> slot-2 destination for this step.
+    # Historical recorded plans may use this legacy spelling. The isolated
+    # provenance must still override the user's R3 -> slot-2 destination for
+    # replay compatibility; the live PDDL domains no longer expose that
+    # legacy action.
     assert _target_slot_for_step(
         PddlPlanStep(
             name='move_shuttle',
@@ -1117,6 +1959,32 @@ def test_clearance_certificate_fails_closed_and_expires_at_a_slot_sensor():
     }])
 
     assert provider.runtime_clearance_certificates() == {}
+
+
+def test_new_shuttle_motion_invalidates_persisted_clearance_certificate():
+    builder = VisualObservedStateBuilder()
+    provider = LatestVisualObservedStateProvider(builder)
+    provider.set_runtime_clearance_certificate(_clearance_certificate())
+    published: list[dict] = []
+    transport = VisualSupervisorTransport(
+        provider=provider,
+        publish_callback=published.append,
+    )
+
+    transport.publish_command({
+        'action': 'shuttle',
+        'command': 'ON',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+    })
+
+    assert provider.runtime_clearance_certificates() == {}
+    assert published == [{
+        'action': 'shuttle',
+        'command': 'ON',
+        'side': 'right',
+        'shuttle': 'right_shuttle_2',
+    }]
 
 
 def test_live_early_stop_observation_is_not_slot3_arrival():
@@ -1192,6 +2060,263 @@ def test_nearest_loaded_goal_is_grounded_from_visual_facts():
     assert grounded.constraints['selection_strategy'] == 'explicit'
 
 
+def test_nearest_exact_slot_uses_forward_topology_from_segment_only_position():
+    observation = _observation(present={'R4': '3'})
+    r4 = next(
+        item for item in observation['shuttles']
+        if item['identity'] == 'R4'
+    )
+    # This is past both A34E slot anchors. Reaching slot 3 requires a directed
+    # wraparound route, and the position deliberately has no exact-slot label.
+    r4['s_ratio'] = 0.9
+    r4['s_m'] = r4['segment_length_m'] * r4['s_ratio']
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation),
+        now_s=100.1,
+    )
+    assert not any(
+        fact.subject == 'room315_right_shuttle_4'
+        and fact.predicate == 'location_slot'
+        for fact in state.fused_planner_state
+    )
+    goal = TaskGoal(
+        goal_id='nearest-segment-only-wrap-to-slot3',
+        description='Move the nearest right shuttle to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'nearest',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+        },
+    )
+
+    grounded = ground_transport_task_goal(goal, state)
+
+    assert grounded.constraints['target_shuttle'] == 'room315_right_shuttle_4'
+
+
+def test_complete_atomic_transport_selection_matrix_is_groundable():
+    """Persist the finite user-request matrix instead of relying on examples."""
+
+    placements = {
+        **{f'L{index}': str(index) for index in range(1, 5)},
+        **{f'R{index}': str(index) for index in range(1, 5)},
+    }
+    validator = Room315DomainValidator()
+
+    def state_with_payload(
+        *,
+        identity: str = '',
+        payload_filter: str = 'any',
+    ):
+        observation = _observation(present=placements)
+        for item in observation['shuttles']:
+            item['loaded_state'] = (
+                'loaded' if item['identity'] in {'L4', 'R4'} else 'empty'
+            )
+            if item['identity'] == identity:
+                item['loaded_state'] = (
+                    'loaded' if payload_filter == 'loaded' else 'empty'
+                )
+        return VisualObservedStateBuilder().build(
+            _snapshot(observation=observation),
+            now_s=100.1,
+        )
+
+    generic_state = state_with_payload()
+
+    explicit_cases = 0
+    for spec in all_shuttle_specs():
+        destinations = (
+            [('slot', slot) for slot in ('1', '2', '3', '4')]
+            + [
+                ('station', station)
+                for station in STATIONS_BY_SIDE[spec.side]
+            ]
+        )
+        for payload_filter in ('loaded', 'empty', 'any'):
+            state = state_with_payload(
+                identity=spec.short_id,
+                payload_filter=payload_filter,
+            )
+            for target_kind, target_value in destinations:
+                target_fields = {
+                    'target_slot': target_value,
+                } if target_kind == 'slot' else {
+                    'target_station': target_value,
+                }
+                validation = validator.validate(TaskGoalDraft(
+                    goal_type='transport',
+                    payload_filter=payload_filter,
+                    selection_strategy='explicit',
+                    side=spec.side,
+                    target_kind=target_kind,
+                    target_shuttle=spec.gazebo_entity_name,
+                    **target_fields,
+                ))
+                assert validation.ok, validation.to_dict()
+                grounded = ground_transport_task_goal(
+                    validation.task_goal,
+                    state,
+                )
+                assert grounded.constraints['target_shuttle'] == (
+                    spec.gazebo_entity_name
+                )
+                assert grounded.constraints['payload_filter'] == payload_filter
+                if target_kind == 'station':
+                    assert grounded.constraints['target_kind'] == 'slot'
+                    assert grounded.constraints['target_station'] == target_value
+                    assert grounded.constraints['target_slot'] in {
+                        '1', '2', '3', '4',
+                    }
+                explicit_cases += 1
+
+    selection_cases = 0
+    for side in ('left', 'right'):
+        destinations = (
+            [('slot', slot) for slot in ('1', '2', '3', '4')]
+            + [
+                ('station', station)
+                for station in STATIONS_BY_SIDE[side]
+            ]
+        )
+        for selection in ('any', 'nearest'):
+            for payload_filter in ('any', 'loaded', 'empty'):
+                for target_kind, target_value in destinations:
+                    target_fields = {
+                        'target_slot': target_value,
+                    } if target_kind == 'slot' else {
+                        'target_station': target_value,
+                    }
+                    validation = validator.validate(TaskGoalDraft(
+                        goal_type='transport',
+                        payload_filter=payload_filter,
+                        selection_strategy=selection,
+                        side=side,
+                        target_kind=target_kind,
+                        **target_fields,
+                    ))
+                    assert validation.ok, validation.to_dict()
+                    grounded = ground_transport_task_goal(
+                        validation.task_goal,
+                        generic_state,
+                    )
+                    selected = grounded.constraints['target_shuttle']
+                    assert selected.startswith(f'room315_{side}_shuttle_')
+                    if payload_filter == 'loaded':
+                        assert selected.endswith('_4')
+                    elif payload_filter == 'empty':
+                        assert not selected.endswith('_4')
+                    if target_kind == 'station':
+                        assert grounded.constraints['target_kind'] == 'slot'
+                        assert grounded.constraints['target_station'] == target_value
+                    selection_cases += 1
+
+    assert explicit_cases == 144
+    assert selection_cases == 72
+
+
+def test_any_prefers_eligible_shuttle_already_at_exact_target_slot():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R1': '1', 'R2': '3'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='any-right-already-slot3',
+        description='Move any right shuttle to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'any',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+        },
+    )
+
+    grounded = ground_transport_task_goal(goal, state)
+
+    assert grounded.constraints['target_shuttle'] == 'room315_right_shuttle_2'
+
+
+def test_any_prefers_lower_cost_feasible_route_before_stable_identity():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R1': '1', 'R2': '2'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='any-right-low-cost-slot3',
+        description='Move any right shuttle to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'any',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+        },
+    )
+
+    grounded = ground_transport_task_goal(goal, state)
+
+    assert grounded.constraints['target_shuttle'] == 'room315_right_shuttle_2'
+
+
+@pytest.mark.parametrize(
+    ('legacy_constraints', 'expected_payload', 'expected_identity'),
+    [
+        ({'shuttle_selection': 'loaded'}, 'loaded', 'R4'),
+        ({'shuttle_selection': 'any', 'payload_required': False}, 'empty', 'R2'),
+    ],
+)
+def test_legacy_payload_selection_is_canonicalized_before_enumeration(
+    legacy_constraints,
+    expected_payload,
+    expected_identity,
+):
+    observation = _observation(present={'R2': '2', 'R4': '1'})
+    for item in observation['shuttles']:
+        if item['identity'] == 'R2':
+            item['loaded_state'] = 'empty'
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id=f'legacy-{expected_payload}-right-slot3',
+        description=f'Move a legacy {expected_payload} shuttle to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            **legacy_constraints,
+        },
+    )
+
+    grounded = ground_transport_task_goal(goal, state)
+
+    assert grounded.constraints['payload_filter'] == expected_payload
+    assert grounded.constraints['selection_strategy'] == 'explicit'
+    assert grounded.constraints['target_shuttle'].endswith(
+        f'_shuttle_{expected_identity[-1]}'
+    )
+
+
 def test_grounding_respects_visual_payload_filter():
     builder = VisualObservedStateBuilder()
     observation = _observation(present={'R2': '2', 'R4': '1'})
@@ -1227,6 +2352,313 @@ def test_grounding_respects_visual_payload_filter():
     )
 
 
+def test_rail_inspection_passes_through_without_transport_fields():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation()),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='inspect-right-rail-runtime',
+        description='Inspect the right rail',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'inspection',
+            'target_kind': 'rail',
+            'side': 'right',
+            'inspection_subject': 'right:rail',
+        },
+    )
+
+    assert ground_transport_task_goal(goal, state) is goal
+
+
+def test_explicit_inspection_rejects_absent_shuttle():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R4': '2'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='inspect-absent-r2',
+        description='Inspect R2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'inspection',
+            'target_kind': 'shuttle',
+            'target_shuttle': 'R2',
+            'inspection_subject': 'room315_right_shuttle_2',
+            'side': 'right',
+        },
+    )
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='explicit inspection shuttle is absent or presence is unknown:R2',
+    ):
+        ground_transport_task_goal(goal, state)
+
+
+def test_inspection_loaded_selection_is_live_grounded_to_present_identity():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R2': '1', 'R4': '2'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='inspect-loaded-right',
+        description='Inspect the loaded right shuttle',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'inspection',
+            'target_kind': 'shuttle_selection',
+            'side': 'right',
+            'selection_strategy': 'any',
+            'shuttle_selection': 'loaded',
+            'payload_required': True,
+            'inspection_subject': 'right:shuttle_selection:any:loaded',
+        },
+    )
+
+    grounded = ground_transport_task_goal(goal, state)
+
+    assert grounded.constraints['target_kind'] == 'shuttle'
+    assert grounded.constraints['target_shuttle'] == 'room315_right_shuttle_4'
+    assert grounded.constraints['inspection_subject'] == (
+        'room315_right_shuttle_4'
+    )
+    assert grounded.constraints['payload_filter'] == 'loaded'
+
+
+def test_complete_validator_accepted_inspection_matrix_is_groundable():
+    placements = {
+        **{f'L{index}': str(index) for index in range(1, 5)},
+        **{f'R{index}': str(index) for index in range(1, 5)},
+    }
+    validator = Room315DomainValidator()
+
+    def state_with_payload(
+        *,
+        identity: str = '',
+        payload_filter: str = 'any',
+    ):
+        observation = _observation(present=placements)
+        for item in observation['shuttles']:
+            item['loaded_state'] = (
+                'loaded' if item['identity'] in {'L4', 'R4'} else 'empty'
+            )
+            if item['identity'] == identity:
+                item['loaded_state'] = (
+                    'loaded' if payload_filter == 'loaded' else 'empty'
+                )
+        return VisualObservedStateBuilder().build(
+            _snapshot(observation=observation),
+            now_s=100.1,
+        )
+
+    generic_state = state_with_payload()
+    grounded_cases = 0
+
+    for spec in all_shuttle_specs():
+        for payload_filter in ('loaded', 'empty', 'any'):
+            validation = validator.validate(TaskGoalDraft(
+                goal_type='inspection',
+                target_kind='shuttle',
+                target_shuttle=spec.gazebo_entity_name,
+                payload_filter=payload_filter,
+            ))
+            assert validation.ok, validation.to_dict()
+            grounded = ground_transport_task_goal(
+                validation.task_goal,
+                state_with_payload(
+                    identity=spec.short_id,
+                    payload_filter=payload_filter,
+                ),
+            )
+            assert grounded.constraints['target_shuttle'] == (
+                spec.gazebo_entity_name
+            )
+            grounded_cases += 1
+
+    for side in ('left', 'right'):
+        for payload_filter in ('loaded', 'empty', 'any'):
+            validation = validator.validate(TaskGoalDraft(
+                goal_type='inspection',
+                target_kind='shuttle_selection',
+                side=side,
+                selection_strategy='any',
+                payload_filter=payload_filter,
+            ))
+            assert validation.ok, validation.to_dict()
+            grounded = ground_transport_task_goal(
+                validation.task_goal,
+                generic_state,
+            )
+            assert grounded.constraints['target_kind'] == 'shuttle'
+            assert grounded.constraints['side'] == side
+            grounded_cases += 1
+
+    non_shuttle_drafts = [
+        TaskGoalDraft(goal_type='inspection', target_kind='system'),
+    ]
+    for side in ('left', 'right'):
+        non_shuttle_drafts.append(TaskGoalDraft(
+            goal_type='inspection',
+            target_kind='rail',
+            side=side,
+        ))
+        non_shuttle_drafts.extend(
+            TaskGoalDraft(
+                goal_type='inspection',
+                target_kind='slot',
+                side=side,
+                target_slot=slot,
+            )
+            for slot in ('1', '2', '3', '4')
+        )
+        non_shuttle_drafts.extend(
+            TaskGoalDraft(
+                goal_type='inspection',
+                target_kind='station',
+                side=side,
+                target_station=station,
+            )
+            for station in STATIONS_BY_SIDE[side]
+        )
+    for draft in non_shuttle_drafts:
+        validation = validator.validate(draft)
+        assert validation.ok, validation.to_dict()
+        assert ground_transport_task_goal(
+            validation.task_goal,
+            generic_state,
+        ) is validation.task_goal
+        grounded_cases += 1
+
+    assert grounded_cases == 45
+
+
+def test_nearest_inspection_without_reference_fails_closed_for_clarification():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R2': '1', 'R4': '2'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='inspect-nearest-right-without-reference',
+        description='Inspect the nearest right shuttle',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'inspection',
+            'target_kind': 'shuttle_selection',
+            'side': 'right',
+            'selection_strategy': 'nearest',
+            'payload_filter': 'any',
+            'inspection_subject': 'right:shuttle_selection:nearest:any',
+        },
+    )
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='nearest shuttle inspection requires an exact slot or station',
+    ):
+        ground_transport_task_goal(goal, state)
+
+
+def test_grounding_rejects_explicit_absent_shuttle():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R4': '2'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='absent-r2-to-slot3',
+        description='Move R2 to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'target_shuttle': 'R2',
+        },
+    )
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='explicit target shuttle is absent or presence is unknown:R2',
+    ):
+        ground_transport_task_goal(goal, state)
+
+
+def test_grounding_rejects_explicit_shuttle_with_wrong_payload_state():
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=_observation(present={'R2': '1'})),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='loaded-r2-but-r2-is-empty',
+        description='Move loaded R2 to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'loaded',
+            'selection_strategy': 'explicit',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'target_shuttle': 'R2',
+        },
+    )
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='explicit target shuttle is not loaded:R2',
+    ):
+        ground_transport_task_goal(goal, state)
+
+
+def test_nearest_station_goal_uses_present_visual_shuttle_and_sensor_slot():
+    observation = _observation(present={'R2': '1', 'R4': '4'})
+    state = VisualObservedStateBuilder().build(
+        _snapshot(observation=observation),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id='nearest-right-yaskawa',
+        description='Move the nearest right shuttle to Yaskawa',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'nearest',
+            'shuttle_selection': 'nearest',
+            'side': 'right',
+            'target_kind': 'station',
+            'target_station': 'right:yaskawa',
+        },
+    )
+
+    grounded = ground_transport_task_goal(goal, state)
+
+    assert grounded.constraints['target_shuttle'] == 'room315_right_shuttle_2'
+    assert grounded.constraints['selection_strategy'] == 'explicit'
+    assert grounded.constraints['target_kind'] == 'slot'
+    assert grounded.constraints['target_station'] == 'yaskawa'
+    assert grounded.constraints['target_slot'] == '1'
+
+
 def test_slot_sensor_arrival_sends_supervised_off_and_confirms_stop():
     builder = VisualObservedStateBuilder()
     provider = LatestVisualObservedStateProvider(builder)
@@ -1238,7 +2670,7 @@ def test_slot_sensor_arrival_sends_supervised_off_and_confirms_stop():
         if command.get('command') == 'OFF':
             stopped = _supervisor(
                 decision_count=1,
-                mode='WAITING',
+                mode='DISABLED',
                 reached_target_slot='3',
             )
             transport.update_supervisor(stopped)
@@ -1252,7 +2684,7 @@ def test_slot_sensor_arrival_sends_supervised_off_and_confirms_stop():
     )
     moving = _supervisor(
         decision_count=0,
-        mode='WAITING',
+        mode='DISABLED',
         reached_target_slot='3',
     )
     target = _observation(present={'R4': '3'})
@@ -1334,7 +2766,7 @@ def test_interior_clearance_sensor_stop_is_confirmed_by_fresh_visual_state():
     def publish(command: dict) -> None:
         commands.append(command)
         transport.update_supervisor(
-            _supervisor(decision_count=1, mode='WAITING')
+            _supervisor(decision_count=1, mode='DISABLED')
         )
         transport.update_observation(observation)
 
@@ -1395,7 +2827,7 @@ def test_wrong_visual_block_cannot_bypass_interior_entry_sensor_stop():
     def publish(command: dict) -> None:
         commands.append(command)
         transport.update_supervisor(
-            _supervisor(decision_count=1, mode='WAITING')
+            _supervisor(decision_count=1, mode='DISABLED')
         )
         # A fresh but still-wrong model classification must not prevent OFF.
         transport.update_observation(observation)
@@ -1454,7 +2886,7 @@ def test_visual_clearance_prediction_alone_cannot_authorize_interior_motion():
     def publish(command: dict) -> None:
         commands.append(command)
         transport.update_supervisor(
-            _supervisor(decision_count=1, mode='WAITING')
+            _supervisor(decision_count=1, mode='DISABLED')
         )
 
     transport = VisualSupervisorTransport(
@@ -1517,9 +2949,51 @@ def test_sensor_zone_entry_without_controller_setpoint_completion_guard_stops():
 
     assert not result['arrived']
     assert 'target_slot 3' in result['reason']
+    assert 'fresh controller DISABLED state' in result['reason']
     assert commands[0]['closed_loop_executive']['mode'] == (
         'slot_sensor_setpoint_timeout_guard'
     )
+
+
+def test_controller_stop_confirmation_requires_fresh_disabled_snapshot():
+    builder = VisualObservedStateBuilder()
+    provider = LatestVisualObservedStateProvider(builder)
+    transport = VisualSupervisorTransport(
+        provider=provider,
+        publish_callback=lambda _command: None,
+        controller_stop_timeout_s=0.1,
+    )
+
+    transport.update_supervisor(_supervisor(mode='DISABLED'))
+    stale_sequence = transport.supervisor_state_count()
+    stale = transport._wait_controller_stopped(
+        side='right',
+        shuttle='R4',
+        timeout_s=0.01,
+        after_supervisor_sequence=stale_sequence,
+    )
+    assert stale['ready'] is False
+    assert 'fresh controller DISABLED state' in stale['reason']
+
+    transport.update_supervisor(_supervisor(mode='WAITING'))
+    enabled_waiting = transport._wait_controller_stopped(
+        side='right',
+        shuttle='R4',
+        timeout_s=0.01,
+        after_supervisor_sequence=stale_sequence,
+    )
+    assert enabled_waiting['ready'] is False
+
+    transport.update_supervisor(_supervisor(mode='DISABLED'))
+    disabled = transport._wait_controller_stopped(
+        side='right',
+        shuttle='R4',
+        timeout_s=0.1,
+        after_supervisor_sequence=stale_sequence,
+    )
+    assert disabled['ready'] is True
+    assert disabled['mode'] == 'DISABLED'
+    assert disabled['supervisor_sequence'] > stale_sequence
 
 
 @pytest.mark.parametrize(

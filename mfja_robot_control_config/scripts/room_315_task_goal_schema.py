@@ -23,7 +23,14 @@ SELECTION_STRATEGIES = ('nearest', 'explicit', 'any')
 PAYLOAD_FILTERS = ('loaded', 'empty', 'any')
 SIDES = ('right', 'left')
 SLOTS = ('1', '2', '3', '4')
-TARGET_KINDS = ('station', 'slot', 'shuttle', 'shuttle_selection', 'rail')
+TARGET_KINDS = (
+    'station',
+    'slot',
+    'shuttle',
+    'shuttle_selection',
+    'rail',
+    'system',
+)
 STATIONS_BY_SIDE = {
     'right': ('yaskawa', 'staubli'),
     'left': ('yaskawa', 'kuka'),
@@ -412,10 +419,25 @@ def normalize_target_kind(value: Any) -> str | None:
     text = slug_text(value)
     if not text:
         return None
-    if text in {'station', 'slot', 'shuttle', 'shuttle_selection', 'rail'}:
+    if text in {
+        'station',
+        'slot',
+        'shuttle',
+        'shuttle_selection',
+        'rail',
+        'system',
+    }:
         return text
     if text in {'track', 'line'}:
         return 'rail'
+    if text in {
+        'room',
+        'room_315',
+        'room315',
+        'room_315_system',
+        'room315_system',
+    }:
+        return 'system'
     return text
 
 

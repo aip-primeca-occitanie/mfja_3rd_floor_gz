@@ -19,6 +19,7 @@ from room_315_closed_loop_executive import PostconditionCheck
 from room_315_closed_loop_executive import _canonical_stopper_effect_state
 from room_315_closed_loop_executive import _canonical_switch_effect_state
 from room_315_closed_loop_executive import _verify_device_state
+from room_315_closed_loop_executive import _verify_shuttle_stopped
 from room_315_contracts import ObservedState
 from room_315_contracts import TaskGoal
 from room_315_observed_state_provider import ObservedStateProvider
@@ -29,6 +30,8 @@ from room_315_pddl_scenario_generator import _observed_state_from_scenario_spec
 from room_315_pddl_scenario_generator import _planner_fact
 from room_315_pddl_scenario_generator import build_pddl_problem_from_observed_state_task_goal
 from room_315_pddl_plan_translator import translate_plan
+from room_315_rail_defaults import public_rail_segment_lengths
+from room_315_task_execution import ground_transport_task_goal
 
 
 class SequenceObservedStateProvider(ObservedStateProvider):
@@ -88,6 +91,7 @@ class RecordingTransport(ScenarioTransport):
         clearance_observed_segment: str = '',
         arrival_shuttle: str = 'room315_right_shuttle_1',
         arrival_sensor: str = 'DZI3R',
+        arrival_sensor_by_shuttle: dict[str, str] | None = None,
     ) -> None:
         self.commands: list[dict] = []
         self.waits: list[tuple[str, dict]] = []
@@ -97,6 +101,9 @@ class RecordingTransport(ScenarioTransport):
         self.clearance_observed_segment = clearance_observed_segment
         self.arrival_shuttle = arrival_shuttle
         self.arrival_sensor = arrival_sensor
+        self.arrival_sensor_by_shuttle = dict(
+            arrival_sensor_by_shuttle or {}
+        )
 
     def publish_command(self, command: dict) -> None:
         self.commands.append(dict(command))
@@ -168,11 +175,20 @@ class RecordingTransport(ScenarioTransport):
         ))
         result = {'arrived': True, 'reason': ''}
         if self.deterministic_arrival_proof:
+            proof_sensor = self.arrival_sensor_by_shuttle.get(
+                shuttle,
+                self.arrival_sensor,
+            )
+            proof_shuttle = (
+                shuttle
+                if shuttle in self.arrival_sensor_by_shuttle
+                else self.arrival_shuttle
+            )
             result.update({
                 'side': side,
-                'shuttle': self.arrival_shuttle,
+                'shuttle': proof_shuttle,
                 'target_slot': target_slot,
-                'target_sensor': self.arrival_sensor,
+                'target_sensor': proof_sensor,
                 'matched_by': 'deterministic_slot_sensor',
                 'sensor_identity_confirmed': True,
                 'controller_stop_confirmed': True,
@@ -352,6 +368,26 @@ def _r4_goal() -> TaskGoal:
     )
 
 
+def _any_loaded_right_slot3_goal() -> TaskGoal:
+    return TaskGoal(
+        goal_id='loaded-r4-slot3-after-r2-topology-route',
+        description='Move any loaded right shuttle to slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'selection_strategy': 'any',
+            'shuttle_selection': 'loaded',
+            'payload_filter': 'loaded',
+            'payload_required': True,
+        },
+    )
+
+
 def _r2_slot1_goal() -> TaskGoal:
     return TaskGoal(
         goal_id='move-r2-a34i-slot1',
@@ -483,9 +519,123 @@ def _persisted_r2_clearance_certificate() -> dict:
     }
 
 
+def _persisted_r1_clearance_certificate() -> dict:
+    certificate = _persisted_r2_clearance_certificate()
+    certificate.update({
+        'identity': 'R1',
+        'shuttle': 'right_shuttle_1',
+        'target_s_m': 0.35,
+        'observed_segment': 'A34I',
+        'observed_s_m': 0.35,
+    })
+    return certificate
+
+
+def _loaded_r4_slot3_recovery_state(state_id: str) -> ObservedState:
+    """Exact accepted state after R2 returned from A34I to right slot 1."""
+
+    state = _observed_state_from_scenario_spec(ScenarioSpec(
+        goal_id=state_id,
+        side='right',
+        shuttle='right_shuttle_4',
+        source='yaskawa',
+        target='staubli',
+        target_slot='3',
+        payload_condition='loaded',
+        loaded_shuttles=('right_shuttle_4',),
+        start_slots_by_shuttle=(
+            ('right_shuttle_1', '4'),
+            ('right_shuttle_2', '1'),
+            ('right_shuttle_3', '3'),
+            ('right_shuttle_4', '2'),
+        ),
+    ))
+    facts = []
+    for fact in state.fused_planner_state:
+        if (
+            fact.subject == 'room315_right_shuttle_1'
+            and fact.predicate in {'location_slot', 'location_block'}
+        ):
+            continue
+        if (
+            fact.subject == 'right:slot:4'
+            and fact.predicate == 'occupancy'
+        ):
+            facts.append(replace(fact, value={
+                'occupied': False,
+                'shuttle': None,
+                'sensor': 'DZI4R',
+            }))
+        else:
+            facts.append(fact)
+    length = public_rail_segment_lengths('right')['A34I']
+    facts.append(_planner_fact(
+        'room315_right_shuttle_1',
+        'rail_position',
+        {
+            'side': 'right',
+            'segment': 'A34I',
+            's_m': 0.35,
+            's_ratio': 0.35 / length,
+            'segment_length_m': length,
+            'position_uncertainty_m': 0.0,
+        },
+        timestamp=state.timestamp,
+        metadata={'source': 'accepted_visual_state'},
+    ))
+    return replace(
+        state,
+        state_id=state_id,
+        fused_planner_state=facts,
+    )
+
+
+def _with_shuttle_moved_between_slots(
+    state: ObservedState,
+    *,
+    shuttle_number: str,
+    from_slot: str,
+    to_slot: str,
+    state_id: str,
+) -> ObservedState:
+    entity = f'room315_right_shuttle_{shuttle_number}'
+    facts = []
+    for fact in state.fused_planner_state:
+        if (
+            fact.subject == f'right:slot:{from_slot}'
+            and fact.predicate == 'occupancy'
+        ):
+            facts.append(replace(fact, value={
+                'occupied': False,
+                'shuttle': None,
+                'sensor': f'DZI{from_slot}R',
+            }))
+        elif (
+            fact.subject == f'right:slot:{to_slot}'
+            and fact.predicate == 'occupancy'
+        ):
+            facts.append(replace(fact, value={
+                'occupied': True,
+                'shuttle': entity,
+                'sensor': f'DZI{to_slot}R',
+            }))
+        elif fact.subject == entity and fact.predicate == 'location_slot':
+            facts.append(replace(fact, value=f'right:slot:{to_slot}'))
+        elif fact.subject == entity and fact.predicate == 'location_block':
+            facts.append(replace(fact, value=f'right:block:slot:{to_slot}'))
+        else:
+            facts.append(fact)
+    return replace(state, state_id=state_id, fused_planner_state=facts)
+
+
 def test_executes_only_first_atomic_step_from_validated_plan():
     state = _base_state('inspect-state')
-    provider = SequenceObservedStateProvider([state, state])
+    fresh_state = replace(
+        state,
+        state_id='inspect-state-fresh',
+        timestamp=state.timestamp + 0.1,
+    )
+    provider = SequenceObservedStateProvider([state, fresh_state])
     planner = SequencePlanner([
         ['inspect_state room315_system', 'prepare_switches right switch=A1 state=INTERIOR'],
     ])
@@ -503,7 +653,218 @@ def test_executes_only_first_atomic_step_from_validated_plan():
     assert len(result.executed_steps) == 1
     assert result.executed_steps[0].plan_length == 2
     assert result.executed_steps[0].symbolic_step == 'inspect_state room315_system'
-    assert [command['action'] for command in transport.commands] == ['DONE']
+    assert transport.commands == []
+    assert result.executed_steps[0].postcondition.reason == (
+        'fresh_validated_observation_inspected'
+    )
+
+
+def test_inspection_rejects_replayed_observation_as_not_fresh():
+    state = _base_state('inspect-replayed-state')
+    provider = SequenceObservedStateProvider([state, state])
+    planner = SequencePlanner([['inspect_state room315_system']])
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_replans=0),
+    ).run(_inspection_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason == (
+        'postcondition_unknown:inspection_requires_fresh_observation'
+    )
+    assert result.executed_steps[0].postcondition.details == {
+        'before_state_id': state.state_id,
+        'after_state_id': state.state_id,
+        'before_timestamp': state.timestamp,
+        'after_timestamp': state.timestamp,
+        'supervisor_command_published': False,
+    }
+    assert transport.commands == [
+        {
+            'action': 'stop_all',
+            'reason': 'postcondition_unknown',
+            'closed_loop_executive': {
+                'mode': 'safe_abort',
+                'reason': 'postcondition_unknown',
+            },
+        }
+    ]
+
+
+def test_rejects_wrong_shuttle_plan_before_any_motion_command():
+    state = _base_state('wrong-shuttle-plan')
+    provider = SequenceObservedStateProvider([state])
+    planner = SequencePlanner([[
+        'move_shuttle_to_slot right_shuttle_2 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3 speed=0.2'
+    ]])
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+    ).run(_transport_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason.startswith('planned_action_contract_violation:')
+    assert [command['action'] for command in transport.commands] == [
+        'stop_all'
+    ]
+
+
+@pytest.mark.parametrize(
+    'symbolic_step,expected_error',
+    [
+        (
+            'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+            'right_staubli right_slot_2 right_slot_3',
+            'missing_frozen_precondition:'
+            'shuttle_at_slot:right_shuttle_1:right_slot_2',
+        ),
+        (
+            'move_shuttle_via_topology_to_slot right_shuttle_1 right '
+            'right_slot_1 right_topology_a12i right_yaskawa right_staubli '
+            'right_slot_3',
+            'missing_frozen_precondition:'
+            'shuttle_at_topology_block:right_shuttle_1:right_topology_a12i',
+        ),
+    ],
+)
+def test_motion_action_must_match_frozen_source_and_topology(
+    symbolic_step,
+    expected_error,
+):
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        _base_state('frozen-motion-contract'),
+        _transport_goal(),
+    )
+    translated = translate_plan([symbolic_step])[0]
+
+    error = ClosedLoopExecutive._first_action_contract_error(
+        first_step=translated.pddl_step,
+        translated_step=translated,
+        problem=problem,
+        task_goal=_transport_goal(),
+    )
+
+    assert error == expected_error
+
+
+def test_goal_atom_cannot_satisfy_first_action_init_precondition():
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        _r4_blocked_state('goal-atom-is-not-init'),
+        _r4_goal(),
+    )
+    translated = translate_plan([
+        'begin_route_clearance right_shuttle_4 right '
+        'right_slot_2 right_slot_2'
+    ])[0]
+
+    # The target goal contains R4/right_slot_2, but the accepted initial state
+    # has R4 at right_slot_4.  Only :init may satisfy action preconditions.
+    assert '(shuttle_at_slot right_shuttle_4 right_slot_2)' in problem.goal_text
+    error = ClosedLoopExecutive._first_action_contract_error(
+        first_step=translated.pddl_step,
+        translated_step=translated,
+        problem=problem,
+        task_goal=_r4_goal(),
+    )
+
+    assert error == (
+        'missing_frozen_precondition:'
+        'shuttle_at_slot:right_shuttle_4:right_slot_2'
+    )
+
+
+def test_inspection_requires_frozen_init_authorization():
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        _base_state('inspection-init-authorization'),
+        _inspection_goal(),
+    )
+    problem = replace(
+        problem,
+        problem_text=problem.problem_text.replace(
+            '    (inspection_required room315_system)\n',
+            '',
+        ),
+    )
+    translated = translate_plan(['inspect_state room315_system'])[0]
+
+    error = ClosedLoopExecutive._first_action_contract_error(
+        first_step=translated.pddl_step,
+        translated_step=translated,
+        problem=problem,
+        task_goal=_inspection_goal(),
+    )
+
+    assert error == 'missing_frozen_inspection_target:room315_system'
+
+
+def test_topology_motion_requires_frozen_configured_route():
+    source = _with_r2_interior(
+        _r4_blocked_state('unconfigured-topology-motion'),
+        'unconfigured-topology-motion',
+        visual_s_m=1.4166 * 0.95,
+    )
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        source,
+        _r2_slot1_goal(),
+    )
+    translated = translate_plan([
+        'move_shuttle_from_segment_to_slot right_shuttle_2 right '
+        'right_topology_a34i right_yaskawa right_slot_1'
+    ])[0]
+
+    error = ClosedLoopExecutive._first_action_contract_error(
+        first_step=translated.pddl_step,
+        translated_step=translated,
+        problem=problem,
+        task_goal=_r2_slot1_goal(),
+    )
+
+    assert error == (
+        'missing_frozen_precondition:topology_route_configured:'
+        'right_shuttle_2:right_topology_a34i:right_slot_1'
+    )
+
+
+def test_missing_motion_mode_is_not_stop_proof():
+    check = _verify_shuttle_stopped(
+        _base_state('missing-motion-mode'),
+        'right_shuttle_1',
+        'right',
+    )
+
+    assert check.status == 'unknown'
+    assert check.reason == 'missing_shuttle_motion_mode_stop_proof'
+
+
+def test_unsatisfied_transport_terminal_is_not_sent_as_done_or_accepted():
+    state = _base_state('false-terminal-plan')
+    provider = SequenceObservedStateProvider([state, state])
+    planner = SequencePlanner([[
+        'finish_task right_shuttle_1 right_staubli'
+    ]])
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_replans=0),
+    ).run(_transport_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason == (
+        'postcondition_mismatch:'
+        'terminal_plan_claimed_unsatisfied_transport_goal'
+    )
+    assert all(command.get('action') != 'DONE' for command in transport.commands)
 
 
 def test_retries_recoverable_unknown_before_planning():
@@ -514,7 +875,12 @@ def test_retries_recoverable_unknown_before_planning():
         status='unknown',
     )
     known = _base_state('known-slot')
-    provider = SequenceObservedStateProvider([unknown, known, known])
+    fresh_known = replace(
+        known,
+        state_id='known-slot-fresh',
+        timestamp=known.timestamp + 0.1,
+    )
+    provider = SequenceObservedStateProvider([unknown, known, fresh_known])
     planner = SequencePlanner([['inspect_state room315_system']])
     transport = RecordingTransport()
 
@@ -529,7 +895,7 @@ def test_retries_recoverable_unknown_before_planning():
     assert result.unknown_retries == 1
     assert result.plan_attempts == 1
     assert provider.calls >= 3
-    assert [command['action'] for command in transport.commands] == ['DONE']
+    assert transport.commands == []
 
 
 def test_postcondition_mismatch_replans_before_next_command():
@@ -538,10 +904,14 @@ def test_postcondition_mismatch_replans_before_next_command():
     provider = SequenceObservedStateProvider([source, source, source, target])
     planner = SequencePlanner([
         [
-            'move_shuttle_to_slot right right_shuttle_1 right_slot_1 right_slot_3',
-            'finish_candidate_task right_shuttle_1 staubli',
+            'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+            'right_staubli right_slot_1 right_slot_3',
+            'finish_candidate_task right_shuttle_1 right_staubli right_slot_3',
         ],
-        ['move_shuttle_to_slot right right_shuttle_1 right_slot_1 right_slot_3'],
+        [
+            'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+            'right_staubli right_slot_1 right_slot_3'
+        ],
     ])
     transport = RecordingTransport()
 
@@ -568,7 +938,8 @@ def test_exact_sensor_and_controller_stop_override_visual_arrival_bias():
     source = _base_state('r1-source')
     provider = SequenceObservedStateProvider([source, source])
     planner = SequencePlanner([[
-        'move_shuttle_to_slot right right_shuttle_1 right_slot_1 right_slot_3',
+        'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3',
     ]])
     transport = RecordingTransport(deterministic_arrival_proof=True)
 
@@ -597,7 +968,18 @@ def test_r2_visual_a34i_to_slot1_executes_exact_authoritative_topology_route():
         'r2-a34i-source',
         visual_s_m=1.4166 * 0.95,
     )
-    provider = SequenceObservedStateProvider([source, source, source, source])
+    configured = _with_fact(
+        source,
+        'right:switch:A4',
+        'state',
+        value='INTERIOR',
+    )
+    provider = SequenceObservedStateProvider([
+        source,
+        configured,
+        configured,
+        configured,
+    ])
     planner = SequencePlanner([
         [
             'prepare_topology_route right_shuttle_2 right '
@@ -731,7 +1113,7 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
     cleared = _with_r2_interior(
         blocked,
         'r2-cleared',
-        visual_segment='A34E',
+        visual_segment='A34I',
     )
     arrived = _with_r4_at_slot2(cleared, 'r4-arrived')
     clearance_blocked = _with_clearance_device_mode(
@@ -770,7 +1152,7 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
             'right_yaskawa right_slot_4 right_slot_2'
         ],
     ])
-    transport = RecordingTransport(clearance_observed_segment='A34E')
+    transport = RecordingTransport(clearance_observed_segment='A34I')
 
     result = ClosedLoopExecutive(
         observed_state_provider=provider,
@@ -783,12 +1165,24 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
     assert result.plan_attempts == 4
     clearance_postcondition = result.executed_steps[1].postcondition
     assert clearance_postcondition.satisfied
-    assert (
-        clearance_postcondition.details['visual_segment_disagreement']
-        is True
+    assert clearance_postcondition.reason == (
+        'blocker_visual_interior_clearance_verified'
     )
-    assert clearance_postcondition.details['model_prediction_replaced'] is False
+    assert clearance_postcondition.details['target_segment'] == 'A34I'
+    assert clearance_postcondition.details['observed_segment'] == 'A34I'
     assert planner.problems[0].goal_text == (
+        '(clearance_relocated right_shuttle_2)'
+    )
+    assert planner.problems[0].provenance['planning_phase'] == (
+        'clear_blocker_to_interior_loop'
+    )
+    assert planner.problems[1].goal_text == (
+        '(clearance_relocated right_shuttle_2)'
+    )
+    assert planner.problems[1].provenance['planning_phase'] == (
+        'clear_blocker_to_interior_loop'
+    )
+    assert planner.problems[2].goal_text == (
         '(and (task_done right_shuttle_4 right_yaskawa) '
         '(shuttle_at_slot right_shuttle_4 right_slot_2))'
     )
@@ -838,6 +1232,16 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
         device: 'EXTERIOR'
         for device in ('A1', 'A2', 'A3', 'A4')
     }
+    restoration_metadata = restoration[0]['closed_loop_executive']
+    assert restoration_metadata['route_normalization_proof'][
+        'clearance_pause_safe'
+    ] is True
+    assert restoration_metadata['route_normalization_proof'][
+        'certified_stopped_interior_shuttles'
+    ] == ['right_shuttle_2']
+    assert restoration_metadata['runtime_clearance_certificates'][
+        'R2'
+    ]['entry_sensor'] == 'DA3IR'
     assert restoration[1]['stoppers'] == {
         device: '0'
         for device in ('A1', 'A2', 'A3', 'A4')
@@ -846,6 +1250,335 @@ def test_blocked_r4_goal_holds_clearance_mode_until_all_relocations_finish():
         wait[0] == 'fresh_visual_observation'
         for wait in transport.waits
     )
+
+
+def test_finish_clearance_rejects_visual_certificate_disagreement_before_switches():
+    blocked = _r4_blocked_state('finish-proof-blocked')
+    visual_mismatch = _with_r2_interior(
+        blocked,
+        'finish-proof-visual-mismatch',
+        visual_segment='A34E',
+    )
+    clearance_blocked = _with_clearance_device_mode(
+        blocked,
+        'finish-proof-clearance-blocked',
+    )
+    clearance_mismatch = _with_clearance_device_mode(
+        visual_mismatch,
+        'finish-proof-clearance-mismatch',
+    )
+    transport = RecordingTransport(clearance_observed_segment='A34E')
+    planner = SequencePlanner([
+        [
+            'begin_route_clearance right_shuttle_4 right '
+            'right_slot_4 right_slot_2'
+        ],
+        [
+            'relocate_blocker_to_interior right_shuttle_2 right_shuttle_4 '
+            'right right_slot_4 right_slot_2'
+        ],
+        [
+            'finish_route_clearance right_shuttle_4 right '
+            'right_slot_4 right_slot_2'
+        ],
+    ])
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([
+            blocked,
+            clearance_blocked,
+            clearance_blocked,
+            clearance_mismatch,
+            clearance_mismatch,
+        ]),
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=5),
+    ).run(_r4_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason.startswith(
+        'planned_action_contract_violation:'
+        'missing_frozen_precondition:clearance_pause_safe:right'
+    )
+    assert not any(
+        command.get('switches')
+        == {device: 'EXTERIOR' for device in ('A1', 'A2', 'A3', 'A4')}
+        for command in transport.commands
+    )
+def test_mixed_topology_is_normalized_before_slot_motion():
+    normal = _base_state('normal-after-route-recovery')
+    mixed = _with_fact(
+        replace(normal, state_id='mixed-before-route-recovery'),
+        'right:switch:A4',
+        'state',
+        value='I',
+    )
+    arrived = _state_with_r1_at_slot3('arrived-after-route-recovery')
+    provider = SequenceObservedStateProvider([
+        mixed,
+        normal,
+        normal,
+        arrived,
+        arrived,
+    ])
+    planner = SequencePlanner([
+        ['restore_normal_route right right_yaskawa right_staubli'],
+        [
+            'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+            'right_staubli right_slot_1 right_slot_3'
+        ],
+    ])
+    transport = RecordingTransport(
+        deterministic_arrival_proof=True,
+        arrival_shuttle='room315_right_shuttle_1',
+        arrival_sensor='DZI3R',
+    )
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=4),
+    ).run(_transport_goal())
+
+    assert result.succeeded
+    assert result.plan_attempts == 2
+    normalization = planner.problems[0].provenance[
+        'route_normalization'
+    ]['by_side']['right']
+    assert normalization['reconfiguration_required'] is True
+    assert normalization['reconfiguration_safe'] is True
+    assert [command['action'] for command in transport.commands] == [
+        'switches',
+        'stoppers',
+        'shuttle',
+    ]
+    assert transport.commands[0]['switches'] == {
+        device: 'EXTERIOR'
+        for device in ('A1', 'A2', 'A3', 'A4')
+    }
+    assert transport.commands[1]['stoppers'] == {
+        device: '0'
+        for device in ('A1', 'A2', 'A3', 'A4')
+    }
+    assert transport.commands[0]['closed_loop_executive']['mode'] == (
+        'restore_normal_route_before_slot_motion'
+    )
+    assert result.executed_steps[0].postcondition.reason == (
+        'normal_route_restored_before_slot_motion'
+    )
+    assert any(
+        wait[0] == 'fresh_visual_observation'
+        for wait in transport.waits
+    )
+
+
+def test_exact_loaded_r4_goal_restores_route_parks_r3_then_reaches_slot3():
+    normal = _loaded_r4_slot3_recovery_state('loaded-r4-normal-route')
+    mixed = _with_fact(
+        replace(normal, state_id='loaded-r4-mixed-route'),
+        'right:switch:A4',
+        'state',
+        value='I',
+    )
+    r3_parked = _with_shuttle_moved_between_slots(
+        normal,
+        shuttle_number='3',
+        from_slot='3',
+        to_slot='4',
+        state_id='r3-parked-at-slot4',
+    )
+    r4_arrived = _with_shuttle_moved_between_slots(
+        r3_parked,
+        shuttle_number='4',
+        from_slot='2',
+        to_slot='3',
+        state_id='loaded-r4-arrived-at-slot3',
+    )
+    provider = PersistedCertificateObservedStateProvider(
+        [
+            mixed,
+            normal,
+            normal,
+            r3_parked,
+            r3_parked,
+            r4_arrived,
+            r4_arrived,
+        ],
+        {'R1': _persisted_r1_clearance_certificate()},
+    )
+    planner = SequencePlanner([
+        ['restore_normal_route right right_staubli right_staubli'],
+        [
+            'move_shuttle_to_slot right_shuttle_3 right right_staubli '
+            'right_staubli right_slot_3 right_slot_4'
+        ],
+        [
+            'move_shuttle_to_slot right_shuttle_4 right right_yaskawa '
+            'right_staubli right_slot_2 right_slot_3'
+        ],
+    ])
+    transport = RecordingTransport(
+        deterministic_arrival_proof=True,
+        arrival_sensor_by_shuttle={
+            'right_shuttle_3': 'DZI4R',
+            'right_shuttle_4': 'DZI3R',
+        },
+    )
+
+    grounded_goal = ground_transport_task_goal(
+        _any_loaded_right_slot3_goal(),
+        mixed,
+    )
+    assert grounded_goal.constraints['target_shuttle'] == (
+        'room315_right_shuttle_4'
+    )
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=6),
+    ).run(grounded_goal)
+
+    assert result.succeeded
+    assert result.reason == 'task_goal_satisfied'
+    assert result.plan_attempts == 3
+    assert [problem.selected_shuttle for problem in planner.problems] == [
+        'right_shuttle_3',
+        'right_shuttle_3',
+        'right_shuttle_4',
+    ]
+    assert planner.problems[0].goal_text == (
+        '(shuttle_at_slot right_shuttle_3 right_slot_4)'
+    )
+    assert planner.problems[2].goal_text == (
+        '(and (task_done right_shuttle_4 right_staubli) '
+        '(shuttle_at_slot right_shuttle_4 right_slot_3))'
+    )
+    assert [command['action'] for command in transport.commands] == [
+        'switches',
+        'stoppers',
+        'shuttle',
+        'shuttle',
+    ]
+    assert [
+        command['shuttle']
+        for command in transport.commands
+        if command['action'] == 'shuttle'
+    ] == ['right_shuttle_3', 'right_shuttle_4']
+    assert [record.postcondition.reason for record in result.executed_steps] == [
+        'normal_route_restored_before_slot_motion',
+        'target_slot_sensor_identity_and_stop_verified',
+        'target_slot_sensor_identity_and_stop_verified',
+    ]
+
+
+def test_mixed_topology_normalization_fails_closed_without_stop_proof():
+    mixed = _with_fact(
+        _base_state('uncertified-interior-route'),
+        'right:switch:A4',
+        'state',
+        value='I',
+    )
+    mixed = replace(
+        mixed,
+        fused_planner_state=[
+            *mixed.fused_planner_state,
+            _planner_fact(
+                'room315_right_shuttle_1',
+                'rail_position',
+                {
+                    'side': 'right',
+                    'segment': 'A34I',
+                    's_m': 0.35,
+                    's_ratio': 0.25,
+                    'segment_length_m': 1.4,
+                    'position_uncertainty_m': 0.0,
+                },
+                timestamp=mixed.timestamp,
+                metadata={'source': 'accepted_visual_state'},
+            ),
+        ],
+    )
+    planner = SequencePlanner([
+        ['restore_normal_route right right_yaskawa right_staubli'],
+    ])
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([mixed]),
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(
+            max_steps=1,
+            max_unknown_retries=0,
+        ),
+    ).run(_transport_goal())
+
+    assert planner.problems == []
+    assert result.status == 'aborted'
+    assert result.reason.startswith(
+        'persistent_uncertainty:mixed rail route requires normalization '
+        'but no certified safe normalization'
+    )
+    assert transport.commands == [{
+        'action': 'stop_all',
+        'reason': 'persistent_uncertainty',
+        'closed_loop_executive': {
+            'mode': 'safe_abort',
+            'reason': 'persistent_uncertainty',
+        },
+    }]
+
+
+@pytest.mark.parametrize(
+    'malformed_step,expected_reason',
+    [
+        (
+            'restore_normal_route left left_yaskawa left_kuka',
+            'planned_action_contract_violation:'
+            'side_mismatch:problem=right,plan=left',
+        ),
+        (
+            'restore_normal_route right left_yaskawa right_staubli',
+            'planned_action_contract_violation:'
+            'missing_frozen_precondition:'
+            'connected:right:left_yaskawa:right_staubli',
+        ),
+    ],
+)
+def test_route_normalization_rejects_plan_argument_mismatch(
+    malformed_step,
+    expected_reason,
+):
+    normal = _base_state('normal-for-malformed-route-plan')
+    mixed = _with_fact(
+        replace(normal, state_id='mixed-for-malformed-route-plan'),
+        'right:switch:A4',
+        'state',
+        value='I',
+    )
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([mixed]),
+        planner=SequencePlanner([[malformed_step]]),
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=1),
+    ).run(_transport_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason == expected_reason
+    assert transport.commands == [{
+        'action': 'stop_all',
+        'reason': f'route_normalization_rejected:{expected_reason}',
+        'closed_loop_executive': {
+            'mode': 'safe_abort',
+            'reason': f'route_normalization_rejected:{expected_reason}',
+        },
+    }]
 
 
 def test_clearance_latch_rejects_normal_route_action_before_any_shuttle_moves():
@@ -892,6 +1625,44 @@ def test_clearance_latch_rejects_normal_route_action_before_any_shuttle_moves():
         }
         for command in transport.commands[2:]
     )
+
+
+def test_clearance_latch_rejects_route_normalization_action():
+    blocked = _r4_blocked_state()
+    clearance_blocked = _with_clearance_device_mode(
+        blocked,
+        'clearance-blocked-before-illegal-normalization',
+    )
+    planner = SequencePlanner([
+        [
+            'begin_route_clearance right_shuttle_4 right '
+            'right_slot_4 right_slot_2'
+        ],
+        ['restore_normal_route right right_staubli right_yaskawa'],
+    ])
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([
+            blocked,
+            clearance_blocked,
+            clearance_blocked,
+        ]),
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=4),
+    ).run(_r4_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason == (
+        'clearance_phase_plan_violation:'
+        'active_side=right,forbidden_action=restore_normal_route'
+    )
+    assert [command['action'] for command in transport.commands] == [
+        'switches',
+        'stoppers',
+        'stop_all',
+    ]
 
 
 def test_interior_clearance_accepts_visual_s_outlier_only_with_complete_sensor_proof():
@@ -1065,6 +1836,18 @@ def test_persistent_uncertainty_fails_closed_with_safe_abort():
     assert result.status == 'aborted'
     assert result.safe_abort_sent
     assert result.plan_attempts == 0
+    assert result.unknown_retries == 1
+    assert provider.calls == 2
+    assert result.reason == (
+        'persistent_uncertainty:'
+        'fresh_visual_observation_unavailable_after:always-unknown:'
+        'provider_replayed_same_state_id'
+    )
+    assert result.replan_reasons == (
+        'recoverable_unknown:slot occupancy fact '
+        "'right:slot:3'/'occupancy' is unknown; observation or recovery "
+        'is required before planning',
+    )
     assert transport.commands == [
         {
             'action': 'stop_all',

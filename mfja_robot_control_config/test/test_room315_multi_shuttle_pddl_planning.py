@@ -44,14 +44,22 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
         'route_cost',
         'route_blocked_by',
         'clearance_precedes',
+        'clearance_pause_safe',
+        'segment_only_location',
+        'switch_group_on_side',
+        'stopper_group_on_side',
         'inspection_done',
         'front_of',
         'waiting_for_clearance',
-        'assign_task',
-        'prepare_switches_for_shuttle',
-        'open_stoppers_for_shuttle',
-        'stop_shuttle_at_slot',
-        'wait_for_clearance',
+        'prepare_topology_route',
+        'move_shuttle_from_segment_to_slot',
+        'prepare_slot_topology_route',
+        'move_shuttle_via_topology_to_slot',
+        'begin_route_clearance',
+        'relocate_blocker_to_interior',
+        'finish_route_clearance',
+        'pause_route_clearance',
+        'restore_normal_route',
     ):
         assert required in text
     for removed in (
@@ -62,6 +70,11 @@ def test_multi_shuttle_pddl_domain_contains_fleet_predicates_and_actions():
         'carrying_payload',
         'payload_on_shuttle',
         'transfer_payload_if_applicable',
+        'assign_task',
+        'prepare_switches_for_shuttle',
+        'open_stoppers_for_shuttle',
+        'stop_shuttle_at_slot',
+        'wait_for_clearance',
     ):
         assert removed not in text
 

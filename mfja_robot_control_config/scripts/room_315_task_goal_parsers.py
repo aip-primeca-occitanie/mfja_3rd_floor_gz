@@ -143,12 +143,15 @@ class StructuredFormParser:
         elif isinstance(target, str):
             slot = normalize_slot_symbol(target)
             station = normalize_station_symbol(target)
+            target_kind = normalize_target_kind(target)
             if slot in SLOTS:
                 payload.setdefault('target_kind', 'slot')
                 payload.setdefault('target_slot', slot)
             elif station in STATION_ALIASES.values():
                 payload.setdefault('target_kind', 'station')
                 payload.setdefault('target_station', station)
+            elif target_kind == 'system':
+                payload.setdefault('target_kind', 'system')
         subject = _optional_text(payload.get('inspection_subject'))
         canonicalize_subject = False
         if subject and not payload.get('target_kind'):
@@ -164,6 +167,9 @@ class StructuredFormParser:
                 canonicalize_subject = True
             elif slug_text(subject) in {'rail', 'track', 'line'}:
                 payload.setdefault('target_kind', 'rail')
+                canonicalize_subject = True
+            elif normalize_target_kind(subject) == 'system':
+                payload.setdefault('target_kind', 'system')
                 canonicalize_subject = True
             elif re.fullmatch(r'(?:room315_)?(?:right|left)_shuttle_?[1-4]|[rl][1-4]', subject.casefold()):
                 payload.setdefault('target_kind', 'shuttle')
@@ -289,10 +295,15 @@ class DeterministicEnglishParser:
                 target_kind = 'slot'
             elif target_station:
                 target_kind = 'station'
+            elif (
+                (selection_strategy or payload_filter)
+                and re.search(r'\b(?:shuttle|carrier)\b', text)
+            ):
+                target_kind = 'shuttle_selection'
             elif re.search(r'\b(?:rail|track|line)\b', text):
                 target_kind = 'rail'
-            elif selection_strategy or payload_filter:
-                target_kind = 'shuttle_selection'
+            elif re.search(r'\b(?:system|room\s*315|room315)\b', text):
+                target_kind = 'system'
         else:
             if target_slot:
                 target_kind = 'slot'

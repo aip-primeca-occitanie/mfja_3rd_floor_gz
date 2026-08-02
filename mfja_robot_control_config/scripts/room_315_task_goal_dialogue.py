@@ -401,11 +401,22 @@ def merge_clarification_answer(pending: TaskGoalDraft, answer: str) -> Any:
             updates['target_shuttle'] = shuttle_match.group(1)
             updates['selection_strategy'] = pending.selection_strategy or 'explicit'
             updates['payload_filter'] = pending.payload_filter or 'any'
+            if (
+                pending.goal_type == 'inspection'
+                and pending.target_kind == 'shuttle_selection'
+            ):
+                updates['target_kind'] = 'shuttle'
     if not updates:
         return _MergeResult(status='no_match', draft=None)
     conflicts = []
     for key, value in updates.items():
         existing = getattr(pending, key)
+        if (
+            key == 'target_kind'
+            and existing == 'shuttle_selection'
+            and value == 'shuttle'
+        ):
+            continue
         if existing not in (None, '', value):
             conflicts.append(key)
     if conflicts:

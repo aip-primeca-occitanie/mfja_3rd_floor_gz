@@ -436,12 +436,33 @@ class RailPositionRoute:
 
 
 @dataclass(frozen=True)
+class RailOccupancyRouteCandidate:
+    """One static-switch route plus its accepted-state occupancy conflicts.
+
+    Candidate order is inherited from :func:`route_candidates_from_position_to_slot`.
+    A caller can therefore make a deterministic policy choice without losing the
+    complete switch assignment or the exact swept rail intervals used to derive
+    ``blockers``.
+    """
+
+    route: RailPositionRoute
+    blockers: tuple[RailRouteBlocker, ...]
+
+    @property
+    def clear(self) -> bool:
+        return not self.blockers
+
+
+@dataclass(frozen=True)
 class RailTopology:
     side: str
     routing_table: dict[str, dict[str, Any]]
     fixed_transitions: dict[str, str]
     slots: dict[str, RailSlotLocation]
     default_switch_state: str = 'E'
+    network_id: str = ''
+    network_source: str = ''
+    devices_source: str = ''
 
 
 class BlockReservationTable:
@@ -583,8 +604,10 @@ def load_rail_topology(
     pulling in ROS or the kinematic simulator.
     """
 
-    network = yaml.safe_load(Path(network_path).expanduser().read_text(encoding='utf-8')) or {}
-    devices = yaml.safe_load(Path(devices_path).expanduser().read_text(encoding='utf-8')) or {}
+    resolved_network_path = Path(network_path).expanduser().resolve()
+    resolved_devices_path = Path(devices_path).expanduser().resolve()
+    network = yaml.safe_load(resolved_network_path.read_text(encoding='utf-8')) or {}
+    devices = yaml.safe_load(resolved_devices_path.read_text(encoding='utf-8')) or {}
     if not isinstance(network, dict):
         raise ValueError(f'{network_path} must contain a YAML mapping')
     if not isinstance(devices, dict):
@@ -619,6 +642,9 @@ def load_rail_topology(
         fixed_transitions=fixed_transitions,
         slots=slots,
         default_switch_state=str(default_switch_state or 'E').strip().upper(),
+        network_id=str(network.get('network_id') or '').strip(),
+        network_source=str(resolved_network_path),
+        devices_source=str(resolved_devices_path),
     )
 
 
@@ -708,6 +734,52 @@ def route_plan_from_position_to_slot(
     ``s_ratio``.  It does not infer position from controller state.
     """
 
+    candidates = route_candidates_from_position_to_slot(
+        topology,
+        source_segment,
+        source_s_ratio,
+        target_slot,
+        max_segments=max_segments,
+    )
+    if candidates:
+        return candidates[0]
+
+    # ``route_candidates_from_position_to_slot`` validates all public inputs
+    # before returning, so an empty result means that all 16 complete static
+    # switch assignments either fall or cycle.
+    side = normalize_side(topology.side)
+    segment = _segment_name(source_segment)
+    ratio = float(source_s_ratio)
+    target = _slot_location(topology, target_slot)
+    raise ValueError(
+        f'no non-FALLING static-switch route from {segment}@{ratio:.6f} '
+        f'to slot {target.slot} on {side} rail; the path is unreachable or '
+        'requires conflicting switch states'
+    )
+
+
+def route_candidates_from_position_to_slot(
+    topology: RailTopology,
+    source_segment: Any,
+    source_s_ratio: Any,
+    target_slot: Any,
+    *,
+    max_segments: int = 32,
+) -> tuple[RailPositionRoute, ...]:
+    """Enumerate every non-falling complete static-switch route.
+
+    The returned tuple is deterministic.  It starts with the historical
+    all-default assignment, then orders the remaining assignments by number of
+    non-default switch values and the canonical ``A1``--``A4`` bit mask.  Two
+    candidates with the same swept intervals are intentionally retained when
+    their complete switch assignments differ: the assignments have distinct
+    reconfiguration costs and safety implications at runtime.
+
+    Every candidate carries the exact forward swept intervals in ``blocks``.
+    No controller position is consulted and no switch may change while that
+    candidate route is being traversed.
+    """
+
     side = normalize_side(topology.side)
     segment = _segment_name(source_segment)
     ratio = _optional_float(source_s_ratio)
@@ -756,6 +828,7 @@ def route_plan_from_position_to_slot(
             for index, name in enumerate(DEVICE_NAMES)
         })
 
+    candidates: list[RailPositionRoute] = []
     for switch_states in assignments:
         blocks = _trace_position_route_with_static_switches(
             topology,
@@ -767,7 +840,7 @@ def route_plan_from_position_to_slot(
         )
         if blocks is None:
             continue
-        return RailPositionRoute(
+        candidates.append(RailPositionRoute(
             side=side,
             source_segment=segment,
             source_s_ratio=ratio,
@@ -776,12 +849,74 @@ def route_plan_from_position_to_slot(
             target_s_ratio=target.s_ratio,
             blocks=blocks,
             switch_states=dict(switch_states),
-        )
+        ))
+    return tuple(candidates)
 
-    raise ValueError(
-        f'no non-FALLING static-switch route from {segment}@{ratio:.6f} '
-        f'to slot {target.slot} on {side} rail; the path is unreachable or '
-        'requires conflicting switch states'
+
+def route_blockers_for_position_route(
+    rails: dict[str, Any],
+    route: RailPositionRoute,
+    *,
+    selected_shuttle: Any = None,
+    side: str | None = None,
+) -> list[RailRouteBlocker]:
+    """Return accepted-state blockers overlapping one exact candidate route."""
+
+    rail_side = normalize_side(side or route.side)
+    if rail_side != normalize_side(route.side):
+        raise ValueError(
+            f'candidate route belongs to {route.side!r}, not {rail_side!r}'
+        )
+    return _route_blockers_for_blocks(
+        rails,
+        route.blocks,
+        selected_shuttle=selected_shuttle,
+        side=rail_side,
+    )
+
+
+def occupancy_aware_route_candidates_from_position_to_slot(
+    rails: dict[str, Any],
+    topology: RailTopology,
+    source_segment: Any,
+    source_s_ratio: Any,
+    target_slot: Any,
+    *,
+    selected_shuttle: Any = None,
+    side: str | None = None,
+    max_segments: int = 32,
+) -> tuple[RailOccupancyRouteCandidate, ...]:
+    """Enumerate deterministic routes and attach blockers for each route.
+
+    Occupancy does not alter or hide topology alternatives.  This is important
+    for a planner: a blocked exterior candidate and a clear interior candidate
+    are both returned, and the accepted-state evidence explaining that choice
+    remains available in ``blockers``.
+    """
+
+    rail_side = normalize_side(side or topology.side)
+    if rail_side != normalize_side(topology.side):
+        raise ValueError(
+            f'topology belongs to {topology.side!r}, not {rail_side!r}'
+        )
+    routes = route_candidates_from_position_to_slot(
+        topology,
+        source_segment,
+        source_s_ratio,
+        target_slot,
+        max_segments=max_segments,
+    )
+    return tuple(
+        RailOccupancyRouteCandidate(
+            route=route,
+            blockers=tuple(route_blockers_for_position_route(
+                rails,
+                route,
+                selected_shuttle=selected_shuttle,
+                side=rail_side,
+            )),
+        )
+        for route in routes
     )
 
 
@@ -802,6 +937,24 @@ def route_blockers_from_rails(
         target_slot,
         switch_states=switch_states,
     )
+    return _route_blockers_for_blocks(
+        rails,
+        route_blocks,
+        selected_shuttle=selected_shuttle,
+        side=rail_side,
+    )
+
+
+def _route_blockers_for_blocks(
+    rails: dict[str, Any],
+    route_blocks: tuple[RailRouteBlock, ...] | list[RailRouteBlock],
+    *,
+    selected_shuttle: Any = None,
+    side: str,
+) -> list[RailRouteBlocker]:
+    """Shared interval-overlap implementation for slot and candidate routes."""
+
+    rail_side = normalize_side(side)
     selected_labels = _owner_labels(selected_shuttle, side=rail_side)
     rail = rails.get(rail_side, {}) if isinstance(rails, dict) else {}
     shuttles = rail.get('shuttles', {}) if isinstance(rail, dict) else {}

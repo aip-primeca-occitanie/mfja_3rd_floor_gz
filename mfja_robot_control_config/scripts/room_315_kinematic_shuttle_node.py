@@ -34,6 +34,7 @@ from mfja_rail_interfaces.msg import SwitchState as RailSwitchState
 from mfja_rail_interfaces.srv import AddShuttle
 from room_315_kinematic_shuttle import (
     CUBIC_HERMITE_PATH_BACKEND,
+    DISABLED,
     FALLING,
     KinematicShuttleCore,
     MOVING,
@@ -1628,7 +1629,13 @@ class Room315KinematicShuttleNode(Node):
                     current_segment=initial_segment,
                     s=initial_s,
                     speed=speed,
-                    mode=MOVING if enabled and deployed and speed > 0.0 else WAITING,
+                    mode=(
+                        MOVING
+                        if enabled and deployed and speed > 0.0
+                        else WAITING
+                        if enabled and deployed
+                        else DISABLED
+                    ),
                 ),
                 falling_stop_offset_m=self.falling_stop_offset_m,
             ),
@@ -3818,7 +3825,7 @@ class Room315KinematicShuttleNode(Node):
             shuttle.motion_target_slot = ''
             shuttle.motion_target_segment = ''
             shuttle.motion_target_s = None
-            shuttle.core.state.mode = WAITING
+            shuttle.core.state.mode = DISABLED
             shuttle.stopped_by = 'NOT_DEPLOYED' if not shuttle.deployed else 'DISABLED'
             shuttle.stopper_distance_m = 0.0
             return
@@ -3846,7 +3853,10 @@ class Room315KinematicShuttleNode(Node):
             shuttle.stopper_distance_m = None
         if speed is not None:
             shuttle.core.state.speed = speed
-        if shuttle.core.state.mode in {WAITING, FALLING} and shuttle.core.state.speed > 0.0:
+        if (
+            shuttle.core.state.mode in {WAITING, DISABLED, FALLING}
+            and shuttle.core.state.speed > 0.0
+        ):
             shuttle.core.state.mode = MOVING
 
     def _reset_shuttle(self, shuttle: ManagedShuttle) -> None:
@@ -3889,7 +3899,13 @@ class Room315KinematicShuttleNode(Node):
             current_segment=initial_segment,
             s=initial_s,
             speed=shuttle.core.state.speed,
-            mode=MOVING if shuttle.enabled and shuttle.core.state.speed > 0.0 else WAITING,
+            mode=(
+                MOVING
+                if shuttle.enabled and shuttle.core.state.speed > 0.0
+                else WAITING
+                if shuttle.enabled
+                else DISABLED
+            ),
         )
         shuttle.blocked_by = None
         shuttle.collision_distance_m = None
@@ -4524,7 +4540,7 @@ class Room315KinematicShuttleNode(Node):
         occupied_poses: Dict[str, ShuttlePose],
     ) -> ShuttlePose:
         if not shuttle.enabled:
-            shuttle.core.state.mode = WAITING
+            shuttle.core.state.mode = DISABLED
             shuttle.blocked_by = None
             shuttle.collision_distance_m = None
             shuttle.stopped_by = 'DISABLED'
@@ -4574,7 +4590,7 @@ class Room315KinematicShuttleNode(Node):
             target_slot, target_segment, target_s, _distance_m = active_target
             if shuttle.core.state.current_segment == target_segment:
                 shuttle.core.state.s = target_s
-            shuttle.core.state.mode = WAITING
+            shuttle.core.state.mode = DISABLED
             shuttle.enabled = False
             shuttle.reached_target_slot = target_slot
             shuttle.stopped_by = f'TARGET_SLOT_{target_slot}'

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import itertools
 import subprocess
 import sys
 from dataclasses import replace
@@ -52,9 +53,10 @@ def _right_plansys_actions():
     return [
         '(prepare_switches right right_yaskawa right_staubli right_switch_group)',
         '(open_stoppers right right_yaskawa right_staubli right_stopper_group)',
-        '(move_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
+        '(move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3)',
         '(stop_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
-        '(finish_task right_shuttle_1 right_staubli)',
+        '(finish_candidate_task right_shuttle_1 right_staubli right_slot_3)',
     ]
 
 
@@ -110,11 +112,12 @@ def test_plansys_backend_converts_plan_items_to_internal_symbolic_plan():
     plan = backend.plan(spec, speed=0.41)
 
     assert plan == [
-        'prepare_switches right yaskawa staubli',
-        'open_stoppers right yaskawa staubli',
-        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.41',
-        'stop_shuttle right right_shuttle_1',
-        'finish_task right_shuttle_1 staubli',
+        'prepare_switches right right_yaskawa right_staubli right_switch_group',
+        'open_stoppers right right_yaskawa right_staubli right_stopper_group',
+        'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3 speed=0.41',
+        'stop_shuttle right_shuttle_1 right right_yaskawa right_staubli',
+        'finish_candidate_task right_shuttle_1 right_staubli right_slot_3',
     ]
 
 
@@ -136,11 +139,12 @@ def test_plansys_backend_canonicalizes_costed_slot_plan_actions():
     plan = backend.plan(spec, speed=0.29)
 
     assert plan == [
-        'prepare_switches right yaskawa staubli',
-        'open_stoppers right yaskawa staubli',
-        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.29',
-        'stop_shuttle right right_shuttle_1',
-        'finish_task right_shuttle_1 staubli',
+        'prepare_switches right right_yaskawa right_staubli right_switch_group',
+        'open_stoppers right right_yaskawa right_staubli right_stopper_group',
+        'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3 speed=0.29',
+        'stop_shuttle right_shuttle_1 right right_yaskawa right_staubli',
+        'finish_candidate_task right_shuttle_1 right_staubli right_slot_3',
     ]
 
 
@@ -168,7 +172,7 @@ def test_plansys_canonicalization_preserves_topology_route_and_move_endpoints():
 
     assert plan == [
         'prepare_topology_route right_shuttle_2 right '
-        'right_topology_a34i right_slot_1',
+        'right_topology_a34i right_slot_1 right_switch_group',
         'move_shuttle_from_segment_to_slot right_shuttle_2 right '
         'right_topology_a34i right_yaskawa right_slot_1 speed=0.2',
     ]
@@ -183,6 +187,86 @@ def test_plansys_canonicalization_preserves_topology_route_and_move_endpoints():
     assert translated[1].command['target_station'] == 'right_yaskawa'
     assert translated[1].command['target_slot'] == 'right_slot_1'
     assert translated[1].command['speed'] == 0.2
+
+
+def test_known_slot_alternate_route_preserves_source_occupancy_and_action_family():
+    generator = _load_module()
+    spec = generator.ScenarioSpec(
+        goal_id='known-slot-alternate-route',
+        side='right',
+        shuttle='right_shuttle_1',
+        source='yaskawa',
+        target='yaskawa',
+        target_slot='1',
+        payload_condition='loaded',
+        start_slots_by_shuttle=(
+            ('right_shuttle_1', '2'),
+            ('right_shuttle_2', '3'),
+        ),
+    )
+    problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        generator._observed_state_from_scenario_spec(spec),
+        generator._task_goal_from_scenario_spec(spec),
+    )
+    clearance = problem.provenance['target_blocker_clearance_plan']
+
+    assert clearance['topology_alternative_selected'] is True
+    assert '(shuttle_at_slot right_shuttle_1 right_slot_2)' in problem.problem_text
+    assert '(segment_only_location right_shuttle_1)' not in problem.problem_text
+    assert '(switch_group_on_side right_switch_group right)' in problem.problem_text
+
+    plan_msg = SimpleNamespace(items=[
+        SimpleNamespace(action=(
+            '(prepare_slot_topology_route right_shuttle_1 right '
+            'right_slot_2 right_topology_a12e right_slot_1 '
+            'right_switch_group)'
+        )),
+        SimpleNamespace(action=(
+            '(move_shuttle_via_topology_to_slot right_shuttle_1 right '
+            'right_slot_2 right_topology_a12e right_yaskawa right_yaskawa '
+            'right_slot_1)'
+        )),
+    ])
+    plan = generator._symbolic_plan_from_plansys_plan(
+        plan_msg,
+        spec=None,
+        problem=problem,
+        speed=0.2,
+    )
+
+    assert plan == [
+        'prepare_slot_topology_route right_shuttle_1 right right_slot_2 '
+        'right_topology_a12e right_slot_1 right_switch_group',
+        'move_shuttle_via_topology_to_slot right_shuttle_1 right '
+        'right_slot_2 right_topology_a12e right_yaskawa right_yaskawa '
+        'right_slot_1 '
+        'speed=0.2',
+    ]
+
+
+def test_plansys_canonicalization_preserves_route_normalization_endpoints():
+    generator = _load_module()
+    problem = generator.build_pddl_problem_from_spec(
+        generator.scenario_spec_from_case(RIGHT_CASE)
+    )
+    plan_msg = SimpleNamespace(items=[SimpleNamespace(action=(
+        '(restore_normal_route right right_staubli right_staubli)'
+    ))])
+
+    plan = generator._symbolic_plan_from_plansys_plan(
+        plan_msg,
+        spec=None,
+        problem=problem,
+        speed=0.2,
+    )
+
+    assert plan == [
+        'restore_normal_route right right_staubli right_staubli'
+    ]
+    translated = generator.translate_plan(plan)[0]
+    assert translated.command['action'] == 'restore_normal_route'
+    assert translated.command['source_station'] == 'right_staubli'
+    assert translated.command['target_station'] == 'right_staubli'
 
 
 @pytest.mark.parametrize(
@@ -222,6 +306,31 @@ def test_plansys_topology_plan_fails_closed_instead_of_eliding_malformed_step(
         )
 
 
+@pytest.mark.parametrize(
+    'legacy_action',
+    [
+        '(move_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
+        '(set_stoppers right A1 open)',
+        '(wait_for_clearance right_shuttle_1 right_slot_3)',
+    ],
+)
+def test_plansys_runtime_rejects_legacy_actions_without_exact_contract(
+    legacy_action,
+):
+    generator = _load_module()
+    problem = generator.build_pddl_problem_from_spec(
+        generator.scenario_spec_from_case(RIGHT_CASE)
+    )
+
+    with pytest.raises(RuntimeError, match='unsupported or malformed'):
+        generator._symbolic_plan_from_plansys_plan(
+            SimpleNamespace(items=[SimpleNamespace(action=legacy_action)]),
+            spec=None,
+            problem=problem,
+            speed=0.2,
+        )
+
+
 def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     generator = _load_module()
     spec = generator.scenario_spec_from_case(RIGHT_CASE)
@@ -235,12 +344,73 @@ def test_plansys_backend_sends_room315_domain_and_problem_to_plan_service():
     assert '(domain room315-shuttle)' in call['domain']
     assert f'(problem room315-{RIGHT_CASE})' in call['problem']
     assert '(goal_candidate right_shuttle_1)' in call['problem']
-    assert '(transport_goal_done right_staubli)' in call['problem']
-    assert '(goal_slot_reached right_slot_3)' in call['problem']
+    assert '(task_done right_shuttle_1 right_staubli)' in call['problem']
+    assert '(shuttle_at_slot right_shuttle_1 right_slot_3)' in call['problem']
     assert '(= (route_cost right_slot_1 right_slot_3) 2)' in call['problem']
     assert 'right_shuttle_1 right_shuttle_2 right_shuttle_3 right_shuttle_4' in call['problem']
     assert '(slot_occupied_by right_slot_1 right_shuttle_1)' in call['problem']
     assert '(block_free right_block_slot_3)' in call['problem']
+
+
+@pytest.mark.parametrize(
+    'selection,expected',
+    [('any', 'right_shuttle_1'), ('nearest', 'right_shuttle_2')],
+)
+def test_non_explicit_goal_is_identity_bound_before_plansys(
+    selection,
+    expected,
+):
+    generator = _load_module()
+    spec = generator.ScenarioSpec(
+        goal_id=f'identity-bound-{selection}',
+        side='right',
+        shuttle='right_shuttle_1',
+        source='yaskawa',
+        target='staubli',
+        target_slot='3',
+        payload_condition='loaded',
+        loaded_shuttles=('right_shuttle_1', 'right_shuttle_2'),
+        start_slots_by_shuttle=(
+            ('right_shuttle_1', '1'),
+            ('right_shuttle_2', '2'),
+        ),
+    )
+    state = generator._observed_state_from_scenario_spec(spec)
+    goal = generator.TaskGoal(
+        goal_id=f'identity-bound-{selection}',
+        description='Move a loaded shuttle to right slot 3',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '3',
+            'selection_strategy': selection,
+            'payload_filter': 'loaded',
+        },
+    )
+
+    problem = generator.build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+    )
+
+    assert problem.selected_shuttle == expected
+    assert problem.provenance['candidate_shuttles'] == [expected]
+    assert problem.provenance['eligible_candidate_shuttles'] == [
+        'right_shuttle_1',
+        'right_shuttle_2',
+    ] if selection == 'any' else [
+        'right_shuttle_2',
+        'right_shuttle_1',
+    ]
+    assert problem.provenance['selection_owner'] == (
+        'deterministic accepted-visual grounding before PlanSys2'
+    )
+    assert problem.problem_text.count('(goal_candidate ') == 1
+    assert f'(goal_candidate {expected})' in problem.problem_text
 
 
 def test_problem_builder_fails_closed_on_unknown_required_facts():
@@ -299,6 +469,174 @@ def _with_continuous_r2(generator, state, *, segment, s_ratio):
         metadata={'model_input_exposure': 'excluded'},
     ))
     return replace(state, fused_planner_state=facts)
+
+
+def _segment_only_two_shuttle_state(
+    generator,
+    *,
+    side,
+    selected_segment,
+    blocker_segment,
+):
+    selected = f'{side}_shuttle_4'
+    blocker = f'{side}_shuttle_2'
+    selected_entity = f'room315_{side}_shuttle_4'
+    blocker_entity = f'room315_{side}_shuttle_2'
+    far_station = 'staubli' if side == 'right' else 'kuka'
+    spec = generator.ScenarioSpec(
+        goal_id='segment-only-clearance-seed',
+        side=side,
+        shuttle=selected,
+        source='yaskawa',
+        target=far_station,
+        target_slot='3',
+        payload_condition='loaded',
+        loaded_shuttles=(selected,),
+        start_slots_by_shuttle=((selected, '1'), (blocker, '3')),
+    )
+    state = generator._observed_state_from_scenario_spec(spec)
+    facts = []
+    for fact in state.fused_planner_state:
+        if (
+            fact.subject in {selected_entity, blocker_entity}
+            and fact.predicate in {'location_slot', 'location_block'}
+        ):
+            facts.append(replace(fact, value=None))
+            continue
+        if (
+            fact.predicate == 'occupancy'
+            and (
+                ':slot:' in fact.subject
+                or ':block:slot:' in fact.subject
+            )
+        ):
+            value = (
+                {
+                    'occupied': False,
+                    'shuttle': None,
+                    'sensor': fact.value.get('sensor'),
+                }
+                if isinstance(fact.value, dict)
+                else None
+            )
+            facts.append(replace(fact, value=value))
+            continue
+        facts.append(fact)
+    for entity, segment, ratio in (
+        (selected_entity, selected_segment, 0.20),
+        (blocker_entity, blocker_segment, 0.75),
+    ):
+        facts.append(generator._planner_fact(
+            entity,
+            'rail_position',
+            {
+                'side': side,
+                'segment': segment,
+                's_ratio': ratio,
+                'position_uncertainty_m': 0.0,
+            },
+            timestamp=state.timestamp,
+            metadata={'model_input_exposure': 'excluded'},
+        ))
+    return replace(state, fused_planner_state=facts), selected, blocker
+
+
+@pytest.mark.parametrize(
+    'side,selected_segment,blocker_segment,target_slot,source_block',
+    [
+        ('right', 'A23', 'A12E', '2', 'right_topology_a23'),
+        ('right', 'A2E', 'A12E', '2', 'right_topology_a2e'),
+        ('right', 'A14', 'A34E', '4', 'right_topology_a14'),
+        ('right', 'A4E', 'A34E', '4', 'right_topology_a4e'),
+        ('left', 'A23', 'A12E', '2', 'left_topology_a14'),
+        ('left', 'A2E', 'A12E', '2', 'left_topology_a4e'),
+        ('left', 'A14', 'A34E', '4', 'left_topology_a23'),
+        ('left', 'A4E', 'A34E', '4', 'left_topology_a2e'),
+    ],
+)
+def test_segment_origin_blocker_clearance_is_representable_for_both_rails(
+    side,
+    selected_segment,
+    blocker_segment,
+    target_slot,
+    source_block,
+):
+    generator = _load_module()
+    state, selected, blocker = _segment_only_two_shuttle_state(
+        generator,
+        side=side,
+        selected_segment=selected_segment,
+        blocker_segment=blocker_segment,
+    )
+    goal = generator.TaskGoal(
+        goal_id=(
+            f'{side}-{selected_segment}-{blocker_segment}-slot-{target_slot}'
+        ),
+        description='Move a segment-bound shuttle after clearing its blocker',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': side,
+            'target_kind': 'slot',
+            'target_slot': target_slot,
+            'target_shuttle': selected,
+            'selection_strategy': 'explicit',
+            'payload_filter': 'any',
+        },
+    )
+
+    parent = generator.build_pddl_problem_from_observed_state_task_goal(
+        state,
+        goal,
+    )
+    clearance = parent.provenance['target_blocker_clearance_plan']
+    isolated = generator.build_first_blocker_clearance_problem(parent)
+
+    assert clearance['source_kind'] == 'accepted_visual_continuous_position'
+    assert clearance['observed_blockers'] == [blocker]
+    assert clearance['ordered_relocations'][0]['destination']['kind'] == (
+        'interior_loop'
+    )
+    assert f'(segment_only_location {selected})' in parent.problem_text
+    init_text = parent.problem_text.split('(:goal', 1)[0]
+    assert f'(shuttle_at_slot {selected} ' not in init_text
+    assert isolated.goal_text == f'(clearance_relocated {blocker})'
+    assert (
+        f'(topology_route_blocked_by {selected} {source_block} '
+        f'{side}_slot_{target_slot} {blocker})'
+        in isolated.problem_text
+    )
+
+    plan_message = SimpleNamespace(items=[
+        SimpleNamespace(action=(
+            f'(begin_segment_route_clearance {selected} {side} '
+            f'{source_block} {side}_slot_{target_slot})'
+        )),
+        SimpleNamespace(action=(
+            f'(relocate_segment_blocker_to_interior {blocker} {selected} '
+            f'{side} {source_block} {side}_slot_{target_slot})'
+        )),
+    ])
+    symbolic = generator._symbolic_plan_from_plansys_plan(
+        plan_message,
+        spec=None,
+        problem=isolated,
+        speed=0.2,
+    )
+    translated = generator.translate_plan(symbolic)
+
+    assert symbolic == [
+        f'begin_segment_route_clearance {selected} {side} '
+        f'{source_block} {side}_slot_{target_slot}',
+        f'relocate_segment_blocker_to_interior {blocker} {selected} {side} '
+        f'{source_block} {side}_slot_{target_slot} speed=0.2',
+    ]
+    assert [item.command['action'] for item in translated] == [
+        'switches',
+        'clearance_relocation',
+    ]
 
 
 def test_problem_builder_removes_route_clear_and_emits_order_for_blocker_ahead():
@@ -408,18 +746,25 @@ def test_interior_clearance_problem_has_one_plansys_relocation_goal():
     )
 
 
-def test_two_interior_blockers_receive_physically_separated_staging_poses():
+@pytest.mark.parametrize(
+    ('side', 'far_station'),
+    (('right', 'staubli'), ('left', 'kuka')),
+)
+def test_full_rail_clearance_plans_one_verified_relocation_per_observation(
+    side,
+    far_station,
+):
     generator = _load_module()
     spec = generator.ScenarioSpec(
-        goal_id='r4-slot4-to-slot2-all-right-present',
-        side='right',
-        shuttle='right_shuttle_4',
-        source='staubli',
+        goal_id=f'{side}-shuttle4-slot4-to-slot2-all-present',
+        side=side,
+        shuttle=f'{side}_shuttle_4',
+        source=far_station,
         target='yaskawa',
         target_slot='2',
         payload_condition='empty',
         start_slots_by_shuttle=tuple(
-            (f'right_shuttle_{index}', str(index))
+            (f'{side}_shuttle_{index}', str(index))
             for index in range(1, 5)
         ),
     )
@@ -431,20 +776,78 @@ def test_two_interior_blockers_receive_physically_separated_staging_poses():
     relocations = problem.provenance[
         'target_blocker_clearance_plan'
     ]['ordered_relocations']
-    targets = [item['destination']['target_s_m'] for item in relocations]
-    required_spacing = relocations[0]['destination'][
-        'required_center_spacing_m'
-    ]
+    clearance = problem.provenance['target_blocker_clearance_plan']
 
-    assert targets == [0.95, 0.35]
-    assert abs(targets[0] - targets[1]) >= required_spacing
-    assert '(= (pending_clearances right) 2)' in problem.problem_text
-    assert '(= (clearance_order right_shuttle_2) 1)' in problem.problem_text
-    assert '(= (clearance_order right_shuttle_1) 2)' in problem.problem_text
+    assert len(relocations) == 1
+    destination = relocations[0]['destination']
+    # The second blocker is deliberately deferred until a fresh observation,
+    # but its known existence must still preserve enough A34I capacity.  The
+    # middle single-blocker pose would make both endpoint poses unreachable on
+    # the following replan.
+    assert destination['target_s_m'] == pytest.approx(0.95)
+    assert abs(destination['target_s_m'] - 0.35) >= (
+        destination['required_center_spacing_m']
+    )
+    assert clearance['observed_blocker_count'] == 2
+    assert len(clearance['deferred_blockers_require_fresh_reobservation']) == 1
+    assert clearance['receding_horizon_clearance'] is True
+    assert clearance['stale_multi_destination_preallocation_used'] is False
+    assert f'(= (pending_clearances {side}) 1)' in problem.problem_text
+    assert f'(= (clearance_order {side}_shuttle_2) 1)' in problem.problem_text
+    assert f'(= (clearance_order {side}_shuttle_1) 2)' not in problem.problem_text
     domain = generator.PDDL_DOMAIN_PATH.read_text(encoding='utf-8')
     assert '(:action begin_route_clearance' in domain
     assert '(:action finish_route_clearance' in domain
     assert '(= (pending_clearances ?side) 0)' in domain
+
+
+@pytest.mark.parametrize('side', ('right', 'left'))
+def test_every_full_rail_public_slot_request_builds_without_stale_capacity_failure(
+    side,
+):
+    """Cover all 24 placements x 4 identities x 4 target slots per side."""
+
+    generator = _load_module()
+    far_station = 'staubli' if side == 'right' else 'kuka'
+    cases = 0
+    for placement in itertools.permutations(('1', '2', '3', '4')):
+        starts = tuple(
+            (f'{side}_shuttle_{identity}', slot)
+            for identity, slot in enumerate(placement, start=1)
+        )
+        for identity in range(1, 5):
+            source_slot = placement[identity - 1]
+            for target_slot in ('1', '2', '3', '4'):
+                spec = generator.ScenarioSpec(
+                    goal_id=(
+                        f'complete-{side}-{placement}-{identity}-{target_slot}'
+                    ),
+                    side=side,
+                    shuttle=f'{side}_shuttle_{identity}',
+                    source=(
+                        'yaskawa' if source_slot in {'1', '2'} else far_station
+                    ),
+                    target=(
+                        'yaskawa' if target_slot in {'1', '2'} else far_station
+                    ),
+                    target_slot=target_slot,
+                    payload_condition='empty',
+                    start_slots_by_shuttle=starts,
+                )
+                problem = (
+                    generator.build_pddl_problem_from_observed_state_task_goal(
+                        generator._observed_state_from_scenario_spec(spec),
+                        generator._task_goal_from_scenario_spec(spec),
+                    )
+                )
+                clearance = problem.provenance[
+                    'target_blocker_clearance_plan'
+                ]
+                assert len(clearance['ordered_relocations']) <= 1
+                assert clearance['unsupported_if_more_than_two_blockers'] is False
+                cases += 1
+
+    assert cases == 384
 
 
 def test_normal_route_preparation_requires_positive_normal_route_latch():
@@ -453,8 +856,6 @@ def test_normal_route_preparation_requires_positive_normal_route_latch():
         generator.PDDL_DOMAIN_PATH: (
             'prepare_switches',
             'open_stoppers',
-            'prepare_switches_for_shuttle',
-            'open_stoppers_for_shuttle',
         ),
         generator.PDDL_DIR / 'domain_room315_runtime.pddl': (
             'prepare_switches',

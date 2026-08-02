@@ -376,6 +376,79 @@ def test_generic_inspection_selection_drops_ungrounded_semantic_shuttle_kind():
     assert validation.task_goal.constraints['inspection_subject'] == 'right:shuttle_selection:any:loaded'
 
 
+def test_generic_inspection_on_named_rail_remains_a_shuttle_selection():
+    builder = _load_builder()
+    pipeline, _backend = _pipeline(_envelope(
+        goal_type='inspection',
+        target_kind='rail',
+        side='right',
+        selection_strategy='any',
+        payload_filter='loaded',
+    ))
+
+    parsed = pipeline.parse(
+        'inspect any loaded shuttle on the right rail'
+    )
+
+    assert parsed.ok, parsed.to_dict()
+    assert parsed.draft.target_kind == 'shuttle_selection'
+    assert parsed.draft.side == 'right'
+    assert parsed.draft.selection_strategy == 'any'
+    assert parsed.draft.payload_filter == 'loaded'
+    validation = builder.Room315DomainValidator().validate(parsed.draft)
+    assert validation.ok, validation.to_dict()
+    assert validation.task_goal.constraints['inspection_subject'] == (
+        'right:shuttle_selection:any:loaded'
+    )
+
+
+def test_nearest_shuttle_inspection_is_rejected_before_confirmation():
+    builder = _load_builder()
+    pipeline, _backend = _pipeline(_envelope(
+        goal_type='inspection',
+        target_kind='rail',
+        side='right',
+        selection_strategy='nearest',
+        payload_filter='loaded',
+    ))
+
+    parsed = pipeline.parse(
+        'inspect the nearest loaded shuttle on the right rail'
+    )
+
+    assert parsed.ok, parsed.to_dict()
+    assert parsed.draft.target_kind == 'shuttle_selection'
+    validation = builder.Room315DomainValidator().validate(
+        parsed.draft,
+        require_confirmation=True,
+    )
+    assert validation.status == 'error'
+    assert validation.task_goal is None
+    assert {issue.code for issue in validation.errors} == {
+        'unsupported_nearest_inspection_reference',
+    }
+
+
+def test_semantic_system_inspection_uses_explicit_supported_target_kind():
+    builder = _load_builder()
+    pipeline, _backend = _pipeline(_envelope(
+        goal_type='inspection',
+        target_kind='system',
+    ))
+
+    parsed = pipeline.parse('inspect the Room 315 system')
+
+    assert parsed.ok, parsed.to_dict()
+    assert parsed.draft.target_kind == 'system'
+    validation = builder.Room315DomainValidator().validate(parsed.draft)
+    assert validation.ok, validation.to_dict()
+    assert validation.task_goal.constraints == {
+        'goal_type': 'inspection',
+        'inspection_subject': 'room315_system',
+        'target_kind': 'system',
+    }
+
+
 def test_dialogue_generic_loaded_slot_requires_side_then_confirmation():
     builder = _load_builder()
     pipeline, _backend = _pipeline(_envelope(
@@ -479,10 +552,10 @@ def test_interactive_cli_auto_confirm_skips_confirmation_prompt_only():
     assert 'Reply yes to finalize' not in output
     assert 'Final validated TaskGoal:' in output
     assert '"target_station": "kuka"' in output
-    assert '"target_slot": "3"' in output
+    assert '"target_slot"' not in output
 
 
-def test_station_goal_uses_first_station_slot_without_reusing_previous_goal():
+def test_station_goal_preserves_any_sensor_slot_semantics_without_reusing_previous_goal():
     builder = _load_builder()
     pipeline, _backend = _pipeline('{}')
     manager = builder.TaskGoalDialogueManager(parser=pipeline)
@@ -499,7 +572,7 @@ def test_station_goal_uses_first_station_slot_without_reusing_previous_goal():
     assert next_goal.status == 'confirmation_required'
     assert next_goal.task_goal is None
     assert 'Rail: Left' in next_goal.confirmation_prompt
-    assert 'Destination: Station kuka / Slot 3' in next_goal.confirmation_prompt
+    assert 'Destination: Station kuka' in next_goal.confirmation_prompt
 
     final = manager.handle('yes', state=next_goal.state, timestamp=5.0)
     assert final.ok, final.to_dict()
@@ -509,10 +582,10 @@ def test_station_goal_uses_first_station_slot_without_reusing_previous_goal():
     assert constraints['side'] == 'left'
     assert constraints['target_kind'] == 'station'
     assert constraints['target_station'] == 'kuka'
-    assert constraints['target_slot'] == '3'
+    assert 'target_slot' not in constraints
 
 
-def test_yaskawa_station_requires_side_then_uses_first_slot_on_that_side():
+def test_yaskawa_station_requires_side_without_silent_first_slot_default():
     builder = _load_builder()
     pipeline, _backend = _pipeline('{}')
     manager = builder.TaskGoalDialogueManager(parser=pipeline)
@@ -526,14 +599,14 @@ def test_yaskawa_station_requires_side_then_uses_first_slot_on_that_side():
     second = manager.handle('right', state=first.state, timestamp=2.0)
     assert second.status == 'confirmation_required'
     assert 'Rail: Right' in second.confirmation_prompt
-    assert 'Destination: Station yaskawa / Slot 1' in second.confirmation_prompt
+    assert 'Destination: Station yaskawa' in second.confirmation_prompt
 
     final = manager.handle('yes', state=second.state, timestamp=3.0)
     assert final.ok, final.to_dict()
     constraints = final.task_goal.constraints
     assert constraints['side'] == 'right'
     assert constraints['target_station'] == 'yaskawa'
-    assert constraints['target_slot'] == '1'
+    assert 'target_slot' not in constraints
 
 
 def test_station_slot_mismatch_fails_closed():

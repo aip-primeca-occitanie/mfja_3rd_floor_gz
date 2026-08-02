@@ -86,6 +86,21 @@ class InitialStateTransport(FakeTransport):
         return dict(self.initial_state)
 
 
+class DirectBoundaryProbeTransport(FakeTransport):
+    def __init__(self):
+        super().__init__()
+        self.readiness_calls = 0
+        self.initial_state_calls = 0
+
+    def wait_until_ready(self, *, timeout_s):
+        self.readiness_calls += 1
+        return {'ready': True, 'reason': ''}
+
+    def wait_for_initial_scenario_state(self, *, scenario, timeout_s):
+        self.initial_state_calls += 1
+        return {'ready': True, 'reason': ''}
+
+
 class TimeoutTransport(FakeTransport):
     def wait_for_supervisor_decision(self, *, previous_count, timeout_s):
         return None
@@ -218,9 +233,10 @@ def _domain_order_right_plan():
     return [
         '(prepare_switches right right_yaskawa right_staubli right_switch_group)',
         '(open_stoppers right right_yaskawa right_staubli right_stopper_group)',
-        '(move_shuttle right_shuttle right right_yaskawa right_staubli)',
-        '(stop_shuttle right_shuttle right right_yaskawa right_staubli)',
-        '(finish_task right_shuttle right_staubli)',
+        '(move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3)',
+        '(stop_shuttle right_shuttle_1 right right_yaskawa right_staubli)',
+        '(finish_candidate_task right_shuttle_1 right_staubli right_slot_3)',
     ]
 
 
@@ -1405,14 +1421,19 @@ def test_four_right_shuttle_slot2_case_waits_for_blockers_and_target():
     ]
 
 
-def test_waiting_mode_counts_as_stopped_even_when_speed_field_is_stale():
+def test_only_disabled_mode_proves_off_when_speed_setting_is_retained():
     generator = _load_module()
 
+    assert generator._shuttle_state_is_stopped({
+        'mode': 'DISABLED',
+        'speed': 0.08,
+        'segment': 'A23',
+    }) is True
     assert generator._shuttle_state_is_stopped({
         'mode': 'WAITING',
         'speed': 0.08,
         'segment': 'A23',
-    }) is True
+    }) is False
 
 
 def test_payload_goal_spec_generates_payload_problem_text():
@@ -1499,11 +1520,12 @@ def test_plansys_domain_order_plan_generates_primitive_commands_and_event_target
     )
 
     assert scenario['symbolic_plan'] == [
-        'prepare_switches right yaskawa staubli',
-        'open_stoppers right yaskawa staubli',
-        'move_shuttle right right_shuttle_1 yaskawa staubli speed=0.44',
-        'stop_shuttle right right_shuttle_1',
-        'finish_task right_shuttle_1 staubli',
+        'prepare_switches right right_yaskawa right_staubli right_switch_group',
+        'open_stoppers right right_yaskawa right_staubli right_stopper_group',
+        'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
+        'right_staubli right_slot_1 right_slot_3 speed=0.44',
+        'stop_shuttle right_shuttle_1 right right_yaskawa right_staubli',
+        'finish_candidate_task right_shuttle_1 right_staubli right_slot_3',
     ]
     assert scenario['primitive_commands'][2]['speed'] == 0.44
     assert [target['primitive'] for target in scenario['expected_event_targets']] == [
@@ -2157,6 +2179,94 @@ def test_execute_mode_publishes_episode_start():
 
     assert result['success'] is True
     assert transport.episode_controls[0] == 'start move the loaded right shuttle to slot 3'
+
+
+def test_generic_execute_rejects_executive_macros_before_all_transport_hooks():
+    generator = _load_module()
+    cases = [
+        (
+            'prepare_topology_route right_shuttle_2 right '
+            'right_topology_a34i right_slot_1 right_switch_group',
+            {
+                'action': 'topology_route',
+                'side': 'right',
+                'shuttle': 'right_shuttle_2',
+                'source_block': 'right_topology_a34i',
+                'target_slot': 'right_slot_1',
+                'switch_group': 'right_switch_group',
+                'deterministic_macro': (
+                    'authoritative_topology_switches_and_open_stoppers'
+                ),
+            },
+        ),
+        (
+            'move_shuttle_via_topology_to_slot right_shuttle_2 right '
+            'right_slot_2 right_topology_a12e right_yaskawa '
+            'right_yaskawa right_slot_1',
+            {
+                'action': 'shuttle',
+                'side': 'right',
+                'shuttle': 'right_shuttle_2',
+                'command': 'ON',
+                'source_slot': 'right_slot_2',
+                'source_block': 'right_topology_a12e',
+                'target_slot': 'right_slot_1',
+                'topology_route_move': True,
+                'slot_topology_route_move': True,
+            },
+        ),
+        (
+            'inspect_state room315_system',
+            {
+                'action': 'DONE',
+                'status': 'success',
+                'inspection_subject': 'room315_system',
+                'deterministic_macro': 'inspect_state',
+            },
+        ),
+    ]
+
+    for symbolic_step, command in cases:
+        scenario = generator.generate_scenario(
+            case_id=RIGHT_CASE,
+            planner=_fake_backend(),
+        )
+        scenario['symbolic_plan'] = [symbolic_step]
+        scenario['primitive_commands'] = [command]
+        scenario['expected_event_targets'] = [{}]
+        assert generator.validate_candidate_scenario(scenario)['valid'] is True
+        transport = DirectBoundaryProbeTransport()
+
+        result = generator.execute_scenario(scenario, transport)
+
+        assert result['success'] is False
+        assert result['failed_step_index'] is None
+        assert result['published_commands'] == []
+        assert result['executed_command_count'] == 0
+        assert result['direct_execution_validation']['valid'] is False
+        assert 'direct execution boundary' in result['failure_reason']
+        assert transport.readiness_calls == 0
+        assert transport.initial_state_calls == 0
+        assert transport.episode_controls == []
+        assert transport.command_messages == []
+        assert transport.count == 0
+
+
+def test_offline_legacy_blocker_fixture_generation_remains_supported():
+    generator = _load_module()
+
+    scenario = generator.generate_scenario(
+        case_id=RIGHT_BLOCKER_CASE,
+        planner=_fake_backend(),
+    )
+
+    assert scenario['symbolic_plan']
+    assert scenario['primitive_commands']
+    assert generator.validate_candidate_scenario(scenario)['valid'] is True
+    assert generator.validate_generic_execution_boundary(
+        scenario,
+        command_payloads=generator.command_payloads_for_execution(scenario),
+    )['valid'] is True
 
 
 def test_execute_mode_waits_for_recorder_start_and_stop_ack():

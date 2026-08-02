@@ -105,6 +105,47 @@ def test_shuttle_on_command_speed_updates_existing_shuttle():
     assert shuttle.stopped_by is None
 
 
+def test_shuttle_off_retains_travel_speed_but_reports_disabled_mode():
+    shuttle_node = _load_module(
+        'room_315_kinematic_shuttle_node',
+        SCRIPTS_DIR / 'room_315_kinematic_shuttle_node.py',
+    )
+    node = object.__new__(shuttle_node.Room315KinematicShuttleNode)
+    shuttle = SimpleNamespace(
+        core=SimpleNamespace(
+            state=SimpleNamespace(
+                mode=shuttle_node.MOVING,
+                speed=0.2,
+            )
+        ),
+        enabled=True,
+        deployed=True,
+        blocked_by=None,
+        collision_distance_m=None,
+        motion_target_slot='2',
+        motion_target_segment='A34E',
+        motion_target_s=0.5,
+        stopped_by=None,
+        stopper_distance_m=None,
+    )
+
+    node._apply_shuttle_action(shuttle, 'DISABLE')
+
+    assert shuttle.enabled is False
+    assert shuttle.core.state.mode == shuttle_node.DISABLED
+    assert shuttle.core.state.speed == 0.2
+    assert shuttle.stopped_by == 'DISABLED'
+
+    node._fill_header = lambda _message: None
+    message = node._make_shuttle_state_message({
+        'entity_name': 'room315_right_shuttle_1',
+        'mode': shuttle.core.state.mode,
+        'speed': shuttle.core.state.speed,
+    })
+    assert message.mode == 'DISABLED'
+    assert message.speed == 0.2
+
+
 def test_generated_room315_shuttle_visual_has_no_gazebo_contact_collisions():
     shuttle_node = _load_module(
         'room_315_kinematic_shuttle_node',

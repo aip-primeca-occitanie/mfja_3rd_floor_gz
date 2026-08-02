@@ -20,20 +20,52 @@ from room_315_multi_shuttle import SIDE_IDS
 SUPPORTED_SYMBOLIC_ACTIONS = {
     'prepare_switches',
     'open_stoppers',
+    'restore_normal_route',
     'set_stoppers',
     'move_shuttle',
     'move_shuttle_to_slot',
     'prepare_topology_route',
     'move_shuttle_from_segment_to_slot',
+    'prepare_slot_topology_route',
+    'move_shuttle_via_topology_to_slot',
     'begin_route_clearance',
     'relocate_blocker_to_interior',
     'finish_route_clearance',
+    'begin_segment_route_clearance',
+    'relocate_segment_blocker_to_interior',
+    'finish_segment_route_clearance',
+    'pause_route_clearance',
     'stop_shuttle',
     'finish_task',
     'finish_candidate_task',
     'inspect_state',
     'wait_for_clearance',
 }
+EXECUTIVE_ONLY_SYMBOLIC_ACTIONS = frozenset({
+    'restore_normal_route',
+    'prepare_topology_route',
+    'move_shuttle_from_segment_to_slot',
+    'prepare_slot_topology_route',
+    'move_shuttle_via_topology_to_slot',
+    'begin_route_clearance',
+    'relocate_blocker_to_interior',
+    'finish_route_clearance',
+    'begin_segment_route_clearance',
+    'relocate_segment_blocker_to_interior',
+    'finish_segment_route_clearance',
+    'pause_route_clearance',
+})
+EXECUTIVE_ONLY_PRIMITIVE_ACTIONS = frozenset({
+    'topology_route',
+    'clearance_relocation',
+    'restore_normal_route',
+    'pause_route_clearance',
+})
+EXECUTIVE_ONLY_COMMAND_FLAGS = frozenset({
+    'topology_route_move',
+    'slot_topology_route',
+    'slot_topology_route_move',
+})
 MODEL_INPUT_ALLOWED_KEYS = {'language', 'overhead_images', 'last_command', 'observable_state'}
 FORBIDDEN_MODEL_INPUT_KEYS = {
     'action_vector',
@@ -144,6 +176,76 @@ def validate_candidate_scenario(
         'failure_reasons': issues,
         'checked_symbolic_steps': len(symbolic_plan),
         'checked_primitive_commands': len(commands),
+    }
+
+
+def validate_generic_execution_boundary(
+    scenario: dict[str, Any],
+    *,
+    command_payloads: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Reject commands that require the closed-loop executive.
+
+    Static scenario validation deliberately continues to accept these actions:
+    they are valid PDDL/data-generation representations.  The legacy
+    ``execute_scenario`` loop, however, cannot expand a deterministic macro,
+    execute one atomic action, re-observe, verify its effect, and replan.  This
+    separate boundary therefore audits the exact payloads that would be
+    published and keeps that generic publisher fail-closed.
+    """
+
+    issues: list[str] = []
+    symbolic_plan = list(scenario.get('symbolic_plan') or [])
+    commands = list(
+        command_payloads
+        if command_payloads is not None
+        else (scenario.get('primitive_commands') or [])
+    )
+
+    for index, step in enumerate(symbolic_plan):
+        action_name = _symbolic_action_name(step)
+        if action_name in EXECUTIVE_ONLY_SYMBOLIC_ACTIONS:
+            issues.append(
+                'direct execution boundary: symbolic action at index '
+                f'{index} is executive-only: {action_name!r}; use the '
+                'closed-loop executive'
+            )
+
+    for index, command in enumerate(commands):
+        if not isinstance(command, dict):
+            continue
+        action = str(command.get('action') or '').strip().casefold()
+        if action in EXECUTIVE_ONLY_PRIMITIVE_ACTIONS:
+            issues.append(
+                'direct execution boundary: primitive command at index '
+                f'{index} is executive-only: {action!r}; use the closed-loop '
+                'executive'
+            )
+        macro = str(command.get('deterministic_macro') or '').strip()
+        if macro:
+            issues.append(
+                'direct execution boundary: primitive command at index '
+                f'{index} carries deterministic_macro {macro!r}; generic '
+                'execute_scenario must not publish deterministic macros'
+            )
+        flags = sorted(
+            flag
+            for flag in EXECUTIVE_ONLY_COMMAND_FLAGS
+            if bool(command.get(flag))
+        )
+        if flags:
+            issues.append(
+                'direct execution boundary: primitive command at index '
+                f'{index} carries executive-only topology flag(s): '
+                f'{", ".join(flags)}'
+            )
+
+    return {
+        'valid': not issues,
+        'failure_reasons': _unique_strings(issues),
+        'checked_symbolic_steps': len(symbolic_plan),
+        'checked_command_payloads': len(commands),
+        'boundary': 'generic_execute_scenario_no_executive_macros',
     }
 
 
@@ -403,13 +505,24 @@ def _validate_primitive_command(
         'stoppers',
         'shuttle',
         'clearance_relocation',
+        'topology_route',
+        'restore_normal_route',
+        'pause_route_clearance',
         'DONE',
         'stop_all',
         'emergency_stop',
     }:
         issues.append(f'primitive command at index {index} has unknown action {action!r}')
         return issues
-    if action in {'switches', 'stoppers', 'shuttle', 'clearance_relocation'}:
+    if action in {
+        'switches',
+        'stoppers',
+        'shuttle',
+        'clearance_relocation',
+        'topology_route',
+        'restore_normal_route',
+        'pause_route_clearance',
+    }:
         side = str(command.get('side') or '').strip().casefold()
         if side not in SIDE_IDS:
             issues.append(f'primitive command at index {index} has invalid side {side!r}')
@@ -428,6 +541,39 @@ def _validate_primitive_command(
                     f'shuttle movement command at index {index} does not identify '
                     'the target shuttle in multi-shuttle mode'
                 )
+    if action == 'topology_route':
+        required = ('shuttle', 'source_block', 'target_slot')
+        for field in required:
+            if not str(command.get(field) or '').strip():
+                issues.append(
+                    f'topology route command at index {index} lacks {field}'
+                )
+        if command.get('deterministic_macro') not in {
+            'authoritative_topology_switches_and_open_stoppers',
+            'authoritative_slot_origin_topology_switches_and_open_stoppers',
+        }:
+            issues.append(
+                f'topology route command at index {index} lacks audited macro provenance'
+            )
+    if action == 'restore_normal_route':
+        for field in ('source_station', 'target_station'):
+            if not str(command.get(field) or '').strip():
+                issues.append(
+                    f'route restoration command at index {index} lacks {field}'
+                )
+        if command.get('deterministic_macro') != (
+            'verified_all_exterior_and_open_stoppers'
+        ):
+            issues.append(
+                f'route restoration command at index {index} lacks audited macro provenance'
+            )
+    if action == 'pause_route_clearance':
+        if command.get('deterministic_macro') != (
+            'certified_capacity_safe_all_exterior_and_open_stoppers'
+        ):
+            issues.append(
+                f'clearance pause command at index {index} lacks audited macro provenance'
+            )
     return issues
 
 

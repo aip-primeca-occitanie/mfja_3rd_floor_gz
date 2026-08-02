@@ -1,15 +1,18 @@
 ; Room 315 production runtime planning domain.
 ;
-; This is the POPF-safe execution subset. Dataset/scenario tooling keeps the
-; broader expert domain in domain_room315.pddl, while the live gateway accepts
-; explicit transport goals and executes only these supervised primitives.
+; This is the POPF-safe execution domain.  The expert and runtime domains keep
+; the same executable action surface so an offline plan cannot rely on an
+; action the supervised live gateway does not implement.  The live gateway
+; grounds explicit/any/nearest transport selection from accepted visual state.
+; Inspection is a non-actuating validated-observation operation.
 
 (define (domain room315-shuttle)
   (:requirements :strips :typing :negative-preconditions :fluents)
 
   (:types
-    inspection_target rail_side shuttle station slot block
-    switch_device stopper_device switch_group stopper_group obstacle
+    inspectable - object
+    inspection_target rail_side shuttle station slot - inspectable
+    block switch_device stopper_device switch_group stopper_group obstacle - object
   )
 
   (:predicates
@@ -21,6 +24,7 @@
     (shuttle_at_slot ?s - shuttle ?slot - slot)
     (shuttle_in_block ?s - shuttle ?block - block)
     (shuttle_at_topology_block ?s - shuttle ?block - block)
+    (segment_only_location ?s - shuttle)
     (loaded ?s - shuttle)
     (empty ?s - shuttle)
     (slot_on_side ?slot - slot ?side - rail_side)
@@ -46,6 +50,9 @@
     (clearance_destination_ready ?blocker - shuttle)
     (normal_route ?side - rail_side)
     (clearance_mode ?side - rail_side)
+    (clearance_pause_safe ?side - rail_side)
+    (route_reconfiguration_required ?side - rail_side)
+    (route_reconfiguration_safe ?side - rail_side)
     (route_reserved_by ?from - slot ?to - slot ?s - shuttle)
     (switch_state_known ?switch - switch_device)
     (switch_exterior ?switch - switch_device)
@@ -55,6 +62,8 @@
     (stopper_closed ?stopper - stopper_device)
     (switches_ready ?side - rail_side)
     (stoppers_open ?side - rail_side)
+    (switch_group_on_side ?group - switch_group ?side - rail_side)
+    (stopper_group_on_side ?group - stopper_group ?side - rail_side)
     (switches_ready_for ?s - shuttle)
     (stoppers_open_for ?s - shuttle)
     (obstacle_present ?obs - obstacle ?side - rail_side)
@@ -69,8 +78,8 @@
     (task_done ?s - shuttle ?station - station)
     (transport_goal_done ?station - station)
     (goal_slot_reached ?slot - slot)
-    (inspection_required ?target - inspection_target)
-    (inspection_done ?target - inspection_target)
+    (inspection_required ?target - inspectable)
+    (inspection_done ?target - inspectable)
   )
 
   (:functions
@@ -91,6 +100,7 @@
     :precondition (and
       (validated_state)
       (connected ?side ?from ?to)
+      (switch_group_on_side ?switches ?side)
       (normal_route ?side)
     )
     :effect (and
@@ -109,6 +119,7 @@
     :precondition (and
       (validated_state)
       (connected ?side ?from ?to)
+      (stopper_group_on_side ?stoppers ?side)
       (switches_ready ?side)
       (normal_route ?side)
     )
@@ -116,6 +127,37 @@
       (stoppers_open ?side)
       (path_ready ?side ?from ?to)
       (increase (total-cost) 1)
+    )
+  )
+
+  ; Recover a stopped rail from a previously completed mixed topology route.
+  ; The problem builder emits the two positive recovery predicates only when
+  ; every shuttle on an interior segment has a validated controller-stop
+  ; certificate and no clearance phase or external obstacle is active.  The
+  ; executive expands this into verified all-exterior switches plus open
+  ; stoppers, then re-observes before allowing any shuttle motion.
+  (:action restore_normal_route
+    :parameters (
+      ?side - rail_side
+      ?from - station
+      ?to - station
+    )
+    :precondition (and
+      (validated_state)
+      (connected ?side ?from ?to)
+      (route_reconfiguration_required ?side)
+      (route_reconfiguration_safe ?side)
+      (= (pending_clearances ?side) 0)
+    )
+    :effect (and
+      (not (route_reconfiguration_required ?side))
+      (not (route_reconfiguration_safe ?side))
+      (not (clearance_mode ?side))
+      (normal_route ?side)
+      (switches_ready ?side)
+      (stoppers_open ?side)
+      (path_ready ?side ?from ?to)
+      (increase (total-cost) 2)
     )
   )
 
@@ -137,6 +179,7 @@
       (slot_at_station ?to_slot ?to)
       (shuttle_at ?s ?from)
       (shuttle_at_slot ?s ?from_slot)
+      (slot_occupied_by ?from_slot ?s)
       (connected ?side ?from ?to)
       (path_ready ?side ?from ?to)
       (switches_ready ?side)
@@ -178,13 +221,16 @@
     :precondition (and
       (validated_state)
       (shuttle_on_side ?s ?side)
+      (segment_only_location ?s)
       (shuttle_at_topology_block ?s ?from_block)
       (block_on_side ?from_block ?side)
       (slot_on_side ?to_slot ?side)
       (topology_route_available ?s ?from_block ?to_slot)
       (topology_route_clear ?s ?from_block ?to_slot)
+      (switch_group_on_side ?switches ?side)
       (slot_free ?to_slot)
       (= (pending_clearances ?side) 0)
+      (normal_route ?side)
     )
     :effect (and
       (topology_route_configured ?s ?from_block ?to_slot)
@@ -208,6 +254,7 @@
     :precondition (and
       (validated_state)
       (shuttle_on_side ?s ?side)
+      (segment_only_location ?s)
       (shuttle_at_topology_block ?s ?from_block)
       (block_on_side ?from_block ?side)
       (slot_on_side ?to_slot ?side)
@@ -223,6 +270,90 @@
       (not (slot_free ?to_slot))
       (slot_occupied_by ?to_slot ?s)
       (slot_reserved_by ?to_slot ?s)
+      (shuttle_at_slot ?s ?to_slot)
+      (shuttle_at ?s ?to)
+      (shuttle_stopped_at ?s ?to)
+      (increase (total-cost) 10)
+    )
+  )
+
+  ; Configure an authoritative alternate route while retaining the shuttle's
+  ; exact source-slot occupancy and learned topology block.
+  (:action prepare_slot_topology_route
+    :parameters (
+      ?s - shuttle
+      ?side - rail_side
+      ?from_slot - slot
+      ?from_block - block
+      ?to_slot - slot
+      ?switches - switch_group
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?s ?side)
+      (slot_on_side ?from_slot ?side)
+      (slot_on_side ?to_slot ?side)
+      (shuttle_at_slot ?s ?from_slot)
+      (slot_occupied_by ?from_slot ?s)
+      (shuttle_at_topology_block ?s ?from_block)
+      (block_on_side ?from_block ?side)
+      (topology_route_available ?s ?from_block ?to_slot)
+      (topology_route_clear ?s ?from_block ?to_slot)
+      (switch_group_on_side ?switches ?side)
+      (slot_free ?to_slot)
+      (= (pending_clearances ?side) 0)
+      (normal_route ?side)
+    )
+    :effect (and
+      (topology_route_configured ?s ?from_block ?to_slot)
+      (switches_ready ?side)
+      (stoppers_open ?side)
+      (increase (total-cost) 2)
+    )
+  )
+
+  ; Move over that route and transfer exact source-slot occupancy to the
+  ; identity-bearing target slot used by runtime effect verification.
+  (:action move_shuttle_via_topology_to_slot
+    :parameters (
+      ?s - shuttle
+      ?side - rail_side
+      ?from_slot - slot
+      ?from_block - block
+      ?from - station
+      ?to - station
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?s ?side)
+      (slot_on_side ?from_slot ?side)
+      (slot_on_side ?to_slot ?side)
+      (slot_at_station ?from_slot ?from)
+      (slot_at_station ?to_slot ?to)
+      (shuttle_at_slot ?s ?from_slot)
+      (slot_occupied_by ?from_slot ?s)
+      (shuttle_at ?s ?from)
+      (shuttle_at_topology_block ?s ?from_block)
+      (block_on_side ?from_block ?side)
+      (topology_route_available ?s ?from_block ?to_slot)
+      (topology_route_clear ?s ?from_block ?to_slot)
+      (topology_route_configured ?s ?from_block ?to_slot)
+      (= (pending_clearances ?side) 0)
+      (slot_free ?to_slot)
+    )
+    :effect (and
+      (not (shuttle_at_topology_block ?s ?from_block))
+      (not (topology_route_configured ?s ?from_block ?to_slot))
+      (not (shuttle_at_slot ?s ?from_slot))
+      (not (slot_occupied_by ?from_slot ?s))
+      (not (shuttle_at ?s ?from))
+      (not (shuttle_stopped_at ?s ?from))
+      (slot_free ?from_slot)
+      (not (slot_free ?to_slot))
+      (slot_occupied_by ?to_slot ?s)
+      (slot_reserved_by ?to_slot ?s)
+      (route_reserved_by ?from_slot ?to_slot ?s)
       (shuttle_at_slot ?s ?to_slot)
       (shuttle_at ?s ?to)
       (shuttle_stopped_at ?s ?to)
@@ -307,6 +438,7 @@
       (shuttle_at_slot ?selected ?from_slot)
       (target_slot_for_goal ?to_slot)
       (= (pending_clearances ?side) 0)
+      (clearance_pause_safe ?side)
     )
     :effect (and
       (not (clearance_mode ?side))
@@ -314,8 +446,128 @@
       (switches_ready ?side)
       (stoppers_open ?side)
       (route_clear_between ?from_slot ?to_slot)
-      (slot_free ?to_slot)
       (increase (total-cost) 1)
+    )
+  )
+
+  ; Segment-origin counterpart of begin_route_clearance.  The selected
+  ; shuttle remains bound to its accepted visual topology block; no synthetic
+  ; source-slot occupancy is introduced.
+  (:action begin_segment_route_clearance
+    :parameters (
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_block - block
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (normal_route ?side)
+      (shuttle_on_side ?selected ?side)
+      (goal_candidate ?selected)
+      (segment_only_location ?selected)
+      (shuttle_at_topology_block ?selected ?from_block)
+      (block_on_side ?from_block ?side)
+      (slot_on_side ?to_slot ?side)
+      (target_slot_for_goal ?to_slot)
+      (topology_route_available ?selected ?from_block ?to_slot)
+      (> (pending_clearances ?side) 0)
+    )
+    :effect (and
+      (not (normal_route ?side))
+      (clearance_mode ?side)
+      (not (switches_ready ?side))
+      (not (stoppers_open ?side))
+      (increase (total-cost) 1)
+    )
+  )
+
+  ; Relocate one blocker on the frozen topology route.  This action is kept
+  ; separate from the exact-slot action because its route proof is expressed
+  ; by topology_route_blocked_by rather than a fabricated source slot.
+  (:action relocate_segment_blocker_to_interior
+    :parameters (
+      ?blocker - shuttle
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_block - block
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (shuttle_on_side ?blocker ?side)
+      (shuttle_on_side ?selected ?side)
+      (segment_only_location ?selected)
+      (shuttle_at_topology_block ?selected ?from_block)
+      (block_on_side ?from_block ?side)
+      (slot_on_side ?to_slot ?side)
+      (target_slot_for_goal ?to_slot)
+      (clearance_mode ?side)
+      (clearance_precedes ?blocker ?selected)
+      (topology_route_blocked_by ?selected ?from_block ?to_slot ?blocker)
+      (clearance_destination_ready ?blocker)
+      (> (pending_clearances ?side) 0)
+      (= (clearance_order ?blocker) (clearance_cursor ?side))
+    )
+    :effect (and
+      (clearance_relocated ?blocker)
+      (not (topology_route_blocked_by ?selected ?from_block ?to_slot ?blocker))
+      (decrease (pending_clearances ?side) 1)
+      (increase (clearance_cursor ?side) 1)
+      (increase (total-cost) 4)
+    )
+  )
+
+  ; Restore the normal route for a segment-origin goal only after the ordered
+  ; relocation certificate sequence is complete.  This establishes the
+  ; topology-route fact consumed by prepare_topology_route.
+  (:action finish_segment_route_clearance
+    :parameters (
+      ?selected - shuttle
+      ?side - rail_side
+      ?from_block - block
+      ?to_slot - slot
+    )
+    :precondition (and
+      (validated_state)
+      (clearance_mode ?side)
+      (shuttle_on_side ?selected ?side)
+      (goal_candidate ?selected)
+      (segment_only_location ?selected)
+      (shuttle_at_topology_block ?selected ?from_block)
+      (block_on_side ?from_block ?side)
+      (slot_on_side ?to_slot ?side)
+      (target_slot_for_goal ?to_slot)
+      (topology_route_available ?selected ?from_block ?to_slot)
+      (= (pending_clearances ?side) 0)
+      (clearance_pause_safe ?side)
+    )
+    :effect (and
+      (not (clearance_mode ?side))
+      (normal_route ?side)
+      (switches_ready ?side)
+      (stoppers_open ?side)
+      (topology_route_clear ?selected ?from_block ?to_slot)
+      (increase (total-cost) 1)
+    )
+  )
+
+  ; Capacity-safe phase break. The fact is emitted only when every shuttle in
+  ; the active interior route has a matching validated stop certificate.
+  (:action pause_route_clearance
+    :parameters (?side - rail_side)
+    :precondition (and
+      (validated_state)
+      (clearance_mode ?side)
+      (clearance_pause_safe ?side)
+      (> (pending_clearances ?side) 0)
+    )
+    :effect (and
+      (not (clearance_mode ?side))
+      (normal_route ?side)
+      (switches_ready ?side)
+      (stoppers_open ?side)
+      (increase (total-cost) 2)
     )
   )
 
@@ -376,6 +628,23 @@
       (task_done ?s ?station)
       (transport_goal_done ?station)
       (goal_slot_reached ?slot)
+      (increase (total-cost) 1)
+    )
+  )
+
+  ; Inspection is a non-actuating runtime operation over the already validated
+  ; observation. The closed-loop executive handles its terminal result without
+  ; issuing any shuttle, switch, or stopper motion.
+  (:action inspect_state
+    :parameters (
+      ?target - inspectable
+    )
+    :precondition (and
+      (validated_state)
+      (inspection_required ?target)
+    )
+    :effect (and
+      (inspection_done ?target)
       (increase (total-cost) 1)
     )
   )
