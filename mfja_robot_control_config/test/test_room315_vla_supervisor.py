@@ -152,6 +152,13 @@ def _guarded_normalization_command(side='right', public_segment='A34I'):
         'certified_stopped_interior_shuttles': [shuttle_id],
         'uncertified_interior_shuttles': [],
         'certificate_segment_mismatches': [],
+        'clearance_lifecycle_certified_stopped_interior_shuttles': [
+            shuttle_id
+        ],
+        'clearance_lifecycle_uncertified_interior_shuttles': [],
+        'clearance_lifecycle_visual_disagreements': [],
+        'clearance_lifecycle_visual_prediction_preserved': True,
+        'clearance_lifecycle_certificate_used_as_localization': False,
         'certificate_segment_consistency': {
             shuttle_id: {
                 'required': True,
@@ -179,6 +186,7 @@ def _guarded_normalization_command(side='right', public_segment='A34I'):
         'clearance_mode_held': True,
         'normal_route_restored': False,
         'matched_by': 'interior_entry_sensor_plus_bounded_travel_time',
+        'model_prediction_replaced': False,
         'controller_position_fields_used_for_localization': False,
     }
     return {
@@ -399,6 +407,112 @@ def test_safety_decoder_accepts_both_interior_branches_on_both_rails():
             )
 
 
+def test_active_clearance_finish_accepts_executor_proved_visual_disagreement():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    _stage_guarded_interior_shuttle(supervisor)
+    command = _guarded_normalization_command()
+    proof = command['closed_loop_executive']['route_normalization_proof']
+    shuttle = 'right_shuttle_1'
+    proof.update({
+        'visually_interior_shuttles': [],
+        'certified_stopped_interior_shuttles': [],
+        'uncertified_interior_shuttles': [shuttle],
+        'certificate_segment_mismatches': [shuttle],
+        'clearance_lifecycle_visual_disagreements': [shuttle],
+    })
+    proof['certificate_segment_consistency'][shuttle].update({
+        'satisfied': False,
+        'accepted_visual_internal_segment': 'A34E',
+        'certificate_used_as_persisted_execution_effect': True,
+        'planning_origin_segment': 'A34I',
+        'raw_visual_prediction_preserved': True,
+        'reason': 'certificate_and_visual_segment_disagree',
+    })
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is True
+    corrected = decision['corrected_action']['closed_loop_executive']
+    assert corrected['route_normalization_proof'][
+        'clearance_lifecycle_visual_prediction_preserved'
+    ] is True
+    assert corrected['controller_position_fields_used_for_localization'] is False
+
+
+def test_active_clearance_finish_accepts_dual_branch_live_replay():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    _stage_guarded_interior_shuttle(supervisor)
+    supervisor.rails['right']['shuttles']['room315_right_shuttle_4'] = {
+        'mode': 'DISABLED',
+        'segment': 'A12I',
+        's': 0.8411016464233398,
+        'speed': 0.2,
+    }
+    command = _guarded_normalization_command()
+    metadata = command['closed_loop_executive']
+    proof = metadata['route_normalization_proof']
+    red = 'right_shuttle_1'
+    yellow = 'right_shuttle_4'
+    proof.update({
+        'interior_shuttles': [red, yellow],
+        'visually_interior_shuttles': [yellow],
+        'certified_interior_shuttles': [red, yellow],
+        'certified_stopped_interior_shuttles': [yellow],
+        'uncertified_interior_shuttles': [red],
+        'certificate_segment_mismatches': [red],
+        'clearance_lifecycle_certified_stopped_interior_shuttles': [
+            red,
+            yellow,
+        ],
+        'clearance_lifecycle_visual_disagreements': [red],
+    })
+    proof['certificate_segment_consistency'][red].update({
+        'satisfied': False,
+        'accepted_visual_internal_segment': 'A34E',
+        'certificate_used_as_persisted_execution_effect': True,
+        'planning_origin_segment': 'A34I',
+        'raw_visual_prediction_preserved': True,
+        'reason': 'certificate_and_visual_segment_disagree',
+    })
+    proof['certificate_segment_consistency'][yellow] = {
+        'required': True,
+        'satisfied': True,
+        'certificate_target_public_segment': 'A12I',
+        'certificate_target_internal_segment': 'A12I',
+        'accepted_visual_internal_segment': 'A12I',
+        'certificate_used_as_localization': False,
+    }
+    metadata['runtime_clearance_certificates']['R4'] = {
+        'identity': 'R4',
+        'shuttle': yellow,
+        'side': 'right',
+        'target_segment': 'A12I',
+        'target_s_m': 1.060396,
+        'entry_sensor': 'DA1IR',
+        'entry_sensor_identity_confirmed': True,
+        'controller_stop_confirmed': True,
+        'post_stop_visual_frame_received': True,
+        'bounded_commanded_motion_completed': True,
+        'clearance_mode_held': True,
+        'normal_route_restored': False,
+        'matched_by': 'interior_entry_sensor_plus_bounded_travel_time',
+        'model_prediction_replaced': False,
+        'controller_position_fields_used_for_localization': False,
+    }
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+
+
 def test_safety_decoder_requires_disabled_mode_not_retained_speed_for_stop_proof():
     module = _load_supervisor_module()
     supervisor = _fake_supervisor(module)
@@ -461,6 +575,7 @@ def test_safety_decoder_accepts_two_stopped_interior_shuttles_with_retained_spee
             'visually_interior_shuttles',
             'certified_interior_shuttles',
             'certified_stopped_interior_shuttles',
+            'clearance_lifecycle_certified_stopped_interior_shuttles',
         ):
             proof[field].append(f'{side}_shuttle_2')
         consistency = proof['certificate_segment_consistency']
@@ -690,6 +805,206 @@ def test_safety_decoder_accepts_strict_mixed_route_normalization_proof():
     assert decision['corrected_action']['closed_loop_executive']['mode'] == (
         'restore_normal_route_before_slot_motion'
     )
+
+
+def _proved_cross_branch_clearance_command():
+    command = copy.deepcopy(_guarded_normalization_command())
+    command['switches'] = {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'INTERIOR',
+        'A4': 'INTERIOR',
+    }
+    metadata = command['closed_loop_executive']
+    metadata.update({
+        'mode': 'begin_route_clearance_hold_interior',
+        'symbolic_step': (
+            'begin_route_clearance right_shuttle_1 right '
+            'right_slot_4 right_slot_2'
+        ),
+        'clearance_route_switch_proof': {
+            'side': 'right',
+            'target_segment': 'A34I',
+            'gate_switch': 'A3',
+            'exit_switch': 'A4',
+            'required_switches': dict(command['switches']),
+            'route_specific_switch_assignment': True,
+            'controller_position_fields_used_for_localization': False,
+        },
+    })
+    metadata['route_normalization_proof'].update({
+        'switches': {name: 'exterior' for name in ('A1', 'A2', 'A3', 'A4')},
+        'stoppers': {name: 'open' for name in ('A1', 'A2', 'A3', 'A4')},
+        'normal_route': True,
+        'clearance_mode': False,
+        'all_stoppers_open': True,
+        'reconfiguration_required': False,
+        'reconfiguration_safe': False,
+        'clearance_pause_safe': False,
+    })
+    return command
+
+
+def test_safety_decoder_accepts_proved_cross_branch_clearance_switches():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    _stage_guarded_interior_shuttle(supervisor)
+    supervisor.rails['right']['switches'] = {
+        name: 'E' for name in ('A1', 'A2', 'A3', 'A4')
+    }
+    supervisor.rails['right']['stoppers'] = {
+        name: '0' for name in ('A1', 'A2', 'A3', 'A4')
+    }
+    supervisor.rails['right']['active_sensors'] = []
+    supervisor.rails['right']['active_position_sensors'] = []
+
+    decision = supervisor._safety_decode_command(
+        _proved_cross_branch_clearance_command()
+    )
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'INTERIOR',
+        'A4': 'INTERIOR',
+    }
+
+
+def test_safety_decoder_preserves_ordinary_clearance_with_no_interior_shuttle():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['shuttles'] = {}
+    supervisor.rails['right']['switches'] = {
+        name: 'E' for name in ('A1', 'A2', 'A3', 'A4')
+    }
+    supervisor.rails['right']['stoppers'] = {
+        name: '0' for name in ('A1', 'A2', 'A3', 'A4')
+    }
+    supervisor.rails['right']['active_sensors'] = []
+    supervisor.rails['right']['active_position_sensors'] = []
+    command = _proved_cross_branch_clearance_command()
+    command['switches'] = {
+        'A1': 'INTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+    command['closed_loop_executive']['clearance_route_switch_proof'].update({
+        'target_segment': 'A12I',
+        'gate_switch': 'A1',
+        'exit_switch': 'A2',
+        'required_switches': dict(command['switches']),
+    })
+    command['closed_loop_executive']['route_normalization_proof'].update({
+        'interior_shuttles': [],
+        'visually_interior_shuttles': [],
+        'certified_interior_shuttles': [],
+        'certified_stopped_interior_shuttles': [],
+        'uncertified_interior_shuttles': [],
+        'clearance_lifecycle_certified_stopped_interior_shuttles': [],
+        'certificate_segment_consistency': {},
+    })
+    command['closed_loop_executive']['runtime_clearance_certificates'] = {}
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is True
+
+
+def test_safety_decoder_rejects_cross_branch_switches_that_differ_from_proof():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    _stage_guarded_interior_shuttle(supervisor)
+    supervisor.rails['right']['switches'] = {
+        name: 'E' for name in ('A1', 'A2', 'A3', 'A4')
+    }
+    supervisor.rails['right']['stoppers'] = {
+        name: '0' for name in ('A1', 'A2', 'A3', 'A4')
+    }
+    command = _proved_cross_branch_clearance_command()
+    command['switches']['A2'] = 'EXTERIOR'
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is False
+    assert 'does not match the proved clearance route' in decision['reason']
+
+
+def _mixed_route_visual_disagreement_command():
+    command = copy.deepcopy(_guarded_normalization_command())
+    metadata = command['closed_loop_executive']
+    metadata['mode'] = 'restore_normal_route_before_slot_motion'
+    metadata['symbolic_step'] = (
+        'restore_normal_route right right_staubli right_yaskawa'
+    )
+    proof = metadata['route_normalization_proof']
+    shuttle = 'right_shuttle_1'
+    proof.update({
+        'stoppers': {
+            'A1': 'open',
+            'A2': 'open',
+            'A3': 'open',
+            'A4': 'open',
+        },
+        'clearance_mode': False,
+        'all_stoppers_open': True,
+        'reconfiguration_required': True,
+        'reconfiguration_safe': True,
+        'clearance_pause_safe': False,
+        'visually_interior_shuttles': [],
+        'certified_stopped_interior_shuttles': [],
+        'uncertified_interior_shuttles': [shuttle],
+        'certificate_segment_mismatches': [shuttle],
+        'clearance_lifecycle_visual_disagreements': [shuttle],
+    })
+    proof['certificate_segment_consistency'][shuttle].update({
+        'satisfied': False,
+        'accepted_visual_internal_segment': 'A34E',
+        'certificate_used_as_persisted_execution_effect': True,
+        'planning_origin_segment': 'A34I',
+        'raw_visual_prediction_preserved': True,
+        'reason': 'certificate_and_visual_segment_disagree',
+    })
+    return command
+
+
+def test_mixed_route_normalization_accepts_proved_visual_disagreement():
+    """Replay the live post-topology-setup normalization rejection."""
+
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    _stage_guarded_interior_shuttle(supervisor)
+    supervisor.rails['right']['stoppers']['A4'] = '0'
+
+    decision = supervisor._safety_decode_command(
+        _mixed_route_visual_disagreement_command()
+    )
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+
+
+def test_mixed_route_visual_disagreement_requires_persisted_effect_proof():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    _stage_guarded_interior_shuttle(supervisor)
+    supervisor.rails['right']['stoppers']['A4'] = '0'
+    command = _mixed_route_visual_disagreement_command()
+    consistency = command['closed_loop_executive'][
+        'route_normalization_proof'
+    ]['certificate_segment_consistency']['right_shuttle_1']
+    consistency.pop('certificate_used_as_persisted_execution_effect')
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is False
+    assert 'visual/certificate segment proof is invalid' in decision['reason']
 
 
 def test_safety_decoder_accepts_strict_capacity_pause_proof():
@@ -933,6 +1248,81 @@ def test_safety_decoder_allows_explicit_target_stopper_stop():
         'command': 'ON',
         'target_stopper': 'A2',
     })
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['target_stopper'] == 'A2'
+
+
+def _interior_cross_branch_motion_command():
+    return {
+        'action': 'shuttle',
+        'side': 'right',
+        'shuttle': 'room315_right_shuttle_1',
+        'command': 'ON',
+        'target_stopper': 'A2',
+        'closed_loop_executive': {
+            'mode': 'plansys2_supervised_interior_clearance',
+            'problem_name': 'live-loaded-a34i-to-a12i',
+            'localization_source': 'accepted_visual_state',
+            'controller_position_fields_used_for_localization': False,
+            'clearance_motion_route_proof': {
+                'side': 'right',
+                'target_segment': 'A12I',
+                'gate_switch': 'A1',
+                'exit_switch': 'A2',
+                'required_switches': {
+                    'A1': 'INTERIOR',
+                    'A2': 'INTERIOR',
+                    'A3': 'EXTERIOR',
+                    'A4': 'INTERIOR',
+                },
+                'required_stoppers': {
+                    'A1': '0', 'A2': '1', 'A3': '0', 'A4': '0',
+                },
+                'route_specific_switch_assignment': True,
+                'controller_position_fields_used_for_localization': False,
+            },
+        },
+    }
+
+
+def test_safety_decoder_rejects_live_falling_cross_branch_assignment():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['shuttles'][
+        'room315_right_shuttle_1'
+    ].update({'mode': 'DISABLED', 'segment': 'A34I', 's': 0.369})
+    supervisor.rails['right']['active_position_sensors'] = []
+    supervisor.rails['right']['switches'] = {
+        'A1': 'I', 'A2': 'I', 'A3': 'E', 'A4': 'E',
+    }
+    supervisor.rails['right']['stoppers']['A2'] = '1'
+
+    decision = supervisor._safety_decode_command(
+        _interior_cross_branch_motion_command()
+    )
+
+    assert decision['accepted'] is False
+    assert 'required switch assignment is not active' in decision['reason']
+    assert "'A4': 'INTERIOR'" in decision['reason']
+    assert "'A4': 'EXTERIOR'" in decision['reason']
+
+
+def test_safety_decoder_accepts_cross_branch_motion_only_after_full_route_setup():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['shuttles'][
+        'room315_right_shuttle_1'
+    ].update({'mode': 'DISABLED', 'segment': 'A34I', 's': 0.369})
+    supervisor.rails['right']['active_position_sensors'] = []
+    supervisor.rails['right']['switches'] = {
+        'A1': 'I', 'A2': 'I', 'A3': 'E', 'A4': 'I',
+    }
+    supervisor.rails['right']['stoppers']['A2'] = '1'
+
+    decision = supervisor._safety_decode_command(
+        _interior_cross_branch_motion_command()
+    )
 
     assert decision['accepted'] is True
     assert decision['corrected_action']['target_stopper'] == 'A2'

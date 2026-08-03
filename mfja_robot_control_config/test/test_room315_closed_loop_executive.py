@@ -172,6 +172,7 @@ class RecordingTransport(ScenarioTransport):
                 'shuttle': shuttle,
                 'target_slot': target_slot,
                 'target_station': target_station,
+                'timeout_s': timeout_s,
             },
         ))
         result = {'arrived': True, 'reason': ''}
@@ -644,6 +645,45 @@ def _with_shuttle_moved_between_slots(
     return replace(state, state_id=state_id, fused_planner_state=facts)
 
 
+def test_supervisor_rejection_reason_is_preserved_at_execution_boundary():
+    class RejectingTransport(RecordingTransport):
+        def wait_for_supervisor_decision(
+            self,
+            *,
+            previous_count: int,
+            timeout_s: float,
+        ) -> dict | None:
+            assert self._decision_count > previous_count
+            return {
+                'accepted': False,
+                'status': 'rejected',
+                'reason': 'certificate set does not match interior occupants',
+            }
+
+    executive = ClosedLoopExecutive(
+        observed_state_provider=None,
+        planner=None,
+        transport=RejectingTransport(),
+    )
+    status = executive._publish_supervised_macro_command(
+        {'action': 'switches', 'side': 'right'},
+        {'mode': 'restore_normal_route_before_slot_motion'},
+    )
+    check = executive._supervisor_status_check(
+        label='clearance_restore_switches',
+        status=status,
+    )
+
+    assert status == 'rejected'
+    assert check.reason == (
+        'clearance_restore_switches_supervisor_rejected:'
+        'certificate set does not match interior occupants'
+    )
+    assert check.details['supervisor_reason'] == (
+        'certificate set does not match interior occupants'
+    )
+
+
 def test_executes_only_first_atomic_step_from_validated_plan():
     state = _base_state('inspect-state')
     fresh_state = replace(
@@ -1062,6 +1102,169 @@ def test_r2_visual_a34i_to_slot1_executes_exact_authoritative_topology_route():
     assert arrival['controller_position_fields_used_for_localization'] is False
 
 
+def test_topology_route_accepts_persisted_motion_effect_when_visual_branch_is_wrong():
+    """A fresh A12I misclassification cannot erase a proved A34I motion."""
+
+    certificate = _persisted_r2_clearance_certificate()
+    source = _with_r2_interior(
+        _r4_blocked_state('persisted-a34i-visual-a12i'),
+        'persisted-a34i-visual-a12i',
+        visual_s_m=0.70,
+        visual_segment='A12I',
+    )
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        source,
+        _r2_slot1_goal(),
+        runtime_clearance_certificates={'R2': certificate},
+    )
+    route = problem.provenance['topology_routes']['routes'][0]
+    consistency = route['runtime_clearance_visual_consistency']
+    assert route['source_segment'] == 'A34I'
+    assert consistency['satisfied'] is False
+    assert consistency['accepted_visual_internal_segment'] == 'A12I'
+    assert consistency['certificate_used_as_persisted_execution_effect'] is True
+    assert consistency['raw_visual_prediction_preserved'] is True
+
+    translated = translate_plan([
+        'prepare_topology_route right_shuttle_2 right '
+        'right_topology_a34i right_slot_1 right_switch_group'
+    ])[0]
+    transport = RecordingTransport()
+    executive = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([source]),
+        planner=SequencePlanner([[]]),
+        transport=transport,
+    )
+    executive._runtime_clearance_certificates = {'R2': certificate}
+
+    status, check = executive._prepare_topology_route(
+        translated_step=translated,
+        problem=problem,
+        plan_length=2,
+        step_index=0,
+    )
+
+    assert status == 'accepted'
+    assert check.status == 'satisfied'
+    assert check.reason == 'authoritative_topology_route_configured'
+    origin_proof = transport.commands[0]['closed_loop_executive'][
+        'persisted_topology_route_origin_proof'
+    ]
+    assert origin_proof['validated'] is True
+    assert origin_proof['source_segment'] == 'A34I'
+    assert origin_proof['raw_visual_prediction_preserved'] is True
+    assert origin_proof['model_prediction_replaced'] is False
+    assert origin_proof['controller_position_fields_used_for_localization'] is False
+
+
+def test_topology_route_rejects_visual_disagreement_without_complete_motion_effect():
+    certificate = _persisted_r2_clearance_certificate()
+    source = _with_r2_interior(
+        _r4_blocked_state('invalid-persisted-a34i-effect'),
+        'invalid-persisted-a34i-effect',
+        visual_s_m=0.70,
+        visual_segment='A12I',
+    )
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        source,
+        _r2_slot1_goal(),
+        runtime_clearance_certificates={'R2': certificate},
+    )
+    translated = translate_plan([
+        'prepare_topology_route right_shuttle_2 right '
+        'right_topology_a34i right_slot_1 right_switch_group'
+    ])[0]
+    invalid_certificate = dict(certificate)
+    invalid_certificate['controller_stop_confirmed'] = False
+    transport = RecordingTransport()
+    executive = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([source]),
+        planner=SequencePlanner([[]]),
+        transport=transport,
+    )
+    executive._runtime_clearance_certificates = {
+        'R2': invalid_certificate,
+    }
+
+    status, check = executive._prepare_topology_route(
+        translated_step=translated,
+        problem=problem,
+        plan_length=2,
+        step_index=0,
+    )
+
+    assert status == 'rejected'
+    assert check.reason == (
+        'topology_route_clearance_certificate_visual_'
+        'consistency_failed_without_valid_persisted_effect'
+    )
+    assert transport.commands == []
+
+
+def test_live_r3_advanced_a34i_effect_survives_visual_a12i_misclassification():
+    """Replay the exact proof preceding the loaded-R4-to-slot-2 rejection."""
+
+    certificate = {
+        **_persisted_r2_clearance_certificate(),
+        'identity': 'R3',
+        'shuttle': 'right_shuttle_3',
+        'target_s_m': 1.066772,
+        'observed_segment': 'A12I',
+        'observed_s_m': 0.792615532875061,
+        'matched_by': 'certified_interior_origin_plus_bounded_travel_time',
+        'interior_advance_origin_certified': True,
+        'motion_origin_s_m': 0.36,
+        'bounded_motion_distance_m': 0.706772,
+        'origin_clearance_proof': {
+            'identity': 'R3',
+            'target_segment': 'A34I',
+            'target_s_m': 0.36,
+            'entry_sensor': 'DA3IR',
+            'entry_sensor_identity_confirmed': True,
+            'controller_stop_confirmed': True,
+            'bounded_commanded_motion_completed': True,
+            'controller_position_fields_used_for_localization': False,
+        },
+    }
+    route = {
+        'shuttle': 'right_shuttle_3',
+        'side': 'right',
+        'source_segment': 'A34I',
+        'source_s_ratio': 1.066772 / 1.416772043341839,
+    }
+    consistency = {
+        'required': True,
+        'satisfied': False,
+        'certificate_target_public_segment': 'A34I',
+        'certificate_target_internal_segment': 'A34I',
+        'accepted_visual_internal_segment': 'A12I',
+        'certificate_used_as_localization': False,
+        'certificate_used_as_persisted_execution_effect': True,
+        'planning_origin_segment': 'A34I',
+        'raw_visual_prediction_preserved': True,
+    }
+    executive = ClosedLoopExecutive(
+        observed_state_provider=None,
+        planner=None,
+        transport=None,
+    )
+    executive._runtime_clearance_certificates = {'R3': certificate}
+
+    proof = executive._validated_persisted_topology_route_origin(
+        route=route,
+        consistency=consistency,
+    )
+
+    assert proof['validated'] is True
+    assert proof['identity'] == 'R3'
+    assert proof['source_segment'] == 'A34I'
+    assert proof['matched_by'] == (
+        'certified_interior_origin_plus_bounded_travel_time'
+    )
+    assert proof['raw_visual_prediction_preserved'] is True
+    assert proof['model_prediction_replaced'] is False
+
+
 def test_new_executive_imports_persisted_clearance_before_first_problem():
     blocked = _r4_blocked_state('persisted-certificate-source')
     # The learned state still reports R2 on the parallel exterior branch. The
@@ -1351,6 +1554,28 @@ def test_a12i_clearance_mode_uses_a1_a2_devices_from_provenance(side):
     assert check.details['exit_switch'] == 'A2'
     assert check.details['target_segment'] == 'A12I'
 
+    # The real executive rebuilds the problem from device feedback after the
+    # begin action. Mirror that fresh active-clearance snapshot here before
+    # testing the subsequent shuttle motion.
+    provenance = dict(problem.provenance)
+    route_normalization = dict(provenance['route_normalization'])
+    by_side = dict(route_normalization['by_side'])
+    side_normalization = dict(by_side[side])
+    side_normalization.update({
+        'switches': {
+            'A1': 'interior', 'A2': 'interior',
+            'A3': 'exterior', 'A4': 'exterior',
+        },
+        'stoppers': {
+            'A1': 'open', 'A2': 'closed',
+            'A3': 'open', 'A4': 'open',
+        },
+    })
+    by_side[side] = side_normalization
+    route_normalization['by_side'] = by_side
+    provenance['route_normalization'] = route_normalization
+    problem = replace(problem, provenance=provenance)
+
     relocation = problem.provenance['clearance_relocation']
     blocker = relocation['shuttle']
     translated = translate_plan([(
@@ -1386,7 +1611,123 @@ def test_a12i_clearance_mode_uses_a1_a2_devices_from_provenance(side):
     )
 
 
-def test_finish_clearance_rejects_visual_certificate_disagreement_before_switches():
+def test_cross_branch_clearance_uses_complete_route_specific_switch_assignment():
+    """The target hold retains the certified source-interior exit switch."""
+
+    spec = ScenarioSpec(
+        goal_id='cross-branch-route-specific-switches',
+        side='right',
+        shuttle='right_shuttle_2',
+        source='yaskawa',
+        target='staubli',
+        target_slot='4',
+        payload_condition='empty',
+        start_slots_by_shuttle=tuple(
+            (f'right_shuttle_{identity}', str(identity))
+            for identity in range(1, 5)
+        ),
+    )
+    state = _observed_state_from_scenario_spec(spec)
+    goal = TaskGoal(
+        goal_id=spec.goal_id,
+        description='Move a blocker from A12I into A34I',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'side': 'right',
+            'target_kind': 'slot',
+            'target_slot': '4',
+            'target_shuttle': 'right_shuttle_2',
+            'payload_filter': 'any',
+        },
+    )
+    parent = build_pddl_problem_from_observed_state_task_goal(state, goal)
+    problem = ClosedLoopExecutive._next_planning_problem(parent)
+    provenance = dict(problem.provenance)
+    relocation = dict(provenance['clearance_relocation'])
+    destination = dict(relocation['destination'])
+    proof = dict(destination['interior_entry_route_proof'])
+    proof['required_switches'] = {
+        'A1': 'E',
+        'A2': 'I',
+        'A3': 'I',
+        'A4': 'I',
+    }
+    destination.update({
+        'gate_switch': 'A3',
+        'exit_switch': 'A4',
+        'target_segment': 'A34I',
+        'interior_entry_route_proof': proof,
+    })
+    relocation['destination'] = destination
+    provenance['clearance_relocation'] = relocation
+    problem = replace(problem, provenance=provenance)
+    transport = RecordingTransport()
+    executive = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([state]),
+        planner=SequencePlanner([[]]),
+        transport=transport,
+    )
+
+    status, check = executive._enter_route_clearance_mode(
+        side='right',
+        problem=problem,
+        plan_length=2,
+        step_index=0,
+        symbolic_step=(
+            'begin_segment_route_clearance right_shuttle_2 right '
+            'right_topology_a12i right_slot_4'
+        ),
+    )
+
+    assert status == 'accepted'
+    assert check.satisfied
+    assert transport.commands[0]['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'INTERIOR',
+        'A3': 'INTERIOR',
+        'A4': 'INTERIOR',
+    }
+    assert transport.commands[1]['stoppers'] == {
+        'A1': '0',
+        'A2': '0',
+        'A3': '0',
+        'A4': '1',
+    }
+    assert check.details['route_specific_switch_assignment'] is True
+    assert check.details['authoritative_required_switches'] == {
+        'A1': 'E',
+        'A2': 'I',
+        'A3': 'I',
+        'A4': 'I',
+    }
+
+    blocker = relocation['shuttle']
+    translated = translate_plan([(
+        f'relocate_segment_blocker_to_interior {blocker} '
+        'right_shuttle_2 right right_topology_a12i right_slot_4 speed=0.2'
+    )])[0]
+    command_count_before = len(transport.commands)
+
+    relocation_status, relocation_check = (
+        executive._execute_interior_clearance(
+            translated_step=translated,
+            problem=problem,
+            plan_length=1,
+            step_index=1,
+        )
+    )
+
+    assert relocation_status == 'rejected'
+    assert 'clearance_motion_route_assignment_not_active' in (
+        relocation_check.reason
+    )
+    assert len(transport.commands) == command_count_before
+
+
+def test_duplicate_finish_clearance_is_rejected_after_one_normalization():
     blocked = _r4_blocked_state('finish-proof-blocked')
     visual_mismatch = _with_r2_interior(
         blocked,
@@ -1431,15 +1772,75 @@ def test_finish_clearance_rejects_visual_certificate_disagreement_before_switche
     ).run(_r4_goal())
 
     assert result.status == 'aborted'
-    assert result.reason.startswith(
-        'planned_action_contract_violation:'
-        'missing_frozen_precondition:clearance_pause_safe:right'
+    assert result.reason == (
+        'clearance_phase_plan_violation:clearance_not_started,'
+        'action=finish_route_clearance'
     )
-    assert not any(
-        command.get('switches')
-        == {device: 'EXTERIOR' for device in ('A1', 'A2', 'A3', 'A4')}
+    normalization_commands = [
+        command
         for command in transport.commands
+        if (
+            command.get('closed_loop_executive', {}).get('mode')
+            == 'restore_normal_route_after_interior_clearance'
+        )
+    ]
+    assert [command['action'] for command in normalization_commands] == [
+        'switches',
+        'stoppers',
+    ]
+
+
+def test_startup_latch_recovery_accepts_certified_visual_disagreement():
+    blocked = _r4_blocked_state('restart-clearance-blocked')
+    visually_mismatched = _with_r2_interior(
+        blocked,
+        'restart-clearance-visual-mismatch',
+        visual_segment='A34E',
     )
+    active_state = _with_clearance_device_mode(
+        visually_mismatched,
+        'restart-clearance-active',
+    )
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        active_state,
+        _r4_goal(),
+        runtime_clearance_certificates={
+            'R2': _persisted_r2_clearance_certificate(),
+        },
+    )
+    normalization = problem.provenance['route_normalization']['by_side'][
+        'right'
+    ]
+    assert normalization['certificate_segment_mismatches'] == [
+        'right_shuttle_2'
+    ]
+    assert normalization[
+        'clearance_lifecycle_visual_disagreements'
+    ] == ['right_shuttle_2']
+    translated = translate_plan([
+        'finish_route_clearance right_shuttle_4 right '
+        'right_slot_4 right_slot_2'
+    ])[0]
+    executive = ClosedLoopExecutive(
+        observed_state_provider=None,
+        planner=None,
+        transport=None,
+    )
+
+    executive._resume_clearance_phase_from_problem(
+        problem=problem,
+        first_step=translated.pddl_step,
+    )
+
+    assert executive._route_clearance_active_side == 'right'
+    assert executive._first_action_contract_error(
+        first_step=translated.pddl_step,
+        translated_step=translated,
+        problem=problem,
+        task_goal=_r4_goal(),
+    ) == ''
+
+
 def test_mixed_topology_is_normalized_before_slot_motion():
     normal = _base_state('normal-after-route-recovery')
     mixed = _with_fact(
@@ -1447,6 +1848,10 @@ def test_mixed_topology_is_normalized_before_slot_motion():
         'right:switch:A4',
         'state',
         value='I',
+    )
+    mixed_problem = build_pddl_problem_from_observed_state_task_goal(
+        mixed,
+        _transport_goal(),
     )
     arrived = _state_with_r1_at_slot3('arrived-after-route-recovery')
     provider = SequenceObservedStateProvider([
@@ -1457,7 +1862,6 @@ def test_mixed_topology_is_normalized_before_slot_motion():
         arrived,
     ])
     planner = SequencePlanner([
-        ['restore_normal_route right right_yaskawa right_staubli'],
         [
             'move_shuttle_to_slot right_shuttle_1 right right_yaskawa '
             'right_staubli right_slot_1 right_slot_3'
@@ -1478,11 +1882,18 @@ def test_mixed_topology_is_normalized_before_slot_motion():
 
     assert result.succeeded
     assert result.plan_attempts == 2
-    normalization = planner.problems[0].provenance[
+    assert planner.calls == 1
+    assert len(planner.problems) == 1
+    normalization = mixed_problem.provenance[
         'route_normalization'
     ]['by_side']['right']
     assert normalization['reconfiguration_required'] is True
     assert normalization['reconfiguration_safe'] is True
+    planned_normalization = planner.problems[0].provenance[
+        'route_normalization'
+    ]['by_side']['right']
+    assert planned_normalization['normal_route'] is True
+    assert planned_normalization['reconfiguration_required'] is False
     assert [command['action'] for command in transport.commands] == [
         'switches',
         'stoppers',
@@ -1543,7 +1954,6 @@ def test_exact_loaded_r4_goal_restores_route_parks_r3_then_reaches_slot3():
         {'R1': _persisted_r1_clearance_certificate()},
     )
     planner = SequencePlanner([
-        ['restore_normal_route right right_staubli right_staubli'],
         [
             'move_shuttle_to_slot right_shuttle_3 right right_staubli '
             'right_staubli right_slot_3 right_slot_4'
@@ -1579,15 +1989,15 @@ def test_exact_loaded_r4_goal_restores_route_parks_r3_then_reaches_slot3():
     assert result.succeeded
     assert result.reason == 'task_goal_satisfied'
     assert result.plan_attempts == 3
+    assert planner.calls == 2
     assert [problem.selected_shuttle for problem in planner.problems] == [
-        'right_shuttle_3',
         'right_shuttle_3',
         'right_shuttle_4',
     ]
     assert planner.problems[0].goal_text == (
         '(shuttle_at_slot right_shuttle_3 right_slot_4)'
     )
-    assert planner.problems[2].goal_text == (
+    assert planner.problems[1].goal_text == (
         '(and (task_done right_shuttle_4 right_staubli) '
         '(shuttle_at_slot right_shuttle_4 right_slot_3))'
     )
@@ -1694,25 +2104,22 @@ def test_route_normalization_rejects_plan_argument_mismatch(
         'state',
         value='I',
     )
-    transport = RecordingTransport()
+    problem = build_pddl_problem_from_observed_state_task_goal(
+        mixed,
+        _transport_goal(),
+    )
+    translated = translate_plan([malformed_step])[0]
+    contract_error = ClosedLoopExecutive._first_action_contract_error(
+        first_step=translated.pddl_step,
+        translated_step=translated,
+        problem=problem,
+        task_goal=_transport_goal(),
+    )
 
-    result = ClosedLoopExecutive(
-        observed_state_provider=SequenceObservedStateProvider([mixed]),
-        planner=SequencePlanner([[malformed_step]]),
-        transport=transport,
-        config=ClosedLoopExecutiveConfig(max_steps=1),
-    ).run(_transport_goal())
-
-    assert result.status == 'aborted'
-    assert result.reason == expected_reason
-    assert transport.commands == [{
-        'action': 'stop_all',
-        'reason': f'route_normalization_rejected:{expected_reason}',
-        'closed_loop_executive': {
-            'mode': 'safe_abort',
-            'reason': f'route_normalization_rejected:{expected_reason}',
-        },
-    }]
+    assert (
+        f'planned_action_contract_violation:{contract_error}'
+        == expected_reason
+    )
 
 
 def test_clearance_latch_rejects_normal_route_action_before_any_shuttle_moves():

@@ -648,6 +648,60 @@ def load_rail_topology(
     )
 
 
+def load_slot_sensor_map(
+    devices_path: Path | str,
+    *,
+    side: str | None = None,
+) -> dict[str, str]:
+    """Derive exact slot-to-DZI bindings from one rail-device definition.
+
+    A slot sensor is authoritative only when its configured segment and
+    longitudinal ratio exactly match that slot.  This keeps planning, runtime
+    arrival verification, and supervision on the same physical configuration
+    instead of maintaining independent hand-written DZI tables.
+    """
+
+    resolved_path = Path(devices_path).expanduser().resolve()
+    devices = yaml.safe_load(resolved_path.read_text(encoding='utf-8')) or {}
+    if not isinstance(devices, dict):
+        raise ValueError(f'{devices_path} must contain a YAML mapping')
+    rail_side = normalize_side(side or devices.get('rail_side') or 'right')
+    sensors_by_pose: dict[tuple[str, float], list[str]] = {}
+    for entry in devices.get('position_sensors') or []:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get('name') or '').strip().upper()
+        segment = _segment_name(entry.get('segment'))
+        s_ratio = _optional_float(entry.get('s_ratio'))
+        if not name.startswith('DZI') or not segment or s_ratio is None:
+            continue
+        sensors_by_pose.setdefault((segment, s_ratio), []).append(name)
+
+    mapping: dict[str, str] = {}
+    for entry in devices.get('slots') or []:
+        if not isinstance(entry, dict):
+            continue
+        slot = _slot_symbol(entry.get('name'))
+        segment = _segment_name(entry.get('segment'))
+        s_ratio = _optional_float(entry.get('s_ratio'))
+        if not slot or not segment or s_ratio is None:
+            raise ValueError(f'invalid slot entry in {resolved_path}: {entry!r}')
+        matches = sensors_by_pose.get((segment, s_ratio), [])
+        if len(matches) != 1:
+            raise ValueError(
+                f'{rail_side} slot {slot} must match exactly one configured '
+                f'DZI sensor in {resolved_path}, found {matches}'
+            )
+        mapping[slot] = matches[0]
+    expected_slots = {'1', '2', '3', '4'}
+    if set(mapping) != expected_slots:
+        raise ValueError(
+            f'{resolved_path} slot sensor map must cover '
+            f'{sorted(expected_slots)}, found {sorted(mapping)}'
+        )
+    return mapping
+
+
 def route_blocks_between_slots(
     topology: RailTopology,
     source_slot: Any,

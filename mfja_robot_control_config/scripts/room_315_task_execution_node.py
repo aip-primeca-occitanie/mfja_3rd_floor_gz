@@ -29,19 +29,18 @@ from room_315_closed_loop_executive import ClosedLoopExecutive
 from room_315_closed_loop_executive import ClosedLoopExecutiveConfig
 from room_315_contracts import ContractValidationError
 from room_315_contracts import TaskGoal
-from room_315_pddl_scenario_generator import PDDL_DOMAIN_PATH
 from room_315_pddl_scenario_generator import PlanSysPlannerBackend
 from room_315_task_execution import LatestVisualObservedStateProvider
 from room_315_task_execution import LiveStateConfig
 from room_315_task_execution import VisualObservedStateBuilder
 from room_315_task_execution import VisualSupervisorTransport
-from room_315_task_execution import ground_transport_task_goal
+from room_315_task_execution import build_runtime_payload_grounding
+from room_315_task_execution import ground_transport_task_goal_stably
+from room_315_task_execution_config import TASK_EXECUTION_PARAMETER_DEFAULTS
+from room_315_task_execution_config import validate_task_execution_parameters
 
 
 TERMINAL_STATUSES = frozenset({'succeeded', 'aborted', 'rejected', 'failed'})
-RUNTIME_PDDL_DOMAIN_PATH = PDDL_DOMAIN_PATH.with_name(
-    'domain_room315_runtime.pddl'
-)
 
 
 class Room315TaskExecutionNode(Node):
@@ -141,8 +140,6 @@ class Room315TaskExecutionNode(Node):
         self._last_goal_id = ''
         self._last_status = 'idle'
         self._last_reason = 'waiting_for_ready_inputs'
-        self._last_result: dict[str, Any] = {}
-        self._last_status_payload: dict[str, Any] = {}
         self._publish_status(
             status='idle',
             reason='task execution node initialized',
@@ -159,48 +156,13 @@ class Room315TaskExecutionNode(Node):
         )
 
     def _declare_parameters(self) -> None:
-        parameters = {
-            'use_sim_time': True,
-            'execution_enabled': False,
-            'task_goal_topic': '/room_315/task_goal',
-            'task_status_topic': '/room_315/task_goal/status',
-            'accepted_observed_state_topic':
-                '/room_315/visual_state/observed_state',
-            'supervisor_command_topic': '/room_315/vla/command',
-            'supervisor_status_topic': '/room_315/vla/status',
-            'left_sensor_feedback_topic':
-                '/room_315/rails/left/sensors/feedback',
-            'right_sensor_feedback_topic':
-                '/room_315/rails/right/sensors/feedback',
-            'diagnostics_topic': '/diagnostics',
-            'planner_service': '/planner/get_plan',
-            'planner_domain_path': str(RUNTIME_PDDL_DOMAIN_PATH),
-            'planner_timeout_s': 10.0,
-            'observation_timeout_s': 1.5,
-            'supervisor_status_timeout_s': 1.5,
-            'slot_sensor_state_timeout_s': 1.0,
-            'observation_wait_s': 2.0,
-            'planning_slot_tolerance_ratio': 0.12,
-            'target_arrival_tolerance_ratio': 0.05,
-            'position_consistency_tolerance_m': 0.08,
-            'slot_sensor_confirmation_frames': 2,
-            # Deprecated compatibility parameter. Final arrival no longer
-            # uses visual confirmation frames.
-            'arrival_confirmation_frames': 3,
-            'controller_stop_timeout_s': 3.0,
-            'speed_mps': 0.2,
-            'max_steps': 32,
-            'max_replans': 8,
-            'max_unknown_retries': 3,
-            'supervisor_timeout_s': 5.0,
-            'effect_timeout_s': 30.0,
-            'clearance_effect_timeout_s': 60.0,
-            'external_obstacles_disabled': True,
-            'diagnostic_period_s': 1.0,
-        }
-        for name, default in parameters.items():
+        for name, default in TASK_EXECUTION_PARAMETER_DEFAULTS.items():
             if not self.has_parameter(name):
                 self.declare_parameter(name, default)
+        validate_task_execution_parameters({
+            name: self.get_parameter(name).value
+            for name in TASK_EXECUTION_PARAMETER_DEFAULTS
+        })
 
     def _on_visual_observation(
         self,
@@ -327,14 +289,8 @@ class Room315TaskExecutionNode(Node):
             goal_id=task_goal.goal_id,
         )
         try:
-            initial_state = self.state_provider.observe()
-            # Shuttle inspection selections require the same fresh presence
-            # and visual-payload grounding as transport selections. Non-shuttle
-            # inspection subjects pass through unchanged in the grounding
-            # helper.
-            grounded_goal = ground_transport_task_goal(
-                task_goal,
-                initial_state,
+            grounded_goal, runtime_payload_grounding = (
+                self._ground_task_goal(task_goal)
             )
             self._publish_status(
                 status='running',
@@ -346,35 +302,9 @@ class Room315TaskExecutionNode(Node):
                 goal_id=task_goal.goal_id,
                 task_goal=grounded_goal.to_dict(),
             )
-            planner = PlanSysPlannerBackend(
-                domain_path=Path(
-                    self._string('planner_domain_path')
-                ).expanduser(),
-                planner_service=self._string('planner_service'),
-                timeout_s=self._float('planner_timeout_s'),
-            )
-            executive = ClosedLoopExecutive(
-                observed_state_provider=self.state_provider,
-                planner=planner,
-                transport=self.transport,
-                config=ClosedLoopExecutiveConfig(
-                    speed_mps=self._float('speed_mps'),
-                    max_steps=self._int('max_steps'),
-                    max_replans=self._int('max_replans'),
-                    max_unknown_retries=self._int('max_unknown_retries'),
-                    supervisor_timeout_s=self._float(
-                        'supervisor_timeout_s'
-                    ),
-                    effect_timeout_s=self._float('effect_timeout_s'),
-                    clearance_effect_timeout_s=self._float(
-                        'clearance_effect_timeout_s'
-                    ),
-                    planning_timeout_s=self._float('planner_timeout_s'),
-                ),
-            )
+            executive = self._create_executive(runtime_payload_grounding)
             result = executive.run(grounded_goal)
             payload = result.to_dict()
-            self._last_result = payload
             self._publish_status(
                 status=result.status,
                 reason=result.reason,
@@ -382,9 +312,6 @@ class Room315TaskExecutionNode(Node):
                 result=payload,
             )
         except Exception as exc:  # noqa: BLE001 - fail-closed runtime boundary
-            self.get_logger().error(
-                f'Task {task_goal.goal_id} failed closed: {exc}'
-            )
             self._publish_supervisor_command({
                 'action': 'stop_all',
                 'reason': f'task_execution_exception:{exc}',
@@ -402,6 +329,81 @@ class Room315TaskExecutionNode(Node):
             with self._lock:
                 self._active_goal_id = ''
 
+    def _ground_task_goal(
+        self,
+        task_goal: TaskGoal,
+    ) -> tuple[TaskGoal, dict[str, Any]]:
+        """Ground target identity from accepted vision before planning."""
+
+        initial_state = self.state_provider.observe()
+        stable = ground_transport_task_goal_stably(
+            task_goal,
+            initial_state,
+            observe_fresh_after=self.state_provider.observe_fresh_after,
+            confirmation_frames=self._int(
+                'payload_grounding_confirmation_frames'
+            ),
+            max_observations=self._int(
+                'payload_grounding_max_observations'
+            ),
+        )
+        proof = build_runtime_payload_grounding(
+            stable.task_goal,
+            stable.observed_state,
+            payload_confirmation=stable.payload_confirmation,
+        )
+        if proof:
+            confirmation = proof['temporal_confirmation']
+            self.get_logger().info(
+                'Payload-qualified TaskGoal grounded by fresh visual '
+                'consensus: selected=%s filter=%s frames=%d/%d '
+                'observations=%d source_state=%s'
+                % (
+                    proof['selected_shuttle'],
+                    proof['payload_filter'],
+                    len(confirmation['state_ids']),
+                    confirmation['confirmation_frames'],
+                    confirmation['observations_examined'],
+                    proof['source_state_id'],
+                )
+            )
+        return stable.task_goal, proof
+
+    def _create_executive(
+        self,
+        runtime_payload_grounding: dict[str, Any],
+    ) -> ClosedLoopExecutive:
+        planner = PlanSysPlannerBackend(
+            domain_path=Path(
+                self._string('planner_domain_path')
+            ).expanduser(),
+            planner_service=self._string('planner_service'),
+            timeout_s=self._float('planner_timeout_s'),
+        )
+        return ClosedLoopExecutive(
+            observed_state_provider=self.state_provider,
+            planner=planner,
+            transport=self.transport,
+            runtime_payload_grounding=runtime_payload_grounding,
+            config=ClosedLoopExecutiveConfig(
+                speed_mps=self._float('speed_mps'),
+                max_steps=self._int('max_steps'),
+                max_replans=self._int('max_replans'),
+                max_unknown_retries=self._int('max_unknown_retries'),
+                supervisor_timeout_s=self._float('supervisor_timeout_s'),
+                effect_timeout_s=self._float('effect_timeout_s'),
+                clearance_effect_timeout_s=self._float(
+                    'clearance_effect_timeout_s'
+                ),
+                route_arrival_timeout_scale=self._float(
+                    'route_arrival_timeout_scale'
+                ),
+                route_arrival_timeout_margin_s=self._float(
+                    'route_arrival_timeout_margin_s'
+                ),
+            ),
+        )
+
     def _publish_supervisor_command(
         self,
         command: dict[str, Any],
@@ -411,7 +413,6 @@ class Room315TaskExecutionNode(Node):
         self.command_pub.publish(message)
 
     def _reject_goal(self, *, goal_id: str, reason: str) -> None:
-        self.get_logger().warning(f'TaskGoal rejected: {reason}')
         self._publish_status(
             status='rejected',
             reason=reason,
@@ -445,7 +446,6 @@ class Room315TaskExecutionNode(Node):
             payload['result'] = result
         self._last_status = str(status)
         self._last_reason = str(reason)
-        self._last_status_payload = payload
         message = String()
         message.data = json.dumps(payload, sort_keys=True)
         self.status_pub.publish(message)

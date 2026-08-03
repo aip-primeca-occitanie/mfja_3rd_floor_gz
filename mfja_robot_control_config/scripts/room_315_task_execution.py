@@ -35,6 +35,7 @@ from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import route_candidates_from_position_to_slot
 from room_315_observed_state_provider import ObservedStateProvider
 from room_315_observed_state_provider import fuse_observed_facts
+from room_315_presence_provider import PRESENCE_STATES
 from room_315_pddl_scenario_generator import RAIL_DEVICES_PATH_BY_SIDE
 from room_315_pddl_scenario_generator import RAIL_NETWORK_PATH_BY_SIDE
 from room_315_pddl_scenario_generator import ScenarioTransport
@@ -43,18 +44,13 @@ from room_315_pddl_scenario_generator import SLOT_STATION_BY_SIDE_AND_SLOT
 from room_315_multi_shuttle import load_rail_topology
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import rail_segment_lengths
-
-
-PRESENCE_STATES = frozenset({'present', 'absent', 'unknown'})
-TERMINAL_SUPERVISOR_DECISIONS = frozenset({
-    'accepted',
-    'approved',
-    'executed',
-    'failed',
-    'rejected',
-    'blocked',
-})
-CONTROLLER_DISABLED_MODE = 'DISABLED'
+from room_315_runtime_contracts import CONTROLLER_DISABLED_MODE
+from room_315_runtime_contracts import MIN_PAYLOAD_CONFIRMATION_FRAMES
+from room_315_runtime_contracts import create_runtime_payload_grounding
+from room_315_runtime_contracts import create_visual_payload_confirmation
+from room_315_runtime_contracts import normalize_runtime_clearance_certificate
+from room_315_runtime_contracts import supervisor_decision_accepted
+from room_315_runtime_contracts import supervisor_decision_is_terminal
 
 
 class TaskExecutionStateError(RuntimeError):
@@ -83,7 +79,7 @@ class LiveStateConfig:
             'observation_wait_s',
         ):
             value = float(getattr(self, name))
-            if value <= 0.0:
+            if not math.isfinite(value) or value <= 0.0:
                 raise ValueError(f'{name} must be greater than zero')
         for name in (
             'planning_slot_tolerance_ratio',
@@ -753,65 +749,25 @@ class VisualObservedStateBuilder:
     def _clearance_certificates_by_identity(
         raw: dict[str, dict[str, Any]] | None,
     ) -> dict[str, dict[str, Any]]:
+        if raw is not None and not isinstance(raw, dict):
+            raise TaskExecutionStateError(
+                'runtime clearance certificates must be a mapping'
+            )
         certificates: dict[str, dict[str, Any]] = {}
         for raw_identity, raw_certificate in dict(raw or {}).items():
-            if not isinstance(raw_certificate, dict):
+            try:
+                certificate = normalize_runtime_clearance_certificate(
+                    raw_identity,
+                    raw_certificate,
+                )
+            except ValueError as exc:
+                raise TaskExecutionStateError(str(exc)) from exc
+            spec = normalize_shuttle_ref(certificate['identity'])
+            assert spec is not None  # guaranteed by shared normalization
+            if spec.short_id in certificates:
                 raise TaskExecutionStateError(
-                    'runtime clearance certificate must be an object'
+                    f'duplicate runtime clearance identity:{spec.short_id}'
                 )
-            spec = normalize_shuttle_ref(raw_identity)
-            if spec is None:
-                spec = normalize_shuttle_ref(raw_certificate.get('identity'))
-            if spec is None:
-                raise TaskExecutionStateError(
-                    f'unknown runtime clearance identity:{raw_identity}'
-                )
-            certificate = copy.deepcopy(raw_certificate)
-            side = _side(certificate.get('side') or spec.side)
-            if side != spec.side:
-                raise TaskExecutionStateError(
-                    f'runtime clearance side conflict:{spec.short_id}:{side}'
-                )
-            if not bool(certificate.get('entry_sensor_identity_confirmed')):
-                raise TaskExecutionStateError(
-                    f'runtime clearance lacks entry sensor proof:{spec.short_id}'
-                )
-            if not bool(certificate.get('controller_stop_confirmed')):
-                raise TaskExecutionStateError(
-                    f'runtime clearance lacks stop proof:{spec.short_id}'
-                )
-            if certificate.get('matched_by') != (
-                'interior_entry_sensor_plus_bounded_travel_time'
-            ):
-                raise TaskExecutionStateError(
-                    'runtime clearance lacks bounded-motion proof:'
-                    f'{spec.short_id}'
-                )
-            if not bool(certificate.get('bounded_commanded_motion_completed')):
-                raise TaskExecutionStateError(
-                    'runtime clearance lacks completed bounded motion:'
-                    f'{spec.short_id}'
-                )
-            if (
-                certificate.get('clearance_mode_held') is not True
-                or certificate.get('normal_route_restored') is not False
-            ):
-                raise TaskExecutionStateError(
-                    'runtime clearance lacks held-route proof:'
-                    f'{spec.short_id}'
-                )
-            if (
-                certificate.get(
-                    'controller_position_fields_used_for_localization'
-                )
-                is not False
-            ):
-                raise TaskExecutionStateError(
-                    'runtime clearance used forbidden controller position:'
-                    f'{spec.short_id}'
-                )
-            certificate['identity'] = spec.short_id
-            certificate['side'] = side
             certificates[spec.short_id] = certificate
         return certificates
 
@@ -950,6 +906,12 @@ class VisualObservedStateBuilder:
         if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
             raise TaskExecutionStateError(f'invalid_visual_bbox:{identity}')
         try:
+            bbox_values = tuple(float(value) for value in bbox)
+        except (TypeError, ValueError) as exc:
+            raise TaskExecutionStateError(
+                f'invalid_visual_bbox:{identity}'
+            ) from exc
+        try:
             s_m = float(item.get('s_m'))
             ratio = float(item.get('s_ratio'))
             length = float(item.get('segment_length_m'))
@@ -957,7 +919,23 @@ class VisualObservedStateBuilder:
             raise TaskExecutionStateError(
                 f'invalid_visual_position:{identity}'
             ) from exc
-        if length <= 0.0 or not 0.0 <= ratio <= 1.0:
+        if (
+            not all(math.isfinite(value) for value in bbox_values)
+            # The runtime schema carries camera-pixel xywh, not normalized
+            # coordinates. Image dimensions are not part of this boundary,
+            # and an accepted detection may be clipped at an image edge, so
+            # only finiteness and positive extents can be validated here;
+            # image intersection is validated upstream.
+            or bbox_values[2] <= 0.0
+            or bbox_values[3] <= 0.0
+        ):
+            raise TaskExecutionStateError(f'invalid_visual_bbox:{identity}')
+        if (
+            not all(math.isfinite(value) for value in (s_m, ratio, length))
+            or length <= 0.0
+            or not 0.0 <= s_m <= length
+            or not 0.0 <= ratio <= 1.0
+        ):
             raise TaskExecutionStateError(f'invalid_visual_position:{identity}')
         if (
             abs(s_m - ratio * length)
@@ -1161,13 +1139,22 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
         self,
         certificate: dict[str, Any],
     ) -> None:
-        spec = normalize_shuttle_ref(certificate.get('identity'))
-        if spec is None:
-            raise TaskExecutionStateError('unknown runtime clearance identity')
-        with self._condition:
-            self._runtime_clearance_certificates[spec.short_id] = copy.deepcopy(
-                certificate
+        raw_identity = (
+            certificate.get('identity')
+            if isinstance(certificate, dict)
+            else None
+        )
+        try:
+            normalized = normalize_runtime_clearance_certificate(
+                raw_identity,
+                certificate,
             )
+        except ValueError as exc:
+            raise TaskExecutionStateError(str(exc)) from exc
+        with self._condition:
+            self._runtime_clearance_certificates[
+                normalized['identity']
+            ] = normalized
             self._condition.notify_all()
 
     def clear_runtime_clearance_certificate(
@@ -1565,39 +1552,33 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
 
     def ready(self) -> tuple[bool, str]:
         try:
-            now_s = self.monotonic()
-            self.builder.build(
-                self.snapshot(),
-                now_s=now_s,
-                runtime_clearance_certificates=(
-                    self.runtime_clearance_certificates()
-                ),
-                slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
-                verified_slot_arrival_certificates=(
-                    self.verified_slot_arrival_certificates(now_s=now_s)
-                ),
-            )
+            self._build_current_state()
         except Exception as exc:  # noqa: BLE001 - readiness explanation
             return False, str(exc)
         return True, ''
+
+    def _build_current_state(self) -> ObservedState:
+        """Build one state from a consistently validated provider snapshot."""
+
+        now_s = self.monotonic()
+        return self.builder.build(
+            self.snapshot(),
+            now_s=now_s,
+            runtime_clearance_certificates=(
+                self.runtime_clearance_certificates()
+            ),
+            slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
+            verified_slot_arrival_certificates=(
+                self.verified_slot_arrival_certificates(now_s=now_s)
+            ),
+        )
 
     def observe(self, *, timestamp: float | None = None) -> ObservedState:
         deadline = self.monotonic() + self.builder.config.observation_wait_s
         last_error = 'live visual observation is unavailable'
         while self.monotonic() <= deadline:
             try:
-                now_s = self.monotonic()
-                return self.builder.build(
-                    self.snapshot(),
-                    now_s=now_s,
-                    runtime_clearance_certificates=(
-                        self.runtime_clearance_certificates()
-                    ),
-                    slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
-                    verified_slot_arrival_certificates=(
-                        self.verified_slot_arrival_certificates(now_s=now_s)
-                    ),
-                )
+                return self._build_current_state()
             except Exception as exc:  # noqa: BLE001 - bounded retry boundary
                 last_error = str(exc)
             with self._condition:
@@ -1630,18 +1611,7 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
         )
         while self.monotonic() <= deadline:
             try:
-                now_s = self.monotonic()
-                state = self.builder.build(
-                    self.snapshot(),
-                    now_s=now_s,
-                    runtime_clearance_certificates=(
-                        self.runtime_clearance_certificates()
-                    ),
-                    slot_sensor_anchors=self.slot_sensor_anchors(now_s=now_s),
-                    verified_slot_arrival_certificates=(
-                        self.verified_slot_arrival_certificates(now_s=now_s)
-                    ),
-                )
+                state = self._build_current_state()
                 if state.state_id != previous_state_id:
                     return state
             except Exception as exc:  # noqa: BLE001 - bounded retry boundary
@@ -1746,7 +1716,7 @@ class VisualSupervisorTransport(ScenarioTransport):
         rail_side = _side(side)
         sanitized = []
         for reading in readings:
-            if not isinstance(reading, dict) or not bool(reading.get('active', True)):
+            if not isinstance(reading, dict) or reading.get('active') is not True:
                 continue
             sanitized.append({
                 'name': str(reading.get('name') or '').strip(),
@@ -1826,10 +1796,8 @@ class VisualSupervisorTransport(ScenarioTransport):
                         'safety_decoder',
                         'last_decision',
                     )
-                    return copy.deepcopy(decision or {
-                        'accepted': True,
-                        'status': 'accepted',
-                    })
+                    if supervisor_decision_is_terminal(decision):
+                        return copy.deepcopy(decision)
                 self._condition.wait(
                     timeout=min(0.1, max(0.0, deadline - self.monotonic()))
                 )
@@ -2771,6 +2739,166 @@ def ground_transport_task_goal(
     )
 
 
+@dataclass(frozen=True)
+class StableTaskGoalGrounding:
+    task_goal: TaskGoal
+    observed_state: ObservedState
+    payload_confirmation: dict[str, Any]
+
+
+def ground_transport_task_goal_stably(
+    task_goal: TaskGoal,
+    initial_state: ObservedState,
+    *,
+    observe_fresh_after: Callable[[str], ObservedState],
+    confirmation_frames: int = 5,
+    max_observations: int = 15,
+) -> StableTaskGoalGrounding:
+    """Require consecutive fresh visual agreement for payload selection."""
+
+    constraints = dict(task_goal.constraints or {})
+    if str(constraints.get('goal_type') or '').casefold() != 'transport':
+        return StableTaskGoalGrounding(
+            task_goal=ground_transport_task_goal(task_goal, initial_state),
+            observed_state=initial_state,
+            payload_confirmation={'required': False},
+        )
+    _selection, payload_filter = _normalize_live_selection_contract(
+        constraints,
+    )
+    if payload_filter not in {'loaded', 'empty'}:
+        return StableTaskGoalGrounding(
+            task_goal=ground_transport_task_goal(task_goal, initial_state),
+            observed_state=initial_state,
+            payload_confirmation={'required': False},
+        )
+
+    required_frames = max(
+        int(confirmation_frames),
+        MIN_PAYLOAD_CONFIRMATION_FRAMES,
+    )
+    observation_limit = max(int(max_observations), required_frames)
+    current = initial_state
+    previous_state_id = ''
+    seen_state_ids: set[str] = set()
+    streak_target = ''
+    streak_state_ids: list[str] = []
+    latest_grounded: TaskGoal | None = None
+    last_error = 'no accepted visual payload candidate'
+
+    for observation_index in range(observation_limit):
+        state_id = str(current.state_id or '').strip()
+        if not state_id or state_id in seen_state_ids:
+            raise TaskExecutionStateError(
+                'payload grounding requires distinct fresh visual state IDs'
+            )
+        seen_state_ids.add(state_id)
+        try:
+            grounded = ground_transport_task_goal(task_goal, current)
+        except TaskExecutionStateError as exc:
+            last_error = str(exc)
+            streak_target = ''
+            streak_state_ids = []
+            latest_grounded = None
+        else:
+            spec = normalize_shuttle_ref(
+                grounded.constraints.get('target_shuttle'),
+                side=constraints.get('side'),
+            )
+            if spec is None:
+                raise TaskExecutionStateError(
+                    'payload grounding produced no authoritative identity'
+                )
+            target = spec.shuttle_id
+            if target != streak_target:
+                streak_target = target
+                streak_state_ids = []
+            streak_state_ids.append(state_id)
+            latest_grounded = grounded
+            if len(streak_state_ids) >= required_frames:
+                return StableTaskGoalGrounding(
+                    task_goal=grounded,
+                    observed_state=current,
+                    payload_confirmation=create_visual_payload_confirmation(
+                        selected_shuttle=target,
+                        payload_filter=payload_filter,
+                        state_ids=list(
+                            streak_state_ids[-required_frames:]
+                        ),
+                        observations_examined=observation_index + 1,
+                    ),
+                )
+        if observation_index + 1 >= observation_limit:
+            break
+        previous_state_id = state_id
+        current = observe_fresh_after(previous_state_id)
+
+    candidate = (
+        str(latest_grounded.constraints.get('target_shuttle') or '')
+        if latest_grounded is not None
+        else 'none'
+    )
+    raise TaskExecutionStateError(
+        'visual payload selection did not reach consecutive consensus:'
+        f'filter={payload_filter},candidate={candidate},'
+        f'confirmed={len(streak_state_ids)}/{required_frames},'
+        f'observations={observation_limit},last_error={last_error}'
+    )
+
+
+def build_runtime_payload_grounding(
+    task_goal: TaskGoal,
+    observed_state: ObservedState,
+    *,
+    payload_confirmation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Create trusted selection-time evidence outside the TaskGoal contract."""
+
+    constraints = dict(task_goal.constraints or {})
+    if str(constraints.get('goal_type') or '').casefold() != 'transport':
+        return {}
+    side = _side(constraints.get('side'))
+    _selection, payload_filter = _normalize_live_selection_contract(
+        constraints,
+    )
+    if payload_filter not in {'loaded', 'empty'}:
+        return {}
+    spec = normalize_shuttle_ref(
+        constraints.get('target_shuttle'),
+        side=side,
+    )
+    if spec is None or spec.side != side:
+        raise TaskExecutionStateError(
+            'payload grounding requires an explicit authoritative target'
+        )
+    facts = {
+        (fact.subject, fact.predicate): fact
+        for fact in observed_state.fused_planner_state
+        if fact.status == 'known'
+    }
+    loaded = facts.get((spec.gazebo_entity_name, 'loaded'))
+    if loaded is None:
+        raise TaskExecutionStateError(
+            f'payload grounding source is unknown:{spec.short_id}'
+        )
+    predicted = 'loaded' if bool(loaded.value) else 'empty'
+    if predicted != payload_filter:
+        raise TaskExecutionStateError(
+            f'payload grounding source does not satisfy {payload_filter}:'
+            f'{spec.short_id}:{predicted}'
+        )
+    try:
+        return create_runtime_payload_grounding(
+            selected_shuttle=spec.shuttle_id,
+            payload_filter=payload_filter,
+            initial_visual_prediction=predicted,
+            source_state_id=str(observed_state.state_id),
+            confirmation=dict(payload_confirmation or {}),
+        )
+    except ValueError as exc:
+        raise TaskExecutionStateError(str(exc)) from exc
+
+
 def _normalize_live_selection_contract(
     constraints: dict[str, Any],
 ) -> tuple[str, str]:
@@ -3255,16 +3383,7 @@ def _normalize_stopper(value: Any) -> str:
 
 
 def _decision_accepted(decision: dict[str, Any]) -> bool:
-    if decision.get('accepted') is False:
-        return False
-    status = str(
-        decision.get('status')
-        or decision.get('decision')
-        or ''
-    ).strip().lower()
-    if status in {'rejected', 'failed', 'blocked', 'timed_out', 'timeout'}:
-        return False
-    return bool(decision.get('accepted', status in {'accepted', 'approved', 'executed'}))
+    return supervisor_decision_accepted(decision)
 
 
 def _slot_number(value: Any) -> str:

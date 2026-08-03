@@ -150,6 +150,7 @@
       (connected ?side ?from ?to)
       (route_reconfiguration_required ?side)
       (route_reconfiguration_safe ?side)
+      (not (clearance_mode ?side))
       (= (pending_clearances ?side) 0)
     )
     :effect (and
@@ -400,7 +401,9 @@
       (target_slot_for_goal ?to_slot)
       (clearance_mode ?side)
       (clearance_precedes ?blocker ?selected)
-      (route_blocked_by ?from_slot ?to_slot ?blocker)
+      ; clearance_precedes is emitted only for the one frozen, proved next
+      ; mover.  That mover may be the direct route blocker or a dependency
+      ; that must create capacity before the direct blocker can move.
       (clearance_destination_ready ?blocker)
       (interior_entry_route_clear ?blocker)
       (> (pending_clearances ?side) 0)
@@ -408,7 +411,9 @@
     )
     :effect (and
       (clearance_relocated ?blocker)
-      (not (route_blocked_by ?from_slot ?to_slot ?blocker))
+      ; Route occupancy is rebuilt from the next accepted visual observation.
+      ; Do not delete a direct-blocker atom here: a valid dependency mover may
+      ; not own one, and POPF then prunes the otherwise applicable action.
       (decrease (pending_clearances ?side) 1)
       (increase (clearance_cursor ?side) 1)
       (increase (total-cost) 4)
@@ -525,7 +530,8 @@
       (target_slot_for_goal ?to_slot)
       (clearance_mode ?side)
       (clearance_precedes ?blocker ?selected)
-      (topology_route_blocked_by ?selected ?from_block ?to_slot ?blocker)
+      ; clearance_precedes authorizes either a direct topology blocker or the
+      ; proved dependency mover selected by the capacity search.
       (clearance_destination_ready ?blocker)
       (interior_entry_route_clear ?blocker)
       (> (pending_clearances ?side) 0)
@@ -533,7 +539,9 @@
     )
     :effect (and
       (clearance_relocated ?blocker)
-      (not (topology_route_blocked_by ?selected ?from_block ?to_slot ?blocker))
+      ; The receding-horizon rebuild owns route-effect recomputation.  A
+      ; capacity dependency is authorized by clearance_precedes but is not a
+      ; fabricated direct topology blocker, so no blocker atom is deleted.
       (decrease (pending_clearances ?side) 1)
       (increase (clearance_cursor ?side) 1)
       (increase (total-cost) 4)

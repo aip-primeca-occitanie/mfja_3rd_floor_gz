@@ -17,7 +17,9 @@ room_315_task_execution_node:
     diagnostics_topic: /diagnostics
 
     planner_service: /planner/get_plan
-    planner_timeout_s: 10.0
+    # POPF has a 15-second solver timeout; the client must not abandon the
+    # service first and turn a valid slow response into a false rejection.
+    planner_timeout_s: 20.0
 
     observation_timeout_s: 1.5
     supervisor_status_timeout_s: 1.5
@@ -36,6 +38,11 @@ room_315_task_execution_node:
     slot_sensor_confirmation_frames: 2
     # Deprecated: retained only so older launch overrides do not fail.
     arrival_confirmation_frames: 3
+    # Payload-qualified requests are grounded only after consecutive fresh
+    # visual frames agree on the same identity. No controller payload field is
+    # used, and lack of consensus rejects the request before actuation.
+    payload_grounding_confirmation_frames: 5
+    payload_grounding_max_observations: 15
     controller_stop_timeout_s: 3.0
 
     speed_mps: 0.2
@@ -46,6 +53,11 @@ room_315_task_execution_node:
     effect_timeout_s: 30.0
     # Interior blocker relocation may traverse more than one ordinary block.
     clearance_effect_timeout_s: 60.0
+    # Exact slot arrival is still accepted only from the identity-bearing DZI
+    # sensor and controller stop. The deadline expands deterministically for a
+    # long forward-only topology route (for example A34I -> right slot 4).
+    route_arrival_timeout_scale: 1.25
+    route_arrival_timeout_margin_s: 5.0
 
     # This must match the Gazebo launch setting
     # enable_room315_vla_obstacles:=false. Shuttle blockers are still derived

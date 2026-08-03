@@ -43,26 +43,15 @@ from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import validate_fleet_command
 from room_315_pddl_scenario_generator import INTERIOR_HOLDING_BRANCH_BY_GATE
 from room_315_pddl_scenario_generator import INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE
+from room_315_pddl_scenario_generator import SLOT_SENSOR_BY_SIDE_AND_SLOT
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import default_rail_network_path
+from room_315_runtime_contracts import CONTROLLER_DISABLED_MODE
+from room_315_runtime_contracts import normalize_runtime_clearance_certificate
 
 
 SIDES = ('right', 'left')
 SWITCHES = ('A1', 'A2', 'A3', 'A4')
-DEFAULT_SLOT_SENSOR_BY_SIDE = {
-    'right': {
-        '1': 'DZI1R',
-        '2': 'DZI2R',
-        '3': 'DZI3R',
-        '4': 'DZI4R',
-    },
-    'left': {
-        '1': 'DZI1L',
-        '2': 'DZI2L',
-        '3': 'DZI3L',
-        '4': 'DZI4L',
-    },
-}
 STOPPER_SENSOR_BY_STOPPER = {
     'A1': 'A1_STOPPER_SENSOR',
     'A2': 'A2_STOPPER_SENSOR',
@@ -126,6 +115,13 @@ ROUTE_NORMALIZATION_ACTION_BY_MODE = {
     'restore_normal_route_after_interior_clearance': 'finish_route_clearance',
     'pause_clearance_after_interior_capacity_exhausted': 'pause_route_clearance',
 }
+GUARDED_ROUTE_RECONFIGURATION_ACTION_BY_MODE = {
+    'begin_route_clearance_hold_interior': 'begin_route_clearance',
+}
+GUARDED_SWITCH_PROOF_ACTION_BY_MODE = {
+    **ROUTE_NORMALIZATION_ACTION_BY_MODE,
+    **GUARDED_ROUTE_RECONFIGURATION_ACTION_BY_MODE,
+}
 ROUTE_NORMALIZATION_SYMBOLIC_ACTION_ALIASES = {
     # Segment-origin clearance has the same supervised physical restoration
     # macro as exact-slot clearance, while retaining distinct PDDL semantics.
@@ -135,7 +131,6 @@ INTERIOR_GATE_BY_PUBLIC_SEGMENT = {
     str(branch['target_segment']): gate
     for gate, branch in INTERIOR_HOLDING_BRANCH_BY_GATE.items()
 }
-CONTROLLER_DISABLED_MODE = 'DISABLED'
 SWITCH_VALUE_BY_ID = {
     1: 'EXTERIOR',
     2: 'INTERIOR',
@@ -830,7 +825,7 @@ def _normalization_symbolic_step_reason(
     side: str,
     mode: str,
 ) -> str:
-    expected_action = ROUTE_NORMALIZATION_ACTION_BY_MODE[mode]
+    expected_action = GUARDED_SWITCH_PROOF_ACTION_BY_MODE[mode]
     text = _clean_token(metadata.get('symbolic_step')).lower()
     text = re.sub(r'^\s*\d+(?:\.\d+)?\s*:\s*', '', text)
     text = re.sub(r'\s*\[[^\]]*\]\s*$', '', text).strip()
@@ -846,7 +841,11 @@ def _normalization_symbolic_step_reason(
         return (
             f'symbolic_step must be {expected_action!r} for mode {mode!r}'
         )
-    side_index = 2 if expected_action == 'finish_route_clearance' else 1
+    side_index = (
+        2
+        if expected_action in {'begin_route_clearance', 'finish_route_clearance'}
+        else 1
+    )
     if len(tokens) <= side_index or tokens[side_index] != side:
         return 'symbolic_step side does not match the switch command side'
     return ''
@@ -975,12 +974,12 @@ def _normalization_certificates_reason(
     if reason:
         return reason
     interior_ids = set(interior_states)
-    for field in (
+    exact_fields = [
         'interior_shuttles',
-        'visually_interior_shuttles',
         'certified_interior_shuttles',
-        'certified_stopped_interior_shuttles',
-    ):
+        'clearance_lifecycle_certified_stopped_interior_shuttles',
+    ]
+    for field in exact_fields:
         identities, reason = _identity_set_for_normalization(
             proof.get(field),
             side=side,
@@ -990,14 +989,74 @@ def _normalization_certificates_reason(
             return reason
         if identities != interior_ids:
             return f'{field} does not exactly match current interior occupants'
+    subset_fields: dict[str, set[str]] = {}
     for field in (
-        'uncertified_interior_shuttles',
-        'certificate_segment_mismatches',
+        'visually_interior_shuttles',
+        'certified_stopped_interior_shuttles',
+    ):
+        identities, reason = _identity_set_for_normalization(
+            proof.get(field),
+            side=side,
+            field=field,
+        )
+        if reason:
+            return reason
+        if not identities.issubset(interior_ids):
+            return f'{field} contains a non-interior identity'
+        subset_fields[field] = identities
+    for field in (
         'external_obstacles',
+        'clearance_lifecycle_uncertified_interior_shuttles',
     ):
         value = proof.get(field)
         if not isinstance(value, list) or value:
             return f'{field} must be an empty list'
+    uncertified_interior, reason = _identity_set_for_normalization(
+        proof.get('uncertified_interior_shuttles'),
+        side=side,
+        field='uncertified_interior_shuttles',
+    )
+    if reason:
+        return reason
+    expected_uncertified = (
+        interior_ids
+        - subset_fields['certified_stopped_interior_shuttles']
+    )
+    if uncertified_interior != expected_uncertified:
+        return (
+            'uncertified_interior_shuttles does not match the strict '
+            'visual/certificate disagreement set'
+        )
+    certified_visual_disagreements, reason = (
+        _identity_set_for_normalization(
+            proof.get('clearance_lifecycle_visual_disagreements'),
+            side=side,
+            field='clearance_lifecycle_visual_disagreements',
+        )
+    )
+    if reason:
+        return reason
+    mismatches, reason = _identity_set_for_normalization(
+        proof.get('certificate_segment_mismatches'),
+        side=side,
+        field='certificate_segment_mismatches',
+    )
+    if reason:
+        return reason
+    if (
+        mismatches != certified_visual_disagreements
+        or mismatches != uncertified_interior
+    ):
+        return 'visual/certificate disagreements are not exactly certified'
+    if (
+        proof.get('clearance_lifecycle_visual_prediction_preserved')
+        is not True
+        or proof.get(
+            'clearance_lifecycle_certificate_used_as_localization'
+        )
+        is not False
+    ):
+        return 'clearance-lifecycle visual provenance is invalid'
 
     raw_consistency = proof.get('certificate_segment_consistency')
     if not isinstance(raw_consistency, dict):
@@ -1024,9 +1083,8 @@ def _normalization_certificates_reason(
             if side == 'left'
             else expected_public_segment
         )
-        if (
+        strict_visual_match = (
             consistency.get('required') is not True
-            or consistency.get('satisfied') is not True
             or expected_public_segment not in INTERIOR_GATE_BY_PUBLIC_SEGMENT
             or _clean_token(
                 consistency.get('certificate_target_public_segment')
@@ -1034,10 +1092,25 @@ def _normalization_certificates_reason(
             or _clean_token(
                 consistency.get('certificate_target_internal_segment')
             ).upper() != expected_visual_segment
-            or _clean_token(
-                consistency.get('accepted_visual_internal_segment')
-            ).upper() != expected_visual_segment
             or consistency.get('certificate_used_as_localization') is not False
+        )
+        if strict_visual_match:
+            return f'visual/certificate segment proof is invalid for {identity}'
+        accepted_visual_segment = _clean_token(
+            consistency.get('accepted_visual_internal_segment')
+        ).upper()
+        if consistency.get('satisfied') is True:
+            if accepted_visual_segment != expected_visual_segment:
+                return f'visual/certificate segment proof is invalid for {identity}'
+        elif not (
+            identity in certified_visual_disagreements
+            and accepted_visual_segment
+            and accepted_visual_segment != expected_visual_segment
+            and consistency.get(
+                'certificate_used_as_persisted_execution_effect'
+            )
+            is True
+            and consistency.get('raw_visual_prediction_preserved') is True
         ):
             return f'visual/certificate segment proof is invalid for {identity}'
 
@@ -1045,15 +1118,17 @@ def _normalization_certificates_reason(
     if not isinstance(raw_certificates, dict):
         return 'runtime_clearance_certificates must be a mapping'
     certificates: dict[str, dict[str, Any]] = {}
-    for raw_identity, certificate in raw_certificates.items():
-        spec = normalize_shuttle_ref(raw_identity, side=side)
-        if spec is None and isinstance(certificate, dict):
-            spec = normalize_shuttle_ref(
-                certificate.get('identity') or certificate.get('shuttle'),
-                side=side,
+    for raw_identity, raw_certificate in raw_certificates.items():
+        try:
+            certificate = normalize_runtime_clearance_certificate(
+                raw_identity,
+                raw_certificate,
             )
-        if spec is None or spec.side != side or not isinstance(certificate, dict):
-            return 'runtime clearance certificate has an invalid identity'
+        except ValueError as exc:
+            return f'runtime clearance certificate is invalid: {exc}'
+        spec = normalize_shuttle_ref(certificate['identity'])
+        if spec is None or spec.side != side:
+            return 'runtime clearance certificate has a side conflict'
         if spec.shuttle_id in certificates:
             return 'runtime clearance certificates contain duplicate identities'
         certificates[spec.shuttle_id] = certificate
@@ -1075,28 +1150,137 @@ def _normalization_certificates_reason(
             return f'runtime clearance target_s_m is invalid for {identity}'
         if (
             spec is None
-            or certificate.get('identity') != spec.short_id
-            or certificate.get('shuttle') != spec.shuttle_id
-            or certificate.get('side') != side
             or not gate
             or target_segment not in INTERIOR_GATE_BY_PUBLIC_SEGMENT
             or _clean_token(certificate.get('entry_sensor')).upper() != expected_sensor
-            or certificate.get('entry_sensor_identity_confirmed') is not True
-            or certificate.get('controller_stop_confirmed') is not True
-            or certificate.get('post_stop_visual_frame_received') is not True
-            or certificate.get('bounded_commanded_motion_completed') is not True
-            or certificate.get('clearance_mode_held') is not True
-            or certificate.get('normal_route_restored') is not False
-            or certificate.get('matched_by') != (
-                'interior_entry_sensor_plus_bounded_travel_time'
-            )
-            or certificate.get(
-                'controller_position_fields_used_for_localization'
-            ) is not False
             or not math.isfinite(target_s_m)
-            or target_s_m < 0.0
+            or target_s_m <= 0.0
         ):
             return f'runtime clearance certificate is invalid for {identity}'
+    return ''
+
+
+def _clearance_route_switch_proof_reason(
+    metadata: dict[str, Any],
+    *,
+    side: str,
+    expanded: dict[str, str],
+) -> str:
+    route_switch_proof = metadata.get('clearance_route_switch_proof')
+    if not isinstance(route_switch_proof, dict):
+        return 'clearance_route_switch_proof must be a mapping'
+    if (
+        route_switch_proof.get('side') != side
+        or route_switch_proof.get('route_specific_switch_assignment') is not True
+        or route_switch_proof.get(
+            'controller_position_fields_used_for_localization'
+        )
+        is not False
+    ):
+        return 'clearance route switch proof provenance is invalid'
+    raw_required = route_switch_proof.get('required_switches')
+    if not isinstance(raw_required, dict):
+        return 'clearance route required_switches must be a mapping'
+    required_switches = {
+        _clean_token(name).upper(): _canonical_switch_state(state)
+        for name, state in raw_required.items()
+    }
+    if (
+        set(required_switches) != set(SWITCHES)
+        or expanded != required_switches
+    ):
+        return 'switch command does not match the proved clearance route'
+    target_segment = _clean_token(
+        route_switch_proof.get('target_segment')
+    ).upper()
+    gate = INTERIOR_GATE_BY_PUBLIC_SEGMENT.get(target_segment, '')
+    branch = INTERIOR_HOLDING_BRANCH_BY_GATE.get(gate)
+    exit_switch = _clean_token(
+        route_switch_proof.get('exit_switch')
+    ).upper()
+    if (
+        not branch
+        or _clean_token(route_switch_proof.get('gate_switch')).upper() != gate
+        or exit_switch != _clean_token(branch.get('exit_switch')).upper()
+        or required_switches.get(gate) != 'INTERIOR'
+        or required_switches.get(exit_switch) != 'INTERIOR'
+    ):
+        return 'clearance route does not prove its target interior branch'
+    return ''
+
+
+def _clearance_motion_route_proof_reason(
+    metadata: dict[str, Any],
+    *,
+    rails: dict[str, Any],
+    side: str,
+) -> str:
+    """Bind an interior shuttle ON command to the actual device route."""
+
+    proof = metadata.get('clearance_motion_route_proof')
+    if not isinstance(proof, dict):
+        return 'clearance_motion_route_proof must be a mapping'
+    if (
+        proof.get('side') != side
+        or proof.get('route_specific_switch_assignment') is not True
+        or proof.get('controller_position_fields_used_for_localization')
+        is not False
+    ):
+        return 'clearance motion route proof provenance is invalid'
+    raw_switches = proof.get('required_switches')
+    raw_stoppers = proof.get('required_stoppers')
+    if not isinstance(raw_switches, dict) or not isinstance(raw_stoppers, dict):
+        return 'clearance motion route device requirements must be mappings'
+    required_switches = {
+        _clean_token(device).upper(): _canonical_switch_state(state)
+        for device, state in raw_switches.items()
+    }
+    required_stoppers = {
+        _clean_token(device).upper(): _normalize_stopper_state(state)
+        for device, state in raw_stoppers.items()
+    }
+    if (
+        set(required_switches) != set(SWITCHES)
+        or set(required_stoppers) != set(SWITCHES)
+    ):
+        return 'clearance motion route proof is not a complete device assignment'
+    target_segment = _clean_token(proof.get('target_segment')).upper()
+    gate = INTERIOR_GATE_BY_PUBLIC_SEGMENT.get(target_segment, '')
+    branch = INTERIOR_HOLDING_BRANCH_BY_GATE.get(gate)
+    exit_switch = _clean_token(proof.get('exit_switch')).upper()
+    if (
+        not branch
+        or _clean_token(proof.get('gate_switch')).upper() != gate
+        or exit_switch != _clean_token(branch.get('exit_switch')).upper()
+        or required_switches.get(gate) != 'INTERIOR'
+        or required_switches.get(exit_switch) != 'INTERIOR'
+        or required_stoppers
+        != {device: ('1' if device == exit_switch else '0') for device in SWITCHES}
+    ):
+        return 'clearance motion route does not hold its target branch safely'
+    rail = _rail_snapshot(rails, side)
+    actual_switches = {
+        device: _canonical_switch_state(
+            dict(rail.get('switches') or {}).get(device)
+        )
+        for device in SWITCHES
+    }
+    actual_stoppers = {
+        device: _normalize_stopper_state(
+            dict(rail.get('stoppers') or {}).get(device)
+        )
+        for device in SWITCHES
+    }
+    if actual_switches != required_switches:
+        return (
+            'clearance motion required switch assignment is not active:'
+            f'required={required_switches},actual={actual_switches}'
+        )
+    if actual_stoppers != required_stoppers:
+        return (
+            'clearance motion required stopper assignment is not active:'
+            f'required={required_stoppers},actual={actual_stoppers}'
+        )
     return ''
 
 
@@ -1108,14 +1292,25 @@ def _guarded_route_normalization_proof_reason(
     expanded: dict[str, str],
     changed_switches: tuple[str, ...],
 ) -> str:
-    if expanded != {name: 'EXTERIOR' for name in SWITCHES}:
-        return 'guarded occupancy permits only all-switch EXTERIOR normalization'
     metadata = command.get('closed_loop_executive')
     if not isinstance(metadata, dict):
         return 'missing closed-loop route-normalization proof'
     mode = _clean_token(metadata.get('mode'))
-    if mode not in ROUTE_NORMALIZATION_ACTION_BY_MODE:
+    if mode not in GUARDED_SWITCH_PROOF_ACTION_BY_MODE:
         return 'closed-loop mode is not authorized for route normalization'
+    if mode == 'begin_route_clearance_hold_interior':
+        reason = _clearance_route_switch_proof_reason(
+            metadata,
+            side=side,
+            expanded=expanded,
+        )
+        if reason:
+            return reason
+    elif expanded != {name: 'EXTERIOR' for name in SWITCHES}:
+        return (
+            'guarded occupancy permits only all-switch EXTERIOR '
+            'normalization or an exact proved clearance route'
+        )
     if (
         metadata.get('localization_source') != 'accepted_visual_state'
         or metadata.get('controller_position_fields_used_for_localization') is not False
@@ -1146,7 +1341,14 @@ def _guarded_route_normalization_proof_reason(
         return reason
     if _obstacle_appearance_reason(_rail_snapshot(rails, side), side):
         return 'current rail has an obstacle during route normalization'
-    if mode == 'restore_normal_route_before_slot_motion':
+    if mode == 'begin_route_clearance_hold_interior':
+        if (
+            proof.get('normal_route') is not True
+            or proof.get('all_stoppers_open') is not True
+            or proof.get('clearance_mode') is not False
+        ):
+            return 'clearance-route reconfiguration did not start from a proved normal route'
+    elif mode == 'restore_normal_route_before_slot_motion':
         if (
             proof.get('reconfiguration_required') is not True
             or proof.get('reconfiguration_safe') is not True
@@ -1653,6 +1855,21 @@ def _decode_room315_vla_action(
                 else ''
             )
             if (
+                normalization_mode
+                in GUARDED_ROUTE_RECONFIGURATION_ACTION_BY_MODE
+            ):
+                proof_reason = _clearance_route_switch_proof_reason(
+                    metadata,
+                    side=side,
+                    expanded=expanded,
+                )
+                if proof_reason:
+                    return _safety_decision(
+                        accepted=False,
+                        original_action=command,
+                        reason=proof_reason,
+                    )
+            if (
                 guarded_occupancy_reasons
                 or normalization_mode in ROUTE_NORMALIZATION_ACTION_BY_MODE
             ):
@@ -1775,6 +1992,27 @@ def _decode_room315_vla_action(
             )
             if reason:
                 return _safety_decision(accepted=False, original_action=command, reason=reason)
+            metadata = command.get('closed_loop_executive')
+            clearance_mode = (
+                _clean_token(metadata.get('mode'))
+                if isinstance(metadata, dict)
+                else ''
+            )
+            if clearance_mode in {
+                'plansys2_supervised_interior_clearance',
+                'plansys2_supervised_interior_advance',
+            }:
+                route_reason = _clearance_motion_route_proof_reason(
+                    metadata,
+                    rails=rails,
+                    side=side,
+                )
+                if route_reason:
+                    return _safety_decision(
+                        accepted=False,
+                        original_action=command,
+                        reason=route_reason,
+                    )
             blocked = _closed_stoppers(rails, side)
             if blocked:
                 target_stopper = _clean_token(
@@ -2652,22 +2890,13 @@ class Room315VlaSupervisor(Node):
         self._set_result(f'stoppers commanded on {side}: {stoppers}')
 
     def _slot_sensor_map_from_config(self) -> dict[str, dict[str, str]]:
-        mapping = {
-            side: dict(DEFAULT_SLOT_SENSOR_BY_SIDE[side])
+        return {
+            side: {
+                slot: SLOT_SENSOR_BY_SIDE_AND_SLOT[(side, slot)]
+                for slot in ('1', '2', '3', '4')
+            }
             for side in SIDES
         }
-        configured = self.defaults.get('slot_sensor_by_side')
-        if not isinstance(configured, dict):
-            return mapping
-        for side in SIDES:
-            side_mapping = configured.get(side)
-            if not isinstance(side_mapping, dict):
-                continue
-            for slot, sensor_name in side_mapping.items():
-                slot_name = str(slot).strip()
-                if slot_name in {'1', '2', '3', '4'}:
-                    mapping[side][slot_name] = str(sensor_name).strip()
-        return mapping
 
     def _normalize_slots(self, raw_slots: Any) -> list[str]:
         if raw_slots is None:

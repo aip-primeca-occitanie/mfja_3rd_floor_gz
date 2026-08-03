@@ -44,6 +44,7 @@ from room_315_multi_shuttle import DEFAULT_SHUTTLE_LENGTH_M
 from room_315_multi_shuttle import SIDES
 from room_315_multi_shuttle import all_shuttle_specs
 from room_315_multi_shuttle import load_rail_topology
+from room_315_multi_shuttle import load_slot_sensor_map
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_multi_shuttle import occupancy_aware_route_candidates_from_position_to_slot
 from room_315_multi_shuttle import route_blockers_from_rails
@@ -52,6 +53,8 @@ from room_315_multi_shuttle import route_plan_from_position_to_slot
 from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import public_rail_segment_lengths
 from room_315_rail_defaults import rail_segment_lengths
+from room_315_runtime_contracts import normalize_runtime_clearance_certificate
+from room_315_runtime_contracts import runtime_payload_grounding_matches
 
 
 REPO_ROOT = SCRIPT_DIR.parents[1]
@@ -221,14 +224,12 @@ SLOT_STATION_BY_SIDE_AND_SLOT = {
     ('left', '4'): 'kuka',
 }
 SLOT_SENSOR_BY_SIDE_AND_SLOT = {
-    ('right', '1'): 'DZI1R',
-    ('right', '2'): 'DZI2R',
-    ('right', '3'): 'DZI3R',
-    ('right', '4'): 'DZI4R',
-    ('left', '1'): 'DZI1L',
-    ('left', '2'): 'DZI2L',
-    ('left', '3'): 'DZI3L',
-    ('left', '4'): 'DZI4L',
+    (side, slot): sensor
+    for side in SIDES
+    for slot, sensor in load_slot_sensor_map(
+        RAIL_DEVICES_PATH_BY_SIDE[side],
+        side=side,
+    ).items()
 }
 SLOT_POSE_BY_SIDE_AND_SLOT = {
     ('right', '1'): ('A12E', 0.9172),
@@ -3330,6 +3331,7 @@ def build_pddl_problem_from_observed_state_task_goal(
     *,
     problem_name: str | None = None,
     runtime_clearance_certificates: dict[str, dict[str, Any]] | None = None,
+    runtime_payload_grounding: dict[str, Any] | None = None,
 ) -> Room315PddlProblem:
     """Convert validated planner state and a high-level goal into PDDL.
 
@@ -3377,6 +3379,7 @@ def build_pddl_problem_from_observed_state_task_goal(
         side=side,
         goal_type=goal_type,
         fleet=fleet,
+        runtime_payload_grounding=runtime_payload_grounding,
     )
     route_clearance = _route_clearance_snapshot(fleet=fleet)
     route_clearance['normalization'] = _route_normalization_snapshot(
@@ -3395,23 +3398,37 @@ def build_pddl_problem_from_observed_state_task_goal(
         obstacles=obstacles,
         goal_data=goal_data,
     )
-    configured_goal_route = any(
-        route.get('configured')
-        and route.get('route_clear')
-        and not route.get('blockers')
+    configured_clear_goal_route_bindings = [
+        binding
         for route in route_clearance['topology_routes'].get('routes', [])
-    )
-    if (
-        side_normalization.get('reconfiguration_required')
-        and not side_normalization.get('reconfiguration_safe')
-        and not configured_goal_route
-    ):
-        raise PddlProblemBuildError(
-            'mixed rail route requires normalization but no certified safe '
-            'normalization or already-configured clear goal route is '
-            'available: '
-            f'{side_normalization.get("reason") or "unknown"}'
-        )
+        if (
+            binding := _configured_clear_segment_route_binding(
+                route,
+                side=side,
+                purpose='goal_motion',
+            )
+        ) is not None
+    ]
+    configured_goal_route = bool(configured_clear_goal_route_bindings)
+    # A mixed switch state is not necessarily unfinished clearance.  It can
+    # be the exact authoritative route just configured for a segment-origin
+    # goal.  Preserve the general normalization requirement for safety
+    # auditing, while explicitly proving when normalization must be deferred
+    # until after the selected goal motion consumes this route.
+    side_normalization.update({
+        'configured_clear_goal_route': configured_goal_route,
+        'normalization_required_before_goal_motion': bool(
+            side_normalization.get('reconfiguration_required')
+            and not configured_goal_route
+        ),
+        'configured_clear_goal_route_bindings': (
+            configured_clear_goal_route_bindings
+        ),
+        'configured_clear_clearance_route': False,
+        'configured_clear_clearance_route_bindings': [],
+        'configured_clear_motion_route': configured_goal_route,
+    })
+    route_clearance['normalization']['by_side'][side] = side_normalization
     route_clearance['target_clearance_plan'] = _target_blocker_clearance_plan(
         fleet=fleet,
         devices=devices,
@@ -3419,8 +3436,143 @@ def build_pddl_problem_from_observed_state_task_goal(
         goal_data=goal_data,
         route_clearance=route_clearance,
     )
+    route_candidate_exclusions: set[int] = set()
+    progress_route_audit: list[dict[str, Any]] = []
+    while True:
+        selected_goal_route = (
+            route_clearance.get('topology_routes', {})
+            .get('by_shuttle_and_slot', {})
+            .get((
+                goal_data['selected_shuttle'],
+                _slot_object(side, goal_data['target_slot']),
+            ))
+        )
+        nonprogress = _direct_blocker_slot_reoccupies_goal_route(
+            side=side,
+            goal_route=selected_goal_route,
+            target_clearance=route_clearance['target_clearance_plan'],
+        )
+        if nonprogress is None:
+            break
+        selected_candidate_index = int(
+            selected_goal_route['selected_route_candidate_index']
+        )
+        route_candidate_exclusions.add(selected_candidate_index)
+        progress_route_audit.append({
+            **nonprogress,
+            'excluded_route_candidate_index': selected_candidate_index,
+            'policy': (
+                'reject_direct_blocker_parking_that_reoccupies_the_same_'
+                'selected_goal_route'
+            ),
+            'controller_position_fields_used_for_localization': False,
+        })
+        try:
+            alternate_routes = _topology_route_snapshot(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                goal_data=goal_data,
+                excluded_candidate_indices_by_shuttle={
+                    goal_data['selected_shuttle']: set(
+                        route_candidate_exclusions
+                    ),
+                },
+            )
+        except PddlProblemBuildError as exc:
+            raise PddlProblemBuildError(
+                'every authoritative topology candidate would relocate a '
+                'direct blocker back onto the selected goal route: '
+                f'{exc}'
+            ) from exc
+        route_clearance['topology_routes'] = alternate_routes
+        route_clearance['target_clearance_plan'] = (
+            _target_blocker_clearance_plan(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                goal_data=goal_data,
+                route_clearance=route_clearance,
+            )
+        )
+    if progress_route_audit:
+        route_clearance['topology_routes']['provenance'][
+            'progress_preserving_route_selection'
+        ] = progress_route_audit
+        route_clearance['target_clearance_plan'][
+            'progress_preserving_route_selection'
+        ] = copy.deepcopy(progress_route_audit)
+
+    # Candidate rejection above can change the final goal route. Recompute
+    # its configured binding before deciding whether a mixed route must be
+    # normalized.
+    configured_clear_goal_route_bindings = [
+        binding
+        for route in route_clearance['topology_routes'].get('routes', [])
+        if (
+            binding := _configured_clear_segment_route_binding(
+                route,
+                side=side,
+                purpose='goal_motion',
+            )
+        ) is not None
+    ]
+    configured_goal_route = bool(configured_clear_goal_route_bindings)
+    side_normalization.update({
+        'configured_clear_goal_route': configured_goal_route,
+        'configured_clear_goal_route_bindings': (
+            configured_clear_goal_route_bindings
+        ),
+    })
     _append_topology_clearance_routes(route_clearance)
     target_clearance = route_clearance['target_clearance_plan']
+    configured_clearance_route_bindings = []
+    for relocation in list(
+        target_clearance.get('ordered_relocations') or []
+    )[:1]:
+        destination = dict(relocation.get('destination') or {})
+        binding = _configured_clear_segment_route_binding(
+            destination.get('topology_route'),
+            side=side,
+            purpose='blocker_clearance_motion',
+        )
+        if binding is not None:
+            configured_clearance_route_bindings.append({
+                **binding,
+                'relocation_order': int(relocation.get('order') or 1),
+            })
+    configured_clearance_route = bool(
+        configured_clearance_route_bindings
+    )
+    configured_motion_route = bool(
+        configured_goal_route or configured_clearance_route
+    )
+    side_normalization.update({
+        'configured_clear_clearance_route': configured_clearance_route,
+        'configured_clear_clearance_route_bindings': (
+            configured_clearance_route_bindings
+        ),
+        'configured_clear_motion_route': configured_motion_route,
+        'normalization_required_before_goal_motion': bool(
+            side_normalization.get('reconfiguration_required')
+            and not configured_motion_route
+        ),
+        'normalization_required_before_planned_motion': bool(
+            side_normalization.get('reconfiguration_required')
+            and not configured_motion_route
+        ),
+    })
+    if (
+        side_normalization.get('reconfiguration_required')
+        and not side_normalization.get('reconfiguration_safe')
+        and not configured_motion_route
+    ):
+        raise PddlProblemBuildError(
+            'mixed rail route requires normalization but no certified safe '
+            'normalization or already-configured clear planned-motion route '
+            'is available: '
+            f'{side_normalization.get("reason") or "unknown"}'
+        )
     if target_clearance.get('unsupported_if_more_than_two_blockers'):
         raise PddlProblemBuildError(
             'more than two route blockers exceed the physically separated '
@@ -3549,6 +3701,23 @@ def build_pddl_problem_from_observed_state_task_goal(
                 else 'deterministic accepted-visual grounding before PlanSys2'
             )
         )
+        provenance['payload_selection_contract'] = {
+            'payload_filter': goal_data['payload_filter'],
+            'semantics': goal_data['payload_filter_semantics'],
+            'selected_shuttle': goal_data['selected_shuttle'],
+            'current_visual_prediction': goal_data[
+                'selected_payload_prediction'
+            ],
+            'current_visual_prediction_matches_selection': goal_data[
+                'selected_payload_prediction_matches_filter'
+            ],
+            'raw_visual_prediction_preserved': True,
+            'model_prediction_replaced': False,
+            'controller_payload_state_used': False,
+            'grounding_proof': dict(
+                goal_data.get('payload_grounding') or {}
+            ),
+        }
     if goal_data.get('station_target_resolution'):
         provenance['station_target_resolution'] = dict(
             goal_data['station_target_resolution']
@@ -3565,6 +3734,88 @@ def build_pddl_problem_from_observed_state_task_goal(
         selection_policy=goal_data.get('selection_policy', ''),
         provenance=provenance,
     )
+
+
+def _replace_problem_goal(
+    problem: Room315PddlProblem,
+    *,
+    problem_name: str,
+    goal_text: str,
+    error_context: str,
+) -> str:
+    """Replace one frozen problem name and goal, or fail closed."""
+
+    old_goal = f'  (:goal\n    {problem.goal_text}\n  )'
+    new_goal = f'  (:goal\n    {goal_text}\n  )'
+    old_name = f'(problem {problem.problem_name})'
+    if (
+        problem.problem_text.count(old_goal) != 1
+        or problem.problem_text.count(old_name) != 1
+    ):
+        raise PddlProblemBuildError(
+            f'could not isolate {error_context} PDDL problem safely'
+        )
+    return problem.problem_text.replace(old_goal, new_goal, 1).replace(
+        old_name,
+        f'(problem {problem_name})',
+        1,
+    )
+
+
+def _reset_pending_clearances(
+    problem_text: str,
+    *,
+    side: str,
+    error_context: str,
+) -> str:
+    """Suspend a parent route count in a one-action subproblem."""
+
+    pending_pattern = re.compile(
+        rf'\(= \(pending_clearances {re.escape(side)}\) \d+\)'
+    )
+    updated, replacements = pending_pattern.subn(
+        f'(= (pending_clearances {side}) 0)',
+        problem_text,
+        count=1,
+    )
+    if replacements != 1:
+        raise PddlProblemBuildError(
+            f'could not isolate {error_context} pending count safely'
+        )
+    return updated
+
+
+def _retain_only_target_free_slot(
+    problem_text: str,
+    *,
+    side: str,
+    target_slot: str,
+    error_context: str,
+) -> tuple[str, list[str]]:
+    """Withhold alternate waypoints from a one-action parking problem."""
+
+    free_slot_pattern = re.compile(
+        rf'(?m)^\s*\(slot_free ({re.escape(side)}_slot_\d+)\)\s*$'
+    )
+    exposed = free_slot_pattern.findall(problem_text)
+    if target_slot not in exposed:
+        raise PddlProblemBuildError(
+            f'{error_context} target {target_slot!r} is not known free'
+        )
+    withheld = sorted(slot for slot in exposed if slot != target_slot)
+    for withheld_slot in withheld:
+        problem_text, replacements = re.subn(
+            rf'(?m)^\s*\(slot_free {re.escape(withheld_slot)}\)\s*\n?',
+            '',
+            problem_text,
+            count=1,
+        )
+        if replacements != 1:
+            raise PddlProblemBuildError(
+                f'could not withhold {error_context} alternate slot '
+                f'{withheld_slot!r}'
+            )
+    return problem_text, withheld
 
 
 def build_first_blocker_clearance_problem(
@@ -3621,41 +3872,77 @@ def build_first_blocker_clearance_problem(
             f'unsupported blocker-clearance destination {destination_kind!r}'
         )
 
-    old_goal = f'  (:goal\n    {problem.goal_text}\n  )'
-    new_goal = f'  (:goal\n    {goal_text}\n  )'
-    if problem.problem_text.count(old_goal) != 1:
-        raise PddlProblemBuildError('could not replace the transport PDDL goal safely')
+    normalization = dict(
+        provenance.get('route_normalization', {})
+        .get('by_side', {})
+        .get(problem.side, {})
+    )
+    if destination_kind == 'slot' and normalization.get('clearance_mode'):
+        raise PddlProblemBuildError(
+            'cannot build a normal-route slot relocation while clearance '
+            'mode is active; build and execute the certified clearance-pause '
+            'subproblem first'
+        )
+    normalize_before_clearance = bool(
+        normalization.get('reconfiguration_required')
+        and normalization.get('reconfiguration_safe')
+        and not normalization.get('normal_route')
+        and not normalization.get('configured_clear_motion_route')
+    )
+    deferred_clearance_goal = goal_text
+    if normalize_before_clearance:
+        # The executive executes one atomic action and re-observes. Asking POPF
+        # to normalize a mixed topology and solve the future relocation in one
+        # search creates an avoidable numeric deadlock/search explosion because
+        # pending_clearances belongs to the parent route. Isolate the safe
+        # normalization action, suspend the future count, then rebuild every
+        # clearance fact from the next accepted observation.
+        goal_text = f'(normal_route {problem.side})'
+        phase = 'normalize_route_before_blocker_clearance'
+
     clearance_provenance = dict(provenance)
     clearance_provenance.update({
         'planning_phase': phase,
         'clearance_relocation': relocation,
         'parent_problem_name': problem.problem_name,
     })
+    if normalize_before_clearance:
+        clearance_provenance.update({
+            'deferred_clearance_goal': deferred_clearance_goal,
+            'normalization_before_clearance': True,
+            'fresh_reobservation_required_after_normalization': True,
+        })
     clearance_problem_name = (
-        f'{problem.problem_name}-clearance-{int(relocation.get("order") or 1)}'
+        f'{problem.problem_name}-normalization-before-clearance'
+        if normalize_before_clearance
+        else (
+            f'{problem.problem_name}-clearance-'
+            f'{int(relocation.get("order") or 1)}'
+        )
     )
-    problem_text = problem.problem_text.replace(old_goal, new_goal, 1).replace(
-        f'(problem {problem.problem_name})',
-        f'(problem {clearance_problem_name})',
-        1,
+    problem_text = _replace_problem_goal(
+        problem,
+        problem_name=clearance_problem_name,
+        goal_text=goal_text,
+        error_context='blocker-clearance',
     )
-    if destination_kind == 'slot':
+    if normalize_before_clearance:
+        problem_text = _reset_pending_clearances(
+            problem_text,
+            side=problem.side,
+            error_context='pre-clearance normalization',
+        )
+        clearance_provenance['parent_pending_clearances_suspended'] = True
+    elif destination_kind == 'slot':
         # pending_clearances describes the parent selected-shuttle route. A
         # free-slot parking subgoal is itself a normal-route move and must not
         # be blocked by that parent's pending count. The parent problem is
         # rebuilt from a fresh observation immediately after this one move.
-        pending_pattern = re.compile(
-            rf'\(= \(pending_clearances {re.escape(problem.side)}\) \d+\)'
-        )
-        problem_text, replacements = pending_pattern.subn(
-            f'(= (pending_clearances {problem.side}) 0)',
+        problem_text = _reset_pending_clearances(
             problem_text,
-            count=1,
+            side=problem.side,
+            error_context='slot-clearance',
         )
-        if replacements != 1:
-            raise PddlProblemBuildError(
-                'could not isolate slot-clearance pending count safely'
-            )
         clearance_provenance['parent_pending_clearances_suspended'] = True
 
         # The executive deliberately executes only the first action from each
@@ -3666,29 +3953,12 @@ def build_first_blocker_clearance_problem(
         # action has the same destination as the frozen clearance provenance.
         # Withholding a free fact is fail-closed; no occupied slot is presented
         # as free, and the complete state is rebuilt after the move.
-        free_slot_pattern = re.compile(
-            rf'(?m)^\s*\(slot_free ({re.escape(problem.side)}_slot_\d+)\)\s*$'
+        problem_text, withheld_free_slots = _retain_only_target_free_slot(
+            problem_text,
+            side=problem.side,
+            target_slot=target_slot,
+            error_context='clearance parking',
         )
-        exposed_free_slots = free_slot_pattern.findall(problem_text)
-        if target_slot not in exposed_free_slots:
-            raise PddlProblemBuildError(
-                f'clearance parking target {target_slot!r} is not known free'
-            )
-        withheld_free_slots = sorted(
-            slot for slot in exposed_free_slots if slot != target_slot
-        )
-        for withheld_slot in withheld_free_slots:
-            problem_text, replacements = re.subn(
-                rf'(?m)^\s*\(slot_free {re.escape(withheld_slot)}\)\s*\n?',
-                '',
-                problem_text,
-                count=1,
-            )
-            if replacements != 1:
-                raise PddlProblemBuildError(
-                    f'could not withhold intermediate parking slot '
-                    f'{withheld_slot!r} safely'
-                )
         clearance_provenance.update({
             'first_action_destination_constrained': True,
             'parking_target_free_fact_retained': target_slot,
@@ -3703,6 +3973,9 @@ def build_first_blocker_clearance_problem(
         problem_text=problem_text,
         goal_text=goal_text,
         target_station=(
+            problem.target_station
+            if normalize_before_clearance
+            else
             SLOT_STATION_BY_SIDE_AND_SLOT[
                 (problem.side, _slot_number_from_object(target_slot))
             ]
@@ -3710,11 +3983,18 @@ def build_first_blocker_clearance_problem(
             else problem.target_station
         ),
         target_slot=(
+            problem.target_slot
+            if normalize_before_clearance
+            else
             _slot_number_from_object(target_slot)
             if destination_kind == 'slot'
             else problem.target_slot
         ),
-        selected_shuttle=blocker,
+        selected_shuttle=(
+            problem.selected_shuttle
+            if normalize_before_clearance
+            else blocker
+        ),
         provenance=clearance_provenance,
     )
 
@@ -3747,52 +4027,26 @@ def build_intermediate_selected_advance_problem(
             'intermediate selected-shuttle advance has incomplete endpoints'
         )
     goal_text = f'(shuttle_at_slot {selected} {target_slot})'
-    old_goal = f'  (:goal\n    {problem.goal_text}\n  )'
-    new_goal = f'  (:goal\n    {goal_text}\n  )'
-    if problem.problem_text.count(old_goal) != 1:
-        raise PddlProblemBuildError(
-            'could not replace the final transport goal for intermediate advance'
-        )
     name = f'{problem.problem_name}-advance-{_slot_number_from_object(target_slot)}'
-    problem_text = problem.problem_text.replace(old_goal, new_goal, 1).replace(
-        f'(problem {problem.problem_name})',
-        f'(problem {name})',
-        1,
+    problem_text = _replace_problem_goal(
+        problem,
+        problem_name=name,
+        goal_text=goal_text,
+        error_context='intermediate selected-shuttle advance',
     )
-    pending_pattern = re.compile(
-        rf'\(= \(pending_clearances {re.escape(problem.side)}\) \d+\)'
-    )
-    problem_text, replacements = pending_pattern.subn(
-        f'(= (pending_clearances {problem.side}) 0)',
+    problem_text = _reset_pending_clearances(
         problem_text,
-        count=1,
+        side=problem.side,
+        error_context='intermediate-advance',
     )
-    if replacements != 1:
-        raise PddlProblemBuildError(
-            'could not isolate intermediate-advance pending count safely'
-        )
     # No other free destination may be used as an unreviewed waypoint in this
     # one-action subproblem.  The complete facts are restored after reobserve.
-    free_slot_pattern = re.compile(
-        rf'(?m)^\s*\(slot_free ({re.escape(problem.side)}_slot_\d+)\)\s*$'
+    problem_text, withheld = _retain_only_target_free_slot(
+        problem_text,
+        side=problem.side,
+        target_slot=target_slot,
+        error_context='intermediate advance',
     )
-    exposed = free_slot_pattern.findall(problem_text)
-    if target_slot not in exposed:
-        raise PddlProblemBuildError(
-            f'intermediate target {target_slot!r} is not known free'
-        )
-    withheld = sorted(slot for slot in exposed if slot != target_slot)
-    for slot in withheld:
-        problem_text, replacements = re.subn(
-            rf'(?m)^\s*\(slot_free {re.escape(slot)}\)\s*\n?',
-            '',
-            problem_text,
-            count=1,
-        )
-        if replacements != 1:
-            raise PddlProblemBuildError(
-                f'could not withhold alternate intermediate slot {slot!r}'
-            )
     provenance.update({
         'planning_phase': 'advance_selected_to_intermediate_slot',
         'intermediate_selected_advance': advance,
@@ -3831,17 +4085,12 @@ def build_clearance_pause_problem(
             'clearance pause requested without a certified safe active phase'
         )
     goal_text = f'(normal_route {problem.side})'
-    old_goal = f'  (:goal\n    {problem.goal_text}\n  )'
-    new_goal = f'  (:goal\n    {goal_text}\n  )'
-    if problem.problem_text.count(old_goal) != 1:
-        raise PddlProblemBuildError(
-            'could not replace the transport goal for clearance pause'
-        )
     name = f'{problem.problem_name}-pause-clearance'
-    problem_text = problem.problem_text.replace(old_goal, new_goal, 1).replace(
-        f'(problem {problem.problem_name})',
-        f'(problem {name})',
-        1,
+    problem_text = _replace_problem_goal(
+        problem,
+        problem_name=name,
+        goal_text=goal_text,
+        error_context='clearance pause',
     )
     provenance.update({
         'planning_phase': 'pause_clearance_for_exterior_choreography',
@@ -4375,11 +4624,12 @@ def _validate_exact_slot_anchor_visual_consistency(
 ) -> dict[str, Any]:
     """Bind raw learned location to a DZI anchor without rewriting either.
 
-    A raw active DZI still requires the legacy bounded-ratio agreement.  Only
-    an executor certificate created after multi-frame identity confirmation,
-    a supervised OFF command, and a fresh stopped-at-target controller effect
-    may turn a same-segment ratio disagreement into a diagnostic.  Segment
-    disagreement always fails closed.
+    A raw active DZI still requires visual segment and bounded-ratio
+    agreement.  Only an executor certificate created after multi-frame
+    identity confirmation, a supervised OFF command, and a fresh
+    stopped-at-target controller effect may turn either disagreement into a
+    diagnostic.  The learned location remains unchanged in the raw facts;
+    only the separate planning geometry is anchored to the certified slot.
     """
 
     position_metadata = (
@@ -4403,7 +4653,8 @@ def _validate_exact_slot_anchor_visual_consistency(
     expected_location = topology.slots[slot]
     observed_segment = str(position.get('segment') or '').strip().upper()
     expected_segment = str(expected_location.segment).strip().upper()
-    if observed_segment != expected_segment:
+    segment_agrees = observed_segment == expected_segment
+    if not segment_agrees and verified_slot_arrival is None:
         raise PddlProblemBuildError(
             f'exact slot anchor and visual segment disagree for {shuttle_id!r}: '
             f'expected {expected_segment}, observed '
@@ -4412,8 +4663,10 @@ def _validate_exact_slot_anchor_visual_consistency(
     observed_ratio = float(position['s_ratio'])
     expected_ratio = float(expected_location.s_ratio)
     ratio_error = abs(observed_ratio - expected_ratio)
-    tolerance_exceeded = (
-        ratio_error > EXACT_SLOT_ANCHOR_VISUAL_TOLERANCE_RATIO
+    ratio_comparison_applicable = segment_agrees
+    tolerance_exceeded = bool(
+        ratio_comparison_applicable
+        and ratio_error > EXACT_SLOT_ANCHOR_VISUAL_TOLERANCE_RATIO
     )
     if tolerance_exceeded and verified_slot_arrival is None:
         raise PddlProblemBuildError(
@@ -4426,15 +4679,27 @@ def _validate_exact_slot_anchor_visual_consistency(
         'side': side,
         'slot': slot,
         'segment': expected_segment,
+        'raw_visual_segment': observed_segment,
+        'canonical_slot_segment': expected_segment,
+        'visual_segment_agrees': segment_agrees,
+        'visual_segment_disagreement': not segment_agrees,
         'raw_visual_s_ratio': observed_ratio,
         'canonical_slot_s_ratio': expected_ratio,
         'absolute_ratio_error': ratio_error,
+        'ratio_comparison_applicable': ratio_comparison_applicable,
         'legacy_ratio_tolerance': (
             EXACT_SLOT_ANCHOR_VISUAL_TOLERANCE_RATIO
         ),
         'legacy_ratio_tolerance_exceeded': tolerance_exceeded,
+        'accepted_segment_disagreement_under_verified_arrival_certificate': (
+            bool(not segment_agrees and verified_slot_arrival is not None)
+        ),
+        'accepted_ratio_disagreement_under_verified_arrival_certificate': (
+            bool(tolerance_exceeded and verified_slot_arrival is not None)
+        ),
         'accepted_under_verified_arrival_certificate': bool(
-            tolerance_exceeded and verified_slot_arrival is not None
+            verified_slot_arrival is not None
+            and (not segment_agrees or tolerance_exceeded)
         ),
         'raw_visual_position_replaced': False,
         'controller_position_fields_used_for_localization': False,
@@ -4558,10 +4823,12 @@ def _verified_slot_planning_position(
 
     slot = _slot_number_from_object(slot_object)
     canonical = topology.slots[slot]
-    segment_length_m = max(
-        float(visual_position['segment_length_m']),
-        1e-9,
+    side = _normalise_planning_side(visual_position['side'])
+    canonical_segment = str(canonical.segment).strip().upper()
+    canonical_segment_length_m = float(
+        rail_segment_lengths(side)[canonical_segment]
     )
+    segment_length_m = max(canonical_segment_length_m, 1e-9)
     uncertainty_m = float(
         visual_position.get('position_uncertainty_m') or 0.0
     )
@@ -4577,9 +4844,16 @@ def _verified_slot_planning_position(
     canonical_ratio = float(canonical.s_ratio)
     return {
         **visual_position,
-        'segment': str(canonical.segment).strip().upper(),
+        'segment': canonical_segment,
         's_ratio': canonical_ratio,
+        'segment_length_m': canonical_segment_length_m,
         'source': 'verified_slot_arrival_categorical_anchor',
+        'raw_visual_segment': str(
+            visual_position.get('segment') or ''
+        ).strip().upper(),
+        'raw_visual_segment_length_m': float(
+            visual_position['segment_length_m']
+        ),
         'raw_visual_s_ratio': raw_ratio,
         'canonical_slot_s_ratio': canonical_ratio,
         'occupancy_start_s_ratio': max(
@@ -4668,29 +4942,15 @@ def _validated_runtime_clearance_certificates(
         for segment in INTERIOR_LOOP_GATE_BY_PUBLIC_SEGMENT
     }
     for raw_identity, raw_certificate in dict(raw or {}).items():
-        if not isinstance(raw_certificate, dict):
-            raise PddlProblemBuildError(
-                'runtime clearance certificate must be an object'
+        try:
+            certificate = normalize_runtime_clearance_certificate(
+                raw_identity,
+                raw_certificate,
             )
-        spec = normalize_shuttle_ref(raw_identity)
-        certificate_identity = normalize_shuttle_ref(
-            raw_certificate.get('identity')
-        )
-        certificate_shuttle = normalize_shuttle_ref(
-            raw_certificate.get('shuttle')
-        )
-        if (
-            spec is None
-            or certificate_identity is None
-            or certificate_shuttle is None
-        ):
-            raise PddlProblemBuildError(
-                f'unknown runtime clearance identity {raw_identity!r}'
-            )
-        if spec != certificate_identity or spec != certificate_shuttle:
-            raise PddlProblemBuildError(
-                f'runtime clearance identity conflict for {spec.short_id}'
-            )
+        except ValueError as exc:
+            raise PddlProblemBuildError(str(exc)) from exc
+        spec = normalize_shuttle_ref(certificate['identity'])
+        assert spec is not None  # guaranteed by shared normalization
         if spec.shuttle_id in certificates:
             raise PddlProblemBuildError(
                 f'duplicate runtime clearance identity for {spec.short_id}'
@@ -4703,99 +4963,7 @@ def _validated_runtime_clearance_certificates(
                 f'runtime clearance identity is not explicitly present: '
                 f'{spec.short_id}'
             )
-        certificate = dict(raw_certificate)
-        if not str(certificate.get('side') or '').strip():
-            raise PddlProblemBuildError(
-                f'runtime clearance side missing for {spec.short_id}'
-            )
-        side = _normalise_planning_side(certificate.get('side'))
-        if side != spec.side:
-            raise PddlProblemBuildError(
-                f'runtime clearance side conflict for {spec.short_id}'
-            )
-        if certificate.get('entry_sensor_identity_confirmed') is not True:
-            raise PddlProblemBuildError(
-                f'runtime clearance lacks entry sensor proof for {spec.short_id}'
-            )
-        if certificate.get('controller_stop_confirmed') is not True:
-            raise PddlProblemBuildError(
-                f'runtime clearance lacks stop proof for {spec.short_id}'
-            )
-        if certificate.get('post_stop_visual_frame_received') is not True:
-            raise PddlProblemBuildError(
-                f'runtime clearance lacks post-stop visual proof for '
-                f'{spec.short_id}'
-            )
-        matched_by = str(certificate.get('matched_by') or '')
-        if matched_by not in {
-            'interior_entry_sensor_plus_bounded_travel_time',
-            'certified_interior_origin_plus_bounded_travel_time',
-        }:
-            raise PddlProblemBuildError(
-                'runtime clearance lacks bounded-motion proof for '
-                f'{spec.short_id}'
-            )
-        if matched_by == (
-            'certified_interior_origin_plus_bounded_travel_time'
-        ):
-            origin_proof = dict(
-                certificate.get('origin_clearance_proof') or {}
-            )
-            try:
-                motion_origin_s_m = float(certificate['motion_origin_s_m'])
-                bounded_motion_distance_m = float(
-                    certificate['bounded_motion_distance_m']
-                )
-                origin_target_s_m = float(origin_proof['target_s_m'])
-            except (KeyError, TypeError, ValueError) as exc:
-                raise PddlProblemBuildError(
-                    'runtime clearance lacks certified interior advance '
-                    f'origin for {spec.short_id}'
-                ) from exc
-            if (
-                certificate.get('interior_advance_origin_certified')
-                is not True
-                or origin_proof.get('identity') != spec.short_id
-                or origin_proof.get('entry_sensor_identity_confirmed')
-                is not True
-                or origin_proof.get('controller_stop_confirmed') is not True
-                or origin_proof.get('bounded_commanded_motion_completed')
-                is not True
-                or origin_proof.get(
-                    'controller_position_fields_used_for_localization'
-                )
-                is not False
-                or abs(origin_target_s_m - motion_origin_s_m) > 1e-9
-                or bounded_motion_distance_m <= 0.0
-            ):
-                raise PddlProblemBuildError(
-                    'runtime clearance interior advance origin proof is '
-                    f'incomplete for {spec.short_id}'
-                )
-        if certificate.get('bounded_commanded_motion_completed') is not True:
-            raise PddlProblemBuildError(
-                'runtime clearance lacks completed bounded motion for '
-                f'{spec.short_id}'
-            )
-        if (
-            certificate.get('clearance_mode_held') is not True
-            or certificate.get('normal_route_restored') is not False
-        ):
-            raise PddlProblemBuildError(
-                f'runtime clearance lacks held-route proof for {spec.short_id}'
-            )
-        if (
-            certificate.get('controller_position_fields_used_for_localization')
-            is not False
-        ):
-            raise PddlProblemBuildError(
-                f'runtime clearance used controller position for {spec.short_id}'
-            )
-        if certificate.get('model_prediction_replaced') is not False:
-            raise PddlProblemBuildError(
-                f'runtime clearance replaced model prediction for '
-                f'{spec.short_id}'
-            )
+        side = certificate['side']
         target_segment = str(
             certificate.get('target_segment') or ''
         ).strip().upper()
@@ -4819,26 +4987,7 @@ def _validated_runtime_clearance_certificates(
                 f'{spec.short_id}: expected {expected_sensor}, observed '
                 f'{entry_sensor or "missing"}'
             )
-        try:
-            target_s_m = float(certificate['target_s_m'])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise PddlProblemBuildError(
-                f'runtime clearance target_s_m invalid for {spec.short_id}'
-            ) from exc
-        if matched_by == (
-            'certified_interior_origin_plus_bounded_travel_time'
-        ) and (
-            target_s_m <= motion_origin_s_m
-            or abs(
-                bounded_motion_distance_m
-                - (target_s_m - motion_origin_s_m)
-            )
-            > 1e-9
-        ):
-            raise PddlProblemBuildError(
-                'runtime clearance interior advance distance is invalid for '
-                f'{spec.short_id}'
-            )
+        target_s_m = certificate['target_s_m']
         segment_length_m = float(
             public_rail_segment_lengths(side)[target_segment]
         )
@@ -5064,6 +5213,7 @@ def _goal_data_from_task_goal(
     side: str,
     goal_type: str,
     fleet: dict[str, Any],
+    runtime_payload_grounding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if goal_type == 'inspection':
         subject = _pddl_symbol(constraints.get('inspection_subject') or 'room315_system')
@@ -5115,6 +5265,25 @@ def _goal_data_from_task_goal(
     if payload_filter not in {'loaded', 'empty', 'any'}:
         payload_filter = 'any'
 
+    raw_payload_grounding = runtime_payload_grounding
+    if raw_payload_grounding is not None and not isinstance(
+        raw_payload_grounding,
+        dict,
+    ):
+        raise PddlProblemBuildError(
+            'runtime payload grounding must be a mapping'
+        )
+    payload_grounding = dict(raw_payload_grounding or {})
+    if payload_grounding and not runtime_payload_grounding_matches(
+        payload_grounding,
+        selected_shuttle=target_shuttle,
+        payload_filter=payload_filter,
+    ):
+        raise PddlProblemBuildError(
+            'runtime payload grounding does not match the explicit target '
+            'and payload filter'
+        )
+
     side_shuttles = [
         spec.shuttle_id
         for spec in all_shuttle_specs()
@@ -5129,16 +5298,24 @@ def _goal_data_from_task_goal(
                 f'explicit transport target {target_shuttle!r} is not present '
                 f'on the authoritative {side} presence registry'
             )
+        # ``payload_filter`` is a candidate-selection qualifier.  The runtime
+        # gateway validates it against an accepted visual state before it
+        # grounds the TaskGoal to one explicit identity.  Reapplying the
+        # qualifier after every atomic motion made the selected identity
+        # unstable: a later occluded frame could flip loaded/empty and abort a
+        # task whose payload cannot physically change in this transport-only
+        # plan.  Keep the later raw visual prediction in the PDDL facts, but
+        # accept a mismatch only with the gateway-created frozen proof.
         explicit_loaded = bool(fleet['loaded_by_shuttle'][target_shuttle])
-        if payload_filter == 'loaded' and not explicit_loaded:
+        payload_matches = (
+            payload_filter == 'any'
+            or (payload_filter == 'loaded' and explicit_loaded)
+            or (payload_filter == 'empty' and not explicit_loaded)
+        )
+        if not payload_matches and not payload_grounding:
             raise PddlProblemBuildError(
                 f'explicit transport target {target_shuttle!r} does not '
-                'satisfy payload_filter=loaded'
-            )
-        if payload_filter == 'empty' and explicit_loaded:
-            raise PddlProblemBuildError(
-                f'explicit transport target {target_shuttle!r} does not '
-                'satisfy payload_filter=empty'
+                f'satisfy payload_filter={payload_filter}'
             )
         candidates = (target_shuttle,)
         selected = target_shuttle
@@ -5293,6 +5470,33 @@ def _goal_data_from_task_goal(
         'selection_policy': selection,
         'planner_selects_candidate': planner_selects_candidate,
         'station_target_resolution': station_resolution,
+        'payload_filter': payload_filter,
+        'payload_filter_semantics': (
+            'selection_time_only_after_explicit_grounding'
+            if payload_grounding
+            else (
+                'live_visual_explicit_validation'
+                if selection == 'explicit'
+                else 'live_visual_candidate_filter_before_grounding'
+            )
+        ),
+        'payload_grounding': payload_grounding,
+        'selected_payload_prediction': (
+            'loaded'
+            if bool(fleet['loaded_by_shuttle'].get(selected))
+            else 'empty'
+        ),
+        'selected_payload_prediction_matches_filter': (
+            payload_filter == 'any'
+            or (
+                payload_filter == 'loaded'
+                and bool(fleet['loaded_by_shuttle'].get(selected))
+            )
+            or (
+                payload_filter == 'empty'
+                and not bool(fleet['loaded_by_shuttle'].get(selected))
+            )
+        ),
     }
 
 
@@ -5497,6 +5701,20 @@ def _route_clearance_snapshot(
                     'slot': certificate['slot'],
                     'sensor': certificate['sensor'],
                     'proof_mode': certificate.get('proof_mode', ''),
+                    'raw_visual_segment': (
+                        fleet['rail_position_by_shuttle'][shuttle]['segment']
+                    ),
+                    'canonical_slot_segment': (
+                        planning_positions[shuttle]['segment']
+                    ),
+                    'raw_visual_segment_length_m': (
+                        fleet['rail_position_by_shuttle'][shuttle][
+                            'segment_length_m'
+                        ]
+                    ),
+                    'canonical_slot_segment_length_m': (
+                        planning_positions[shuttle]['segment_length_m']
+                    ),
                     'raw_visual_s_ratio': (
                         fleet['rail_position_by_shuttle'][shuttle]['s_ratio']
                     ),
@@ -5544,6 +5762,9 @@ def _topology_route_snapshot(
     devices: dict[str, dict[str, str]],
     obstacles: dict[str, list[str]],
     goal_data: dict[str, Any],
+    excluded_candidate_indices_by_shuttle: (
+        dict[str, set[int]] | None
+    ) = None,
 ) -> dict[str, Any]:
     """Compile non-slot visual locations through the authoritative rail graph."""
 
@@ -5569,6 +5790,12 @@ def _topology_route_snapshot(
                 obstacles=obstacles,
                 shuttle=shuttle,
                 target_slot=str(goal_data['target_slot']),
+                excluded_candidate_indices=set(
+                    (excluded_candidate_indices_by_shuttle or {}).get(
+                        shuttle,
+                        set(),
+                    )
+                ),
             ))
     return {
         'routes': entries,
@@ -5595,6 +5822,103 @@ def _topology_route_snapshot(
             ],
         },
     }
+
+
+def _configured_clear_segment_route_binding(
+    route: Any,
+    *,
+    side: str,
+    purpose: str,
+) -> dict[str, Any] | None:
+    """Return proof that one configured mixed route must be consumed now.
+
+    Receding-horizon planning rebuilds the parent TaskGoal after every atomic
+    action.  A route prepared for the first blocker relocation is therefore
+    just as authoritative as a route prepared for the final goal shuttle.  If
+    only final-goal routes are retained, the next rebuild restores the normal
+    route, then prepares the same blocker route again forever.  This binding
+    is deliberately limited to a clear, configured, segment-origin route;
+    exact-slot moves retain the canonical normal-route lifecycle.
+    """
+
+    if not isinstance(route, dict):
+        return None
+    if (
+        route.get('side') != side
+        or not route.get('configured')
+        or not route.get('route_clear')
+        or route.get('blockers')
+        or route.get('source_slot_object')
+    ):
+        return None
+    return {
+        'purpose': str(purpose),
+        'shuttle': route['shuttle'],
+        'source_block': route['source_block'],
+        'target_slot': route['target_slot_object'],
+        'required_switches': dict(route['required_switches']),
+        'required_stoppers': dict(route['required_stoppers']),
+        'route_clear': True,
+        'controller_position_fields_used_for_localization': False,
+    }
+
+
+def _direct_blocker_slot_reoccupies_goal_route(
+    *,
+    side: str,
+    goal_route: Any,
+    target_clearance: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Detect a one-step relocation that cannot clear its own goal route."""
+
+    if not isinstance(goal_route, dict):
+        return None
+    relocations = list(target_clearance.get('ordered_relocations') or [])
+    if not relocations:
+        return None
+    relocation = dict(relocations[0])
+    blocker = str(relocation.get('shuttle') or '')
+    if blocker not in list(goal_route.get('blockers') or []):
+        # A dependency move can legitimately enter a branch behind the goal
+        # shuttle. Only the direct blocker itself is subject to this test.
+        return None
+    destination = dict(relocation.get('destination') or {})
+    if str(destination.get('kind') or '').strip().casefold() != 'slot':
+        return None
+    if str(destination.get('source_slot') or '').strip():
+        # A sensor-anchored slot-to-slot move can be a deliberate staging
+        # transition that opens a later interior entry (for example slot 4 ->
+        # slot 1 -> A34I).  The non-progress defect is specific to exporting a
+        # segment-origin blocker into an exterior slot on the same goal trace.
+        return None
+    if (
+        str(destination.get('source_kind') or '').strip().casefold()
+        != 'accepted_visual_continuous_position'
+    ):
+        return None
+    target_slot_object = str(destination.get('target_slot') or '')
+    try:
+        target_slot = _slot_number_from_object(target_slot_object)
+        slot_position = _planning_rail_topology(side).slots[target_slot]
+    except (KeyError, ValueError):
+        return None
+    for block_index, block in enumerate(goal_route.get('route_blocks') or []):
+        if (
+            str(block.get('segment') or '').strip().upper()
+            == str(slot_position.segment).strip().upper()
+            and float(block['start_s_ratio']) - 1e-9
+            <= float(slot_position.s_ratio)
+            <= float(block['end_s_ratio']) + 1e-9
+        ):
+            return {
+                'reason': 'direct_blocker_parking_reoccupies_goal_route',
+                'blocker': blocker,
+                'parking_slot': target_slot_object,
+                'overlap_segment': str(slot_position.segment).strip().upper(),
+                'overlap_s_ratio': round(float(slot_position.s_ratio), 9),
+                'overlap_route_block_index': block_index,
+            }
+    return None
 
 
 def _clearance_certificate_visual_segment_consistency(
@@ -5662,6 +5986,7 @@ def _topology_route_entry(
     target_slot: str,
     target_position: tuple[str, float] | None = None,
     required_switch_states: dict[str, str] | None = None,
+    excluded_candidate_indices: set[int] | None = None,
 ) -> dict[str, Any]:
     planning_positions = (
         fleet.get('planning_rail_position_by_shuttle')
@@ -5968,8 +6293,20 @@ def _topology_route_entry(
             index,
         )
 
+    excluded_candidate_indices = set(excluded_candidate_indices or set())
+    eligible_indexed_candidates = [
+        (index, candidate)
+        for index, candidate in enumerate(route_candidates)
+        if index not in excluded_candidate_indices
+    ]
+    if not eligible_indexed_candidates:
+        raise PddlProblemBuildError(
+            f'no progress-preserving topology candidate remains for '
+            f'{shuttle!r} to {route_target_description}; excluded='
+            f'{sorted(excluded_candidate_indices)}'
+        )
     selected_index, selected_candidate = min(
-        enumerate(route_candidates),
+        eligible_indexed_candidates,
         key=candidate_score,
     )
     route = selected_candidate.route
@@ -6072,7 +6409,11 @@ def _topology_route_entry(
         'selected_route_candidate_index': selected_index,
         'route_selection_policy': (
             'clear_before_blocked_then_fewest_blockers_then_shortest_'
-            'authoritative_route_then_fewest_switch_changes'
+            'authoritative_route_then_fewest_switch_changes_with_'
+            'nonprogressing_candidate_exclusion'
+        ),
+        'excluded_route_candidate_indices': sorted(
+            excluded_candidate_indices
         ),
         'route_candidates': [
             {
@@ -6166,6 +6507,308 @@ def _clearance_device_states_for_branch(
     return switches, stoppers
 
 
+def _interior_route_switches_for_source(
+    *,
+    side: str,
+    branch: dict[str, Any],
+    source_position: dict[str, Any],
+) -> dict[str, str]:
+    """Complete a holding-route assignment for an interior source.
+
+    A branch's canonical switch assignment describes entry from the exterior
+    loop.  It is incomplete when the mover already occupies the *other*
+    interior branch: that shuttle must first traverse its current converging
+    gate before it can reach the requested diverging gate.  Leaving the source
+    exit at ``E`` manufactures a FALLING route and makes a physically feasible
+    cross-branch capacity transfer appear impossible.
+
+    The returned assignment is derived only from the authoritative branch
+    table and the accepted/certified source segment.  Identity, colour,
+    payload, and shuttle number are deliberately absent.
+    """
+
+    required = {
+        str(device).strip().upper(): str(state).strip().upper()
+        for device, state in dict(branch['switches']).items()
+    }
+    source_public_segment = _public_segment_for_side(
+        side,
+        source_position.get('segment'),
+    )
+    source_gate = INTERIOR_LOOP_GATE_BY_PUBLIC_SEGMENT.get(
+        source_public_segment,
+        '',
+    )
+    if source_gate:
+        source_branch = INTERIOR_HOLDING_BRANCH_BY_GATE[source_gate]
+        required[str(source_branch['exit_switch']).strip().upper()] = 'I'
+    return required
+
+
+def _required_switch_words(
+    required_switches: dict[str, Any],
+) -> dict[str, str]:
+    """Normalize a complete route assignment for audit comparisons."""
+
+    return {
+        str(device).strip().upper(): (
+            'interior'
+            if str(state).strip().upper() in {'I', 'INTERIOR'}
+            else 'exterior'
+        )
+        for device, state in required_switches.items()
+    }
+
+
+def _active_clearance_assignment_differs(
+    *,
+    side: str,
+    devices: dict[str, dict[str, str]],
+    required_switches: dict[str, Any],
+) -> bool:
+    required = _required_switch_words(required_switches)
+    return bool(
+        set(required) != set(DEVICE_NAMES)
+        or any(
+            devices['switches'].get(_switch_object(side, device)) != state
+            for device, state in required.items()
+        )
+    )
+
+
+def _topology_route_length_m(
+    *,
+    side: str,
+    route_entry: dict[str, Any],
+) -> float:
+    """Return the travelled length of one authoritative topology route."""
+
+    lengths = rail_segment_lengths(side)
+    return sum(
+        float(lengths[block['segment']])
+        * abs(
+            float(block['end_s_ratio'])
+            - float(block['start_s_ratio'])
+        )
+        for block in route_entry.get('route_blocks') or []
+    )
+
+
+def _hypothetical_verified_slot_relocation(
+    *,
+    fleet: dict[str, Any],
+    shuttle: str,
+    source_slot: str,
+    target_slot: str,
+) -> dict[str, Any]:
+    """Return a planning-only fleet after one sensor-verifiable slot move.
+
+    This is used only to prove that a proposed first vacancy-rotation move can
+    unlock the next receding-horizon action.  It does not assert that either
+    hypothetical move happened, and none of these positions are emitted as
+    observed facts.  The real executor still performs one supervised action,
+    waits for its identity-bearing slot sensor, and rebuilds from vision.
+    """
+
+    future = copy.deepcopy(fleet)
+    if future['slot_occupancy'].get(source_slot) != shuttle:
+        raise PddlProblemBuildError(
+            f'cannot simulate {shuttle!r} leaving unoccupied slot '
+            f'{source_slot!r}'
+        )
+    if future['slot_occupancy'].get(target_slot):
+        raise PddlProblemBuildError(
+            f'cannot simulate {shuttle!r} entering occupied slot '
+            f'{target_slot!r}'
+        )
+    side = _shuttle_side(shuttle)
+    if not target_slot.startswith(f'{side}_slot_'):
+        raise PddlProblemBuildError(
+            f'cannot simulate cross-side slot relocation for {shuttle!r}'
+        )
+    future['slot_occupancy'][source_slot] = ''
+    future['slot_occupancy'][target_slot] = shuttle
+    future['location_slot_by_shuttle'][shuttle] = target_slot
+    raw_position = future['rail_position_by_shuttle'].get(shuttle)
+    if not isinstance(raw_position, dict):
+        raise PddlProblemBuildError(
+            f'cannot simulate slot relocation without visual geometry for '
+            f'{shuttle!r}'
+        )
+    future['planning_rail_position_by_shuttle'][shuttle] = {
+        **_verified_slot_planning_position(
+            visual_position=raw_position,
+            slot_object=target_slot,
+            topology=_planning_rail_topology(side),
+        ),
+        'source': 'conditional_verified_slot_relocation_search',
+        'hypothetical_for_search_only': True,
+    }
+    return future
+
+
+def _conditional_exterior_vacancy_release(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    route_clearance: dict[str, Any],
+    side: str,
+    selected_shuttle: str,
+    selected_target_slot: str,
+    primary_blocker: str,
+    target_occupant: str,
+    observed_blockers: list[str],
+) -> dict[str, Any] | None:
+    """Find a non-target exterior move that causally releases the goal route.
+
+    A segment-origin target must not be sent around the opposite interior loop
+    merely because the first exact-slot blocker cannot move immediately.  This
+    search considers the other *observed route blockers*, simulates one clear
+    slot move, and requires proof that the primary blocker can then park in a
+    non-goal slot and leave the selected shuttle's topology route clear.  Only
+    the first move is returned; every later step remains conditional on a fresh
+    observation.
+    """
+
+    if (
+        obstacles.get(side)
+        or not primary_blocker
+        or primary_blocker == target_occupant
+        or primary_blocker == selected_shuttle
+    ):
+        return None
+    runtime_clearances = dict(
+        fleet.get('runtime_clearance_certificates') or {}
+    )
+    primary_source = fleet['location_slot_by_shuttle'].get(
+        primary_blocker,
+        '',
+    )
+    if not primary_source or primary_blocker in runtime_clearances:
+        return None
+
+    current_pairs = {
+        (entry['from_slot'], entry['to_slot']): entry
+        for entry in route_clearance['provenance']['pairs']
+        if entry.get('side') == side
+    }
+    free_slots = sorted(
+        slot
+        for slot, occupant in fleet['slot_occupancy'].items()
+        if (
+            slot.startswith(f'{side}_slot_')
+            and slot != selected_target_slot
+            and not occupant
+        )
+    )
+    candidates: list[dict[str, Any]] = []
+    for dependency in observed_blockers[1:]:
+        if (
+            dependency in {selected_shuttle, primary_blocker}
+            or dependency in runtime_clearances
+        ):
+            continue
+        dependency_source = fleet['location_slot_by_shuttle'].get(
+            dependency,
+            '',
+        )
+        if not dependency_source:
+            continue
+        for dependency_target in free_slots:
+            dependency_pair = (dependency_source, dependency_target)
+            if dependency_pair not in route_clearance['clear_pairs']:
+                continue
+            try:
+                after_dependency = _hypothetical_verified_slot_relocation(
+                    fleet=fleet,
+                    shuttle=dependency,
+                    source_slot=dependency_source,
+                    target_slot=dependency_target,
+                )
+            except PddlProblemBuildError:
+                continue
+            after_dependency_clearance = _route_clearance_snapshot(
+                fleet=after_dependency
+            )
+            for primary_target, occupant in sorted(
+                after_dependency['slot_occupancy'].items()
+            ):
+                if (
+                    occupant
+                    or not primary_target.startswith(f'{side}_slot_')
+                    or primary_target == selected_target_slot
+                    or (
+                        primary_source,
+                        primary_target,
+                    ) not in after_dependency_clearance['clear_pairs']
+                ):
+                    continue
+                try:
+                    after_primary = _hypothetical_verified_slot_relocation(
+                        fleet=after_dependency,
+                        shuttle=primary_blocker,
+                        source_slot=primary_source,
+                        target_slot=primary_target,
+                    )
+                    selected_route = _topology_route_entry(
+                        fleet=after_primary,
+                        devices=devices,
+                        obstacles=obstacles,
+                        shuttle=selected_shuttle,
+                        target_slot=_slot_number_from_object(
+                            selected_target_slot
+                        ),
+                    )
+                except PddlProblemBuildError:
+                    continue
+                if not selected_route.get('route_clear'):
+                    continue
+                future_pairs = {
+                    (entry['from_slot'], entry['to_slot']): entry
+                    for entry in after_dependency_clearance[
+                        'provenance'
+                    ]['pairs']
+                    if entry.get('side') == side
+                }
+                primary_pair = (primary_source, primary_target)
+                dependency_route = current_pairs.get(dependency_pair) or {}
+                primary_route = future_pairs.get(primary_pair) or {}
+                dependency_length_m = _topology_route_length_m(
+                    side=side,
+                    route_entry=dependency_route,
+                )
+                primary_length_m = _topology_route_length_m(
+                    side=side,
+                    route_entry=primary_route,
+                )
+                candidates.append({
+                    'shuttle': dependency,
+                    'source_slot': dependency_source,
+                    'target_slot': dependency_target,
+                    'dependency_route_length_m': dependency_length_m,
+                    'future_primary_blocker': primary_blocker,
+                    'future_primary_source_slot': primary_source,
+                    'future_primary_target_slot': primary_target,
+                    'future_primary_route_length_m': primary_length_m,
+                    'future_selected_route': selected_route,
+                    'total_conditional_release_length_m': (
+                        dependency_length_m + primary_length_m
+                    ),
+                })
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda candidate: (
+            float(candidate['total_conditional_release_length_m']),
+            float(candidate['dependency_route_length_m']),
+            str(candidate['target_slot']),
+            str(candidate['shuttle']),
+        ),
+    )
+
+
 def _active_interior_clearance_gate(
     *,
     side: str,
@@ -6180,8 +6823,23 @@ def _active_interior_clearance_gate(
         for device in DEVICE_NAMES
     }
     for gate, branch in INTERIOR_HOLDING_BRANCH_BY_GATE.items():
-        switches, stoppers = _clearance_device_states_for_branch(branch)
-        if observed_switches == switches and observed_stoppers == stoppers:
+        target_gate = str(branch['gate_switch']).strip().upper()
+        target_exit = str(branch['exit_switch']).strip().upper()
+        # A cross-branch transfer may additionally keep the *source* merge
+        # switch interior.  The target diverger, target merge, and unique
+        # closed target stopper are the authoritative clearance-mode
+        # signature; unrelated switches need not match the exterior-entry
+        # template exactly.
+        if (
+            observed_switches.get(target_gate) == 'interior'
+            and observed_switches.get(target_exit) == 'interior'
+            and observed_stoppers.get(target_exit) == 'closed'
+            and all(
+                state == 'open'
+                for device, state in observed_stoppers.items()
+                if device != target_exit
+            )
+        ):
             return gate
     return ''
 
@@ -6262,6 +6920,11 @@ def _resolve_selected_interior_buffer_choreography(
         or fleet['rail_position_by_shuttle']
     )
     selected_position = planning_positions.get(selected_shuttle) or {}
+    selected_required_switches = _interior_route_switches_for_source(
+        side=side,
+        branch=branch,
+        source_position=selected_position,
+    )
     if not _is_interior_holding_position(
         side=side,
         position=selected_position,
@@ -6375,7 +7038,7 @@ def _resolve_selected_interior_buffer_choreography(
                     internal_segment,
                     selected_target_s_m / segment_length_m,
                 ),
-                required_switch_states=dict(branch['switches']),
+                required_switch_states=selected_required_switches,
             )
         except PddlProblemBuildError as exc:
             attempts.append({
@@ -6415,6 +7078,16 @@ def _resolve_selected_interior_buffer_choreography(
                 'observed_segment': public_segment,
                 'observed_s_m': selected_target_s_m,
             })
+            primary_required_switches = _interior_route_switches_for_source(
+                side=side,
+                branch=branch,
+                source_position=(
+                    future_fleet['planning_rail_position_by_shuttle'].get(
+                        primary_blocker
+                    )
+                    or {}
+                ),
+            )
             try:
                 primary_route = _topology_route_entry(
                     fleet=future_fleet,
@@ -6426,7 +7099,7 @@ def _resolve_selected_interior_buffer_choreography(
                         internal_segment,
                         primary_target_s_m / segment_length_m,
                     ),
-                    required_switch_states=dict(branch['switches']),
+                    required_switch_states=primary_required_switches,
                 )
             except PddlProblemBuildError:
                 continue
@@ -6459,7 +7132,10 @@ def _resolve_selected_interior_buffer_choreography(
                 },
                 'gate_switch': str(branch['gate_switch']),
                 'target_segment': public_segment,
-                'required_switches': dict(branch['switches']),
+                'required_switches': selected_required_switches,
+                'future_primary_required_switches': (
+                    primary_required_switches
+                ),
                 'selection_policy': (
                     'nearest_forward_selected_pose_that_opens_a_separated_'
                     'rear_holding_pose'
@@ -6504,7 +7180,6 @@ def _resolve_interior_clearance_dependency(
     side = _shuttle_side(primary_blocker)
     gate = str(branch['gate_switch']).strip().upper()
     public_segment = str(branch['target_segment']).strip().upper()
-    required_switches = dict(branch['switches'])
     internal_segment = _interior_internal_segment(side, public_segment)
     internal_length_m = float(rail_segment_lengths(side)[internal_segment])
     planning_positions = (
@@ -6524,6 +7199,11 @@ def _resolve_interior_clearance_dependency(
         route_entries: list[dict[str, Any]] = []
         rejected_reason = ''
         while True:
+            mover_required_switches = _interior_route_switches_for_source(
+                side=side,
+                branch=branch,
+                source_position=planning_positions.get(mover) or {},
+            )
             try:
                 entry = _topology_route_entry(
                     fleet=fleet,
@@ -6532,7 +7212,7 @@ def _resolve_interior_clearance_dependency(
                     shuttle=mover,
                     target_slot='4',
                     target_position=(internal_segment, target_s_ratio),
-                    required_switch_states=required_switches,
+                    required_switch_states=mover_required_switches,
                 )
             except PddlProblemBuildError as exc:
                 rejected_reason = str(exc)
@@ -6573,6 +7253,15 @@ def _resolve_interior_clearance_dependency(
                     ):
                         fallback_candidates.append(selected_shuttle)
                     for fallback in fallback_candidates:
+                        fallback_required_switches = (
+                            _interior_route_switches_for_source(
+                                side=side,
+                                branch=branch,
+                                source_position=(
+                                    planning_positions.get(fallback) or {}
+                                ),
+                            )
+                        )
                         try:
                             fallback_entry = _topology_route_entry(
                                 fleet=fleet,
@@ -6584,7 +7273,9 @@ def _resolve_interior_clearance_dependency(
                                     internal_segment,
                                     target_s_ratio,
                                 ),
-                                required_switch_states=required_switches,
+                                required_switch_states=(
+                                    fallback_required_switches
+                                ),
                             )
                         except PddlProblemBuildError:
                             continue
@@ -6603,7 +7294,9 @@ def _resolve_interior_clearance_dependency(
                             ),
                             'gate_switch': gate,
                             'target_segment': public_segment,
-                            'required_switches': required_switches,
+                            'required_switches': (
+                                fallback_required_switches
+                            ),
                             'selection_policy': (
                                 'authoritative_topology_dependency_chain_then_'
                                 'farthest_capacity_preserving_holding_pose'
@@ -6631,7 +7324,7 @@ def _resolve_interior_clearance_dependency(
                     'route_entries': route_entries,
                     'gate_switch': gate,
                     'target_segment': public_segment,
-                    'required_switches': required_switches,
+                    'required_switches': mover_required_switches,
                     'selection_policy': (
                         'authoritative_topology_dependency_chain_then_'
                         'farthest_capacity_preserving_holding_pose'
@@ -6671,10 +7364,257 @@ def _resolve_interior_clearance_dependency(
         'attempts': attempts,
         'gate_switch': gate,
         'target_segment': public_segment,
-        'required_switches': required_switches,
+        'required_switches': dict(branch['switches']),
         'selection_policy': (
             'authoritative_topology_dependency_chain_then_'
             'farthest_capacity_preserving_holding_pose'
+        ),
+        'controller_position_fields_used_for_localization': False,
+    }
+
+
+def _resolve_shortest_direct_interior_blocker_release(
+    *,
+    fleet: dict[str, Any],
+    devices: dict[str, dict[str, str]],
+    obstacles: dict[str, list[str]],
+    primary_blocker: str,
+    selected_shuttle: str,
+    gates: tuple[str, ...],
+    required_center_spacing_m: float,
+) -> dict[str, Any]:
+    """Choose the shortest one-move release of a proved route blocker.
+
+    The blocker is tested against every currently admissible
+    interior branch and every capacity-preserving holding pose.  A result is
+    accepted only when that blocker itself can move now; dependency moves are
+    deliberately excluded because they do not release the user's route in one
+    action. Identity, colour, payload, and exterior slot cardinality are absent
+    from the ranking.
+    """
+
+    side = _shuttle_side(selected_shuttle)
+    positions = (
+        fleet.get('planning_rail_position_by_shuttle')
+        or fleet['rail_position_by_shuttle']
+    )
+    runtime_clearances = dict(
+        fleet.get('runtime_clearance_certificates') or {}
+    )
+    branch_search: list[dict[str, Any]] = []
+    for gate in gates:
+        branch = dict(INTERIOR_HOLDING_BRANCH_BY_GATE[gate])
+        public_segment = str(branch['target_segment']).strip().upper()
+        occupied_s_m = [
+            float(certificate['target_s_m'])
+            for identity, certificate in runtime_clearances.items()
+            if identity != primary_blocker
+            and certificate.get('side') == side
+            and str(certificate.get('target_segment') or '').upper()
+            == public_segment
+        ] + [
+            float(position['s_ratio'])
+            * float(position['segment_length_m'])
+            for shuttle, position in positions.items()
+            if shuttle not in runtime_clearances
+            and shuttle != primary_blocker
+            and position.get('side') == side
+            and _is_interior_holding_position(
+                side=side,
+                position=position,
+                public_segment=public_segment,
+            )
+        ]
+        pose_candidates = _interior_holding_pose_candidates(
+            side=side,
+            public_segment=public_segment,
+            occupied_s_m=occupied_s_m,
+            required_center_spacing_m=required_center_spacing_m,
+        )
+        internal_segment = _interior_internal_segment(
+            side,
+            public_segment,
+        )
+        internal_length_m = float(
+            rail_segment_lengths(side)[internal_segment]
+        )
+        attempts: list[dict[str, Any]] = []
+        resolution: dict[str, Any] | None = None
+        required_switches = _interior_route_switches_for_source(
+            side=side,
+            branch=branch,
+            source_position=positions.get(primary_blocker) or {},
+        )
+        for target_s_m in pose_candidates:
+            target_s_ratio = float(target_s_m) / max(
+                internal_length_m,
+                1e-9,
+            )
+            try:
+                route_entry = _topology_route_entry(
+                    fleet=fleet,
+                    devices=devices,
+                    obstacles=obstacles,
+                    shuttle=primary_blocker,
+                    target_slot='4',
+                    target_position=(internal_segment, target_s_ratio),
+                    required_switch_states=required_switches,
+                )
+            except PddlProblemBuildError as exc:
+                attempts.append({
+                    'target_s_m': float(target_s_m),
+                    'reason': str(exc),
+                })
+                continue
+            blockers = [
+                blocker
+                for blocker in route_entry.get('blockers') or []
+                if blocker != primary_blocker
+            ]
+            if obstacles.get(side) or blockers:
+                attempts.append({
+                    'target_s_m': float(target_s_m),
+                    'reason': (
+                        'external_obstacle_blocks_clearance_route'
+                        if obstacles.get(side)
+                        else 'direct_interior_route_blocked'
+                    ),
+                    'blockers': blockers,
+                })
+                continue
+            resolution = {
+                'resolved': True,
+                'primary_blocker': primary_blocker,
+                'first_movable_shuttle': primary_blocker,
+                'target_s_m': float(target_s_m),
+                'target_s_ratio': target_s_ratio,
+                'dependency_chain': [primary_blocker],
+                'route_entries': [route_entry],
+                'gate_switch': str(branch['gate_switch']),
+                'target_segment': public_segment,
+                'required_switches': required_switches,
+                'controller_position_fields_used_for_localization': False,
+            }
+            break
+        if resolution is None:
+            resolution = {
+                'resolved': False,
+                'primary_blocker': primary_blocker,
+                'first_movable_shuttle': '',
+                'target_s_m': None,
+                'dependency_chain': [primary_blocker],
+                'attempts': attempts,
+                'gate_switch': str(branch['gate_switch']),
+                'target_segment': public_segment,
+                'required_switches': required_switches,
+                'controller_position_fields_used_for_localization': False,
+            }
+        elif _is_interior_holding_position(
+            side=side,
+            position=positions.get(primary_blocker) or {},
+            public_segment=public_segment,
+        ):
+            # The blocker is already stopped on this one-way branch. Treating
+            # the next forward holding pose as a fresh branch entry makes the
+            # receding-horizon problem unstable: after ``begin clearance`` it
+            # can choose an exterior relocation, finish clearance, and then
+            # rediscover this shorter interior route forever. Bind the move to
+            # the persisted entry/stop effect and advance monotonically within
+            # the branch instead.
+            try:
+                origin = normalize_runtime_clearance_certificate(
+                    primary_blocker,
+                    runtime_clearances.get(primary_blocker),
+                )
+            except ValueError as exc:
+                resolution = {
+                    **resolution,
+                    'resolved': False,
+                    'reason': (
+                        'existing_interior_blocker_has_no_valid_origin_proof:'
+                        f'{exc}'
+                    ),
+                }
+            else:
+                origin_segment = str(
+                    origin.get('target_segment') or ''
+                ).strip().upper()
+                origin_s_m = float(origin['target_s_m'])
+                target_s_m = float(resolution['target_s_m'])
+                if (
+                    origin_segment != public_segment
+                    or target_s_m
+                    <= origin_s_m + INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
+                ):
+                    resolution = {
+                        **resolution,
+                        'resolved': False,
+                        'reason': (
+                            'existing_interior_blocker_has_no_forward_'
+                            'separated_holding_pose'
+                        ),
+                    }
+                else:
+                    resolution.update({
+                        'motion_mode': 'advance_within_interior_branch',
+                        'motion_origin_s_m': origin_s_m,
+                        'bounded_motion_distance_m': (
+                            target_s_m - origin_s_m
+                        ),
+                        'origin_clearance_proof': {
+                            'identity': origin['identity'],
+                            'target_segment': origin_segment,
+                            'target_s_m': origin_s_m,
+                            'entry_sensor': origin['entry_sensor'],
+                            'entry_sensor_identity_confirmed': True,
+                            'controller_stop_confirmed': True,
+                            'bounded_commanded_motion_completed': True,
+                            'controller_position_fields_used_for_localization': (
+                                False
+                            ),
+                        },
+                    })
+        elif resolution.get('resolved'):
+            resolution['motion_mode'] = 'enter_interior_branch'
+        route_entries = list(resolution.get('route_entries') or [])
+        resolution.update({
+            'branch': branch,
+            'occupied_target_s_m': sorted(occupied_s_m),
+            'candidate_pose_count': len(pose_candidates),
+            'first_mover_route_length_m': _topology_route_length_m(
+                side=side,
+                route_entry=(route_entries[-1] if route_entries else {}),
+            ),
+            'direct_blocker_release': bool(resolution['resolved']),
+        })
+        branch_search.append(resolution)
+
+    direct_results = [
+        result
+        for result in branch_search
+        if result['direct_blocker_release']
+    ]
+    if not direct_results:
+        return {
+            'resolved': False,
+            'branch_search': branch_search,
+            'reason': 'no_direct_interior_blocker_release',
+            'controller_position_fields_used_for_localization': False,
+        }
+    selected = min(
+        direct_results,
+        key=lambda result: (
+            float(result['first_mover_route_length_m']),
+            len(result.get('dependency_chain') or []),
+            str(result.get('gate_switch') or ''),
+        ),
+    )
+    return {
+        **selected,
+        'branch_search': branch_search,
+        'selection_policy': (
+            'fewest_blocker_release_actions_then_shortest_'
+            'authoritative_interior_route'
         ),
         'controller_position_fields_used_for_localization': False,
     }
@@ -6833,7 +7773,12 @@ def _target_blocker_clearance_plan(
         and devices['stoppers'].get(_stopper_object(side, device)) == 'open'
         for device in DEVICE_NAMES
     )
-    if source and normal_device_route and staged_interior_present:
+    active_clearance_gate = _active_interior_clearance_gate(
+        side=side,
+        devices=devices,
+    )
+    clearance_mode_active = bool(active_clearance_gate)
+    if source and staged_interior_present:
         source_number = int(_slot_number_from_object(source))
         target_number = int(_slot_number_from_object(target))
         final_distance = (target_number - source_number) % 4
@@ -6846,7 +7791,38 @@ def _target_blocker_clearance_plan(
                 and (source, candidate) in route_clearance['clear_pairs']
             ):
                 clear_advances.append((distance, candidate))
-        if clear_advances:
+        if clear_advances and clearance_mode_active:
+            distance, intermediate = max(clear_advances)
+            base.update({
+                'required': False,
+                'observed_blockers': observed_blocker_ids,
+                'observed_blocker_count': len(observed_blocker_ids),
+                'planned_relocations_this_observation': 0,
+                'deferred_blockers_require_fresh_reobservation': (
+                    observed_blocker_ids
+                ),
+                'receding_horizon_clearance': True,
+                'clearance_mode_active': True,
+                'clearance_pause_for_exterior_progress': {
+                    'required': True,
+                    'active_gate': active_clearance_gate,
+                    'shuttle': selected,
+                    'source_slot': source,
+                    'next_reachable_slot': intermediate,
+                    'final_target_slot': target,
+                    'forward_slot_steps': distance,
+                    'reason': (
+                        'staged_interior_move_opened_shorter_exterior_'
+                        'progress_for_selected_shuttle'
+                    ),
+                    'policy': (
+                        'pause_clearance_then_advance_selected_and_'
+                        'reobserve'
+                    ),
+                },
+            })
+            return base
+        if clear_advances and normal_device_route:
             distance, intermediate = max(clear_advances)
             base.update({
                 'required': False,
@@ -6892,18 +7868,16 @@ def _target_blocker_clearance_plan(
         + 2.0 * INTERIOR_LOOP_CLEAR_POSE_TOLERANCE_M
     )
 
-    # A dense full-rail state can use the already occupied interior buffer
-    # more efficiently than rotating every exterior slot. If the selected
-    # shuttle is stopped inside A12I/A34I, either move the goal-slot occupant
-    # directly into a separated rear pose or advance the selected shuttle by
-    # the minimum safe distance that creates such a pose. Execute only that
-    # first proved move, then reobserve. This is topology/geometry based and
-    # therefore independent of identity, colour, or payload.
-    occupied_side_slots = sum(
-        bool(occupant)
-        for slot_object, occupant in fleet['slot_occupancy'].items()
-        if slot_object.startswith(f'{side}_slot_')
-    )
+    # An interior-origin goal can use either branch as a one-move holding
+    # destination for a route blocker or the goal-slot occupant. This is useful
+    # even when only
+    # two exterior slots are occupied: the low slot count may mean that other
+    # shuttles are already staged inside, not that an exterior vacancy cascade
+    # is cheaper.  Never gate this proof on exterior shuttle cardinality.
+    # Either move the goal-slot occupant directly into a separated rear pose
+    # or advance the selected shuttle by the minimum safe distance that creates
+    # such a pose. Execute only that first proved move, then reobserve. This is
+    # topology/geometry based and independent of identity, colour, or payload.
     primary_blocker = blocker_ids[0] if blocker_ids else ''
     selected_position = positions.get(selected) or {}
     selected_public_segment = _public_segment_for_side(
@@ -6914,36 +7888,386 @@ def _target_blocker_clearance_plan(
         selected_public_segment,
         '',
     )
-    active_clearance_gate = _active_interior_clearance_gate(
-        side=side,
-        devices=devices,
+    direct_exterior_release_by_slot: dict[str, dict[str, Any]] = {}
+    primary_source_slot = fleet['location_slot_by_shuttle'].get(
+        primary_blocker,
+        '',
     )
-    clearance_mode_active = bool(active_clearance_gate)
+    normalization = dict(
+        route_clearance.get('normalization', {})
+        .get('by_side', {})
+        .get(side, {})
+    )
+    exterior_route_setup_safe = bool(
+        normal_device_route or normalization.get('reconfiguration_safe')
+    )
+    conditional_exterior_release: dict[str, Any] | None = None
     if (
-        occupied_side_slots >= 3
-        and primary_blocker
-        and primary_blocker == target_occupant
-        and selected_gate
-        and active_clearance_gate in {'', selected_gate}
-    ):
-        selected_branch = dict(
-            INTERIOR_HOLDING_BRANCH_BY_GATE[selected_gate]
+        staged_interior_present
+        and (
+            normal_device_route
+            or normalization.get('clearance_pause_safe')
         )
-        buffer_resolution = _resolve_selected_interior_buffer_choreography(
+    ):
+        conditional_exterior_release = (
+            _conditional_exterior_vacancy_release(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                route_clearance=route_clearance,
+                side=side,
+                selected_shuttle=selected,
+                selected_target_slot=target,
+                primary_blocker=primary_blocker,
+                target_occupant=target_occupant,
+                observed_blockers=observed_blocker_ids,
+            )
+        )
+    if conditional_exterior_release is not None:
+        mover = str(conditional_exterior_release['shuttle'])
+        mover_position = positions[mover]
+        relocation = {
+            'order': 1,
+            'shuttle': mover,
+            'reason': 'opens_exterior_vacancy_chain_for_route_blocker',
+            'current_segment': mover_position['segment'],
+            'current_s_ratio': round(
+                float(mover_position['s_ratio']),
+                6,
+            ),
+            'destination': {
+                'kind': 'slot',
+                'source_slot': conditional_exterior_release[
+                    'source_slot'
+                ],
+                'target_slot': conditional_exterior_release[
+                    'target_slot'
+                ],
+                'target_sensor': SLOT_SENSOR_BY_SIDE_AND_SLOT[
+                    (
+                        side,
+                        _slot_number_from_object(
+                            conditional_exterior_release['target_slot']
+                        ),
+                    )
+                ],
+                'selection_policy': (
+                    'conditional_exterior_vacancy_release_before_'
+                    'selected_interior_detour'
+                ),
+            },
+            'dependency_for_shuttle': primary_blocker,
+            'effect_verification': 'identity_bearing_slot_sensor',
+        }
+        base.update({
+            'required': True,
+            'observed_blockers': observed_blocker_ids,
+            'observed_blocker_count': len(observed_blocker_ids),
+            'planned_relocations_this_observation': 1,
+            'deferred_blockers_require_fresh_reobservation': (
+                observed_blocker_ids
+            ),
+            'receding_horizon_clearance': True,
+            'ordered_relocations': [relocation],
+            'route_must_be_reobserved_after_each_relocation': True,
+            'exterior_slot_relocations_precede_interior_clearance': True,
+            'switch_restore_policy': 'once_after_all_relocations',
+            'clearance_mode_active': clearance_mode_active,
+            'conditional_exterior_vacancy_resolution': {
+                'required': True,
+                'first_safe_move': {
+                    'shuttle': mover,
+                    'source_slot': conditional_exterior_release[
+                        'source_slot'
+                    ],
+                    'target_slot': conditional_exterior_release[
+                        'target_slot'
+                    ],
+                },
+                'conditionally_unlocked_primary_move': {
+                    'shuttle': primary_blocker,
+                    'source_slot': conditional_exterior_release[
+                        'future_primary_source_slot'
+                    ],
+                    'target_slot': conditional_exterior_release[
+                        'future_primary_target_slot'
+                    ],
+                },
+                'selected_shuttle_kept_on_current_route': True,
+                'selected_interior_detour_prevented': True,
+                'conditional_release_length_m': round(
+                    float(
+                        conditional_exterior_release[
+                            'total_conditional_release_length_m'
+                        ]
+                    ),
+                    6,
+                ),
+                'future_actions_are_not_preallocated': True,
+                'fresh_reobservation_required_after_first_move': True,
+                'policy': (
+                    'prove_non_target_vacancy_rotation_then_execute_only_'
+                    'the_first_sensor_verified_move'
+                ),
+                'identity_or_colour_used': False,
+                'controller_position_fields_used_for_localization': False,
+            },
+        })
+        if clearance_mode_active:
+            base['clearance_pause_for_exterior_progress'] = {
+                'required': True,
+                'active_gate': active_clearance_gate,
+                'shuttle': selected,
+                'source_slot': source,
+                'final_target_slot': target,
+                'reason': (
+                    'proved_exterior_vacancy_rotation_requires_normal_route'
+                ),
+                'policy': (
+                    'pause_clearance_then_execute_proved_exterior_move_and_'
+                    'reobserve'
+                ),
+            }
+        return base
+    if (
+        selected_gate
+        and primary_blocker
+        and primary_source_slot
+        and exterior_route_setup_safe
+        and not active_clearance_gate
+    ):
+        for slot_object, occupant in fleet['slot_occupancy'].items():
+            if (
+                occupant
+                or not slot_object.startswith(f'{side}_slot_')
+                or slot_object == target
+                or (
+                    primary_source_slot,
+                    slot_object,
+                ) not in route_clearance['clear_pairs']
+            ):
+                continue
+            pair = next(
+                (
+                    candidate
+                    for candidate in route_clearance['provenance']['pairs']
+                    if candidate['from_slot'] == primary_source_slot
+                    and candidate['to_slot'] == slot_object
+                ),
+                {},
+            )
+            if not pair:
+                continue
+            direct_exterior_release_by_slot[slot_object] = {
+                'target_slot': slot_object,
+                'route_length_m': _topology_route_length_m(
+                    side=side,
+                    route_entry=pair,
+                ),
+                'route_blocks': copy.deepcopy(pair['route_blocks']),
+            }
+    active_gate_direct_release: dict[str, Any] | None = None
+    active_gate_is_best_direct_release = not bool(active_clearance_gate)
+    if primary_blocker and selected_gate and active_clearance_gate:
+        active_gate_direct_release = (
+            _resolve_shortest_direct_interior_blocker_release(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                primary_blocker=primary_blocker,
+                selected_shuttle=selected,
+                gates=tuple(INTERIOR_HOLDING_BRANCH_BY_GATE),
+                required_center_spacing_m=clearance_spacing_m,
+            )
+        )
+        active_gate_is_best_direct_release = bool(
+            active_gate_direct_release.get('resolved')
+            and str(active_gate_direct_release.get('gate_switch') or '')
+            == active_clearance_gate
+        )
+        base['active_clearance_gate_continuation_audit'] = {
+            'active_gate': active_clearance_gate,
+            'best_direct_release_gate': str(
+                active_gate_direct_release.get('gate_switch') or ''
+            ),
+            'best_direct_release_resolved': bool(
+                active_gate_direct_release.get('resolved')
+            ),
+            'active_gate_retained': active_gate_is_best_direct_release,
+            'policy': (
+                'retain_active_gate_only_when_it_matches_the_fresh_global_'
+                'direct_release_optimum'
+            ),
+            'controller_position_fields_used_for_localization': False,
+        }
+    if (
+        primary_blocker
+        and selected_gate
+        and active_gate_is_best_direct_release
+    ):
+        # Once a clearance gate is active, continue it only when a fresh
+        # comparison across every branch selects that same gate. This keeps an
+        # R2 -> A12I decision stable across ``begin clearance`` without
+        # hijacking older cases where an unrelated active A3 route must pause
+        # before a shorter exterior slot release.
+        direct_release = (
+            active_gate_direct_release
+            if active_gate_direct_release is not None
+            else _resolve_shortest_direct_interior_blocker_release(
             fleet=fleet,
             devices=devices,
             obstacles=obstacles,
             primary_blocker=primary_blocker,
             selected_shuttle=selected,
-            branch=selected_branch,
+            gates=tuple(INTERIOR_HOLDING_BRANCH_BY_GATE),
             required_center_spacing_m=clearance_spacing_m,
+            )
         )
+        best_exterior_release = min(
+            direct_exterior_release_by_slot.values(),
+            key=lambda candidate: (
+                float(candidate['route_length_m']),
+                str(candidate['target_slot']),
+            ),
+            default=None,
+        )
+        direct_interior_length_m = float(
+            direct_release.get('first_mover_route_length_m') or math.inf
+        )
+        direct_interior_preferred = bool(
+            direct_release.get('resolved')
+            and (
+                best_exterior_release is None
+                or direct_interior_length_m
+                < float(best_exterior_release['route_length_m'])
+            )
+        )
+        release_kind = (
+            'goal_slot' if primary_blocker == target_occupant else 'route'
+        )
+        cost_comparison = {
+            'objective': (
+                'fewest_blocker_release_actions_then_shortest_'
+                'authoritative_route'
+            ),
+            'blocker': primary_blocker,
+            'blocker_kind': release_kind,
+            'direct_interior_available': bool(
+                direct_release.get('resolved')
+            ),
+            'direct_interior_route_length_m': (
+                direct_interior_length_m
+                if math.isfinite(direct_interior_length_m)
+                else None
+            ),
+            'direct_interior_target_segment': (
+                direct_release.get('target_segment') or ''
+            ),
+            'direct_exterior_candidates': sorted(
+                direct_exterior_release_by_slot.values(),
+                key=lambda candidate: str(candidate['target_slot']),
+            ),
+            'selected_strategy': (
+                f'direct_interior_{release_kind}_blocker_release'
+                if direct_interior_preferred
+                else (
+                    f'direct_exterior_{release_kind}_blocker_release'
+                    if best_exterior_release is not None
+                    else 'interior_capacity_choreography'
+                )
+            ),
+            'identity_or_colour_used': False,
+            'exterior_slot_cardinality_used': False,
+        }
+        base['blocker_release_cost_comparison'] = cost_comparison
+        if primary_blocker == target_occupant:
+            # Backward-compatible audit key retained for target-slot cases.
+            base['goal_slot_release_cost_comparison'] = {
+                **copy.deepcopy(cost_comparison),
+                'objective': (
+                    'fewest_goal_slot_release_actions_then_shortest_'
+                    'authoritative_route'
+                ),
+                'selected_strategy': (
+                    'direct_interior_goal_slot_release'
+                    if direct_interior_preferred
+                    else (
+                        'direct_exterior_goal_slot_release'
+                        if best_exterior_release is not None
+                        else 'interior_capacity_choreography'
+                    )
+                ),
+            }
+        if direct_interior_preferred:
+            buffer_resolution = direct_release
+            selected_branch = dict(direct_release['branch'])
+            selected_public_segment = str(
+                selected_branch['target_segment']
+            )
+        elif best_exterior_release is not None:
+            # The cost audit above selected a proved one-move exterior release.
+            # Honour that result even when no *direct interior* route exists.
+            # The former condition tested direct_release.resolved here, fell
+            # into selected-shuttle capacity choreography when it was false,
+            # and therefore moved the user's target despite having already
+            # recorded ``direct_exterior_*_blocker_release`` as the cheaper
+            # strategy.  Leave buffer resolution false so the ordinary slot
+            # relocation block below emits the audited exterior move.
+            buffer_resolution = {
+                'resolved': False,
+                'reason': 'shorter_direct_exterior_blocker_release_exists',
+                'direct_release_branch_search': direct_release[
+                    'branch_search'
+                ],
+            }
+        else:
+            # The same capacity choreography is required for a route blocker,
+            # not only for the shuttle occupying the final goal slot.  A
+            # segment-origin goal can sit at the rear holding pose while a
+            # blocker is stopped on the other interior branch.  Advancing the
+            # selected shuttle first opens a separated rear pose; the blocker
+            # can then transfer across branches and release the selected goal
+            # route after a fresh observation.  Restricting this proof to a
+            # goal-slot occupant caused the live R1(A34I) -> slot 4 task to
+            # reject even though this two-move topology solution existed.
+            selected_branch = dict(
+                INTERIOR_HOLDING_BRANCH_BY_GATE[selected_gate]
+            )
+            buffer_resolution = _resolve_selected_interior_buffer_choreography(
+                fleet=fleet,
+                devices=devices,
+                obstacles=obstacles,
+                primary_blocker=primary_blocker,
+                selected_shuttle=selected,
+                branch=selected_branch,
+                required_center_spacing_m=clearance_spacing_m,
+            )
+            buffer_resolution['direct_release_branch_search'] = (
+                direct_release['branch_search']
+            )
         if buffer_resolution.get('resolved'):
             mover = str(buffer_resolution['first_movable_shuttle'])
             route_entries = list(
                 buffer_resolution.get('route_entries') or []
             )
+            first_route = route_entries[-1] if route_entries else {}
+            first_route_length_m = _topology_route_length_m(
+                side=side,
+                route_entry=first_route,
+            )
+            target_number = int(_slot_number_from_object(target))
+            exterior_vacancy_release_actions: int | None = None
+            for distance in range(1, 5):
+                slot_number = ((target_number - 1 + distance) % 4) + 1
+                slot_object = _slot_object(side, str(slot_number))
+                if not fleet['slot_occupancy'].get(slot_object):
+                    exterior_vacancy_release_actions = distance
+                    break
             motion_mode = str(buffer_resolution['motion_mode'])
+            relocation_required_switches = dict(
+                buffer_resolution.get('required_switches')
+                or selected_branch['switches']
+            )
             destination = {
                 'kind': 'interior_loop',
                 'gate_switch': str(selected_branch['gate_switch']),
@@ -6958,7 +8282,7 @@ def _target_blocker_clearance_plan(
                 'interior_entry_route_proof': {
                     'status': 'clear',
                     'method': (
-                        'authoritative_dense_interior_buffer_choreography_v1'
+                        'authoritative_costed_interior_blocker_release_v3'
                     ),
                     'checked_route_blocks': list(
                         (route_entries[-1] if route_entries else {}).get(
@@ -6966,8 +8290,8 @@ def _target_blocker_clearance_plan(
                         )
                         or []
                     ),
-                    'required_switches': dict(selected_branch['switches']),
-                    'gate_switch': selected_gate,
+                    'required_switches': relocation_required_switches,
+                    'gate_switch': str(selected_branch['gate_switch']),
                     'target_segment': selected_public_segment,
                     'blocking_shuttles': [],
                     'dependency_chain': list(
@@ -6988,17 +8312,29 @@ def _target_blocker_clearance_plan(
                     'origin_clearance_proof': copy.deepcopy(
                         buffer_resolution['origin_clearance_proof']
                     ),
-                    'future_primary_target_s_m': float(
-                        buffer_resolution['future_primary_target_s_m']
-                    ),
                 })
+                # When the selected shuttle advances to open a rear pose,
+                # retain that conditional future pose for the primary
+                # blocker.  If the primary blocker itself is already on the
+                # branch and advances now, no second hypothetical move exists
+                # and inventing this field would misstate the choreography.
+                if 'future_primary_target_s_m' in buffer_resolution:
+                    destination['future_primary_target_s_m'] = float(
+                        buffer_resolution['future_primary_target_s_m']
+                    )
             relocation = {
                 'order': 1,
                 'shuttle': mover,
                 'reason': (
                     'advance_selected_to_open_interior_entry_for_goal_occupant'
-                    if mover == selected
-                    else 'move_goal_occupant_to_open_selected_goal_slot'
+                    if mover == selected and primary_blocker == target_occupant
+                    else (
+                        'advance_selected_to_open_cross_branch_route_capacity'
+                        if mover == selected
+                        else 'move_goal_occupant_to_open_selected_goal_slot'
+                        if primary_blocker == target_occupant
+                        else 'move_route_blocker_to_shortest_safe_interior_branch'
+                    )
                 ),
                 'current_segment': positions[mover]['segment'],
                 'current_s_ratio': round(
@@ -7007,6 +8343,17 @@ def _target_blocker_clearance_plan(
                 ),
                 'destination': destination,
             }
+            required_switch_states = _required_switch_words(
+                relocation_required_switches
+            )
+            active_assignment_mismatch = bool(
+                clearance_mode_active
+                and _active_clearance_assignment_differs(
+                    side=side,
+                    devices=devices,
+                    required_switches=relocation_required_switches,
+                )
+            )
             base.update({
                 'required': True,
                 'observed_blockers': observed_blocker_ids,
@@ -7028,8 +8375,50 @@ def _target_blocker_clearance_plan(
                     'first_action_only': True,
                     'fresh_reobservation_required_after_action': True,
                     'exterior_slot_rotation_avoided': True,
+                    'exterior_slot_cardinality_gate_used': False,
+                    'clearance_cost': {
+                        'first_mover_route_length_m': first_route_length_m,
+                        'route_blocker_release_actions': 1,
+                        'goal_slot_release_actions': (
+                            (1 if mover == primary_blocker else 2)
+                            if primary_blocker == target_occupant else None
+                        ),
+                        'exterior_vacancy_release_actions': (
+                            exterior_vacancy_release_actions
+                        ),
+                    },
+                    'selection_policy': buffer_resolution.get(
+                        'selection_policy',
+                        'cardinality_independent_shared_branch_release_then_'
+                        'fresh_reobservation',
+                    ),
                 },
             })
+            if active_assignment_mismatch:
+                # Reconfigure only through the existing certified pause.  A
+                # direct switch change while an interior shuttle is stopped
+                # under a different held route can connect it to FALLING.
+                base['clearance_pause_for_exterior_progress'] = {
+                    'required': True,
+                    'active_gate': active_clearance_gate,
+                    'shuttle': selected,
+                    'source_slot': source,
+                    'final_target_slot': target,
+                    'reason': (
+                        'next_cross_branch_relocation_requires_a_different_'
+                        'certified_switch_assignment'
+                    ),
+                    'current_switches': {
+                        device: devices['switches'].get(
+                            _switch_object(side, device)
+                        )
+                        for device in DEVICE_NAMES
+                    },
+                    'next_required_switches': required_switch_states,
+                    'policy': (
+                        'pause_clearance_then_reconfigure_once_and_reobserve'
+                    ),
+                }
             return base
     has_staged_interior_shuttles = staged_interior_present
     topology_recovery = not bool(source)
@@ -7063,7 +8452,15 @@ def _target_blocker_clearance_plan(
                     if (blocker_slot, slot) in route_clearance['clear_pairs']
                 ),
                 key=lambda slot: (
-                    (
+                    float(
+                        direct_exterior_release_by_slot.get(
+                            slot,
+                            {},
+                        ).get('route_length_m', math.inf)
+                    )
+                    if blocker == primary_blocker
+                    and direct_exterior_release_by_slot
+                    else (
                         -int(_slot_number_from_object(slot))
                         if has_staged_interior_shuttles
                         else 0
@@ -7111,7 +8508,13 @@ def _target_blocker_clearance_plan(
                 (side, _slot_number_from_object(parking_slot))
             ],
             'selection_policy': (
-                'recovery_aware_highest_reachable_free_exterior_slot'
+                'shortest_authoritative_one_move_exterior_goal_release'
+                if blocker == target_occupant
+                and direct_exterior_release_by_slot
+                else 'shortest_authoritative_one_move_exterior_blocker_release'
+                if blocker == primary_blocker
+                and direct_exterior_release_by_slot
+                else 'recovery_aware_highest_reachable_free_exterior_slot'
                 if has_staged_interior_shuttles
                 else 'nearest_reachable_known_free_exterior_slot'
             ),
@@ -7310,24 +8713,46 @@ def _target_blocker_clearance_plan(
                 preferred_dependency_shuttles=observed_blocker_ids[1:],
             )
             route_entries = list(resolution.get('route_entries') or [])
-            route_length_m = sum(
-                float(rail_segment_lengths(side)[block['segment']])
-                * abs(
-                    float(block['end_s_ratio'])
-                    - float(block['start_s_ratio'])
-                )
-                for block in (
-                    (route_entries[-1] if route_entries else {}).get(
-                        'route_blocks'
-                    )
-                    or []
-                )
+            route_length_m = _topology_route_length_m(
+                side=side,
+                route_entry=(route_entries[-1] if route_entries else {}),
             )
             resolution.update({
                 'branch': branch,
                 'occupied_target_s_m': sorted(occupied_s_m),
                 'candidate_pose_count': len(pose_candidates),
                 'first_mover_route_length_m': route_length_m,
+            })
+            first_mover = str(
+                resolution.get('first_movable_shuttle') or ''
+            )
+            nearest_forward_blocker = (
+                observed_blocker_ids[-1]
+                if source and observed_blocker_ids
+                else ''
+            )
+            unlocks_selected_progress = bool(
+                nearest_forward_blocker
+                and first_mover == nearest_forward_blocker
+            )
+            resolution.update({
+                'nearest_forward_blocker': nearest_forward_blocker,
+                'immediate_selected_forward_progress_unlocked': (
+                    unlocks_selected_progress
+                ),
+                'clearance_cost': {
+                    'first_mover_route_length_m': route_length_m,
+                    'dependency_depth': len(
+                        resolution.get('dependency_chain') or []
+                    ),
+                    'moves_primary_blocker': (
+                        first_mover == primary_blocker
+                    ),
+                    'moves_selected_shuttle': first_mover == selected,
+                    'opens_immediate_selected_progress': (
+                        unlocks_selected_progress
+                    ),
+                },
             })
             branch_search.append(resolution)
 
@@ -7338,6 +8763,11 @@ def _target_blocker_clearance_plan(
             min(
                 resolved_branches,
                 key=lambda result: (
+                    0
+                    if result.get(
+                        'immediate_selected_forward_progress_unlocked'
+                    )
+                    else 1,
                     0
                     if result['first_movable_shuttle'] == primary_blocker
                     else 1,
@@ -7369,8 +8799,9 @@ def _target_blocker_clearance_plan(
             'active_gate_retained': bool(active_clearance_gate),
             'results': branch_search,
             'policy': (
-                'retain_active_branch_else_direct_primary_blocker_then_'
-                'nonselected_dependency_then_shortest_route'
+                'retain_active_branch_else_unlock_selected_forward_'
+                'progress_then_direct_primary_blocker_then_nonselected_'
+                'dependency_then_shortest_route'
             ),
         }
         if dependency_resolution['resolved']:
@@ -7545,7 +8976,7 @@ def _target_blocker_clearance_plan(
                         ) or []
                     ),
                     'required_switches': dict(
-                        selected_branch['switches']
+                        fallback_resolution['required_switches']
                     ),
                     'gate_switch': gate_switch,
                     'target_segment': public_segment,
@@ -7585,6 +9016,52 @@ def _target_blocker_clearance_plan(
         'unsupported_if_more_than_two_blockers': False,
         'stale_multi_destination_preallocation_used': False,
     })
+    first_relocation = relocations[0] if relocations else {}
+    first_destination = dict(first_relocation.get('destination') or {})
+    first_route_proof = dict(
+        first_destination.get('interior_entry_route_proof') or {}
+    )
+    next_required_switches = dict(
+        first_route_proof.get('required_switches') or {}
+    )
+    if (
+        clearance_mode_active
+        and first_destination.get('kind') == 'interior_loop'
+        and next_required_switches
+        and _active_clearance_assignment_differs(
+            side=side,
+            devices=devices,
+            required_switches=next_required_switches,
+        )
+    ):
+        # Every receding-horizon relocation owns a complete route assignment.
+        # Never reuse an active branch merely because the target gate matches:
+        # a mover starting on the opposite interior branch may additionally
+        # require its source exit switch.  The live R4(A34I) -> A12I case
+        # required A4=I; reusing A1/A2 clearance with A4=E sent it to FALLING.
+        base['clearance_pause_for_exterior_progress'] = {
+            'required': True,
+            'active_gate': active_clearance_gate,
+            'shuttle': str(first_relocation.get('shuttle') or selected),
+            'source_slot': source,
+            'final_target_slot': target,
+            'reason': (
+                'next_interior_relocation_requires_a_different_'
+                'certified_switch_assignment'
+            ),
+            'current_switches': {
+                device: devices['switches'].get(
+                    _switch_object(side, device)
+                )
+                for device in DEVICE_NAMES
+            },
+            'next_required_switches': _required_switch_words(
+                next_required_switches
+            ),
+            'policy': (
+                'pause_clearance_then_reconfigure_once_and_reobserve'
+            ),
+        }
     return base
 
 
@@ -7619,6 +9096,38 @@ def _append_topology_clearance_routes(route_clearance: dict[str, Any]) -> None:
         })
 
 
+def _clearance_lifecycle_certificate_is_safe(
+    certificate: dict[str, Any],
+) -> bool:
+    """Recognize an executor-owned stopped interior-motion effect proof."""
+
+    try:
+        normalized = normalize_runtime_clearance_certificate(
+            certificate.get('identity'),
+            certificate,
+        )
+    except ValueError:
+        return False
+    side = normalized['side']
+    target_segment = str(
+        normalized.get('target_segment') or ''
+    ).strip().upper()
+    gate = INTERIOR_LOOP_GATE_BY_PUBLIC_SEGMENT.get(target_segment, '')
+    if side not in SIDES or not gate:
+        return False
+    expected_sensor = INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE.get(
+        (side, gate),
+        '',
+    )
+    target_s_m = normalized['target_s_m']
+    return bool(
+        math.isfinite(target_s_m)
+        and target_s_m > 0.0
+        and str(normalized.get('entry_sensor') or '').strip().upper()
+        == expected_sensor
+    )
+
+
 def _route_normalization_snapshot(
     *,
     fleet: dict[str, Any],
@@ -7641,6 +9150,9 @@ def _route_normalization_snapshot(
         fleet.get('runtime_clearance_certificates') or {}
     )
     positions = fleet.get('rail_position_by_shuttle') or {}
+    planning_positions = (
+        fleet.get('planning_rail_position_by_shuttle') or positions
+    )
     for side in SIDES:
         switches = {
             device: devices['switches'].get(_switch_object(side, device), '')
@@ -7668,6 +9180,12 @@ def _route_normalization_snapshot(
             if position.get('side') == side
             and str(position.get('segment') or '').strip().upper().endswith('I')
         )
+        planning_interior_shuttles = sorted(
+            shuttle
+            for shuttle, position in planning_positions.items()
+            if position.get('side') == side
+            and str(position.get('segment') or '').strip().upper().endswith('I')
+        )
         certified_interior_shuttles = sorted(
             shuttle
             for shuttle, certificate in certificates.items()
@@ -7675,23 +9193,29 @@ def _route_normalization_snapshot(
             and str(certificate.get('target_segment') or '')
             .strip().upper().endswith('I')
         )
-        # A persisted identity-bearing interior-entry/stop certificate is
-        # safety evidence even when learned vision temporarily disagrees with
-        # its segment.  Never make that disagreement disappear by building the
-        # risk set from visual ``*I`` labels alone: changing the merge switch
-        # in that state could send a physically interior shuttle to FALLING.
+        # The physical switch-risk set follows canonical planning geometry plus
+        # persisted interior-entry effects.  Planning geometry differs from raw
+        # vision only under strict execution evidence: either an identity-
+        # bearing verified exterior-slot arrival or an interior-entry/stop
+        # certificate.  Thus an unanchored raw ``*I`` label still fails closed,
+        # while a stale raw A12I prediction cannot overrule a later verified
+        # DZI arrival at an exterior slot.  Raw vision remains preserved below
+        # for disagreement diagnostics and is never rewritten.
         interior_shuttles = sorted(
-            set(visually_interior_shuttles)
+            set(planning_interior_shuttles)
             | set(certified_interior_shuttles)
+        )
+        raw_interior_overridden_by_verified_exterior_slot = sorted(
+            set(visually_interior_shuttles) - set(interior_shuttles)
         )
         certificate_segment_consistency = {
             shuttle: _clearance_certificate_visual_segment_consistency(
                 side=side,
                 certificate=certificates[shuttle],
-                position=positions[shuttle],
+                position=planning_positions[shuttle],
             )
             for shuttle in interior_shuttles
-            if shuttle in certificates and shuttle in positions
+            if shuttle in certificates and shuttle in planning_positions
         }
         certified_stopped = sorted(
             shuttle
@@ -7717,19 +9241,37 @@ def _route_normalization_snapshot(
             for shuttle, consistency in certificate_segment_consistency.items()
             if not consistency['satisfied']
         )
+        clearance_lifecycle_certified = sorted(
+            shuttle
+            for shuttle in interior_shuttles
+            if shuttle in certificates
+            and _clearance_lifecycle_certificate_is_safe(
+                certificates[shuttle]
+            )
+        )
+        clearance_lifecycle_uncertified = sorted(
+            set(interior_shuttles) - set(clearance_lifecycle_certified)
+        )
+        clearance_lifecycle_visual_disagreements = sorted(
+            set(segment_mismatches) & set(clearance_lifecycle_certified)
+        )
+        lifecycle_disagreements_proved = (
+            set(segment_mismatches)
+            == set(clearance_lifecycle_visual_disagreements)
+        )
         reconfiguration_required = not normal_route and not clearance_mode
         reconfiguration_safe = (
             reconfiguration_required
             and all_stoppers_open
             and not bool(obstacles.get(side))
-            and not uncertified_interior
+            and not clearance_lifecycle_uncertified
+            and lifecycle_disagreements_proved
         )
         clearance_pause_safe = (
             clearance_mode
             and not bool(obstacles.get(side))
             and bool(interior_shuttles)
-            and not uncertified_interior
-            and not segment_mismatches
+            and not clearance_lifecycle_uncertified
         )
         if normal_route:
             reason = 'already_normal'
@@ -7739,10 +9281,15 @@ def _route_normalization_snapshot(
             reason = 'mixed_route_has_non_open_stopper_state'
         elif obstacles.get(side):
             reason = 'external_obstacle_present'
-        elif segment_mismatches:
-            reason = 'interior_stop_certificate_segment_mismatch'
-        elif uncertified_interior:
+        elif clearance_lifecycle_uncertified:
             reason = 'interior_shuttle_has_no_validated_stop_certificate'
+        elif not lifecycle_disagreements_proved:
+            reason = 'interior_stop_certificate_segment_mismatch'
+        elif segment_mismatches:
+            reason = (
+                'mixed_topology_route_is_safe_with_certified_visual_'
+                'disagreement'
+            )
         else:
             reason = 'mixed_topology_route_is_safe_to_normalize'
         by_side[side] = {
@@ -7758,10 +9305,29 @@ def _route_normalization_snapshot(
             'clearance_pause_safe': clearance_pause_safe,
             'interior_shuttles': interior_shuttles,
             'visually_interior_shuttles': visually_interior_shuttles,
+            'planning_interior_shuttles': planning_interior_shuttles,
+            'raw_interior_overridden_by_verified_exterior_slot': (
+                raw_interior_overridden_by_verified_exterior_slot
+            ),
+            'raw_visual_position_preserved': True,
             'certified_interior_shuttles': certified_interior_shuttles,
             'certified_stopped_interior_shuttles': certified_stopped,
             'uncertified_interior_shuttles': uncertified_interior,
             'certificate_segment_mismatches': segment_mismatches,
+            'clearance_lifecycle_certified_stopped_interior_shuttles': (
+                clearance_lifecycle_certified
+            ),
+            'clearance_lifecycle_uncertified_interior_shuttles': (
+                clearance_lifecycle_uncertified
+            ),
+            'clearance_lifecycle_visual_disagreements': (
+                clearance_lifecycle_visual_disagreements
+            ),
+            'reconfiguration_visual_disagreements_proved': (
+                lifecycle_disagreements_proved
+            ),
+            'clearance_lifecycle_visual_prediction_preserved': True,
+            'clearance_lifecycle_certificate_used_as_localization': False,
             'certificate_segment_consistency': (
                 certificate_segment_consistency
             ),
@@ -7840,6 +9406,10 @@ def _pddl_init_facts(
                 f'(slot_in_block {slot_object} {block})',
                 f'(block_on_side {block} {side})',
             ])
+    planning_positions = (
+        fleet.get('planning_rail_position_by_shuttle')
+        or fleet['rail_position_by_shuttle']
+    )
     for shuttle_spec in all_shuttle_specs():
         shuttle = shuttle_spec.shuttle_id
         if not fleet['present_by_shuttle'][shuttle]:
@@ -7863,7 +9433,18 @@ def _pddl_init_facts(
         block_object = fleet['location_block_by_shuttle'].get(shuttle)
         if block_object:
             facts.append(f'(shuttle_in_block {shuttle} {_pddl_symbol(block_object)})')
-        position = fleet['rail_position_by_shuttle'].get(shuttle)
+        # Topology actions must start from the same authoritative planning
+        # position used to construct their route facts.  This differs from
+        # the raw learned position only after an identity-bearing slot sensor
+        # or a supervised interior-motion certificate has proved an executed
+        # categorical effect.  Emitting the raw visual block here while
+        # topology_route_available uses that persisted effect creates an
+        # internally contradictory PDDL problem (for example A34E versus
+        # A34I), so POPF can never apply begin_segment_route_clearance.  The
+        # learned block remains untouched in rail_position_by_shuttle and in
+        # shuttle_in_block above; this fact is executor-owned planning state,
+        # not a replacement visual prediction or controller localization.
+        position = planning_positions.get(shuttle)
         if position:
             facts.append(
                 f'(shuttle_at_topology_block {shuttle} '
@@ -8014,7 +9595,10 @@ def _pddl_init_facts(
             .get('by_side', {})
             .get(side, {})
         )
-        if normalization.get('reconfiguration_required'):
+        if (
+            normalization.get('reconfiguration_required')
+            and not normalization.get('configured_clear_motion_route')
+        ):
             facts.append(f'(route_reconfiguration_required {side})')
         if normalization.get('reconfiguration_safe'):
             facts.append(f'(route_reconfiguration_safe {side})')

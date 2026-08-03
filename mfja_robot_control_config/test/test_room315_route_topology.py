@@ -45,6 +45,26 @@ def _trace(route):
     ]
 
 
+@pytest.mark.parametrize(
+    ('side', 'suffix'),
+    (('right', 'R'), ('left', 'L')),
+)
+def test_slot_sensor_map_is_derived_from_authoritative_device_poses(
+    side,
+    suffix,
+):
+    multi = _load_module()
+
+    mapping = multi.load_slot_sensor_map(
+        KINEMATICS_DIR / f'rail_devices_{side}.yaml',
+        side=side,
+    )
+
+    assert mapping == {
+        str(slot): f'DZI{slot}{suffix}' for slot in range(1, 5)
+    }
+
+
 def test_right_slot_route_uses_directed_topology_intervals():
     multi = _load_module()
     topology = _right_topology(multi)

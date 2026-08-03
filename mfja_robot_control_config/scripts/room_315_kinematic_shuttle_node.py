@@ -858,6 +858,11 @@ class Room315KinematicShuttleNode(Node):
         self.pose_offset_command_topic = pose_offset_command_topic
         self.pending_switch_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
         self.pending_stopper_state_updates: Dict[str, PendingDiscreteStateUpdate] = {}
+        # Visual switch-state messages are feedback from the Gazebo visual
+        # controller, not a second command authority. Keep the target of each
+        # published command until matching feedback arrives so delayed feedback
+        # from an older command cannot roll the kinematic state back.
+        self.visual_switch_feedback_targets: Dict[str, str] = {}
         shuttle_specs = self._resolve_shuttle_specs(
             shuttle_count=shuttle_count,
             identity_selection_mode=identity_selection_mode,
@@ -4052,7 +4057,19 @@ class Room315KinematicShuttleNode(Node):
             return
 
         changed = {}
+        stale_feedback = {}
         for switch_name, state in updates.items():
+            feedback_target = self.visual_switch_feedback_targets.get(switch_name)
+            if feedback_target is not None:
+                if state == feedback_target:
+                    self.visual_switch_feedback_targets.pop(switch_name, None)
+                else:
+                    stale_feedback[switch_name] = state
+                # Matching feedback is an acknowledgement. Conflicting
+                # feedback predates the latest published typed command. Neither
+                # is a new request to mutate the authoritative logic state.
+                continue
+
             pending_update = self.pending_switch_state_updates.get(switch_name)
             if (
                 self.switch_states.get(switch_name) != state
@@ -4062,8 +4079,14 @@ class Room315KinematicShuttleNode(Node):
                 )
             ):
                 changed[switch_name] = state
+        if stale_feedback:
+            self.get_logger().info(
+                'Ignored stale visual switch feedback while awaiting the latest '
+                'command acknowledgement: '
+                f'{_ordered_switch_states(stale_feedback)}'
+            )
         if changed:
-            immediate_updates = self._schedule_switch_state_updates(
+            self._schedule_switch_state_updates(
                 changed,
                 source='visual state sync',
             )
@@ -4272,6 +4295,8 @@ class Room315KinematicShuttleNode(Node):
             visual_selector = self._visual_selector_for_selector(switch_name)
             if visual_selector is None:
                 continue
+            if self.sync_from_visual_switch_states:
+                self.visual_switch_feedback_targets[switch_name] = state
             visual_entries.append(
                 f'{visual_selector}={self._visual_mode_for_state(state)}'
             )

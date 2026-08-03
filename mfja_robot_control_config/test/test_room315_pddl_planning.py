@@ -206,6 +206,36 @@ def test_expert_and_runtime_domains_are_symbolically_identical():
     )
 
 
+def test_clearance_dependency_actions_do_not_require_direct_blocker_atoms():
+    """A proved capacity mover need not directly overlap the user's route."""
+
+    for path in (PDDL_DIR / 'domain_room315.pddl', RUNTIME_DOMAIN_PATH):
+        text = _without_comments(path.read_text(encoding='utf-8').casefold())
+        slot_action = text.split(
+            '(:action relocate_blocker_to_interior',
+            1,
+        )[1].split('(:action stage_selected_to_interior', 1)[0]
+        segment_action = text.split(
+            '(:action relocate_segment_blocker_to_interior',
+            1,
+        )[1].split('(:action stage_selected_segment_to_interior', 1)[0]
+
+        assert '(clearance_precedes ?blocker ?selected)' in slot_action
+        assert '(clearance_destination_ready ?blocker)' in slot_action
+        assert '(interior_entry_route_clear ?blocker)' in slot_action
+        assert '(route_blocked_by ?from_slot ?to_slot ?blocker)' not in (
+            slot_action
+        )
+
+        assert '(clearance_precedes ?blocker ?selected)' in segment_action
+        assert '(clearance_destination_ready ?blocker)' in segment_action
+        assert '(interior_entry_route_clear ?blocker)' in segment_action
+        assert (
+            '(topology_route_blocked_by ?selected ?from_block ?to_slot '
+            '?blocker)'
+        ) not in segment_action
+
+
 def test_topology_setup_groups_are_bound_to_the_planned_rail_side():
     for path in (PDDL_DIR / 'domain_room315.pddl', RUNTIME_DOMAIN_PATH):
         text = _without_comments(path.read_text(encoding='utf-8').casefold())

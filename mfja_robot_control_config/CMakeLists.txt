@@ -91,6 +91,7 @@ install(
     scripts/room_315_payload_case_batch_runner.py
     scripts/room_315_payload_case_review.py
     scripts/room_315_presence_provider.py
+    scripts/room_315_runtime_contracts.py
     scripts/room_315_build_runtime_candidate.py
     scripts/room_315_runtime_acceptance_readiness.py
     scripts/room_315_runtime_acceptance_recorder.py
@@ -106,6 +107,7 @@ install(
     scripts/room_315_task_goal_semantic_smoke.py
     scripts/room_315_task_goal_validation.py
     scripts/room_315_task_execution.py
+    scripts/room_315_task_execution_config.py
     scripts/room_315_task_execution_node.py
     scripts/room_315_vla_benchmark_suite.py
     scripts/room_315_vla_dataset_recorder.py

@@ -11,14 +11,3 @@ defaults:
   shuttle_name_by_side:
     right: room315_right_shuttle_1
     left: room315_left_shuttle_1
-  slot_sensor_by_side:
-    right:
-      "1": DZI1R
-      "2": DZI2R
-      "3": DZI3R
-      "4": DZI4R
-    left:
-      "1": DZI1L
-      "2": DZI2L
-      "3": DZI3L
-      "4": DZI4L
