@@ -58,12 +58,32 @@ from room_315_runtime_contracts import runtime_payload_grounding_matches
 
 
 REPO_ROOT = SCRIPT_DIR.parents[1]
-PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'pddl'
+PACKAGE_NAME = 'mfja_robot_control_config'
+
+
+def _package_root_for_script(script_dir: Path) -> Path:
+    """Resolve this package's root from either source or a colcon install.
+
+    Scripts are installed in ``<prefix>/lib/<package>``, while package data is
+    installed in ``<prefix>/share/<package>``.  Resolving relative to the
+    script directory alone only works from a source checkout and made the
+    task-execution node exit during import after a clean colcon build.
+    """
+
+    source_package_root = script_dir.parent
+    if (source_package_root / 'config').is_dir():
+        return source_package_root
+
+    install_prefix = script_dir.parents[1]
+    return install_prefix / 'share' / PACKAGE_NAME
+
+
+PACKAGE_ROOT = _package_root_for_script(SCRIPT_DIR)
+PDDL_DIR = PACKAGE_ROOT / 'config' / 'room_315_vla' / 'pddl'
 PDDL_DOMAIN_PATH = PDDL_DIR / 'domain_room315.pddl'
-KINEMATICS_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_kinematics'
+KINEMATICS_DIR = PACKAGE_ROOT / 'config' / 'room_315_kinematics'
 DEFAULT_PAYLOAD_TRAINING_CASES_PATH = (
-    REPO_ROOT
-    / 'mfja_robot_control_config'
+    PACKAGE_ROOT
     / 'config'
     / 'room_315_vla'
     / 'payload_training_cases_expanded_160_speed_sweep.yaml'
@@ -4713,7 +4733,7 @@ def _verified_slot_arrival_from_fact(
     side: str,
     slot_object: str,
 ) -> dict[str, Any]:
-    """Validate the narrow executor-owned proof admitted by the planner."""
+    """Validate the narrow executor-owned slot proof admitted by the planner."""
 
     metadata = fact.metadata if isinstance(fact.metadata, dict) else {}
     if not (
@@ -4754,18 +4774,30 @@ def _verified_slot_arrival_from_fact(
         raise PddlProblemBuildError(
             f'verified slot arrival slot/sensor conflict for {shuttle_id!r}'
         )
-    if (
-        certificate.get('matched_by') != 'deterministic_slot_sensor'
-        or certificate.get('proof_mode') not in {
+    proof_mode = str(certificate.get('proof_mode') or '')
+    reached_target_slot = str(
+        certificate.get('reached_target_slot') or ''
+    ).strip()
+    initial_occupancy_proof = (
+        proof_mode == 'stable_stopped_dzi_initial_occupancy'
+        and certificate.get('controller_target_slot_confirmed') is False
+        and not reached_target_slot
+    )
+    commanded_arrival_proof = (
+        proof_mode in {
             'supervised_command_arrival',
             'stable_stopped_dzi_runtime_recovery',
         }
+        and certificate.get('controller_target_slot_confirmed') is True
+        and reached_target_slot == slot
+    )
+    if (
+        certificate.get('matched_by') != 'deterministic_slot_sensor'
+        or not (initial_occupancy_proof or commanded_arrival_proof)
         or certificate.get('sensor_identity_confirmed') is not True
         or certificate.get('controller_stop_confirmed') is not True
-        or certificate.get('controller_target_slot_confirmed') is not True
         or str(certificate.get('controller_mode') or '').strip().upper()
         != 'DISABLED'
-        or str(certificate.get('reached_target_slot') or '').strip() != slot
         or certificate.get('model_prediction_replaced') is not False
         or certificate.get(
             'controller_position_fields_used_for_localization'
@@ -4811,12 +4843,13 @@ def _verified_slot_planning_position(
 ) -> dict[str, Any]:
     """Create sensor-anchored planning geometry while retaining raw vision.
 
-    A verified arrival combines an identity-bearing DZI with a supervised
-    controller stop at the same discrete target.  That proof owns the stopped
-    shuttle's planning centre; a biased learned ratio must not stretch its
-    body into the next slot and make an otherwise safe forward move
-    impossible.  The learned ratio remains unchanged in the raw fact and in
-    provenance.  The protected interval still includes both complete shuttle
+    A verified slot proof combines a stable identity-bearing DZI with a
+    disabled controller. It can represent either a supervised arrival or
+    initial stopped occupancy before any target was commanded. That proof owns
+    the stopped shuttle's planning centre; a biased learned ratio must not
+    stretch its body into the next slot and make an otherwise safe forward
+    move impossible. The learned ratio remains unchanged in the raw fact and
+    provenance. The protected interval still includes both complete shuttle
     half-bodies plus the route margin, so canonical occupancy is not reduced
     below the physical separation contract.
     """
@@ -8068,6 +8101,7 @@ def _target_blocker_clearance_plan(
             }
     active_gate_direct_release: dict[str, Any] | None = None
     active_gate_is_best_direct_release = not bool(active_clearance_gate)
+    active_gate_can_preserve_buffer_choreography = False
     if primary_blocker and selected_gate and active_clearance_gate:
         active_gate_direct_release = (
             _resolve_shortest_direct_interior_blocker_release(
@@ -8085,6 +8119,18 @@ def _target_blocker_clearance_plan(
             and str(active_gate_direct_release.get('gate_switch') or '')
             == active_clearance_gate
         )
+        # BEGIN is an atomic receding-horizon step, so the next accepted
+        # observation still precedes the relocation it configured.  A direct
+        # blocker release can remain globally unresolved precisely because the
+        # selected interior shuttle must advance first to open a separated
+        # holding pose.  Preserve that dense-buffer choreography when its
+        # selected branch is the already-held clearance branch; otherwise the
+        # rebuild replaces the pending selected advance with ``unavailable``,
+        # pauses the unchanged route, and repeats BEGIN forever.
+        active_gate_can_preserve_buffer_choreography = bool(
+            not active_gate_direct_release.get('resolved')
+            and active_clearance_gate == selected_gate
+        )
         base['active_clearance_gate_continuation_audit'] = {
             'active_gate': active_clearance_gate,
             'best_direct_release_gate': str(
@@ -8093,23 +8139,33 @@ def _target_blocker_clearance_plan(
             'best_direct_release_resolved': bool(
                 active_gate_direct_release.get('resolved')
             ),
-            'active_gate_retained': active_gate_is_best_direct_release,
+            'active_gate_retained': bool(
+                active_gate_is_best_direct_release
+                or active_gate_can_preserve_buffer_choreography
+            ),
+            'selected_buffer_choreography_retained': (
+                active_gate_can_preserve_buffer_choreography
+            ),
             'policy': (
-                'retain_active_gate_only_when_it_matches_the_fresh_global_'
-                'direct_release_optimum'
+                'retain_active_gate_for_the_fresh_global_direct_release_'
+                'optimum_or_its_same_branch_selected_buffer_dependency'
             ),
             'controller_position_fields_used_for_localization': False,
         }
     if (
         primary_blocker
         and selected_gate
-        and active_gate_is_best_direct_release
+        and (
+            active_gate_is_best_direct_release
+            or active_gate_can_preserve_buffer_choreography
+        )
     ):
-        # Once a clearance gate is active, continue it only when a fresh
-        # comparison across every branch selects that same gate. This keeps an
-        # R2 -> A12I decision stable across ``begin clearance`` without
-        # hijacking older cases where an unrelated active A3 route must pause
-        # before a shorter exterior slot release.
+        # Once a clearance gate is active, continue it when a fresh direct
+        # comparison selects that gate or when the unresolved direct move is
+        # still waiting on the selected shuttle's same-branch buffer advance.
+        # This keeps a decision stable across ``begin clearance`` without
+        # hijacking cases where another branch has become the proved direct
+        # optimum and the active route must pause before reconfiguration.
         direct_release = (
             active_gate_direct_release
             if active_gate_direct_release is not None
@@ -9608,6 +9664,7 @@ def _pddl_init_facts(
         for obstacle in side_obstacles:
             facts.append(f'(obstacle_present {obstacle} {side})')
     if goal_data['goal_type'] == 'transport':
+        facts.append(f'(active_goal_side {goal_data["side"]})')
         target_station = _station_object(goal_data['side'], goal_data['target_station'])
         facts.append(f'(target_station_for_goal {target_station})')
         if goal_data['target_slot']:

@@ -250,6 +250,35 @@ def _load_module():
     return module
 
 
+def test_package_root_for_script_supports_source_and_colcon_install_layouts(
+    tmp_path,
+):
+    generator = _load_module()
+
+    assert generator._package_root_for_script(SCRIPT_PATH.parent) == (
+        REPO_ROOT / 'mfja_robot_control_config'
+    )
+
+    script_dir = (
+        tmp_path
+        / 'install'
+        / 'mfja_robot_control_config'
+        / 'lib'
+        / 'mfja_robot_control_config'
+    )
+    package_share = (
+        tmp_path
+        / 'install'
+        / 'mfja_robot_control_config'
+        / 'share'
+        / 'mfja_robot_control_config'
+    )
+    script_dir.mkdir(parents=True)
+    (package_share / 'config').mkdir(parents=True)
+
+    assert generator._package_root_for_script(script_dir) == package_share
+
+
 def _load_batch_runner_module():
     spec = importlib.util.spec_from_file_location(
         'room_315_payload_case_batch_runner',

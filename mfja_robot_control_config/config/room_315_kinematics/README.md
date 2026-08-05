@@ -22,6 +22,25 @@ switch states, and controlling the robots.
 - `rail_devices_left.yaml`: user-editable left-rail slots, position sensors,
   stopper-linked position sensors, and stoppers.
 
+## Segment CSV Naming
+
+The live right and left topology YAML files use normalized, explicit CSV
+references. Every CSV filename stem matches its public segment name; for
+example, public segment `A23` explicitly declares
+`csv: raw_segments/A23.csv`. The
+`csv_reference_schema: public_segment_filename_v1` marker distinguishes this
+layout from historical topology snapshots.
+
+The explicit `csv` field remains authoritative. Loader code must read that
+field and must not infer a filename from the segment key merely because the
+two names now match.
+
+The kinematic loader contains a narrowly scoped compatibility table for the
+exact legacy public-segment/CSV-reference pairs found in immutable historical
+schema snapshots. It redirects those old references to the normalized files
+and emits a deprecation warning. Live YAML and newly exported snapshots always
+write normalized references; no duplicate legacy CSV files are retained.
+
 ## Segment Direction
 
 Every rail segment is one-way only. Motion always follows the CSV order from

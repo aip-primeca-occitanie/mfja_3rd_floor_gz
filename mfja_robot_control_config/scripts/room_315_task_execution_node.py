@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 import sys
 import threading
 import time
@@ -41,6 +43,46 @@ from room_315_task_execution_config import validate_task_execution_parameters
 
 
 TERMINAL_STATUSES = frozenset({'succeeded', 'aborted', 'rejected', 'failed'})
+TASK_EXECUTION_INSTANCE_LOCK_PATH = Path(
+    '/tmp/mfja_room315_task_execution_node.lock'
+)
+
+
+class TaskExecutionInstanceAlreadyRunning(RuntimeError):
+    """Raised before ROS startup when another gateway owns the singleton."""
+
+
+def acquire_task_execution_instance_lock(
+    path: Path = TASK_EXECUTION_INSTANCE_LOCK_PATH,
+) -> int:
+    """Acquire the host-wide Room 315 command-gateway singleton lock."""
+
+    lock_path = Path(path)
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        owner_pid = os.read(descriptor, 64).decode('ascii', errors='ignore').strip()
+        os.close(descriptor)
+        owner = f' (owner pid {owner_pid})' if owner_pid else ''
+        raise TaskExecutionInstanceAlreadyRunning(
+            'another Room 315 task execution gateway is already running'
+            f'{owner}; refusing a duplicate command subscriber'
+        ) from exc
+    os.ftruncate(descriptor, 0)
+    os.write(descriptor, str(os.getpid()).encode('ascii'))
+    os.fsync(descriptor)
+    return descriptor
+
+
+def release_task_execution_instance_lock(descriptor: int) -> None:
+    """Release a lock acquired by ``acquire_task_execution_instance_lock``."""
+
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        os.close(descriptor)
 
 
 class Room315TaskExecutionNode(Node):
@@ -553,20 +595,29 @@ def _stamp_s(stamp: Any) -> float:
 
 
 def main(args: list[str] | None = None) -> None:
-    rclpy.init(args=args)
-    node = Room315TaskExecutionNode()
     try:
+        instance_lock = acquire_task_execution_instance_lock()
+    except TaskExecutionInstanceAlreadyRunning as exc:
+        print(f'FATAL: {exc}', file=sys.stderr)
+        raise SystemExit(2) from exc
+
+    node: Room315TaskExecutionNode | None = None
+    try:
+        rclpy.init(args=args)
+        node = Room315TaskExecutionNode()
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        if node._active_goal_id:
+        if node is not None and node._active_goal_id:
             node._publish_supervisor_command({
                 'action': 'stop_all',
                 'reason': 'task_execution_node_shutdown',
             })
-        node.destroy_node()
+        if node is not None:
+            node.destroy_node()
         rclpy.try_shutdown()
+        release_task_execution_instance_lock(instance_lock)
 
 
 if __name__ == '__main__':

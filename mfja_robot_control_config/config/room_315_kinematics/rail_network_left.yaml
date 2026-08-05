@@ -6,6 +6,7 @@ description: 'Explicit directed rail topology for the room 315 left-rail shuttle
 
   '
 source_csv_dir: mfja_robot_control_config/config/room_315_kinematics/raw_segments
+csv_reference_schema: public_segment_filename_v1
 snap_tolerance_m: 0.05
 motion_policy:
   segment_direction: forward_only
@@ -160,72 +161,72 @@ nodes:
       side: start
 segments:
   A3E:
-    csv: raw_segments/A1E.csv
+    csv: raw_segments/A3E.csv
     start_node: A3_C
     end_node: A3_E
     direction: forward
   A3I:
-    csv: raw_segments/A1I.csv
+    csv: raw_segments/A3I.csv
     start_node: A3_C
     end_node: A3_I
     direction: forward
   A4E:
-    csv: raw_segments/A2E.csv
+    csv: raw_segments/A4E.csv
     start_node: A4_E
     end_node: A4_C
     direction: forward
   A4I:
-    csv: raw_segments/A2I.csv
+    csv: raw_segments/A4I.csv
     start_node: A4_I
     end_node: A4_C
     direction: forward
   A1E:
-    csv: raw_segments/A3E.csv
+    csv: raw_segments/A1E.csv
     start_node: A1_C
     end_node: A1_E
     direction: forward
   A1I:
-    csv: raw_segments/A3I.csv
+    csv: raw_segments/A1I.csv
     start_node: A1_C
     end_node: A1_I
     direction: forward
   A2E:
-    csv: raw_segments/A4E.csv
+    csv: raw_segments/A2E.csv
     start_node: A2_E
     end_node: A2_C
     direction: forward
   A2I:
-    csv: raw_segments/A4I.csv
+    csv: raw_segments/A2I.csv
     start_node: A2_I
     end_node: A2_C
     direction: forward
   A34E:
-    csv: raw_segments/A12E.csv
+    csv: raw_segments/A34E.csv
     start_node: A3_E
     end_node: A4_E
     direction: forward
   A34I:
-    csv: raw_segments/A12I.csv
+    csv: raw_segments/A34I.csv
     start_node: A3_I
     end_node: A4_I
     direction: forward
   A23:
-    csv: raw_segments/A14.csv
+    csv: raw_segments/A23.csv
     start_node: A2_C
     end_node: A3_C
     direction: forward
   A14:
-    csv: raw_segments/A23.csv
+    csv: raw_segments/A14.csv
     start_node: A4_C
     end_node: A1_C
     direction: forward
   A12E:
-    csv: raw_segments/A34E.csv
+    csv: raw_segments/A12E.csv
     start_node: A1_E
     end_node: A2_E
     direction: forward
   A12I:
-    csv: raw_segments/A34I.csv
+    csv: raw_segments/A12I.csv
     start_node: A1_I
     end_node: A2_I
     direction: forward

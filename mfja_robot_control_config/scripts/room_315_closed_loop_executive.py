@@ -796,6 +796,25 @@ class ClosedLoopExecutive:
             try:
                 plan, translated_plan = self._request_and_validate_plan(problem)
             except Exception as exc:  # noqa: BLE001 - fail closed at execution boundary
+                # Planning can race a separately completed physical action
+                # (for example while ROS graph discovery is briefly exposing
+                # two executors during a launch restart).  PlanSys2 reports
+                # ``Plan not found`` when the frozen problem no longer needs
+                # an action, but that response alone is never success proof.
+                # Accept the goal only after a fresh observed state proves it;
+                # otherwise retain the original fail-closed planner abort.
+                goal_recheck = self._fresh_goal_satisfaction_recheck(
+                    after_state_id=observed_state.state_id,
+                    task_goal=task_goal,
+                )
+                if goal_recheck is not None:
+                    return self._result(
+                        status='succeeded',
+                        reason='task_goal_satisfied_after_planner_response',
+                        replans=replans,
+                        unknown_retries=unknown_retries,
+                        final_state_id=goal_recheck.state_id,
+                    )
                 return self._abort_result(
                     abort_reason='planner_failure',
                     result_reason=f'planner_failure:{exc}',
@@ -805,6 +824,18 @@ class ClosedLoopExecutive:
                 )
 
             if not plan:
+                goal_recheck = self._fresh_goal_satisfaction_recheck(
+                    after_state_id=observed_state.state_id,
+                    task_goal=task_goal,
+                )
+                if goal_recheck is not None:
+                    return self._result(
+                        status='succeeded',
+                        reason='task_goal_satisfied_after_empty_plan',
+                        replans=replans,
+                        unknown_retries=unknown_retries,
+                        final_state_id=goal_recheck.state_id,
+                    )
                 return self._abort_result(
                     abort_reason='empty_plan',
                     replans=replans,
@@ -1188,6 +1219,22 @@ class ClosedLoopExecutive:
             unknown_retries=unknown_retries,
             final_state_id=final_state_id,
         )
+
+    def _fresh_goal_satisfaction_recheck(
+        self,
+        *,
+        after_state_id: str,
+        task_goal: TaskGoal,
+    ) -> ObservedState | None:
+        """Return fresh success proof after a non-actionable planner reply."""
+
+        try:
+            observed_state = self._observe(after_state_id=after_state_id)
+        except (TypeError, _FreshObservationUnavailable):
+            return None
+        if self._task_goal_satisfied(observed_state, task_goal):
+            return observed_state
+        return None
 
     def _clearance_phase_plan_error(
         self,

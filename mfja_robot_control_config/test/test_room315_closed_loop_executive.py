@@ -84,6 +84,16 @@ class SequencePlanner(BasePlannerBackend):
         return list(plan)
 
 
+class FailingPlanner(BasePlannerBackend):
+    def __init__(self, message: str) -> None:
+        self.message = message
+        self.calls = 0
+
+    def plan(self, goal_or_problem, *, speed: float) -> list[str]:
+        self.calls += 1
+        raise RuntimeError(self.message)
+
+
 class RecordingTransport(ScenarioTransport):
     def __init__(
         self,
@@ -921,6 +931,60 @@ def test_unsatisfied_transport_terminal_is_not_sent_as_done_or_accepted():
         'terminal_plan_claimed_unsatisfied_transport_goal'
     )
     assert all(command.get('action') != 'DONE' for command in transport.commands)
+
+
+def test_planner_no_plan_race_returns_success_only_after_fresh_goal_proof():
+    source = _base_state('planner-race-source')
+    arrived = _state_with_r1_at_slot3('planner-race-arrived')
+    provider = SequenceObservedStateProvider([source, arrived])
+    planner = FailingPlanner(
+        'PlanSys2 failed to generate a plan: Plan not found'
+    )
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+    ).run(_transport_goal())
+
+    assert result.succeeded
+    assert result.reason == 'task_goal_satisfied_after_planner_response'
+    assert result.final_state_id == 'planner-race-arrived'
+    assert result.plan_attempts == 1
+    assert result.observations == 2
+    assert result.safe_abort_sent is False
+    assert transport.commands == []
+
+
+def test_planner_failure_still_aborts_when_fresh_state_does_not_prove_goal():
+    source = _base_state('planner-failure-source')
+    still_unsatisfied = replace(
+        source,
+        state_id='planner-failure-fresh-unsatisfied',
+        timestamp=source.timestamp + 0.1,
+    )
+    provider = SequenceObservedStateProvider([source, still_unsatisfied])
+    planner = FailingPlanner(
+        'PlanSys2 failed to generate a plan: Plan not found'
+    )
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+    ).run(_transport_goal())
+
+    assert result.status == 'aborted'
+    assert result.reason == (
+        'planner_failure:PlanSys2 failed to generate a plan: Plan not found'
+    )
+    assert result.observations == 2
+    assert result.safe_abort_sent is True
+    assert [command['action'] for command in transport.commands] == [
+        'stop_all'
+    ]
 
 
 def test_retries_recoverable_unknown_before_planning():

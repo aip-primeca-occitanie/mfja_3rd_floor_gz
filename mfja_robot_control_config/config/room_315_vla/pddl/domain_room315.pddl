@@ -18,6 +18,10 @@
   (:predicates
     (validated_state)
     (observation_required)
+    ; Transport problems are rail-scoped.  This mirrors the executive's
+    ; existing active-side guard and prevents a recoverable state on the
+    ; independent rail from entering POPF's search for the requested rail.
+    (active_goal_side ?side - rail_side)
 
     (shuttle_on_side ?s - shuttle ?side - rail_side)
     (shuttle_at ?s - shuttle ?station - station)
@@ -108,6 +112,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (connected ?side ?from ?to)
       (switch_group_on_side ?switches ?side)
       (normal_route ?side)
@@ -127,6 +132,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (connected ?side ?from ?to)
       (stopper_group_on_side ?stoppers ?side)
       (switches_ready ?side)
@@ -147,6 +153,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (connected ?side ?from ?to)
       (route_reconfiguration_required ?side)
       (route_reconfiguration_safe ?side)
@@ -176,6 +183,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?s ?side)
       (slot_on_side ?from_slot ?side)
       (slot_on_side ?to_slot ?side)
@@ -219,6 +227,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?s ?side)
       (segment_only_location ?s)
       (shuttle_at_topology_block ?s ?from_block)
@@ -249,6 +258,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?s ?side)
       (segment_only_location ?s)
       (shuttle_at_topology_block ?s ?from_block)
@@ -287,6 +297,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?s ?side)
       (slot_on_side ?from_slot ?side)
       (slot_on_side ?to_slot ?side)
@@ -323,6 +334,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?s ?side)
       (slot_on_side ?from_slot ?side)
       (slot_on_side ?to_slot ?side)
@@ -367,6 +379,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (normal_route ?side)
       (shuttle_on_side ?selected ?side)
       (goal_candidate ?selected)
@@ -395,6 +408,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?blocker ?side)
       (shuttle_on_side ?selected ?side)
       (shuttle_at_slot ?selected ?from_slot)
@@ -431,6 +445,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?selected ?side)
       (goal_candidate ?selected)
       (shuttle_at_slot ?selected ?from_slot)
@@ -458,6 +473,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (clearance_mode ?side)
       (shuttle_on_side ?selected ?side)
       (goal_candidate ?selected)
@@ -488,6 +504,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (normal_route ?side)
       (shuttle_on_side ?selected ?side)
       (goal_candidate ?selected)
@@ -521,6 +538,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?blocker ?side)
       (shuttle_on_side ?selected ?side)
       (segment_only_location ?selected)
@@ -557,6 +575,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?selected ?side)
       (goal_candidate ?selected)
       (segment_only_location ?selected)
@@ -589,6 +608,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (clearance_mode ?side)
       (shuttle_on_side ?selected ?side)
       (goal_candidate ?selected)
@@ -619,6 +639,7 @@
     :parameters (?side - rail_side)
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (clearance_mode ?side)
       (clearance_pause_safe ?side)
       (> (pending_clearances ?side) 0)
@@ -641,6 +662,7 @@
     )
     :precondition (and
       (validated_state)
+      (active_goal_side ?side)
       (shuttle_on_side ?s ?side)
       (shuttle_at ?s ?to)
       (path_ready ?side ?from ?to)

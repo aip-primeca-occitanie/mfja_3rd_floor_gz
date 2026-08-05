@@ -245,6 +245,10 @@ if(BUILD_TESTING)
     test/test_room315_kinematic_shuttle_core.py
   )
   ament_add_pytest_test(
+    test_room315_segment_csv_normalization
+    test/test_room315_segment_csv_normalization.py
+  )
+  ament_add_pytest_test(
     test_room315_pddl_planning
     test/test_room315_pddl_planning.py
   )

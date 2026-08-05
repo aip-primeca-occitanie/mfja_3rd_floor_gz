@@ -7,6 +7,7 @@ import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
+import warnings
 
 import yaml
 
@@ -18,6 +19,28 @@ FALLING = 'FALLING'
 POLYLINE_PATH_BACKEND = 'polyline'
 CUBIC_HERMITE_PATH_BACKEND = 'cubic_hermite'
 PATH_BACKENDS = {POLYLINE_PATH_BACKEND, CUBIC_HERMITE_PATH_BACKEND}
+PUBLIC_SEGMENT_CSV_REFERENCE_SCHEMA = 'public_segment_filename_v1'
+
+# Backward compatibility for immutable topology snapshots created before the
+# CSV filenames were normalized. Live topology YAML uses explicit normalized
+# references; this table is consulted only for an exact historical
+# (public-segment, legacy-reference) pair.
+LEGACY_ROOM315_CSV_REFERENCE_ALIASES = {
+    ('A23', 'raw_segments/A14.csv'): 'raw_segments/A23.csv',
+    ('A3E', 'raw_segments/A1E.csv'): 'raw_segments/A3E.csv',
+    ('A3I', 'raw_segments/A1I.csv'): 'raw_segments/A3I.csv',
+    ('A34E', 'raw_segments/A12E.csv'): 'raw_segments/A34E.csv',
+    ('A34I', 'raw_segments/A12I.csv'): 'raw_segments/A34I.csv',
+    ('A4E', 'raw_segments/A2E.csv'): 'raw_segments/A4E.csv',
+    ('A4I', 'raw_segments/A2I.csv'): 'raw_segments/A4I.csv',
+    ('A14', 'raw_segments/A23.csv'): 'raw_segments/A14.csv',
+    ('A1E', 'raw_segments/A3E.csv'): 'raw_segments/A1E.csv',
+    ('A1I', 'raw_segments/A3I.csv'): 'raw_segments/A1I.csv',
+    ('A12E', 'raw_segments/A34E.csv'): 'raw_segments/A12E.csv',
+    ('A12I', 'raw_segments/A34I.csv'): 'raw_segments/A12I.csv',
+    ('A2E', 'raw_segments/A4E.csv'): 'raw_segments/A2E.csv',
+    ('A2I', 'raw_segments/A4I.csv'): 'raw_segments/A2I.csv',
+}
 
 
 @dataclass(frozen=True)
@@ -251,15 +274,31 @@ class RailNetwork:
             config = yaml.safe_load(handle)
 
         normalized_backend = _normalize_path_backend(path_backend)
-        segments = {
-            name: SegmentGeometry(
+        segments: Dict[str, SegmentGeometry] = {}
+        legacy_references = []
+        for name, segment_config in config['segments'].items():
+            csv_path, used_legacy_alias = _resolve_segment_csv_path(
+                segment_name=name,
+                segment_config=segment_config,
+                network_config=config,
+                network_path=network_path,
+            )
+            if used_legacy_alias:
+                legacy_references.append(str(segment_config['csv']))
+            segments[name] = SegmentGeometry(
                 name=name,
-                points=_read_csv_points(_resolve_path(segment_config['csv'], network_path)),
+                points=_read_csv_points(csv_path),
                 path_backend=normalized_backend,
                 arc_length_samples_per_edge=arc_length_samples_per_edge,
             )
-            for name, segment_config in config['segments'].items()
-        }
+        if legacy_references:
+            warnings.warn(
+                'Loaded legacy Room 315 segment CSV references; use explicit '
+                'raw_segments/<public-segment>.csv references and '
+                f'{PUBLIC_SEGMENT_CSV_REFERENCE_SCHEMA!r}.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
         return cls(network_path=network_path, config=config, segments=segments)
 
     def default_switch_states(self) -> Dict[str, str]:
@@ -408,6 +447,46 @@ def _resolve_path(raw_path: str, network_path: Path) -> Path:
         return source_relative
 
     return network_path.parent / path
+
+
+def _resolve_segment_csv_path(
+    *,
+    segment_name: str,
+    segment_config: dict,
+    network_config: dict,
+    network_path: Path,
+) -> tuple[Path, bool]:
+    raw_reference = Path(str(segment_config['csv'])).as_posix()
+    if (
+        network_config.get('csv_reference_schema')
+        == PUBLIC_SEGMENT_CSV_REFERENCE_SCHEMA
+    ):
+        return _resolve_path(raw_reference, network_path), False
+
+    normalized_reference = LEGACY_ROOM315_CSV_REFERENCE_ALIASES.get(
+        (segment_name, raw_reference)
+    )
+    if normalized_reference is None:
+        return _resolve_path(raw_reference, network_path), False
+
+    source_config_dir = (
+        _repo_root()
+        / 'mfja_robot_control_config'
+        / 'config'
+        / 'room_315_kinematics'
+    )
+    adjacent_legacy_path = network_path.parent / raw_reference
+    if adjacent_legacy_path.is_file():
+        return adjacent_legacy_path, True
+
+    normalized_candidates = (
+        source_config_dir / normalized_reference,
+        _default_config_dir() / normalized_reference,
+    )
+    for candidate in normalized_candidates:
+        if candidate.is_file():
+            return candidate, True
+    return network_path.parent / normalized_reference, True
 
 
 def _normalize_path_backend(raw_backend: str) -> str:

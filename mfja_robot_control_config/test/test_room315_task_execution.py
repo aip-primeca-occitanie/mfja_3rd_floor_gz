@@ -2784,6 +2784,110 @@ def test_full_rail_moves_clearance_dependency_before_goal_slot_blocker(
         ) in planner_output
 
 
+@pytest.mark.parametrize(
+    'domain_name',
+    ('domain_room315.pddl', 'domain_room315_runtime.pddl'),
+)
+@pytest.mark.parametrize('side', ('right', 'left'))
+def test_dense_mirrored_clearance_ignores_recoverable_opposite_rail(
+    domain_name,
+    side,
+    tmp_path,
+):
+    """Keep an independent rail's recovery state out of the active search.
+
+    This is the minimal replay of the live L4 -> slot 2 ``Plan not found``:
+    the left rail was in its normal dense four-shuttle layout while the right
+    rail retained a safe route-reconfiguration state from its previous task.
+    POPF must solve the same dense clearance request for either active rail.
+    """
+
+    popf = Path('/opt/ros/jazzy/lib/popf/popf')
+    discovered = str(popf) if popf.is_file() else shutil.which('popf')
+    if not discovered:
+        pytest.skip('POPF executable is unavailable')
+
+    placements = {
+        **{f'L{index}': str(index) for index in range(1, 5)},
+        **{f'R{index}': str(index) for index in range(1, 5)},
+    }
+    state = VisualObservedStateBuilder().build(
+        _snapshot(
+            observation=_observation(present=placements),
+            supervisor=_supervisor(
+                shuttle_identity=f'{side[0].upper()}4',
+            ),
+        ),
+        now_s=100.1,
+    )
+    goal = TaskGoal(
+        goal_id=f'{side}-dense-shuttle-4-to-slot-2',
+        description=f'Move {side} shuttle 4 to slot 2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': side,
+            'target_kind': 'slot',
+            'target_shuttle': f'room315_{side}_shuttle_4',
+            'target_slot': '2',
+        },
+    )
+    parent = build_pddl_problem_from_observed_state_task_goal(state, goal)
+    problem = ClosedLoopExecutive._next_planning_problem(parent)
+
+    inactive_side = 'left' if side == 'right' else 'right'
+    inactive_normal = f'    (normal_route {inactive_side})\n'
+    assert inactive_normal in problem.problem_text
+    contaminated_problem_text = problem.problem_text.replace(
+        inactive_normal,
+        (
+            f'    (route_reconfiguration_required {inactive_side})\n'
+            f'    (route_reconfiguration_safe {inactive_side})\n'
+        ),
+        1,
+    )
+    assert f'(active_goal_side {side})' in contaminated_problem_text
+    assert (
+        f'(active_goal_side {inactive_side})'
+        not in contaminated_problem_text
+    )
+
+    problem_path = tmp_path / f'{domain_name}-{side}-opposite-recovery.pddl'
+    problem_path.write_text(contaminated_problem_text, encoding='utf-8')
+    domain = (
+        SCRIPT_DIR.parent
+        / 'config'
+        / 'room_315_vla'
+        / 'pddl'
+        / domain_name
+    )
+    completed = subprocess.run(
+        [discovered, str(domain), str(problem_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20.0,
+    )
+    planner_output = completed.stdout + completed.stderr
+
+    assert 'Solution Found' in planner_output
+    assert 'Problem unsolvable' not in planner_output
+    assert (
+        f'begin_route_clearance {side}_shuttle_4 {side} '
+        f'{side}_slot_4 {side}_slot_2'
+    ) in planner_output
+    assert (
+        f'relocate_blocker_to_interior {side}_shuttle_2 '
+        f'{side}_shuttle_4 {side} {side}_slot_4 {side}_slot_2'
+    ) in planner_output
+    assert f'restore_normal_route {inactive_side} ' not in planner_output
+
+
 @pytest.mark.parametrize('side', ('right', 'left'))
 @pytest.mark.parametrize(
     ('slot1_identity', 'slot2_identity', 'selected_identity', 'slot4_identity'),
@@ -6071,7 +6175,9 @@ def test_full_rail_three_blocker_choreography_has_safe_capacity_pause_and_advanc
     assert build_intermediate_selected_advance_problem(advance_parent) == advance
 
 
-def test_interior_goal_cross_branch_blocker_transfer_replays_red_slot4_failure():
+def test_interior_goal_cross_branch_blocker_transfer_replays_red_slot4_failure(
+    tmp_path,
+):
     """A certified interior goal opens capacity before a cross-branch move."""
 
     goal = TaskGoal(
@@ -6228,6 +6334,76 @@ def test_interior_goal_cross_branch_blocker_transfer_replays_red_slot4_failure()
     ]['ordered_relocations'][0]
     assert live_raw_first['shuttle'] == 'right_shuttle_1'
     assert live_raw_first['destination']['target_s_m'] == pytest.approx(0.92)
+
+    # Re-observation after BEGIN sees the same two certified interior poses
+    # and the held A3/A4 route, before any shuttle has moved.  Preserve the
+    # planned R1 advance under that route.  Pausing here would restore A3/A4
+    # to exterior without changing occupancy; the next fresh problem would
+    # request BEGIN again and repeat until max_steps_exceeded.
+    active_before_first_move, certificates = accepted_state(
+        selected_s_m=0.49,
+        selected_visual_s_m=0.5310416221618652,
+        switch_states={'A3': 'I', 'A4': 'I'},
+    )
+    active_before_first_move_parent = (
+        build_pddl_problem_from_observed_state_task_goal(
+            active_before_first_move,
+            goal,
+            runtime_clearance_certificates=certificates,
+        )
+    )
+    active_before_first_move_clearance = (
+        active_before_first_move_parent.provenance[
+            'target_blocker_clearance_plan'
+        ]
+    )
+    active_before_first_move_relocation = (
+        active_before_first_move_clearance['ordered_relocations'][0]
+    )
+    assert active_before_first_move_relocation['shuttle'] == (
+        'right_shuttle_1'
+    )
+    assert active_before_first_move_relocation['destination'][
+        'target_s_m'
+    ] == pytest.approx(0.92)
+    assert active_before_first_move_clearance.get(
+        'clearance_pause_for_exterior_progress'
+    ) is None
+    active_before_first_move_problem = ClosedLoopExecutive._next_planning_problem(
+        active_before_first_move_parent
+    )
+    assert active_before_first_move_problem.goal_text == (
+        '(clearance_relocated right_shuttle_1)'
+    )
+    popf = Path('/opt/ros/jazzy/lib/popf/popf')
+    discovered = str(popf) if popf.is_file() else shutil.which('popf')
+    if discovered:
+        domain = (
+            SCRIPT_DIR.parent
+            / 'config'
+            / 'room_315_vla'
+            / 'pddl'
+            / 'domain_room315_runtime.pddl'
+        )
+        problem_path = tmp_path / 'active-a34-buffer-continuation.pddl'
+        problem_path.write_text(
+            active_before_first_move_problem.problem_text,
+            encoding='utf-8',
+        )
+        completed = subprocess.run(
+            [discovered, str(domain), str(problem_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20.0,
+        )
+        planner_output = completed.stdout + completed.stderr
+        assert 'Solution Found' in planner_output
+        assert (
+            'stage_selected_segment_to_interior right_shuttle_1 right '
+            'right_topology_a34i right_slot_4'
+        ) in planner_output
+        assert 'pause_route_clearance right' not in planner_output
 
     held, certificates = accepted_state(
         selected_s_m=0.92,
@@ -7140,6 +7316,153 @@ def test_runtime_restart_recovers_only_after_stable_stopped_dzi_proof():
     provider.update_slot_sensor_feedback('right', [reading], receive_s=clock[0])
     clock[0] += 0.1
     provider.update_slot_sensor_feedback('right', [reading], receive_s=clock[0])
+    assert provider.verified_slot_arrival_certificates() == {}
+
+
+def test_runtime_start_recovers_stable_initial_dzi_despite_visual_ratio_bias():
+    """Replay the live L2 -> slot 4 abort caused by biased L1 vision."""
+
+    clock = [100.0]
+    provider = LatestVisualObservedStateProvider(
+        VisualObservedStateBuilder(),
+        slot_sensor_confirmation_frames=2,
+        monotonic=lambda: clock[0],
+    )
+    observation = _observation(present={
+        'L1': '1',
+        'L2': '2',
+        'L3': '3',
+        'L4': '4',
+    })
+    l1 = next(
+        item for item in observation['shuttles']
+        if item['identity'] == 'L1'
+    )
+    expected_ratio = _planning_rail_topology('left').slots['1'].s_ratio
+    live_ratio_error = 0.146776223
+    l1['s_ratio'] = expected_ratio + live_ratio_error
+    l1['s_m'] = l1['s_ratio'] * l1['segment_length_m']
+
+    provider.update_observation(observation, receive_s=clock[0])
+    provider.update_supervisor(
+        _supervisor(
+            mode='DISABLED',
+            reached_target_slot='',
+            shuttle_identity='L1',
+        ),
+        receive_s=clock[0],
+    )
+    reading = {
+        'active': True,
+        'name': 'DZI1L',
+        'shuttle': 'room315_left_shuttle_1',
+    }
+    provider.update_slot_sensor_feedback(
+        'left',
+        [reading],
+        receive_s=clock[0],
+    )
+    assert provider.verified_slot_arrival_certificates() == {}
+    clock[0] += 0.1
+    provider.update_slot_sensor_feedback(
+        'left',
+        [reading],
+        receive_s=clock[0],
+    )
+
+    recovered = provider.verified_slot_arrival_certificates()['L1']
+    assert recovered['proof_mode'] == (
+        'stable_stopped_dzi_initial_occupancy'
+    )
+    assert recovered['controller_mode'] == 'DISABLED'
+    assert recovered['controller_target_slot_confirmed'] is False
+    assert recovered['reached_target_slot'] == ''
+    assert recovered['controller_position_fields_used_for_localization'] is False
+
+    state = provider.observe()
+    raw_position = _fact(
+        state,
+        'room315_left_shuttle_1',
+        'rail_position',
+    )
+    assert raw_position.value['s_ratio'] == pytest.approx(
+        expected_ratio + live_ratio_error
+    )
+    goal = TaskGoal(
+        goal_id='live-l2-slot4-after-initial-l1-visual-bias',
+        description='Move L2 to left slot 4',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'transport',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+            'shuttle_selection': 'explicit',
+            'side': 'left',
+            'target_kind': 'slot',
+            'target_shuttle': 'room315_left_shuttle_2',
+            'target_slot': '4',
+        },
+    )
+    problem = build_pddl_problem_from_observed_state_task_goal(state, goal)
+    diagnostic = problem.provenance['planning_scope'][
+        'exact_slot_anchor_visual_diagnostics'
+    ]['left_shuttle_1']
+    assert diagnostic['absolute_ratio_error'] == pytest.approx(
+        live_ratio_error
+    )
+    assert diagnostic[
+        'accepted_under_verified_arrival_certificate'
+    ] is True
+    assert diagnostic['raw_visual_position_replaced'] is False
+    assert diagnostic[
+        'controller_position_fields_used_for_localization'
+    ] is False
+
+
+@pytest.mark.parametrize(
+    ('mode', 'reached_target_slot'),
+    (
+        ('MOVING', ''),
+        ('DISABLED', '2'),
+    ),
+)
+def test_initial_dzi_bootstrap_rejects_motion_or_conflicting_target(
+    mode,
+    reached_target_slot,
+):
+    clock = [100.0]
+    provider = LatestVisualObservedStateProvider(
+        VisualObservedStateBuilder(),
+        slot_sensor_confirmation_frames=2,
+        monotonic=lambda: clock[0],
+    )
+    provider.update_supervisor(
+        _supervisor(
+            mode=mode,
+            reached_target_slot=reached_target_slot,
+            shuttle_identity='L1',
+        ),
+        receive_s=clock[0],
+    )
+    reading = {
+        'active': True,
+        'name': 'DZI1L',
+        'shuttle': 'room315_left_shuttle_1',
+    }
+    provider.update_slot_sensor_feedback(
+        'left',
+        [reading],
+        receive_s=clock[0],
+    )
+    clock[0] += 0.1
+    provider.update_slot_sensor_feedback(
+        'left',
+        [reading],
+        receive_s=clock[0],
+    )
+
     assert provider.verified_slot_arrival_certificates() == {}
 
 

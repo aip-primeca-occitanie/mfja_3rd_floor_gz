@@ -71,6 +71,33 @@ def test_room315_pddl_declares_negative_precondition_requirement():
     assert re.search(r'\(:requirements[^)]*:negative-preconditions', text)
 
 
+def test_transport_actions_are_scoped_to_the_requested_rail():
+    """The symbolic action surface must match the executive's side guard."""
+
+    for domain_path in (
+        PDDL_DIR / 'domain_room315.pddl',
+        RUNTIME_DOMAIN_PATH,
+    ):
+        text = _without_comments(domain_path.read_text(encoding='utf-8').casefold())
+        assert '(active_goal_side ?side - rail_side)' in text
+        action_chunks = re.split(r'(?=\(:action\s+)', text)
+        side_actions = []
+        for chunk in action_chunks:
+            match = re.match(r'\(:action\s+([^\s)]+)', chunk)
+            if not match or '?side - rail_side' not in chunk:
+                continue
+            side_actions.append(match.group(1))
+            precondition = chunk.split(':precondition', 1)[1].split(
+                ':effect',
+                1,
+            )[0]
+            assert '(active_goal_side ?side)' in precondition, (
+                domain_path.name,
+                match.group(1),
+            )
+        assert side_actions
+
+
 def test_room315_pddl_finish_requires_stopped_shuttle():
     text = _without_comments(
         (PDDL_DIR / 'domain_room315.pddl').read_text(encoding='utf-8').casefold()

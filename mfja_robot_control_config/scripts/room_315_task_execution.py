@@ -631,13 +631,15 @@ class VisualObservedStateBuilder:
         *,
         sensor_anchors: dict[str, dict[str, Any]],
     ) -> dict[str, dict[str, Any]]:
-        """Validate executor proof without admitting controller localization.
+        """Validate executor slot proof without controller localization.
 
         A raw active DZI reading is deliberately insufficient.  The
         certificate is created by the arrival transport, or reconstructed
         after a runtime restart, only after the same identity-bearing DZI
-        stays active for the configured confirmation count and a fresh
-        controller status proves the shuttle is disabled at that slot.
+        stays active for the configured confirmation count and fresh
+        controller status proves the shuttle is disabled.  A simulator-start
+        shuttle has no commanded ``reached_target_slot`` yet, so its stable
+        stopped DZI is admitted under a distinct initial-occupancy proof.
         """
 
         certificates: dict[str, dict[str, Any]] = {}
@@ -689,17 +691,34 @@ class VisualObservedStateBuilder:
                     'verified slot arrival lacks matching fresh DZI anchor:'
                     f'{spec.short_id}'
                 )
-            if (
-                certificate.get('matched_by') != 'deterministic_slot_sensor'
-                or certificate.get('proof_mode') not in {
+            proof_mode = str(certificate.get('proof_mode') or '')
+            reached_target_slot = str(
+                certificate.get('reached_target_slot') or ''
+            ).strip()
+            initial_occupancy_proof = (
+                proof_mode == 'stable_stopped_dzi_initial_occupancy'
+                and certificate.get('controller_target_slot_confirmed')
+                is False
+                and not reached_target_slot
+            )
+            commanded_arrival_proof = (
+                proof_mode in {
                     'supervised_command_arrival',
                     'stable_stopped_dzi_runtime_recovery',
                 }
+                and certificate.get('controller_target_slot_confirmed')
+                is True
+                and reached_target_slot == slot
+            )
+            if (
+                certificate.get('matched_by') != 'deterministic_slot_sensor'
+                or not (
+                    initial_occupancy_proof
+                    or commanded_arrival_proof
+                )
                 or certificate.get('sensor_identity_confirmed') is not True
                 or certificate.get('controller_stop_confirmed') is not True
-                or certificate.get('controller_target_slot_confirmed') is not True
                 or certificate.get('controller_mode') != CONTROLLER_DISABLED_MODE
-                or str(certificate.get('reached_target_slot') or '') != slot
                 or certificate.get('model_prediction_replaced') is not False
                 or certificate.get(
                     'controller_position_fields_used_for_localization'
@@ -1338,12 +1357,37 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
             if isinstance(shuttles, dict)
             else {}
         )
+        controller_mode = str(
+            controller_state.get('mode') or ''
+        ).strip().upper()
+        controller_reached_slot = str(
+            controller_state.get('reached_target_slot') or ''
+        ).strip()
+        proof_mode = str(certificate.get('proof_mode') or '')
+        if proof_mode == 'stable_stopped_dzi_initial_occupancy':
+            target_evidence_is_current = bool(
+                certificate.get('controller_target_slot_confirmed') is False
+                and not str(
+                    certificate.get('reached_target_slot') or ''
+                ).strip()
+                and not controller_reached_slot
+            )
+        elif proof_mode in {
+            'supervised_command_arrival',
+            'stable_stopped_dzi_runtime_recovery',
+        }:
+            target_evidence_is_current = bool(
+                certificate.get('controller_target_slot_confirmed') is True
+                and str(
+                    certificate.get('reached_target_slot') or ''
+                ).strip() == slot
+                and controller_reached_slot == slot
+            )
+        else:
+            target_evidence_is_current = False
         return bool(
-            str(controller_state.get('mode') or '').strip().upper()
-            == CONTROLLER_DISABLED_MODE
-            and str(
-                controller_state.get('reached_target_slot') or ''
-            ).strip() == slot
+            controller_mode == CONTROLLER_DISABLED_MODE
+            and target_evidence_is_current
         )
 
     def _bootstrap_verified_slot_arrivals_locked(
@@ -1353,11 +1397,12 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
     ) -> None:
         """Recover proof after a runtime restart from stable stopped sources.
 
-        This never uses controller position fields.  Recovery requires the
-        same unique identity-bearing DZI for the full confirmation count plus
-        fresh ``DISABLED`` controller feedback whose discrete
-        ``reached_target_slot`` matches that DZI.  A locally issued motion
-        command suppresses bootstrap until the arrival transport registers
+        This never uses controller position fields. Recovery requires the same
+        unique identity-bearing DZI for the full confirmation count plus fresh
+        ``DISABLED`` feedback. A matching ``reached_target_slot`` reconstructs
+        a commanded arrival. An empty value reconstructs only initial stopped
+        occupancy; a non-empty mismatch is rejected. A locally issued motion
+        command suppresses both forms until the arrival transport registers
         the new supervised result.
         """
 
@@ -1377,6 +1422,30 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                 if spec is None or not isinstance(anchor, dict):
                     continue
                 slot = str(anchor.get('slot') or '')
+                shuttles = _nested_dict(
+                    self._supervisor_status,
+                    'rails',
+                    side,
+                ).get('shuttles')
+                controller_state = (
+                    shuttles.get(spec.gazebo_entity_name, {})
+                    if isinstance(shuttles, dict)
+                    else {}
+                )
+                controller_mode = str(
+                    controller_state.get('mode') or ''
+                ).strip().upper()
+                reached_target_slot = str(
+                    controller_state.get('reached_target_slot') or ''
+                ).strip()
+                if (
+                    controller_mode != CONTROLLER_DISABLED_MODE
+                    or reached_target_slot not in {'', slot}
+                ):
+                    continue
+                controller_target_slot_confirmed = (
+                    reached_target_slot == slot
+                )
                 certificate = {
                     'identity': spec.short_id,
                     'shuttle': spec.gazebo_entity_name,
@@ -1384,7 +1453,11 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                     'slot': slot,
                     'sensor': str(anchor.get('sensor') or '').upper(),
                     'matched_by': 'deterministic_slot_sensor',
-                    'proof_mode': 'stable_stopped_dzi_runtime_recovery',
+                    'proof_mode': (
+                        'stable_stopped_dzi_runtime_recovery'
+                        if controller_target_slot_confirmed
+                        else 'stable_stopped_dzi_initial_occupancy'
+                    ),
                     'motion_epoch': (
                         self._verified_slot_motion_epoch_by_identity.get(
                             spec.short_id,
@@ -1396,8 +1469,10 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                     'sensor_sequence': self._slot_sensor_sequence[side],
                     'controller_stop_confirmed': True,
                     'controller_mode': CONTROLLER_DISABLED_MODE,
-                    'controller_target_slot_confirmed': True,
-                    'reached_target_slot': slot,
+                    'controller_target_slot_confirmed': (
+                        controller_target_slot_confirmed
+                    ),
+                    'reached_target_slot': reached_target_slot,
                     'supervisor_sequence': self._supervisor_sequence,
                     'model_prediction_replaced': False,
                     'controller_position_fields_used_for_localization': False,

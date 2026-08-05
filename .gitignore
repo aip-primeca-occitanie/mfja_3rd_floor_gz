@@ -39,6 +39,7 @@ room315_shuttle_rail_report_ar.pdf
 /mfja_rail_interfaces/exp/
 /mfja_robot_control_config/config/room_315_kinematics/*_explanation_ar.html
 reports/
+/report/
 
 # Local notes and generated HTML exports
 memory.md

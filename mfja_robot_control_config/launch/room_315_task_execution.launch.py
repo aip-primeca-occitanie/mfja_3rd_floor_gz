@@ -4,7 +4,9 @@ from launch.actions import EmitEvent
 from launch.actions import RegisterEventHandler
 from launch.actions import TimerAction
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
 from launch.events import matches_action
+from launch.events import Shutdown
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import LifecycleNode
@@ -77,6 +79,16 @@ def generate_launch_description():
             },
         ],
     )
+    shutdown_on_gateway_exit = RegisterEventHandler(
+        OnProcessExit(
+            target_action=gateway,
+            on_exit=[
+                EmitEvent(event=Shutdown(
+                    reason='Room 315 task execution gateway exited',
+                )),
+            ],
+        )
+    )
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
@@ -120,4 +132,5 @@ def generate_launch_description():
         configure_planner,
         activate_planner,
         gateway,
+        shutdown_on_gateway_exit,
     ])
