@@ -111,7 +111,7 @@ def public_rail_segment_lengths(side: str) -> dict[str, float]:
     if str(side or '').strip().lower() != 'left':
         return lengths
     return {
-        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(name, name): length
+        internal_rail_segment_name_to_public(side, name): length
         for name, length in lengths.items()
     }
 
@@ -298,7 +298,20 @@ STOPPER_STOP_STATE = '1'
 SWITCH_INTERIOR_STATE = 'I'
 SWITCH_EXTERIOR_STATE = 'E'
 
-LEFT_PUBLIC_SEGMENT_NAME_MAP = {
+# The left rail reuses the right rail's directed geometry and therefore has two
+# intentionally different segment-name domains:
+#
+# * internal: keys stored in rail_network_left.yaml and used by RailNetwork;
+# * public: labels published on ROS topics and shown in the Room 315 layout.
+#
+# Never use one map as though it were bidirectional.  This particular layout is
+# currently an involution (A14 <-> A23, for example), which used to hide calls
+# made in the wrong direction.  The two named maps and conversion functions
+# below make the direction explicit without changing any runtime value.
+# For example, public left A23 is internal A14; its successor is governed by
+# public switch A3.  Raw left A23 belongs to public A14 and must not be used to
+# document the public A23 route.
+LEFT_INTERNAL_TO_PUBLIC_SEGMENT_NAME_MAP = {
     'A1E': 'A3E',
     'A1I': 'A3I',
     'A2E': 'A4E',
@@ -314,6 +327,36 @@ LEFT_PUBLIC_SEGMENT_NAME_MAP = {
     'A34E': 'A12E',
     'A34I': 'A12I',
 }
+
+LEFT_PUBLIC_TO_INTERNAL_SEGMENT_NAME_MAP = {
+    public_name: internal_name
+    for internal_name, public_name in LEFT_INTERNAL_TO_PUBLIC_SEGMENT_NAME_MAP.items()
+}
+if (
+    len(LEFT_PUBLIC_TO_INTERNAL_SEGMENT_NAME_MAP)
+    != len(LEFT_INTERNAL_TO_PUBLIC_SEGMENT_NAME_MAP)
+):
+    raise RuntimeError('left rail segment-name mapping must be one-to-one')
+
+# Backward-compatible import for out-of-tree users.  New code must use one of
+# the directional names/functions above.
+LEFT_PUBLIC_SEGMENT_NAME_MAP = LEFT_INTERNAL_TO_PUBLIC_SEGMENT_NAME_MAP
+
+
+def internal_rail_segment_name_to_public(side: str, segment: Any) -> str:
+    """Convert an internal RailNetwork segment ID to its published ROS label."""
+    canonical = str(segment or '').strip().upper()
+    if str(side or '').strip().lower() != 'left':
+        return canonical
+    return LEFT_INTERNAL_TO_PUBLIC_SEGMENT_NAME_MAP.get(canonical, canonical)
+
+
+def public_rail_segment_name_to_internal(side: str, segment: Any) -> str:
+    """Convert a published ROS segment label to its internal RailNetwork ID."""
+    canonical = str(segment or '').strip().upper()
+    if str(side or '').strip().lower() != 'left':
+        return canonical
+    return LEFT_PUBLIC_TO_INTERNAL_SEGMENT_NAME_MAP.get(canonical, canonical)
 
 DEVICE_MARKER_STYLES = {
     'position_sensor': {

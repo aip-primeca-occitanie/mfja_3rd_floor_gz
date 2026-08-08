@@ -1,0 +1,11 @@
+{
+  "command": [
+    "ros2",
+    "node",
+    "list"
+  ],
+  "duration_s": 0.35567551711574197,
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "/clock_bridge\n/conveyor_loop_mode_controller\n/launch_ros_1935129\n/planner\n/room315_vla_camera_bridge\n/room315_world_service_bridge\n/room_315/rails/left/room_315_kinematic_shuttle\n/room_315/rails/right/room_315_kinematic_shuttle\n/room_315_task_execution_node\n/room_315_visual_state_inference_node\n/room_315_vla_supervisor\n"
+}

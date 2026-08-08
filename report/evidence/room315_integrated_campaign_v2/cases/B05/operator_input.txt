@@ -1,0 +1,3 @@
+Move the cyan shuttle to slot 2 on the left rail.
+yes
+quit

@@ -1,0 +1,427 @@
+schema_version: 2
+campaign_id: room315_integrated_campaign_v2
+description: >
+  Predeclared cold-start simulation campaign for the complete English request,
+  visual observation, PlanSys2 planning, deterministic supervision, shuttle
+  motion and final-effect verification path.
+protocol:
+  scope_statement: >
+    This campaign contains positive integrated demonstrations only. Fault and
+    rejection paths are evaluated separately by automated tests and are not
+    part of this campaign.
+  campaign_scope: positive_integrated_demonstrations_only
+  fault_and_rejection_cases_included: false
+  fault_and_rejection_evidence: separate_automated_tests
+  predeclared_case_count: 12
+  predeclared_case_ids: [B01, B02, B03, B04, B05, B06, B07, B08, P01, P02, M01, M02]
+  independent_cold_start_per_case: true
+  operator_confirmation_required: true
+  reuse_existing_runtime_state: false
+  include_previous_campaign_data: false
+  fail_campaign_on_unexpected_case_outcome: true
+  required_terminal_outcome: succeeded
+  exact_runtime_artifact_match_required: true
+  task_result_timeout_s: 600
+  readiness_timeout_s: 120
+  shuttle_speed_mps: 0.2
+runtime_artifact_contract:
+  hash_algorithm: sha256
+  exact_artifact_count: 15
+  verify_before_first_case: true
+  artifacts:
+    - role: visual_checkpoint
+      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt
+      size_bytes: 113868535
+      sha256: 8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d
+    - role: visual_target_statistics
+      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/target_stats.json
+      size_bytes: 8705
+      sha256: 2d48078641842aa2db7a59b9285fc5bbedaaa3a0039fc39986ca230db983b18c
+    - role: visual_label_vectorizer
+      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/visual_label_vectorizer.json
+      size_bytes: 17458
+      sha256: 637c854556f3331c4e187db4aa7fc70457f01df8877947b9a0e988a543f7113e
+    - role: visual_training_configuration
+      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/training_config.json
+      size_bytes: 15630
+      sha256: 5c45544af7766afff397dafa7c14c0b3b05083f07a93122308ef50c2e8f452eb
+    - role: visual_run_metadata
+      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/run_metadata.json
+      size_bytes: 5560
+      sha256: d86c0ebfda3f5b174fc3c06f4ce8a3e083d2048db7b44d20efe951aaa7e5428d
+    - role: intent_language_model
+      path: /home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf
+      size_bytes: 1117320736
+      sha256: 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+    - role: intent_runtime_configuration
+      path: /home/tiago/models/room315_intent/task_goal_understanding.local.yaml
+      size_bytes: 617
+      sha256: 6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea
+    - role: visual_state_runtime_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml
+      size_bytes: 2735
+      sha256: e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19
+    - role: task_execution_runtime_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml
+      size_bytes: 3068
+      sha256: 15d3eaee91e4090f874efeaa7cc2f1df37c78b0fd091466c06b4754e041e57a9
+    - role: plansys2_runtime_domain
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl
+      size_bytes: 24629
+      sha256: 705fd5070503d08e8ec41696959e137afac4a610655317c412df1e4d9875414d
+    - role: shuttle_identity_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml
+      size_bytes: 5328
+      sha256: 721de97f0aed54efae6a23ae923cdb141da9871ddfc28c9cd33373ee000af141
+    - role: right_rail_network_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml
+      size_bytes: 6804
+      sha256: 98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d
+    - role: left_rail_network_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml
+      size_bytes: 6821
+      sha256: 6473fdef8d50f7678836b0168bd146b7231d4e779eade406fe8541bb94744ccb
+    - role: right_rail_device_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml
+      size_bytes: 2703
+      sha256: d8c9e79e1e0ae90b53b15038be91a5b25e44a4662c1d353c9919586a27a7e3c7
+    - role: left_rail_device_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml
+      size_bytes: 2712
+      sha256: a6aa815037fc78381512c2fc30da159d6db7976d927fd8c5b7400f336f3afc85
+cases:
+  - id: B01
+    family: colour_alias
+    side: right
+    coverage: [R1, red, slot_to_slot, same_station]
+    utterance: "Move the red shuttle to slot 2 on the right rail."
+    launch:
+      right: {identities: [R1], start_slots: ["1"], loaded: []}
+      left: {identities: [], start_slots: [], loaded: []}
+    expected:
+      selected_identity: R1
+      target_slot: "2"
+      target_station: yaskawa
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: right
+        target_kind: slot
+        target_shuttle: room315_right_shuttle_1
+        target_slot: "2"
+      prompt_fragments: ["Shuttle: room315_right_shuttle_1", "Rail: Right", "Destination: Slot 2"]
+
+  - id: B02
+    family: explicit_identity
+    side: right
+    coverage: [R2, explicit_identity, slot_to_slot, cross_station]
+    utterance: "Move R2 to slot 3 on the right rail."
+    launch:
+      right: {identities: [R2], start_slots: ["2"], loaded: []}
+      left: {identities: [], start_slots: [], loaded: []}
+    expected:
+      selected_identity: R2
+      target_slot: "3"
+      target_station: staubli
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: right
+        target_kind: slot
+        target_shuttle: room315_right_shuttle_2
+        target_slot: "3"
+      prompt_fragments: ["Shuttle: room315_right_shuttle_2", "Rail: Right", "Destination: Slot 3"]
+
+  - id: B03
+    family: colour_alias
+    side: right
+    coverage: [R3, green, slot_to_slot, same_station]
+    utterance: "Move the green shuttle to slot 4 on the right rail."
+    launch:
+      right: {identities: [R3], start_slots: ["3"], loaded: []}
+      left: {identities: [], start_slots: [], loaded: []}
+    expected:
+      selected_identity: R3
+      target_slot: "4"
+      target_station: staubli
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: right
+        target_kind: slot
+        target_shuttle: room315_right_shuttle_3
+        target_slot: "4"
+      prompt_fragments: ["Shuttle: room315_right_shuttle_3", "Rail: Right", "Destination: Slot 4"]
+
+  - id: B04
+    family: station_target
+    side: right
+    coverage: [R4, yellow, station_target, cross_station]
+    utterance: "Move yellow R4 to the Yaskawa station on the right rail."
+    launch:
+      right: {identities: [R4], start_slots: ["4"], loaded: []}
+      left: {identities: [], start_slots: [], loaded: []}
+    expected:
+      selected_identity: R4
+      target_slots: ["1", "2"]
+      target_station: yaskawa
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: right
+        target_kind: station
+        target_shuttle: room315_right_shuttle_4
+        target_station: yaskawa
+      prompt_fragments: ["Shuttle: room315_right_shuttle_4", "Rail: Right", "Destination: Station yaskawa"]
+
+  - id: B05
+    family: colour_alias
+    side: left
+    coverage: [L1, cyan, slot_to_slot, same_station]
+    utterance: "Move the cyan shuttle to slot 2 on the left rail."
+    launch:
+      right: {identities: [], start_slots: [], loaded: []}
+      left: {identities: [L1], start_slots: ["1"], loaded: []}
+    expected:
+      selected_identity: L1
+      target_slot: "2"
+      target_station: yaskawa
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: left
+        target_kind: slot
+        target_shuttle: room315_left_shuttle_1
+        target_slot: "2"
+      prompt_fragments: ["Shuttle: room315_left_shuttle_1", "Rail: Left", "Destination: Slot 2"]
+
+  - id: B06
+    family: explicit_identity
+    side: left
+    coverage: [L2, explicit_identity, slot_to_slot, cross_station]
+    utterance: "Move L2 to slot 3 on the left rail."
+    launch:
+      right: {identities: [], start_slots: [], loaded: []}
+      left: {identities: [L2], start_slots: ["2"], loaded: []}
+    expected:
+      selected_identity: L2
+      target_slot: "3"
+      target_station: kuka
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: left
+        target_kind: slot
+        target_shuttle: room315_left_shuttle_2
+        target_slot: "3"
+      prompt_fragments: ["Shuttle: room315_left_shuttle_2", "Rail: Left", "Destination: Slot 3"]
+
+  - id: B07
+    family: colour_alias
+    side: left
+    coverage: [L3, orange, slot_to_slot, same_station]
+    utterance: "Move the orange shuttle to slot 4 on the left rail."
+    launch:
+      right: {identities: [], start_slots: [], loaded: []}
+      left: {identities: [L3], start_slots: ["3"], loaded: []}
+    expected:
+      selected_identity: L3
+      target_slot: "4"
+      target_station: kuka
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: left
+        target_kind: slot
+        target_shuttle: room315_left_shuttle_3
+        target_slot: "4"
+      prompt_fragments: ["Shuttle: room315_left_shuttle_3", "Rail: Left", "Destination: Slot 4"]
+
+  - id: B08
+    family: station_target
+    side: left
+    coverage: [L4, white, station_target, cross_station]
+    utterance: "Move white L4 to the Yaskawa station on the left rail."
+    launch:
+      right: {identities: [], start_slots: [], loaded: []}
+      left: {identities: [L4], start_slots: ["4"], loaded: []}
+    expected:
+      selected_identity: L4
+      target_slots: ["1", "2"]
+      target_station: yaskawa
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: left
+        target_kind: station
+        target_shuttle: room315_left_shuttle_4
+        target_station: yaskawa
+      prompt_fragments: ["Shuttle: room315_left_shuttle_4", "Rail: Left", "Destination: Station yaskawa"]
+
+  - id: P01
+    family: payload_qualified_nearest
+    side: right
+    coverage: [R1, R2, loaded, nearest, multi_shuttle]
+    utterance: "Please move the nearest loaded right shuttle to slot 3."
+    launch:
+      right: {identities: [R1, R2], start_slots: ["1", "2"], loaded: [R1]}
+      left: {identities: [], start_slots: [], loaded: []}
+    expected:
+      selected_identity: R1
+      target_slot: "3"
+      target_station: staubli
+      exact_executed_step_count: 4
+      route_clearance:
+        required: true
+        blocker_identity: R2
+        blocker_shuttle: right_shuttle_2
+        exact_action_names:
+          - begin_route_clearance
+          - relocate_blocker_to_interior
+          - finish_route_clearance
+          - move_shuttle_to_slot
+        exact_symbolic_steps:
+          - begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3
+          - relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2
+          - finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3
+          - move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2
+      payload_consensus:
+        required: true
+        confirmation_contract: room315.visual_payload_confirmation.v1
+        runtime_grounding_contract: room315.runtime_payload_grounding.v2
+        payload_filter: loaded
+        selected_identity: R1
+        selected_shuttle: right_shuttle_1
+        confirmation_source: accepted_visual_state_sequence
+        runtime_grounding_source: accepted_visual_temporal_consensus
+        minimum_consecutive_frames: 5
+        consecutive_identity_agreement: true
+        controller_payload_state_used: false
+      constraints:
+        goal_type: transport
+        selection_strategy: nearest
+        payload_filter: loaded
+        side: right
+        target_kind: slot
+        target_slot: "3"
+      prompt_fragments: ["Rail: Right", "Destination: Slot 3"]
+
+  - id: P02
+    family: payload_qualified_nearest
+    side: left
+    coverage: [L1, L2, loaded, nearest, multi_shuttle]
+    utterance: "Please move the nearest loaded left shuttle to slot 3."
+    launch:
+      right: {identities: [], start_slots: [], loaded: []}
+      left: {identities: [L1, L2], start_slots: ["1", "2"], loaded: [L1]}
+    expected:
+      selected_identity: L1
+      target_slot: "3"
+      target_station: kuka
+      exact_executed_step_count: 4
+      route_clearance:
+        required: true
+        blocker_identity: L2
+        blocker_shuttle: left_shuttle_2
+        exact_action_names:
+          - begin_route_clearance
+          - relocate_blocker_to_interior
+          - finish_route_clearance
+          - move_shuttle_to_slot
+        exact_symbolic_steps:
+          - begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3
+          - relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2
+          - finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3
+          - move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2
+      payload_consensus:
+        required: true
+        confirmation_contract: room315.visual_payload_confirmation.v1
+        runtime_grounding_contract: room315.runtime_payload_grounding.v2
+        payload_filter: loaded
+        selected_identity: L1
+        selected_shuttle: left_shuttle_1
+        confirmation_source: accepted_visual_state_sequence
+        runtime_grounding_source: accepted_visual_temporal_consensus
+        minimum_consecutive_frames: 5
+        consecutive_identity_agreement: true
+        controller_payload_state_used: false
+      constraints:
+        goal_type: transport
+        selection_strategy: nearest
+        payload_filter: loaded
+        side: left
+        target_kind: slot
+        target_slot: "3"
+      prompt_fragments: ["Rail: Left", "Destination: Slot 3"]
+
+  - id: M01
+    family: multi_shuttle_route
+    side: right
+    coverage: [R1, R2, explicit_identity, route_clearance, multi_shuttle]
+    utterance: "Move R1 to slot 3 on the right rail."
+    launch:
+      right: {identities: [R1, R2], start_slots: ["1", "2"], loaded: []}
+      left: {identities: [], start_slots: [], loaded: []}
+    expected:
+      selected_identity: R1
+      target_slot: "3"
+      target_station: staubli
+      exact_executed_step_count: 4
+      route_clearance:
+        required: true
+        blocker_identity: R2
+        blocker_shuttle: right_shuttle_2
+        exact_action_names:
+          - begin_route_clearance
+          - relocate_blocker_to_interior
+          - finish_route_clearance
+          - move_shuttle_to_slot
+        exact_symbolic_steps:
+          - begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3
+          - relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2
+          - finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3
+          - move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: right
+        target_kind: slot
+        target_shuttle: room315_right_shuttle_1
+        target_slot: "3"
+      prompt_fragments: ["Shuttle: room315_right_shuttle_1", "Rail: Right", "Destination: Slot 3"]
+
+  - id: M02
+    family: multi_shuttle_route
+    side: left
+    coverage: [L1, L2, explicit_identity, route_clearance, multi_shuttle]
+    utterance: "Move L1 to slot 3 on the left rail."
+    launch:
+      right: {identities: [], start_slots: [], loaded: []}
+      left: {identities: [L1, L2], start_slots: ["1", "2"], loaded: []}
+    expected:
+      selected_identity: L1
+      target_slot: "3"
+      target_station: kuka
+      exact_executed_step_count: 4
+      route_clearance:
+        required: true
+        blocker_identity: L2
+        blocker_shuttle: left_shuttle_2
+        exact_action_names:
+          - begin_route_clearance
+          - relocate_blocker_to_interior
+          - finish_route_clearance
+          - move_shuttle_to_slot
+        exact_symbolic_steps:
+          - begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3
+          - relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2
+          - finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3
+          - move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2
+      constraints:
+        goal_type: transport
+        selection_strategy: explicit
+        side: left
+        target_kind: slot
+        target_shuttle: room315_left_shuttle_1
+        target_slot: "3"
+      prompt_fragments: ["Shuttle: room315_left_shuttle_1", "Rail: Left", "Destination: Slot 3"]

@@ -1,0 +1,17 @@
+{
+  "attempts": [
+    {
+      "command": [
+        "ros2",
+        "topic",
+        "info",
+        "/room_315/task_goal"
+      ],
+      "duration_s": 0.3586765509098768,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "Type: std_msgs/msg/String\nPublisher count: 0\nSubscription count: 1\n"
+    }
+  ],
+  "status": "ready"
+}

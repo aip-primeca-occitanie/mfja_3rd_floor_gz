@@ -1,0 +1,69 @@
+\chapter{Verification Matrix}
+\label{app:test-matrix}
+
+\section{Automated test families}
+
+\begin{longtable}{@{}p{0.22\textwidth}p{0.29\textwidth}p{0.38\textwidth}@{}}
+\caption{Representative automated verification families.}
+\label{tab:full-test-matrix}\\
+\toprule
+\textbf{Layer} & \textbf{Representative modules} & \textbf{Properties}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Layer} & \textbf{Representative modules} & \textbf{Properties}\\
+\midrule
+\endhead
+World/robots & \path{collision_free}, \path{initial_joint_positions},
+\path{world_physics} & Initial pose, references, clearances and physics\\
+\tablerowrule
+Rail/devices & \path{kinematic_shuttle_core}, \path{route_topology},
+\path{rail_devices} & Arc-length continuity, switch routes, sensors and slots\\
+\tablerowrule
+Fleet safety & \path{headway_safety}, \path{block_reservation_runtime},
+\path{fleet_supervisor_safety} & Clearance, capacity, ownership and
+non-mutation on rejection\\
+\tablerowrule
+Contracts/language & \path{runtime_contracts}, \path{task_goal_validation},
+\path{semantic_gateway} & Provenance, freshness, strict JSON, clarification
+and injection rejection\\
+\tablerowrule
+Planning/execution & \path{pddl_planner_backend},
+\path{pddl_plan_translator}, \path{closed_loop_executive} & Problem
+consistency, supported actions, first-step execution and effect checking\\
+\tablerowrule
+Data/training & \path{grouped_visual_splits}, dataset manifests and checkpoint
+audits & Family isolation, hashes, fixed splits and configured-checkpoint
+validation\\
+\tablerowrule
+Runtime perception & \path{visual_runtime}, \path{observed_state_provider},
+\path{runtime_acceptance} & Artifact compatibility, presence-gated decode,
+training-mask/inference separation and accepted-observation readiness\\
+\bottomrule
+\end{longtable}
+
+\section{Protective boundary cases}
+
+The required response is no actuation when critical facts are unknown, stale or
+contradictory, or when semantic JSON contains plans or commands. The same
+response applies to occupied targets without a clearance proof,
+insufficient headway, switch changes within \SI{0.35}{m}, capacity overflow,
+planner timeout, unsupported actions, stale effect observations, the absence of
+an eligible payload-qualified shuttle, and unavailable or hash-mismatched model
+weights. Each condition blocks command publication and state mutation based on
+unverified, unauthorised or stale evidence.
+
+\section{Interpretation of integrated evidence}
+
+Each automated family targets a specific software layer. The integrated
+campaign in \cref{chap:results} complements those checks with 12 isolated
+cold starts of the live ROS graph. The six cases on each rail cover all eight
+shuttle identities and five predeclared case families. The preserved evidence
+binds the source tree, launch declarations, runtime configuration and model
+artifacts to per-case logs, ROS bags and terminal-effect verification.
+
+Each declared condition was executed once. Repetitions across controlled seeds
+would quantify run-to-run variation, while a separate live-graph campaign could
+extend the layered automated fault tests with stale vision, sensor loss, planner
+timeout, emergency stop and conflicting goals.
+Offline visual metrics continue to provide a separate evaluation of perception.

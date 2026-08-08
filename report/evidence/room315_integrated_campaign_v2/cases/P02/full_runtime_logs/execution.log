@@ -1,0 +1,32 @@
+[INFO] [launch]: All log files can be found below /tmp/room315_P02_azlcgra7/ros_logs_execution/2026-08-07-11-00-01-753844-tiago-Precision-7560-1933299
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [planner_node-1]: process started with pid [1933335]
+[INFO] [room_315_task_execution_node.py-2]: process started with pid [1933336]
+[room_315_task_execution_node.py-2] [INFO] [1786093202.401936549] [room_315_task_execution_node]: Task execution status=idle goal=none reason=task execution node initialized
+[room_315_task_execution_node.py-2] [INFO] [1786093202.402307770] [room_315_task_execution_node]: Room 315 TaskGoal execution gateway initialized. Planning localization comes from validated visual state; final slot arrival requires deterministic sensor identity plus controller-stop confirmation.
+[planner_node-1] [INFO] [1786093202.934572797] [planner]: [planner] Configuring...
+[planner_node-1] [INFO] [1786093202.935244323] [planner]: Created solver : POPF of type plansys2/POPFPlanSolver
+[planner_node-1] [INFO] [1786093202.935261865] [planner]: [planner] Solver Timeout 15
+[planner_node-1] [INFO] [1786093202.936997218] [planner]: [planner] Configured
+[planner_node-1] [INFO] [1786093202.937907174] [planner]: [planner] Activating...
+[planner_node-1] [INFO] [1786093202.937915847] [planner]: [planner] Activated
+[room_315_task_execution_node.py-2] [INFO] [1786093223.540975994] [room_315_task_execution_node]: Task execution status=accepted goal=room315-task-goal-d63385b7fcce reason=validated TaskGoal accepted for closed-loop execution
+[room_315_task_execution_node.py-2] [INFO] [1786093223.542263796] [room_315_task_execution_node]: Task execution status=running goal=room315-task-goal-d63385b7fcce reason=observing and requesting PlanSys2 plan
+[room_315_task_execution_node.py-2] [INFO] [1786093224.539113385] [room_315_task_execution_node]: Payload-qualified TaskGoal grounded by fresh visual consensus: selected=left_shuttle_1 filter=loaded frames=5/5 observations=5 source_state=room315-live-visual-35-520000000
+[room_315_task_execution_node.py-2] [INFO] [1786093224.539615662] [room_315_task_execution_node]: Task execution status=running goal=room315-task-goal-d63385b7fcce reason=TaskGoal validated and grounded when required from accepted visual state; requesting PlanSys2 plan
+[planner_node-1] [INFO] [1786093224.740119359] [planner]: Writing planning results to /tmp.
+[planner_node-1] [INFO] [1786093224.740359710] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[planner_node-1] [INFO] [1786093227.417608764] [planner]: Writing planning results to /tmp.
+[planner_node-1] [INFO] [1786093227.417790584] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[planner_node-1] [INFO] [1786093245.537796237] [planner]: Writing planning results to /tmp.
+[planner_node-1] [INFO] [1786093245.537972888] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[planner_node-1] [INFO] [1786093247.936742990] [planner]: Writing planning results to /tmp.
+[planner_node-1] [INFO] [1786093247.936917497] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[room_315_task_execution_node.py-2] [INFO] [1786093268.010343503] [room_315_task_execution_node]: Task execution status=succeeded goal=room315-task-goal-d63385b7fcce reason=task_goal_satisfied
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[planner_node-1] [INFO] [1786093278.142999247] [rclcpp]: signal_handler(signum=2)
+[INFO] [planner_node-1]: process has finished cleanly [pid 1933335]
+[INFO] [room_315_task_execution_node.py-2]: process has finished cleanly [pid 1933336]
+[planner_node-1] Warning: class_loader.ClassLoader: SEVERE WARNING!!! Attempting to unload library while objects created by this loader exist in the heap! You should delete your objects before attempting to unload the library or destroying the ClassLoader. The library will NOT be unloaded.
+[planner_node-1]          at line 127 in ./src/class_loader.cpp
+[ERROR] [launch]: Caught exception in launch (see debug for traceback): Cannot shutdown a ROS adapter that is not running

@@ -1,0 +1,12 @@
+{
+  "accepted_frame_count": 147,
+  "actual_present_identities": [
+    "L4"
+  ],
+  "canonical_s_m_projection_count": 0,
+  "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "clamped_fields": [],
+  "expected_present_identities": [
+    "L4"
+  ]
+}

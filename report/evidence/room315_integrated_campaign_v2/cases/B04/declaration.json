@@ -1,0 +1,49 @@
+{
+  "coverage": [
+    "R4",
+    "yellow",
+    "station_target",
+    "cross_station"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "selection_strategy": "explicit",
+      "side": "right",
+      "target_kind": "station",
+      "target_shuttle": "room315_right_shuttle_4",
+      "target_station": "yaskawa"
+    },
+    "prompt_fragments": [
+      "Shuttle: room315_right_shuttle_4",
+      "Rail: Right",
+      "Destination: Station yaskawa"
+    ],
+    "selected_identity": "R4",
+    "target_slots": [
+      "1",
+      "2"
+    ],
+    "target_station": "yaskawa"
+  },
+  "family": "station_target",
+  "id": "B04",
+  "launch": {
+    "left": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    },
+    "right": {
+      "identities": [
+        "R4"
+      ],
+      "loaded": [],
+      "start_slots": [
+        "4"
+      ]
+    }
+  },
+  "side": "right",
+  "utterance": "Move yellow R4 to the Yaskawa station on the right rail."
+}

@@ -1,0 +1,27 @@
+Room 315 operator-capability verification on the campaign-bound source state
+Executed: 2026-08-07T16:08:35+02:00
+Repository HEAD: c44c501640e3dab35ab241384c99963e1b9d8745
+Working-tree patch SHA-256: d446c63192386b32b0d92e24aed6210b59bc53bfcb81c9af05a644ed421db0bd
+Runtime source tree: 483 files
+Runtime source-tree SHA-256: 326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9
+Source identity matches report/evidence/room315_integrated_campaign_v2/environment.json.
+
+Command:
+python3 -m pytest -q \
+  mfja_robot_control_config/test/test_robot_joint_command.py \
+  mfja_robot_control_config/test/test_room315_multi_shuttle_registry.py \
+  mfja_robot_control_config/test/test_room315_multi_shuttle_launch_args.py \
+  mfja_robot_control_config/test/test_room315_rail_devices.py \
+  mfja_robot_control_config/test/test_room315_device_marker_lifecycle.py \
+  mfja_robot_control_config/test/test_room315_switch_feedback_authority.py
+
+Result:
+..........................................                               [100%]
+42 passed in 0.41s
+
+Claim boundary:
+These checks cover the robot command helper, shuttle registry and start-slot
+validation, launch-argument propagation, rail-device definitions, marker and
+sensor lifecycle, and switch-feedback authority. They are component and
+configuration evidence; they do not claim that every runbook command was
+executed in a complete live Gazebo campaign.

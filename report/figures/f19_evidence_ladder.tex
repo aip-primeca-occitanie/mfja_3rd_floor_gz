@@ -1,0 +1,43 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000},
+  layer/.style={draw=mfjablue,fill=mfjalight,rounded corners=2pt,
+    align=center,minimum height=10mm,text width=61mm,inner sep=1.6mm,
+    font=\sffamily\scriptsize},
+  complete/.style={layer,draw=mfjagreen,fill=mfjagreen!7},
+  purpose/.style={draw=black!35,fill=white,rounded corners=2pt,align=left,
+    text width=70mm,minimum height=10mm,inner sep=1.8mm,
+    font=\sffamily\scriptsize},
+  link/.style={thin,black!45}
+]
+  \draw[-{Latex[length=2.7mm]},very thick,mfjablue]
+    (-7.25,-5.15) -- (-7.25,0.70);
+  \node[rotate=90,font=\sffamily\scriptsize\bfseries,text=mfjablue]
+    at (-7.62,-2.20) {increasing system integration};
+
+  \node[complete] (campaign) at (-3.80,0.00)
+    {Integrated campaign\\complete normal workflow in Gazebo};
+  \node[layer] (offline) at (-3.80,-1.65)
+    {Offline model evaluation\\language cases and locked visual Test};
+  \node[layer] (integration) at (-3.80,-3.30)
+    {Controlled integration tests\\providers, planning and supervision};
+  \node[layer] (local) at (-3.80,-4.95)
+    {Unit and configuration checks\\geometry, contracts and translation};
+
+  \node[purpose] (p1) at (3.45,0.00)
+    {Shows the complete request-to-motion path in the selected positive
+      scenes.};
+  \node[purpose] (p2) at (3.45,-1.65)
+    {Measures the language interface and visual model offline.};
+  \node[purpose] (p3) at (3.45,-3.30)
+    {Exercises interactions and protective cases in controlled test
+      harnesses.};
+  \node[purpose] (p4) at (3.45,-4.95)
+    {Checks local rules, data structures and configuration consistency.};
+
+  \draw[link] (campaign.east) -- (p1.west);
+  \draw[link] (offline.east) -- (p2.west);
+  \draw[link] (integration.east) -- (p3.west);
+  \draw[link] (local.east) -- (p4.west);
+
+\end{tikzpicture}

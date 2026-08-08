@@ -1,0 +1,46 @@
+{
+  "coverage": [
+    "L3",
+    "orange",
+    "slot_to_slot",
+    "same_station"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "selection_strategy": "explicit",
+      "side": "left",
+      "target_kind": "slot",
+      "target_shuttle": "room315_left_shuttle_3",
+      "target_slot": "4"
+    },
+    "prompt_fragments": [
+      "Shuttle: room315_left_shuttle_3",
+      "Rail: Left",
+      "Destination: Slot 4"
+    ],
+    "selected_identity": "L3",
+    "target_slot": "4",
+    "target_station": "kuka"
+  },
+  "family": "colour_alias",
+  "id": "B07",
+  "launch": {
+    "left": {
+      "identities": [
+        "L3"
+      ],
+      "loaded": [],
+      "start_slots": [
+        "3"
+      ]
+    },
+    "right": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    }
+  },
+  "side": "left",
+  "utterance": "Move the orange shuttle to slot 4 on the left rail."
+}

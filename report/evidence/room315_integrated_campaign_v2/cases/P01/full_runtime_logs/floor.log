@@ -1,0 +1,102 @@
+[INFO] [launch]: All log files can be found below /tmp/room315_P01_v_syjzsa/ros_logs_floor/2026-08-07-10-58-07-930916-tiago-Precision-7560-1931945
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: Acquired exclusive Room 315 simulation runtime lock.
+[INFO] [launch.user]: Cleared VLA obstacle pose cache: /home/tiago/.ros/room315_vla_obstacles.json
+[INFO] [launch.user]: Room 315 VLA obstacle markers: disabled
+[INFO] [gazebo-1]: process started with pid [1931962]
+[INFO] [conveyor_loop_mode_controller.py-2]: process started with pid [1931963]
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093088.635536122] [conveyor_loop_mode_controller]: Loaded 8 managed switch poses from /tmp/room_315_only_without_room315_vla_obstacles_1931945.world.
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093088.635967481] [conveyor_loop_mode_controller]: Detected initial switch layout from world file: EXTERIOR
+[conveyor_loop_mode_controller.py-2] [WARN] [1786093090.214775748] [conveyor_loop_mode_controller]: Switch color update round 1 failed for 8 switch(es); retrying the remaining requests.
+[gazebo-1] libEGL warning: egl: failed to create dri2 screen
+[INFO] [parameter_bridge-3]: process started with pid [1932180]
+[INFO] [parameter_bridge-4]: process started with pid [1932181]
+[parameter_bridge-4] [INFO] [1786093091.410523660] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/room_315_only/set_pose (ros_gz_interfaces/srv/SetEntityPose -> /)]
+[parameter_bridge-4] [INFO] [1786093091.411369903] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/room_315_only/create (ros_gz_interfaces/srv/SpawnEntity -> /)]
+[parameter_bridge-4] [INFO] [1786093091.411614401] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/room_315_only/remove (ros_gz_interfaces/srv/DeleteEntity -> /)]
+[parameter_bridge-3] [INFO] [1786093091.414863259] [clock_bridge]: Creating GZ->ROS Bridge: [/clock (gz.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093091.730881620] [conveyor_loop_mode_controller]: Per-switch command topic: /mfja/conveyor/switch_cmd (examples: "A1R=INTERIOR", "A1=EXTERIOR", "RIGHT=INTERIOR, A3L=EXTERIOR").
+[INFO] [room_315_kinematic_shuttle_node.py-5]: process started with pid [1932235]
+[INFO] [room_315_kinematic_shuttle_node.py-6]: process started with pid [1932236]
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093092.793190188] [room_315.rails.right.room_315_kinematic_shuttle]: Room 315 kinematic shuttle started with rail_side=right, network=/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml, path_backend=cubic_hermite, devices=/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml, pose_topic=/room_315/rails/right/shuttles/pose_cmd, gazebo_world=room_315_only, add_shuttle_service=/room_315/rails/right/shuttles/add, shuttle_control_topic=/room_315/rails/right/shuttles/command, shuttle_state_topic=/room_315/rails/right/shuttles/state, payload_state_topic=/room_315/rails/right/shuttles/payload_state, payload_command_topic=/room_315/rails/right/shuttles/payload_command, switch_command_topic=/room_315/rails/right/switches/command, switch_state_topic=/room_315/rails/right/switches/state, stopper_command_topic=/room_315/rails/right/stoppers/command, stopper_state_topic=/room_315/rails/right/stoppers/state, sensor_feedback_topic=/room_315/rails/right/sensors/feedback, offset_topic=/room_315/rails/right/shuttles/pose_offset_command, visual_switch_topic=/mfja/conveyor/switch_cmd, visual_switch_state_topic=/mfja/conveyor/switch_states, switch_motion_delay_s=0.300, stopper_motion_delay_s=0.100, sensor_publish_rate_hz=30.000, sync_sensor_feedback_to_motion_tick=True, entity_prefix=room315_right_shuttle_, spawn_service=/world/room_315_only/create, delete_service=/world/room_315_only/remove, payload_visuals=True, loaded_shuttles=['r1'], device_markers=0, shuttles=room315_right_shuttle_1:slot1:A12E@0.918:snap=0.000m, room315_right_shuttle_2:slot2:A12E@1.455:snap=0.000m
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093092.793882630] [room_315.rails.left.room_315_kinematic_shuttle]: Room 315 kinematic shuttle started with rail_side=left, network=/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml, path_backend=cubic_hermite, devices=/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml, pose_topic=/room_315/rails/left/shuttles/pose_cmd, gazebo_world=room_315_only, add_shuttle_service=/room_315/rails/left/shuttles/add, shuttle_control_topic=/room_315/rails/left/shuttles/command, shuttle_state_topic=/room_315/rails/left/shuttles/state, payload_state_topic=/room_315/rails/left/shuttles/payload_state, payload_command_topic=/room_315/rails/left/shuttles/payload_command, switch_command_topic=/room_315/rails/left/switches/command, switch_state_topic=/room_315/rails/left/switches/state, stopper_command_topic=/room_315/rails/left/stoppers/command, stopper_state_topic=/room_315/rails/left/stoppers/state, sensor_feedback_topic=/room_315/rails/left/sensors/feedback, offset_topic=/room_315/rails/left/shuttles/pose_offset_command, visual_switch_topic=/mfja/conveyor/switch_cmd, visual_switch_state_topic=/mfja/conveyor/switch_states, switch_motion_delay_s=0.300, stopper_motion_delay_s=0.100, sensor_publish_rate_hz=30.000, sync_sensor_feedback_to_motion_tick=True, entity_prefix=room315_left_shuttle_, spawn_service=/world/room_315_only/create, delete_service=/world/room_315_only/remove, payload_visuals=True, loaded_shuttles=[], device_markers=0, shuttles=none
+[INFO] [parameter_bridge-7]: process started with pid [1932263]
+[INFO] [room_315_vla_supervisor.py-8]: process started with pid [1932264]
+[parameter_bridge-7] [INFO] [1786093093.413577358] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/right_rail_rgbd/image (gz.msgs.Image) -> /room_315/vla/right_rail_rgbd/image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.415262197] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/right_rail_rgbd/image (sensor_msgs/msg/Image) -> /room_315/vla/right_rail_rgbd/image (gz.msgs.Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.415720096] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/right_rail_rgbd/camera_info (gz.msgs.CameraInfo) -> /room_315/vla/right_rail_rgbd/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.416063848] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/right_rail_rgbd/camera_info (sensor_msgs/msg/CameraInfo) -> /room_315/vla/right_rail_rgbd/camera_info (gz.msgs.CameraInfo)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.416386690] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/right_rail_rgbd/depth_image (gz.msgs.Image) -> /room_315/vla/right_rail_rgbd/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.416611999] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/right_rail_rgbd/depth_image (sensor_msgs/msg/Image) -> /room_315/vla/right_rail_rgbd/depth_image (gz.msgs.Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.416857947] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/right_rail_rgbd/points (gz.msgs.PointCloudPacked) -> /room_315/vla/right_rail_rgbd/points (sensor_msgs/msg/PointCloud2)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.417174606] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/right_rail_rgbd/points (sensor_msgs/msg/PointCloud2) -> /room_315/vla/right_rail_rgbd/points (gz.msgs.PointCloudPacked)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.417526375] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/left_rail_rgbd/image (gz.msgs.Image) -> /room_315/vla/left_rail_rgbd/image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.417732637] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/left_rail_rgbd/image (sensor_msgs/msg/Image) -> /room_315/vla/left_rail_rgbd/image (gz.msgs.Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.417972739] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/left_rail_rgbd/camera_info (gz.msgs.CameraInfo) -> /room_315/vla/left_rail_rgbd/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.418162735] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/left_rail_rgbd/camera_info (sensor_msgs/msg/CameraInfo) -> /room_315/vla/left_rail_rgbd/camera_info (gz.msgs.CameraInfo)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.418435232] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/left_rail_rgbd/depth_image (gz.msgs.Image) -> /room_315/vla/left_rail_rgbd/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.418627922] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/left_rail_rgbd/depth_image (sensor_msgs/msg/Image) -> /room_315/vla/left_rail_rgbd/depth_image (gz.msgs.Image)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.418855480] [room315_vla_camera_bridge]: Creating GZ->ROS Bridge: [/room_315/vla/left_rail_rgbd/points (gz.msgs.PointCloudPacked) -> /room_315/vla/left_rail_rgbd/points (sensor_msgs/msg/PointCloud2)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786093093.419042273] [room315_vla_camera_bridge]: Creating ROS->GZ Bridge: [/room_315/vla/left_rail_rgbd/points (sensor_msgs/msg/PointCloud2) -> /room_315/vla/left_rail_rgbd/points (gz.msgs.PointCloudPacked)] (Lazy 0)
+[room_315_vla_supervisor.py-8] [INFO] [1786093093.745257879] [room_315_vla_supervisor]: Room 315 VLA supervisor ready. Command topic: /room_315/vla/command
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093095.087300288] [room_315.rails.right.room_315_kinematic_shuttle]: Requested Gazebo payload spawn for room315_right_shuttle_1
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093095.262342430] [room_315.rails.right.room_315_kinematic_shuttle]: Gazebo spawned room315_right_shuttle_1_payload
+[room_315_vla_supervisor.py-8] [INFO] [1786093133.460495896] [room_315_vla_supervisor]: switches commanded on right: {'A1': 'EXTERIOR', 'A2': 'EXTERIOR', 'A3': 'INTERIOR', 'A4': 'INTERIOR'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093133.461309336] [room_315.rails.right.room_315_kinematic_shuttle]: Scheduled switch state updates from typed command after 0.300s: {'A3': 'I', 'A4': 'I'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093133.789023689] [room_315.rails.right.room_315_kinematic_shuttle]: Published visual switch command from actual state (motion delay): A3R=INTERIOR, A4R=INTERIOR
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093133.789301587] [room_315.rails.right.room_315_kinematic_shuttle]: Applied actual switch states after motion delay: {'A1': 'E', 'A2': 'E', 'A3': 'I', 'A4': 'I'}
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093133.789468452] [conveyor_loop_mode_controller]: Applying switch command from switch topic command "A3R=INTERIOR, A4R=INTERIOR": A3_droit_switch=INTERIOR, A4_droit_switch=INTERIOR
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093134.558942202] [conveyor_loop_mode_controller]: Applied switch command successfully. Current global state: MIXED.
+[room_315_vla_supervisor.py-8] [INFO] [1786093134.656654765] [room_315_vla_supervisor]: stoppers commanded on right: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093134.656982976] [room_315.rails.right.room_315_kinematic_shuttle]: Scheduled stopper state updates from typed command after 0.100s: {'A4': '1'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093134.784353301] [room_315.rails.right.room_315_kinematic_shuttle]: Applied actual stopper states after motion delay: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'}
+[room_315_vla_supervisor.py-8] [INFO] [1786093135.902778038] [room_315_vla_supervisor]: shuttle command sent on right
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093135.902983916] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_2': 'ENABLE@0.200m/s'}; shuttles=room315_right_shuttle_1:slot1:A12E@0.918:snap=0.000m, room315_right_shuttle_2:slot2:A12E@1.455:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093148.662609859] [room_315_vla_supervisor]: shuttle command sent on right
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093148.663037015] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_2': 'DISABLE'}; shuttles=room315_right_shuttle_1:slot1:A12E@0.918:snap=0.000m, room315_right_shuttle_2:slot2:A34I@1.061:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093148.959570048] [room_315_vla_supervisor]: switches commanded on right: {'A1': 'EXTERIOR', 'A2': 'EXTERIOR', 'A3': 'EXTERIOR', 'A4': 'EXTERIOR'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093148.959771513] [room_315.rails.right.room_315_kinematic_shuttle]: Scheduled switch state updates from typed command after 0.300s: {'A3': 'E', 'A4': 'E'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093149.289569078] [room_315.rails.right.room_315_kinematic_shuttle]: Published visual switch command from actual state (motion delay): A3R=EXTERIOR, A4R=EXTERIOR
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093149.289874894] [conveyor_loop_mode_controller]: Applying switch command from switch topic command "A3R=EXTERIOR, A4R=EXTERIOR": A3_droit_switch=EXTERIOR, A4_droit_switch=EXTERIOR
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093149.290014161] [room_315.rails.right.room_315_kinematic_shuttle]: Applied actual switch states after motion delay: {'A1': 'E', 'A2': 'E', 'A3': 'E', 'A4': 'E'}
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093150.065945649] [conveyor_loop_mode_controller]: Applied switch command successfully. Current global state: EXTERIOR.
+[room_315_vla_supervisor.py-8] [INFO] [1786093150.119142708] [room_315_vla_supervisor]: stoppers commanded on right: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093150.119506522] [room_315.rails.right.room_315_kinematic_shuttle]: Scheduled stopper state updates from typed command after 0.100s: {'A4': '0'}
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093150.246310008] [room_315.rails.right.room_315_kinematic_shuttle]: Applied actual stopper states after motion delay: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'}
+[room_315_vla_supervisor.py-8] [INFO] [1786093151.696958237] [room_315_vla_supervisor]: shuttle command sent on right
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093151.697209542] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_1': 'ENABLE@0.200m/s->slot3'}; shuttles=room315_right_shuttle_1:slot1:A12E@0.918:snap=0.000m, room315_right_shuttle_2:slot2:A34I@1.061:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093167.208255008] [room_315_vla_supervisor]: shuttle command sent on right
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093167.208496617] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_1': 'DISABLE'}; shuttles=room315_right_shuttle_1:slot1:A34E@0.997:snap=0.000m, room315_right_shuttle_2:slot2:A34I@1.061:snap=0.000m
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786093177.163272006] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_1': 'DISABLE', 'room315_right_shuttle_2': 'DISABLE'}; shuttles=room315_right_shuttle_1:slot1:A34E@0.997:snap=0.000m, room315_right_shuttle_2:slot2:A34I@1.061:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093177.163289362] [room_315_vla_supervisor]: stop all command: all shuttles OFF
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[parameter_bridge-3] [INFO] [1786093179.287660591] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-7] [INFO] [1786093179.287708700] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-4] [INFO] [1786093179.287717001] [rclcpp]: signal_handler(signum=2)
+[conveyor_loop_mode_controller.py-2] Traceback (most recent call last):
+[conveyor_loop_mode_controller.py-2]   File "/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py", line 1330, in <module>
+[conveyor_loop_mode_controller.py-2]     main()
+[conveyor_loop_mode_controller.py-2]   File "/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py", line 1321, in main
+[conveyor_loop_mode_controller.py-2]     rclpy.spin(node)
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[conveyor_loop_mode_controller.py-2]     executor.spin_once()
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 839, in spin_once
+[conveyor_loop_mode_controller.py-2]     self._spin_once_impl(timeout_sec)
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 823, in _spin_once_impl
+[conveyor_loop_mode_controller.py-2]     handler, entity, node = self.wait_for_ready_callbacks(
+[conveyor_loop_mode_controller.py-2]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 793, in wait_for_ready_callbacks
+[conveyor_loop_mode_controller.py-2]     return next(self._cb_iter)
+[conveyor_loop_mode_controller.py-2]            ^^^^^^^^^^^^^^^^^^^
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 697, in _wait_for_ready_callbacks
+[conveyor_loop_mode_controller.py-2]     wait_set.wait(timeout_nsec)
+[conveyor_loop_mode_controller.py-2] KeyboardInterrupt
+[ERROR] [conveyor_loop_mode_controller.py-2]: process has died [pid 1931963, exit code -2, cmd '/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py --world room_315_only --world-file /tmp/room_315_only_without_room315_vla_obstacles_1931945.world --partition room_315_only_1931945 --initial-loop-mode auto --no-pause-during-switch-update --neutral-visual-colors --ros-args -r __node:=conveyor_loop_mode_controller --params-file /tmp/launch_params_79xdr_k4'].
+[INFO] [parameter_bridge-3]: process has finished cleanly [pid 1932180]
+[INFO] [parameter_bridge-4]: process has finished cleanly [pid 1932181]
+[INFO] [parameter_bridge-7]: process has finished cleanly [pid 1932263]
+[INFO] [room_315_kinematic_shuttle_node.py-5]: process has finished cleanly [pid 1932235]
+[INFO] [room_315_vla_supervisor.py-8]: process has finished cleanly [pid 1932264]
+[INFO] [room_315_kinematic_shuttle_node.py-6]: process has finished cleanly [pid 1932236]
+[ERROR] [gazebo-1]: process has died [pid 1931962, exit code -2, cmd 'ruby /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz sim -r -s /tmp/room_315_only_without_room315_vla_obstacles_1931945.world --force-version 8'].
+[INFO] [launch]: process[gazebo-1] was required: shutting down launched system

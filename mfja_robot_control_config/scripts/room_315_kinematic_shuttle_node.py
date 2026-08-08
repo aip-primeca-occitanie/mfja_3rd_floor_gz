@@ -48,7 +48,6 @@ from room_315_rail_defaults import (
     DEVICE_MARKER_STYLES,
     LEFT_CALIBRATION_DEFAULTS,
     LEFT_ENTITY_DEFAULTS,
-    LEFT_PUBLIC_SEGMENT_NAME_MAP,
     LEFT_TOPIC_DEFAULTS,
     LEFT_VISUAL_SWITCH_SELECTOR_MAP,
     MARKER_VISUAL_ACTIVE,
@@ -74,6 +73,8 @@ from room_315_rail_defaults import (
     AllowedStartPose,
     apply_rail_point_calibration,
     apply_rail_pose_calibration,
+    internal_rail_segment_name_to_public,
+    public_rail_segment_name_to_internal,
 )
 from room_315_rail_devices import (
     PositionSensorConfig,
@@ -1545,13 +1546,9 @@ class Room315KinematicShuttleNode(Node):
                 )
             requested_segment, ratio_text = token.split('@', 1)
             requested_segment = requested_segment.strip().upper()
-            segment_name = (
-                LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
-                    requested_segment,
-                    requested_segment,
-                )
-                if self.rail_side == 'left'
-                else requested_segment
+            segment_name = public_rail_segment_name_to_internal(
+                self.rail_side,
+                requested_segment,
             )
             if segment_name not in self.network.segments:
                 raise ValueError(
@@ -4948,10 +4945,10 @@ class Room315KinematicShuttleNode(Node):
         return _canonical_switch_name(name)
 
     def _public_segment_name(self, name: str) -> str:
-        canonical_name = _canonical_segment_name(name)
-        if self.rail_side != 'left':
-            return canonical_name
-        return LEFT_PUBLIC_SEGMENT_NAME_MAP.get(canonical_name, canonical_name)
+        return internal_rail_segment_name_to_public(
+            self.rail_side,
+            _canonical_segment_name(name),
+        )
 
     def _public_sensor_name(self, name: str) -> str:
         return _canonical_sensor_name(name)
@@ -4969,6 +4966,10 @@ class Room315KinematicShuttleNode(Node):
         gazebo_poses: list[ShuttlePose],
     ) -> None:
         if not self.shuttles:
+            # A blank-name ShuttleState is the explicit, timestamped
+            # empty-inventory heartbeat consumed by the visual presence
+            # provider.  It distinguishes an empty but healthy rail source
+            # from a missing or stale source without creating a fake shuttle.
             self.state_publisher.publish(self._make_shuttle_state_message({}))
             return
 

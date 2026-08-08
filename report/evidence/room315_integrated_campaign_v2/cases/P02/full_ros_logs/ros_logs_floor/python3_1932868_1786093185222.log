@@ -1,0 +1,8 @@
+[INFO] [1786093185.311299260] [conveyor_loop_mode_controller]: Loaded 8 managed switch poses from /tmp/room_315_only_without_room315_vla_obstacles_1932850.world.
+[INFO] [1786093185.311704043] [conveyor_loop_mode_controller]: Detected initial switch layout from world file: EXTERIOR
+[WARN] [1786093186.891109404] [conveyor_loop_mode_controller]: Switch color update round 1 failed for 8 switch(es); retrying the remaining requests.
+[INFO] [1786093188.418272401] [conveyor_loop_mode_controller]: Per-switch command topic: /mfja/conveyor/switch_cmd (examples: "A1R=INTERIOR", "A1=EXTERIOR", "RIGHT=INTERIOR, A3L=EXTERIOR").
+[INFO] [1786093225.286115880] [conveyor_loop_mode_controller]: Applying switch command from switch topic command "A3L=INTERIOR, A4L=INTERIOR": A3_gauche_switch=INTERIOR, A4_gauche_switch=INTERIOR
+[INFO] [1786093226.057974337] [conveyor_loop_mode_controller]: Applied switch command successfully. Current global state: MIXED.
+[INFO] [1786093246.057423079] [conveyor_loop_mode_controller]: Applying switch command from switch topic command "A3L=EXTERIOR, A4L=EXTERIOR": A3_gauche_switch=EXTERIOR, A4_gauche_switch=EXTERIOR
+[INFO] [1786093246.833181768] [conveyor_loop_mode_controller]: Applied switch command successfully. Current global state: EXTERIOR.

@@ -1,0 +1,51 @@
+schema_version: 1
+evaluation_id: room315_language_semantic_evaluation_v3
+purpose: >-
+  Evaluate the configured local semantic gateway, strict envelope boundary and
+  deterministic fusion on the repository's predeclared ten-case English
+  interface corpus. This is an offline language-contract evaluation, not a
+  motion, latency or reliability campaign.
+
+method: >-
+  Each non-control utterance is passed once through the production
+  ConversationalIntentGatewayParser so that the real backend result, strict
+  SemanticParseEnvelope and fusion trace are retained even for a rejected
+  draft. Domain validation follows successful parsing. Parser issues are
+  classified with the same missing/ambiguous-versus-error rule used by the
+  TaskGoal builder. The cancellation utterance is passed through the
+  TaskGoalDialogueManager and a backend-call counter must remain unchanged.
+
+corpus:
+  path: mfja_robot_control_config/config/room_315_vla/task_goal_english_benchmark.yaml
+  sha256: 1a945519f6b5b58e9c44ca8c7de823832f4898fb442276572048cf3d5903a9cc
+  case_count: 10
+
+semantic_config:
+  path: /home/tiago/models/room315_intent/task_goal_understanding.local.yaml
+  sha256: 6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea
+  required_backend: llama_cpp
+  require_ready: true
+  require_offline: true
+
+model:
+  path: /home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf
+  sha256: 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+
+source_identity:
+  git_head: c44c501640e3dab35ab241384c99963e1b9d8745
+  source_tree_sha256: 326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9
+  source_identity_record: report/evidence/current_source_identity_2026-08-07.txt
+  source_identity_record_sha256: 639bcd1c53e0a4bdccdc8111220ed561256fb121685973eacd472a2ce61156d6
+
+acceptance:
+  - All ten outcomes match the status, constraints and issue codes declared in the unchanged repository corpus.
+  - Each of the nine non-control cases invokes the ready configured semantic model exactly once with the expected fingerprint.
+  - Accepted and clarification cases must produce a strict semantic envelope without fallback.
+  - A predeclared error case may use deterministic fallback only when the model output is rejected by the strict semantic-envelope schema and the final result remains the declared error.
+  - The cancellation case is intercepted by the dialogue control boundary without model invocation.
+  - No case declared ambiguous, inconsistent or invalid is resolved automatically as an executable goal.
+
+claim_boundary:
+  - The evaluation measures the language-contract, envelope and fusion boundary only.
+  - The one observation per utterance is not a language-accuracy or latency benchmark.
+  - It does not measure motion execution, statistical reliability, multilingual behaviour or requests outside the ten declared cases.

@@ -1,0 +1,3 @@
+Move white L4 to the Yaskawa station on the left rail.
+yes
+quit

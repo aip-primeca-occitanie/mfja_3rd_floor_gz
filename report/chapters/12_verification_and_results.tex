@@ -1,0 +1,292 @@
+\chapter{Experiments and Results}
+\label{chap:results}
+
+\section{Integrated English-to-motion campaign}
+
+\subsection{Campaign design}
+
+The integrated campaign was defined before execution as a twelve-row test
+matrix. Each row fixed a case identifier, one unique English utterance, its
+predeclared case family and expected grounded goal, together with the rail, active
+identities, initial slot and payload arrangement. Slot requests fixed one
+terminal slot; station requests fixed the set of acceptable station slots. The
+eight B-series rows left their symbolic action sequence to the planner. Only
+the two P-series and two M-series route-clearance rows additionally fixed the
+exact four-step trace that execution had to reproduce. The saved environment
+record identifies the software, language configuration, visual checkpoint,
+runtime configuration and PDDL domain used for the campaign. The runner checked
+these files before starting the cases.
+
+Every row used a cold start: a fresh Gazebo process and an isolated ROS domain,
+with no retained task, observation or controller state from another row. Before
+the utterance was entered, the runner waited for the world and scene, both rail
+controllers, both overhead camera streams, the configured visual runtime, the
+PlanSys2 planner service, the supervisor and the task gateway.
+The matrix assigned six rows to each rail, exercised all eight configured
+identities and partitioned the cases into five mutually exclusive families.
+Four families describe the language or goal form: colour alias, explicit
+identity, station target and payload-qualified nearest. The fifth is a
+route-clearance scenario family whose explicit-identity requests require a
+blocking shuttle to be staged first. \Cref{tab:campaign-case-results} lists
+every declared row alongside the recorded motion and terminal result.
+
+For each case, the runner entered the instruction, compared the displayed
+interpretation with the expected goal and then replied \code{yes} through the
+same interactive confirmation used in normal operation. The CLI's auto-confirm
+mode was not used. A row counted as successful only when the expected terminal
+state was reached, every step postcondition passed, the required commands passed
+the supervisor checks and the final DZI and controller readings agreed. The
+camera recording and ROS bag also had to close cleanly.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\caption{Campaign rows and recorded terminal results.}
+\label{tab:campaign-case-results}
+\begin{tabularx}{\textwidth}{@{}p{0.06\textwidth}p{0.17\textwidth}
+p{0.12\textwidth}X>{\centering\arraybackslash}p{0.13\textwidth}
+>{\centering\arraybackslash}p{0.085\textwidth}@{}}
+\toprule
+\textbf{Case} & \textbf{Case family} & \textbf{Rail / shuttle} &
+\textbf{Recorded task path} &
+\makecell{\textbf{Steps /}\\\textbf{postconditions}} & \textbf{Status}\\
+\midrule
+B01 & Colour alias & Right / R1 & Slot 1 $\rightarrow$ slot 2 & 1/1 & Passed\\
+\tablerowrule
+B02 & Explicit identity & Right / R2 & Slot 2 $\rightarrow$ slot 3 & 1/1 & Passed\\
+\tablerowrule
+B03 & Colour alias & Right / R3 & Slot 3 $\rightarrow$ slot 4 & 1/1 & Passed\\
+\tablerowrule
+B04 & Station target & Right / R4 & Slot 4 $\rightarrow$ Yaskawa, slot 1 & 1/1 & Passed\\
+\tablerowrule
+B05 & Colour alias & Left / L1 & Slot 1 $\rightarrow$ slot 2 & 1/1 & Passed\\
+\tablerowrule
+B06 & Explicit identity & Left / L2 & Slot 2 $\rightarrow$ slot 3 & 1/1 & Passed\\
+\tablerowrule
+B07 & Colour alias & Left / L3 & Slot 3 $\rightarrow$ slot 4 & 1/1 & Passed\\
+\tablerowrule
+B08 & Station target & Left / L4 & Slot 4 $\rightarrow$ Yaskawa, slot 1 & 1/1 & Passed\\
+\tablerowrule
+P01 & Payload-qualified nearest & Right / R1 &
+Loaded R1 selected; R2 cleared;\newline slot 1 $\rightarrow$ slot 3 &
+4/4 & Passed\\
+\tablerowrule
+P02 & Payload-qualified nearest & Left / L1 &
+Loaded L1 selected; L2 cleared;\newline slot 1 $\rightarrow$ slot 3 &
+4/4 & Passed\\
+\tablerowrule
+M01 & Multi-shuttle route & Right / R1 & R2 cleared; slot 1 $\rightarrow$
+slot 3 & 4/4 & Passed\\
+\tablerowrule
+M02 & Multi-shuttle route & Left / L1 & L2 cleared; slot 1 $\rightarrow$
+slot 3 & 4/4 & Passed\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The twelve rows represent supported normal-workflow tasks in valid initial
+scenes. The automated suites in \cref{sec:automated-evidence} separately
+exercise stale state, sensor loss, emergency stop and protected-switch
+rejection.
+
+\subsection{Final campaign result}
+
+All 12 planned cases were completed: 12/12 runs succeeded, all 24 recorded
+step postconditions were satisfied (24/24), and all 48 recorded supervisor
+action decisions passed their checks (48/48). Across the twelve runs, the executive
+made 24 plan attempts and recorded four occupancy-triggered replan events; it
+recorded no unknown-result retries and issued no safe aborts. All tasks ended with
+\code{status=succeeded} and reason \code{task\_goal\_satisfied}. Every run met
+the criteria defined above. Together, the runs trace the complete path from
+twelve distinct English instructions to their expected shuttle movements in
+the selected Gazebo scenes.
+
+\Cref{fig:b03-camera-evidence} compares the initial and final camera frames from
+case B03 and shows the corresponding change in the simulated scene.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.99\textwidth]{images/b03_campaign_right_camera_initial_final.png}
+  \caption[Initial and final right-camera frames for campaign case B03.]
+  {Initial and final right-camera frames from the B03 ROS bag. The frames show
+  the scene change; identity-bearing DZI and controller records identify R3's
+  arrival at slot~4 and the final \code{DISABLED} controller state.}
+  \label{fig:b03-camera-evidence}
+\end{figure}
+
+\Cref{fig:integrated-campaign-summary} gives a compact view of the campaign
+outcomes and coverage.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.98\textwidth}{!}{\input{figures/f20_integrated_campaign_summary.tex}}
+  \caption[Outcomes and coverage of the twelve-run campaign.]
+  {Outcome counts, planning record and planned coverage of the twelve-run
+  campaign. The five case-family counts are mutually exclusive.}
+  \label{fig:integrated-campaign-summary}
+\end{figure}
+\FloatBarrier
+
+\section{Visual model selection and locked-Test result}
+
+The visual model was trained and selected by the method in
+\cref{chap:ai-development}. Epoch~14 minimised validation total weighted loss
+at 0.10294849 and produced the configured \code{best.pt}. After selection, that
+unchanged checkpoint was evaluated once on the locked 256-scenario Test
+partition. \Cref{tab:visual-test-results} reports its principal metrics.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Locked-Test metrics for the configured visual-state checkpoint.}
+\label{tab:visual-test-results}
+\begin{tabularx}{\textwidth}{@{}p{0.37\textwidth}p{0.19\textwidth}X@{}}
+\toprule
+\textbf{Metric} & \textbf{Result} & \textbf{Interpretation}\\
+\midrule
+Rail-side accuracy & 100.00\% & Correct left/right rail classification\\
+\tablerowrule
+Loaded-state accuracy & 99.2537\% & Correct loaded/empty state for present
+fixed identities\\
+\tablerowrule
+Exact block accuracy & 65.2985\% & Correct highest-scoring one of 14 symbolic
+blocks\\
+\tablerowrule
+Top-two block accuracy & 74.8134\% & Correct block among the two highest
+scores\\
+\tablerowrule
+Arc-position MAE, $s_m$ & \SI{0.15152}{m} & Mean absolute longitudinal-position
+error\\
+\tablerowrule
+Normalised-position MAE, $s_{ratio}$ & 0.096266 & Error relative to the known
+segment length\\
+\tablerowrule
+Bounding-box MAE & 16.076 pixels & Mean absolute projected-box coordinate
+error\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\FloatBarrier
+
+Rail-side and payload-state accuracy are high, while exact fine-grained block
+classification is less precise. The deployed model therefore
+supplies location and payload estimates to the workflow rather than deciding a
+final slot by itself. Exact arrival is taken from the rail-state checks defined
+in \cref{chap:interfaces}; a later camera observation records the changed scene.
+
+\section{Automated software checks}
+\label{sec:automated-evidence}
+
+Before the complete runs, automated tests checked the software used by the
+workflow. Static and unit checks cover geometry, configuration and schema rules.
+Component and controlled-integration tests exercise providers, task
+construction, planning, translation, supervision and effect checking in
+  controlled harnesses. They also include fault and protective cases. The integrated campaign then
+evaluates the normal-path components together in the Gazebo workflow.
+
+On 7 August, three named suites were executed. The focused
+contract and executive suite passed 190/190 checks in \SI{4.10}{s}, including
+the Torch-dependent visual-runtime case through the campaign's visual Python
+path. A transport suite passed 96/96 checks in \SI{1.48}{s}, covering kinematic
+paths, topology, headway, reservations, fleet supervision, devices, identity
+and static shuttle clearance. The complementary operator-capability suite
+passed 42/42 checks in \SI{0.41}{s}, covering the robot command helper, launch
+propagation, rail devices, marker/sensor lifecycle and switch-feedback
+rules. The suites overlap in a small number of files and are therefore
+reported separately rather than summed. Full commands and results are described
+in \cref{app:reproducibility}.
+
+\subsection{Language-interface evaluation}
+\label{sec:language-contract-evidence}
+
+The nine non-control cases in the unchanged ten-case English corpus were each
+executed once through the configured local semantic gateway, strict envelope
+parser and field fusion; successfully parsed drafts were then passed
+to domain validation. The dialogue manager handled the cancellation case before
+model inference. All ten declared final outcomes matched:
+four supported goals produced the expected constraints, three incomplete or
+ambiguous requests required clarification, two inconsistent or invalid
+requests were rejected, and the
+cancellation command produced no task. All five incomplete, ambiguous,
+inconsistent or invalid requests ended in clarification or rejection.
+
+The configured local backend was invoked exactly once in all nine
+non-control cases. Eight outputs passed the strict semantic-envelope schema
+without fallback. For the invalid-slot case, the model output itself contained
+slot~9; the schema rejected that envelope and the request remained an error.
+The cancellation command bypassed inference. This ten-utterance study evaluates
+the implemented Room~315 English contract. The retained case records and
+configuration are described in
+\cref{app:reproducibility}.
+
+\subsection{All-robot launch check}
+
+A separate cold-start check launched the full-floor profile with
+\code{robots:=all} in an isolated ROS domain and Gazebo partition. All six
+configured robot models were present; each exposed its namespaced joint command
+and feedback topics and produced a fresh \code{JointState} sample, while both
+TIAGo variants exposed independent base-velocity topics. The active log before
+planned shutdown was free of the declared error patterns. This check covers launch
+composition, namespace separation and feedback availability. Motion,
+simultaneous operation and repeatability require dedicated runs.
+
+\Cref{fig:evidence-ladder} places these results alongside the other evaluation
+layers. Software tests study local behaviour and protective cases, the offline
+evaluations measure the language and visual interfaces, and the campaign follows
+the complete normal workflow. Full evaluation records are indexed in
+\cref{app:reproducibility}; operator tools and runbooks are listed in
+\cref{app:interfaces}.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.96\textwidth}{!}{\input{figures/f19_evidence_ladder.tex}}
+  \caption[Evaluation layers and the questions they address.]
+  {Software tests, offline model evaluation and complete simulated runs answer
+  different questions about the project.}
+  \label{fig:evidence-ladder}
+\end{figure}
+
+\FloatBarrier
+\section{Review of the internship objectives}
+
+\Cref{tab:objective-results} returns to the O1--O4 objectives introduced in
+\cref{chap:introduction} and summarises how each one was assessed.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Assessment of the four internship objectives.}
+\label{tab:objective-results}
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash}p{0.19\textwidth}
+>{\raggedright\arraybackslash}X
+>{\raggedright\arraybackslash}p{0.20\textwidth}@{}}
+\toprule
+\textbf{Objective} & \textbf{Main result} &
+\textbf{How it was evaluated}\\
+\midrule
+O1---simulation platform & Third-floor and Room~315 Gazebo models plus one
+all-robot cold-start check: six of six configured models, namespaced
+command/feedback topics and fresh state samples & One full-floor cold-start
+launch and interface check\\
+\tablerowrule
+O2---multi-shuttle transport & Calibrated Hermite rail geometry, explicit
+switch-dependent topology, eight stable shuttle identities, typed devices,
+reservations, headway checks and limited recovery on both rails; 96/96 named
+transport checks and route-clearance cases in the integrated campaign &
+Named software tests and declared simulated campaign scenes\\
+\tablerowrule
+O3---contracts and supervision & Versioned command, state and
+effect contracts; sparse device updates; freshness and consistency gates;
+supervisor rejection cases; and post-step effect checks covered by the 190/190
+focused checks and the integrated runs & Named software tests and simulated
+campaign records\\
+\tablerowrule
+O4---neuro-symbolic workflow & Family-grouped paired-camera corpus,
+configured visual checkpoint and locked-Test metrics; ten-case language
+evaluation; and the twelve-run English-to-motion campaign & Ten language cases,
+the locked visual Test split and twelve selected campaign scenes\\
+\bottomrule
+\end{tabularx}
+\end{table}

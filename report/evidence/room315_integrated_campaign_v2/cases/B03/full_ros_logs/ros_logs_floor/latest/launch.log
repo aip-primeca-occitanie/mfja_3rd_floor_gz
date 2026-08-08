@@ -1,0 +1,23 @@
+1786092682.8994915 [INFO] [launch]: All log files can be found below /tmp/room315_B03_yzbo_c60/ros_logs_floor/2026-08-07-10-51-22-898774-tiago-Precision-7560-1924733
+1786092682.8995888 [INFO] [launch]: Default logging verbosity is set to INFO
+1786092682.9614623 [INFO] [launch.user]: Acquired exclusive Room 315 simulation runtime lock.
+1786092682.9616418 [INFO] [launch.user]: Cleared VLA obstacle pose cache: /home/tiago/.ros/room315_vla_obstacles.json
+1786092682.9675424 [INFO] [launch.user]: Room 315 VLA obstacle markers: disabled
+1786092683.3270493 [INFO] [gazebo-1]: process started with pid [1924756]
+1786092683.3271506 [INFO] [conveyor_loop_mode_controller.py-2]: process started with pid [1924757]
+1786092686.3309934 [INFO] [parameter_bridge-3]: process started with pid [1924976]
+1786092686.3310950 [INFO] [parameter_bridge-4]: process started with pid [1924977]
+1786092687.3367591 [INFO] [room_315_kinematic_shuttle_node.py-5]: process started with pid [1925019]
+1786092687.3368495 [INFO] [room_315_kinematic_shuttle_node.py-6]: process started with pid [1925022]
+1786092688.3336928 [INFO] [parameter_bridge-7]: process started with pid [1925060]
+1786092688.3337922 [INFO] [room_315_vla_supervisor.py-8]: process started with pid [1925061]
+1786092736.3726602 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1786092736.4390769 [ERROR] [conveyor_loop_mode_controller.py-2]: process has died [pid 1924757, exit code -2, cmd '/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py --world room_315_only --world-file /tmp/room_315_only_without_room315_vla_obstacles_1924733.world --partition room_315_only_1924733 --initial-loop-mode auto --no-pause-during-switch-update --neutral-visual-colors --ros-args -r __node:=conveyor_loop_mode_controller --params-file /tmp/launch_params_oy35ea6o'].
+1786092736.4812791 [INFO] [parameter_bridge-3]: process has finished cleanly [pid 1924976]
+1786092736.4851494 [INFO] [parameter_bridge-4]: process has finished cleanly [pid 1924977]
+1786092736.4862556 [INFO] [parameter_bridge-7]: process has finished cleanly [pid 1925060]
+1786092736.5304615 [INFO] [room_315_vla_supervisor.py-8]: process has finished cleanly [pid 1925061]
+1786092736.5319512 [INFO] [room_315_kinematic_shuttle_node.py-5]: process has finished cleanly [pid 1925019]
+1786092736.5466671 [INFO] [room_315_kinematic_shuttle_node.py-6]: process has finished cleanly [pid 1925022]
+1786092736.5940554 [ERROR] [gazebo-1]: process has died [pid 1924756, exit code -2, cmd 'ruby /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz sim -r -s /tmp/room_315_only_without_room315_vla_obstacles_1924733.world --force-version 8'].
+1786092736.5942798 [INFO] [launch]: process[gazebo-1] was required: shutting down launched system

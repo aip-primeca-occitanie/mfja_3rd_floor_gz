@@ -1,0 +1,238 @@
+{
+  "actual_constraints": {
+    "goal_type": "inspection",
+    "inspection_subject": "room315_left_shuttle_2",
+    "payload_filter": "any",
+    "selection_strategy": "explicit",
+    "shuttle_selection": "explicit",
+    "side": "left",
+    "target_kind": "shuttle",
+    "target_shuttle": "room315_left_shuttle_2"
+  },
+  "actual_issue_codes": [],
+  "actual_status": "ok",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.653608092106879,
+  "expected_constraints": {
+    "goal_type": "inspection",
+    "side": "left",
+    "target_kind": "shuttle",
+    "target_shuttle": "room315_left_shuttle_2"
+  },
+  "expected_issue_codes": [],
+  "expected_status": "ok",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "inspect_left_shuttle",
+  "index": 4,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-e2cd725b83b7",
+        "goal_type": "inspection",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": null,
+        "raw": {
+          "fusion_values": {
+            "goal_type": "inspection",
+            "selection_strategy": "explicit",
+            "target_kind": "shuttle",
+            "target_shuttle": "L2"
+          },
+          "request": "Inspect L2."
+        },
+        "schema_version": 1,
+        "selection_strategy": "explicit",
+        "side": null,
+        "source": "human",
+        "target_kind": "shuttle",
+        "target_shuttle": "L2",
+        "target_slot": null,
+        "target_station": null
+      },
+      "issues": [],
+      "ok": true,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.652942938031629,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"inspection\",\"selection_strategy\":\"any\",\"payload_filter\":\"empty\",\"side\":\"left\",\"target_kind\":\"shuttle_selection\",\"target_shuttle\":\"L2\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_shuttle\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": {
+          "alternatives": [],
+          "confidence": {
+            "overall": 0.8
+          },
+          "contract_type": "SemanticParseEnvelope",
+          "dialogue_act": "new_goal",
+          "draft_patch": {
+            "goal_type": "inspection",
+            "payload_filter": "empty",
+            "selection_strategy": "any",
+            "side": "left",
+            "target_kind": "shuttle_selection",
+            "target_shuttle": "L2"
+          },
+          "evidence": {},
+          "provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "semantic_inference",
+            "selection_strategy": "semantic_inference",
+            "side": "semantic_inference",
+            "target_kind": "semantic_inference",
+            "target_shuttle": "semantic_inference"
+          },
+          "schema_version": 1
+        },
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 1,
+          "fallback_reason": "",
+          "fallback_used": false,
+          "field_provenance": {
+            "goal_type": "explicit_text",
+            "selection_strategy": "explicit_text",
+            "target_kind": "explicit_text",
+            "target_shuttle": "explicit_text"
+          },
+          "final_decision": "draft",
+          "latency_s": 4.652999199926853,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [
+            {
+              "authoritative": "explicit",
+              "decision": "kept_authoritative_value",
+              "field": "selection_strategy",
+              "semantic": "any"
+            }
+          ],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "goal_type",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 7,
+                "start": 0,
+                "text": "Inspect"
+              },
+              "value": "inspection"
+            },
+            {
+              "field": "selection_strategy",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 10,
+                "start": 8,
+                "text": "L2"
+              },
+              "value": "explicit"
+            },
+            {
+              "field": "target_shuttle",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 10,
+                "start": 8,
+                "text": "L2"
+              },
+              "value": "L2"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "ok"
+    },
+    "validation": {
+      "clarifications": [],
+      "confirmation_prompt": "",
+      "confirmation_required": false,
+      "constraints": {
+        "goal_type": "inspection",
+        "inspection_subject": "room315_left_shuttle_2",
+        "payload_filter": "any",
+        "selection_strategy": "explicit",
+        "shuttle_selection": "explicit",
+        "side": "left",
+        "target_kind": "shuttle",
+        "target_shuttle": "room315_left_shuttle_2"
+      },
+      "description": "inspect room315_left_shuttle_2",
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-e2cd725b83b7",
+        "goal_type": "inspection",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": null,
+        "raw": {
+          "fusion_values": {
+            "goal_type": "inspection",
+            "selection_strategy": "explicit",
+            "target_kind": "shuttle",
+            "target_shuttle": "L2"
+          },
+          "request": "Inspect L2."
+        },
+        "schema_version": 1,
+        "selection_strategy": "explicit",
+        "side": null,
+        "source": "human",
+        "target_kind": "shuttle",
+        "target_shuttle": "L2",
+        "target_slot": null,
+        "target_station": null
+      },
+      "errors": [],
+      "ok": true,
+      "risk_level": "medium",
+      "status": "ok",
+      "task_goal": {
+        "confidence": 1.0,
+        "constraints": {
+          "goal_type": "inspection",
+          "inspection_subject": "room315_left_shuttle_2",
+          "payload_filter": "any",
+          "selection_strategy": "explicit",
+          "shuttle_selection": "explicit",
+          "side": "left",
+          "target_kind": "shuttle",
+          "target_shuttle": "room315_left_shuttle_2"
+        },
+        "contract_type": "TaskGoal",
+        "description": "inspect room315_left_shuttle_2",
+        "goal_id": "room315-task-goal-8c0f389ae83f",
+        "schema_version": 1,
+        "source": "human",
+        "timestamp": 0.0
+      }
+    }
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Inspect L2.",
+  "unsafe_auto_resolution": false
+}

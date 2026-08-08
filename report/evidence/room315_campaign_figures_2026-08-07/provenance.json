@@ -1,0 +1,197 @@
+{
+  "case_id": "B03",
+  "claim_boundary": "The raw PNGs are exact RGB decodes of the archived right-camera frames; the composite contains resized copies and presentation text. Exact slot identity and stopped arrival come from the preserved DZI/controller evidence, not from the pixels alone. The figure makes no payload-state or reliability claim.",
+  "declared_transition": {
+    "side": "right",
+    "start_slot": "3",
+    "target_slot": "4",
+    "utterance": "Move the green shuttle to slot 4 on the right rail."
+  },
+  "derived_at_utc": "2026-08-07T14:21:20.095083+00:00",
+  "derived_files": {
+    "b03_campaign_right_camera_initial_final.png": {
+      "bytes": 123697,
+      "sha256": "c1272484031885f0ec32334eec343fb284d52588f7b198429e7718a0af26551c"
+    },
+    "b03_right_camera_before_request.png": {
+      "bytes": 20078,
+      "sha256": "fdf6b892eaea1bf307923edea6ebe3a937b0191d47abe675a57734e18ff0a9c4"
+    },
+    "b03_right_camera_final_observation.png": {
+      "bytes": 20005,
+      "sha256": "88d740c92862652caf06133d51d4773edeff6f02418133423d005c48283df9cd"
+    },
+    "report/images/b03_campaign_right_camera_initial_final.png": {
+      "bytes": 123697,
+      "sha256": "c1272484031885f0ec32334eec343fb284d52588f7b198429e7718a0af26551c"
+    }
+  },
+  "image_contract": {
+    "composite_operations": [
+      "resizing",
+      "panel layout",
+      "text labels"
+    ],
+    "encoding": "rgb8",
+    "frame_id": "room315_vla_right_rail_rgbd_optical_frame",
+    "height": 480,
+    "raw_pngs_are_direct_rgb_decodes": true,
+    "slot_labels_are_not_inferred_from_pixels": true,
+    "visual_bbox_overlay_used": false,
+    "width": 640
+  },
+  "schema_version": "room315.campaign_figure_provenance.v1",
+  "selected_identity": "R3",
+  "selection_contract": {
+    "final": "The bag VisualStateObservation whose header stamp exactly matches final_visual_observation.json; the image header stamp exactly matches that observation's right_image_stamp.",
+    "initial": "Latest accepted VisualStateObservation recorded strictly before the single preserved TaskGoal; the image header stamp exactly matches that observation's right_image_stamp.",
+    "no_approximate_timestamp_matching": true
+  },
+  "slot_evidence": {
+    "final": {
+      "controller_mode": "DISABLED",
+      "controller_stop_confirmed": true,
+      "sensor": "DZI4R",
+      "sensor_confirmation_frames": 2,
+      "sensor_identity_confirmed": true,
+      "slot": "4"
+    },
+    "initial": {
+      "controller_mode": "DISABLED",
+      "sensor": "DZI3R",
+      "sensor_identity_confirmed": true,
+      "slot": "3"
+    }
+  },
+  "software": {
+    "font_bold": {
+      "path": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+      "sha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895"
+    },
+    "font_regular": {
+      "path": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+      "sha256": "ae7b7855e115a5966d8b1b3f80f254ccc117ec86f9965e202ee2940453837280"
+    },
+    "numpy": "1.26.4",
+    "pillow": "10.2.0",
+    "python": "3.12.3",
+    "script_sha256": "e1aee4c9a7fdaa7952f9c9efda1e3ed725970d98280db0c77ad32773df6a9f8d"
+  },
+  "source_integrity": {
+    "campaign_checksum_contract_unchanged": true,
+    "campaign_checksum_entry_count": 941,
+    "campaign_checksum_manifest_sha256_after": "4aabb82f645571bbff5eefec2e61d64bcae9fa036df59cda7343e1eb420ce078",
+    "campaign_checksum_manifest_sha256_before": "4aabb82f645571bbff5eefec2e61d64bcae9fa036df59cda7343e1eb420ce078",
+    "campaign_sha256sums_verified": true
+  },
+  "sources": {
+    "report/evidence/room315_integrated_campaign_v2/SHA256SUMS": {
+      "bytes": 113113,
+      "sha256": "4aabb82f645571bbff5eefec2e61d64bcae9fa036df59cda7343e1eb420ce078"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/declaration.json": {
+      "bytes": 914,
+      "sha256": "8163976b11a412284f6db26973c6832f148829ec4a9a31080ea8cd495efced1f"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/final_visual_observation.json": {
+      "bytes": 3589,
+      "sha256": "f81026b7d63e365d07bed5fb4042eb34499c3f17b2e06653617e2b01a9454d86"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/readiness/initial_controller_evidence.json": {
+      "bytes": 10637,
+      "sha256": "35b8273cdf8a86cb2adeb5f4870e3528ad150d322c88bdaef337837b64e17323"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/rosbag/metadata.yaml": {
+      "bytes": 24248,
+      "sha256": "1b67de5e3113a154758020ff8baf34fb56e5849d4231b1f5a936ef0ac4d9fbbc"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/rosbag/rosbag_0.mcap": {
+      "bytes": 16082240,
+      "sha256": "ba99d5b8e7bcca9df64b392c6d088c140e47bd425235193858363a4aab111670"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/task_goal.json": {
+      "bytes": 522,
+      "sha256": "3375cac668fe35d91412977faed35406bb82168d1f017937dc48bd500ae381f5"
+    },
+    "report/evidence/room315_integrated_campaign_v2/cases/B03/terminal_response.json": {
+      "bytes": 4171,
+      "sha256": "92097ede2aff4cd3c50d50b7f872ef9a1fcebdc031931cc29d3b8caa41e5db6b"
+    },
+    "report/evidence/room315_integrated_campaign_v2/manifest.json": {
+      "bytes": 175296,
+      "sha256": "3a381517e2c3bf33d575606caf871f07b5fbe7ccf307e760fc77a7c1ba47e318"
+    },
+    "report/evidence/room315_integrated_campaign_v2/summary.json": {
+      "bytes": 46165,
+      "sha256": "3c065872051d0e26b5425b64132c3a6f4f1ab8b79b3088fda5d9894e721f0d1e"
+    }
+  },
+  "timestamps": {
+    "final": {
+      "image_header_nanoseconds": 46000000000,
+      "image_header_seconds": 46.0,
+      "image_record_nanoseconds": 46020000000,
+      "observation_header_nanoseconds": 46030000000,
+      "observation_record_nanoseconds": 46040000000
+    },
+    "initial": {
+      "image_header_nanoseconds": 35300000000,
+      "image_header_seconds": 35.3,
+      "image_record_nanoseconds": 35325000000,
+      "milliseconds_before_task_goal_record": 240.0,
+      "observation_header_nanoseconds": 35340000000,
+      "observation_record_nanoseconds": 35355000000
+    },
+    "task_goal_record": {
+      "nanoseconds": 35595000000,
+      "seconds": 35.595
+    }
+  },
+  "topics": {
+    "right_camera": "/room_315/vla/right_rail_rgbd/image",
+    "task_goal": "/room_315/task_goal",
+    "visual_observation": "/room_315/visual_state/observed_state"
+  },
+  "visual_observation_records": {
+    "final": {
+      "accepted": true,
+      "accepted_frame_count": 125,
+      "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+      "header_ns": 46030000000,
+      "r3": {
+        "bbox_xywh": [
+          456.6507568359375,
+          189.6665496826172,
+          52.93597412109375,
+          68.06893157958984
+        ],
+        "block": "A34E",
+        "presence_state": "present",
+        "side": "right",
+        "visual_facts_valid": true
+      },
+      "record_ns": 46040000000,
+      "right_image_ns": 46000000000
+    },
+    "initial": {
+      "accepted": true,
+      "accepted_frame_count": 86,
+      "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+      "header_ns": 35340000000,
+      "r3": {
+        "bbox_xywh": [
+          444.3685302734375,
+          282.66412353515625,
+          50.33982467651367,
+          68.80889129638672
+        ],
+        "block": "A34E",
+        "presence_state": "present",
+        "side": "right",
+        "visual_facts_valid": true
+      },
+      "record_ns": 35355000000,
+      "right_image_ns": 35300000000
+    }
+  }
+}

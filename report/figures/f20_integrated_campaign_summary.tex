@@ -1,0 +1,61 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  metric/.style={draw=mfjagreen,very thick,fill=mfjagreen!7,
+    rounded corners=3pt,align=center,text width=44mm,minimum height=18mm,
+    inner sep=1.5mm},
+  runmetric/.style={draw=mfjablue!75,fill=mfjalight,rounded corners=2pt,
+    align=center,text width=32mm,minimum height=13mm,inner sep=1.2mm,
+    font=\sffamily\scriptsize},
+  scope/.style={draw=mfjablue,fill=mfjalight,rounded corners=2pt,
+    align=center,text width=44mm,minimum height=15mm,inner sep=1.4mm,
+    font=\sffamily\scriptsize},
+  family/.style={draw=mfjaorange,fill=mfjaorange!7,rounded corners=2pt,
+    align=center,text width=27mm,minimum height=18mm,inner sep=1.2mm,
+    font=\sffamily\scriptsize},
+  note/.style={draw=black!35,fill=white,rounded corners=2pt,
+    align=center,text width=150mm,minimum height=8mm,inner sep=1.2mm,
+    font=\sffamily\scriptsize}
+]
+  \node[metric] (m1) at (-5.25,0)
+    {{\fontsize{20}{21}\selectfont\bfseries 12/12}\\successful cold-start runs};
+  \node[metric] (m2) at (0,0)
+    {{\fontsize{20}{21}\selectfont\bfseries 24/24}\\satisfied step postconditions};
+  \node[metric] (m3) at (5.25,0)
+    {{\fontsize{20}{21}\selectfont\bfseries 48/48}\\decisions passed\\supervisor checks};
+
+  \node[font=\sffamily\bfseries\normalsize,text=mfjablue]
+    at (0,-1.35) {Planning and execution record};
+  \node[runmetric] at (-5.70,-2.35)
+    {{\Large\bfseries 24}\\plan attempts};
+  \node[runmetric] at (-1.90,-2.35)
+    {{\Large\bfseries 4}\\occupancy-triggered\\replan events};
+  \node[runmetric] at (1.90,-2.35)
+    {{\Large\bfseries 0}\\unknown retries};
+  \node[runmetric] at (5.70,-2.35)
+    {{\Large\bfseries 0}\\safe aborts};
+
+  \node[font=\sffamily\bfseries\normalsize,text=mfjablue]
+    at (0,-3.35) {Campaign coverage};
+  \node[scope] (s1) at (-5.25,-4.35)
+    {\textbf{RAILS}\\6 right \(\cdot\) 6 left};
+  \node[scope] (s2) at (0,-4.35)
+    {\textbf{IDENTITIES}\\8 total: R1--R4 and L1--L4};
+  \node[scope] (s3) at (5.25,-4.35)
+    {\textbf{LANGUAGE}\\12 unique English utterances};
+
+  \node[font=\sffamily\bfseries\normalsize,text=mfjaorange]
+    at (0,-5.35) {Case-family distribution};
+  \node[family] (f1) at (-6.20,-6.45)
+    {\textbf{Colour alias}\\{\Large\bfseries 4}};
+  \node[family] (f2) at (-3.10,-6.45)
+    {\textbf{Explicit identity}\\{\Large\bfseries 2}};
+  \node[family] (f3) at (0,-6.45)
+    {\textbf{Station target}\\{\Large\bfseries 2}};
+  \node[family] (f4) at (3.10,-6.45)
+    {\textbf{Payload-qualified nearest}\\{\Large\bfseries 2}};
+  \node[family] (f5) at (6.20,-6.45)
+    {\textbf{Multi-shuttle route}\\{\Large\bfseries 2}};
+
+  \node[note] at (0,-8.10)
+    {Each of the 12 runs started with a fresh Gazebo process in an isolated ROS domain.};
+\end{tikzpicture}

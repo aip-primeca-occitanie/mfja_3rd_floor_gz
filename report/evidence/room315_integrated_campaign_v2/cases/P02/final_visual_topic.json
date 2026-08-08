@@ -1,0 +1,16 @@
+{
+  "command": [
+    "ros2",
+    "topic",
+    "echo",
+    "--no-daemon",
+    "--full-length",
+    "/room_315/visual_state/observed_state",
+    "mfja_rail_interfaces/msg/VisualStateObservation",
+    "--once"
+  ],
+  "duration_s": 1.3090607689227909,
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "header:\n  stamp:\n    sec: 85\n    nanosec: 325000000\n  frame_id: room_315\nleft_image_stamp:\n  sec: 85\n  nanosec: 300000000\nright_image_stamp:\n  sec: 85\n  nanosec: 300000000\nschema_version: room315.visual_state.v3\ncheckpoint_sha256: 8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d\nstage: fused_observed_state\naccepted: true\nstabilized: false\nstale: false\nmodel_ready: true\ninput_ready: true\npresence_ready: true\nstate_fusion_ready: true\nvalidation_reasons: []\nclamped_fields:\n- L2.s_ratio_consistency_projection\npreprocessing_latency_ms: 4.660011967644095\ninference_latency_ms: 3.2677301205694675\nvalidation_latency_ms: 0.06619887426495552\ncycle_latency_ms: 9.728512028232217\naccepted_frame_count: 239\nrejected_frame_count: 17\nstale_frame_count: 0\nshuttles:\n- identity: L1\n  presence_state: present\n  visual_facts_valid: true\n  side: left\n  block: A34E\n  bbox_xywh:\n  - 452.892822265625\n  - 164.0885772705078\n  - 50.3999137878418\n  - 68.69953155517578\n  s_m: 1.208378553390503\n  s_ratio: 0.5687121152877808\n  segment_length_m: 2.0739223957061768\n  loaded_state: loaded\n- identity: L2\n  presence_state: present\n  visual_facts_valid: true\n  side: left\n  block: A34E\n  bbox_xywh:\n  - 341.87054443359375\n  - 101.32027435302734\n  - 45.98214340209961\n  - 69.0185546875\n  s_m: 0.894000768661499\n  s_ratio: 0.5658956260140688\n  segment_length_m: 1.5797979831695557\n  loaded_state: empty\n- identity: L3\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: L4\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R1\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R2\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R3\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R4\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n---\n"
+}

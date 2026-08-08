@@ -1,0 +1,16 @@
+{
+  "command": [
+    "ros2",
+    "topic",
+    "echo",
+    "--no-daemon",
+    "--full-length",
+    "/clock",
+    "rosgraph_msgs/msg/Clock",
+    "--once"
+  ],
+  "duration_s": 4.348496305057779,
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "clock:\n  sec: 0\n  nanosec: 30000000\n---\n"
+}

@@ -1,0 +1,8 @@
+1786093201.7554181 [INFO] [launch]: All log files can be found below /tmp/room315_P02_azlcgra7/ros_logs_execution/2026-08-07-11-00-01-753844-tiago-Precision-7560-1933299
+1786093201.7556748 [INFO] [launch]: Default logging verbosity is set to INFO
+1786093201.9335904 [INFO] [planner_node-1]: process started with pid [1933335]
+1786093201.9337394 [INFO] [room_315_task_execution_node.py-2]: process started with pid [1933336]
+1786093278.1431298 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1786093278.9676974 [INFO] [planner_node-1]: process has finished cleanly [pid 1933335]
+1786093278.9677773 [INFO] [room_315_task_execution_node.py-2]: process has finished cleanly [pid 1933336]
+1786093278.9687386 [ERROR] [launch]: Caught exception in launch (see debug for traceback): Cannot shutdown a ROS adapter that is not running

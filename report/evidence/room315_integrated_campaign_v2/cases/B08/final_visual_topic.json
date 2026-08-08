@@ -1,0 +1,16 @@
+{
+  "command": [
+    "ros2",
+    "topic",
+    "echo",
+    "--no-daemon",
+    "--full-length",
+    "/room_315/visual_state/observed_state",
+    "mfja_rail_interfaces/msg/VisualStateObservation",
+    "--once"
+  ],
+  "duration_s": 1.2040409909095615,
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "header:\n  stamp:\n    sec: 53\n    nanosec: 220000000\n  frame_id: room_315\nleft_image_stamp:\n  sec: 53\n  nanosec: 200000000\nright_image_stamp:\n  sec: 53\n  nanosec: 200000000\nschema_version: room315.visual_state.v3\ncheckpoint_sha256: 8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d\nstage: fused_observed_state\naccepted: true\nstabilized: false\nstale: false\nmodel_ready: true\ninput_ready: true\npresence_ready: true\nstate_fusion_ready: true\nvalidation_reasons: []\nclamped_fields: []\npreprocessing_latency_ms: 4.662364022806287\ninference_latency_ms: 3.262856975197792\nvalidation_latency_ms: 0.06045796908438206\ncycle_latency_ms: 9.344035992398858\naccepted_frame_count: 147\nrejected_frame_count: 10\nstale_frame_count: 0\nshuttles:\n- identity: L1\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: L2\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: L3\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: L4\n  presence_state: present\n  visual_facts_valid: true\n  side: left\n  block: A12E\n  bbox_xywh:\n  - 160.1383056640625\n  - 137.0213623046875\n  - 45.6843147277832\n  - 68.52601623535156\n  s_m: 1.0918731689453125\n  s_ratio: 0.5280983448028564\n  segment_length_m: 2.045072555541992\n  loaded_state: empty\n- identity: R1\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R2\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R3\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n- identity: R4\n  presence_state: absent\n  visual_facts_valid: false\n  side: ''\n  block: ''\n  bbox_xywh:\n  - 0.0\n  - 0.0\n  - 0.0\n  - 0.0\n  s_m: 0.0\n  s_ratio: 0.0\n  segment_length_m: 0.0\n  loaded_state: ''\n---\n"
+}

@@ -1,0 +1,19 @@
+{
+  "confidence": 1.0,
+  "constraints": {
+    "goal_type": "transport",
+    "payload_filter": "any",
+    "selection_strategy": "explicit",
+    "shuttle_selection": "explicit",
+    "side": "left",
+    "target_kind": "slot",
+    "target_shuttle": "room315_left_shuttle_1",
+    "target_slot": "2"
+  },
+  "contract_type": "TaskGoal",
+  "description": "transport room315_left_shuttle_1 on left rail to slot 2",
+  "goal_id": "room315-task-goal-16dc8c5fc73e",
+  "schema_version": 1,
+  "source": "human",
+  "timestamp": 0.0
+}

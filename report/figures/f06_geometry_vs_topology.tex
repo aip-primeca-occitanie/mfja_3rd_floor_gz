@@ -1,0 +1,76 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  panel/.style={draw=black!25,fill=mfjalight!45,rounded corners=2mm,
+    minimum width=158mm,minimum height=48mm},
+  title/.style={font=\sffamily\bfseries\large,text=mfjablue},
+  arr/.style={-{Latex[length=2.2mm]},thick,mfjablue},
+  seg/.style={draw=mfjablue,fill=white,rounded corners=2pt,
+    minimum width=22mm,minimum height=9mm,font=\ttfamily\small},
+  sw/.style={diamond,draw=mfjaorange,fill=mfjaorange!12,aspect=1.7,
+    minimum width=18mm,minimum height=10mm,font=\sffamily\bfseries}
+]
+  \node[panel] (geometry) {};
+  \node[title,anchor=north west] at ([xshift=4mm,yshift=-3mm]geometry.north west)
+    {Geometry: where is the shuttle?};
+
+  \coordinate (p0) at ([xshift=16mm,yshift=2mm]geometry.west);
+  \coordinate (p1) at ([xshift=-16mm,yshift=2mm]geometry.east);
+  \coordinate (c0) at ($(p0)+(30mm,20mm)$);
+  \coordinate (c1) at ($(p1)+(-35mm,-18mm)$);
+  \draw[black!55,line width=2.1pt]
+    (p0) .. controls (c0) and (c1) ..
+    node[pos=0.53,coordinate] (ps) {} (p1);
+
+  % Endpoint and local tangents follow the corresponding Bézier derivatives.
+  \draw[-{Latex[length=2mm]},thick,mfjagreen]
+    (p0) -- ++(18mm,12mm)
+    node[right=1mm] {\(\mathbf t_0\)};
+  \draw[-{Latex[length=2mm]},thick,mfjagreen]
+    (p1) -- ++(15mm,7.7mm)
+    node[above left] {\(\mathbf t_1\)};
+  \draw[-{Latex[length=2mm]},thick,mfjaorange]
+    (ps) -- ++(16mm,-3.2mm)
+    node[pos=0.72,above=1mm] {\(\mathbf t(s)\)};
+  \fill[mfjaorange] (ps) circle (1.2mm);
+  \node[above=4mm of ps,font=\sffamily\small] {position \(P(s)\)};
+
+  \fill[mfjablue] (p0) circle (1.1mm);
+  \fill[mfjablue] (p1) circle (1.1mm);
+  \node[below left] at (p0) {\(P_0\)};
+  \node[below right] at (p1) {\(P_1\)};
+
+  \coordinate (axisleft) at ([xshift=16mm,yshift=14mm]geometry.south west);
+  \coordinate (axisright) at ([xshift=-16mm,yshift=14mm]geometry.south east);
+  \coordinate (saxis) at (ps |- axisleft);
+  \draw[mfjablue,thick] (axisleft) -- (axisright);
+  \draw[mfjablue] ($(axisleft)+(0,-2mm)$) -- ($(axisleft)+(0,2mm)$);
+  \draw[mfjablue] ($(saxis)+(0,-2mm)$) -- ($(saxis)+(0,2mm)$);
+  \draw[mfjablue] ($(axisright)+(0,-2mm)$) -- ($(axisright)+(0,2mm)$);
+  \draw[mfjaorange!80,densely dashed] (ps) -- (saxis);
+  \node[below=1mm] at (axisleft) {0};
+  \node[below=1mm] at (saxis) {\(s\)};
+  \node[below=1mm] at (axisright) {\(L\)};
+  \node[anchor=south,font=\sffamily\small,text=black!70]
+    at ([yshift=1mm]geometry.south)
+    {Arc length \(0\le s\le L\); normalised position \(\rho=s/L\)};
+
+  \node[panel,minimum height=62mm,below=6mm of geometry] (topology) {};
+  \node[title,anchor=north west] at ([xshift=4mm,yshift=-3mm]topology.north west)
+    {Topology: which successor is legal?};
+
+  \node[seg] (a23) at ([xshift=-47mm,yshift=8mm]topology.center) {A23};
+  \node[sw,right=20mm of a23] (a3) {A3};
+  \node[seg,right=30mm of a3,yshift=11mm] (a3e) {A3E};
+  \node[seg,right=30mm of a3,yshift=-11mm] (a3i) {A3I};
+  \draw[arr] (a23) -- node[above=1mm,font=\sffamily\small]
+    {exit switch} (a3);
+  \draw[arr] (a3) -- node[above,sloped,font=\sffamily\small]
+    {E: exterior} (a3e);
+  \draw[arr] (a3) -- node[below,sloped,font=\sffamily\small]
+    {I: interior} (a3i);
+  \node[anchor=south,align=center,text width=135mm,
+    font=\sffamily\small,text=black!72]
+    at ([yshift=5mm]topology.south)
+    {After \texttt{A23}, switch \texttt{A3} selects the next public segment.\\
+     Geometric proximity alone never defines a legal route.};
+\end{tikzpicture}

@@ -1,0 +1,276 @@
+llama_context: n_ctx_per_seq (4096) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+Room 315 task-goal CLI ready. Type quit to exit.
+{"model_health": {"backend": "llama_cpp", "message": "", "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e", "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf", "ready": true, "state": "ready"}}
+Confirm Room 315 goal:
+Action: Transport
+Shuttle: room315_right_shuttle_1
+Rail: Right
+Destination: Slot 3
+Risk: high
+Reply yes to finalize, no to revise, or cancel.
+Final validated TaskGoal:
+{
+  "confidence": 1.0,
+  "constraints": {
+    "goal_type": "transport",
+    "payload_filter": "any",
+    "selection_strategy": "explicit",
+    "shuttle_selection": "explicit",
+    "side": "right",
+    "target_kind": "slot",
+    "target_shuttle": "room315_right_shuttle_1",
+    "target_slot": "3"
+  },
+  "contract_type": "TaskGoal",
+  "description": "transport room315_right_shuttle_1 on right rail to slot 3",
+  "goal_id": "room315-task-goal-64cef2e6b11d",
+  "schema_version": 1,
+  "source": "human",
+  "timestamp": 0.0
+}
+Task execution response:
+{
+  "contract": "room315.task_execution_status.v1",
+  "controller_position_fields_used_for_localization": false,
+  "execution_enabled": true,
+  "goal_id": "room315-task-goal-64cef2e6b11d",
+  "location_source": "accepted_visual_state",
+  "presence_source": "controller_ShuttleState_name_and_timestamps_only",
+  "reason": "task_goal_satisfied",
+  "result": {
+    "executed_steps": [
+      {
+        "observed_state_id": "room315-live-visual-35-735000000",
+        "occupancy_changed": false,
+        "plan_length": 2,
+        "postcondition": {
+          "details": {
+            "authoritative_required_switches": {
+              "A1": "E",
+              "A2": "E",
+              "A3": "I",
+              "A4": "I"
+            },
+            "exit_switch": "A4",
+            "gate_switch": "A3",
+            "restore_deferred_to_finish_route_clearance": true,
+            "route_specific_switch_assignment": true,
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "1"
+            },
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "INTERIOR",
+              "A4": "INTERIOR"
+            },
+            "target_segment": "A34I"
+          },
+          "reason": "route_clearance_mode_held_for_pending_blockers",
+          "status": "satisfied"
+        },
+        "primitive": "SET_SWITCHES",
+        "problem_name": "closed-loop-room315-task-goal-64cef2e6b11d-0-clearance-1",
+        "step_index": 0,
+        "supervisor_status": "accepted",
+        "symbolic_step": "begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3"
+      },
+      {
+        "observed_state_id": "room315-live-visual-37-825000000",
+        "occupancy_changed": true,
+        "plan_length": 1,
+        "postcondition": {
+          "details": {
+            "absolute_error_m": 0.0003212531356810988,
+            "controller_position_fields_used_for_localization": false,
+            "localization_source": "accepted_visual_state",
+            "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+            "model_prediction_replaced": false,
+            "observed_s_m": 1.0670932531356812,
+            "observed_segment": "A12E",
+            "raw_visual_longitudinal_position_source": "accepted_visual_state",
+            "route_clearance_certificate": {
+              "absolute_error_m": 0.0003212531356810988,
+              "bounded_commanded_motion_completed": true,
+              "bounded_motion_distance_m": 1.066772,
+              "clearance_mode_held": true,
+              "controller_position_fields_used_for_localization": false,
+              "controller_stop_confirmed": true,
+              "entry_sensor": "DA3IR",
+              "entry_sensor_identity_confirmed": true,
+              "identity": "R2",
+              "interior_advance_origin_certified": false,
+              "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+              "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+              "model_prediction_replaced": false,
+              "model_segment_disagreement": true,
+              "motion_origin_s_m": null,
+              "normal_route_restored": false,
+              "observed_s_m": 1.0670932531356812,
+              "observed_segment": "A12E",
+              "origin_clearance_proof": {},
+              "post_stop_visual_confirmation": false,
+              "post_stop_visual_frame_received": true,
+              "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+              "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+              "shuttle": "right_shuttle_2",
+              "side": "right",
+              "target_s_m": 1.066772,
+              "target_segment": "A34I",
+              "tolerance_m": 0.08,
+              "visual_longitudinal_prediction_preserved": true,
+              "visual_prediction_disagreement": true,
+              "visual_s_within_tolerance": true,
+              "visual_segment_prediction_preserved": true
+            },
+            "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+            "segment_identity_source": "accepted_visual_state",
+            "shuttle": "right_shuttle_2",
+            "target_s_m": 1.066772,
+            "target_segment": "A34I",
+            "tolerance_m": 0.08,
+            "visual_longitudinal_disagreement": false,
+            "visual_segment_disagreement": true
+          },
+          "reason": "blocker_sensor_motion_certified_interior_clearance",
+          "status": "satisfied"
+        },
+        "primitive": "SHUTTLE_ON",
+        "problem_name": "closed-loop-room315-task-goal-64cef2e6b11d-1-clearance-1",
+        "step_index": 1,
+        "supervisor_status": "accepted",
+        "symbolic_step": "relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2"
+      },
+      {
+        "observed_state_id": "room315-live-visual-51-625000000",
+        "occupancy_changed": false,
+        "plan_length": 6,
+        "postcondition": {
+          "details": {
+            "fresh_visual_frame": {
+              "ready": true,
+              "reason": "",
+              "visual_sequence": 121
+            },
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "0"
+            },
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "EXTERIOR",
+              "A4": "EXTERIOR"
+            }
+          },
+          "reason": "normal_route_restored_after_interior_clearance",
+          "status": "satisfied"
+        },
+        "primitive": "SET_SWITCHES",
+        "problem_name": "closed-loop-room315-task-goal-64cef2e6b11d-2",
+        "step_index": 2,
+        "supervisor_status": "accepted",
+        "symbolic_step": "finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3"
+      },
+      {
+        "observed_state_id": "room315-live-visual-54-425000000",
+        "occupancy_changed": true,
+        "plan_length": 3,
+        "postcondition": {
+          "details": {
+            "arrival_verification": {
+              "arrival_timeout_audit": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 14.776009959789075,
+                "route_distance_m": 2.955201991957815,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "arrived": true,
+              "controller_position_fields_used_for_localization": false,
+              "controller_stop_confirmed": true,
+              "controller_target_slot_confirmed": true,
+              "ground_truth_scope": "final_actuation_verification_only",
+              "matched_by": "deterministic_slot_sensor",
+              "matched_sensors": [
+                "DZI3R"
+              ],
+              "planner_localization_unchanged": true,
+              "reason": "",
+              "sensor_confirmation_frames": 2,
+              "sensor_identity_confirmed": true,
+              "shuttle": "room315_right_shuttle_1",
+              "shuttle_contract": "right_shuttle_1",
+              "side": "right",
+              "target_sensor": "DZI3R",
+              "target_slot": "3",
+              "target_slot_contract": "right:slot:3",
+              "target_station": "staubli",
+              "verified_slot_arrival_certificate": {
+                "controller_mode": "DISABLED",
+                "controller_position_fields_used_for_localization": false,
+                "controller_stop_confirmed": true,
+                "controller_target_slot_confirmed": true,
+                "identity": "R1",
+                "matched_by": "deterministic_slot_sensor",
+                "model_prediction_replaced": false,
+                "motion_epoch": 1,
+                "proof_mode": "supervised_command_arrival",
+                "reached_target_slot": "3",
+                "sensor": "DZI3R",
+                "sensor_confirmation_frames": 2,
+                "sensor_identity_confirmed": true,
+                "sensor_sequence": 1612,
+                "shuttle": "room315_right_shuttle_1",
+                "side": "right",
+                "slot": "3",
+                "supervisor_sequence": 63
+              },
+              "visual_localization_used_for_final_stop": false
+            },
+            "visual_disagreement": false,
+            "visual_postcondition": {
+              "details": {
+                "shuttle": "right_shuttle_1",
+                "target_slot": "right:slot:3"
+              },
+              "reason": "target_slot_occupancy_verified",
+              "status": "satisfied"
+            }
+          },
+          "reason": "target_slot_sensor_identity_and_stop_verified",
+          "status": "satisfied"
+        },
+        "primitive": "SHUTTLE_ON",
+        "problem_name": "closed-loop-room315-task-goal-64cef2e6b11d-3",
+        "step_index": 3,
+        "supervisor_status": "accepted",
+        "symbolic_step": "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2"
+      }
+    ],
+    "final_state_id": "room315-live-visual-69-730000000",
+    "observations": 8,
+    "plan_attempts": 4,
+    "reason": "task_goal_satisfied",
+    "replan_reasons": [
+      "changed_occupancy"
+    ],
+    "replans": 1,
+    "safe_abort_sent": false,
+    "status": "succeeded",
+    "unknown_retries": 0
+  },
+  "status": "succeeded",
+  "timestamp_s": 70.01
+}
+Goodbye.

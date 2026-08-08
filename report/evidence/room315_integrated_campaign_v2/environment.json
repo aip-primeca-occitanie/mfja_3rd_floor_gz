@@ -1,0 +1,167 @@
+{
+  "artifacts": [
+    {
+      "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+      "sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+      "size": 113868535
+    },
+    {
+      "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/target_stats.json",
+      "sha256": "2d48078641842aa2db7a59b9285fc5bbedaaa3a0039fc39986ca230db983b18c",
+      "size": 8705
+    },
+    {
+      "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/visual_label_vectorizer.json",
+      "sha256": "637c854556f3331c4e187db4aa7fc70457f01df8877947b9a0e988a543f7113e",
+      "size": 17458
+    },
+    {
+      "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/training_config.json",
+      "sha256": "5c45544af7766afff397dafa7c14c0b3b05083f07a93122308ef50c2e8f452eb",
+      "size": 15630
+    },
+    {
+      "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/run_metadata.json",
+      "sha256": "d86c0ebfda3f5b174fc3c06f4ce8a3e083d2048db7b44d20efe951aaa7e5428d",
+      "size": 5560
+    },
+    {
+      "path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "size": 1117320736
+    },
+    {
+      "path": "/home/tiago/models/room315_intent/task_goal_understanding.local.yaml",
+      "sha256": "6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea",
+      "size": 617
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml",
+      "sha256": "e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19",
+      "size": 2735
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml",
+      "sha256": "15d3eaee91e4090f874efeaa7cc2f1df37c78b0fd091466c06b4754e041e57a9",
+      "size": 3068
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl",
+      "sha256": "705fd5070503d08e8ec41696959e137afac4a610655317c412df1e4d9875414d",
+      "size": 24629
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml",
+      "sha256": "721de97f0aed54efae6a23ae923cdb141da9871ddfc28c9cd33373ee000af141",
+      "size": 5328
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml",
+      "sha256": "98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d",
+      "size": 6804
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml",
+      "sha256": "6473fdef8d50f7678836b0168bd146b7231d4e779eade406fe8541bb94744ccb",
+      "size": 6821
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml",
+      "sha256": "d8c9e79e1e0ae90b53b15038be91a5b25e44a4662c1d353c9919586a27a7e3c7",
+      "size": 2703
+    },
+    {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml",
+      "sha256": "a6aa815037fc78381512c2fc30da159d6db7976d927fd8c5b7400f336f3afc85",
+      "size": 2712
+    }
+  ],
+  "campaign_matrix": {
+    "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/report/evidence/room315_integrated_campaign_v2/campaign_matrix.yaml",
+    "sha256": "edbae98bc9d40f2dc839e222354b867c38b533c2de0af6dcaac74ba6ae943c95"
+  },
+  "captured_at_utc": "2026-08-07T08:49:11.175437Z",
+  "diagnostic_commands": {
+    "gazebo_version": {
+      "command": [
+        "gz",
+        "sim",
+        "--versions"
+      ],
+      "duration_s": 0.055783196119591594,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "8.9.0\n"
+    },
+    "gpu": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,driver_version,memory.total",
+        "--format=csv,noheader"
+      ],
+      "duration_s": 0.024414541898295283,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "NVIDIA GeForce RTX 3080 Laptop GPU, 580.95.05, 16384 MiB\n"
+    },
+    "ros2_doctor": {
+      "command": [
+        "ros2",
+        "doctor",
+        "--report"
+      ],
+      "duration_s": 2.6050080549903214,
+      "returncode": 0,
+      "stderr": "/opt/ros/jazzy/lib/python3.12/site-packages/ros2doctor/api/__init__.py: 162: UserWarning: Fail to call PackageReport class functions.\n",
+      "stdout": "\n   NETWORK CONFIGURATION\ninet         : 127.0.0.1\ninet4        : ['127.0.0.1']\ninet6        : ['::1']\nnetmask      : 255.0.0.0\ndevice       : lo\nflags        : 73<LOOPBACK,RUNNING,UP>\nmtu          : 65536\ninet         : 10.192.85.157\ninet4        : ['10.192.85.157']\nether        : 54:6c:eb:4d:5c:3d\ninet6        : ['fe80::f784:a5c3:d7ca:61f3%wlp147s0']\nnetmask      : 255.255.255.0\ndevice       : wlp147s0\nflags        : 4163<BROADCAST,RUNNING,MULTICAST,UP>\nmtu          : 1500\nbroadcast    : 10.192.85.255\nether        : 08:92:04:25:22:68\ndevice       : enp0s31f6\nflags        : 4099<BROADCAST,MULTICAST,UP>\nmtu          : 1500\n\n   PLATFORM INFORMATION\nsystem           : Linux\nplatform info    : Linux-6.14.0-34-generic-x86_64-with-glibc2.39\nrelease          : 6.14.0-34-generic\nprocessor        : x86_64\n\n   QOS COMPATIBILITY LIST\ncompatibility status    : No publisher/subscriber pairs found\n\n   RMW MIDDLEWARE\nmiddleware name    : rmw_fastrtps_cpp\n\n   ROS 2 INFORMATION\ndistribution name      : jazzy\ndistribution type      : ros2\ndistribution status    : active\nrelease platforms      : {'debian': ['bookworm'], 'rhel': ['9'], 'ubuntu': ['noble']}\n\n   TOPIC LIST\ntopic               : none\npublisher count     : 0\nsubscriber count    : 0\n"
+    }
+  },
+  "git": {
+    "branch": "ali/neuro-symbolic-closed-loop",
+    "head": "c44c501640e3dab35ab241384c99963e1b9d8745",
+    "runtime_source_file_count": 483,
+    "runtime_source_tree_sha256": "326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9",
+    "status_porcelain": [
+      " M mfja_3rd_floor_bringup/launch/room_315_floor_common.py",
+      " M mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py",
+      " M mfja_robot_control_config/scripts/room_315_pddl_scenario_generator.py",
+      " M mfja_robot_control_config/scripts/room_315_presence_provider.py",
+      " M mfja_robot_control_config/scripts/room_315_rail_defaults.py",
+      " M mfja_robot_control_config/scripts/room_315_task_execution.py",
+      " M mfja_robot_control_config/scripts/room_315_visual_label_exporter.py",
+      " M mfja_robot_control_config/scripts/room_315_vla_supervisor.py",
+      " M mfja_robot_control_config/test/test_room315_task_execution.py",
+      " M mfja_robot_control_config/test/test_room315_visual_runtime.py",
+      " M mfja_robot_control_config/test/test_room315_vla_supervisor.py",
+      " M runbookvla.html",
+      "?? mfja_robot_control_config/test/test_room315_floor_runtime_singleton.py",
+      "?? mfja_robot_control_config/test/test_room315_rail_segment_names.py"
+    ],
+    "worktree_patch_sha256": "d446c63192386b32b0d92e24aed6210b59bc53bfcb81c9af05a644ed421db0bd"
+  },
+  "platform": {
+    "base_ros_domain_id": 100,
+    "case_ros_domain_ids": {
+      "B01": 100,
+      "B02": 101,
+      "B03": 102,
+      "B04": 103,
+      "B05": 104,
+      "B06": 105,
+      "B07": 106,
+      "B08": 107,
+      "M01": 110,
+      "M02": 111,
+      "P01": 108,
+      "P02": 109
+    },
+    "hostname": "tiago-Precision-7560",
+    "machine": "x86_64",
+    "python": "3.12.3",
+    "release": "6.14.0-34-generic",
+    "ros_automatic_discovery_range": "LOCALHOST",
+    "ros_distro": "jazzy",
+    "ros_domain_id": 100,
+    "system": "Linux"
+  }
+}

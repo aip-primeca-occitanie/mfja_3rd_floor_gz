@@ -50,8 +50,9 @@ from room_315_multi_shuttle import occupancy_aware_route_candidates_from_positio
 from room_315_multi_shuttle import route_blockers_from_rails
 from room_315_multi_shuttle import route_blocks_between_slots
 from room_315_multi_shuttle import route_plan_from_position_to_slot
-from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import internal_rail_segment_name_to_public
 from room_315_rail_defaults import public_rail_segment_lengths
+from room_315_rail_defaults import public_rail_segment_name_to_internal
 from room_315_rail_defaults import rail_segment_lengths
 from room_315_runtime_contracts import normalize_runtime_clearance_certificate
 from room_315_runtime_contracts import runtime_payload_grounding_matches
@@ -4920,11 +4921,7 @@ def _runtime_clearance_planning_position(
 
     side = _normalise_planning_side(certificate['side'])
     public_segment = str(certificate['target_segment']).strip().upper()
-    internal_segment = (
-        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(public_segment, public_segment)
-        if side == 'left'
-        else public_segment
-    )
+    internal_segment = public_rail_segment_name_to_internal(side, public_segment)
     internal_lengths = rail_segment_lengths(side)
     if internal_segment not in internal_lengths:
         raise PddlProblemBuildError(
@@ -5096,8 +5093,7 @@ def _rail_position_from_fact(
         or metadata.get('segment')
         or ''
     ).strip().upper()
-    if expected_side == 'left':
-        segment = LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
+    segment = public_rail_segment_name_to_internal(expected_side, segment)
     if segment not in segment_lengths:
         raise PddlProblemBuildError(
             f'continuous rail position for {shuttle_id!r} has unknown '
@@ -5965,13 +5961,9 @@ def _clearance_certificate_visual_segment_consistency(
     certified_public_segment = str(
         certificate.get('target_segment') or ''
     ).strip().upper()
-    certified_internal_segment = (
-        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
-            certified_public_segment,
-            certified_public_segment,
-        )
-        if side == 'left'
-        else certified_public_segment
+    certified_internal_segment = public_rail_segment_name_to_internal(
+        side,
+        certified_public_segment,
     )
     visual_segment = str(
         position.get('raw_visual_segment')
@@ -6394,10 +6386,9 @@ def _topology_route_entry(
         devices['stoppers'].get(_stopper_object(side, device)) == 'open'
         for device in DEVICE_NAMES
     )
-    public_segment = (
-        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(route.source_segment, route.source_segment)
-        if side == 'left'
-        else route.source_segment
+    public_segment = internal_rail_segment_name_to_public(
+        side,
+        route.source_segment,
     )
     return {
         'shuttle': shuttle,
@@ -6428,10 +6419,9 @@ def _topology_route_entry(
         'route_blocks': [
             {
                 'segment': block.segment,
-                'public_segment': (
-                    LEFT_PUBLIC_SEGMENT_NAME_MAP.get(block.segment, block.segment)
-                    if side == 'left'
-                    else block.segment
+                'public_segment': internal_rail_segment_name_to_public(
+                    side,
+                    block.segment,
                 ),
                 'start_s_ratio': round(float(block.start_s_ratio), 9),
                 'end_s_ratio': round(float(block.end_s_ratio), 9),
@@ -6494,20 +6484,11 @@ _INTERIOR_HOLDING_GRID_STEP_M = 0.01
 
 
 def _interior_internal_segment(side: str, public_segment: str) -> str:
-    return (
-        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(public_segment, public_segment)
-        if side == 'left'
-        else public_segment
-    )
+    return public_rail_segment_name_to_internal(side, public_segment)
 
 
 def _public_segment_for_side(side: str, internal_segment: Any) -> str:
-    segment = str(internal_segment or '').strip().upper()
-    return (
-        LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
-        if side == 'left'
-        else segment
-    )
+    return internal_rail_segment_name_to_public(side, internal_segment)
 
 
 def _is_interior_holding_position(

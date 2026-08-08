@@ -1,0 +1,46 @@
+{
+  "coverage": [
+    "R3",
+    "green",
+    "slot_to_slot",
+    "same_station"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "selection_strategy": "explicit",
+      "side": "right",
+      "target_kind": "slot",
+      "target_shuttle": "room315_right_shuttle_3",
+      "target_slot": "4"
+    },
+    "prompt_fragments": [
+      "Shuttle: room315_right_shuttle_3",
+      "Rail: Right",
+      "Destination: Slot 4"
+    ],
+    "selected_identity": "R3",
+    "target_slot": "4",
+    "target_station": "staubli"
+  },
+  "family": "colour_alias",
+  "id": "B03",
+  "launch": {
+    "left": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    },
+    "right": {
+      "identities": [
+        "R3"
+      ],
+      "loaded": [],
+      "start_slots": [
+        "3"
+      ]
+    }
+  },
+  "side": "right",
+  "utterance": "Move the green shuttle to slot 4 on the right rail."
+}

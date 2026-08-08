@@ -1,0 +1,25 @@
+[INFO] [launch]: All log files can be found below /tmp/room315_B07_5lcsu2w7/ros_logs_execution/2026-08-07-10-56-12-639779-tiago-Precision-7560-1930741
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [planner_node-1]: process started with pid [1930773]
+[INFO] [room_315_task_execution_node.py-2]: process started with pid [1930774]
+[room_315_task_execution_node.py-2] [INFO] [1786092973.323271980] [room_315_task_execution_node]: Task execution status=idle goal=none reason=task execution node initialized
+[room_315_task_execution_node.py-2] [INFO] [1786092973.323662099] [room_315_task_execution_node]: Room 315 TaskGoal execution gateway initialized. Planning localization comes from validated visual state; final slot arrival requires deterministic sensor identity plus controller-stop confirmation.
+[planner_node-1] [INFO] [1786092973.822311623] [planner]: [planner] Configuring...
+[planner_node-1] [INFO] [1786092973.822950327] [planner]: Created solver : POPF of type plansys2/POPFPlanSolver
+[planner_node-1] [INFO] [1786092973.822965548] [planner]: [planner] Solver Timeout 15
+[planner_node-1] [INFO] [1786092973.824866334] [planner]: [planner] Configured
+[planner_node-1] [INFO] [1786092973.825932304] [planner]: [planner] Activating...
+[planner_node-1] [INFO] [1786092973.825944357] [planner]: [planner] Activated
+[room_315_task_execution_node.py-2] [INFO] [1786092994.640006353] [room_315_task_execution_node]: Task execution status=accepted goal=room315-task-goal-fc5e4e27a96c reason=validated TaskGoal accepted for closed-loop execution
+[room_315_task_execution_node.py-2] [INFO] [1786092994.641297898] [room_315_task_execution_node]: Task execution status=running goal=room315-task-goal-fc5e4e27a96c reason=observing and requesting PlanSys2 plan
+[room_315_task_execution_node.py-2] [INFO] [1786092994.643691824] [room_315_task_execution_node]: Task execution status=running goal=room315-task-goal-fc5e4e27a96c reason=TaskGoal validated and grounded when required from accepted visual state; requesting PlanSys2 plan
+[planner_node-1] [INFO] [1786092994.803752780] [planner]: Writing planning results to /tmp.
+[planner_node-1] [INFO] [1786092994.803946476] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[room_315_task_execution_node.py-2] [INFO] [1786092998.692634493] [room_315_task_execution_node]: Task execution status=succeeded goal=room315-task-goal-fc5e4e27a96c reason=task_goal_satisfied
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[planner_node-1] [INFO] [1786093013.614032413] [rclcpp]: signal_handler(signum=2)
+[INFO] [planner_node-1]: process has finished cleanly [pid 1930773]
+[INFO] [room_315_task_execution_node.py-2]: process has finished cleanly [pid 1930774]
+[planner_node-1] Warning: class_loader.ClassLoader: SEVERE WARNING!!! Attempting to unload library while objects created by this loader exist in the heap! You should delete your objects before attempting to unload the library or destroying the ClassLoader. The library will NOT be unloaded.
+[planner_node-1]          at line 127 in ./src/class_loader.cpp
+[ERROR] [launch]: Caught exception in launch (see debug for traceback): Cannot shutdown a ROS adapter that is not running

@@ -1,0 +1,19 @@
+{
+  "confidence": 1.0,
+  "constraints": {
+    "goal_type": "transport",
+    "payload_filter": "loaded",
+    "payload_required": true,
+    "selection_strategy": "nearest",
+    "shuttle_selection": "nearest",
+    "side": "right",
+    "target_kind": "slot",
+    "target_slot": "3"
+  },
+  "contract_type": "TaskGoal",
+  "description": "transport nearest / loaded shuttle on right rail to slot 3",
+  "goal_id": "room315-task-goal-27493a159946",
+  "schema_version": 1,
+  "source": "human",
+  "timestamp": 0.0
+}

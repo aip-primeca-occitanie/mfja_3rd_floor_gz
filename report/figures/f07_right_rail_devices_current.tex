@@ -1,0 +1,84 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  rail/.style={very thick,draw=black!40},
+  branch/.style={very thick,draw=mfjablue!70},
+  sw/.style={circle,draw=mfjaorange,fill=mfjaorange!14,thick,
+    minimum size=7mm,font=\sffamily\scriptsize\bfseries},
+  dzi/.style={rectangle,draw=mfjared,fill=mfjared!18,minimum size=3.5mm,
+    inner sep=0pt},
+  stopper/.style={diamond,draw=mfjablue,fill=mfjablue!18,thick,
+    minimum size=4.5mm,inner sep=0pt},
+  card/.style={draw=black!35,fill=mfjalight,rounded corners=2pt,
+    text width=35mm,minimum height=25mm,align=left,inner sep=2mm,
+    font=\sffamily\scriptsize}
+]
+  \node[font=\sffamily\bfseries\normalsize,text=mfjablue] at (0,5.65)
+    {Right rail: indexing sensors, slots and stopper points};
+
+  \coordinate (a1) at (-5,0);
+  \coordinate (a2) at (5,0);
+  \coordinate (a3) at (5,4);
+  \coordinate (a4) at (-5,4);
+  \coordinate (a3e) at (4.3,4.7);
+  \coordinate (a3i) at (4.3,3.3);
+  \coordinate (a4e) at (-4.3,4.7);
+  \coordinate (a4i) at (-4.3,3.3);
+  \coordinate (a1e) at (-4.3,-0.7);
+  \coordinate (a1i) at (-4.3,0.7);
+  \coordinate (a2e) at (4.3,-0.7);
+  \coordinate (a2i) at (4.3,0.7);
+
+  \draw[rail] (a2) -- (a3);
+  \draw[rail] (a4) -- (a1);
+  \draw[branch] (a3) -- (a3e) -- (a4e) -- (a4);
+  \draw[branch] (a3) -- (a3i) -- (a4i) -- (a4);
+  \draw[branch] (a1) -- (a1e) -- (a2e) -- (a2);
+  \draw[branch] (a1) -- (a1i) -- (a2i) -- (a2);
+
+  \node[sw] at (a1) {A1}; \node[sw] at (a2) {A2};
+  \node[sw] at (a3) {A3}; \node[sw] at (a4) {A4};
+
+  \node[dzi] at (-0.78,-0.7) {};
+  \node[font=\sffamily\scriptsize,below=1mm] at (-0.78,-0.7) {DZI1R / slot 1};
+  \node[dzi] at (1.35,-0.7) {};
+  \node[font=\sffamily\scriptsize,below=1mm] at (1.35,-0.7) {DZI2R / slot 2};
+  \node[dzi] at (0.46,4.7) {};
+  \node[font=\sffamily\scriptsize,above=1mm] at (0.46,4.7) {DZI3R / slot 3};
+  \node[dzi] at (-1.62,4.7) {};
+  \node[font=\sffamily\scriptsize,above=1mm] at (-1.62,4.7) {DZI4R / slot 4};
+
+  \node[stopper] at (5,2.85) {};
+  \node[font=\sffamily\scriptsize,right=1.5mm] at (5,2.85) {A3};
+  \node[stopper] at (-5,0.25) {};
+  \node[font=\sffamily\scriptsize,left=1.5mm] at (-5,0.25) {A1};
+  \node[stopper] at (-3.95,4.7) {};
+  \node[stopper] at (-3.95,3.3) {};
+  \node[font=\sffamily\scriptsize,align=right] (a4stoplabel) at (-5.75,3.05)
+    {A4 stopper\\same command identity};
+  \draw[black!40,thin] (a4stoplabel.east) -- (-4.05,3.55);
+  \node[stopper] at (3.95,-0.7) {};
+  \node[stopper] at (3.75,0.7) {};
+  \node[font=\sffamily\scriptsize,align=left] (a2stoplabel) at (5.75,1.05)
+    {A2 stopper\\same command identity};
+  \draw[black!40,thin] (a2stoplabel.west) -- (3.85,0.45);
+
+  \node[draw=black!25,fill=white,rounded corners=1pt,
+    font=\sffamily\scriptsize,align=left,inner sep=1.5mm] at (0,2)
+    {\tikz\node[dzi] {}; indexing sensor at its numbered slot\\
+     \tikz\node[stopper] {}; physical stopper point; commands use A1--A4};
+
+  \node[font=\sffamily\bfseries\normalsize,text=mfjablue] at (0,-1.65)
+    {Detector identities around each switch};
+  \node[card] (c1) at (-6,-3.25)
+    {\textbf{A1}\\Approach: \texttt{DA1R}\\Exterior: \texttt{DA1ER}\\
+     Interior: \texttt{DA1IR}\\Stopper: \texttt{A1} on A14};
+  \node[card] (c2) at (-2,-3.25)
+    {\textbf{A2}\\Approach: \texttt{DA2R}\\Exterior: \texttt{DA2ER}\\
+     Interior: \texttt{DA2IR}\\Stopper: \texttt{A2}, E/I points};
+  \node[card] (c3) at (2,-3.25)
+    {\textbf{A3}\\Approach: \texttt{DA3R}\\Exterior: \texttt{DA3ER}\\
+     Interior: \texttt{DA3IR}\\Stopper: \texttt{A3} on A23};
+  \node[card] (c4) at (6,-3.25)
+    {\textbf{A4}\\Approach: \texttt{DA4R}\\Exterior: \texttt{DA4ER}\\
+     Interior: \texttt{DA4IR}\\Stopper: \texttt{A4}, E/I points};
+\end{tikzpicture}

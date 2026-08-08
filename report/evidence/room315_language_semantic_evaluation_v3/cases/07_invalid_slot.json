@@ -1,0 +1,124 @@
+{
+  "actual_constraints": {},
+  "actual_issue_codes": [
+    "invalid_fused_draft"
+  ],
+  "actual_status": "error",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.871360008837655,
+  "expected_constraints": {},
+  "expected_issue_codes": [
+    "invalid_fused_draft"
+  ],
+  "expected_status": "error",
+  "fallback_reason": "invalid_semantic_envelope",
+  "fallback_used": true,
+  "id": "invalid_slot",
+  "index": 7,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": null,
+      "issues": [
+        {
+          "code": "invalid_fused_draft",
+          "field": "draft",
+          "message": "target_slot must be one of 1, 2, 3, or 4"
+        }
+      ],
+      "ok": false,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.871013965224847,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"transport\",\"selection_strategy\":\"nearest\",\"payload_filter\":\"loaded\",\"side\":\"right\",\"target_kind\":\"shuttle\",\"target_shuttle\":\"R1\",\"target_slot\":\"9\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_slot\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": null,
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 0,
+          "fallback_reason": "invalid_semantic_envelope",
+          "fallback_used": true,
+          "field_provenance": {
+            "goal_type": "explicit_text",
+            "selection_strategy": "explicit_text",
+            "side": "explicit_text",
+            "target_kind": "explicit_text",
+            "target_slot": "explicit_text"
+          },
+          "final_decision": "error",
+          "latency_s": 4.871043866267428,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "goal_type",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 4,
+                "start": 0,
+                "text": "Move"
+              },
+              "value": "transport"
+            },
+            {
+              "field": "side",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 14,
+                "start": 9,
+                "text": "right"
+              },
+              "value": "right"
+            },
+            {
+              "field": "target_kind",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 32,
+                "start": 26,
+                "text": "slot 9"
+              },
+              "value": "slot"
+            },
+            {
+              "field": "target_slot",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 32,
+                "start": 26,
+                "text": "slot 9"
+              },
+              "value": "9"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "error"
+    },
+    "validation": null
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Move the right shuttle to slot 9.",
+  "unsafe_auto_resolution": false
+}

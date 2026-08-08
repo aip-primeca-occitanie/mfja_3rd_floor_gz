@@ -1,0 +1,6 @@
+[room_315_task_execution_node.py-2] [INFO] [1786092920.632233659] [room_315_task_execution_node]: Task execution status=accepted goal=room315-task-goal-2b151aec21ba reason=validated TaskGoal accepted for closed-loop execution
+[room_315_task_execution_node.py-2] [INFO] [1786092920.633315710] [room_315_task_execution_node]: Task execution status=running goal=room315-task-goal-2b151aec21ba reason=observing and requesting PlanSys2 plan
+[room_315_task_execution_node.py-2] [INFO] [1786092920.636714154] [room_315_task_execution_node]: Task execution status=running goal=room315-task-goal-2b151aec21ba reason=TaskGoal validated and grounded when required from accepted visual state; requesting PlanSys2 plan
+[planner_node-1] [INFO] [1786092920.793793638] [planner]: Writing planning results to /tmp.
+[planner_node-1] [INFO] [1786092920.793977502] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[room_315_task_execution_node.py-2] [INFO] [1786092938.410687002] [room_315_task_execution_node]: Task execution status=succeeded goal=room315-task-goal-2b151aec21ba reason=task_goal_satisfied

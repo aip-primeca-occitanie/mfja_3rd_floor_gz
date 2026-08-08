@@ -1,0 +1,163 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  cfg/.style={
+    draw=mfjablue,
+    very thick,
+    rounded corners=1.5mm,
+    fill=mfjalight,
+    minimum height=13mm,
+    text width=42mm,
+    align=center,
+    font=\sffamily\small
+  },
+  helper/.style={
+    draw=mfjablue,
+    rounded corners=1.3mm,
+    fill=mfjablue!6,
+    minimum height=25mm,
+    text width=38mm,
+    align=center,
+    font=\sffamily\small
+  },
+  bridge/.style={
+    draw=mfjaorange,
+    rounded corners=1.3mm,
+    fill=mfjaorange!8,
+    minimum height=15mm,
+    text width=38mm,
+    align=center,
+    font=\sffamily\small
+  },
+  sim/.style={
+    draw=mfjagreen,
+    rounded corners=1.3mm,
+    fill=mfjagreen!7,
+    minimum height=15mm,
+    text width=38mm,
+    align=center,
+    font=\sffamily\small
+  },
+  configflow/.style={
+    -{Latex[length=2.2mm]},
+    very thick,
+    draw=mfjablue
+  },
+  derive/.style={
+    -{Latex[length=2.0mm]},
+    thick,
+    densely dashed,
+    draw=mfjaorange
+  },
+  command/.style={
+    -{Latex[length=2.2mm]},
+    very thick,
+    draw=mfjablue
+  },
+  feedback/.style={
+    -{Latex[length=2.2mm]},
+    very thick,
+    draw=mfjagreen
+  },
+  lane/.style={
+    draw=mfjablue!55,
+    dashed,
+    rounded corners=1.8mm,
+    fill=mfjalight!28,
+    inner xsep=4mm,
+    inner ysep=4mm
+  },
+  lanehead/.style={
+    align=center,
+    font=\sffamily\small\bfseries,
+    text=mfjablue
+  }
+]
+  % One source of truth selects, validates and derives the bridge rules.
+  \node[cfg] (registry) {YAML robot registry\\+ selector};
+  \node[cfg,right=9mm of registry] (launch)
+    {Shared launch\\+ fixed configuration checks};
+  \node[cfg,right=9mm of launch] (rules)
+    {Selected entries\\+ per-instance bridge rules};
+  \draw[configflow] (registry) -- (launch);
+  \draw[configflow] (launch) -- (rules);
+
+  % Three isolated identities are laid out as vertical command/feedback paths.
+  \node[lanehead,below=20mm of registry] (khead)
+    {KUKA lane\\isolated identity \texttt{/kuka1}\\[-0.2ex]
+     {\color{mfjablue}$\downarrow$ command}\quad
+     {\color{mfjagreen}$\uparrow$ feedback}};
+  \node[lanehead,below=20mm of launch] (shead)
+    {St\"aubli lane\\isolated identity \texttt{/staubli1}\\[-0.2ex]
+     {\color{mfjablue}$\downarrow$ command}\quad
+     {\color{mfjagreen}$\uparrow$ feedback}};
+  \node[lanehead,below=20mm of rules] (thead)
+    {TIAGo lane\\isolated identity \texttt{/tiago1}\\[-0.2ex]
+     {\color{mfjablue}$\downarrow$ command}\quad
+     {\color{mfjagreen}$\uparrow$ feedback}};
+
+  % KUKA: helper output -> bridge -> simulator, with a separate return path.
+  \node[helper,below=6mm of khead] (kh) {
+    Validated helper output\\[-0.2ex]
+    \texttt{/kuka1/}\\[-0.2ex]
+    \texttt{joint\_trajectory}};
+  \node[bridge,below=13mm of kh] (kb)
+    {per-instance\\\texttt{kuka1} bridge};
+  \node[sim,below=13mm of kb] (kg)
+    {Gazebo\\model/controller\\\texttt{kuka1}};
+  \draw[command] ([xshift=7mm]kh.south) -- ([xshift=7mm]kb.north);
+  \draw[feedback] ([xshift=-7mm]kb.north) -- ([xshift=-7mm]kh.south);
+  \draw[command] ([xshift=7mm]kb.south) -- ([xshift=7mm]kg.north);
+  \draw[feedback] ([xshift=-7mm]kg.north) -- ([xshift=-7mm]kb.south);
+
+  % Staubli: the same bounded path, with its own public topic and entity.
+  \node[helper,below=6mm of shead] (sh) {
+    Validated helper output\\[-0.2ex]
+    \texttt{/staubli1/}\\[-0.2ex]
+    \texttt{joint\_trajectory}};
+  \node[bridge,below=13mm of sh] (sb)
+    {per-instance\\\texttt{staubli1} bridge};
+  \node[sim,below=13mm of sb] (sg)
+    {Gazebo\\model/controller\\\texttt{staubli1}};
+  \draw[command] ([xshift=7mm]sh.south) -- ([xshift=7mm]sb.north);
+  \draw[feedback] ([xshift=-7mm]sb.north) -- ([xshift=-7mm]sh.south);
+  \draw[command] ([xshift=7mm]sb.south) -- ([xshift=7mm]sg.north);
+  \draw[feedback] ([xshift=-7mm]sg.north) -- ([xshift=-7mm]sb.south);
+
+  % TIAGo retains separate joint and base command surfaces in one identity.
+  \node[helper,below=6mm of thead] (th) {
+    Validated joint helper\\[-0.2ex]
+    + independent base command\\[-0.2ex]
+    \texttt{/tiago1/}\\[-0.2ex]
+    \texttt{joint\_trajectory}\\[-0.2ex]
+    \texttt{/tiago1/cmd\_vel}};
+  \node[bridge,below=13mm of th] (tb)
+    {per-instance\\\texttt{tiago1} bridge};
+  \node[sim,below=13mm of tb] (tg)
+    {Gazebo\\model/controller\\\texttt{tiago1}};
+  \draw[command] ([xshift=7mm]th.south) -- ([xshift=7mm]tb.north);
+  \draw[feedback] ([xshift=-7mm]tb.north) -- ([xshift=-7mm]th.south);
+  \draw[command] ([xshift=7mm]tb.south) -- ([xshift=7mm]tg.north);
+  \draw[feedback] ([xshift=-7mm]tg.north) -- ([xshift=-7mm]tb.south);
+
+  % Lane boundaries make it explicit that no global command topic is shared.
+  \begin{scope}[on background layer]
+    \node[lane,fit=(khead)(kh)(kb)(kg)] (klane) {};
+    \node[lane,fit=(shead)(sh)(sb)(sg)] (slane) {};
+    \node[lane,fit=(thead)(th)(tb)(tg)] (tlane) {};
+  \end{scope}
+
+  % Selected entries derive three independent lanes, not one broadcast path.
+  \coordinate (derivebus) at ($(khead.north)!0.5!(thead.north)+(0,7mm)$);
+  \draw[derive] (rules.south) -- ++(0,-5mm) -| (derivebus);
+  \node[above=1mm of derivebus,fill=white,inner sep=1mm,
+    font=\sffamily\small,text=mfjaorange]
+    {derive one isolated lane per selected entry};
+  \draw[derive] (derivebus) -| (khead.north);
+  \draw[derive] (derivebus) -- (shead.north);
+  \draw[derive] (derivebus) -| (thead.north);
+
+  \node[below=7mm of sg,align=center,text width=145mm,
+    font=\sffamily\small\bfseries,text=mfjablue]
+    {Namespace isolation preserves robot identity across command surfaces,
+     per-instance bridge, Gazebo entity and feedback.};
+\end{tikzpicture}

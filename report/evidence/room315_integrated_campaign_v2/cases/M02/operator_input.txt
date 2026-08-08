@@ -1,0 +1,3 @@
+Move L1 to slot 3 on the left rail.
+yes
+quit

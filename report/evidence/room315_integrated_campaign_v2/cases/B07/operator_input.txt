@@ -1,0 +1,3 @@
+Move the orange shuttle to slot 4 on the left rail.
+yes
+quit

@@ -1,0 +1,264 @@
+\chapter[Typed Interfaces, Contracts and Safety Supervision]
+{Typed Interfaces, Contracts and\\Safety Supervision}
+\label{chap:interfaces}
+
+\section{A typed command and state interface}
+
+The rail stack uses a dedicated typed interface package with separate command
+and state topics. Each message specifies its role, required fields and
+addressed device. This makes multi-shuttle coordination predictable and keeps
+requests distinct from reported state.
+
+ROS~2 interfaces are defined using \code{.msg}, \code{.srv} and \code{.action}
+files \citep{ros2jazzyinterfaces}. The project defines typed
+messages for named state, switch command/state, stopper command/state, shuttle
+command/state, sensor feedback/readings and visual state, plus an
+\code{AddShuttle} service. The interface package remains independent from
+Gazebo-specific implementation details.
+
+\section{Command/state separation}
+
+The interface distinguishes three message roles:
+
+\begin{itemize}
+  \item a \emph{command} says what a caller requests;
+  \item a \emph{state} says what the responsible controller reports;
+  \item a \emph{result} records the operation status, the readings used to
+  establish it and a reason where applicable.
+\end{itemize}
+
+Command publication and effect observation are separate events. The executive
+checks controller or supervisor state for the requested effect.
+Exact slot arrival requires new DZI and controller reports, while switch and
+stopper feedback is subject to the freshness conditions of the corresponding
+command-result check.
+
+\section{Sparse partial-update semantics}
+
+Live switch and stopper commands are sparse named updates. For example, a
+checked command envelope containing only
+\code{switches: \{A3: INTERIOR\}} requests a change to A3 and says nothing
+about A1, A2 or A4. An omitted device therefore means ``preserve its current
+state''; no default value is applied to it.
+
+The supervisor checks every named update against the current safety state.
+After those checks pass, it publishes a typed ROS~2 \code{SwitchCommand} or
+\code{StopperCommand}. Their \code{switches} and \code{stoppers} fields are
+arrays of \code{NamedState} entries, and the controller applies only the
+entries present in the corresponding array. Shuttle motion uses its own typed
+\code{ShuttleCommand} message. The controllers accept actuation requests through
+these typed command messages. The translator's auxiliary \code{event\_action}
+record and the visual model's training-only \code{target\_mask} serve other
+parts of the workflow.
+
+\Cref{fig:contract-semantics} shows the two rules at this boundary: execution
+must be confirmed through controller feedback, and only explicitly named
+devices may change.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.98\textwidth}{!}{\input{figures/f08_contract_semantics.tex}}
+  \caption[Supervised sparse commands and controller feedback.]
+  {Live command semantics. The supervisor checks a sparse command dictionary
+  before publishing typed ROS~2 device messages. Controller feedback establishes
+  the observed result, and omitted device names retain their previous state.}
+  \label{fig:contract-semantics}
+\end{figure}
+\FloatBarrier
+
+\section{Versioned contracts}
+
+Operational and task data are represented by versioned Python contracts.
+Planning and execution use typed records together with checked JSON command
+dictionaries. Stable identifiers, timestamps and producer/source information
+are included where required. At the execution boundary, the supervisor converts
+each authorised request into typed ROS~2 messages. The principal contracts and
+their permitted producers are summarised in
+\cref{tab:contracts}.
+
+\begin{table}[htbp]
+\centering
+\caption{Principal closed-loop contracts and their producers.}
+\label{tab:contracts}
+\small
+\renewcommand{\arraystretch}{1.04}
+\begin{tabularx}{\textwidth}{@{}
+  >{\raggedright\arraybackslash}p{0.27\textwidth}
+  >{\raggedright\arraybackslash}p{0.34\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Contract} & \textbf{Meaning} & \textbf{Allowed producer}\\
+\midrule
+\code{ObservedFact} & One fact with value, confidence and
+known/unknown/stale/conflicting status & Visual model or rule-based
+provider, identified by source\\
+\tablerowrule
+\code{ObservedState} & Versioned state envelope containing visual inputs and
+fused facts with freshness/status metadata & State-fusion layer\\
+\tablerowrule
+\code{SemanticParseEnvelope} & Strict semantic proposal from user text
+& Local language model; the schema contains semantic fields and excludes PDDL,
+plan and command fields\\
+\tablerowrule
+\code{TaskGoalDraft} & Incomplete task proposal after field precedence and
+fusion & Explicit parser and field-fusion resolver\\
+\tablerowrule
+\code{TaskGoal} & Immutable validated task constraints, optionally grounded to
+one current instance & Domain validator; before planning, the grounding gateway may derive
+an instance from current visual facts\\
+\tablerowrule
+\code{PddlPlanStep} & One parsed symbolic action selected from a returned plan
+& PlanSys2 planner boundary; the executive alone may construct a narrowly
+defined route-normalisation prerequisite when required\\
+\tablerowrule
+\code{TranslatedPlanStep} & Parsed action, live sparse named command and
+auxiliary event-action record & Plan translator\\
+\tablerowrule
+Checked command dictionary & One physical-command request, including
+only the named device updates to apply & Executive or macro dispatcher;
+published only after supervisor authorisation\\
+\tablerowrule
+\makecell[l]{\code{SwitchCommand}/\\\code{StopperCommand}/\\
+\code{ShuttleCommand}} & Typed ROS~2 execution messages; device messages carry
+sparse \code{NamedState[]} updates & Safety supervisor after current-state
+validation\\
+\tablerowrule
+\makecell[l]{\code{PostconditionCheck}\\and closed-loop records} & Recorded effect status,
+reason and per-step/task outcome & Closed-loop executive using supervisor,
+controller and observation reports\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The source field determines how a fact may be used. Simulator pose may provide
+an oracle label or a safety veto, but it is excluded from the visual model
+input. A language proposal passes through fusion, domain validation and
+operator confirmation before it becomes a task. The permitted producers in
+\cref{tab:contracts} define these boundaries, while
+\cref{fig:neurosymbolic-architecture} shows the complete runtime sequence.
+
+\section{Observed-state semantics}
+
+Every critical fact has four possible statuses:
+\emph{known}, \emph{unknown}, \emph{stale} and \emph{conflicting}. This is more
+expressive than a Boolean value plus confidence. Unknown means the value was
+not observed; stale means it was once known but is too old; conflicting means
+authorised sources disagree. The system preserves these statuses instead of
+silently coercing them to false.
+\Cref{fig:observed-fact-eligibility} shows which fact statuses may authorise
+planner predicates and actuation.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.98\textwidth}{!}{\input{figures/f09_fact_eligibility.tex}}
+  \caption[Eligibility gates for facts entering planner state.]
+  {Status handling before an observed fact enters planner state.}
+  \label{fig:observed-fact-eligibility}
+\end{figure}
+\FloatBarrier
+
+\code{ObservedState} separates:
+
+\begin{description}
+  \item[\code{visual\_model\_inputs}] the perception facts and image-derived
+  representation intended for the learned boundary;
+  \item[\code{fused\_planner\_state}] fused facts with their status and
+  freshness metadata after source reconciliation.
+\end{description}
+
+The live task gateway retains the latest visual observation together
+with supervisor and device reports. The provider interface supplies one current
+snapshot to the executive. Live operation keeps oracle and visual providers
+distinct, and test-only providers remain isolated from the live path.
+
+\section{Supervisor responsibilities}
+
+The Room~315 execution supervisor, implemented in
+\code{room\_315\_vla\_supervisor.py}, provides the final software authorisation
+before a command is published. The filename retains the early project
+terminology; the component is a rule-based command supervisor, not a learned
+VLA policy. It subscribes to command dictionaries encoded as
+JavaScript Object Notation (JSON), validates their sparse named updates,
+observes the current rail state and publishes typed device or shuttle commands
+only after the checks pass. The kinematic rail controller consumes these
+messages and applies the resulting simulated state transition.
+
+The supervisor gates include:
+
+\begin{itemize}
+  \item emergency-stop state and global \code{stop\_all};
+  \item command structure, identity and rail-side consistency;
+  \item fresh and non-conflicting state;
+  \item occupied target and block reservation;
+  \item same-segment and block headway;
+  \item switch change within the \SI{0.35}{m} protected distance;
+  \item stopper and route-clearance state;
+  \item newly observed occupancy by another shuttle and sensor dropout;
+  \item timeout, unknown localisation and impossible/falling pose;
+  \item limited retry and lexicographic reservation-conflict tie-breaking.
+\end{itemize}
+
+Safety metrics and recent decisions are stored for diagnostics. For every
+published command, the supervisor records the reason for authorisation. A
+rejected command leaves the requested device unchanged and records the reason
+for rejection. If an execution exception occurs, or the system shuts down
+during an active goal, the gateway sends \code{stop\_all}.
+
+\section{Reservations and deadlock}
+
+A block reservation associates a route resource with one shuttle and task.
+Reservations prevent two primitives from entering the same protected
+block. A separate headway check prevents physical overlap on the current segment
+even when the destination block is free.
+
+When crossed reservations form a detected deadlock, a lexicographic identity
+tie-break grants priority to one identity. The other participants remain safely
+stopped before observing and planning again. The implemented detector handles
+these crossed reservations; temporal non-progress and larger wait-for cycles
+would require a separate detector. Any subsequent recovery motion still requires a planned,
+reachable destination, available capacity and an effect check.
+
+\section{Source of switch feedback}
+
+Switch safety relies on a clear separation between data sources. The planner
+uses current visual locations, in keeping with the visual-state objective. The
+switch supervisor checks continuous controller coordinates before allowing a
+change. This check is independent of the learned observation.
+
+The controller coordinate is mapped to the canonical rail graph and the
+distance to the controlled switch node is measured along the rail, not as a
+straight Euclidean distance through space. A switch operation is authorised
+only from current, finite and graph-mappable state; all other cases remain
+inhibited under the fail-closed policy.
+
+\section{Checking command effects}
+
+The runtime defines the expected effects of every translated execution
+command. Examples include:
+
+\begin{itemize}
+  \item \code{SET\_SWITCHES}: requested switch values match
+  controller status;
+  \item \code{SET\_STOPPERS}: requested stopper values match
+  controller status;
+  \item commanded slot motion: the identity-bearing DZI, controller
+  \code{reached\_target\_slot}, explicit \code{DISABLED} state and required
+  confirmation frames agree;
+  \item \code{STOP\_NOW}: controller reports a fresh explicit
+  \code{DISABLED} state;
+  \item observation-only inspection: a newer visual observation is
+  available after the request.
+\end{itemize}
+
+The executive associates the result with command, plan-step and observed-state
+identifiers. Motion arrival and retries following motion require newer state
+reports. Command-linked observation identifiers are recorded for motion
+effects; switch and stopper matching currently permits cached state.
+
+\section{Manual and emergency paths}
+
+Manual command dictionaries remain available for device debugging. Except for
+the dedicated emergency stop, they pass through the same structural and
+supervisor checks. The emergency path has higher priority and broadcasts a
+stop without waiting for planner state. A stopper can therefore be tested
+without a language model while remaining subject to the current safety state.

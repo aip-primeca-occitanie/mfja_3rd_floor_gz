@@ -1,0 +1,49 @@
+{
+  "coverage": [
+    "L4",
+    "white",
+    "station_target",
+    "cross_station"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "selection_strategy": "explicit",
+      "side": "left",
+      "target_kind": "station",
+      "target_shuttle": "room315_left_shuttle_4",
+      "target_station": "yaskawa"
+    },
+    "prompt_fragments": [
+      "Shuttle: room315_left_shuttle_4",
+      "Rail: Left",
+      "Destination: Station yaskawa"
+    ],
+    "selected_identity": "L4",
+    "target_slots": [
+      "1",
+      "2"
+    ],
+    "target_station": "yaskawa"
+  },
+  "family": "station_target",
+  "id": "B08",
+  "launch": {
+    "left": {
+      "identities": [
+        "L4"
+      ],
+      "loaded": [],
+      "start_slots": [
+        "4"
+      ]
+    },
+    "right": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    }
+  },
+  "side": "left",
+  "utterance": "Move white L4 to the Yaskawa station on the left rail."
+}

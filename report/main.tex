@@ -1,0 +1,44 @@
+\documentclass[11pt,a4paper,oneside,openany]{book}
+
+\input{preamble}
+\input{metadata}
+\hypersetup{
+  pdftitle={\ReportTitle},
+  pdfkeywords={ROS 2, Gazebo, digital twin, multi-robot, PlanSys2, PDDL,
+    computer vision, vision-language-action research, neuro-symbolic control}
+}
+
+\begin{document}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{frontmatter}
+
+\input{chapters/01_introduction}
+\input{chapters/02_host_organisation}
+\input{chapters/03_mission_and_project_management}
+\input{chapters/04_background_and_design_choices}
+\input{chapters/05_digital_twin}
+\input{chapters/06_multi_robot_interface}
+\input{chapters/07_room315_transport}
+\input{chapters/08_interfaces_and_safety}
+\input{chapters/09_vla_evolution}
+\input{chapters/10_neurosymbolic_runtime}
+\input{chapters/12_verification_and_results}
+\input{chapters/14_limitations_and_perspectives}
+\input{chapters/15_conclusion}
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliography}
+\begingroup
+\small
+\bibliographystyle{plainnat}
+\bibliography{references}
+\endgroup
+
+\appendix
+\input{chapters/a_reproducibility}
+\input{chapters/b_interfaces}
+
+\end{document}

@@ -1,0 +1,5 @@
+1786093397.9292672 [INFO] [launch]: All log files can be found below /tmp/room315_M02_k0pnqyxe/ros_logs_visual/2026-08-07-11-03-17-928444-tiago-Precision-7560-1935080
+1786093397.9293823 [INFO] [launch]: Default logging verbosity is set to INFO
+1786093397.9879246 [INFO] [room_315_visual_state_inference_node.py-1]: process started with pid [1935094]
+1786093479.6745188 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1786093480.4641862 [INFO] [room_315_visual_state_inference_node.py-1]: process has finished cleanly [pid 1935094]

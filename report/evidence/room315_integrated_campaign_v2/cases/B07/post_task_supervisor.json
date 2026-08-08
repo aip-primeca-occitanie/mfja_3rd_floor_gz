@@ -1,0 +1,482 @@
+{
+  "echo": {
+    "command": [
+      "ros2",
+      "topic",
+      "echo",
+      "--no-daemon",
+      "--full-length",
+      "/room_315/vla/status",
+      "std_msgs/msg/String",
+      "--once"
+    ],
+    "duration_s": 1.9143276130780578,
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "data: '{\"active_tasks\": {}, \"completed_tasks\": [], \"emergency_stop\": false, \"last_command\": \"{\\\"action\\\": \\\"shuttle\\\", \\\"closed_loop_executive\\\": {\\\"final_arrival_source\\\": \\\"deterministic_slot_sensor\\\", \\\"mode\\\": \\\"slot_sensor_target_arrival_finalize\\\", \\\"planner_localization_source\\\": \\\"accepted_visual_state\\\", \\\"target_sensor\\\": \\\"DZI4L\\\", \\\"target_slot\\\": \\\"4\\\"}, \\\"command\\\": \\\"OFF\\\", \\\"shuttle\\\": \\\"left_shuttle_3\\\", \\\"side\\\": \\\"left\\\"}\", \"last_primitive_command\": {\"action\": \"shuttle\", \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\", \"speed\": 0.0, \"start_slot\": \"\", \"target_slot\": \"\", \"task_id\": \"\", \"time_s\": 1256980.165422}, \"last_result\": \"shuttle command sent on left\", \"payload_state\": {\"by_shuttle\": {\"room315_left_shuttle_3\": {\"entity_name\": \"room315_left_shuttle_3\", \"loaded\": false, \"model_input_exposure\": \"excluded\", \"payload_type\": \"none\", \"short_id\": \"L3\", \"shuttle_id\": \"left_shuttle_3\", \"shuttle_index\": 2, \"side\": \"left\"}}, \"model_input_exposure\": \"excluded\", \"shuttles\": [{\"entity_name\": \"room315_left_shuttle_3\", \"loaded\": false, \"model_input_exposure\": \"excluded\", \"payload_type\": \"none\", \"short_id\": \"L3\", \"shuttle_id\": \"left_shuttle_3\", \"shuttle_index\": 2, \"side\": \"left\"}]}, \"rails\": {\"left\": {\"active_position_sensors\": [], \"active_sensors\": [{\"name\": \"DZI4L\", \"s\": 1.4891, \"s_ratio\": 0.6684, \"segment\": \"A34E\", \"shuttle\": \"room315_left_shuttle_3\", \"type\": \"sensor\"}], \"payloads\": {\"room315_left_shuttle_3\": {\"entity_name\": \"room315_left_shuttle_3\", \"loaded\": false, \"model_input_exposure\": \"excluded\", \"payload_type\": \"none\", \"short_id\": \"L3\", \"shuttle_id\": \"left_shuttle_3\", \"shuttle_index\": 2, \"side\": \"left\"}}, \"shuttles\": {\"room315_left_shuttle_3\": {\"mode\": \"DISABLED\", \"reached_target_slot\": \"4\", \"s\": 1.4891, \"segment\": \"A34E\", \"speed\": 0.2, \"x\": -12.853, \"y\": -3.4371, \"yaw\": -0.0007, \"z\": 0.8393}}, \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}, \"switches\": {\"A1\": \"E\", \"A2\": \"E\", \"A3\": \"E\", \"A4\": \"E\"}}, \"right\": {\"active_position_sensors\": [], \"active_sensors\": [], \"payloads\": {}, \"shuttles\": {}, \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}, \"switches\": {\"A1\": \"E\", \"A2\": \"E\", \"A3\": \"E\", \"A4\": \"E\"}}}, \"safety_decoder\": {\"fleet_state\": {\"block_occupancy\": {\"left:A34E\": \"L3\"}, \"block_reservations\": {}, \"min_headway_blocks\": 1, \"model_input_exposure\": \"excluded\", \"shuttle_blocks\": {\"L3\": \"left:A34E\"}, \"station_slot_targets\": {}}, \"last_decision\": {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1256980.165288}, \"metrics\": {\"accepted_actions\": 2, \"average_wait_time_by_shuttle\": {}, \"block_occupancy_violation_count\": 0, \"block_reservation_rejection_count\": 0, \"deadlock_avoided_count\": 0, \"deadlock_detected_count\": 0, \"fail_safe_abort_count\": 0, \"fleet_throughput_tasks_per_minute\": null, \"headway_violation_count\": 0, \"illegal_proposal_rate\": 0.0, \"multi_shuttle_task_success\": null, \"obstacle_stop_count\": 0, \"occupied_target_rejection_count\": 0, \"per_shuttle_task_success\": {}, \"rejected_action_rate\": 0.0, \"rejected_actions\": 0, \"rejection_reasons\": {}, \"safety_recovery_count\": 0, \"sensor_dropout_count\": 0, \"shuttle_id_accuracy\": null, \"timeout_rejection_count\": 0, \"total_proposed_actions\": 2, \"trusted_state_rejection_count\": 0, \"unknown_localization_rejection_count\": 0, \"wrong_shuttle_command_rate\": 0.0}, \"recent_decisions\": [{\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 2.6827018435055883, \"route_distance_m\": 0.5365403687011177, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-fc5e4e27a96c-0\", \"step_index\": 0, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_3\", \"source_station\": \"left_kuka\", \"speed\": 0.2, \"target_slot\": \"4\", \"target_station\": \"left_kuka\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 2.6827018435055883, \"route_distance_m\": 0.5365403687011177, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-fc5e4e27a96c-0\", \"step_index\": 0, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_3\", \"source_station\": \"left_kuka\", \"speed\": 0.2, \"target_slot\": \"4\", \"target_station\": \"left_kuka\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 2.6827018435055883, \"route_distance_m\": 0.5365403687011177, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-fc5e4e27a96c-0\", \"step_index\": 0, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_3\", \"source_station\": \"left_kuka\", \"speed\": 0.2, \"target_slot\": \"4\", \"target_station\": \"left_kuka\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 2.6827018435055883, \"route_distance_m\": 0.5365403687011177, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-fc5e4e27a96c-0\", \"step_index\": 0, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_3\", \"source_station\": \"left_kuka\", \"speed\": 0.2, \"target_slot\": \"4\", \"target_station\": \"left_kuka\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1256976.505908}, {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_3\", \"side\": \"left\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1256980.165288}], \"recovery\": {\"model_input_exposure\": \"excluded\", \"next_step\": \"\", \"phase\": \"idle\", \"reason\": \"\", \"retry_count\": 0}}, \"safety_decoder_metrics\": {\"accepted_actions\": 2, \"average_wait_time_by_shuttle\": {}, \"block_occupancy_violation_count\": 0, \"block_reservation_rejection_count\": 0, \"deadlock_avoided_count\": 0, \"deadlock_detected_count\": 0, \"fail_safe_abort_count\": 0, \"fleet_throughput_tasks_per_minute\": null, \"headway_violation_count\": 0, \"illegal_proposal_rate\": 0.0, \"multi_shuttle_task_success\": null, \"obstacle_stop_count\": 0, \"occupied_target_rejection_count\": 0, \"per_shuttle_task_success\": {}, \"rejected_action_rate\": 0.0, \"rejected_actions\": 0, \"rejection_reasons\": {}, \"safety_recovery_count\": 0, \"sensor_dropout_count\": 0, \"shuttle_id_accuracy\": null, \"timeout_rejection_count\": 0, \"total_proposed_actions\": 2, \"trusted_state_rejection_count\": 0, \"unknown_localization_rejection_count\": 0, \"wrong_shuttle_command_rate\": 0.0}, \"vision\": {\"camera_info_frame_id\": \"room315_vla_left_rail_rgbd_optical_frame\", \"cameras\": {\"left_rail_rgb\": {\"camera_info_frame_id\": \"room315_vla_left_rail_rgbd_optical_frame\", \"image_frames\": 379, \"last_camera_info_age_s\": 0.088, \"last_image_age_s\": 0.069}, \"right_rail_rgb\": {\"camera_info_frame_id\": \"room315_vla_right_rail_rgbd_optical_frame\", \"image_frames\": 379, \"last_camera_info_age_s\": 0.099, \"last_image_age_s\": 0.077}}, \"image_frames\": 758, \"last_camera_info_age_s\": 0.088, \"last_image_age_s\": 0.069}}'\n---\n"
+  },
+  "payload": {
+    "active_tasks": {},
+    "completed_tasks": [],
+    "emergency_stop": false,
+    "last_command": "{\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI4L\", \"target_slot\": \"4\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_3\", \"side\": \"left\"}",
+    "last_primitive_command": {
+      "action": "shuttle",
+      "command": "OFF",
+      "shuttle": "room315_left_shuttle_3",
+      "side": "left",
+      "speed": 0.0,
+      "start_slot": "",
+      "target_slot": "",
+      "task_id": "",
+      "time_s": 1256980.165422
+    },
+    "last_result": "shuttle command sent on left",
+    "payload_state": {
+      "by_shuttle": {
+        "room315_left_shuttle_3": {
+          "entity_name": "room315_left_shuttle_3",
+          "loaded": false,
+          "model_input_exposure": "excluded",
+          "payload_type": "none",
+          "short_id": "L3",
+          "shuttle_id": "left_shuttle_3",
+          "shuttle_index": 2,
+          "side": "left"
+        }
+      },
+      "model_input_exposure": "excluded",
+      "shuttles": [
+        {
+          "entity_name": "room315_left_shuttle_3",
+          "loaded": false,
+          "model_input_exposure": "excluded",
+          "payload_type": "none",
+          "short_id": "L3",
+          "shuttle_id": "left_shuttle_3",
+          "shuttle_index": 2,
+          "side": "left"
+        }
+      ]
+    },
+    "rails": {
+      "left": {
+        "active_position_sensors": [],
+        "active_sensors": [
+          {
+            "name": "DZI4L",
+            "s": 1.4891,
+            "s_ratio": 0.6684,
+            "segment": "A34E",
+            "shuttle": "room315_left_shuttle_3",
+            "type": "sensor"
+          }
+        ],
+        "payloads": {
+          "room315_left_shuttle_3": {
+            "entity_name": "room315_left_shuttle_3",
+            "loaded": false,
+            "model_input_exposure": "excluded",
+            "payload_type": "none",
+            "short_id": "L3",
+            "shuttle_id": "left_shuttle_3",
+            "shuttle_index": 2,
+            "side": "left"
+          }
+        },
+        "shuttles": {
+          "room315_left_shuttle_3": {
+            "mode": "DISABLED",
+            "reached_target_slot": "4",
+            "s": 1.4891,
+            "segment": "A34E",
+            "speed": 0.2,
+            "x": -12.853,
+            "y": -3.4371,
+            "yaw": -0.0007,
+            "z": 0.8393
+          }
+        },
+        "stoppers": {
+          "A1": "0",
+          "A2": "0",
+          "A3": "0",
+          "A4": "0"
+        },
+        "switches": {
+          "A1": "E",
+          "A2": "E",
+          "A3": "E",
+          "A4": "E"
+        }
+      },
+      "right": {
+        "active_position_sensors": [],
+        "active_sensors": [],
+        "payloads": {},
+        "shuttles": {},
+        "stoppers": {
+          "A1": "0",
+          "A2": "0",
+          "A3": "0",
+          "A4": "0"
+        },
+        "switches": {
+          "A1": "E",
+          "A2": "E",
+          "A3": "E",
+          "A4": "E"
+        }
+      }
+    },
+    "safety_decoder": {
+      "fleet_state": {
+        "block_occupancy": {
+          "left:A34E": "L3"
+        },
+        "block_reservations": {},
+        "min_headway_blocks": 1,
+        "model_input_exposure": "excluded",
+        "shuttle_blocks": {
+          "L3": "left:A34E"
+        },
+        "station_slot_targets": {}
+      },
+      "last_decision": {
+        "accepted": true,
+        "corrected_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI4L",
+            "target_slot": "4"
+          },
+          "command": "OFF",
+          "shuttle": "room315_left_shuttle_3",
+          "side": "left"
+        },
+        "executed_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI4L",
+            "target_slot": "4"
+          },
+          "command": "OFF",
+          "shuttle": "room315_left_shuttle_3",
+          "side": "left"
+        },
+        "illegal_proposal": false,
+        "original_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI4L",
+            "target_slot": "4"
+          },
+          "command": "OFF",
+          "shuttle": "left_shuttle_3",
+          "side": "left"
+        },
+        "raw_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI4L",
+            "target_slot": "4"
+          },
+          "command": "OFF",
+          "shuttle": "left_shuttle_3",
+          "side": "left"
+        },
+        "reason": "",
+        "rejected_action": null,
+        "safe_correction": true,
+        "time_s": 1256980.165288
+      },
+      "metrics": {
+        "accepted_actions": 2,
+        "average_wait_time_by_shuttle": {},
+        "block_occupancy_violation_count": 0,
+        "block_reservation_rejection_count": 0,
+        "deadlock_avoided_count": 0,
+        "deadlock_detected_count": 0,
+        "fail_safe_abort_count": 0,
+        "fleet_throughput_tasks_per_minute": null,
+        "headway_violation_count": 0,
+        "illegal_proposal_rate": 0.0,
+        "multi_shuttle_task_success": null,
+        "obstacle_stop_count": 0,
+        "occupied_target_rejection_count": 0,
+        "per_shuttle_task_success": {},
+        "rejected_action_rate": 0.0,
+        "rejected_actions": 0,
+        "rejection_reasons": {},
+        "safety_recovery_count": 0,
+        "sensor_dropout_count": 0,
+        "shuttle_id_accuracy": null,
+        "timeout_rejection_count": 0,
+        "total_proposed_actions": 2,
+        "trusted_state_rejection_count": 0,
+        "unknown_localization_rejection_count": 0,
+        "wrong_shuttle_command_rate": 0.0
+      },
+      "recent_decisions": [
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 2.6827018435055883,
+                "route_distance_m": 0.5365403687011177,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-fc5e4e27a96c-0",
+              "step_index": 0,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "room315_left_shuttle_3",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_3",
+            "source_station": "left_kuka",
+            "speed": 0.2,
+            "target_slot": "4",
+            "target_station": "left_kuka"
+          },
+          "executed_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 2.6827018435055883,
+                "route_distance_m": 0.5365403687011177,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-fc5e4e27a96c-0",
+              "step_index": 0,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "room315_left_shuttle_3",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_3",
+            "source_station": "left_kuka",
+            "speed": 0.2,
+            "target_slot": "4",
+            "target_station": "left_kuka"
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 2.6827018435055883,
+                "route_distance_m": 0.5365403687011177,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-fc5e4e27a96c-0",
+              "step_index": 0,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "left_shuttle_3",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_3",
+            "source_station": "left_kuka",
+            "speed": 0.2,
+            "target_slot": "4",
+            "target_station": "left_kuka"
+          },
+          "raw_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 2.6827018435055883,
+                "route_distance_m": 0.5365403687011177,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-fc5e4e27a96c-0",
+              "step_index": 0,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_3 left left_kuka left_kuka left_slot_3 left_slot_4 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "left_shuttle_3",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_3",
+            "source_station": "left_kuka",
+            "speed": 0.2,
+            "target_slot": "4",
+            "target_station": "left_kuka"
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": true,
+          "time_s": 1256976.505908
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI4L",
+              "target_slot": "4"
+            },
+            "command": "OFF",
+            "shuttle": "room315_left_shuttle_3",
+            "side": "left"
+          },
+          "executed_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI4L",
+              "target_slot": "4"
+            },
+            "command": "OFF",
+            "shuttle": "room315_left_shuttle_3",
+            "side": "left"
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI4L",
+              "target_slot": "4"
+            },
+            "command": "OFF",
+            "shuttle": "left_shuttle_3",
+            "side": "left"
+          },
+          "raw_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI4L",
+              "target_slot": "4"
+            },
+            "command": "OFF",
+            "shuttle": "left_shuttle_3",
+            "side": "left"
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": true,
+          "time_s": 1256980.165288
+        }
+      ],
+      "recovery": {
+        "model_input_exposure": "excluded",
+        "next_step": "",
+        "phase": "idle",
+        "reason": "",
+        "retry_count": 0
+      }
+    },
+    "safety_decoder_metrics": {
+      "accepted_actions": 2,
+      "average_wait_time_by_shuttle": {},
+      "block_occupancy_violation_count": 0,
+      "block_reservation_rejection_count": 0,
+      "deadlock_avoided_count": 0,
+      "deadlock_detected_count": 0,
+      "fail_safe_abort_count": 0,
+      "fleet_throughput_tasks_per_minute": null,
+      "headway_violation_count": 0,
+      "illegal_proposal_rate": 0.0,
+      "multi_shuttle_task_success": null,
+      "obstacle_stop_count": 0,
+      "occupied_target_rejection_count": 0,
+      "per_shuttle_task_success": {},
+      "rejected_action_rate": 0.0,
+      "rejected_actions": 0,
+      "rejection_reasons": {},
+      "safety_recovery_count": 0,
+      "sensor_dropout_count": 0,
+      "shuttle_id_accuracy": null,
+      "timeout_rejection_count": 0,
+      "total_proposed_actions": 2,
+      "trusted_state_rejection_count": 0,
+      "unknown_localization_rejection_count": 0,
+      "wrong_shuttle_command_rate": 0.0
+    },
+    "vision": {
+      "camera_info_frame_id": "room315_vla_left_rail_rgbd_optical_frame",
+      "cameras": {
+        "left_rail_rgb": {
+          "camera_info_frame_id": "room315_vla_left_rail_rgbd_optical_frame",
+          "image_frames": 379,
+          "last_camera_info_age_s": 0.088,
+          "last_image_age_s": 0.069
+        },
+        "right_rail_rgb": {
+          "camera_info_frame_id": "room315_vla_right_rail_rgbd_optical_frame",
+          "image_frames": 379,
+          "last_camera_info_age_s": 0.099,
+          "last_image_age_s": 0.077
+        }
+      },
+      "image_frames": 758,
+      "last_camera_info_age_s": 0.088,
+      "last_image_age_s": 0.069
+    }
+  }
+}

@@ -1,0 +1,36 @@
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+The four objectives were completed in simulation.
+Objectives O1 and O2 produced a maintainable ROS~2 Jazzy and Gazebo Harmonic
+environment with selective robot launch, calibrated rail cells, identifiable
+shuttles and switch-dependent routes. One all-robot cold start confirmed access
+to the six configured models, and all 96 transport checks passed across the
+geometry, topology, coordination, device and identity functions.
+
+Objectives O3 and O4 extended this foundation with typed command and state
+interfaces, task planning, language interpretation and paired-camera
+perception. Together, these elements formed the evaluated English-to-motion
+workflow.
+
+The language interface also produced the intended outcome in all ten evaluation
+cases, including clarification, rejection and cancellation.
+
+The complete path from an English request to shuttle motion was exercised in
+12 isolated cold-start runs. Every run reached its intended terminal state, and
+all 24 recorded step postconditions were satisfied. On the
+locked 256-scenario Test set, the configured visual checkpoint achieved 100\%
+rail-side accuracy, 99.2537\% loaded-state accuracy and 65.2985\% exact-block
+accuracy.
+
+For MFJA, the project provides a reusable platform for practical teaching,
+software integration, synthetic-data generation and further planning or
+perception experiments. For me, the most important lesson was learning how to
+divide an initially broad integration request into smaller parts that I could
+implement and test one at a time. I also prepared the configuration, regression
+tests and run instructions so that the host team can continue using and
+extending the work.
+
+The immediate next step is to repeat the campaign across controlled seeds and
+conduct a live-graph fault-injection study before extending the simulated
+workflow to broader scenarios.

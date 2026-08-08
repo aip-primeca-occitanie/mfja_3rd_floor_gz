@@ -1,0 +1,3 @@
+Please move the nearest loaded right shuttle to slot 3.
+yes
+quit

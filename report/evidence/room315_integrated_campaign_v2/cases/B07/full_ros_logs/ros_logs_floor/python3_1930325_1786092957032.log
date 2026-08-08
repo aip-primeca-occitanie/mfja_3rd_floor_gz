@@ -1,0 +1,4 @@
+[INFO] [1786092957.119353399] [conveyor_loop_mode_controller]: Loaded 8 managed switch poses from /tmp/room_315_only_without_room315_vla_obstacles_1930307.world.
+[INFO] [1786092957.119775222] [conveyor_loop_mode_controller]: Detected initial switch layout from world file: EXTERIOR
+[WARN] [1786092958.697127175] [conveyor_loop_mode_controller]: Switch color update round 1 failed for 8 switch(es); retrying the remaining requests.
+[INFO] [1786092960.238432337] [conveyor_loop_mode_controller]: Per-switch command topic: /mfja/conveyor/switch_cmd (examples: "A1R=INTERIOR", "A1=EXTERIOR", "RIGHT=INTERIOR, A3L=EXTERIOR").

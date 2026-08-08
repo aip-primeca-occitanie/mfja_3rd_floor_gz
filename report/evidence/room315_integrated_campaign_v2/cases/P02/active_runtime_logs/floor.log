@@ -1,0 +1,26 @@
+[room_315_vla_supervisor.py-8] [INFO] [1786093224.979878325] [room_315_vla_supervisor]: switches commanded on left: {'A1': 'EXTERIOR', 'A2': 'EXTERIOR', 'A3': 'INTERIOR', 'A4': 'INTERIOR'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093224.980049345] [room_315.rails.left.room_315_kinematic_shuttle]: Scheduled switch state updates from typed command after 0.300s: {'A3': 'I', 'A4': 'I'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093225.285906633] [room_315.rails.left.room_315_kinematic_shuttle]: Published visual switch command from actual state (motion delay): A3L=INTERIOR, A4L=INTERIOR
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093225.286115880] [conveyor_loop_mode_controller]: Applying switch command from switch topic command "A3L=INTERIOR, A4L=INTERIOR": A3_gauche_switch=INTERIOR, A4_gauche_switch=INTERIOR
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093225.286309619] [room_315.rails.left.room_315_kinematic_shuttle]: Applied actual switch states after motion delay: {'A1': 'E', 'A2': 'E', 'A3': 'I', 'A4': 'I'}
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093226.057974337] [conveyor_loop_mode_controller]: Applied switch command successfully. Current global state: MIXED.
+[room_315_vla_supervisor.py-8] [INFO] [1786093226.390282579] [room_315_vla_supervisor]: stoppers commanded on left: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093226.390614488] [room_315.rails.left.room_315_kinematic_shuttle]: Scheduled stopper state updates from typed command after 0.100s: {'A4': '1'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093226.519629023] [room_315.rails.left.room_315_kinematic_shuttle]: Applied actual stopper states after motion delay: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'}
+[room_315_vla_supervisor.py-8] [INFO] [1786093227.634784294] [room_315_vla_supervisor]: shuttle command sent on left
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093227.635221192] [room_315.rails.left.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_left_shuttle_2': 'ENABLE@0.200m/s'}; shuttles=room315_left_shuttle_1:slot1:A12E@0.954:snap=0.000m, room315_left_shuttle_2:slot2:A12E@1.502:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093245.397033799] [room_315_vla_supervisor]: shuttle command sent on left
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093245.397524587] [room_315.rails.left.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_left_shuttle_2': 'DISABLE'}; shuttles=room315_left_shuttle_1:slot1:A12E@0.954:snap=0.000m, room315_left_shuttle_2:slot2:A34I@1.054:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093245.749528025] [room_315_vla_supervisor]: switches commanded on left: {'A1': 'EXTERIOR', 'A2': 'EXTERIOR', 'A3': 'EXTERIOR', 'A4': 'EXTERIOR'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093245.749785530] [room_315.rails.left.room_315_kinematic_shuttle]: Scheduled switch state updates from typed command after 0.300s: {'A3': 'E', 'A4': 'E'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093246.057310497] [room_315.rails.left.room_315_kinematic_shuttle]: Published visual switch command from actual state (motion delay): A3L=EXTERIOR, A4L=EXTERIOR
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093246.057423079] [conveyor_loop_mode_controller]: Applying switch command from switch topic command "A3L=EXTERIOR, A4L=EXTERIOR": A3_gauche_switch=EXTERIOR, A4_gauche_switch=EXTERIOR
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093246.057814857] [room_315.rails.left.room_315_kinematic_shuttle]: Applied actual switch states after motion delay: {'A1': 'E', 'A2': 'E', 'A3': 'E', 'A4': 'E'}
+[conveyor_loop_mode_controller.py-2] [INFO] [1786093246.833181768] [conveyor_loop_mode_controller]: Applied switch command successfully. Current global state: EXTERIOR.
+[room_315_vla_supervisor.py-8] [INFO] [1786093246.886493433] [room_315_vla_supervisor]: stoppers commanded on left: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093246.886776177] [room_315.rails.left.room_315_kinematic_shuttle]: Scheduled stopper state updates from typed command after 0.100s: {'A4': '0'}
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093247.013560884] [room_315.rails.left.room_315_kinematic_shuttle]: Applied actual stopper states after motion delay: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'}
+[room_315_vla_supervisor.py-8] [INFO] [1786093248.157126554] [room_315_vla_supervisor]: shuttle command sent on left
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093248.157345888] [room_315.rails.left.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_left_shuttle_1': 'ENABLE@0.200m/s->slot3'}; shuttles=room315_left_shuttle_1:slot1:A12E@0.954:snap=0.000m, room315_left_shuttle_2:slot2:A34I@1.054:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786093267.998429973] [room_315_vla_supervisor]: shuttle command sent on left
+[room_315_kinematic_shuttle_node.py-6] [INFO] [1786093267.999015371] [room_315.rails.left.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_left_shuttle_1': 'DISABLE'}; shuttles=room315_left_shuttle_1:slot1:A34E@0.953:snap=0.000m, room315_left_shuttle_2:slot2:A34I@1.054:snap=0.000m

@@ -1,0 +1,71 @@
+{
+  "algorithm": {
+    "algorithm": "image-hash-connected component packing with 512 seeded exact-capacity candidates and normalized feature-deviation minimization",
+    "candidate_trials": 512,
+    "component_count": 218,
+    "component_size_distribution": {
+      "1": 210,
+      "2": 4,
+      "3": 2,
+      "15": 1,
+      "16": 1
+    },
+    "hard_constraints": {
+      "configuration_counts": {
+        "test": 32,
+        "train": 191,
+        "validation": 32
+      },
+      "presence_configuration_grouped": true,
+      "shared_source_image_hash_components_grouped": true
+    },
+    "objective": "sum over splits/features of squared deviation from proportional global feature totals divided by max(1,target)",
+    "objective_score": 175.759534594927,
+    "seed": 31520260730,
+    "tie_breaking": "lexicographically smallest SHA-256 of seed and sorted assignment after objective rounded to 12 decimals"
+  },
+  "dataset_inferred_capacity": false,
+  "dataset_root": "/home/tiago/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/dataset",
+  "fixed_identity_order": [
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "R1",
+    "R2",
+    "R3",
+    "R4"
+  ],
+  "fixed_vector_dimension": 200,
+  "schema_version": "room315.visual_grouped_splits.v1",
+  "seed": 31520260730,
+  "source_dataset_root": "/home/tiago/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729",
+  "split_unit": "presence_configuration_id",
+  "splits": {
+    "test": {
+      "configuration_count": 32,
+      "file": "test.jsonl",
+      "label_file": "test_visual_labels.jsonl",
+      "scenario_count": 256
+    },
+    "train": {
+      "configuration_count": 191,
+      "file": "train.jsonl",
+      "label_file": "train_visual_labels.jsonl",
+      "scenario_count": 1528
+    },
+    "validation": {
+      "configuration_count": 32,
+      "file": "validation.jsonl",
+      "label_file": "validation_visual_labels.jsonl",
+      "scenario_count": 256
+    }
+  },
+  "test_lock": {
+    "normal_training_may_load_test": false,
+    "test_requires_explicit_unlock": true,
+    "validation_checkpoint_selection_only": true
+  },
+  "variants_per_configuration": 8,
+  "visual_state_schema": "room315.visual_state.v3"
+}

@@ -1,0 +1,255 @@
+{
+  "actual_constraints": {
+    "goal_type": "transport",
+    "payload_filter": "loaded",
+    "payload_required": true,
+    "selection_strategy": "any",
+    "shuttle_selection": "loaded",
+    "side": "right",
+    "target_kind": "slot",
+    "target_slot": "4"
+  },
+  "actual_issue_codes": [],
+  "actual_status": "ok",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.568466580938548,
+  "expected_constraints": {
+    "goal_type": "transport",
+    "payload_filter": "loaded",
+    "side": "right",
+    "target_kind": "slot",
+    "target_slot": "4"
+  },
+  "expected_issue_codes": [],
+  "expected_status": "ok",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "polite_indirect_loaded",
+  "index": 3,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-713d708c07de",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": "loaded",
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "any",
+            "side": "right",
+            "target_kind": "slot",
+            "target_slot": "4"
+          },
+          "request": "Could you get a loaded shuttle over to the right slot 4?"
+        },
+        "schema_version": 1,
+        "selection_strategy": "any",
+        "side": "right",
+        "source": "human",
+        "target_kind": "slot",
+        "target_shuttle": null,
+        "target_slot": "4",
+        "target_station": null
+      },
+      "issues": [],
+      "ok": true,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.56791433901526,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"transport\",\"selection_strategy\":\"nearest\",\"payload_filter\":\"loaded\",\"side\":\"right\",\"target_kind\":\"shuttle_selection\",\"target_slot\":\"4\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_slot\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": {
+          "alternatives": [],
+          "confidence": {
+            "overall": 0.8
+          },
+          "contract_type": "SemanticParseEnvelope",
+          "dialogue_act": "new_goal",
+          "draft_patch": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "shuttle_selection",
+            "target_slot": "4"
+          },
+          "evidence": {},
+          "provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "semantic_inference",
+            "selection_strategy": "semantic_inference",
+            "side": "semantic_inference",
+            "target_kind": "semantic_inference",
+            "target_slot": "semantic_inference"
+          },
+          "schema_version": 1
+        },
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 1,
+          "fallback_reason": "",
+          "fallback_used": false,
+          "field_provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "explicit_text",
+            "selection_strategy": "explicit_text",
+            "side": "explicit_text",
+            "target_kind": "explicit_text",
+            "target_slot": "explicit_text"
+          },
+          "final_decision": "draft",
+          "latency_s": 4.567975260084495,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [
+            {
+              "authoritative": "slot",
+              "decision": "kept_authoritative_value",
+              "field": "target_kind",
+              "semantic": "shuttle_selection"
+            }
+          ],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "payload_filter",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 22,
+                "start": 16,
+                "text": "loaded"
+              },
+              "value": "loaded"
+            },
+            {
+              "field": "side",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 48,
+                "start": 43,
+                "text": "right"
+              },
+              "value": "right"
+            },
+            {
+              "field": "target_kind",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 55,
+                "start": 49,
+                "text": "slot 4"
+              },
+              "value": "slot"
+            },
+            {
+              "field": "target_slot",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 55,
+                "start": 49,
+                "text": "slot 4"
+              },
+              "value": "4"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "ok"
+    },
+    "validation": {
+      "clarifications": [],
+      "confirmation_prompt": "",
+      "confirmation_required": false,
+      "constraints": {
+        "goal_type": "transport",
+        "payload_filter": "loaded",
+        "payload_required": true,
+        "selection_strategy": "any",
+        "shuttle_selection": "loaded",
+        "side": "right",
+        "target_kind": "slot",
+        "target_slot": "4"
+      },
+      "description": "transport any / loaded shuttle on right rail to slot 4",
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-713d708c07de",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": "loaded",
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "any",
+            "side": "right",
+            "target_kind": "slot",
+            "target_slot": "4"
+          },
+          "request": "Could you get a loaded shuttle over to the right slot 4?"
+        },
+        "schema_version": 1,
+        "selection_strategy": "any",
+        "side": "right",
+        "source": "human",
+        "target_kind": "slot",
+        "target_shuttle": null,
+        "target_slot": "4",
+        "target_station": null
+      },
+      "errors": [],
+      "ok": true,
+      "risk_level": "high",
+      "status": "ok",
+      "task_goal": {
+        "confidence": 1.0,
+        "constraints": {
+          "goal_type": "transport",
+          "payload_filter": "loaded",
+          "payload_required": true,
+          "selection_strategy": "any",
+          "shuttle_selection": "loaded",
+          "side": "right",
+          "target_kind": "slot",
+          "target_slot": "4"
+        },
+        "contract_type": "TaskGoal",
+        "description": "transport any / loaded shuttle on right rail to slot 4",
+        "goal_id": "room315-task-goal-5b974c7bdccc",
+        "schema_version": 1,
+        "source": "human",
+        "timestamp": 0.0
+      }
+    }
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Could you get a loaded shuttle over to the right slot 4?",
+  "unsafe_auto_resolution": false
+}

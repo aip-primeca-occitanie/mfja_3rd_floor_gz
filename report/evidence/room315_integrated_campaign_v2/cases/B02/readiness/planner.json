@@ -1,0 +1,59 @@
+{
+  "lifecycle_attempts": [
+    {
+      "command": [
+        "ros2",
+        "lifecycle",
+        "get",
+        "/planner"
+      ],
+      "duration_s": 1.5454237791709602,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "unconfigured [1]\n"
+    },
+    {
+      "command": [
+        "ros2",
+        "lifecycle",
+        "get",
+        "/planner"
+      ],
+      "duration_s": 3.0319684268906713,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "active [3]\n"
+    }
+  ],
+  "lifecycle_state": "active",
+  "lifecycle_state_id": 3,
+  "planner_service": "/planner/get_plan",
+  "planner_service_type": "plansys2_msgs/srv/GetPlan",
+  "service_attempts": [
+    {
+      "command": [
+        "ros2",
+        "service",
+        "type",
+        "/planner/get_plan"
+      ],
+      "duration_s": 0.3709179980214685,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "plansys2_msgs/srv/GetPlan\n"
+    },
+    {
+      "command": [
+        "ros2",
+        "service",
+        "type",
+        "/planner/get_plan"
+      ],
+      "duration_s": 0.37328910105861723,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "plansys2_msgs/srv/GetPlan\n"
+    }
+  ],
+  "status": "ready"
+}

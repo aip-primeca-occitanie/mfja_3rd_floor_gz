@@ -1,0 +1,83 @@
+{
+  "accepted_actuating_step_count": 1,
+  "accepted_supervisor_decision_count": 2,
+  "accepted_supervisor_decision_source": "safety_decoder_metrics_delta",
+  "actuating_step_count": 1,
+  "controller_mode_at_arrival": "DISABLED",
+  "executed_step_count": 1,
+  "final_visual_checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "goal_id": "room315-task-goal-16dc8c5fc73e",
+  "initial_controller_evidence_status": "passed",
+  "initial_visual_checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "non_actuating_step_count": 0,
+  "payload_consensus": {
+    "status": "not_applicable"
+  },
+  "plan_attempts": 1,
+  "post_task_controller_evidence_status": "passed",
+  "primitive_steps": [
+    "SHUTTLE_ON"
+  ],
+  "replans": 0,
+  "rosbag": {
+    "duration_ns": 25725000000,
+    "message_count": 14247,
+    "relative_files": [
+      "rosbag/rosbag_0.mcap"
+    ],
+    "required_topic_message_counts": {
+      "/clock": 5146,
+      "/room_315/rails/left/sensors/feedback": 772,
+      "/room_315/rails/left/shuttles/command": 2,
+      "/room_315/rails/left/shuttles/state": 772,
+      "/room_315/task_goal": 1,
+      "/room_315/task_goal/status": 4,
+      "/room_315/visual_state/observed_state": 76,
+      "/room_315/visual_state/raw_model_prediction": 76,
+      "/room_315/visual_state/validation": 76,
+      "/room_315/vla/command": 2,
+      "/room_315/vla/left_rail_rgbd/image": 246,
+      "/room_315/vla/right_rail_rgbd/image": 248,
+      "/room_315/vla/status": 27
+    },
+    "status": "passed",
+    "storage_identifier": "mcap"
+  },
+  "safe_abort_sent": false,
+  "satisfied_postcondition_count": 1,
+  "selected_identity": "L1",
+  "sensor_confirmation_frames": 2,
+  "status": "passed",
+  "supervisor_metrics": {
+    "delta": {
+      "accepted_actions": 2,
+      "rejected_actions": 0,
+      "total_proposed_actions": 2
+    },
+    "final": {
+      "accepted_actions": 2,
+      "rejected_actions": 0,
+      "total_proposed_actions": 2
+    },
+    "initial": {
+      "accepted_actions": 0,
+      "rejected_actions": 0,
+      "total_proposed_actions": 0
+    }
+  },
+  "symbolic_declaration_validation": {
+    "declared_blocker_identity": "",
+    "declared_exact_symbolic_steps": [],
+    "declared_prefixes": [],
+    "exact_executed_step_count": null,
+    "symbolic_steps": [
+      "move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_yaskawa left_slot_1 left_slot_2 speed=0.2"
+    ]
+  },
+  "symbolic_steps": [
+    "move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_yaskawa left_slot_1 left_slot_2 speed=0.2"
+  ],
+  "target_sensor": "DZI2L",
+  "target_slot": "2",
+  "unknown_retries": 0
+}

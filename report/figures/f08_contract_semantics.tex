@@ -1,0 +1,77 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  panel/.style={draw=mfjablue,rounded corners=2pt,inner sep=3mm,
+    minimum width=158mm},
+  flow/.style={draw,rounded corners=2pt,align=center,minimum height=10mm,
+    text width=21mm,fill=mfjalight},
+  typed/.style={flow,draw=mfjaorange,fill=mfjaorange!8},
+  authority/.style={flow,draw=mfjagreen,fill=mfjagreen!8},
+  arr/.style={-{Latex[length=1.9mm]},thick,mfjablue},
+  feedback/.style={-{Latex[length=1.9mm]},thick,mfjagreen},
+  cell/.style={draw,minimum width=13mm,minimum height=7mm,align=center}
+]
+  \node[panel,minimum height=66mm] (commandpanel) {};
+  \node[anchor=north west,font=\sffamily\bfseries\normalsize,mfjablue]
+    at ([xshift=2mm,yshift=-2mm]commandpanel.north west)
+    {(a) Command and result are separate};
+
+  \node[flow] (caller) at ([xshift=-57mm,yshift=8mm]commandpanel.center)
+    {Task executive\\or operator};
+  \node[typed,right=5mm of caller] (command)
+    {Checked command\\request};
+  \node[authority,right=5mm of command] (supervisor)
+    {Command\\supervisor};
+  \node[typed,right=5mm of supervisor] (typedcommand)
+    {Typed ROS~2\\device message};
+  \node[authority,right=5mm of typedcommand] (controller)
+    {Responsible\\controller};
+  \node[flow,below=10mm of controller] (state)
+    {Controller\\state report};
+  \node[authority,left=5mm of state] (verify)
+    {Compare with\\expected effect};
+  \node[flow,left=5mm of verify] (result)
+    {Recorded\\command result};
+  \node[anchor=north east,draw=mfjared,fill=mfjared!7,
+    rounded corners=1.2mm,inner xsep=2.2mm,inner ysep=1.1mm,
+    font=\sffamily\bfseries\small,text=mfjared]
+    at ([xshift=-3mm,yshift=-3mm]commandpanel.north east)
+    {Publication \(\neq\) observed success};
+  \draw[arr] (caller) -- (command);
+  \draw[arr] (command) -- (supervisor);
+  \draw[arr] (supervisor) -- (typedcommand);
+  \draw[arr] (typedcommand) -- (controller);
+  \draw[feedback] (controller) -- (state);
+  \draw[feedback] (state) -- (verify);
+  \draw[feedback] (verify) -- (result);
+
+  \node[panel,minimum height=84mm,below=7mm of commandpanel] (maskpanel) {};
+  \node[anchor=north west,font=\sffamily\bfseries\normalsize,mfjablue]
+    at ([xshift=2mm,yshift=-2mm]maskpanel.north west)
+    {(b) A sparse named update changes only the addressed device};
+
+  \node[typed,minimum width=41mm,text width=35mm]
+    (sparse) at ([xshift=-48mm,yshift=10mm]maskpanel.center)
+    {Envelope\\\texttt{switches: \{A3: INTERIOR\}}};
+  \node[authority,minimum width=34mm,text width=28mm,right=8mm of sparse]
+    (gate) {Supervisor checks\\the named update};
+  \node[typed,minimum width=48mm,text width=42mm,right=8mm of gate]
+    (roscommand) {\texttt{SwitchCommand}\\
+      \texttt{switches=[}\\\texttt{A3: INTERIOR]}};
+  \draw[arr] (sparse) -- (gate);
+  \draw[arr] (gate) -- (roscommand);
+
+  \matrix (m) [matrix of nodes,nodes={cell},column sep=-\pgflinewidth,
+    row sep=-\pgflinewidth] at ([yshift=-15mm]maskpanel.center) {
+    |[draw=none,minimum width=28mm,align=right]| {} &
+      |[fill=mfjalight]| {A1} & |[fill=mfjalight]| {A2} &
+      |[fill=mfjalight]| {A3} & |[fill=mfjalight]| {A4} \\
+    |[draw=none,minimum width=28mm,align=right]| {Current} & E & I & E & I \\
+    |[draw=none,minimum width=28mm,align=right,font=\sffamily\bfseries\small]| {Named update} &
+      |[fill=black!5,text=black!40]| --- & |[fill=black!5,text=black!40]| --- &
+      |[fill=mfjaorange!18]| I & |[fill=black!5,text=black!40]| --- \\
+    |[draw=none,minimum width=28mm,align=right,font=\sffamily\bfseries\small]| {Result} &
+      |[fill=mfjagreen!12]| E & |[fill=mfjagreen!12]| I & |[fill=mfjagreen!24]| I & |[fill=mfjagreen!12]| I \\
+  };
+  \node[below=3mm of m,font=\sffamily\bfseries\small,mfjagreen]
+    {Only A3 is transmitted and changed; omitted names retain their state.};
+\end{tikzpicture}

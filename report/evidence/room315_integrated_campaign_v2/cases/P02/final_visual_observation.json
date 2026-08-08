@@ -1,0 +1,176 @@
+{
+  "accepted": true,
+  "accepted_frame_count": 239,
+  "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "clamped_fields": [
+    "L2.s_ratio_consistency_projection"
+  ],
+  "cycle_latency_ms": 9.728512028232217,
+  "header": {
+    "frame_id": "room_315",
+    "stamp": {
+      "nanosec": 325000000,
+      "sec": 85
+    }
+  },
+  "inference_latency_ms": 3.2677301205694675,
+  "input_ready": true,
+  "left_image_stamp": {
+    "nanosec": 300000000,
+    "sec": 85
+  },
+  "model_ready": true,
+  "preprocessing_latency_ms": 4.660011967644095,
+  "presence_ready": true,
+  "rejected_frame_count": 17,
+  "right_image_stamp": {
+    "nanosec": 300000000,
+    "sec": 85
+  },
+  "schema_version": "room315.visual_state.v3",
+  "shuttles": [
+    {
+      "bbox_xywh": [
+        452.892822265625,
+        164.0885772705078,
+        50.3999137878418,
+        68.69953155517578
+      ],
+      "block": "A34E",
+      "identity": "L1",
+      "loaded_state": "loaded",
+      "presence_state": "present",
+      "s_m": 1.208378553390503,
+      "s_ratio": 0.5687121152877808,
+      "segment_length_m": 2.0739223957061768,
+      "side": "left",
+      "visual_facts_valid": true
+    },
+    {
+      "bbox_xywh": [
+        341.87054443359375,
+        101.32027435302734,
+        45.98214340209961,
+        69.0185546875
+      ],
+      "block": "A34E",
+      "identity": "L2",
+      "loaded_state": "empty",
+      "presence_state": "present",
+      "s_m": 0.894000768661499,
+      "s_ratio": 0.5658956260140688,
+      "segment_length_m": 1.5797979831695557,
+      "side": "left",
+      "visual_facts_valid": true
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "L3",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "L4",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "R1",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "R2",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "R3",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "R4",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    }
+  ],
+  "stabilized": false,
+  "stage": "fused_observed_state",
+  "stale": false,
+  "stale_frame_count": 0,
+  "state_fusion_ready": true,
+  "validation_latency_ms": 0.06619887426495552,
+  "validation_reasons": []
+}

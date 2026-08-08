@@ -1,0 +1,16 @@
+{
+  "command": [
+    "ros2",
+    "topic",
+    "echo",
+    "--no-daemon",
+    "--full-length",
+    "/room_315/vla/status",
+    "std_msgs/msg/String",
+    "--once"
+  ],
+  "duration_s": 2.2941470050718635,
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "data: '{\"active_tasks\": {}, \"completed_tasks\": [], \"emergency_stop\": false, \"last_command\": \"\", \"last_primitive_command\": null, \"last_result\": \"initialized\", \"payload_state\": {\"by_shuttle\": {}, \"model_input_exposure\": \"excluded\", \"shuttles\": []}, \"rails\": {\"left\": {\"active_position_sensors\": [], \"active_sensors\": [], \"payloads\": {}, \"shuttles\": {}, \"stoppers\": {}, \"switches\": {}}, \"right\": {\"active_position_sensors\": [], \"active_sensors\": [], \"payloads\": {}, \"shuttles\": {}, \"stoppers\": {}, \"switches\": {}}}, \"safety_decoder\": {\"fleet_state\": {\"block_occupancy\": {}, \"block_reservations\": {}, \"min_headway_blocks\": 1, \"model_input_exposure\": \"excluded\", \"shuttle_blocks\": {}, \"station_slot_targets\": {}}, \"last_decision\": null, \"metrics\": {\"accepted_actions\": 0, \"average_wait_time_by_shuttle\": {}, \"block_occupancy_violation_count\": 0, \"block_reservation_rejection_count\": 0, \"deadlock_avoided_count\": 0, \"deadlock_detected_count\": 0, \"fail_safe_abort_count\": 0, \"fleet_throughput_tasks_per_minute\": null, \"headway_violation_count\": 0, \"illegal_proposal_rate\": 0.0, \"multi_shuttle_task_success\": null, \"obstacle_stop_count\": 0, \"occupied_target_rejection_count\": 0, \"per_shuttle_task_success\": {}, \"rejected_action_rate\": 0.0, \"rejected_actions\": 0, \"rejection_reasons\": {}, \"safety_recovery_count\": 0, \"sensor_dropout_count\": 0, \"shuttle_id_accuracy\": null, \"timeout_rejection_count\": 0, \"total_proposed_actions\": 0, \"trusted_state_rejection_count\": 0, \"unknown_localization_rejection_count\": 0, \"wrong_shuttle_command_rate\": 0.0}, \"recent_decisions\": [], \"recovery\": {\"model_input_exposure\": \"excluded\", \"next_step\": \"\", \"phase\": \"idle\", \"reason\": \"\", \"retry_count\": 0}}, \"safety_decoder_metrics\": {\"accepted_actions\": 0, \"average_wait_time_by_shuttle\": {}, \"block_occupancy_violation_count\": 0, \"block_reservation_rejection_count\": 0, \"deadlock_avoided_count\": 0, \"deadlock_detected_count\": 0, \"fail_safe_abort_count\": 0, \"fleet_throughput_tasks_per_minute\": null, \"headway_violation_count\": 0, \"illegal_proposal_rate\": 0.0, \"multi_shuttle_task_success\": null, \"obstacle_stop_count\": 0, \"occupied_target_rejection_count\": 0, \"per_shuttle_task_success\": {}, \"rejected_action_rate\": 0.0, \"rejected_actions\": 0, \"rejection_reasons\": {}, \"safety_recovery_count\": 0, \"sensor_dropout_count\": 0, \"shuttle_id_accuracy\": null, \"timeout_rejection_count\": 0, \"total_proposed_actions\": 0, \"trusted_state_rejection_count\": 0, \"unknown_localization_rejection_count\": 0, \"wrong_shuttle_command_rate\": 0.0}, \"vision\": {\"camera_info_frame_id\": \"\", \"cameras\": {}, \"image_frames\": 0, \"last_camera_info_age_s\": null, \"last_image_age_s\": null}}'\n---\n"
+}

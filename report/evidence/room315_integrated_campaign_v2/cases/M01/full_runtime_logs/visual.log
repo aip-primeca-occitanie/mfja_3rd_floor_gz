@@ -1,0 +1,7 @@
+[INFO] [launch]: All log files can be found below /tmp/room315_M01_9h48pg8m/ros_logs_visual/2026-08-07-11-01-39-150811-tiago-Precision-7560-1934173
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [room_315_visual_state_inference_node.py-1]: process started with pid [1934179]
+[room_315_visual_state_inference_node.py-1] [INFO] [1786093302.150516131] [room_315_visual_state_inference_node]: Approved visual checkpoint loaded strictly on cuda; load_ms=2331.402
+[room_315_visual_state_inference_node.py-1] [INFO] [1786093302.150997238] [room_315_visual_state_inference_node]: Room 315 visual-state runtime initialized fail-closed; no planner, executor, or command publisher is owned by this node.
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [room_315_visual_state_inference_node.py-1]: process has finished cleanly [pid 1934179]

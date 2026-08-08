@@ -1,0 +1,104 @@
+{
+  "contract": "room315.task_execution_status.v1",
+  "controller_position_fields_used_for_localization": false,
+  "execution_enabled": true,
+  "goal_id": "room315-task-goal-10513275c5b0",
+  "location_source": "accepted_visual_state",
+  "presence_source": "controller_ShuttleState_name_and_timestamps_only",
+  "reason": "task_goal_satisfied",
+  "result": {
+    "executed_steps": [
+      {
+        "observed_state_id": "room315-live-visual-30-30000000",
+        "occupancy_changed": true,
+        "plan_length": 3,
+        "postcondition": {
+          "details": {
+            "arrival_verification": {
+              "arrival_timeout_audit": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 11.705092117312201,
+                "route_distance_m": 2.3410184234624403,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "arrived": true,
+              "controller_position_fields_used_for_localization": false,
+              "controller_stop_confirmed": true,
+              "controller_target_slot_confirmed": true,
+              "ground_truth_scope": "final_actuation_verification_only",
+              "matched_by": "deterministic_slot_sensor",
+              "matched_sensors": [
+                "DZI1L"
+              ],
+              "planner_localization_unchanged": true,
+              "reason": "",
+              "sensor_confirmation_frames": 2,
+              "sensor_identity_confirmed": true,
+              "shuttle": "room315_left_shuttle_4",
+              "shuttle_contract": "left_shuttle_4",
+              "side": "left",
+              "target_sensor": "DZI1L",
+              "target_slot": "1",
+              "target_slot_contract": "left:slot:1",
+              "target_station": "yaskawa",
+              "verified_slot_arrival_certificate": {
+                "controller_mode": "DISABLED",
+                "controller_position_fields_used_for_localization": false,
+                "controller_stop_confirmed": true,
+                "controller_target_slot_confirmed": true,
+                "identity": "L4",
+                "matched_by": "deterministic_slot_sensor",
+                "model_prediction_replaced": false,
+                "motion_epoch": 1,
+                "proof_mode": "supervised_command_arrival",
+                "reached_target_slot": "1",
+                "sensor": "DZI1L",
+                "sensor_confirmation_frames": 2,
+                "sensor_identity_confirmed": true,
+                "sensor_sequence": 916,
+                "shuttle": "room315_left_shuttle_4",
+                "side": "left",
+                "slot": "1",
+                "supervisor_sequence": 35
+              },
+              "visual_localization_used_for_final_stop": false
+            },
+            "visual_disagreement": false,
+            "visual_postcondition": {
+              "details": {
+                "shuttle": "left_shuttle_4",
+                "target_slot": "left:slot:1"
+              },
+              "reason": "target_slot_occupancy_verified",
+              "status": "satisfied"
+            }
+          },
+          "reason": "target_slot_sensor_identity_and_stop_verified",
+          "status": "satisfied"
+        },
+        "primitive": "SHUTTLE_ON",
+        "problem_name": "closed-loop-room315-task-goal-10513275c5b0-0",
+        "step_index": 0,
+        "supervisor_status": "accepted",
+        "symbolic_step": "move_shuttle_to_slot left_shuttle_4 left left_kuka left_yaskawa left_slot_4 left_slot_1 speed=0.2"
+      }
+    ],
+    "final_state_id": "room315-live-visual-42-820000000",
+    "observations": 2,
+    "plan_attempts": 1,
+    "reason": "task_goal_satisfied",
+    "replan_reasons": [],
+    "replans": 0,
+    "safe_abort_sent": false,
+    "status": "succeeded",
+    "unknown_retries": 0
+  },
+  "status": "succeeded",
+  "timestamp_s": 43.005
+}

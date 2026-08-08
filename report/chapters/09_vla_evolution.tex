@@ -1,0 +1,288 @@
+\chapter[AI Inputs: English and Visual-State Learning]
+{Developing the AI Inputs: English Understanding and Visual-State Learning}
+\label{chap:ai-development}
+
+\section{Phase~2 objective and implementation sequence}
+
+Phase~2 extended the Room~315 transport system with two AI-based inputs. Its
+objective was to let an operator state a task in English and use the current
+paired-camera observation to obtain the rail state needed to plan and complete
+the requested shuttle motion. The language path had to produce a task
+description compatible with planning, and the image path had to describe the
+current rail scene.
+
+Development began with two separate questions: could an English request be
+turned into a valid Room~315 task, and could the paired cameras recover the
+scene information needed for planning? The two paths were tested separately
+before they were connected. The implementation sequence is summarised in
+\cref{tab:phase2-sequence}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Phase~2 development sequence.}
+\label{tab:phase2-sequence}
+\begin{tabularx}{\textwidth}{@{}p{0.08\textwidth}p{0.28\textwidth}X@{}}
+\toprule
+\textbf{Step} & \textbf{Work performed} & \textbf{Usable result}\\
+\midrule
+1 & Define language and visual outputs & Semantic proposals contain task fields,
+while visual proposals contain scene-state values\\
+\tablerowrule
+2 & Integrate a local English model and build task validation &
+English requests become confirmed \code{TaskGoal} objects\\
+\tablerowrule
+3 & Generate paired-camera Room~315 data and separate the inputs from labels &
+A structured corpus represents shuttle presence, location and payload state\\
+\tablerowrule
+4 & Partially fine-tune a paired-view ResNet-18 and select a checkpoint &
+Two RGB views produce a fixed-order visual-state proposal\\
+\tablerowrule
+5 & Connect both branches to the runtime checks & A confirmed \code{TaskGoal}
+and a current \code{VisualStateObservation} form the
+two integration contracts\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Reused components and project-specific development}
+
+The two learned components used different adaptation methods. The language
+model was integrated as a pretrained, quantised model without fine-tuning on
+Room~315 data. The visual network also reused pretrained image features, but it
+was subsequently trained on the project's paired-camera corpus.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Reused foundations and project-specific Phase~2 work.}
+\label{tab:reused-developed-ai}
+\begin{tabularx}{\textwidth}{@{}p{0.24\textwidth}p{0.27\textwidth}X@{}}
+\toprule
+\textbf{Component} & \textbf{Reused foundation} & \textbf{Developed in this
+project}\\
+\midrule
+English understanding & Pretrained Qwen2.5-1.5B-Instruct weights and the local
+\code{llama.cpp} inference backend & Saved local configuration, constrained
+prompt, strict JSON schema, explicit-fact extraction, field fusion,
+clarification, validation and confirmation dialogue\\
+\tablerowrule
+Visual state & ImageNet-pretrained TorchVision ResNet-18 & Gazebo corpus,
+paired-view architecture, 200-value target, masked multi-head loss, partial
+fine-tuning, grouped evaluation and integration of the selected checkpoint\\
+\tablerowrule
+Planning & PlanSys2 and its POPF solver & Room~315 PDDL model, fresh-problem
+generation and closed-loop integration (\cref{chap:neurosymbolic})\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Building the English task interface}
+
+\subsection{Local model selection and configuration}
+
+The selected semantic model is
+\code{Qwen2.5-1.5B-Instruct-GGUF} from the Qwen2.5 family
+\citep{qwen25}, using the
+\code{qwen2.5-1.5b-instruct-q4\_k\_m.gguf} quantisation. It runs locally on the
+CPU through \code{llama.cpp} \citep{llamacpp}; the configured artefact hash is
+listed in \cref{app:reproducibility}. The runtime is offline and uses a 4096-token
+context, temperature~0, at most 192 generated tokens and seed~315. These
+settings record and control the inference conditions and keep each response
+short enough for the schema check.
+
+The pretrained weights were used without project-specific language-model
+training or fine-tuning. A versioned prompt constrains the general instruction
+model to extracting a semantic proposal from an English Room~315 request. The
+prompt enumerates the permitted task fields, identities, rails, stations and
+slots. It requires one JSON object of type \code{SemanticParseEnvelope} and
+excludes PDDL, plan steps, switch updates, stopper updates and shuttle commands.
+
+\subsection{From model output to a confirmed task}
+
+The language path contains four project-specific stages. A rule-based extractor
+first records facts stated explicitly, such as \emph{green shuttle},
+\emph{right rail} or \emph{slot 2}. Qwen then proposes candidate intent fields
+such as transport, inspection, nearest or payload-qualified selection. The
+fusion resolver applies fixed precedence, preventing a semantic proposal from
+overwriting an explicit user fact or confirmed context. This produces a
+\code{TaskGoalDraft}, which is not an executable command. The dialogue manager
+requests any missing information, the domain validator checks rail, identity,
+station and slot consistency, and the operator confirms the interpretation.
+An immutable \code{TaskGoal} is published after these stages are complete.
+
+For example, the request ``Move the green shuttle to slot 2.'' contains a
+configured colour alias. The explicit extractor resolves \emph{green} to
+\code{room315\_right\_shuttle\_3}; the verb and destination are also grounded
+directly from the text. The semantic envelope is stored with the parse record,
+and the explicit fields retain precedence. The confirmation therefore states
+R3, the right rail and slot~2 before the task is published. The complete
+colour-alias execution is followed in \cref{tab:green-shuttle-trace}.
+
+The indirect request ``Could you get a loaded shuttle over to the right
+slot~4?'' falls outside the explicit transport-verb patterns. In the saved
+evaluation record, the
+semantic model supplied \code{goal\_type=transport}, while field fusion and
+domain validation constrained the side, payload and destination. A separate
+ten-case English corpus covers explicit, indirect, ambiguous, inconsistent and
+cancellation forms; its evaluation is reported in
+\cref{sec:language-contract-evidence}.
+
+\section{Generating the Room~315 visual corpus}
+
+\subsection{Systematic simulated scenes}
+
+For identities declared present by the configured registry, the visual
+branch estimates the location and loaded state required by the planner. The
+dataset generator first enumerated every non-empty subset of the eight
+canonical identities L1--L4 and R1--R4, giving $2^8-1=255$ presence
+configurations. Eight geometrically different scenes were generated for each
+configuration by varying valid rail positions, payload states and switch
+arrangements, producing 2040 scenarios.
+
+For every scenario, the orchestration layer configured the Gazebo scene,
+allowed it to settle and captured one synchronised image from each overhead
+rail camera. The resulting corpus contains 2040 paired observations, or 4080
+RGB image files. \Cref{fig:paired-camera-training} shows one such model input.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.485\textwidth}
+    \includegraphics[width=\textwidth]{f13_left_raw.png}
+    \caption{Left-camera RGB input}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.485\textwidth}
+    \includegraphics[width=\textwidth]{f13_right_raw.png}
+    \caption{Right-camera RGB input}
+  \end{subfigure}
+  \caption[Paired Room~315 camera observation used for visual training.]
+  {The two synchronised RGB images form the complete learned input for one
+  scenario. Simulator state is used to construct labels in a separate file and
+  is never appended to the image tensor.}
+  \label{fig:paired-camera-training}
+\end{figure}
+
+\subsection{Inputs, labels and grouped partitions}
+
+Gazebo supplies the known identity, calibrated rail coordinate, payload state
+and projected image bounding box used to create supervision. Those values are
+stored separately from the image references. The model features are the paired
+RGB overhead images; depth, controller position, point clouds and row-level
+oracle metadata remain label-generation data. This separation
+prevents simulator truth from leaking into inference.
+
+All eight variants of one presence configuration remain in the same data
+partition. The resulting grouped split contains 191 configurations and 1528
+scenarios for training, 32 configurations and 256 scenarios for validation,
+and 32 configurations and 256 scenarios for the locked Test partition. Image
+hashes and configuration-family membership are audited across the partitions.
+Checkpoint selection uses the validation partition alone; the Test partition
+is used once for the final evaluation in \cref{chap:results}.
+
+\section{Designing and training the visual-state estimator}
+
+\subsection{Fixed 200-value supervision contract}
+
+Each image pair is resized to $224\times224$ per view and normalised using the
+ImageNet channel statistics. The same ResNet-18 backbone \citep{resnet} is
+applied to the left and right images. Their two 512-value feature vectors are
+concatenated, passed through a 128-unit structured head and mapped to exactly
+200 output values. The fixed identity order is L1--L4 followed by R1--R4, with
+25 values assigned to each identity:
+
+\begin{equation*}
+  25 =
+  \underbrace{2}_{\text{rail-side scores}} +
+  \underbrace{14}_{\text{block scores}} +
+  \underbrace{2}_{\text{payload scores}} +
+  \underbrace{4}_{\text{bounding box }(x,y,w,h)} +
+  \underbrace{3}_{s_m,\;s_{ratio},\;L_{segment}} .
+\end{equation*}
+
+The fixed output index supplies shuttle identity, while a configured registry
+specifies which identities exist in the launched scene. At runtime, the model
+estimates location and payload values for identities marked present by that
+registry.
+
+\begin{figure}[p]
+  \centering
+  \input{figures/f12_visual_model_contract_v2.tex}
+  \caption[Paired-view visual model and fixed-order state decoding.]
+  {The two RGB views are encoded independently with the same ResNet-18 weights.
+  Their 512-value features are concatenated and mapped to a fixed 200-value
+  state proposal. A separate configured identity registry controls which
+  named values may be decoded; whole-observation validation decides whether a
+  \code{VisualStateObservation} is published.}
+  \label{fig:visual-model-contract}
+\end{figure}
+
+The separate 200-element \code{target\_mask} is used only to compute the loss.
+When an identity is absent or lacks valid visual supervision, its 25 target
+coordinates receive zero weight; valid present identities contribute normally.
+The mask is not used for image segmentation or as a runtime ROS message, and it
+remains outside the command path.
+
+\subsection{Training procedure}
+
+Training started from the official
+\code{ResNet18\_Weights.IMAGENET1K\_V1} checkpoint. The earlier backbone stages
+were frozen, while ResNet \code{layer4} and the custom prediction head were
+fine-tuned. This left 8,552,776 of 11,335,560 parameters trainable. Targets were
+normalised using statistics computed from valid training coordinates only.
+
+The loss is the equally weighted mean of five masked Smooth-L1 heads:
+segment location, loaded state, bounding box, $s_m$ and $s_{ratio}$. Equal
+head weighting prevents larger coordinate groups from dominating by element
+count, while masking removes absent identities from the loss. The exact
+training configuration is summarised in \cref{tab:visual-training-config}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Configuration of the selected visual training run.}
+\label{tab:visual-training-config}
+\begin{tabularx}{\textwidth}{@{}p{0.31\textwidth}X@{}}
+\toprule
+\textbf{Item} & \textbf{Configured value}\\
+\midrule
+Input & Two RGB views, each resized bilinearly to $224\times224$ and
+ImageNet-normalised; no data augmentation\\
+\tablerowrule
+Initial weights and adaptation & ImageNet-pretrained ResNet-18; partial
+fine-tuning of \code{layer4} plus the structured head\\
+\tablerowrule
+Optimiser & AdamW, learning rate $10^{-3}$, weight decay $10^{-4}$\\
+\tablerowrule
+Batch and schedule & Batch size 32; maximum 15 epochs; validation-loss patience
+3\\
+\tablerowrule
+Loss & Masked per-sample Smooth-L1, equal weight for five output heads\\
+\tablerowrule
+Reproducibility & CUDA training, seed 31520260730; Test partition excluded from
+training and model selection\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+All 15 epochs completed. Epoch~14 had the minimum total weighted validation
+loss and was therefore saved as \code{best.pt}. Its checkpoint, vectoriser,
+target statistics, preprocessing description and training configuration were
+stored together. At startup, the runtime checks their expected hashes and schema
+before the model can publish a proposal. The final locked-Test measurements are
+presented in \cref{chap:results}.
+
+\begin{figure}[p]
+  \centering
+  \resizebox{0.98\textwidth}{!}{\input{figures/f11_dataset_pipeline_vertical.tex}}
+  \caption[Visual-data, training and checkpoint-promotion sequence.]
+  {The visual-data workflow from scene generation to the model used at runtime.
+  Paired images are kept separate from their training labels, and all variants
+  of one identity configuration remain in the same partition.}
+  \label{fig:dataset-pipeline}
+\end{figure}
+
+\section{Integration outputs}
+
+The resulting integration contracts are a confirmed \code{TaskGoal} and a
+current \code{VisualStateObservation}. \Cref{chap:neurosymbolic} follows how
+the gateway uses them for planning and shuttle motion.

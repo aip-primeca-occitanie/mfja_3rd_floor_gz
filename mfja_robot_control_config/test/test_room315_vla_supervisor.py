@@ -215,6 +215,46 @@ def _guarded_normalization_command(side='right', public_segment='A34I'):
     }
 
 
+def test_blank_shuttle_state_is_empty_inventory_heartbeat():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['left']['shuttles'] = {
+        'room315_left_shuttle_1': {'mode': 'STOPPED'},
+    }
+    supervisor.rails['left']['payloads'] = {
+        'room315_left_shuttle_1': {'loaded': True},
+    }
+    message = module.ShuttleState()
+    message.name = ''
+
+    supervisor._on_shuttle_state('left', message)
+
+    assert supervisor.rails['left']['shuttles'] == {}
+    assert supervisor.rails['left']['payloads'] == {}
+
+
+def test_named_shuttle_state_remains_in_safety_registry():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right']['shuttles'] = {}
+    message = module.ShuttleState()
+    message.name = 'room315_right_shuttle_3'
+    message.mode = 'WAITING'
+    message.current_segment = 'A12E'
+    message.s = 0.5
+    message.speed = 0.2
+
+    supervisor._on_shuttle_state('right', message)
+
+    assert set(supervisor.rails['right']['shuttles']) == {
+        'room315_right_shuttle_3',
+    }
+    assert (
+        supervisor.rails['right']['shuttles']['room315_right_shuttle_3']['mode']
+        == 'WAITING'
+    )
+
+
 def _stage_guarded_interior_shuttle(
     supervisor,
     *,
@@ -804,6 +844,124 @@ def test_safety_decoder_accepts_strict_mixed_route_normalization_proof():
     assert decision['accepted'] is True
     assert decision['corrected_action']['closed_loop_executive']['mode'] == (
         'restore_normal_route_before_slot_motion'
+    )
+
+
+def test_mixed_route_normalization_accepts_empty_interior_live_replay():
+    """Restore E/I/I/I after both right shuttles have reached exterior slots."""
+
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right'].update({
+        'shuttles': {
+            'room315_right_shuttle_1': {
+                'mode': 'DISABLED',
+                'segment': 'A12E',
+                's': 0.9175592456689063,
+                'speed': 0.2,
+            },
+            'room315_right_shuttle_3': {
+                'mode': 'DISABLED',
+                'segment': 'A34E',
+                's': 1.5227229497249548,
+                'speed': 0.2,
+            },
+        },
+        'switches': {'A1': 'E', 'A2': 'I', 'A3': 'I', 'A4': 'I'},
+        'stoppers': {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'},
+        'active_sensors': [],
+        'active_position_sensors': [
+            {'name': 'DZI1R', 'shuttle': 'room315_right_shuttle_1'},
+            {'name': 'DZI4R', 'shuttle': 'room315_right_shuttle_3'},
+        ],
+    })
+    command = copy.deepcopy(_guarded_normalization_command())
+    metadata = command['closed_loop_executive']
+    metadata.update({
+        'mode': 'restore_normal_route_before_slot_motion',
+        'symbolic_step': (
+            'restore_normal_route right right_staubli right_staubli'
+        ),
+        'runtime_clearance_certificates': {},
+    })
+    proof = metadata['route_normalization_proof']
+    proof.update({
+        'switches': {
+            'A1': 'exterior',
+            'A2': 'interior',
+            'A3': 'interior',
+            'A4': 'interior',
+        },
+        'stoppers': {
+            'A1': 'open',
+            'A2': 'open',
+            'A3': 'open',
+            'A4': 'open',
+        },
+        'normal_route': False,
+        'clearance_mode': False,
+        'all_stoppers_open': True,
+        'reconfiguration_required': True,
+        'reconfiguration_safe': True,
+        'clearance_pause_safe': False,
+        'interior_shuttles': [],
+        'visually_interior_shuttles': [],
+        'certified_interior_shuttles': [],
+        'certified_stopped_interior_shuttles': [],
+        'uncertified_interior_shuttles': [],
+        'certificate_segment_mismatches': [],
+        'clearance_lifecycle_certified_stopped_interior_shuttles': [],
+        'clearance_lifecycle_uncertified_interior_shuttles': [],
+        'clearance_lifecycle_visual_disagreements': [],
+        'certificate_segment_consistency': {},
+        'external_obstacles': [],
+    })
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is True
+    assert decision['corrected_action']['switches'] == {
+        'A1': 'EXTERIOR',
+        'A2': 'EXTERIOR',
+        'A3': 'EXTERIOR',
+        'A4': 'EXTERIOR',
+    }
+
+
+def test_clearance_finish_still_requires_a_stopped_interior_shuttle():
+    module = _load_supervisor_module()
+    supervisor = _fake_supervisor(module)
+    supervisor.rails['right'].update({
+        'shuttles': {},
+        'switches': {'A1': 'E', 'A2': 'E', 'A3': 'I', 'A4': 'I'},
+        'stoppers': {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'},
+        'active_sensors': [],
+        'active_position_sensors': [],
+    })
+    command = copy.deepcopy(_guarded_normalization_command())
+    metadata = command['closed_loop_executive']
+    metadata['runtime_clearance_certificates'] = {}
+    proof = metadata['route_normalization_proof']
+    for field in (
+        'interior_shuttles',
+        'visually_interior_shuttles',
+        'certified_interior_shuttles',
+        'certified_stopped_interior_shuttles',
+        'uncertified_interior_shuttles',
+        'certificate_segment_mismatches',
+        'clearance_lifecycle_certified_stopped_interior_shuttles',
+        'clearance_lifecycle_uncertified_interior_shuttles',
+        'clearance_lifecycle_visual_disagreements',
+    ):
+        proof[field] = []
+    proof['certificate_segment_consistency'] = {}
+
+    decision = supervisor._safety_decode_command(command)
+
+    assert decision['accepted'] is False
+    assert (
+        'route-normalization exception has no stopped interior shuttle'
+        in decision['reason']
     )
 
 

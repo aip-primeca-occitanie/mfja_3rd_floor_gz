@@ -1,0 +1,15 @@
+Captured: 2026-08-07T16:08:35+02:00
+Repository HEAD: c44c501640e3dab35ab241384c99963e1b9d8745
+Branch: ali/neuro-symbolic-closed-loop
+Working-tree patch SHA-256: d446c63192386b32b0d92e24aed6210b59bc53bfcb81c9af05a644ed421db0bd
+Runtime source files: 483
+Runtime source-tree SHA-256: 326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9
+Python: 3.12.3
+Platform: Linux 6.14.0-34-generic x86_64
+
+Untracked runtime-source files included in the source-tree identity:
+ed138320eccd32df8071ddcda340b3f39eb2b248853c1c24efd7b51ab83d4d38  mfja_robot_control_config/test/test_room315_floor_runtime_singleton.py
+0c74597a0e1d9c48a55cd97390dafb81d332b6af6d0782658372b52eee96dd12  mfja_robot_control_config/test/test_room315_rail_segment_names.py
+
+The source-tree identity and working-tree patch identity match the pre- and
+post-campaign records in report/evidence/room315_integrated_campaign_v2.

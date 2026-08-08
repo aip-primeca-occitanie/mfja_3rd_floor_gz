@@ -1,0 +1,60 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  header/.style={draw=mfjablue,rounded corners=2pt,fill=mfjalight,
+    align=center,text width=150mm,minimum height=11mm,font=\sffamily\bfseries},
+  status/.style={draw,rounded corners=2pt,align=center,text width=39mm,
+    minimum height=14mm},
+  response/.style={draw=black!30,rounded corners=2pt,fill=black!3,
+    align=center,text width=51mm,minimum height=14mm},
+  consequence/.style={draw,rounded corners=2pt,align=center,text width=45mm,
+    minimum height=14mm,font=\sffamily\bfseries},
+  ok/.style={draw=mfjagreen,fill=mfjagreen!8},
+  warn/.style={draw=mfjaorange,fill=mfjaorange!8},
+  bad/.style={draw=mfjared,fill=mfjared!7},
+  edge/.style={-{Latex[length=2mm]},thick,mfjablue},
+  reject/.style={-{Latex[length=2mm]},thick,mfjared}
+]
+  \node[header] (head)
+    {{\ttfamily ObservedFact} status check --- exactly one branch is taken};
+
+  \node[status,ok,below=5mm of head,xshift=-56mm] (known)
+    {{\color{mfjagreen}\bfseries KNOWN}\\fresh, authorised and consistent};
+  \node[response,right=7mm of known] (knownaction)
+    {Retained and available\\for planner input};
+  \node[consequence,ok,right=7mm of knownaction] (accepted)
+    {May populate\\executable planner facts};
+  \draw[edge,mfjagreen] (known) -- (knownaction);
+  \draw[edge,mfjagreen] (knownaction) -- (accepted);
+
+  \node[status,warn,below=4mm of known] (unknown)
+    {{\color{mfjaorange}\bfseries UNKNOWN}\\value was not observed};
+  \node[response,right=7mm of unknown] (unknownaction)
+    {Recorded; the missing value\\remains explicit};
+  \node[consequence,bad,right=7mm of unknownaction] (unknownstop)
+    {Planner input\\withheld};
+  \draw[reject] (unknown) -- (unknownaction);
+  \draw[reject] (unknownaction) -- (unknownstop);
+
+  \node[status,warn,below=4mm of unknown] (stale)
+    {{\color{mfjaorange}\bfseries STALE}\\last reading is too old};
+  \node[response,right=7mm of stale] (staleaction)
+    {Recorded; a newer\\observation is required};
+  \node[consequence,bad,right=7mm of staleaction] (stalestop)
+    {Planner input\\withheld};
+  \draw[reject] (stale) -- (staleaction);
+  \draw[reject] (staleaction) -- (stalestop);
+
+  \node[status,bad,below=4mm of stale] (conflict)
+    {{\color{mfjared}\bfseries CONFLICTING}\\authorised sources disagree};
+  \node[response,right=7mm of conflict] (conflictaction)
+    {Recorded with the\\source disagreement};
+  \node[consequence,bad,right=7mm of conflictaction] (conflictstop)
+    {Planner input\\withheld};
+  \draw[reject] (conflict) -- (conflictaction);
+  \draw[reject] (conflictaction) -- (conflictstop);
+
+  \node[draw=mfjablue!50,fill=mfjalight,rounded corners=2pt,align=center,
+    text width=150mm,minimum height=10mm,below=5mm of conflictaction]
+    {Eligible facts enter planning first; translation and supervisor checks\\
+      then precede command publication.};
+\end{tikzpicture}

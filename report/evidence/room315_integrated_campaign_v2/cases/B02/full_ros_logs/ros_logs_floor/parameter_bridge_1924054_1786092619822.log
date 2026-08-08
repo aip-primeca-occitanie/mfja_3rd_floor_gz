@@ -1,0 +1,4 @@
+[INFO] [1786092619.832887351] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/room_315_only/set_pose (ros_gz_interfaces/srv/SetEntityPose -> /)]
+[INFO] [1786092619.833758018] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/room_315_only/create (ros_gz_interfaces/srv/SpawnEntity -> /)]
+[INFO] [1786092619.834016401] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/room_315_only/remove (ros_gz_interfaces/srv/DeleteEntity -> /)]
+[INFO] [1786092677.552076198] [rclcpp]: signal_handler(signum=2)

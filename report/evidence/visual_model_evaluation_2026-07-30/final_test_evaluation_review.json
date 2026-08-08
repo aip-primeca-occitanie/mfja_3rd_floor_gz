@@ -1,0 +1,67 @@
+{
+  "checkpoint": {
+    "epoch": 14,
+    "name": "best.pt",
+    "sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d"
+  },
+  "checks": {
+    "all_metrics_finite": true,
+    "all_test_rows_evaluated": true,
+    "attempt_completed": true,
+    "checkpoint_hash_correct": true,
+    "checkpoint_not_modified": true,
+    "completion_passed": true,
+    "evaluation_hash_matches": true,
+    "evaluation_only": true,
+    "further_test_evaluation_forbidden": true,
+    "further_training_forbidden": true,
+    "one_evaluation_completed": true,
+    "one_evaluation_started": true,
+    "postflight_hash_matches": true,
+    "postflight_passed": true,
+    "test_split_not_modified": true,
+    "test_split_only": true,
+    "training_executed_false": true,
+    "training_process_false": true,
+    "training_rerun_false": true
+  },
+  "deployment_constraints": {
+    "direct_command_capability": false,
+    "planning_source": false,
+    "reason": "Block classification remains moderate and no calibrated confidence output is available.",
+    "requires_deterministic_validation": true,
+    "requires_state_fusion": true
+  },
+  "evaluation": {
+    "elapsed_seconds": 4.533,
+    "samples": 256,
+    "split": "test"
+  },
+  "fingerprints": {
+    "runtime_postflight_sha256": "c07e1468a010f813dbfe617bb6e37a930f11efbe251f811c0e1340ab2fa605c5",
+    "visual_state_eval_sha256": "d745196f2525b3892765824020d7e23ec651aa0cca7a3fb12632c51a04d603df"
+  },
+  "model_role": "visual_state_estimator_with_deterministic_validation",
+  "passed": true,
+  "review_decision": "accepted",
+  "schema_version": "room315.final_test_evaluation_review.v1",
+  "test_metrics": {
+    "bbox_mae_px": 16.076386,
+    "block_accuracy": 0.652985,
+    "cycle_time_seconds": {
+      "mean": 0.015161,
+      "p50": 0.013244,
+      "p95": 0.013402
+    },
+    "inference_latency_seconds": {
+      "mean": 0.007078,
+      "p50": 0.005505,
+      "p95": 0.005648
+    },
+    "loaded_state_accuracy": 0.992537,
+    "s_m_mae_m": 0.15152,
+    "s_ratio_mae": 0.096266,
+    "side_accuracy": 1.0,
+    "top2_block_accuracy": 0.748134
+  }
+}

@@ -1,0 +1,179 @@
+\chapter{Technical Background and Design Choices}
+\label{chap:background}
+
+\section{ROS 2 as the integration layer}
+
+ROS~2 provides processes (nodes), typed interfaces, discovery and distributed
+communication. Topics suit continuous streams, services suit short
+request--response operations and actions suit long-running tasks with feedback
+\citep{ros2jazzyinterfaces}. These distinctions guided the choice of typed
+streams, explicit request--response operations and isolated namespaces for the
+project. The resulting interfaces are presented in
+\cref{chap:multi-robot,chap:interfaces}.
+
+ROS~2 Quality of Service (QoS) matters because camera data, state and commands
+have different reliability and latency needs \citep{ros2qos}. The current
+design therefore combines conservative communication defaults with explicit
+freshness checks. Profiles for other network conditions would require
+measurement in their target environment.
+
+\section{Gazebo Harmonic and description formats}
+
+Gazebo Harmonic is the recommended Gazebo pairing for ROS~2 Jazzy on
+Ubuntu~24.04 \citep{gazeboharmonic}. The Simulation Description
+Format (SDF) describes the world, environment models, sensors, physics and
+plugins \citep{sdfspec}; the Unified Robot Description Format (URDF) remains useful for robot
+kinematic trees and \code{robot\_state\_publisher}. The
+\code{ros\_gz\_bridge} translates selected Gazebo Transport messages to or
+from ROS~2 \citep{gazeborosintegration}.
+
+Simulation serves four complementary purposes in this project:
+
+\begin{enumerate}
+  \item validate coordinate frames, namespaces and controller interfaces
+  across heterogeneous robot models in a controlled environment;
+  \item support instruction in multi-robot launch and command workflows;
+  \item execute repeatable rail and safety scenarios at scale;
+  \item generate labelled overhead observations for perception training.
+\end{enumerate}
+
+These purposes impose different fidelity requirements. High-resolution visual
+meshes support camera-based observation, while simplified collision geometry
+keeps contact handling efficient and predictable. The shuttle study requires
+continuous, repeatable transport rather than detailed wheel--rail contact
+dynamics; it therefore uses kinematic pose control. The corresponding transport
+assumptions are detailed in \cref{chap:transport}.
+
+ISO~23247 defines general principles and requirements for manufacturing
+digital-twin frameworks \citep{iso23247}. In this project, the digital-twin
+model combines a versioned representation of the simulated environment with
+clearly defined information flows, assumptions and boundaries. Visual
+similarity alone is insufficient for that purpose.
+
+\section{Coordinate and rail representations}
+
+A rail path is represented by piecewise geometric segments. Each segment has
+an arc-length coordinate \(s\), a physical length \(L\), and a normalised
+coordinate
+\begin{equation}
+  \rho = \frac{s}{L}, \qquad 0 \leq \rho \leq 1 .
+  \label{eq:sratio}
+\end{equation}
+Using \cref{eq:sratio}, the controller evaluates position and tangent from
+\(s\), then constructs the shuttle pose and heading. Cubic Hermite
+interpolation provides continuous tangents between calibrated source points. A
+separate topology graph defines which segments connect for each switch
+assignment. Geometry therefore determines \emph{where the rail is}, while
+topology determines \emph{which route is open}. This relationship is shown in
+\cref{fig:geometry-versus-topology}.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.96\textwidth}{!}{\input{figures/f06_geometry_vs_topology.tex}}
+  \caption[Geometry and topology as complementary rail representations.]
+  {Complementary rail representations. Hermite geometry supplies
+  position and tangent for pose construction; topology and switch state select
+  the valid successor exposed through the public interface.}
+  \label{fig:geometry-versus-topology}
+\end{figure}
+
+The normalised coordinate supports relative placement, while \(s\) preserves
+the metric distance needed for motion control. \Cref{chap:transport} presents
+the transport implementation, and
+\cref{chap:ai-development,chap:interfaces,chap:neurosymbolic} define the
+visual-state contract and final arrival checks.
+
+\section{Symbolic task planning}
+
+The Planning Domain Definition Language (PDDL) describes objects, predicates,
+actions, preconditions and effects \citep{pddl}. PlanSys2 integrates PDDL-based
+planning into ROS~2 and exposes domain, problem, planner and executor components
+\citep{plansys2}. The selected solver is POPF, a forward-chaining partial-order
+planner \citep{popf}.
+
+Symbolic planning is appropriate for Room~315 because the important decisions
+are discrete and relational: which shuttle is present, which slot is occupied,
+which branch is selected, whether a stopper is open, whether a blocker must
+be staged and whether the goal has been achieved. Continuous motion remains
+inside the controller and effect-verification layers.
+
+The planner provides the symbolic sequence, while continuous movement is handled
+by the controller. The current deployment combines the PlanSys2 planner service
+with project-specific translation, supervision and execution components. These
+component responsibilities are defined in \cref{chap:neurosymbolic}.
+
+\section{Architectural alternatives and final design}
+
+The term vision--language--action covers architectures with materially different
+responsibility splits. RT-2 maps images and language to tokenised robot actions
+inside one learned policy, while TinyVLA studies a smaller policy in the same
+end-to-end family \citep{rt2,tinyvla}. Hybrid systems separate more of the
+decision process: SayCan combines language-model scores with learned affordances
+over a predefined skill set \citep{saycan}. OWL-TAMP uses a vision--language
+model to propose a partial plan skeleton and discrete and continuous
+constraints, after which a task-and-motion planner produces a complete plan
+that satisfies them \citep{owltamp}. A recent structured long-horizon manipulation study also
+compares VLA policies with neuro-symbolic sequencing; its result is specific to
+that task setting rather than a universal ranking of the two families
+\citep{pricenotright}. \Cref{tab:architecture-comparison} summarises the
+resulting design comparison.
+
+\begin{table}[H]
+\centering
+\caption{Representative architectures compared by the roles assigned to
+learning, planning and command execution.}
+\label{tab:architecture-comparison}
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash}p{0.15\textwidth}
+>{\raggedright\arraybackslash}p{0.18\textwidth}
+>{\raggedright\arraybackslash}p{0.16\textwidth}
+>{\raggedright\arraybackslash}p{0.17\textwidth}
+>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Approach} & \textbf{Learned output} & \textbf{Planning role} &
+\textbf{Execution path} & \textbf{Decision for Room~315}\\
+\midrule
+End-to-end VLA policy & Robot-action tokens or trajectories & Action selection
+inside the learned policy; no separate symbolic planner & Decoded action passed
+to the robot control stack & Not selected: the training corpus labels scene
+state rather than action trajectories, and the rail rules were already explicit.\\
+\tablerowrule
+VLM/LLM with skills or a planner & Ranked skills, subgoals or planning
+constraints & Skill selector or task-and-motion planner & Selected skill or
+downstream controller & Related design pattern, but not adopted as-is:
+open-world constraint generation was unnecessary for the fixed topology.\\
+\tablerowrule
+Neuro-symbolic planning with learned control & Symbolic abstractions and
+low-level continuous-control policies learned from demonstrations & A PDDL
+planner determines the high-level sequence & Learned controller executes each
+planned operator & Closest architectural family; adapted because Room~315 learns
+task and scene inputs but retains an explicit controller.\\
+\tablerowrule
+Implemented Room~315 system & Schema-constrained task fields and paired-camera
+state proposal; neither contains a plan or action & PlanSys2/POPF for normal
+planning; the stepwise executive handles one route-normalisation prerequisite &
+Supervisor publishes a typed command; the rail controller applies it &
+Implemented: matches the state-labelled corpus, fixed topology and simulation
+objectives.\\
+\bottomrule
+\end{tabularx}
+\endgroup
+\end{table}
+
+For the rest of the report, VLA refers to the Phase~2 research direction and to
+learned-action systems such as RT-2. The Room~315 implementation is described as
+a neuro-symbolic language-and-vision interface.
+
+\section{Visual-state model}
+
+The perception baseline uses ResNet-18 as a compact backbone \citep{resnet}.
+The fixed-camera, fixed-fleet formulation produces the compact state required by
+the Room~315 demonstrator and is specific to this room and fleet. Its inputs,
+outputs, presence handling and training process are specified in
+\cref{chap:ai-development}. The simulated command and state checks performed by
+the software supervisor are defined in \cref{chap:interfaces}; their engineering
+limits are discussed in \cref{chap:perspectives}.

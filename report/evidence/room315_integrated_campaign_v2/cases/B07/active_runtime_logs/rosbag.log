@@ -1,0 +1,39 @@
+[INFO] [1786092978.922400643] [rosbag2_recorder]: Listening for topics...
+[INFO] [1786092978.922410234] [rosbag2_recorder]: Event publisher thread: Starting
+[INFO] [1786092978.922481739] [rosbag2_recorder]: Recording...
+[INFO] [1786092978.922505489] [rosbag2_recorder]: use_sim_time set, waiting for /clock before starting recording...
+[INFO] [1786092980.474170727] [rosbag2_recorder]: Sim time /clock found, starting recording.
+[INFO] [1786092980.480977300] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/switches/state'
+[INFO] [1786092980.482272431] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/sensors/feedback'
+[INFO] [1786092980.483173073] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/switches/command'
+[INFO] [1786092980.484059831] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/switches/command'
+[INFO] [1786092980.486811712] [rosbag2_recorder]: Subscribed to topic '/room_315/vla/left_rail_rgbd/camera_info'
+[INFO] [1786092980.487905052] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/stoppers/state'
+[INFO] [1786092980.489100968] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/shuttles/command'
+[INFO] [1786092980.490488541] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/shuttles/payload_state'
+[INFO] [1786092980.491247439] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/stoppers/command'
+[INFO] [1786092980.492042288] [rosbag2_recorder]: Subscribed to topic '/room_315/vla/right_rail_rgbd/camera_info'
+[INFO] [1786092980.492608921] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/sensors/feedback'
+[INFO] [1786092980.493231253] [rosbag2_recorder]: Subscribed to topic '/room_315/vla/status'
+[INFO] [1786092980.493930867] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/shuttles/command'
+[INFO] [1786092980.494751317] [rosbag2_recorder]: Subscribed to topic '/room_315/visual_state/raw_model_prediction'
+[INFO] [1786092980.495587788] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/shuttles/state'
+[INFO] [1786092980.496434646] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/left/shuttles/payload_state'
+[INFO] [1786092980.497582426] [rosbag2_recorder]: Subscribed to topic '/room_315/vla/left_rail_rgbd/image'
+[INFO] [1786092980.498183997] [rosbag2_recorder]: Subscribed to topic '/room_315/vla/command'
+[INFO] [1786092980.499174874] [rosbag2_recorder]: Subscribed to topic '/room_315/visual_state/observed_state'
+[INFO] [1786092980.499917861] [rosbag2_recorder]: Subscribed to topic '/clock'
+[INFO] [1786092980.500422912] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/switches/state'
+[INFO] [1786092980.500910736] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/stoppers/state'
+[INFO] [1786092980.501404657] [rosbag2_recorder]: Subscribed to topic '/room_315/visual_state/raw'
+[INFO] [1786092980.501965401] [rosbag2_recorder]: Subscribed to topic '/room_315/vla/right_rail_rgbd/image'
+[INFO] [1786092980.502477168] [rosbag2_recorder]: Subscribed to topic '/room_315/visual_state/validation'
+[INFO] [1786092980.502972188] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/stoppers/command'
+[INFO] [1786092980.503483771] [rosbag2_recorder]: Subscribed to topic '/room_315/rails/right/shuttles/state'
+[INFO] [1786092980.504260288] [rosbag2_recorder]: Subscribed to topic '/room_315/task_goal/status'
+[INFO] [1786092980.505913978] [rosbag2_recorder]: Subscribed to topic '/diagnostics'
+[INFO] [1786092988.430151401] [rosbag2_recorder]: Subscribed to topic '/room_315/task_goal'
+[INFO] [1786093012.007935968] [rosbag2_recorder]: Pausing recording.
+[INFO] [1786093012.007993544] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1786093012.018448760] [rosbag2_recorder]: Event publisher thread: Exiting
+[INFO] [1786093012.018491669] [rosbag2_recorder]: Recording stopped

@@ -1,0 +1,156 @@
+{
+  "accepted_frame_count": 1,
+  "actual_present_identities": [
+    "R1",
+    "R2"
+  ],
+  "canonical_s_m_projection_count": 2,
+  "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "clamped_fields": [
+    "R1.s_ratio_consistency_projection",
+    "R2.s_ratio_consistency_projection"
+  ],
+  "expected_present_identities": [
+    "R1",
+    "R2"
+  ],
+  "initial_visual_shuttles": [
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "L1",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "L2",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "L3",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "L4",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        168.90878295898438,
+        233.447998046875,
+        50.706764221191406,
+        63.30817413330078
+      ],
+      "block": "A12E",
+      "identity": "R1",
+      "loaded_state": "loaded",
+      "presence_state": "present",
+      "s_m": 1.0637376308441162,
+      "s_ratio": 0.4321906992824298,
+      "segment_length_m": 2.4612691402435303,
+      "side": "right",
+      "visual_facts_valid": true
+    },
+    {
+      "bbox_xywh": [
+        136.01730346679688,
+        272.8194580078125,
+        50.697235107421875,
+        70.7844467163086
+      ],
+      "block": "A12E",
+      "identity": "R2",
+      "loaded_state": "empty",
+      "presence_state": "present",
+      "s_m": 1.3728803396224976,
+      "s_ratio": 0.583334447673329,
+      "segment_length_m": 2.3535046577453613,
+      "side": "right",
+      "visual_facts_valid": true
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "R3",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    },
+    {
+      "bbox_xywh": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "block": "",
+      "identity": "R4",
+      "loaded_state": "",
+      "presence_state": "absent",
+      "s_m": 0.0,
+      "s_ratio": 0.0,
+      "segment_length_m": 0.0,
+      "side": "",
+      "visual_facts_valid": false
+    }
+  ],
+  "validation_reasons": []
+}

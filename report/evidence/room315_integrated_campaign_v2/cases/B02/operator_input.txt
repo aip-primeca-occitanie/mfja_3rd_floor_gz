@@ -1,0 +1,3 @@
+Move R2 to slot 3 on the right rail.
+yes
+quit

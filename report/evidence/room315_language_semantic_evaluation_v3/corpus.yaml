@@ -1,0 +1,71 @@
+schema_version: 1
+benchmark_id: room315_task_goal_english_v1
+description: Offline English corpus for Room 315 task-goal understanding.
+cases:
+  - id: clear_nearest_loaded_right_slot3
+    text: "Please move the nearest loaded right shuttle to slot 3."
+    expected_status: ok
+    expected_constraints:
+      goal_type: transport
+      selection_strategy: nearest
+      payload_filter: loaded
+      side: right
+      target_kind: slot
+      target_slot: "3"
+  - id: explicit_shuttle_station
+    text: "Move R2 to the Staubli station."
+    expected_status: ok
+    expected_constraints:
+      goal_type: transport
+      selection_strategy: explicit
+      payload_filter: any
+      side: right
+      target_kind: station
+      target_station: staubli
+      target_shuttle: room315_right_shuttle_2
+  - id: polite_indirect_loaded
+    text: "Could you get a loaded shuttle over to the right slot 4?"
+    expected_status: ok
+    expected_constraints:
+      goal_type: transport
+      payload_filter: loaded
+      side: right
+      target_kind: slot
+      target_slot: "4"
+  - id: inspect_left_shuttle
+    text: "Inspect L2."
+    expected_status: ok
+    expected_constraints:
+      goal_type: inspection
+      side: left
+      target_kind: shuttle
+      target_shuttle: room315_left_shuttle_2
+  - id: ambiguous_yaskawa
+    text: "Send the nearest shuttle to Yaskawa."
+    expected_status: clarification_required
+    expected_issue_codes:
+      - ambiguous_station_side
+  - id: missing_side
+    text: "Move the loaded shuttle to slot 3."
+    expected_status: clarification_required
+    expected_issue_codes:
+      - missing_side
+  - id: invalid_slot
+    text: "Move the right shuttle to slot 9."
+    expected_status: error
+    expected_issue_codes:
+      - invalid_fused_draft
+  - id: conflicting_sides
+    text: "Move the right and left shuttle to slot 2."
+    expected_status: clarification_required
+    expected_issue_codes:
+      - ambiguous_explicit_conflict
+  - id: shuttle_side_conflict
+    text: "Move left R2 to slot 3."
+    expected_status: error
+    expected_issue_codes:
+      - shuttle_side_conflict
+  - id: cancellation
+    text: "cancel"
+    expected_dialogue_act: cancel
+    expected_status: cancelled

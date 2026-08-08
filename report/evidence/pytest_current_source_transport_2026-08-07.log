@@ -1,0 +1,36 @@
+Room 315 transport-layer verification on the campaign-bound source state
+Executed: 2026-08-07T16:12:53+02:00
+Repository HEAD: c44c501640e3dab35ab241384c99963e1b9d8745
+Working-tree patch SHA-256: d446c63192386b32b0d92e24aed6210b59bc53bfcb81c9af05a644ed421db0bd
+Runtime source tree: 483 files
+Runtime source-tree SHA-256: 326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9
+Source identity matches report/evidence/room315_integrated_campaign_v2/environment.json.
+
+Command:
+python3 -m pytest -q -rs \
+  mfja_robot_control_config/test/test_room315_kinematic_shuttle_core.py \
+  mfja_robot_control_config/test/test_room315_route_topology.py \
+  mfja_robot_control_config/test/test_room315_headway_safety.py \
+  mfja_robot_control_config/test/test_room315_block_reservation_runtime.py \
+  mfja_robot_control_config/test/test_room315_fleet_supervisor_safety.py \
+  mfja_robot_control_config/test/test_room315_rail_devices.py \
+  mfja_robot_control_config/test/test_room315_multi_shuttle_registry.py \
+  mfja_robot_control_config/test/test_room315_multi_shuttle_launch_args.py \
+  mfja_robot_control_config/test/test_room315_rail_segment_names.py \
+  mfja_robot_control_config/test/test_room315_switch_feedback_authority.py \
+  mfja_robot_control_config/test/test_room315_shuttle_identity_config.py \
+  mfja_robot_control_config/test/test_room315_shuttle_identity_tracker.py \
+  mfja_3rd_floor_description/test/test_room315_shuttle_collision_free.py
+
+Result:
+........................................................................ [ 75%]
+........................                                                 [100%]
+96 passed in 1.48s
+
+Claim boundary:
+The selected files cover kinematic path invariants, route topology, headway,
+block reservations, fleet-supervisor safeguards, rail-device definitions,
+registry and launch validation, public segment names, switch-feedback
+authority, shuttle identity configuration and tracking, and static shuttle
+collision-clearance checks. They are layer-specific automated evidence; the
+integrated Gazebo campaign is reported separately.

@@ -1,0 +1,108 @@
+\chapter{Limitations and Perspectives}
+\label{chap:perspectives}
+
+\section{Current limitations}
+
+The integrated campaign and the language and perception studies concern the
+Room~315 Gazebo workflow. The separate all-robot check covers the full-floor
+Gazebo launch profile. The shuttle backend is kinematic, which supports
+controlled studies of topology, coordination and closed-loop task execution.
+It omits torque, slip, braking, mechanical play and payload inertia. Arm
+manipulation, handover and grasp verification are also beyond the implemented
+task domain. The supervisor provides software checks for this simulated
+workflow; it is not a certified machinery-safety function.
+
+The perception study uses the known shuttle fleet, fixed simulated cameras and
+a grouped held-out split of generated scenes. Its measurements characterise
+that camera geometry and those scene families. The visual model estimates
+shuttle location and payload state, while the switch, stopper and actuator
+interfaces use their own reported state.
+
+Each campaign row and the all-robot launch check were executed once. Repeating
+them across controlled seeds is the next step for measuring run-to-run
+variation. Automated suites exercise stale state, sensor loss, planner timeout,
+emergency stop and conflicting tasks; a live-graph fault campaign would extend
+that work. Final shuttle arrival already uses command-linked observations.
+Applying the same correlation to switch and stopper reports is a remaining
+interface improvement. The current deadlock rule handles crossed reservations;
+longer wait-for cycles and temporal non-progress require further detection.
+
+The documented CLI validates a task against the Room~315 domain and obtains
+operator confirmation at the configured risk levels. The execution subscriber
+assumes a trusted ROS graph and the official CLI producer. A multi-user
+simulation service would therefore need authenticated task sources or graph
+isolation, together with sender identity in each task.
+
+The language study covers ten selected English requests, including
+clarification, rejection and cancellation. Open-vocabulary and multilingual
+evaluation remain future extensions.
+
+\section{Next evaluation steps}
+
+\Cref{tab:remaining-plan} orders the next simulation-focused tasks by the
+question each one would answer.
+
+\begin{table}[H]
+\centering
+\caption{Priority experiments for extending the current evaluation.}
+\label{tab:remaining-plan}
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash}p{0.09\textwidth}
+>{\raggedright\arraybackslash}p{0.36\textwidth}
+>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Priority} & \textbf{Engineering task} & \textbf{Purpose}\\
+\midrule
+P0 & Repeat the campaign across controlled seeds & Measure repeatability, seed
+sensitivity and uncertainty, with every attempt recorded in a predefined
+matrix\\
+\tablerowrule
+P0 & Inject faults into the live ROS graph & Characterise shutdown and recovery
+for stale or missing visual
+state, sensor loss, planner timeout, emergency stop and conflicting tasks\\
+\tablerowrule
+P0 & Relate switch and stopper acknowledgements to commands & Correlate each
+device result with a matching state update newer than the command\\
+\tablerowrule
+P0 & Authenticate task sources and retain operator confirmation & Add
+approved-source identity and keep confirmation at the appropriate risk levels\\
+\tablerowrule
+P1 & Package one reproducible evaluation release & Keep together the software,
+fixtures, data and commands needed to repeat the tests, offline metrics and
+campaign\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Continued use at MFJA}
+
+The current package can support practical teaching sessions in which students
+launch a chosen robot set, inspect namespaces and typed interfaces, modify a
+rail scenario, generate a PDDL problem and follow one supervised task step to
+its observed result. Configuration-driven launch and cold-start campaign rows
+allow every session to begin from a declared state, while the runbooks provide
+the operational sequence and diagnostic checks.
+
+The same assets provide a reference benchmark setup. A new planner,
+perception checkpoint or task-grounding method can be compared on the existing
+case matrix without changing controller behaviour or the arrival checks. The
+preserved 12-case campaign supplies a reference scenario set, and the grouped
+visual corpus supplies a fixed split for model comparison.
+
+Further synthetic-data work can add camera perturbations, partial occlusion,
+station clutter and payload variation while preserving configuration-family
+grouping and a locked Test partition. This would broaden the visual study while
+preserving comparability with the current data and model records.
+
+\section{Focused research extensions}
+
+Planner development should keep the PDDL domain aligned with the canonical rail
+graph and require an executable translation and visible effect check for every
+action. Independently tested atomic tasks can then be extended to controlled
+concurrency, with reservations and deadlock handling evaluated before any
+increase in parallelism.
+
+The language interface can be extended with clearer explanations for rejected
+or ambiguous requests and a recorded correction history. New language or
+vision methods can then be compared with the current implementation on the
+existing case matrix.

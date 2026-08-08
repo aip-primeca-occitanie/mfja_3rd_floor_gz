@@ -1,0 +1,109 @@
+{
+  "accepted_actuating_step_count": 4,
+  "accepted_supervisor_decision_count": 8,
+  "accepted_supervisor_decision_source": "safety_decoder_metrics_delta",
+  "actuating_step_count": 4,
+  "case_id": "M01",
+  "controller_mode_at_arrival": "DISABLED",
+  "duration_s": 92.61542085395195,
+  "executed_step_count": 4,
+  "final_visual_checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "finished_at_utc": "2026-08-07T09:02:54.957444Z",
+  "goal_id": "room315-task-goal-64cef2e6b11d",
+  "initial_controller_evidence_status": "passed",
+  "initial_visual_checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "non_actuating_step_count": 0,
+  "payload_consensus": {
+    "status": "not_applicable"
+  },
+  "plan_attempts": 4,
+  "post_task_controller_evidence_status": "passed",
+  "primitive_steps": [
+    "SET_SWITCHES",
+    "SHUTTLE_ON",
+    "SET_SWITCHES",
+    "SHUTTLE_ON"
+  ],
+  "replans": 1,
+  "ros_domain_id": 110,
+  "rosbag": {
+    "duration_ns": 59575000000,
+    "message_count": 34339,
+    "relative_files": [
+      "rosbag/rosbag_0.mcap"
+    ],
+    "required_topic_message_counts": {
+      "/clock": 11916,
+      "/room_315/rails/right/sensors/feedback": 1742,
+      "/room_315/rails/right/shuttles/command": 4,
+      "/room_315/rails/right/shuttles/state": 3484,
+      "/room_315/rails/right/stoppers/command": 2,
+      "/room_315/rails/right/switches/command": 2,
+      "/room_315/task_goal": 1,
+      "/room_315/task_goal/status": 4,
+      "/room_315/visual_state/observed_state": 185,
+      "/room_315/visual_state/raw_model_prediction": 189,
+      "/room_315/visual_state/validation": 192,
+      "/room_315/vla/command": 8,
+      "/room_315/vla/left_rail_rgbd/image": 576,
+      "/room_315/vla/right_rail_rgbd/image": 576,
+      "/room_315/vla/status": 65
+    },
+    "status": "passed",
+    "storage_identifier": "mcap"
+  },
+  "safe_abort_sent": false,
+  "satisfied_postcondition_count": 4,
+  "selected_identity": "R1",
+  "sensor_confirmation_frames": 2,
+  "started_at_utc": "2026-08-07T09:01:22.342035Z",
+  "status": "passed",
+  "supervisor_metrics": {
+    "delta": {
+      "accepted_actions": 8,
+      "rejected_actions": 0,
+      "total_proposed_actions": 8
+    },
+    "final": {
+      "accepted_actions": 8,
+      "rejected_actions": 0,
+      "total_proposed_actions": 8
+    },
+    "initial": {
+      "accepted_actions": 0,
+      "rejected_actions": 0,
+      "total_proposed_actions": 0
+    }
+  },
+  "symbolic_declaration_validation": {
+    "declared_blocker_identity": "R2",
+    "declared_exact_symbolic_steps": [
+      "begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+      "relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2",
+      "finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+      "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2"
+    ],
+    "declared_prefixes": [
+      "begin_route_clearance",
+      "relocate_blocker_to_interior",
+      "finish_route_clearance",
+      "move_shuttle_to_slot"
+    ],
+    "exact_executed_step_count": 4,
+    "symbolic_steps": [
+      "begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+      "relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2",
+      "finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+      "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2"
+    ]
+  },
+  "symbolic_steps": [
+    "begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+    "relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2",
+    "finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+    "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2"
+  ],
+  "target_sensor": "DZI3R",
+  "target_slot": "3",
+  "unknown_retries": 0
+}

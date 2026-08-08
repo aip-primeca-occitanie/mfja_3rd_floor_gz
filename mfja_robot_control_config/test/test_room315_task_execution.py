@@ -34,7 +34,7 @@ from room_315_pddl_scenario_generator import build_first_blocker_clearance_probl
 from room_315_pddl_scenario_generator import build_clearance_pause_problem
 from room_315_pddl_scenario_generator import build_intermediate_selected_advance_problem
 from room_315_pddl_scenario_generator import build_pddl_problem_from_observed_state_task_goal
-from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import internal_rail_segment_name_to_public
 from room_315_rail_defaults import public_rail_segment_lengths
 from room_315_task_execution import LiveStateConfig
 from room_315_task_execution import LiveVisualSnapshot
@@ -57,8 +57,7 @@ def _visual_item(identity: str, *, slot: str) -> dict:
     spec = next(item for item in all_shuttle_specs() if item.short_id == identity)
     location = _planning_rail_topology(spec.side).slots[str(slot)]
     segment = location.segment
-    if spec.side == 'left':
-        segment = LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
+    segment = internal_rail_segment_name_to_public(spec.side, segment)
     length = public_rail_segment_lengths(spec.side)[segment]
     return {
         'identity': identity,

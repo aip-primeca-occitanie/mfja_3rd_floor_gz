@@ -1,0 +1,257 @@
+{
+  "actual_constraints": {
+    "goal_type": "transport",
+    "payload_filter": "any",
+    "selection_strategy": "explicit",
+    "shuttle_selection": "explicit",
+    "side": "right",
+    "target_kind": "station",
+    "target_shuttle": "room315_right_shuttle_2",
+    "target_station": "staubli"
+  },
+  "actual_issue_codes": [],
+  "actual_status": "ok",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.600312513997778,
+  "expected_constraints": {
+    "goal_type": "transport",
+    "payload_filter": "any",
+    "selection_strategy": "explicit",
+    "side": "right",
+    "target_kind": "station",
+    "target_shuttle": "room315_right_shuttle_2",
+    "target_station": "staubli"
+  },
+  "expected_issue_codes": [],
+  "expected_status": "ok",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "explicit_shuttle_station",
+  "index": 2,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-cf8518c9cb1c",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": null,
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "selection_strategy": "explicit",
+            "target_kind": "station",
+            "target_shuttle": "R2",
+            "target_station": "staubli"
+          },
+          "request": "Move R2 to the Staubli station."
+        },
+        "schema_version": 1,
+        "selection_strategy": "explicit",
+        "side": null,
+        "source": "human",
+        "target_kind": "station",
+        "target_shuttle": "R2",
+        "target_slot": null,
+        "target_station": "staubli"
+      },
+      "issues": [],
+      "ok": true,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.599681867985055,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"transport\",\"selection_strategy\":\"nearest\",\"payload_filter\":\"loaded\",\"side\":\"right\",\"target_kind\":\"station\",\"target_station\":\"staubli\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_station\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": {
+          "alternatives": [],
+          "confidence": {
+            "overall": 0.8
+          },
+          "contract_type": "SemanticParseEnvelope",
+          "dialogue_act": "new_goal",
+          "draft_patch": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "station",
+            "target_station": "staubli"
+          },
+          "evidence": {},
+          "provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "semantic_inference",
+            "selection_strategy": "semantic_inference",
+            "side": "semantic_inference",
+            "target_kind": "semantic_inference",
+            "target_station": "semantic_inference"
+          },
+          "schema_version": 1
+        },
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 1,
+          "fallback_reason": "",
+          "fallback_used": false,
+          "field_provenance": {
+            "goal_type": "explicit_text",
+            "selection_strategy": "explicit_text",
+            "target_kind": "explicit_text",
+            "target_shuttle": "explicit_text",
+            "target_station": "explicit_text"
+          },
+          "final_decision": "draft",
+          "latency_s": 4.599750767927617,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "goal_type",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 4,
+                "start": 0,
+                "text": "Move"
+              },
+              "value": "transport"
+            },
+            {
+              "field": "selection_strategy",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 7,
+                "start": 5,
+                "text": "R2"
+              },
+              "value": "explicit"
+            },
+            {
+              "field": "target_shuttle",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 7,
+                "start": 5,
+                "text": "R2"
+              },
+              "value": "R2"
+            },
+            {
+              "field": "target_kind",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 22,
+                "start": 15,
+                "text": "Staubli"
+              },
+              "value": "station"
+            },
+            {
+              "field": "target_station",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 22,
+                "start": 15,
+                "text": "Staubli"
+              },
+              "value": "staubli"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "ok"
+    },
+    "validation": {
+      "clarifications": [],
+      "confirmation_prompt": "",
+      "confirmation_required": false,
+      "constraints": {
+        "goal_type": "transport",
+        "payload_filter": "any",
+        "selection_strategy": "explicit",
+        "shuttle_selection": "explicit",
+        "side": "right",
+        "target_kind": "station",
+        "target_shuttle": "room315_right_shuttle_2",
+        "target_station": "staubli"
+      },
+      "description": "transport room315_right_shuttle_2 on right rail to station staubli",
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-cf8518c9cb1c",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": null,
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "selection_strategy": "explicit",
+            "target_kind": "station",
+            "target_shuttle": "R2",
+            "target_station": "staubli"
+          },
+          "request": "Move R2 to the Staubli station."
+        },
+        "schema_version": 1,
+        "selection_strategy": "explicit",
+        "side": null,
+        "source": "human",
+        "target_kind": "station",
+        "target_shuttle": "R2",
+        "target_slot": null,
+        "target_station": "staubli"
+      },
+      "errors": [],
+      "ok": true,
+      "risk_level": "high",
+      "status": "ok",
+      "task_goal": {
+        "confidence": 1.0,
+        "constraints": {
+          "goal_type": "transport",
+          "payload_filter": "any",
+          "selection_strategy": "explicit",
+          "shuttle_selection": "explicit",
+          "side": "right",
+          "target_kind": "station",
+          "target_shuttle": "room315_right_shuttle_2",
+          "target_station": "staubli"
+        },
+        "contract_type": "TaskGoal",
+        "description": "transport room315_right_shuttle_2 on right rail to station staubli",
+        "goal_id": "room315-task-goal-5dfb8370c307",
+        "schema_version": 1,
+        "source": "human",
+        "timestamp": 0.0
+      }
+    }
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Move R2 to the Staubli station.",
+  "unsafe_auto_resolution": false
+}

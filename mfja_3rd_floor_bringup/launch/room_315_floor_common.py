@@ -1,3 +1,4 @@
+import fcntl
 import os
 from pathlib import Path
 
@@ -7,10 +8,79 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.actions import LogInfo
 from launch.actions import OpaqueFunction
+from launch.actions import RegisterEventHandler
 from launch.actions import TimerAction
 from launch.conditions import IfCondition
+from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+
+
+ROOM315_RUNTIME_INSTANCE_LOCK_PATH = Path(
+    '/tmp/mfja_room315_floor_runtime.lock'
+)
+_room315_runtime_lock_descriptor = None
+
+
+class Room315RuntimeAlreadyRunning(RuntimeError):
+    """Raised before Gazebo startup when another Room 315 launch owns ROS I/O."""
+
+
+def acquire_room315_runtime_instance_lock(
+    path=ROOM315_RUNTIME_INSTANCE_LOCK_PATH,
+):
+    """Acquire the host-wide Room 315 Gazebo/ROS singleton lock."""
+
+    lock_path = Path(path)
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        owner_pid = os.read(descriptor, 64).decode(
+            'ascii', errors='ignore'
+        ).strip()
+        os.close(descriptor)
+        owner = f' (owner pid {owner_pid})' if owner_pid else ''
+        raise Room315RuntimeAlreadyRunning(
+            'another Room 315 simulation launch is already running'
+            f'{owner}; stop it before starting a second launch because the '
+            'rail topics and Gazebo world services are process-global'
+        ) from exc
+    os.ftruncate(descriptor, 0)
+    os.write(descriptor, str(os.getpid()).encode('ascii'))
+    os.fsync(descriptor)
+    return descriptor
+
+
+def release_room315_runtime_instance_lock(descriptor):
+    """Release a lock acquired by ``acquire_room315_runtime_instance_lock``."""
+
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        os.close(descriptor)
+
+
+def _acquire_room315_runtime_lock(context, *args, **kwargs):
+    del context, args, kwargs
+    global _room315_runtime_lock_descriptor
+    if _room315_runtime_lock_descriptor is None:
+        _room315_runtime_lock_descriptor = (
+            acquire_room315_runtime_instance_lock()
+        )
+    return [LogInfo(msg='Acquired exclusive Room 315 simulation runtime lock.')]
+
+
+def _release_room315_runtime_lock(context, *args, **kwargs):
+    del context, args, kwargs
+    global _room315_runtime_lock_descriptor
+    if _room315_runtime_lock_descriptor is not None:
+        release_room315_runtime_instance_lock(
+            _room315_runtime_lock_descriptor
+        )
+        _room315_runtime_lock_descriptor = None
+    return []
 
 
 def _as_launch_bool(value):
@@ -390,6 +460,14 @@ def generate_floor_launch_description(profile_name):
 
     return LaunchDescription([
         *launch_arguments,
+        OpaqueFunction(function=_acquire_room315_runtime_lock),
+        RegisterEventHandler(
+            OnShutdown(
+                on_shutdown=[
+                    OpaqueFunction(function=_release_room315_runtime_lock),
+                ],
+            )
+        ),
         OpaqueFunction(function=_clear_vla_obstacle_pose_cache),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),

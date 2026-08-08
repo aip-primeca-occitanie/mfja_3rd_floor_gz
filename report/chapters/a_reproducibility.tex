@@ -1,0 +1,172 @@
+\chapter{Reproducibility Records}
+\label{app:reproducibility}
+
+\section{Software environment and handover}
+
+The reproducibility package identifies the final implementation and the records
+used for its evaluation. The handover includes an archived or committed copy
+of the exact source, together with the current configuration and report bundle
+\citep{mfjarepository}. The integrated campaign is retained in two layers: its
+lightweight records are versioned with the report, and its complete raw bundle
+is published as a checksum-identified release asset. The summary, file manifest
+and full-archive checksum list identify the workflow reported in
+\cref{chap:results}.
+
+The reference environment is Ubuntu~24.04, ROS~2 Jazzy, Gazebo Harmonic and
+Python~3.12. Manifests and hashes provide stable identifiers for generated data
+and model results. The report sources and lightweight evidence are versioned
+under \path{report/} in the software repository and are also included in the
+submission bundle.
+
+The workspace can be identified and built from its root with:
+
+\begin{lstlisting}[language=bash]
+source /opt/ros/jazzy/setup.bash
+git -C src/mfja_3rd_floor_gz rev-parse HEAD
+colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
+source install/setup.bash
+\end{lstlisting}
+
+\paragraph{Source and report checks.}
+
+The current source identity and test inventory can be recorded from the
+repository root with:
+
+\begin{lstlisting}[language=bash]
+git rev-parse HEAD
+git status --short
+python3 -m pytest --collect-only -q \
+  mfja_robot_control_config/test \
+  mfja_3rd_floor_description/test
+\end{lstlisting}
+
+A reproducible handover records this output and archives or commits the same
+source. Test collection confirms discovery, while the executed results are
+presented in \cref{chap:results}. From \path{report/}, \code{make check} builds
+the PDF, rejects unresolved references or citations and reports the page size
+and count. Its diagnostics are preserved as
+\path{report/evidence/final_report_build_2026-08-08.log}.
+
+User-facing launch profiles and their current arguments are documented in
+\path{docs/INSTALLATION.md},
+\path{docs/QUICK_START_AND_FEATURE_GUIDE.md} and
+\path{docs/ROOM315_LANGUAGE_TO_MOTION_RUNTIME.md}. The browser-based
+\path{runbook.html} supplies copy-ready operator workflows and diagnostic
+checks. \Cref{app:interfaces} provides a concise index of the corresponding
+capabilities and operator interfaces.
+
+\section{Evaluation files and identifiers}
+
+\Cref{tab:evidence-roots} associates each reported result with the files and
+identifiers needed to inspect it, without depending on host-specific storage
+paths.
+
+\begin{longtable}{@{}
+>{\raggedright\arraybackslash}p{0.22\textwidth}
+>{\raggedright\arraybackslash}p{0.67\textwidth}@{}}
+\caption{Files and identifiers for the reported results.}
+\label{tab:evidence-roots}\\
+\toprule
+\textbf{Result group} & \textbf{Files and identifiers}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Result group} & \textbf{Files and identifiers}\\
+\midrule
+\endhead
+Software and configuration & Git HEAD
+\path{c44c501640e3dab35ab241384c99963e1b9d8745}, the stored binary worktree
+patch, and the 483-file source manifest with aggregate SHA-256
+\path{326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9}.
+The two untracked files named by the source record are retained under
+\path{report/evidence/current_source_supplement_2026-08-07}.\\
+\tablerowrule
+Configured language runtime &
+\code{Qwen2.5-1.5B-Instruct-GGUF},
+\path{qwen2.5-1.5b-instruct-q4_k_m.gguf}, SHA-256
+\path{6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e}.
+The campaign used \path{task_goal_understanding.local.yaml}, SHA-256
+\path{6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea};
+it pins the offline \code{llama.cpp} parameters and prompt-schema version.\\
+\tablerowrule
+Language-contract evaluation &
+\path{report/evidence/room315_language_semantic_evaluation_v3} retains the
+unchanged ten-case corpus, semantic configuration, runner, source snapshot,
+raw backend outputs, strict envelopes, fusion traces and environment. The
+summary, manifest and checksum-list SHA-256 values are respectively
+\path{38d015617856e3127da5a7082701caf5ab40523c6271cc7830d521800c8ecffd},
+\path{d6584fb276f12630c60bb2d3860988d06d0c63d2a0c2e2931f38aaf33c0574de}
+and
+\path{f3e4260f6514f35486783c22b74b932de264ad7af9b18c85e6868fdea859211b}.
+The final protocol records 10/10 declared outcomes, nine model invocations,
+eight strict envelopes without fallback, one expected schema rejection and no
+unsafe automatic resolution.\\
+\tablerowrule
+Configured visual runtime and evaluation & Checkpoint SHA-256
+\path{8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d},
+bound to the preserved \path{training_config.json}, \path{metrics.json},
+\path{run_metadata.json}, target/vectoriser sidecars and runtime preflight.
+\path{visual_state_runtime.yaml} selects this hash and has SHA-256
+\path{e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19}.
+The evidence root is
+\path{report/evidence/visual_model_evaluation_2026-07-30}; its checksum-list
+SHA-256 is
+\path{912438606d432c8acc48bbf20aa624c65c29ea51ddef03142d75d2259c13c3b9}.\\
+\tablerowrule
+Training and validation data & The preserved \path{split_manifest.json}
+(SHA-256 \path{8516f38ffbfdfb5a70cab17bb480e31f4c1f2b0d4c360b9d91a0bf10c122ca93})
+records 1528 training, 256 validation and 256 locked-Test scenarios. The leakage
+audit (SHA-256 \path{205e1d8f47109aa17b936190b86c66d3e7c6b0fbf49116c9477f75d1eeb97a03})
+and final review (SHA-256
+\path{aa21e1991a1ffac6070231cae25a880528bf4bc6e19b27f39e450483c1f9e7e0})
+retain the split and Test-evaluation checks.\\
+\tablerowrule
+Automated verification & Three logs retain each command, result and the same
+source identity as the campaign:
+\path{pytest_current_source_focused_2026-08-07.log}, 190/190, SHA-256
+\path{cf4804917505d61465559924b3c776dbc7e2c3418dfeec16bf8bc2de11a17110};
+\path{pytest_current_source_transport_2026-08-07.log}, 96/96, SHA-256
+\path{9bb7bf0448f323c87b16b9bb0eaca4fef74b6bfdf53473af084aaedf45ba1404};
+and \path{pytest_current_source_runbook_capabilities_2026-08-07.log}, 42/42,
+SHA-256
+\path{fbd5891ec92e20a6b3a43528bdecfc0ff6f4554253ba34bbb181a6910ea6347c}.
+Their coverage is described in \cref{chap:results}.\\
+\tablerowrule
+Multi-robot cold start &
+\path{report/evidence/multi_robot_cold_start_smoke_2026-08-07} retains the
+predeclared protocol, active and complete logs, ROS graph, model list and six
+fresh state samples. \path{result.json} has SHA-256
+\path{59b60b1fddf37b74b86013dce195438259f41933db335aa0ccff85e83e014fae};
+the checksum-list SHA-256 is
+\path{5c3d60f5d6324eafb989b577369b50f686e8c8d62d37a8bf27008cfff384d8c0}.\\
+\tablerowrule
+Integrated runtime & The lightweight evidence root is
+\path{report/evidence/room315_integrated_campaign_v2}. Its
+\path{summary.json} has SHA-256
+\path{3c065872051d0e26b5425b64132c3a6f4f1ab8b79b3088fda5d9894e721f0d1e},
+and \path{manifest.json} has SHA-256
+\path{3a381517e2c3bf33d575606caf871f07b5fbe7ccf307e760fc77a7c1ba47e318},
+while the complete bundle with per-case ROS bags is indexed by
+\path{ROOM315_INTEGRATED_CAMPAIGN_ARCHIVE.md} and published under
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-evidence-v2}{\texttt{room315-evidence-v2}};
+its archive SHA-256 is
+\path{7775885867f8fde6c23d24e881d339447d5fc622be0143f2be5ca21d7f259b1b}.
+The summary records 12/12 successful cold-start runs across the 12 declared
+positive cases: six on each rail, all eight shuttle identities and five
+predeclared case families.\\
+\tablerowrule
+B03 camera figure & The exact archived frames, extraction script and provenance
+are retained under
+\path{report/evidence/room315_campaign_figures_2026-08-07}. The figure SHA-256
+is \path{c1272484031885f0ec32334eec343fb284d52588f7b198429e7718a0af26551c};
+the derivative checksum-list SHA-256 is
+\path{466772cfd0ab4dc4e57a6cc261b3ca507d2cc6c09882f2755d10f117e76bb502}.\\
+\bottomrule
+\end{longtable}
+
+The repository retains the declarations, readiness records, resolved commands,
+runtime logs and terminal verification. The release adds the twelve raw ROS
+bags and the original checksum list; a separate checksum list verifies the 929
+retained files. The campaign environment records the Git and runtime identities
+and isolated ROS domains. The current-source supplement preserves the two test
+files required to reconstruct the recorded 483-file source state.

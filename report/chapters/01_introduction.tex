@@ -1,0 +1,64 @@
+\chapter{General Introduction}
+\label{chap:introduction}
+
+\paragraph{Context and engineering objective.}
+
+The MFJA robotics platforms bring together industrial manipulators, a mobile
+robot, transport cells, cameras and programmable devices. Integrating this
+equipment in simulation requires compatible models, coordinate frames,
+namespaces, commands and state descriptions. The challenge was therefore
+broader than constructing a visually accurate Gazebo scene: the simulated
+equipment also had to behave consistently enough to support routing, planning
+and experimentation.
+
+The project then examined whether camera observations and English requests
+could describe a task without sending motor commands directly. The language and
+vision paths supply information about the request and the scene. PlanSys2
+produces the symbolic sequence, and the supervisor checks each requested step
+before execution. Neither learned model produces a plan or an action vector.
+
+\paragraph{Objectives and principal contribution.}
+
+The project pursued four engineering objectives within simulation:
+
+\begin{enumerate}[label=\textbf{O\arabic*.},leftmargin=*,itemsep=0.22em]
+  \item establish a maintainable Gazebo representation of the MFJA third floor
+  and Room~315, with configuration-driven launch and unified ROS~2 access to
+  the supported simulated robots;
+  \item implement continuous multi-shuttle transport over calibrated rail
+  geometry and explicit topology, including device semantics, routing,
+  reservations and collision-avoidance constraints;
+  \item define typed command and state interfaces, together with supervision
+  rules for checking commands and confirming their effects; and
+  \item design and evaluate a neuro-symbolic workflow that combines
+  natural-language goal interpretation and paired-camera state estimation with
+  PDDL/PlanSys2 planning and supervised execution.
+\end{enumerate}
+
+The four objectives form a progression from the simulated environment and its
+transport system to task-level interaction through language and vision. The
+objective identifiers O1--O4 are used again in
+\cref{tab:objective-results} to connect each objective to its evaluated result.
+
+\paragraph{Method and headline results.}
+
+Development followed short build, test and review cycles. Each part was first
+implemented and checked separately, then connected to the preceding layers.
+This made it possible to resolve modelling, interface and coordination issues
+before evaluating the complete workflow. The software, dataset and model
+versions used for the reported evaluations are listed in
+\cref{app:reproducibility}.
+
+The complete workflow and the visual model were evaluated separately. Their
+results and the limits of each evaluation are presented in
+\cref{chap:results}.
+
+\paragraph{Report structure.}
+The host environment, mission and principal design choices are introduced in
+\cref{chap:host,chap:mission,chap:background}. The engineering foundations are
+then developed in
+\cref{chap:digital-twin,chap:multi-robot,chap:transport,chap:interfaces}, followed
+by the language integration, paired-camera data generation and visual training
+process in \cref{chap:ai-development}. \Cref{chap:neurosymbolic} follows one
+English instruction through planning, supervised motion and result checking,
+and \cref{chap:results,chap:perspectives} present the results and future work.

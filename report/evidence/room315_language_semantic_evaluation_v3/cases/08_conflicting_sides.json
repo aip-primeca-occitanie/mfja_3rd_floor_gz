@@ -1,0 +1,159 @@
+{
+  "actual_constraints": {},
+  "actual_issue_codes": [
+    "ambiguous_explicit_conflict"
+  ],
+  "actual_status": "clarification_required",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.909141418989748,
+  "expected_constraints": {},
+  "expected_issue_codes": [
+    "ambiguous_explicit_conflict"
+  ],
+  "expected_status": "clarification_required",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "conflicting_sides",
+  "index": 8,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": null,
+      "issues": [
+        {
+          "code": "ambiguous_explicit_conflict",
+          "details": {
+            "conflicts": [
+              "side"
+            ]
+          },
+          "field": "side",
+          "message": "The current text contains conflicting explicit Room 315 facts."
+        }
+      ],
+      "ok": false,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.908750577131286,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"transport\",\"selection_strategy\":\"nearest\",\"payload_filter\":\"loaded\",\"side\":\"right\",\"target_kind\":\"shuttle_selection\",\"target_shuttle\":\"R1\",\"target_slot\":\"2\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_slot\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": {
+          "alternatives": [],
+          "confidence": {
+            "overall": 0.8
+          },
+          "contract_type": "SemanticParseEnvelope",
+          "dialogue_act": "new_goal",
+          "draft_patch": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "shuttle_selection",
+            "target_shuttle": "R1",
+            "target_slot": "2"
+          },
+          "evidence": {},
+          "provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "semantic_inference",
+            "selection_strategy": "semantic_inference",
+            "side": "semantic_inference",
+            "target_kind": "semantic_inference",
+            "target_slot": "semantic_inference"
+          },
+          "schema_version": 1
+        },
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 1,
+          "fallback_reason": "",
+          "fallback_used": false,
+          "field_provenance": {},
+          "final_decision": "clarification_required",
+          "latency_s": 4.908760655205697,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "goal_type",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 4,
+                "start": 0,
+                "text": "Move"
+              },
+              "value": "transport"
+            },
+            {
+              "field": "side",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 14,
+                "start": 9,
+                "text": "right"
+              },
+              "value": "right"
+            },
+            {
+              "field": "side",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 23,
+                "start": 19,
+                "text": "left"
+              },
+              "value": "left"
+            },
+            {
+              "field": "target_kind",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 41,
+                "start": 35,
+                "text": "slot 2"
+              },
+              "value": "slot"
+            },
+            {
+              "field": "target_slot",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 41,
+                "start": 35,
+                "text": "slot 2"
+              },
+              "value": "2"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "error"
+    },
+    "validation": null
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Move the right and left shuttle to slot 2.",
+  "unsafe_auto_resolution": false
+}

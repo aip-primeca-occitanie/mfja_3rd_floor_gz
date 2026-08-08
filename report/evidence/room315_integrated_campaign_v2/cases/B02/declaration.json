@@ -1,0 +1,46 @@
+{
+  "coverage": [
+    "R2",
+    "explicit_identity",
+    "slot_to_slot",
+    "cross_station"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "selection_strategy": "explicit",
+      "side": "right",
+      "target_kind": "slot",
+      "target_shuttle": "room315_right_shuttle_2",
+      "target_slot": "3"
+    },
+    "prompt_fragments": [
+      "Shuttle: room315_right_shuttle_2",
+      "Rail: Right",
+      "Destination: Slot 3"
+    ],
+    "selected_identity": "R2",
+    "target_slot": "3",
+    "target_station": "staubli"
+  },
+  "family": "explicit_identity",
+  "id": "B02",
+  "launch": {
+    "left": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    },
+    "right": {
+      "identities": [
+        "R2"
+      ],
+      "loaded": [],
+      "start_slots": [
+        "2"
+      ]
+    }
+  },
+  "side": "right",
+  "utterance": "Move R2 to slot 3 on the right rail."
+}

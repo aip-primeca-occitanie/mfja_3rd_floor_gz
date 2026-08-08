@@ -1,0 +1,287 @@
+\begin{titlepage}
+  \thispagestyle{empty}
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[mfjablue!74,line width=1.60pt]
+      ([xshift=0.75cm,yshift=-1.60cm]current page.north west)
+      rectangle
+      ([xshift=-0.75cm,yshift=0.75cm]current page.south east);
+  \end{tikzpicture}
+
+  \sffamily
+  \begin{center}
+    \vspace*{0.80cm}
+
+    % The official UFR ST template reserves the right-hand position for the
+    % CFA logo only when the student is an apprentice.  This report concerns
+    % formation initiale, so that position is intentionally left empty.
+    \begin{tabularx}{0.93\textwidth}{@{}>{\centering\arraybackslash}X
+                                      >{\centering\arraybackslash}X
+                                      >{\centering\arraybackslash}X@{}}
+      \includegraphics[width=4.25cm,height=2.45cm,keepaspectratio]
+        {cover_mfja_logo.png}
+      &
+      \includegraphics[width=4.65cm,height=2.45cm,keepaspectratio]
+        {cover_univ_evry_ufrst.png}
+      & {}
+    \end{tabularx}
+
+    \vspace{1.30cm}
+    {\fontsize{20}{23}\selectfont Université Évry Paris-Saclay\par}
+    \vspace{0.42cm}
+    {\fontsize{17}{20}\selectfont\bfseries
+      \underline{Mention :}\ \ReportProgrammeMention\par}
+    \vspace{0.10cm}
+    {\fontsize{16}{19}\selectfont\bfseries
+      \underline{Parcours :}\ \ReportProgrammeTrack\par}
+
+    \vspace{2.75cm}
+    {\fontsize{18}{22}\selectfont\bfseries \ReportProgrammeCover\par}
+    \vspace{0.12cm}
+    {\large Année universitaire\par}
+    {\large\bfseries \ReportAcademicYear\par}
+
+    \vspace{2.10cm}
+    {\color{blue!55!cyan}\makebox[0pt][c]{\rule{16.9cm}{1.15pt}}\par}
+    \vspace{0.48cm}
+    \parbox{16.5cm}{%
+      \centering\itshape\fontsize{19}{23}\selectfont
+      \ReportTitle\par}
+    \vspace{0.48cm}
+    {\color{blue!55!cyan}\makebox[0pt][c]{\rule{16.9cm}{1.15pt}}\par}
+
+    \vspace{0.72cm}
+    {\Large\bfseries \ReportHost\par}
+    \vspace{0.10cm}
+    {\large\bfseries \ReportService\par}
+
+    \vfill
+    \begin{minipage}{0.84\textwidth}
+      \raggedright
+      \fontsize{16}{19}\selectfont
+      \begin{tabular}{@{}>{\bfseries}l l@{}}
+        NOM : & \ReportSurname \\[0.20cm]
+        Prénom : & \ReportGivenName \\[0.20cm]
+        Numéro d'étudiant : & \ReportStudentNumber \\[0.20cm]
+        Statut : & \ReportStatusFrench \\[0.20cm]
+        Tuteurs de stage : & \ReportHostSupervisorsFrench \\
+      \end{tabular}
+    \end{minipage}
+    \vspace{0.45cm}
+  \end{center}
+\end{titlepage}
+\setcounter{page}{2}
+
+\cleardoublepage
+\chapter*{Identification Page}
+\thispagestyle{plain}
+\begingroup
+\renewcommand{\arraystretch}{1.08}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\sffamily\raggedright\arraybackslash}p{4.45cm}@{\hspace{0.55cm}}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\multicolumn{2}{@{}l}{\large\sffamily\bfseries Student}\\
+\midrule
+Name & \ReportAuthor\\
+Programme & \ReportProgramme\\
+Academic year & \ReportAcademicYear\\
+Student number & \ReportStudentNumber\\
+Telephone & \ReportStudentPhone\\
+Email & \ReportStudentEmail\\
+\addlinespace
+\multicolumn{2}{@{}l}{\large\sffamily\bfseries Host organisation}\\
+\midrule
+Organisation & \ReportHost\\
+Host service & \ReportService\\
+Address & \ReportHostAddress\\
+Telephone & \ReportHostPhone\\
+\addlinespace
+\multicolumn{2}{@{}l}{\large\sffamily\bfseries Host supervisors}\\
+\midrule
+\ReportHostSupervisorOne & \ReportHostSupervisorOneRole; \ReportHostSupervisorOneEmail\newline
+  Telephone: \ReportHostSupervisorOnePhone\\
+\ReportHostSupervisorTwo & \ReportHostSupervisorTwoRole; \ReportHostSupervisorTwoEmail\newline
+  Telephone: \ReportHostSupervisorTwoPhone\\
+\addlinespace
+\multicolumn{2}{@{}l}{\large\sffamily\bfseries Academic supervisor}\\
+\midrule
+Name & \ReportAcademicSupervisor\\
+Role & \ReportAcademicSupervisorRole\\
+Email & \ReportAcademicSupervisorEmail\\
+\addlinespace
+\multicolumn{2}{@{}l}{\large\sffamily\bfseries Mission}\\
+\midrule
+Period & \ReportStartDate{} -- \ReportEndDate\\
+Host unit & Robotics platforms, MFJA\\
+Official title & \ReportMissionTitle\\
+Report language & English\\
+\bottomrule
+\end{tabularx}
+\endgroup
+
+\cleardoublepage
+\chapter*{Abstract}
+The internship developed a common simulation environment for the industrial
+and mobile robots used at the Maison de la Formation Jacqueline Auriol (MFJA).
+The initial assignment was to model Room~315 in Gazebo and provide consistent
+Robot Operating System~2 (ROS~2) access to its robots and transport system.
+Completing this stage ahead of schedule opened an investigation inspired by
+vision--language--action (VLA) research, based on overhead-camera perception
+and natural-language interaction. The implemented architecture is a
+schema-constrained neuro-symbolic
+language-and-vision interface rather than an end-to-end VLA policy.
+
+The resulting system combines configuration-driven robot launch, calibrated
+rail geometry, continuous multi-shuttle motion and typed ROS~2 command and
+state interfaces. A locally deployed Qwen2.5-1.5B-Instruct model converts an
+English request into a structured task proposal, while a paired-view ResNet-18
+estimates shuttle state from the simulated cameras. Schema and domain checks
+are applied before PDDL/PlanSys2 produces a plan, and the resulting motion is
+supervised and confirmed from the observed system state.
+
+The English-to-motion workflow completed 12/12 isolated cold-start
+runs: six on each rail, covering all eight shuttle identities and five planned
+case families. Every run reached its expected terminal state. A
+separate ten-case language evaluation matched the expected result in every
+case, including clarification, rejection and cancellation. On the locked
+256-scenario Test set, the configured visual checkpoint achieved 100\%
+rail-side accuracy, 99.2537\% loaded-state accuracy and 65.2985\% exact-block
+accuracy.
+
+All implementation and evaluation took place in Gazebo simulation.
+
+\textbf{Keywords:} ROS~2; Gazebo Harmonic; industrial robotics; digital twin;
+multi-robot systems; flexible manufacturing; PDDL; PlanSys2; computer vision;
+language-and-vision interface; neuro-symbolic control; safety supervision.
+
+\cleardoublepage
+\chapter*{Résumé}
+Le stage portait sur une interface unifiée pour les robots industriels et
+mobiles en simulation, destinée à l'enseignement, à l'intégration logicielle et
+à la recherche. Le premier lot de travail a consisté à modéliser la salle~315
+de la Maison de la Formation Jacqueline Auriol (MFJA) dans Gazebo et à produire
+une simulation exploitable de ses robots et de son système de transport. Son
+achèvement anticipé a permis d'étendre le projet à une étude fondée sur des
+caméras en hauteur et une approche vision--langage--action (VLA). L'objectif
+d'ingénierie est ainsi devenu l'intégration de robots hétérogènes, du transport
+flexible, de l'état visuel et des requêtes en langage naturel, tout en maintenant
+un contrôle déterministe de l'actionnement.
+
+Le développement a suivi une démarche incrémentale. Chaque couche s'appuie sur
+une représentation de référence et une interface ROS~2 limitée, validées avant
+l'intégration de la couche suivante. Le travail a produit quatre contributions
+liées: un socle de jumeau numérique simulé avec lancement piloté par
+configuration; des graphes ferroviaires calibrés et un mouvement continu
+multi-navette supervisé; des contrats commande/état typés avec supervision
+déterministe et vérification des effets; enfin, une boucle neuro-symbolique
+dotée de deux interfaces apprises limitées. Un modèle
+Qwen2.5-1.5B-Instruct déployé localement propose une représentation sémantique
+soumise à un schéma strict, tandis qu'un ResNet-18 à deux vues, entraîné sur le
+corpus généré de la salle~315, estime des valeurs d'état structurées. La fusion
+et la validation de domaine déterministes créent la tâche acceptée.
+PDDL/PlanSys2, la traduction du plan, la supervision et la vérification des
+effets conservent l'autorité de décision et d'exécution.
+
+Dans le périmètre simulé de la salle~315, la campagne intégrée allant de la
+requête en anglais au mouvement a mené à bien les douze exécutions isolées
+démarrées à froid. Elle comprenait six exécutions par rail, couvrait les huit
+identités de navette et cinq familles de cas prédéclarées ; le résultat
+terminal déclaré a été vérifié dans chaque cas. Une évaluation distincte et
+figée du contrat linguistique sur dix cas a reproduit chaque résultat final
+déclaré sans aucune résolution automatique non sûre. Le checkpoint visuel utilisé
+pour l'évaluation est identifié par hachage. Il a atteint 100\,\% de précision
+du côté de rail, 99,2537\,\% de précision de l'état de charge et 65,2985\,\% de
+précision pour la classification exacte du bloc lors d'une unique évaluation
+sur l'ensemble Test verrouillé de 256 scénarios.
+
+La mise en œuvre et son évaluation restent limitées à la simulation. La
+configuration actuelle utilise le checkpoint visuel identifié. Le projet
+fournit à la MFJA une base réutilisable pour l'enseignement et la recherche,
+des contrats d'intégration explicites et un socle traçable pour poursuivre les
+développements et les expérimentations en simulation.
+
+\textbf{Mots-clés :} ROS~2 ; Gazebo ; robotique industrielle ; jumeau
+numérique ; système multi-robot ; PDDL ; PlanSys2 ; vision ; VLA ; commande
+neuro-symbolique ; supervision de sécurité.
+
+\cleardoublepage
+\chapter*{Acknowledgements}
+I would like to sincerely thank Olivier Stasse and Diane Bury for their
+scientific guidance throughout this internship. Our weekly discussions and
+their constructive feedback helped me refine the technical architecture,
+improve the experimental methodology and develop the initial modelling
+assignment into a broader integration and research project for the MFJA
+platforms.
+
+I would also like to thank Nicolas Seguy for his academic supervision and for
+following the progress of the placement. Finally, I am grateful to the
+administrative and technical staff at the MFJA for coordinating access to the
+facilities, helping with organisational procedures and providing the practical
+support needed throughout the internship.
+
+\cleardoublepage
+\chapter*{Use of Generative Artificial Intelligence}
+Generative artificial intelligence tools, primarily OpenAI ChatGPT, were used
+during the preparation of this work as supporting tools. Their use included
+improving the grammatical correctness, clarity, and fluency of the report;
+enhancing the visual quality and presentation of selected figures and diagrams;
+and assisting with the generation, organization, and refactoring of selected
+portions of code, as well as with repetitive development tasks and workflow
+optimization.
+
+All technical choices, system design, implementation, experiments, results,
+analyses, and conclusions presented in this report remain the author's own work
+and responsibility. AI-assisted code, figures, and suggestions were
+systematically reviewed, adapted where necessary, tested or validated as
+appropriate, and integrated by the author. Generative AI was therefore used as
+a supporting tool to improve efficiency and presentation quality, rather than
+as a substitute for the author's technical reasoning, engineering decisions,
+implementation, or validation. This disclosure follows the university
+reporting guidance \citep{evryreportinstructions2026}.
+
+\cleardoublepage
+\chapter*{Glossary and Acronyms}
+\section*{Acronyms}
+\begin{acronym}[PlanSys2]
+  \acro{APE}{Activité Principale Exercée, the French principal-activity code}
+  \acro{CAD}{Computer-Aided Design}
+  \acro{CLI}{Command-Line Interface}
+  \acro{CSV}{Comma-Separated Values}
+  \acro{DDS}{Data Distribution Service}
+  \acro{GUI}{Graphical User Interface}
+  \acro{JSON}{JavaScript Object Notation}
+  \acro{MFJA}{Maison de la Formation Jacqueline Auriol}
+  \acro{NAF}{Nomenclature d'Activités Française}
+  \acro{PDDL}{Planning Domain Definition Language}
+  \acro{PLC}{Programmable Logic Controller}
+  \acro{POPF}{Partial Order Planning Forwards}
+  \acro{QoS}{Quality of Service}
+  \acro{RGB}{Red--Green--Blue colour representation}
+  \acro{ROS}{Robot Operating System}
+  \acro{SDF}{Simulation Description Format}
+  \acro{STL}{Stereolithography mesh format}
+  \acro{TF}{ROS transform tree}
+  \acro{URDF}{Unified Robot Description Format}
+  \acro{VLA}{Vision--Language--Action}
+  \acro{YAML}{YAML Ain't Markup Language}
+\end{acronym}
+
+\section*{Project-specific terms}
+\begin{description}
+  \item[Digital twin] A versioned digital representation of a defined physical
+  system that includes its relevant information flows.
+  \item[Fail-closed] A policy that withholds an operation when required state is
+  missing, stale, contradictory or from an unapproved source.
+  \item[\code{ObservedState}] A versioned collection of current observed facts
+  and their provenance at one state identifier.
+  \item[SHA-256] A cryptographic digest used here to identify the exact files or
+  model weights associated with an evaluation.
+  \item[\code{TaskGoal}] The fixed task description created after rule-based
+  validation and operator confirmation of a semantic draft.
+\end{description}
+
+\cleardoublepage
+\tableofcontents
+\cleardoublepage
+\listoffigures
+\cleardoublepage
+\listoftables
+\cleardoublepage

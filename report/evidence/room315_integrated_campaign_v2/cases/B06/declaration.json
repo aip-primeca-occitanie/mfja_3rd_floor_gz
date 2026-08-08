@@ -1,0 +1,46 @@
+{
+  "coverage": [
+    "L2",
+    "explicit_identity",
+    "slot_to_slot",
+    "cross_station"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "selection_strategy": "explicit",
+      "side": "left",
+      "target_kind": "slot",
+      "target_shuttle": "room315_left_shuttle_2",
+      "target_slot": "3"
+    },
+    "prompt_fragments": [
+      "Shuttle: room315_left_shuttle_2",
+      "Rail: Left",
+      "Destination: Slot 3"
+    ],
+    "selected_identity": "L2",
+    "target_slot": "3",
+    "target_station": "kuka"
+  },
+  "family": "explicit_identity",
+  "id": "B06",
+  "launch": {
+    "left": {
+      "identities": [
+        "L2"
+      ],
+      "loaded": [],
+      "start_slots": [
+        "2"
+      ]
+    },
+    "right": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    }
+  },
+  "side": "left",
+  "utterance": "Move L2 to slot 3 on the left rail."
+}

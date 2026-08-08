@@ -1,252 +1,1443 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Room 315 VLA Payload Case Runbook</title>
+  <meta name="description" content="Terminal-by-terminal Room 315 VLA closed-loop operator runbook.">
+  <title>Room 315 VLA Closed-Loop Runbook</title>
   <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fa;
+      --surface: #ffffff;
+      --surface-soft: #edf3f7;
+      --ink: #16212c;
+      --muted: #5e6d7a;
+      --line: #d6e0e8;
+      --blue: #174a7c;
+      --blue-dark: #10385f;
+      --teal: #087f7b;
+      --teal-soft: #e9f7f5;
+      --green: #24704b;
+      --green-soft: #eaf6ef;
+      --orange: #a75d00;
+      --orange-soft: #fff5e6;
+      --red: #ad3038;
+      --red-soft: #fff0f1;
+      --code-bg: #101820;
+      --code-ink: #eaf1f7;
+      --radius: 10px;
+      --shadow: 0 12px 32px rgba(22, 33, 44, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #17202a;
-      background: #f7f8fa;
-      line-height: 1.55;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Arial, sans-serif;
+      line-height: 1.62;
     }
-    main {
-      max-width: 920px;
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre, kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    code {
+      padding: 0.08em 0.28em;
+      border-radius: 4px;
+      background: var(--surface-soft);
+      overflow-wrap: anywhere;
+    }
+    header {
+      color: #fff;
+      background:
+        radial-gradient(circle at 82% 12%, rgba(34, 188, 178, 0.24), transparent 28%),
+        linear-gradient(130deg, #10385f 0%, #174a7c 58%, #087f7b 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .header-inner {
+      max-width: 1220px;
       margin: 0 auto;
-      padding: 40px 20px 64px;
+      padding: 42px 24px 34px;
     }
-    h1, h2 {
-      line-height: 1.2;
+    .eyebrow {
+      margin: 0 0 9px;
+      color: #bdece8;
+      font-size: 0.82rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    code, pre {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    h1 {
+      max-width: 930px;
+      margin: 0;
+      font-size: clamp(2rem, 4.5vw, 3.55rem);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+    .subtitle {
+      max-width: 950px;
+      margin: 17px 0 0;
+      color: #e5eef5;
+      font-size: 1.05rem;
+    }
+    .header-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .header-tag {
+      padding: 5px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.10);
+      color: #fff;
+      font-size: 0.79rem;
+      font-weight: 750;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 285px minmax(0, 1fr);
+      gap: 24px;
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 24px 24px 56px;
+    }
+    nav {
+      position: sticky;
+      top: 14px;
+      align-self: start;
+      max-height: calc(100vh - 28px);
+      overflow-y: auto;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    nav h2 {
+      margin: 0 0 9px;
+      font-size: 0.92rem;
+    }
+    nav a {
+      display: block;
+      padding: 6px 9px;
+      border-radius: 6px;
+      color: var(--ink);
+      font-size: 0.88rem;
+    }
+    nav a:hover, nav a:focus-visible {
+      background: var(--surface-soft);
+      text-decoration: none;
+      outline: none;
+    }
+    nav .nav-group {
+      margin: 12px 8px 4px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    main { display: grid; gap: 20px; min-width: 0; }
+    section {
+      scroll-margin-top: 18px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    h2 {
+      margin: 0 0 10px;
+      color: var(--blue-dark);
+      font-size: 1.48rem;
+      line-height: 1.24;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      margin: 23px 0 8px;
+      color: var(--ink);
+      font-size: 1.08rem;
+      line-height: 1.3;
+    }
+    h4 { margin: 16px 0 6px; font-size: 0.98rem; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 15px; padding-inline-start: 23px; }
+    li + li { margin-top: 5px; }
+    .lead { color: var(--muted); font-size: 1.01rem; }
+    .note { color: var(--muted); font-size: 0.93rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .tile {
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+    .tile h3, .tile h4 { margin-top: 0; }
+    .callout {
+      margin: 14px 0;
+      padding: 13px 15px;
+      border-left: 4px solid var(--teal);
+      border-radius: 6px;
+      background: var(--teal-soft);
+    }
+    .callout strong { color: #075d59; }
+    .callout.warning { border-color: var(--orange); background: var(--orange-soft); }
+    .callout.warning strong { color: #7a4300; }
+    .callout.danger { border-color: var(--red); background: var(--red-soft); }
+    .callout.danger strong { color: #86222a; }
+    .callout.success { border-color: var(--green); background: var(--green-soft); }
+    .callout.success strong { color: #195536; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0 2px; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      padding: 3px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.77rem;
+      font-weight: 760;
+    }
+    .tag.ok { border-color: #a9d5ba; background: var(--green-soft); color: var(--green); }
+    .tag.warn { border-color: #e7c692; background: var(--orange-soft); color: #7a4300; }
+    .command {
+      margin: 12px 0 18px;
+      overflow: hidden;
+      border: 1px solid #26394b;
+      border-radius: 8px;
+      background: var(--code-bg);
+      direction: ltr;
+    }
+    .command-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 43px;
+      padding: 8px 10px 8px 14px;
+      border-bottom: 1px solid #2b3e50;
+      color: #c8d7e4;
+      background: #162432;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+    .terminal-label { display: inline-flex; align-items: center; gap: 8px; }
+    .terminal-label::before {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #56c7bd;
+      content: "";
+      box-shadow: 14px 0 0 #f0bd65, 28px 0 0 #ec7880;
+      margin-right: 28px;
     }
     pre {
+      margin: 0;
+      padding: 15px;
       overflow-x: auto;
-      padding: 16px;
-      border: 1px solid #d7dde5;
-      background: #ffffff;
+      color: var(--code-ink);
+      background: var(--code-bg);
+      font-size: 0.86rem;
+      line-height: 1.55;
+      white-space: pre;
+    }
+    pre code { padding: 0; background: transparent; color: inherit; overflow-wrap: normal; }
+    .copy-btn {
+      flex: none;
+      padding: 6px 10px;
+      border: 1px solid #527087;
       border-radius: 6px;
+      background: #20374a;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 800;
     }
-    pre code {
-      background: transparent;
-      color: inherit;
+    .copy-btn:hover, .copy-btn:focus-visible { background: #2a4b64; outline: 2px solid #75cfc7; }
+    .copy-btn.copied { border-color: #65c58b; background: #1e6240; }
+    .utterance {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 9px 0;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fbfcfd;
+    }
+    .utterance code {
       padding: 0;
+      background: transparent;
+      color: var(--blue-dark);
+      font-size: 0.91rem;
+      font-weight: 720;
     }
-    .note {
-      padding: 12px 14px;
-      border-left: 4px solid #2f6fed;
-      background: #eef4ff;
+    .utterance .copy-btn { border-color: #b7c8d7; background: #eef3f7; color: var(--blue-dark); }
+    .utterance .copy-btn:hover { background: #dde9f1; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      margin: 17px 0;
     }
-    .warning {
-      padding: 12px 14px;
-      border-left: 4px solid #c47f00;
-      background: #fff7e8;
+    .flow-step {
+      position: relative;
+      min-height: 84px;
+      padding: 11px 8px;
+      border: 1px solid #bad2df;
+      border-radius: 8px;
+      background: #f7fbfd;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 780;
+    }
+    .flow-step span { display: block; margin-top: 4px; color: var(--muted); font-size: 0.72rem; font-weight: 600; }
+    .flow-step:not(:last-child)::after {
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      right: -9px;
+      color: var(--teal);
+      content: "›";
+      font-size: 1.4rem;
+      font-weight: 900;
+      transform: translateY(-52%);
+    }
+    .table-wrap { overflow-x: auto; margin: 12px 0 18px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 10px 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--blue-dark); background: var(--surface-soft); font-size: 0.8rem; letter-spacing: 0.025em; text-transform: uppercase; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.28);
+      border-radius: 50%;
+      vertical-align: -1px;
+    }
+    .red { background: #d73535; } .blue { background: #2b62c9; }
+    .green { background: #32a852; } .yellow { background: #f1cf2f; }
+    .cyan { background: #2bcbd1; } .magenta { background: #d340c8; }
+    .orange { background: #ef8b2c; } .white { background: #fff; }
+    .scenario-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .scenario-head h2 { margin-bottom: 2px; }
+    .scenario-number {
+      display: inline-grid;
+      place-items: center;
+      flex: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 850;
+    }
+    .checklist { display: grid; gap: 8px; margin: 12px 0; }
+    .checklist label {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+      cursor: pointer;
+    }
+    .checklist input { margin-top: 0.32em; accent-color: var(--teal); }
+    details { margin: 11px 0; border: 1px solid var(--line); border-radius: 7px; background: #fbfcfd; }
+    summary { padding: 11px 13px; color: var(--blue-dark); cursor: pointer; font-weight: 800; }
+    details > div { padding: 0 13px 13px; }
+    .status-good { color: var(--green); font-weight: 800; }
+    .status-stop { color: var(--red); font-weight: 800; }
+    footer {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 0 24px 38px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; max-height: none; columns: 2; }
+      nav h2, nav .nav-group { column-span: all; }
+      .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .flow-step:nth-child(3)::after { display: none; }
+    }
+    @media (max-width: 680px) {
+      .header-inner, .layout, footer { padding-left: 15px; padding-right: 15px; }
+      .layout { padding-top: 15px; }
+      nav { columns: 1; }
+      section { padding: 18px; }
+      .grid, .grid.three, .flow { grid-template-columns: 1fr; }
+      .flow-step::after { display: none; }
+      .scenario-head { flex-direction: column-reverse; }
+      .utterance { flex-direction: column; }
+      .command-bar { align-items: flex-start; }
+      pre { font-size: 0.78rem; }
+    }
+    @media print {
+      body { background: #fff; }
+      header { color: #000; background: #fff; }
+      .subtitle, .eyebrow { color: #333; }
+      .layout { display: block; max-width: none; padding: 0; }
+      nav, .copy-btn { display: none; }
+      section { break-inside: avoid; box-shadow: none; }
+      .command { break-inside: avoid; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Room 315 VLA Payload Case Runbook</h1>
-    <p class="note">
-      The active Room 315 workflow uses curated payload speed-sweep cases,
-      validated training exports, visual-state datasets, and planner-based execution.
-    </p>
-    <p class="warning">
-      Use fresh test output directories when running batches. Export only
-      episodes that pass validation and are approved for training.
-    </p>
+  <header>
+    <div class="header-inner">
+      <p class="eyebrow">MFJA · Room 315 · Operator procedure</p>
+      <h1>VLA Closed-Loop Runbook</h1>
+      <p class="subtitle">
+        A complete English-language, terminal-by-terminal guide for testing the current
+        Gazebo workflow: natural-language intent, visual state, PDDL/PlanSys2 planning,
+        supervised shuttle motion, re-observation and verified completion.
+      </p>
+      <div class="header-tags" aria-label="Runbook scope">
+        <span class="header-tag">English commands</span>
+        <span class="header-tag">Gazebo simulation</span>
+        <span class="header-tag">Right + left rails</span>
+        <span class="header-tag">Loaded / empty selection</span>
+        <span class="header-tag">Copy-ready terminals</span>
+      </div>
+    </div>
+  </header>
 
-    <h2>Every New Terminal</h2>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+  <div class="layout">
+    <nav aria-label="Runbook navigation">
+      <h2>On this page</h2>
+      <div class="nav-group">Start here</div>
+      <a href="#scope">Scope and success rule</a>
+      <a href="#prerequisites">Prerequisites</a>
+      <a href="#identity-map">Identity and color map</a>
+      <a href="#language-contract">Supported English</a>
+      <a href="#common-stack">Common terminals 2–5</a>
+      <a href="#readiness">Readiness checklist</a>
+      <div class="nav-group">Scenario profiles</div>
+      <a href="#scenario-one-only">1. Exactly one shuttle</a>
+      <a href="#scenario-minimum">2. One shuttle per rail</a>
+      <a href="#scenario-two-empty">3. Two right shuttles</a>
+      <a href="#scenario-loaded">4. One loaded, one empty</a>
+      <a href="#scenario-nearest">5. Nearest loaded</a>
+      <a href="#scenario-stations">6. Exactly two, one loaded</a>
+      <a href="#scenario-full">7. Full eight-shuttle stress</a>
+      <div class="nav-group">Operations</div>
+      <a href="#inspection-dialogue">Inspection and dialogue</a>
+      <a href="#payload-tools">Payload setup</a>
+      <a href="#monitoring-safety">Monitoring and safe stop</a>
+      <a href="#automated-checks">Automated checks</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#shutdown">Clean shutdown</a>
+    </nav>
+
+    <main>
+      <section id="scope">
+        <h2>Scope and success rule</h2>
+        <p class="lead">
+          Use this page for the current Room 315 simulated system. It does not command
+          physical MFJA equipment. Every movement request remains subject to fresh
+          perception, deterministic presence, planning, device state and supervisor checks.
+        </p>
+
+        <div class="flow" aria-label="Closed-loop flow">
+          <div class="flow-step">English request<span>Terminal 4</span></div>
+          <div class="flow-step">Validated TaskGoal<span>confirm with yes</span></div>
+          <div class="flow-step">Accepted visual state<span>Terminal 2</span></div>
+          <div class="flow-step">PDDL / PlanSys2<span>Terminal 3</span></div>
+          <div class="flow-step">Safety-gated motion<span>Terminal 1</span></div>
+          <div class="flow-step">Re-observe and verify<span>terminal status</span></div>
+        </div>
+
+        <div class="callout success">
+          <strong>Exactly one shuttle is supported end to end.</strong> Both rail nodes and both
+          camera streams must remain enabled, but a rail may contain zero shuttles. Its
+          timestamped empty-inventory heartbeat keeps deterministic presence ready without
+          creating a phantom shuttle. Scenario 1 is the smallest complete VLA profile.
+        </div>
+
+        <div class="grid">
+          <div class="tile">
+            <h3>When a command is successful</h3>
+            <p>Terminal 4 prints a response containing:</p>
+            <ul>
+              <li><code>status: succeeded</code></li>
+              <li><code>reason: task_goal_satisfied</code></li>
+              <li><code>safe_abort_sent: false</code></li>
+            </ul>
+          </div>
+          <div class="tile">
+            <h3>One command at a time</h3>
+            <p>
+              Wait for the terminal result before entering another command. For examples
+              marked <em>fresh launch</em>, restart the scenario first so its listed slot and
+              payload state are true.
+            </p>
+          </div>
+        </div>
+
+        <p class="note">
+          “Verified command” in this runbook means that the phrase was checked against the
+          current parser/domain contract and matched to the stated scenario. Runtime still
+          fails closed if a required live input is unavailable; that behavior is intentional.
+        </p>
+      </section>
+
+      <section id="prerequisites">
+        <h2>Prerequisites</h2>
+
+        <h3>Run this at the start of every new terminal</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Every terminal</span><button type="button" class="copy-btn" data-copy="cmd-terminal-setup">Copy</button></div>
+          <pre><code id="cmd-terminal-setup">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash</code></pre>
+        </div>
 
-    <h2>Optional Rebuild After Code Changes</h2>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
+        <h3>Before Terminal 1, confirm that no earlier Room 315 simulation remains</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Pre-launch singleton check</span><button type="button" class="copy-btn" data-copy="cmd-singleton-check">Copy</button></div>
+          <pre><code id="cmd-singleton-check">if pgrep -af '[r]os2 launch mfja_3rd_floor_bringup (room_315_only|full_floor).launch.py|[g]z sim.*room_315|[r]oom_315_kinematic_shuttle_node.py'; then
+  echo "STOP: close the earlier Room 315 runtime before launching Terminal 1."
+else
+  echo "Room 315 runtime check: clear"
+fi</code></pre>
+        </div>
+        <div class="callout">
+          <strong>Only one Terminal 1 simulation may run at a time.</strong> The launch now
+          owns an exclusive runtime lock. A second launch exits before Gazebo starts with
+          <code>another Room 315 simulation launch is already running</code>. This prevents
+          two controllers from publishing different poses for the same shuttle identity.
+        </div>
+
+        <h3>Optional rebuild after source changes</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Build terminal</span><button type="button" class="copy-btn" data-copy="cmd-build">Copy</button></div>
+          <pre><code id="cmd-build">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-colcon build --symlink-install --packages-select mfja_robot_control_config
+colcon build --symlink-install --packages-select \
+  mfja_rail_interfaces \
+  mfja_robot_control_config \
+  mfja_3rd_floor_bringup
 source install/setup.bash</code></pre>
+        </div>
 
-    <h2>Manual Launch Room 315</h2>
-    <pre><code>ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+        <h3>Check the local visual and intent models</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Preflight terminal</span><button type="button" class="copy-btn" data-copy="cmd-model-preflight">Copy</button></div>
+          <pre><code id="cmd-model-preflight">export VISUAL_RUN="$HOME/room315_full_training_approved_archive_seed31520260730/results/run"
+test -f "$VISUAL_RUN/best.pt" &amp;&amp; echo "Visual checkpoint: OK"
+test -f "$VISUAL_RUN/target_stats.json" &amp;&amp; echo "Target statistics: OK"
+test -f "$VISUAL_RUN/visual_label_vectorizer.json" &amp;&amp; echo "Visual vectorizer: OK"
+test -f "$VISUAL_RUN/training_config.json" &amp;&amp; echo "Training configuration: OK"
+test -f "$VISUAL_RUN/run_metadata.json" &amp;&amp; echo "Run metadata: OK"
+test -f "$HOME/models/room315_intent/room315_intent.env" &amp;&amp; echo "Intent environment: OK"
+test -f "$HOME/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf" &amp;&amp; echo "Intent checkpoint: OK"
+sha256sum "$VISUAL_RUN/best.pt"</code></pre>
+        </div>
+        <p class="note">
+          The configured visual checkpoint hash begins with
+          <code>8a2d865e3d3551ec…</code>. If the intent files are missing, run
+          <code>python3 mfja_robot_control_config/scripts/setup_room315_intent_model.py</code>
+          once from the repository root.
+        </p>
+      </section>
+
+      <section id="identity-map">
+        <h2>Identity, color, rail and station map</h2>
+        <p>
+          Color phrases are deterministic aliases for the fixed identities below. Include
+          the word <code>shuttle</code> or <code>carrier</code> after a color. An explicit ID or
+          color already determines the rail, so the side does not need to be repeated.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Identity</th><th>English color</th><th>Rail</th><th>Canonical entity</th></tr></thead>
+            <tbody>
+              <tr><td>R1</td><td><span class="swatch red"></span>red</td><td>Right</td><td><code>room315_right_shuttle_1</code></td></tr>
+              <tr><td>R2</td><td><span class="swatch blue"></span>blue</td><td>Right</td><td><code>room315_right_shuttle_2</code></td></tr>
+              <tr><td>R3</td><td><span class="swatch green"></span>green</td><td>Right</td><td><code>room315_right_shuttle_3</code></td></tr>
+              <tr><td>R4</td><td><span class="swatch yellow"></span>yellow</td><td>Right</td><td><code>room315_right_shuttle_4</code></td></tr>
+              <tr><td>L1</td><td><span class="swatch cyan"></span>cyan</td><td>Left</td><td><code>room315_left_shuttle_1</code></td></tr>
+              <tr><td>L2</td><td><span class="swatch magenta"></span>magenta</td><td>Left</td><td><code>room315_left_shuttle_2</code></td></tr>
+              <tr><td>L3</td><td><span class="swatch orange"></span>orange</td><td>Left</td><td><code>room315_left_shuttle_3</code></td></tr>
+              <tr><td>L4</td><td><span class="swatch white"></span>white</td><td>Left</td><td><code>room315_left_shuttle_4</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid">
+          <div class="tile">
+            <h3>Right rail stations</h3>
+            <ul><li>Yaskawa: slots 1 and 2</li><li>Staubli: slots 3 and 4</li></ul>
+          </div>
+          <div class="tile">
+            <h3>Left rail stations</h3>
+            <ul><li>Yaskawa: slots 1 and 2</li><li>KUKA: slots 3 and 4</li></ul>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>Launch-list rule:</strong> identity and start-slot lists are positional.
+          For example, <code>R1,R3</code> with <code>1,3</code> means R1 starts in slot 1 and
+          R3 starts in slot 3. The identity count, slot count and declared shuttle count must
+          agree, and startup slots must be unique on each rail.
+        </div>
+      </section>
+
+      <section id="language-contract">
+        <h2>Supported English command contract</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Capability</th><th>Supported form</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Explicit transport</td><td>ID or configured color → slot 1–4</td><td><code>Move the green shuttle to slot 2.</code></td></tr>
+              <tr><td>Payload selection</td><td>loaded, empty or any shuttle</td><td><code>Move any loaded shuttle on the right rail to slot 4.</code></td></tr>
+              <tr><td>Topology selection</td><td>nearest or closest shuttle to a target</td><td><code>Move the nearest loaded shuttle on the right rail to slot 3.</code></td></tr>
+              <tr><td>Station transport</td><td>Yaskawa, Staubli or KUKA</td><td><code>Move R3 to the Staubli station.</code></td></tr>
+              <tr><td>Inspection</td><td>system, rail, slot, station, shuttle or payload-filtered shuttle</td><td><code>Inspect shuttle R2.</code></td></tr>
+              <tr><td>Dialogue</td><td>clarification, correction, confirmation, cancel and restart</td><td><code>right</code>, then <code>yes</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Use simple, explicit wording for repeatable demonstrations</h3>
+        <div class="utterance"><code id="phrase-green-slot2">Move the green shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-green-slot2">Copy</button></div>
+        <div class="utterance"><code id="phrase-red-slot4">Move the red shuttle to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-red-slot4">Copy</button></div>
+        <div class="utterance"><code id="phrase-nearest-loaded">Move the nearest loaded shuttle on the right rail to slot 3.</code><button type="button" class="copy-btn" data-copy="phrase-nearest-loaded">Copy</button></div>
+
+        <div class="callout danger">
+          <strong>Not supported as one atomic natural-language goal:</strong> swaps, “move all”,
+          compound agendas, load/unload operations, arbitrary coordinates, requested speeds,
+          deadlines or unrestricted free-form robot programs. The CLI must clarify or reject
+          these requests; it must not approximate them with unrelated motion.
+        </div>
+        <p class="note">
+          Transport goals always require confirmation. After checking the canonical summary,
+          type <code>yes</code>. Do not use <code>--auto-confirm</code> for operator demonstrations.
+        </p>
+      </section>
+
+      <section id="common-stack">
+        <h2>Common terminals 2–5</h2>
+        <p class="lead">
+          Every full scenario starts with its own Terminal 1 launch command. Once Terminal 1
+          is stable, use the same Terminals 2–5 below.
+        </p>
+
+        <h3>Terminal 2 — visual-state inference</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 2: start inference</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy</button></div>
+          <pre><code id="cmd-visual-runtime">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+export VISUAL_RUN="$HOME/room315_full_training_approved_archive_seed31520260730/results/run"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+export PYTHONPATH="/usr/lib/python3/dist-packages:$HOME/room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}"
+
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true \
+  enable_camera_bridge:=false \
+  device:=cuda \
+  checkpoint_path:="$VISUAL_RUN/best.pt" \
+  sidecar_directory:="$VISUAL_RUN" \
+  dry_run_state_fusion:=true \
+  plansys2_update_enabled:=false</code></pre>
+        </div>
+        <p class="note">If CUDA is unavailable, replace <code>device:=cuda</code> with <code>device:=cpu</code>.</p>
+
+        <h3>Required gate — wait for one accepted visual observation</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Readiness terminal: accepted-state gate</span><button type="button" class="copy-btn" data-copy="cmd-accepted-gate">Copy</button></div>
+          <pre><code id="cmd-accepted-gate">source /opt/ros/jazzy/setup.bash
+source "$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash"
+
+timeout 30 ros2 topic echo /room_315/visual_state/observed_state \
+  mfja_rail_interfaces/msg/VisualStateObservation --once</code></pre>
+        </div>
+        <div class="callout success">
+          <strong>Start Terminal 3 only after this gate passes.</strong> The message must show
+          <code>stage: fused_observed_state</code>, <code>accepted: true</code>,
+          <code>presence_ready: true</code> and <code>state_fusion_ready: true</code>.
+        </div>
+        <details>
+          <summary>If the gate times out, display the rejection reason</summary>
+          <div class="command">
+            <div class="command-bar"><span class="terminal-label">Visual rejection diagnostics</span><button type="button" class="copy-btn" data-copy="cmd-visual-rejection">Copy</button></div>
+            <pre><code id="cmd-visual-rejection">ros2 topic echo /room_315/visual_state/validation \
+  mfja_rail_interfaces/msg/VisualStateObservation --once
+
+ros2 topic echo /diagnostics diagnostic_msgs/msg/DiagnosticArray --once</code></pre>
+          </div>
+        </details>
+
+        <h3>Terminal 3 — PlanSys2 and closed-loop execution</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 3: planner and gateway</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy</button></div>
+          <pre><code id="cmd-task-execution">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+
+ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
+  use_sim_time:=true \
+  execution_enabled:=true \
+  enable_plansys2:=true \
+  external_obstacles_disabled:=true</code></pre>
+        </div>
+
+        <h3>Terminal 4 — interactive English commands</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 4: command interface</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy</button></div>
+          <pre><code id="cmd-task-cli">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS/src/mfja_3rd_floor_gz"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/models/room315_intent/room315_intent.env"
+export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
+  --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" \
+  --publish-topic /room_315/task_goal \
+  --result-topic /room_315/task_goal/status \
+  --wait-for-result \
+  --publish-timeout-s 10 \
+  --result-timeout-s 300</code></pre>
+        </div>
+
+        <h3>Terminal 5 — optional live task monitor</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 5: task status</span><button type="button" class="copy-btn" data-copy="cmd-status-monitor">Copy</button></div>
+          <pre><code id="cmd-status-monitor">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/task_goal/status std_msgs/msg/String</code></pre>
+        </div>
+      </section>
+
+      <section id="readiness">
+        <h2>Readiness checklist before the first command</h2>
+        <div class="checklist">
+          <label><input type="checkbox"> <span>Terminal 1 shows Gazebo running, both rail nodes—including an enabled zero-shuttle side when used—and the VLA supervisor without a latched emergency stop.</span></label>
+          <label><input type="checkbox"> <span>Terminal 2 has loaded the expected checkpoint and has published at least one accepted observation.</span></label>
+          <label><input type="checkbox"> <span>The observation reports <code>accepted: true</code>, <code>presence_ready: true</code> and <code>state_fusion_ready: true</code>.</span></label>
+          <label><input type="checkbox"> <span>Terminal 3 reports the PlanSys2 planner as <code>active</code>.</span></label>
+          <label><input type="checkbox"> <span>Terminal 4 prints <code>model_health ... ready: true</code>.</span></label>
+        </div>
+
+        <div class="grid">
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Readiness: accepted visual state</span><button type="button" class="copy-btn" data-copy="cmd-observed-once">Copy</button></div>
+              <pre><code id="cmd-observed-once">timeout 30 ros2 topic echo /room_315/visual_state/observed_state \
+  mfja_rail_interfaces/msg/VisualStateObservation --once</code></pre>
+            </div>
+          </div>
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Readiness: planner lifecycle</span><button type="button" class="copy-btn" data-copy="cmd-planner-state">Copy</button></div>
+              <pre><code id="cmd-planner-state">ros2 lifecycle get /planner</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="callout success">
+          <strong>Proceed only when all five checks pass.</strong> If one is false, use the
+          troubleshooting section rather than repeatedly publishing the same task.
+        </div>
+
+        <h3>Choose the profile that matches the feature you want to test</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Profile</th><th>Total shuttles</th><th>Payload state</th><th>Main purpose</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#scenario-one-only">1. Exactly one shuttle</a></td><td>1</td><td>unqualified command</td><td>Smallest complete English-to-motion demonstration</td></tr>
+              <tr><td><a href="#scenario-minimum">2. One shuttle per rail</a></td><td>2: one per rail</td><td>both configured empty</td><td>Dual-rail explicit identity and station commands</td></tr>
+              <tr><td><a href="#scenario-two-empty">3. Two right task shuttles</a></td><td>2: both on the right</td><td>both configured empty</td><td>Independent and blocker-aware right-rail moves</td></tr>
+              <tr><td><a href="#scenario-loaded">4. Loaded and empty selection</a></td><td>2: both on the right</td><td>one loaded</td><td>Explicit loaded/empty visual grounding</td></tr>
+              <tr><td><a href="#scenario-nearest">5. Nearest loaded</a></td><td>2: both on the right</td><td>two loaded</td><td>Payload filtering followed by topology-nearest selection</td></tr>
+              <tr><td><a href="#scenario-stations">6. Exactly two, one loaded</a></td><td>2: one per rail</td><td>one loaded</td><td>Small loaded profile and station grounding on both rails</td></tr>
+              <tr><td><a href="#scenario-full">7. Complete fleet</a></td><td>8: four per rail</td><td>one loaded</td><td>Occupied targets, blocker relocation, re-observation and replanning</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="scenario-one-only">
+        <div class="scenario-head">
+          <div><h2>Exactly one shuttle: complete closed-loop test</h2><p class="lead">One green R3 shuttle at right slot 1; the enabled left rail has an empty inventory.</p></div>
+          <span class="scenario-number">1</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Live verified full closed loop</span><span class="tag">1 total shuttle</span><span class="tag">R3 / green</span></div>
+
+        <div class="callout success">
+          <strong>Keep both rail nodes enabled.</strong> With
+          <code>room315_left_shuttle_count:=0</code>, the left controller publishes a fresh
+          empty-inventory heartbeat. Presence fusion marks L1–L4 absent and can accept the
+          single right-rail shuttle without creating a witness shuttle.
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: exactly one shuttle</span><button type="button" class="copy-btn" data-copy="cmd-one-shuttle-launch">Copy</button></div>
+          <pre><code id="cmd-one-shuttle-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
-  start_paused:=false \
   gui:=true \
+  start_paused:=false \
   enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true \
+  enable_room315_left_rail:=true \
   enable_room315_vla:=true \
-  enable_room315_vla_dataset_recorder:=true</code></pre>
+  enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false \
+  room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 \
+  room315_right_active_identities:=R3 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
 
-    <h2>Dry Run One Case</h2>
-    <pre><code>ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
+        <h3>Run the complete terminal sequence</h3>
+        <ol>
+          <li>Wait until Terminal 1 reports both rail nodes, the camera bridge and the VLA supervisor.</li>
+          <li>Start common Terminal 2 and pass the accepted-state gate.</li>
+          <li>Start common Terminal 3 and confirm that <code>/planner</code> is active.</li>
+          <li>Start common Terminal 4, enter the command below, then reply <code>yes</code>.</li>
+        </ol>
+        <div class="utterance"><code id="phrase-one-parse">Move the green shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-one-parse">Copy</button></div>
+        <div class="callout success">
+          <strong>Verified result:</strong> <code>status: succeeded</code>,
+          <code>reason: task_goal_satisfied</code>, <code>safe_abort_sent: false</code>, target
+          sensor <code>DZI2R</code>, and controller <code>reached_target_slot: 2</code>.
+        </div>
+        <p class="note">
+          No startup payload is configured in this profile. Use the unqualified command above;
+          loaded/empty-qualified language always follows the accepted visual payload state.
+        </p>
+      </section>
+
+      <section id="scenario-minimum">
+        <div class="scenario-head">
+          <div><h2>One shuttle per rail</h2><p class="lead">Green R3 on the right and cyan L1 on the left; both configured empty.</p></div>
+          <span class="scenario-number">2</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Full closed loop</span><span class="tag">2 total shuttles</span><span class="tag">one per rail</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Shuttle</th><th>Color</th><th>Rail</th><th>Start slot</th><th>Payload</th></tr></thead><tbody><tr><td>R3</td><td>green</td><td>Right</td><td>1</td><td>empty</td></tr><tr><td>L1</td><td>cyan</td><td>Left</td><td>4</td><td>empty</td></tr></tbody></table></div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: one shuttle per rail</span><button type="button" class="copy-btn" data-copy="cmd-minimum-launch">Copy</button></div>
+          <pre><code id="cmd-minimum-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 \
+  room315_right_active_identities:=R3 \
+  room315_right_start_slot:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_left_active_identities:=L1 \
+  room315_left_start_slot:=4 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
+        <p>After Terminal 1 is stable, start common Terminals 2, 3, 4 and optionally 5.</p>
+        <h3>Recommended ordered tour</h3>
+        <div class="utterance"><code id="phrase-min-inspect">Inspect the Room 315 system.</code><button type="button" class="copy-btn" data-copy="phrase-min-inspect">Copy</button></div>
+        <div class="utterance"><code id="phrase-min-green">Move the green shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-min-green">Copy</button></div>
+        <div class="utterance"><code id="phrase-min-cyan">Move the cyan shuttle to slot 1.</code><button type="button" class="copy-btn" data-copy="phrase-min-cyan">Copy</button></div>
+        <div class="utterance"><code id="phrase-min-station">Move R3 to the Staubli station.</code><button type="button" class="copy-btn" data-copy="phrase-min-station">Copy</button></div>
+        <p class="note">Reply <code>yes</code> to each transport confirmation and wait for <code>succeeded</code> before the next line.</p>
+      </section>
+
+      <section id="scenario-two-empty">
+        <div class="scenario-head">
+          <div><h2>Exactly two commandable right-rail shuttles</h2><p class="lead">Red R1 and green R3; the enabled left rail publishes an empty inventory.</p></div>
+          <span class="scenario-number">3</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Full closed loop</span><span class="tag">2 total shuttles</span><span class="tag">both on right</span><span class="tag">blocker-aware</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Shuttle</th><th>Rail</th><th>Start slot</th><th>Configured payload</th></tr></thead><tbody><tr><td>R1 / red</td><td>Right</td><td>1</td><td>empty</td></tr><tr><td>R3 / green</td><td>Right</td><td>3</td><td>empty</td></tr></tbody></table></div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: two right shuttles</span><button type="button" class="copy-btn" data-copy="cmd-two-empty-launch">Copy</button></div>
+          <pre><code id="cmd-two-empty-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=2 \
+  room315_right_active_identities:=R1,R3 \
+  room315_right_start_slots:=1,3 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
+
+        <h3>Simple free-target checks</h3>
+        <div class="utterance"><code id="phrase-two-red2">Move the red shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-two-red2">Copy</button></div>
+        <div class="utterance"><code id="phrase-two-green4">Move the green shuttle to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-two-green4">Copy</button></div>
+
+        <h3>Blocker-aware examples requested for the demonstration</h3>
+        <div class="callout">
+          <strong>Fresh launch for each line:</strong> these routes may require the planner to
+          move the other right-rail shuttle, re-observe and replan. Restart the scenario before
+          trying the second line so the initial-state table is again valid.
+        </div>
+        <div class="utterance"><code id="phrase-two-green2">Move the green shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-two-green2">Copy</button></div>
+        <div class="utterance"><code id="phrase-two-red4">Move the red shuttle to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-two-red4">Copy</button></div>
+      </section>
+
+      <section id="scenario-loaded">
+        <div class="scenario-head">
+          <div><h2>Exactly two right shuttles, one loaded</h2><p class="lead">Red R1 is configured empty; green R3 carries the visible payload; the enabled left rail is empty.</p></div>
+          <span class="scenario-number">4</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Full closed loop</span><span class="tag">2 total shuttles</span><span class="tag">loaded / empty grounding</span><span class="tag">5-frame payload consensus</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Shuttle</th><th>Rail</th><th>Start slot</th><th>Configured payload</th></tr></thead><tbody><tr><td>R1 / red</td><td>Right</td><td>1</td><td>empty</td></tr><tr><td>R3 / green</td><td>Right</td><td>3</td><td><strong>loaded</strong></td></tr></tbody></table></div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: loaded and empty</span><button type="button" class="copy-btn" data-copy="cmd-loaded-launch">Copy</button></div>
+          <pre><code id="cmd-loaded-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=2 \
+  room315_right_active_identities:=R1,R3 \
+  room315_right_start_slots:=1,3 \
+  room315_right_loaded_shuttles:=R3 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
+        <div class="callout warning">
+          <strong>Verify visual payload consensus first.</strong> Wait for at least five
+          accepted frames and inspect the accepted observation. Continue with the phrases
+          below only when R3 is reported <code>loaded</code> and R1 is reported
+          <code>empty</code>. Startup configuration creates the payload visuals, but runtime
+          language grounding deliberately trusts the visual result.
+        </div>
+        <div class="utterance"><code id="phrase-loaded-green4">Move the loaded green shuttle to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-loaded-green4">Copy</button></div>
+        <div class="utterance"><code id="phrase-empty-red2">Move the empty red shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-empty-red2">Copy</button></div>
+        <div class="utterance"><code id="phrase-any-loaded4">Move any loaded shuttle on the right rail to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-any-loaded4">Copy</button></div>
+        <div class="utterance"><code id="phrase-inspect-loaded">Inspect any loaded shuttle on the right rail.</code><button type="button" class="copy-btn" data-copy="phrase-inspect-loaded">Copy</button></div>
+        <p class="note">Use a fresh launch for each movement example unless you deliberately want to test changed occupancy.</p>
+      </section>
+
+      <section id="scenario-nearest">
+        <div class="scenario-head">
+          <div><h2>Nearest-loaded selection with exactly two shuttles</h2><p class="lead">Two loaded candidates on the right; the enabled left rail is empty and the executive selects by topology distance.</p></div>
+          <span class="scenario-number">5</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Full closed loop</span><span class="tag">2 total shuttles</span><span class="tag">2 loaded candidates</span><span class="tag">topology-nearest</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Shuttle</th><th>Rail</th><th>Start slot</th><th>Configured payload</th></tr></thead><tbody><tr><td>R1 / red</td><td>Right</td><td>1</td><td>loaded</td></tr><tr><td>R4 / yellow</td><td>Right</td><td>4</td><td>loaded</td></tr></tbody></table></div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: nearest-loaded profile</span><button type="button" class="copy-btn" data-copy="cmd-nearest-launch">Copy</button></div>
+          <pre><code id="cmd-nearest-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=2 \
+  room315_right_active_identities:=R1,R4 \
+  room315_right_start_slots:=1,4 \
+  room315_right_loaded_shuttles:=R1,R4 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
+        <div class="utterance"><code id="phrase-nearest3">Move the nearest loaded shuttle on the right rail to slot 3.</code><button type="button" class="copy-btn" data-copy="phrase-nearest3">Copy</button></div>
+        <div class="utterance"><code id="phrase-nearest-inspect">Inspect any loaded shuttle on the right rail.</code><button type="button" class="copy-btn" data-copy="phrase-nearest-inspect">Copy</button></div>
+        <p class="note">Send these only after the accepted observation reports both R1 and R4 as <code>loaded</code>.</p>
+        <div class="callout">
+          <strong>What this proves:</strong> the wording does not choose R1 or R4 by color or
+          number. After payload filtering, selection uses the accepted location and
+          authoritative rail topology relative to slot 3.
+        </div>
+      </section>
+
+      <section id="scenario-stations">
+        <div class="scenario-head">
+          <div><h2>Exactly two shuttles, one loaded: dual-rail station goals</h2><p class="lead">One loaded yellow shuttle and one empty magenta shuttle, with one shuttle on each rail.</p></div>
+          <span class="scenario-number">6</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Full closed loop</span><span class="tag">2 total shuttles</span><span class="tag">1 loaded + 1 empty</span><span class="tag">station grounding</span><span class="tag">both rails</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Shuttle</th><th>Rail</th><th>Start slot / station</th><th>Payload</th></tr></thead><tbody><tr><td>R4 / yellow</td><td>Right</td><td>1 / Yaskawa</td><td>loaded</td></tr><tr><td>L2 / magenta</td><td>Left</td><td>3 / KUKA</td><td>empty</td></tr></tbody></table></div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: dual-rail station profile</span><button type="button" class="copy-btn" data-copy="cmd-stations-launch">Copy</button></div>
+          <pre><code id="cmd-stations-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 \
+  room315_right_active_identities:=R4 \
+  room315_right_start_slot:=1 \
+  room315_right_loaded_shuttles:=R4 \
+  room315_left_shuttle_count:=1 \
+  room315_left_active_identities:=L2 \
+  room315_left_start_slot:=3 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
+        <div class="utterance"><code id="phrase-yellow-staubli">Move the loaded yellow shuttle to the Staubli station.</code><button type="button" class="copy-btn" data-copy="phrase-yellow-staubli">Copy</button></div>
+        <div class="utterance"><code id="phrase-magenta-yaskawa">Move the magenta shuttle to the Yaskawa station on the left rail.</code><button type="button" class="copy-btn" data-copy="phrase-magenta-yaskawa">Copy</button></div>
+        <div class="utterance"><code id="phrase-l2-slot4">Move L2 to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-l2-slot4">Copy</button></div>
+        <p class="note">Yaskawa exists on both rails, so include the side unless an explicit shuttle identity already supplies it.</p>
+      </section>
+
+      <section id="scenario-full">
+        <div class="scenario-head">
+          <div><h2>Full eight-shuttle blocker and replanning stress tour</h2><p class="lead">All slots begin occupied; R4 is loaded.</p></div>
+          <span class="scenario-number">7</span>
+        </div>
+        <div class="tag-row"><span class="tag ok">Full closed loop</span><span class="tag">4 + 4 fleet</span><span class="tag">occupied targets</span><span class="tag">blocker relocation</span><span class="tag">re-observe / replan</span></div>
+
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Terminal 1: complete fleet</span><button type="button" class="copy-btn" data-copy="cmd-full-fleet-launch">Copy</button></div>
+          <pre><code id="cmd-full-fleet-launch">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  gui:=true \
+  gui_config:=config/room315_runtime_safe.gui.config \
+  start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true \
+  enable_room315_left_rail:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false \
+  room315_visual_debug_colors:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=4 \
+  room315_right_active_identities:=R1,R2,R3,R4 \
+  room315_right_start_slots:=1,2,3,4 \
+  room315_right_loaded_shuttles:=R4 \
+  room315_left_shuttle_count:=4 \
+  room315_left_active_identities:=L1,L2,L3,L4 \
+  room315_left_start_slots:=1,2,3,4 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2</code></pre>
+        </div>
+        <div class="callout warning">
+          <strong>Run this as an ordered tour.</strong> Each target is initially occupied, so
+          the executive may relocate blockers through an interior branch, obtain a new visual
+          observation and replan. Do not enter the next command until the current one reports
+          <code>succeeded</code>.
+        </div>
+        <div class="utterance"><code id="phrase-full-green2">Move the green shuttle to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-full-green2">Copy</button></div>
+        <div class="utterance"><code id="phrase-full-red4">Move the red shuttle to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-full-red4">Copy</button></div>
+        <div class="utterance"><code id="phrase-full-loaded2">Move the loaded shuttle on the right rail to slot 2.</code><button type="button" class="copy-btn" data-copy="phrase-full-loaded2">Copy</button></div>
+        <div class="utterance"><code id="phrase-full-l2-4">Move L2 to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-full-l2-4">Copy</button></div>
+        <p class="note">
+          This profile exercises explicit color aliases, payload selection, occupied-target
+          handling, mirrored rails, switch/stopper supervision, re-observation and replanning.
+        </p>
+      </section>
+
+      <section id="inspection-dialogue">
+        <h2>Inspection, clarification and dialogue features</h2>
+        <div class="grid">
+          <div class="tile">
+            <h3>Non-actuating inspections</h3>
+            <p>These require a newer accepted visual observation but do not command motion.</p>
+            <div class="utterance"><code id="phrase-inspect-system">Inspect the Room 315 system.</code><button type="button" class="copy-btn" data-copy="phrase-inspect-system">Copy</button></div>
+            <div class="utterance"><code id="phrase-inspect-r2">Inspect shuttle R2.</code><button type="button" class="copy-btn" data-copy="phrase-inspect-r2">Copy</button></div>
+            <div class="utterance"><code id="phrase-check-slot3">Check the right slot 3.</code><button type="button" class="copy-btn" data-copy="phrase-check-slot3">Copy</button></div>
+          </div>
+          <div class="tile">
+            <h3>Intentional clarification test</h3>
+            <p>Use a profile containing a loaded right shuttle.</p>
+            <ol>
+              <li>Type <code>Move the loaded shuttle to slot 3.</code></li>
+              <li>When asked for the rail, type <code>right</code>.</li>
+              <li>Check the summary and type <code>yes</code>.</li>
+            </ol>
+            <p class="note">Use <code>cancel</code> to discard a pending goal or <code>restart</code> to begin a new dialogue.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>Duplicate protection:</strong> the execution gateway rejects an identical
+          already-completed normalized goal. Relaunch Terminal 3 or choose a different target
+          before repeating the exact same command.
+        </div>
+        <details>
+          <summary>Requests that should be rejected or clarified without motion</summary>
+          <div>
+            <ul>
+              <li><code>Move all shuttles to slot 2.</code> — compound/move-all request.</li>
+              <li><code>Swap the red and green shuttles.</code> — compound swap.</li>
+              <li><code>Unload R3.</code> — payload mutation is not a natural-language task.</li>
+              <li><code>Move the shuttle quickly to x = 2.4.</code> — speed and arbitrary coordinate are unsupported.</li>
+              <li><code>Move the purple shuttle to slot 3.</code> — purple is not a configured identity color.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <section id="payload-tools">
+        <h2>Payload setup and visual grounding</h2>
+        <p>
+          Prefer the scenario launch argument <code>room315_right_loaded_shuttles</code> or
+          <code>room315_left_loaded_shuttles</code>. It creates the visible payload from the
+          beginning. Runtime loaded/empty selection still trusts the visual model, not the
+          controller payload flag, and requires consecutive agreement before actuation.
+        </p>
+        <div class="grid">
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Diagnostic: mark R3 loaded</span><button type="button" class="copy-btn" data-copy="cmd-payload-loaded">Copy</button></div>
+              <pre><code id="cmd-payload-loaded">ros2 topic pub --once \
+  /room_315/rails/right/shuttles/payload_command \
+  std_msgs/msg/String "{data: 'R3 loaded'}"</code></pre>
+            </div>
+          </div>
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Diagnostic: mark R3 empty</span><button type="button" class="copy-btn" data-copy="cmd-payload-empty">Copy</button></div>
+              <pre><code id="cmd-payload-empty">ros2 topic pub --once \
+  /room_315/rails/right/shuttles/payload_command \
+  std_msgs/msg/String "{data: 'R3 empty'}"</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Monitor deterministic payload setup</span><button type="button" class="copy-btn" data-copy="cmd-payload-state">Copy</button></div>
+          <pre><code id="cmd-payload-state">ros2 topic echo /room_315/rails/right/shuttles/payload_state std_msgs/msg/String</code></pre>
+        </div>
+        <div class="callout warning">
+          <strong>After a manual payload change:</strong> wait for the visual payload to be
+          clearly visible and for at least five accepted observations before sending a
+          loaded/empty-qualified command. Do not phrase load or unload as a transport goal.
+        </div>
+      </section>
+
+      <section id="monitoring-safety">
+        <h2>Monitoring, diagnostics and safe stop</h2>
+        <div class="grid">
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Visual runtime diagnostics</span><button type="button" class="copy-btn" data-copy="cmd-diagnostics">Copy</button></div>
+              <pre><code id="cmd-diagnostics">ros2 topic echo /diagnostics diagnostic_msgs/msg/DiagnosticArray</code></pre>
+            </div>
+          </div>
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Supervisor status</span><button type="button" class="copy-btn" data-copy="cmd-supervisor-status">Copy</button></div>
+              <pre><code id="cmd-supervisor-status">ros2 topic echo /room_315/vla/status std_msgs/msg/String</code></pre>
+            </div>
+          </div>
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Right shuttle states</span><button type="button" class="copy-btn" data-copy="cmd-right-state">Copy</button></div>
+              <pre><code id="cmd-right-state">ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+            </div>
+          </div>
+          <div>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Right slot sensors</span><button type="button" class="copy-btn" data-copy="cmd-right-sensors">Copy</button></div>
+              <pre><code id="cmd-right-sensors">ros2 topic echo /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <h3>Stop all shuttles without latching emergency stop</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Operator safe stop</span><button type="button" class="copy-btn" data-copy="cmd-stop-all">Copy</button></div>
+          <pre><code id="cmd-stop-all">ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"stop_all\",\"close_stoppers\":false}'}"</code></pre>
+        </div>
+
+        <div class="grid">
+          <div>
+            <h3>Latch emergency stop</h3>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Emergency stop</span><button type="button" class="copy-btn" data-copy="cmd-estop">Copy</button></div>
+              <pre><code id="cmd-estop">ros2 topic pub --once /room_315/vla/emergency_stop \
+  std_msgs/msg/Bool "{data: true}"</code></pre>
+            </div>
+          </div>
+          <div>
+            <h3>Clear after inspection</h3>
+            <div class="command">
+              <div class="command-bar"><span class="terminal-label">Clear emergency stop</span><button type="button" class="copy-btn" data-copy="cmd-clear-estop">Copy</button></div>
+              <pre><code id="cmd-clear-estop">ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"clear_emergency_stop\"}'}"</code></pre>
+            </div>
+          </div>
+        </div>
+        <p class="note">Clear emergency stop only after confirming why it was set and confirming that no task is still active.</p>
+      </section>
+
+      <section id="automated-checks">
+        <h2>Automated checks and optional dataset regression</h2>
+
+        <h3>Validate the exact green-shuttle phrase offline</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Parser smoke test</span><button type="button" class="copy-btn" data-copy="cmd-semantic-smoke">Copy</button></div>
+          <pre><code id="cmd-semantic-smoke">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+cd "$MFJA_WS/src/mfja_3rd_floor_gz"
+source "$HOME/models/room315_intent/room315_intent.env"
+export PYTHONPATH="mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+
+python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
+  --require-real-model \
+  --text "Move the green shuttle to slot 2."</code></pre>
+        </div>
+
+        <h3>Focused contract regression</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Focused test suite</span><button type="button" class="copy-btn" data-copy="cmd-focused-tests">Copy</button></div>
+          <pre><code id="cmd-focused-tests">python3 -m pytest -q \
+  mfja_robot_control_config/test/test_room315_multi_shuttle_launch_args.py \
+  mfja_robot_control_config/test/test_room315_shuttle_identity_config.py \
+  mfja_robot_control_config/test/test_room315_visual_runtime.py \
+  mfja_robot_control_config/test/test_room315_task_execution_config.py \
+  mfja_robot_control_config/test/test_room315_task_execution_singleton.py \
+  mfja_robot_control_config/test/test_room315_task_goal_semantic_gateway.py</code></pre>
+        </div>
+
+        <h3>Dry-run one curated planning case</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Scenario-generator dry run</span><button type="button" class="copy-btn" data-copy="cmd-case-dry-run">Copy</button></div>
+          <pre><code id="cmd-case-dry-run">ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
   --case-id right_loaded_r1_s1_to_slot3_no_blocker_speed008 \
   --language-template-id loaded_shuttle_to_slot \
   --dry-run</code></pre>
+        </div>
 
-    <h2>Preflight One Case</h2>
-    <pre><code>ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
-  --case-id right_loaded_r1_s1_to_slot3_no_blocker_speed008 \
-  --language-template-id loaded_shuttle_to_slot \
-  --command-timeout-s 8 \
-  --preflight-only \
-  --ready-line</code></pre>
+        <details>
+          <summary>Optional: record a fresh manual dataset run</summary>
+          <div>
+            <p>Add these arguments to the selected Terminal 1 scenario launch:</p>
+            <pre><code>enable_room315_vla_dataset_recorder:=true \
+room315_vla_dataset_dir:="$HOME/room315_runs/choose_a_new_run_name"</code></pre>
+            <p class="note">Always choose a new directory. Do not reuse or reset a directory containing evidence you want to keep.</p>
+          </div>
+        </details>
+        <p class="note">
+          The original 160-case payload batch remains available through
+          <code>payload_training_cases_expanded_160_speed_sweep.yaml</code>, but it is an
+          automated dataset/regression workflow rather than the interactive operator path.
+        </p>
+      </section>
 
-    <h2>Execute One Case</h2>
-    <pre><code>ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
-  --case-id right_loaded_r1_s1_to_slot3_no_blocker_speed008 \
-  --language-template-id loaded_shuttle_to_slot \
-  --command-timeout-s 30 \
-  --arrival-timeout-s 120 \
-  --require-dataset-recorder \
-  --quiet \
-  --execute</code></pre>
+      <section id="troubleshooting">
+        <h2>Troubleshooting by observed symptom</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Symptom</th><th>Likely cause</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><code>presence_ready: false</code></td><td>A rail node is disabled, missing or stale; a non-empty identity is invalid; or identity/count lists do not agree.</td><td>Keep both rail nodes enabled. A zero-shuttle side is valid and must publish its fresh empty-inventory heartbeat; then check identity/start-slot list lengths.</td></tr>
+              <tr><td><code>state_fusion_ready: false</code></td><td>Presence, camera input or model artefact is not ready.</td><td>Check Terminal 2 diagnostics and the accepted-observation topic before starting Terminal 3.</td></tr>
+              <tr><td>Planner is not active</td><td>Terminal 3 is still configuring or exited.</td><td>Run <code>ros2 lifecycle get /planner</code>; restart Terminal 3 if it never reaches active.</td></tr>
+              <tr><td><code>no_task_execution_subscriber</code></td><td>The gateway is absent.</td><td>Start Terminal 3 and verify <code>/room_315/task_goal</code> has a subscriber.</td></tr>
+              <tr><td>Loaded/empty request is rejected</td><td>Visual payload consensus is not established.</td><td>Use a startup loaded list, confirm the payload is visible and wait for accepted frames.</td></tr>
+              <tr><td>Duplicate goal rejected</td><td>The same completed normalized goal was sent again.</td><td>Choose another target or relaunch Terminal 3 for a new scenario.</td></tr>
+              <tr><td>Task times out or aborts</td><td>Live perception, occupancy, route capacity or device state did not support the request.</td><td>Do not resend blindly. Read the exact <code>reason</code>, issue <code>stop_all</code>, then restart from the scenario table.</td></tr>
+              <tr><td>A shuttle flickers between two slots</td><td>Two older Terminal 1 simulations are sharing the same ROS topics, so each publishes a different pose for the same identity.</td><td>Stop Terminals 4, 3, 2 and every Terminal 1, confirm that no Room 315 process remains, then start exactly one profile. Current builds reject a second simulation automatically.</td></tr>
+              <tr><td>Unknown color</td><td>The color is not one of the eight configured aliases.</td><td>Use the identity/color table or type R1–R4/L1–L4 directly.</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-    <h2>Test The 160 Active Cases</h2>
-    <p>
-      The active case file is checked into the repository:
-      <code>/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml</code>.
-      It contains the current payload case families repeated across four speeds:
-      0.06, 0.08, 0.10, and 0.12 m/s.
-    </p>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Quick graph check</span><button type="button" class="copy-btn" data-copy="cmd-graph-check">Copy</button></div>
+          <pre><code id="cmd-graph-check">ros2 node list
+ros2 topic info /room_315/task_goal --verbose
+ros2 topic info /room_315/visual_state/observed_state --verbose
+ros2 lifecycle get /planner</code></pre>
+        </div>
+        <p>
+          For low-level rail topics, switches, stoppers and sensor-only tests, also see
+          <a href="runbook.html">runbook.html</a>. For the architecture contract, see
+          <a href="docs/ROOM315_LANGUAGE_TO_MOTION_RUNTIME.md">ROOM315_LANGUAGE_TO_MOTION_RUNTIME.md</a>.
+        </p>
+      </section>
 
-    <h3>Terminal 1 - Smoke Test The First 4 Expanded Cases</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+      <section id="shutdown">
+        <h2>Clean shutdown and scenario reset</h2>
+        <ol>
+          <li>If a task is active, send <code>stop_all</code> and wait for the supervisor status.</li>
+          <li>Exit Terminal 4 with <code>quit</code>.</li>
+          <li>Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in Terminal 3, then Terminal 2, then Terminal 1.</li>
+          <li>Wait until Gazebo closes before launching another scenario.</li>
+          <li>Open fresh terminals and repeat the readiness checklist.</li>
+        </ol>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">Confirm no Room 315 processes remain</span><button type="button" class="copy-btn" data-copy="cmd-process-check">Copy</button></div>
+          <pre><code id="cmd-process-check">pgrep -af '[r]os2 launch.*room_315|[g]z sim.*room_315|[r]oom_315_kinematic_shuttle_node.py|[r]oom_315_visual_state_inference_node.py|[r]oom_315_task_execution_node.py|[p]lanner_node' \
+  || echo "No matching Room 315 runtime processes"</code></pre>
+        </div>
+        <div class="callout success">
+          <strong>Ready for the next profile:</strong> all previous terminals are closed, no
+          matching runtime processes remain, and the next scenario will start from its stated
+          identity, slot and payload configuration.
+        </div>
+      </section>
+    </main>
+  </div>
 
-ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml \
-  --start-at 1 \
-  --stop-after 4 \
-  --dataset-dir /home/tiago/room315_payload_expanded_test_4 \
-  --results-dir /tmp/room315_payload_expanded_test_4 \
-  --reset-dataset \
-  --gui true \
-  --launch-wait-s 15 \
-  --preflight-timeout-s 90 \
-  --command-timeout-s 45 \
-  --arrival-timeout-s 240 \
-  --episode-write-timeout-s 20</code></pre>
+  <footer>
+    Room 315 VLA operator runbook · current repository launch and task-goal contracts ·
+    controlled Gazebo simulation only.
+  </footer>
+  <div id="copy-status" class="sr-only" aria-live="polite"></div>
 
-    <h3>Terminal 2 - Check The 4-Case Smoke Test</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+  <script>
+    (() => {
+      const status = document.getElementById("copy-status");
+      const buttons = document.querySelectorAll("[data-copy]");
 
-jq '{case_count, successes, failures, failed_cases}' \
-  /tmp/room315_payload_expanded_test_4/payload_case_batch_summary.json
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return "Copied";
+        }
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand("copy");
+        area.remove();
+        if (!ok) throw new Error("copy command was not available");
+        return "Copied";
+      }
 
-jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
-  /home/tiago/room315_payload_expanded_test_4/meta/training_events.jsonl.summary.json</code></pre>
-
-    <h3>Terminal 1 - Run The Full 160-Case Batch</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml \
-  --dataset-dir /home/tiago/room315_payload_expanded_160_speed_sweep \
-  --results-dir /tmp/room315_payload_expanded_160_speed_sweep \
-  --reset-dataset \
-  --gui true \
-  --launch-wait-s 15 \
-  --preflight-timeout-s 90 \
-  --command-timeout-s 45 \
-  --arrival-timeout-s 240 \
-  --episode-write-timeout-s 20</code></pre>
-
-    <h3>Terminal 2 - Check The 160-Case Result After Terminal 1 Finishes</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-jq '{case_count, successes, failures, failed_cases}' \
-  /tmp/room315_payload_expanded_160_speed_sweep/payload_case_batch_summary.json
-
-jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
-  /home/tiago/room315_payload_expanded_160_speed_sweep/meta/training_events.jsonl.summary.json
-
-find /home/tiago/room315_payload_expanded_160_speed_sweep/episodes \
-  -maxdepth 2 \
-  -name validation.json \
-  -print0 | xargs -0 jq -r \
-  'select((.approved_for_training != true) or (.validation_status != "approved") or (.task_success != true)) | input_filename + " " + (.failure_reason // "")'</code></pre>
-
-    <h2>Test The Decision-Diversity V2 Cases</h2>
-    <p>
-      The decision-diversity case file is local-only:
-      <code>/home/tiago/payload_training_cases_expanded_decision_v2.yaml</code>.
-      It contains 166 new cases focused on multi-blocker permutations,
-      nearest-loaded shuttle selection, single-blocker identity variants, and
-      underrepresented slot routes.
-    </p>
-
-    <h3>Terminal 1 - Smoke Test The First 4 Decision V2 Cases</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config /home/tiago/payload_training_cases_expanded_decision_v2.yaml \
-  --start-at 1 \
-  --stop-after 4 \
-  --dataset-dir /home/tiago/room315_payload_decision_v2_test_4 \
-  --results-dir /tmp/room315_payload_decision_v2_test_4 \
-  --reset-dataset \
-  --gui true \
-  --launch-wait-s 15 \
-  --preflight-timeout-s 90 \
-  --command-timeout-s 45 \
-  --arrival-timeout-s 240 \
-  --episode-write-timeout-s 20</code></pre>
-
-    <h3>Terminal 2 - Check The Decision V2 Smoke Test</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-jq '{case_count, successes, failures, failed_cases}' \
-  /tmp/room315_payload_decision_v2_test_4/payload_case_batch_summary.json
-
-jq '{approved_episodes, skipped_episodes, skipped_rows, rows, skip_reasons}' \
-  /home/tiago/room315_payload_decision_v2_test_4/meta/training_events.jsonl.summary.json</code></pre>
-
-    <h3>Terminal 1 - Run The Full 166-Case Decision V2 Batch</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config /home/tiago/payload_training_cases_expanded_decision_v2.yaml \
-  --dataset-dir /home/tiago/room315_payload_expanded_decision_v2 \
-  --results-dir /tmp/room315_payload_expanded_decision_v2 \
-  --reset-dataset \
-  --gui true \
-  --launch-wait-s 15 \
-  --preflight-timeout-s 90 \
-  --command-timeout-s 45 \
-  --arrival-timeout-s 240 \
-  --episode-write-timeout-s 20</code></pre>
-
-    <h3>Terminal 2 - Check The Decision V2 Result After Terminal 1 Finishes</h3>
-    <pre><code>cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-jq '{case_count, successes, failures, failed_cases}' \
-  /tmp/room315_payload_expanded_decision_v2/payload_case_batch_summary.json
-
-jq '{approved_episodes, skipped_episodes, skipped_rows, skip_reasons}' \
-  /home/tiago/room315_payload_expanded_decision_v2/meta/training_events.jsonl.summary.json
-
-find /home/tiago/room315_payload_expanded_decision_v2/episodes \
-  -maxdepth 2 \
-  -name validation.json \
-  -print0 | xargs -0 jq -r \
-  'select((.approved_for_training != true) or (.validation_status != "approved") or (.task_success != true)) | input_filename + " " + (.failure_reason // "")'</code></pre>
-  </main>
+      buttons.forEach((button) => {
+        button.addEventListener("click", async () => {
+          const target = document.getElementById(button.dataset.copy);
+          if (!target) return;
+          const original = button.textContent;
+          const text = target.innerText.replace(/\n$/, "");
+          try {
+            const result = await copyText(text);
+            button.textContent = result;
+            button.classList.add("copied");
+            status.textContent = `${result}: ${text.split("\n")[0]}`;
+          } catch (_error) {
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            button.textContent = "Selected";
+            status.textContent = "Text selected; press Ctrl+C to copy.";
+          }
+          window.setTimeout(() => {
+            button.textContent = original;
+            button.classList.remove("copied");
+          }, 1600);
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

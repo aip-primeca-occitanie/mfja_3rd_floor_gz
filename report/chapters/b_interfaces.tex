@@ -1,0 +1,182 @@
+\chapter{Capability and Interface Reference}
+\label{app:interfaces}
+
+This appendix provides a concise reference to the current operator tools and
+public interfaces. Full operating procedures remain in \path{runbook.html},
+while \cref{chap:results} reports the configurations exercised in the
+experiments.
+
+\section{Operator capability index}
+
+\begingroup
+\small
+\begin{longtable}{@{}p{0.19\textwidth}p{0.42\textwidth}p{0.29\textwidth}@{}}
+\caption{Current capabilities represented in the operator runbook.}
+\label{tab:runbook-capabilities}\\
+\toprule
+\textbf{Runbook area} & \textbf{Available interface or profile} &
+\textbf{Use}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Runbook area} & \textbf{Available interface or profile} &
+\textbf{Use}\\
+\midrule
+\endhead
+Room~315 and world profiles & Focused Room~315; full third floor with
+\code{robots:=none}, an exact/comma-separated robot selection or \code{all};
+and an isolated fixed-base robot with its table & Launch compositions for
+exercising integration boundaries separately or together\\
+\tablerowrule
+Runtime presentation & GUI or headless execution and paused/running start;
+light/full GUI choices on the Room~315 and full-floor paths; optional device
+markers & Inspection and resource-control options; markers support debugging
+and calibration and can be hidden during image capture\\
+\tablerowrule
+Robot inventory and control & Four fixed-base arms, full TIAGo and base-only
+TIAGo from the current full-floor registry; namespaced joint command/state
+surfaces and independent TIAGo base velocity & The helper checks profiles,
+vector length and units; collision-free trajectories require a separate planner\\
+\tablerowrule
+Mirrored rail setup & Independent left/right enablement, shuttle count, start
+slots, stored speed setting and initial enabled state & Current low-level simulator
+configuration. Supervised tasks retain the fixed L1--L4/R1--R4 identity domain\\
+\tablerowrule
+Shuttle lifecycle & Typed add service; per-entity ON, OFF, RESET and REMOVE;
+rail-wide \code{ALL} ON, OFF and RESET; continuous state feedback & Additional
+names support commissioning; supervised tasks use the fixed L1--L4/R1--R4
+identity set\\
+\tablerowrule
+Devices and sensors & Per-rail switch and stopper command/state topics plus
+continuous aggregate binary readings for station, branch and stopper-linked
+detectors & Raw command publication for low-level diagnosis; closed-loop tasks
+reach the same devices through translation and supervision\\
+\tablerowrule
+Geometry maintenance & Guarded dry-run projection from Gazebo XYZ to a rail
+segment and \code{s\_ratio}, with YAML updates available for slots, ordinary
+sensors and single-/multi-point stoppers & Offline maintenance utility. A
+configuration write requires relaunch and subsequent marker/feedback checking\\
+\tablerowrule
+Runtime diagnosis & ROS graph, topic, service and interface inspection together
+with build/source procedures & Support for reproducibility and troubleshooting\\
+\bottomrule
+\end{longtable}
+\endgroup
+
+\section{Public rail interfaces}
+
+The \code{mfja\_rail\_interfaces} package is independent of Gazebo-specific
+controllers, allowing simulator nodes, tests and alternative actuation
+providers to share public types.
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.61\textwidth}@{}}
+\caption{Condensed rail-interface reference.}
+\label{tab:message-reference}\\
+\toprule
+\textbf{Interface} & \textbf{Principal semantics}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Interface} & \textbf{Principal semantics}\\
+\midrule
+\endhead
+\code{NamedState} & Canonical device name and symbolic state, embedded in
+switch/stopper arrays\\
+\tablerowrule
+Switch command/state & Partial named command and reported switch state\\
+\tablerowrule
+Stopper command/state & Partial named command and reported stopper state\\
+\tablerowrule
+\code{ShuttleCommand} & Named \code{ON/OFF/RESET/REMOVE}, start slot, stored
+speed setting and optional target slot\\
+\tablerowrule
+\code{ShuttleState} & Identity, mode, controller segment/arc length, pose,
+stored speed and reached target; these fields support runtime checks\\
+\tablerowrule
+\code{SensorFeedback} & Binary occupancy readings with detected identity,
+segment and calibrated coordinates\\
+\tablerowrule
+\small\path{VisualShuttleState} & Fused identity/presence validity plus learned side,
+block, box, \(s_m\), ratio, segment length and loaded state\\
+\tablerowrule
+{\footnotesize\path{VisualStateObservation}} & Image stamps, schema/checkpoint, readiness,
+validation reasons, provenance and eight shuttle records\\
+\tablerowrule
+\code{AddShuttle} service & Requested identity/start state and explicit
+acceptance result\\
+\tablerowrule
+\makecell[l]{\code{JointTrajectory}\\\code{JointState}} & Namespaced robot joint command and
+feedback; the operator helper validates profile, vector length and angular
+unit conversion\\
+\tablerowrule
+\code{Twist}/odometry/TF & Independent TIAGo mobile-base command and feedback
+surfaces for the full and base-only variants\\
+\bottomrule
+\end{longtable}
+
+Three fields require careful interpretation. \code{ShuttleState.speed} stores a
+speed setting rather than instantaneous velocity.
+\code{reached\_target\_slot} indicates low-level setpoint completion; the full
+task effect requires additional evidence. \code{VisualStateObservation.accepted}
+indicates that the structural and freshness checks passed, while individual
+learned values remain estimates.
+
+\section{Canonical assets}
+
+\begin{table}[htbp]
+\centering
+\caption{Canonical Room~315 mapping.}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Rail} & \textbf{Shuttles} & \textbf{Station slots}\\
+\midrule
+Left & L1--L4 & 1--2 Yaskawa HC10; 3--4 KUKA KR6\\
+\tablerowrule
+Right & R1--R4 & 1--2 Yaskawa HC10DT; 3--4 Stäubli TX2\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Rail geometry, public segment names, switch assignments and branch-capacity
+rules are defined and justified in \cref{chap:transport}. Runtime topic strings
+remain configurable; the installed configuration and live ROS graph are the
+current operational references.
+
+\clearpage
+\section{Runtime responsibility summary}
+
+\begin{table}[H]
+\centering
+\caption{Responsibilities in the Room~315 task workflow.}
+\label{tab:authority-matrix}
+\begin{tabularx}{\textwidth}{@{}p{0.30\textwidth}X@{}}
+\toprule
+\textbf{Workflow decision} & \textbf{Responsible component}\\
+\midrule
+Interpret an English request & The local model proposes semantic fields;
+explicit parsing, field fusion, domain validation and dialogue produce the
+confirmed \code{TaskGoal}\\
+\tablerowrule
+Estimate visible shuttle state & The paired-camera model estimates location and
+payload state for identities supplied by the configured presence registry\\
+\tablerowrule
+Create the symbolic plan & PlanSys2/POPF solves the current PDDL problem\\
+\tablerowrule
+Select the next operation & The project executive takes the first supported
+plan step and observes the result before replanning\\
+\tablerowrule
+Translate the operation & The plan translator creates the sparse named command
+for the addressed device or shuttle\\
+\tablerowrule
+Publish the command & The software supervisor checks the current state and
+publishes the corresponding typed ROS~2 message\\
+\tablerowrule
+Apply and confirm the result & The kinematic controller applies the simulated
+transition; the executive compares device and sensor reports with the expected
+effect\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Canonical source roots and artefact identities are listed in
+\cref{app:reproducibility}.

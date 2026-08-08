@@ -109,6 +109,11 @@ class ShuttleStatePresenceProvider(PresenceProvider):
     """Fresh-name registry backed by the two controller ShuttleState streams.
 
     Repeated messages with the same canonical entity name are expected.
+    The kinematic controller publishes a blank-name message as the explicit
+    heartbeat for a rail whose active shuttle inventory is empty.  That
+    heartbeat initializes and refreshes the side without inventing an entity;
+    every identity on the side is therefore absent once the complete registry
+    is ready.  Unknown *non-empty* names remain fail-closed faults.
     Different fresh names resolving to the same fixed identity are rejected as
     duplicate reports.  A missing identity becomes explicitly absent only
     while both side sources are initialized and fresh.
@@ -171,9 +176,16 @@ class ShuttleStatePresenceProvider(PresenceProvider):
             source.last_source_stamp_s = stamp
 
         raw_name = str(entity_name or '').strip()
+        # Producer contract: Room315KinematicShuttleNode emits one blank-name
+        # ShuttleState every publish cycle when ``self.shuttles`` is empty.
+        # The timestamped message is an empty-inventory heartbeat, not an
+        # unknown entity.  Returning here deliberately preserves the source
+        # freshness update above while adding no presence record.
+        if not raw_name:
+            return
         spec = normalize_shuttle_ref(raw_name)
         if spec is None:
-            self._record_fault(f'unknown_presence_entity:{raw_name or "empty"}', receive)
+            self._record_fault(f'unknown_presence_entity:{raw_name}', receive)
             return
         if spec.side != side:
             self._record_fault(

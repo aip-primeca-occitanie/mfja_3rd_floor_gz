@@ -1,0 +1,217 @@
+{
+  "actual_constraints": {},
+  "actual_issue_codes": [
+    "missing_side"
+  ],
+  "actual_status": "clarification_required",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.465071958955377,
+  "expected_constraints": {},
+  "expected_issue_codes": [
+    "missing_side"
+  ],
+  "expected_status": "clarification_required",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "missing_side",
+  "index": 6,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-669cfb10766c",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": "loaded",
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "any",
+            "target_kind": "slot",
+            "target_slot": "3"
+          },
+          "request": "Move the loaded shuttle to slot 3."
+        },
+        "schema_version": 1,
+        "selection_strategy": "any",
+        "side": null,
+        "source": "human",
+        "target_kind": "slot",
+        "target_shuttle": null,
+        "target_slot": "3",
+        "target_station": null
+      },
+      "issues": [],
+      "ok": true,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.464639131911099,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"transport\",\"selection_strategy\":\"nearest\",\"payload_filter\":\"loaded\",\"side\":\"right\",\"target_kind\":\"slot\",\"target_slot\":\"3\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_slot\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": {
+          "alternatives": [],
+          "confidence": {
+            "overall": 0.8
+          },
+          "contract_type": "SemanticParseEnvelope",
+          "dialogue_act": "new_goal",
+          "draft_patch": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "slot",
+            "target_slot": "3"
+          },
+          "evidence": {},
+          "provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "semantic_inference",
+            "selection_strategy": "semantic_inference",
+            "side": "semantic_inference",
+            "target_kind": "semantic_inference",
+            "target_slot": "semantic_inference"
+          },
+          "schema_version": 1
+        },
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 1,
+          "fallback_reason": "",
+          "fallback_used": false,
+          "field_provenance": {
+            "goal_type": "explicit_text",
+            "payload_filter": "explicit_text",
+            "selection_strategy": "explicit_text",
+            "target_kind": "explicit_text",
+            "target_slot": "explicit_text"
+          },
+          "final_decision": "draft",
+          "latency_s": 4.464695448754355,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "goal_type",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 4,
+                "start": 0,
+                "text": "Move"
+              },
+              "value": "transport"
+            },
+            {
+              "field": "payload_filter",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 15,
+                "start": 9,
+                "text": "loaded"
+              },
+              "value": "loaded"
+            },
+            {
+              "field": "target_kind",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 33,
+                "start": 27,
+                "text": "slot 3"
+              },
+              "value": "slot"
+            },
+            {
+              "field": "target_slot",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 33,
+                "start": 27,
+                "text": "slot 3"
+              },
+              "value": "3"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "ok"
+    },
+    "validation": {
+      "clarifications": [
+        {
+          "code": "missing_side",
+          "field": "side",
+          "message": "Transport goals need a Room 315 rail side.",
+          "options": [
+            "right",
+            "left"
+          ]
+        }
+      ],
+      "confirmation_prompt": "",
+      "confirmation_required": false,
+      "constraints": {},
+      "description": "",
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-669cfb10766c",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": "loaded",
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "any",
+            "target_kind": "slot",
+            "target_slot": "3"
+          },
+          "request": "Move the loaded shuttle to slot 3."
+        },
+        "schema_version": 1,
+        "selection_strategy": "any",
+        "side": null,
+        "source": "human",
+        "target_kind": "slot",
+        "target_shuttle": null,
+        "target_slot": "3",
+        "target_station": null
+      },
+      "errors": [],
+      "ok": false,
+      "risk_level": "low",
+      "status": "clarification_required",
+      "task_goal": null
+    }
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Move the loaded shuttle to slot 3.",
+  "unsafe_auto_resolution": false
+}

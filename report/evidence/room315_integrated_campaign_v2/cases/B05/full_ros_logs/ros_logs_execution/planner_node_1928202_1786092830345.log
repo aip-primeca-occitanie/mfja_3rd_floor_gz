@@ -1,0 +1,9 @@
+[INFO] [1786092831.329558261] [planner]: [planner] Configuring...
+[INFO] [1786092831.330113483] [planner]: Created solver : POPF of type plansys2/POPFPlanSolver
+[INFO] [1786092831.330126201] [planner]: [planner] Solver Timeout 15
+[INFO] [1786092831.331835746] [planner]: [planner] Configured
+[INFO] [1786092831.333108015] [planner]: [planner] Activating...
+[INFO] [1786092831.333142062] [planner]: [planner] Activated
+[INFO] [1786092855.060201200] [planner]: Writing planning results to /tmp.
+[INFO] [1786092855.060397760] [planner]: [planner-popf] called with timeout 15.000000 seconds
+[INFO] [1786092866.450385477] [rclcpp]: signal_handler(signum=2)

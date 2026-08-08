@@ -1,0 +1,445 @@
+{
+  "camera_completeness": {
+    "train": {
+      "allow_blank_images": false,
+      "complete_row_rate": 1.0,
+      "complete_rows": 1528,
+      "debug_blank_image_mode": false,
+      "per_camera": {
+        "left_rail_rgb": {
+          "blank_substitutions": 0,
+          "existing_files": 1528,
+          "missing_files": 0,
+          "missing_ref_rows": 0,
+          "referenced_rows": 1528,
+          "unreadable_files": 0
+        },
+        "right_rail_rgb": {
+          "blank_substitutions": 0,
+          "existing_files": 1528,
+          "missing_files": 0,
+          "missing_ref_rows": 0,
+          "referenced_rows": 1528,
+          "unreadable_files": 0
+        }
+      },
+      "problem_examples": [],
+      "required_cameras": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "total_rows": 1528
+    },
+    "val": {
+      "allow_blank_images": false,
+      "complete_row_rate": 1.0,
+      "complete_rows": 256,
+      "debug_blank_image_mode": false,
+      "per_camera": {
+        "left_rail_rgb": {
+          "blank_substitutions": 0,
+          "existing_files": 256,
+          "missing_files": 0,
+          "missing_ref_rows": 0,
+          "referenced_rows": 256,
+          "unreadable_files": 0
+        },
+        "right_rail_rgb": {
+          "blank_substitutions": 0,
+          "existing_files": 256,
+          "missing_files": 0,
+          "missing_ref_rows": 0,
+          "referenced_rows": 256,
+          "unreadable_files": 0
+        }
+      },
+      "problem_examples": [],
+      "required_cameras": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "total_rows": 256
+    }
+  },
+  "class_balance": {
+    "train": {
+      "calibration_version": {
+        "room315.gazebo_pinhole.v1": 1528
+      },
+      "continuous_position_available": {
+        "true": 6032
+      },
+      "fixed_identity_presence": {
+        "L1": 792,
+        "L2": 752,
+        "L3": 744,
+        "L4": 760,
+        "R1": 752,
+        "R2": 744,
+        "R3": 768,
+        "R4": 720
+      },
+      "labels": 1528,
+      "loaded_state": {
+        "empty": 3016,
+        "loaded": 3016
+      },
+      "obstacle_count": {
+        "0": 1528
+      },
+      "schema_version": {
+        "room315.visual_state.v3": 1528
+      },
+      "visible_switch_state": {
+        "exterior": 9124,
+        "interior": 3100
+      }
+    },
+    "val": {
+      "calibration_version": {
+        "room315.gazebo_pinhole.v1": 256
+      },
+      "continuous_position_available": {
+        "true": 1088
+      },
+      "fixed_identity_presence": {
+        "L1": 112,
+        "L2": 120,
+        "L3": 152,
+        "L4": 120,
+        "R1": 152,
+        "R2": 144,
+        "R3": 136,
+        "R4": 152
+      },
+      "labels": 256,
+      "loaded_state": {
+        "empty": 544,
+        "loaded": 544
+      },
+      "obstacle_count": {
+        "0": 256
+      },
+      "schema_version": {
+        "room315.visual_state.v3": 256
+      },
+      "visible_switch_state": {
+        "exterior": 1560,
+        "interior": 488
+      }
+    }
+  },
+  "dataset_mode": "visual_state",
+  "feature_purity": {
+    "debug_or_ablation_features": [],
+    "learned_output_boundary": "visual facts only; no PDDL, plans, primitives, or rail commands",
+    "oracle_labels_physically_separate_from_model_input": true,
+    "production_features_from": "model_input.overhead_images",
+    "row_level_metadata_used_as_features": []
+  },
+  "image_preprocessing": {
+    "augmentations": [],
+    "input_resolution": [
+      224,
+      224
+    ],
+    "normalization_mean_per_rgb_view": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std_per_rgb_view": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resize": "direct_bilinear_resize",
+    "value_range": [
+      0.0,
+      1.0
+    ]
+  },
+  "model_input_integrity": {
+    "train": {
+      "allowed_model_input_fields": [
+        "overhead_images"
+      ],
+      "dataset_mode": "visual_state",
+      "label_schema_version": "room315.visual_state.v3",
+      "labels_checked": 1528,
+      "oracle_label_source": "separate_jsonl",
+      "oracle_labels_physically_separate": true,
+      "production_feature_source": "model_input.overhead_images only",
+      "row_level_metadata_used_as_features": [],
+      "rows_checked": 1528
+    },
+    "val": {
+      "allowed_model_input_fields": [
+        "overhead_images"
+      ],
+      "dataset_mode": "visual_state",
+      "label_schema_version": "room315.visual_state.v3",
+      "labels_checked": 256,
+      "oracle_label_source": "separate_jsonl",
+      "oracle_labels_physically_separate": true,
+      "production_feature_source": "model_input.overhead_images only",
+      "row_level_metadata_used_as_features": [],
+      "rows_checked": 256
+    }
+  },
+  "purpose": "small custom visual-state label predictor; outputs are not rail commands",
+  "row_fingerprint": {
+    "train": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095",
+    "train_labels": "6f867fa33e79c089953c259b419a041a508c079d3208f2287941b1ea4db22ac3",
+    "val": "5119937c489fc100c73ca6637697044ee7a3b5e37e8ce76c4c542ed80475858a",
+    "val_labels": "34df371f1da0168e63d34571565f13e6799b233667c70b8c55aad63682ea1c8a"
+  },
+  "schema": {
+    "label_vector_names": [
+      "shuttles.0.bbox.0",
+      "shuttles.0.bbox.1",
+      "shuttles.0.bbox.2",
+      "shuttles.0.bbox.3",
+      "shuttles.0.rail_position.s_m",
+      "shuttles.0.rail_position.s_ratio",
+      "shuttles.0.rail_position.segment_length_m",
+      "shuttles.1.bbox.0",
+      "shuttles.1.bbox.1",
+      "shuttles.1.bbox.2",
+      "shuttles.1.bbox.3",
+      "shuttles.1.rail_position.s_m",
+      "shuttles.1.rail_position.s_ratio",
+      "shuttles.1.rail_position.segment_length_m",
+      "shuttles.2.bbox.0",
+      "shuttles.2.bbox.1",
+      "shuttles.2.bbox.2",
+      "shuttles.2.bbox.3",
+      "shuttles.2.rail_position.s_m",
+      "shuttles.2.rail_position.s_ratio",
+      "shuttles.2.rail_position.segment_length_m",
+      "shuttles.3.bbox.0",
+      "shuttles.3.bbox.1",
+      "shuttles.3.bbox.2",
+      "shuttles.3.bbox.3",
+      "shuttles.3.rail_position.s_m",
+      "shuttles.3.rail_position.s_ratio",
+      "shuttles.3.rail_position.segment_length_m",
+      "shuttles.4.bbox.0",
+      "shuttles.4.bbox.1",
+      "shuttles.4.bbox.2",
+      "shuttles.4.bbox.3",
+      "shuttles.4.rail_position.s_m",
+      "shuttles.4.rail_position.s_ratio",
+      "shuttles.4.rail_position.segment_length_m",
+      "shuttles.5.bbox.0",
+      "shuttles.5.bbox.1",
+      "shuttles.5.bbox.2",
+      "shuttles.5.bbox.3",
+      "shuttles.5.rail_position.s_m",
+      "shuttles.5.rail_position.s_ratio",
+      "shuttles.5.rail_position.segment_length_m",
+      "shuttles.6.bbox.0",
+      "shuttles.6.bbox.1",
+      "shuttles.6.bbox.2",
+      "shuttles.6.bbox.3",
+      "shuttles.6.rail_position.s_m",
+      "shuttles.6.rail_position.s_ratio",
+      "shuttles.6.rail_position.segment_length_m",
+      "shuttles.7.bbox.0",
+      "shuttles.7.bbox.1",
+      "shuttles.7.bbox.2",
+      "shuttles.7.bbox.3",
+      "shuttles.7.rail_position.s_m",
+      "shuttles.7.rail_position.s_ratio",
+      "shuttles.7.rail_position.segment_length_m",
+      "shuttles.0.location.side==left",
+      "shuttles.0.location.side==right",
+      "shuttles.0.location.block==A12E",
+      "shuttles.0.location.block==A12I",
+      "shuttles.0.location.block==A14",
+      "shuttles.0.location.block==A1E",
+      "shuttles.0.location.block==A1I",
+      "shuttles.0.location.block==A23",
+      "shuttles.0.location.block==A2E",
+      "shuttles.0.location.block==A2I",
+      "shuttles.0.location.block==A34E",
+      "shuttles.0.location.block==A34I",
+      "shuttles.0.location.block==A3E",
+      "shuttles.0.location.block==A3I",
+      "shuttles.0.location.block==A4E",
+      "shuttles.0.location.block==A4I",
+      "shuttles.0.loaded_state==empty",
+      "shuttles.0.loaded_state==loaded",
+      "shuttles.1.location.side==left",
+      "shuttles.1.location.side==right",
+      "shuttles.1.location.block==A12E",
+      "shuttles.1.location.block==A12I",
+      "shuttles.1.location.block==A14",
+      "shuttles.1.location.block==A1E",
+      "shuttles.1.location.block==A1I",
+      "shuttles.1.location.block==A23",
+      "shuttles.1.location.block==A2E",
+      "shuttles.1.location.block==A2I",
+      "shuttles.1.location.block==A34E",
+      "shuttles.1.location.block==A34I",
+      "shuttles.1.location.block==A3E",
+      "shuttles.1.location.block==A3I",
+      "shuttles.1.location.block==A4E",
+      "shuttles.1.location.block==A4I",
+      "shuttles.1.loaded_state==empty",
+      "shuttles.1.loaded_state==loaded",
+      "shuttles.2.location.side==left",
+      "shuttles.2.location.side==right",
+      "shuttles.2.location.block==A12E",
+      "shuttles.2.location.block==A12I",
+      "shuttles.2.location.block==A14",
+      "shuttles.2.location.block==A1E",
+      "shuttles.2.location.block==A1I",
+      "shuttles.2.location.block==A23",
+      "shuttles.2.location.block==A2E",
+      "shuttles.2.location.block==A2I",
+      "shuttles.2.location.block==A34E",
+      "shuttles.2.location.block==A34I",
+      "shuttles.2.location.block==A3E",
+      "shuttles.2.location.block==A3I",
+      "shuttles.2.location.block==A4E",
+      "shuttles.2.location.block==A4I",
+      "shuttles.2.loaded_state==empty",
+      "shuttles.2.loaded_state==loaded",
+      "shuttles.3.location.side==left",
+      "shuttles.3.location.side==right",
+      "shuttles.3.location.block==A12E",
+      "shuttles.3.location.block==A12I",
+      "shuttles.3.location.block==A14",
+      "shuttles.3.location.block==A1E",
+      "shuttles.3.location.block==A1I",
+      "shuttles.3.location.block==A23",
+      "shuttles.3.location.block==A2E",
+      "shuttles.3.location.block==A2I",
+      "shuttles.3.location.block==A34E",
+      "shuttles.3.location.block==A34I",
+      "shuttles.3.location.block==A3E",
+      "shuttles.3.location.block==A3I",
+      "shuttles.3.location.block==A4E",
+      "shuttles.3.location.block==A4I",
+      "shuttles.3.loaded_state==empty",
+      "shuttles.3.loaded_state==loaded",
+      "shuttles.4.location.side==left",
+      "shuttles.4.location.side==right",
+      "shuttles.4.location.block==A12E",
+      "shuttles.4.location.block==A12I",
+      "shuttles.4.location.block==A14",
+      "shuttles.4.location.block==A1E",
+      "shuttles.4.location.block==A1I",
+      "shuttles.4.location.block==A23",
+      "shuttles.4.location.block==A2E",
+      "shuttles.4.location.block==A2I",
+      "shuttles.4.location.block==A34E",
+      "shuttles.4.location.block==A34I",
+      "shuttles.4.location.block==A3E",
+      "shuttles.4.location.block==A3I",
+      "shuttles.4.location.block==A4E",
+      "shuttles.4.location.block==A4I",
+      "shuttles.4.loaded_state==empty",
+      "shuttles.4.loaded_state==loaded",
+      "shuttles.5.location.side==left",
+      "shuttles.5.location.side==right",
+      "shuttles.5.location.block==A12E",
+      "shuttles.5.location.block==A12I",
+      "shuttles.5.location.block==A14",
+      "shuttles.5.location.block==A1E",
+      "shuttles.5.location.block==A1I",
+      "shuttles.5.location.block==A23",
+      "shuttles.5.location.block==A2E",
+      "shuttles.5.location.block==A2I",
+      "shuttles.5.location.block==A34E",
+      "shuttles.5.location.block==A34I",
+      "shuttles.5.location.block==A3E",
+      "shuttles.5.location.block==A3I",
+      "shuttles.5.location.block==A4E",
+      "shuttles.5.location.block==A4I",
+      "shuttles.5.loaded_state==empty",
+      "shuttles.5.loaded_state==loaded",
+      "shuttles.6.location.side==left",
+      "shuttles.6.location.side==right",
+      "shuttles.6.location.block==A12E",
+      "shuttles.6.location.block==A12I",
+      "shuttles.6.location.block==A14",
+      "shuttles.6.location.block==A1E",
+      "shuttles.6.location.block==A1I",
+      "shuttles.6.location.block==A23",
+      "shuttles.6.location.block==A2E",
+      "shuttles.6.location.block==A2I",
+      "shuttles.6.location.block==A34E",
+      "shuttles.6.location.block==A34I",
+      "shuttles.6.location.block==A3E",
+      "shuttles.6.location.block==A3I",
+      "shuttles.6.location.block==A4E",
+      "shuttles.6.location.block==A4I",
+      "shuttles.6.loaded_state==empty",
+      "shuttles.6.loaded_state==loaded",
+      "shuttles.7.location.side==left",
+      "shuttles.7.location.side==right",
+      "shuttles.7.location.block==A12E",
+      "shuttles.7.location.block==A12I",
+      "shuttles.7.location.block==A14",
+      "shuttles.7.location.block==A1E",
+      "shuttles.7.location.block==A1I",
+      "shuttles.7.location.block==A23",
+      "shuttles.7.location.block==A2E",
+      "shuttles.7.location.block==A2I",
+      "shuttles.7.location.block==A34E",
+      "shuttles.7.location.block==A34I",
+      "shuttles.7.location.block==A3E",
+      "shuttles.7.location.block==A3I",
+      "shuttles.7.location.block==A4E",
+      "shuttles.7.location.block==A4I",
+      "shuttles.7.loaded_state==empty",
+      "shuttles.7.loaded_state==loaded"
+    ],
+    "visual_state_schema_version": "room315.visual_state.v3"
+  },
+  "source_files": {
+    "train": {
+      "bytes": 3558755,
+      "newline_count": 1528,
+      "path": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/train.jsonl",
+      "sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095"
+    },
+    "train_labels": {
+      "bytes": 8714600,
+      "newline_count": 1528,
+      "path": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/train_visual_labels.jsonl",
+      "sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583"
+    },
+    "val": {
+      "bytes": 596975,
+      "newline_count": 256,
+      "path": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/validation.jsonl",
+      "sha256": "5119937c489fc100c73ca6637697044ee7a3b5e37e8ce76c4c542ed80475858a"
+    },
+    "val_labels": {
+      "bytes": 1462391,
+      "newline_count": 256,
+      "path": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/validation_visual_labels.jsonl",
+      "sha256": "218039e54ac0abf3de940f8abf92aff8c91a75333d991eb213a73101939fab71"
+    }
+  },
+  "split_integrity": {
+    "disjoint_episodes": true,
+    "episode_overlap": [],
+    "train_episode_count": 1528,
+    "train_row_fingerprint": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095",
+    "train_rows": 1528,
+    "val_episode_count": 256,
+    "val_row_fingerprint": "5119937c489fc100c73ca6637697044ee7a3b5e37e8ce76c4c542ed80475858a",
+    "val_rows": 256
+  },
+  "target_normalization": {
+    "absent_shuttle_slots_excluded": true,
+    "kind": "per_target_mean_and_population_std",
+    "oracle_position_uncertainty_excluded": true,
+    "source_split": "train"
+  },
+  "tool": "room_315_vla_train_local"
+}

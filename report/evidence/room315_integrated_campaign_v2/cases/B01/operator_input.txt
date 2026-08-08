@@ -1,0 +1,3 @@
+Move the red shuttle to slot 2 on the right rail.
+yes
+quit

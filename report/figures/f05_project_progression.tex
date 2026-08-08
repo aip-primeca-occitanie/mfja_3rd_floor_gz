@@ -1,0 +1,81 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  stage/.style={
+    draw=black!22,
+    rounded corners=2mm,
+    fill=white,
+    align=left,
+    text width=151mm,
+    minimum height=18mm,
+    inner sep=2.4mm,
+    execute at begin node={\raggedright
+      \hyphenpenalty=10000\exhyphenpenalty=10000
+      \emergencystretch=3em\relax}
+  },
+  phase/.style={
+    rounded corners=1.2mm,
+    fill=mfjablue,
+    text=white,
+    font=\sffamily\bfseries,
+    text width=151mm,
+    align=left,
+    inner xsep=2.4mm,
+    inner ysep=1.2mm
+  },
+  flow/.style={-{Latex[length=2.2mm]},line width=1.05pt,mfjablue}
+]
+  \node[phase] (p1) {Phase 1 --- initial assigned task};
+
+  \node[stage,below=3mm of p1] (s1) {%
+    {\color{mfjablue}\bfseries 1. World and robots}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} unify heterogeneous assets, names and topics.\quad
+    {\color{mfjablue}\bfseries Implementation:} correct the CAD scene, separate package ownership
+    and launch from a namespaced registry.\quad
+    {\color{mfjagreen}\bfseries Result:} select any supported simulated-robot subset.};
+
+  \node[stage,below=4mm of s1] (s2) {%
+    {\color{mfjablue}\bfseries 2. Shuttle motion}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} repeatable motion through switch transitions.\quad
+    {\color{mfjablue}\bfseries Implementation:} use arc-length Hermite paths and Gazebo pose control.\quad
+    {\color{mfjagreen}\bfseries Result:} repeatable continuous motion with an explicit
+    kinematic model.};
+
+  \node[stage,below=4mm of s2] (s3) {%
+    {\color{mfjablue}\bfseries 3. Topology and devices}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} encode legal routes, stops and device
+    semantics.\quad
+    {\color{mfjablue}\bfseries Implementation:} declare directed segments, switches, slots, stoppers
+    and sensors in YAML.\quad
+    {\color{mfjagreen}\bfseries Result:} planner-readable dual-rail state and coordination.};
+
+  \draw[flow] (s1.south) -- (s2.north);
+  \draw[flow] (s2.south) -- (s3.north);
+
+  \node[phase,below=5mm of s3] (p2)
+    {Phase 2 --- additional research direction};
+
+  \node[stage,below=3mm of p2] (s4) {%
+    {\color{mfjablue}\bfseries 4. Visual and task interfaces}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} interpret English tasks and the current camera scene.\quad
+    {\color{mfjablue}\bfseries Implementation:} pair overhead RGB views, keep labels separate from
+    model input, and convert semantic proposals into confirmed task goals.\quad
+    {\color{mfjagreen}\bfseries Result:} structured language and visual inputs for planning.};
+
+  \node[stage,below=4mm of s4] (s5) {%
+    {\color{mfjablue}\bfseries 5. Planning and supervised execution}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} convert the current task and state into supervised motion.\quad
+    {\color{mfjablue}\bfseries Implementation:} build a fresh PDDL problem, select one symbolic step,
+    translate it, pass it through the supervisor and check the resulting state.\quad
+    {\color{mfjagreen}\bfseries Result:} one-step planning and execution that repeats until completion.};
+
+  \node[stage,below=4mm of s5] (s6) {%
+    {\color{mfjablue}\bfseries 6. Experiments and results}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} measure perception and confirm complete task behaviour.\quad
+    {\color{mfjablue}\bfseries Implementation:} use grouped visual splits, model metrics, software
+    tests and a 12-run cold-start operator-interface campaign.\quad
+    {\color{mfjagreen}\bfseries Result:} model measurements and complete positive runs across both
+    rails, all eight identities and five case families.};
+
+  \draw[flow] (s4.south) -- (s5.north);
+  \draw[flow] (s5.south) -- (s6.north);
+\end{tikzpicture}

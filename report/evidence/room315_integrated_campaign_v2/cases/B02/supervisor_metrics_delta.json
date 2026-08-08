@@ -1,0 +1,17 @@
+{
+  "delta": {
+    "accepted_actions": 2,
+    "rejected_actions": 0,
+    "total_proposed_actions": 2
+  },
+  "final": {
+    "accepted_actions": 2,
+    "rejected_actions": 0,
+    "total_proposed_actions": 2
+  },
+  "initial": {
+    "accepted_actions": 0,
+    "rejected_actions": 0,
+    "total_proposed_actions": 0
+  }
+}

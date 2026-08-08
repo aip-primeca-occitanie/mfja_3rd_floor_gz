@@ -1,0 +1,75 @@
+\begin{tikzpicture}[
+  node distance=7mm and 12mm,
+  segment/.style={
+    draw=mfjablue,
+    rounded corners=1.4mm,
+    fill=mfjalight,
+    minimum width=1.65cm,
+    minimum height=0.78cm,
+    font=\small\ttfamily
+  },
+  current/.style={
+    draw=mfjagreen,
+    rounded corners=1.7mm,
+    fill=mfjagreen!10,
+    minimum width=2.05cm,
+    minimum height=1.02cm,
+    font=\normalsize\ttfamily\bfseries
+  },
+  gate/.style={
+    diamond,
+    draw=mfjaorange,
+    fill=mfjaorange!12,
+    aspect=1.7,
+    inner sep=1.7mm,
+    font=\small\sffamily\bfseries
+  },
+  edge/.style={-{Latex[length=2.2mm]},line width=1.05pt,mfjablue},
+  note/.style={
+    rounded corners=1.2mm,
+    align=center,
+    font=\scriptsize\sffamily,
+    inner xsep=2.2mm,
+    inner ysep=1.1mm
+  }
+]
+  \node[note,draw=mfjagreen,fill=mfjagreen!8,text width=12.7cm] (shared)
+    {One public successor map is used by both \code{/left\_rail} and
+     \code{/right\_rail}.};
+
+  \node[segment,below left=10mm and 6mm of shared.south west,anchor=west]
+    (a2e) {A2E};
+  \node[segment,below=6mm of a2e] (a2i) {A2I};
+  \node[current,right=16mm of $(a2e)!0.5!(a2i)$] (a23) {A23};
+  \node[gate,right=28mm of a23] (a3) {A3};
+  \node[segment,above right=5mm and 17mm of a3] (a3e) {A3E};
+  \node[segment,below right=5mm and 17mm of a3] (a3i) {A3I};
+
+  \node[font=\scriptsize\sffamily,align=center]
+    at ($(a2e.north east)!0.5!(a23.north west)+(0,0.48)$)
+    {fixed successor (Any)};
+  \draw[edge] (a2e.east) -- ($(a23.west)+(0,0.23)$);
+  \draw[edge] (a2i.east) -- ($(a23.west)+(0,-0.23)$);
+  \draw[edge] (a23) -- (a3);
+  \node[draw=mfjablue!40,fill=white,rounded corners=0.8mm,
+    font=\scriptsize\sffamily,text=mfjablue,
+    inner xsep=1.5mm,inner ysep=0.7mm]
+    at ($(a23.east)!0.5!(a3.west)+(0,5mm)$)
+    {exit governed by};
+  \draw[edge] (a3) -- node[above,sloped,font=\scriptsize\sffamily]
+    {E: exterior} (a3e);
+  \draw[edge] (a3) -- node[below,sloped,font=\scriptsize\sffamily]
+    {I: interior} (a3i);
+
+  % Keep both explanatory notes below the lowest branch node so that neither
+  % note can cover the routing arrows or the A3I successor.
+  \coordinate (graphbottom) at (shared.center |- a3i.south);
+  \node[note,draw=mfjablue,fill=mfjalight,text width=5.0cm,
+    anchor=north east]
+    (entry) at ([xshift=-3mm,yshift=-10mm]graphbottom)
+    {\code{A2} is the entry boundary into \code{A23}.};
+  \node[note,draw=mfjaorange,fill=mfjaorange!8,text width=5.25cm,
+    anchor=north west]
+    at ([xshift=3mm,yshift=-10mm]graphbottom)
+    {\code{A3} is the exit decision after \code{A23}.};
+\end{tikzpicture}

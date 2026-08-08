@@ -1,0 +1,29 @@
+Room 315 focused verification on the campaign-bound source state
+Executed: 2026-08-07T16:11:13+02:00
+Repository HEAD: c44c501640e3dab35ab241384c99963e1b9d8745
+Working-tree patch SHA-256: d446c63192386b32b0d92e24aed6210b59bc53bfcb81c9af05a644ed421db0bd
+Runtime source tree: 483 files
+Runtime source-tree SHA-256: 326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9
+Source identity matches report/evidence/room315_integrated_campaign_v2/environment.json.
+
+Command:
+PYTHONPATH=/usr/lib/python3/dist-packages:/home/tiago/room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH} \
+python3 -m pytest -q -rs \
+  mfja_robot_control_config/test/test_room315_rail_segment_names.py \
+  mfja_robot_control_config/test/test_room315_pddl_plan_translator.py \
+  mfja_robot_control_config/test/test_room315_vla_supervisor.py \
+  mfja_robot_control_config/test/test_room315_visual_runtime.py \
+  mfja_robot_control_config/test/test_room315_task_execution_config.py \
+  mfja_robot_control_config/test/test_room315_closed_loop_executive.py
+
+Result:
+........................................................................ [ 37%]
+........................................................................ [ 75%]
+..............................................                           [100%]
+190 passed in 4.10s
+
+Claim boundary:
+The selected files cover public rail-segment naming, PDDL plan translation,
+supervision, the dependency-free visual-runtime core, task-execution
+configuration, the Torch-dependent visual-runtime case and the closed-loop
+executive. The integrated Gazebo campaign is reported separately.

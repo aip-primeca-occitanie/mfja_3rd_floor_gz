@@ -1,0 +1,206 @@
+{
+  "assigned_scenario_count": 2040,
+  "checks": {
+    "all_2040_scenarios_assigned": true,
+    "configuration_counts_exact": true,
+    "every_source_scenario_assigned_once": true,
+    "hard_overlap_counts_zero": true,
+    "scenario_counts_exact": true
+  },
+  "geometry_duplication_findings": {
+    "camera_pair_fingerprint": {
+      "interpretation": "no exact duplicate fingerprint across splits",
+      "pair_overlap_counts": {
+        "train__test": 0,
+        "train__validation": 0,
+        "validation__test": 0
+      }
+    },
+    "geometry_fingerprint": {
+      "interpretation": "no exact duplicate fingerprint across splits",
+      "pair_overlap_counts": {
+        "train__test": 0,
+        "train__validation": 0,
+        "validation__test": 0
+      }
+    },
+    "position_fingerprint": {
+      "interpretation": "no exact duplicate fingerprint across splits",
+      "pair_overlap_counts": {
+        "train__test": 0,
+        "train__validation": 0,
+        "validation__test": 0
+      }
+    }
+  },
+  "hard_failures": {},
+  "hard_overlap_fields": [
+    "presence_configuration_id",
+    "scenario_id",
+    "v2_plan_id",
+    "episode_directory",
+    "source_image_path",
+    "source_image_sha256",
+    "event_record_identity",
+    "presence_bitmask"
+  ],
+  "overlaps": {
+    "camera_pair_fingerprint": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "episode_directory": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "event_record_identity": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "geometry_fingerprint": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "position_fingerprint": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "presence_bitmask": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "presence_configuration_id": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "scenario_id": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "source_image_path": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "source_image_sha256": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "v2_plan_id": {
+      "train__test": {
+        "count": 0,
+        "examples": []
+      },
+      "train__validation": {
+        "count": 0,
+        "examples": []
+      },
+      "validation__test": {
+        "count": 0,
+        "examples": []
+      }
+    }
+  },
+  "passed": true,
+  "schema_version": "room315.visual_split_leakage_audit.v1",
+  "unique_assigned_scenario_count": 2040
+}

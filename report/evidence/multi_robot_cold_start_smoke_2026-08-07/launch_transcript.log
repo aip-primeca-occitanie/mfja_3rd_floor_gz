@@ -1,0 +1,130 @@
+Script started on 2026-08-07 16:14:59+02:00 [COMMAND="ros2 launch mfja_3rd_floor_bringup full_floor.launch.py robots:=all gui:=false start_paused:=false enable_room315_kinematic_shuttles:=false enable_room315_vla:=false gz_partition:=mfja_report_smoke_20260807" TERM="dumb" TTY="/dev/pts/8" COLUMNS="80" LINES="24"]
+[INFO] [launch]: All log files can be found below /home/tiago/.ros/log/2026-08-07-16-14-59-811894-tiago-Precision-7560-1957781
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: Acquired exclusive Room 315 simulation runtime lock.
+[INFO] [launch.user]: Cleared VLA obstacle pose cache: /home/tiago/.ros/room315_vla_obstacles.json
+[INFO] [launch.user]: Room 315 VLA obstacle markers: disabled
+[INFO] [gazebo-1]: process started with pid [1957784]
+[INFO] [conveyor_loop_mode_controller.py-2]: process started with pid [1957785]
+[conveyor_loop_mode_controller.py-2] [INFO] [1786112100.525247872] [conveyor_loop_mode_controller]: Loaded 8 managed switch poses from /tmp/mfja_3rd_floor_without_room315_vla_obstacles_1957781.world.
+[conveyor_loop_mode_controller.py-2] [INFO] [1786112100.525645301] [conveyor_loop_mode_controller]: Detected initial switch layout from world file: EXTERIOR
+[conveyor_loop_mode_controller.py-2] [INFO] [1786112100.526079181] [conveyor_loop_mode_controller]: Per-switch command topic: /mfja/conveyor/switch_cmd (examples: "A1R=INTERIOR", "A1=EXTERIOR", "RIGHT=INTERIOR, A3L=EXTERIOR").
+[gazebo-1] libEGL warning: egl: failed to create dri2 screen
+[INFO] [parameter_bridge-3]: process started with pid [1957910]
+[INFO] [parameter_bridge-4]: process started with pid [1957911]
+[INFO] [create-5]: process started with pid [1957912]
+[INFO] [robot_state_publisher-6]: process started with pid [1957913]
+[INFO] [parameter_bridge-7]: process started with pid [1957914]
+[INFO] [create-8]: process started with pid [1957915]
+[INFO] [robot_state_publisher-9]: process started with pid [1957946]
+[INFO] [parameter_bridge-10]: process started with pid [1957947]
+[INFO] [create-11]: process started with pid [1957948]
+[INFO] [robot_state_publisher-12]: process started with pid [1957949]
+[INFO] [parameter_bridge-13]: process started with pid [1957950]
+[INFO] [create-14]: process started with pid [1957951]
+[INFO] [robot_state_publisher-15]: process started with pid [1957955]
+[INFO] [parameter_bridge-16]: process started with pid [1957957]
+[INFO] [create-17]: process started with pid [1957960]
+[INFO] [robot_state_publisher-18]: process started with pid [1957962]
+[INFO] [parameter_bridge-19]: process started with pid [1957980]
+[INFO] [create-20]: process started with pid [1957984]
+[INFO] [robot_state_publisher-21]: process started with pid [1957994]
+[INFO] [parameter_bridge-22]: process started with pid [1957995]
+[parameter_bridge-4] [INFO] [1786112103.387942337] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/mfja_3rd_floor/set_pose (ros_gz_interfaces/srv/SetEntityPose -> /)]
+[parameter_bridge-3] [INFO] [1786112103.390727036] [clock_bridge]: Creating GZ->ROS Bridge: [/clock (gz.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[robot_state_publisher-6] [INFO] [1786112103.391475728] [kuka1.robot_state_publisher]: Robot initialized
+[parameter_bridge-4] [INFO] [1786112103.394744197] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/mfja_3rd_floor/create (ros_gz_interfaces/srv/SpawnEntity -> /)]
+[parameter_bridge-4] [INFO] [1786112103.397785274] [room315_world_service_bridge]: Creating ROS->GZ service bridge [/world/mfja_3rd_floor/remove (ros_gz_interfaces/srv/DeleteEntity -> /)]
+[robot_state_publisher-12] [INFO] [1786112103.412705691] [yaskawa_hc10_1.robot_state_publisher]: Robot initialized
+[robot_state_publisher-15] [INFO] [1786112103.425393773] [yaskawa_hc10dt_1.robot_state_publisher]: Robot initialized
+[robot_state_publisher-9] [INFO] [1786112103.434702395] [staubli1.robot_state_publisher]: Robot initialized
+[robot_state_publisher-21] [INFO] [1786112103.457111317] [tiago_base1.robot_state_publisher]: Robot initialized
+[robot_state_publisher-18] [INFO] [1786112103.458088094] [tiago1.robot_state_publisher]: Robot initialized
+[create-5] [INFO] [1786112103.577555550] [spawn_kuka1]: Entity creation successful.
+[create-17] [INFO] [1786112103.677838769] [spawn_tiago1]: Entity creation successful.
+[INFO] [create-5]: process has finished cleanly [pid 1957912]
+[create-20] [INFO] [1786112103.777758265] [spawn_tiago_base1]: Entity creation successful.
+[create-8] [INFO] [1786112103.877834804] [spawn_staubli1]: Entity creation successful.
+[INFO] [create-17]: process has finished cleanly [pid 1957960]
+[INFO] [create-20]: process has finished cleanly [pid 1957984]
+[create-11] [INFO] [1786112103.978208449] [spawn_yaskawa_hc10_1]: Entity creation successful.
+[INFO] [create-8]: process has finished cleanly [pid 1957915]
+[create-14] [INFO] [1786112104.078674757] [spawn_yaskawa_hc10dt_1]: Entity creation successful.
+[INFO] [create-11]: process has finished cleanly [pid 1957948]
+[INFO] [create-14]: process has finished cleanly [pid 1957951]
+[parameter_bridge-7] [INFO] [1786112104.404824113] [kuka1_bridge]: Creating ROS->GZ Bridge: [/kuka1/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /model/kuka1/joint_trajectory (gz.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786112104.408698742] [kuka1_bridge]: Creating GZ->ROS Bridge: [/model/kuka1/joint_trajectory_progress (gz.msgs.Float) -> /kuka1/joint_trajectory_progress (std_msgs/msg/Float32)] (Lazy 0)
+[parameter_bridge-7] [INFO] [1786112104.411693409] [kuka1_bridge]: Creating GZ->ROS Bridge: [/world/mfja_3rd_floor/model/kuka1/joint_state (gz.msgs.Model) -> /kuka1/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-10] [INFO] [1786112104.434584644] [staubli1_bridge]: Creating ROS->GZ Bridge: [/staubli1/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /model/staubli1/joint_trajectory (gz.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-10] [INFO] [1786112104.438518581] [staubli1_bridge]: Creating GZ->ROS Bridge: [/model/staubli1/joint_trajectory_progress (gz.msgs.Float) -> /staubli1/joint_trajectory_progress (std_msgs/msg/Float32)] (Lazy 0)
+[parameter_bridge-10] [INFO] [1786112104.439986975] [staubli1_bridge]: Creating GZ->ROS Bridge: [/world/mfja_3rd_floor/model/staubli1/joint_state (gz.msgs.Model) -> /staubli1/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-16] [INFO] [1786112104.448573585] [yaskawa_hc10dt_1_bridge]: Creating ROS->GZ Bridge: [/yaskawa_hc10dt_1/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /model/yaskawa_hc10dt_1/joint_trajectory (gz.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-13] [INFO] [1786112104.450880631] [yaskawa_hc10_1_bridge]: Creating ROS->GZ Bridge: [/yaskawa_hc10_1/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /model/yaskawa_hc10_1/joint_trajectory (gz.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-19] [INFO] [1786112104.450961568] [tiago1_bridge]: Creating ROS->GZ Bridge: [/tiago1/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /model/tiago1/joint_trajectory (gz.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-16] [INFO] [1786112104.451741261] [yaskawa_hc10dt_1_bridge]: Creating GZ->ROS Bridge: [/model/yaskawa_hc10dt_1/joint_trajectory_progress (gz.msgs.Float) -> /yaskawa_hc10dt_1/joint_trajectory_progress (std_msgs/msg/Float32)] (Lazy 0)
+[parameter_bridge-16] [INFO] [1786112104.453279773] [yaskawa_hc10dt_1_bridge]: Creating GZ->ROS Bridge: [/world/mfja_3rd_floor/model/yaskawa_hc10dt_1/joint_state (gz.msgs.Model) -> /yaskawa_hc10dt_1/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-13] [INFO] [1786112104.454285090] [yaskawa_hc10_1_bridge]: Creating GZ->ROS Bridge: [/model/yaskawa_hc10_1/joint_trajectory_progress (gz.msgs.Float) -> /yaskawa_hc10_1/joint_trajectory_progress (std_msgs/msg/Float32)] (Lazy 0)
+[parameter_bridge-19] [INFO] [1786112104.454284835] [tiago1_bridge]: Creating GZ->ROS Bridge: [/model/tiago1/joint_trajectory_progress (gz.msgs.Float) -> /tiago1/joint_trajectory_progress (std_msgs/msg/Float32)] (Lazy 0)
+[parameter_bridge-19] [INFO] [1786112104.455538121] [tiago1_bridge]: Creating GZ->ROS Bridge: [/world/mfja_3rd_floor/model/tiago1/joint_state (gz.msgs.Model) -> /tiago1/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-13] [INFO] [1786112104.455543588] [yaskawa_hc10_1_bridge]: Creating GZ->ROS Bridge: [/world/mfja_3rd_floor/model/yaskawa_hc10_1/joint_state (gz.msgs.Model) -> /yaskawa_hc10_1/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-22] [INFO] [1786112104.456689133] [tiago_base1_bridge]: Creating ROS->GZ Bridge: [/tiago_base1/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /model/tiago_base1/joint_trajectory (gz.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-19] [INFO] [1786112104.457307304] [tiago1_bridge]: Creating ROS->GZ Bridge: [/tiago1/cmd_vel (geometry_msgs/msg/Twist) -> /model/tiago1/cmd_vel (gz.msgs.Twist)] (Lazy 0)
+[parameter_bridge-22] [INFO] [1786112104.460120548] [tiago_base1_bridge]: Creating GZ->ROS Bridge: [/model/tiago_base1/joint_trajectory_progress (gz.msgs.Float) -> /tiago_base1/joint_trajectory_progress (std_msgs/msg/Float32)] (Lazy 0)
+[parameter_bridge-22] [INFO] [1786112104.461532672] [tiago_base1_bridge]: Creating GZ->ROS Bridge: [/world/mfja_3rd_floor/model/tiago_base1/joint_state (gz.msgs.Model) -> /tiago_base1/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-22] [INFO] [1786112104.463800580] [tiago_base1_bridge]: Creating ROS->GZ Bridge: [/tiago_base1/cmd_vel (geometry_msgs/msg/Twist) -> /model/tiago_base1/cmd_vel (gz.msgs.Twist)] (Lazy 0)
+[parameter_bridge-19] [INFO] [1786112104.464004851] [tiago1_bridge]: Creating GZ->ROS Bridge: [/model/tiago1/odom (gz.msgs.Odometry) -> /tiago1/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-22] [INFO] [1786112104.464987948] [tiago_base1_bridge]: Creating GZ->ROS Bridge: [/model/tiago_base1/odom (gz.msgs.Odometry) -> /tiago_base1/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-19] [INFO] [1786112104.467561162] [tiago1_bridge]: Creating GZ->ROS Bridge: [/model/tiago1/tf (gz.msgs.Pose_V) -> /tiago1/tf (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-22] [INFO] [1786112104.467694583] [tiago_base1_bridge]: Creating GZ->ROS Bridge: [/model/tiago_base1/tf (gz.msgs.Pose_V) -> /tiago_base1/tf (tf2_msgs/msg/TFMessage)] (Lazy 0)
+^C[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[robot_state_publisher-21] [INFO] [1786112231.756580934] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-22] [INFO] [1786112231.756578800] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-16] [INFO] [1786112231.756591788] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-13] [INFO] [1786112231.756597941] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-19] [INFO] [1786112231.756598283] [rclcpp]: signal_handler(signum=2)
+[robot_state_publisher-18] [INFO] [1786112231.756597816] [rclcpp]: signal_handler(signum=2)
+[robot_state_publisher-12] [INFO] [1786112231.756600061] [rclcpp]: signal_handler(signum=2)
+[robot_state_publisher-15] [INFO] [1786112231.756629957] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-7] [INFO] [1786112231.756671221] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-10] [INFO] [1786112231.756675841] [rclcpp]: signal_handler(signum=2)
+[robot_state_publisher-9] [INFO] [1786112231.756694389] [rclcpp]: signal_handler(signum=2)
+[robot_state_publisher-6] [INFO] [1786112231.756734026] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-4] [INFO] [1786112231.756867525] [rclcpp]: signal_handler(signum=2)
+[parameter_bridge-3] [INFO] [1786112231.756904511] [rclcpp]: signal_handler(signum=2)
+[conveyor_loop_mode_controller.py-2] Traceback (most recent call last):
+[conveyor_loop_mode_controller.py-2]   File "/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py", line 1330, in <module>
+[conveyor_loop_mode_controller.py-2]     main()
+[conveyor_loop_mode_controller.py-2]   File "/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py", line 1321, in main
+[conveyor_loop_mode_controller.py-2]     rclpy.spin(node)
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[conveyor_loop_mode_controller.py-2]     executor.spin_once()
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 839, in spin_once
+[conveyor_loop_mode_controller.py-2]     self._spin_once_impl(timeout_sec)
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 823, in _spin_once_impl
+[conveyor_loop_mode_controller.py-2]     handler, entity, node = self.wait_for_ready_callbacks(
+[conveyor_loop_mode_controller.py-2]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 793, in wait_for_ready_callbacks
+[conveyor_loop_mode_controller.py-2]     return next(self._cb_iter)
+[conveyor_loop_mode_controller.py-2]            ^^^^^^^^^^^^^^^^^^^
+[conveyor_loop_mode_controller.py-2]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 697, in _wait_for_ready_callbacks
+[conveyor_loop_mode_controller.py-2]     wait_set.wait(timeout_nsec)
+[conveyor_loop_mode_controller.py-2] KeyboardInterrupt
+[ERROR] [conveyor_loop_mode_controller.py-2]: process has died [pid 1957785, exit code -2, cmd '/home/tiago/mfja_3rd_floor_ros2_ws/install/mfja_robot_control_config/lib/mfja_robot_control_config/conveyor_loop_mode_controller.py --world mfja_3rd_floor --world-file /tmp/mfja_3rd_floor_without_room315_vla_obstacles_1957781.world --partition mfja_report_smoke_20260807 --initial-loop-mode auto --no-pause-during-switch-update --ros-args -r __node:=conveyor_loop_mode_controller --params-file /tmp/launch_params_j55o1gvl'].
+[INFO] [parameter_bridge-10]: process has finished cleanly [pid 1957947]
+[INFO] [parameter_bridge-19]: process has finished cleanly [pid 1957980]
+[INFO] [parameter_bridge-3]: process has finished cleanly [pid 1957910]
+[INFO] [parameter_bridge-13]: process has finished cleanly [pid 1957950]
+[INFO] [parameter_bridge-22]: process has finished cleanly [pid 1957995]
+[INFO] [parameter_bridge-16]: process has finished cleanly [pid 1957957]
+[INFO] [parameter_bridge-7]: process has finished cleanly [pid 1957914]
+[INFO] [robot_state_publisher-18]: process has finished cleanly [pid 1957962]
+[INFO] [robot_state_publisher-15]: process has finished cleanly [pid 1957955]
+[INFO] [robot_state_publisher-12]: process has finished cleanly [pid 1957949]
+[INFO] [robot_state_publisher-21]: process has finished cleanly [pid 1957994]
+[INFO] [parameter_bridge-4]: process has finished cleanly [pid 1957911]
+[INFO] [robot_state_publisher-9]: process has finished cleanly [pid 1957946]
+[INFO] [robot_state_publisher-6]: process has finished cleanly [pid 1957913]
+[ERROR] [gazebo-1]: process has died [pid 1957784, exit code -2, cmd 'ruby /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz sim -r -s /tmp/mfja_3rd_floor_without_room315_vla_obstacles_1957781.world --force-version 8'].
+[INFO] [launch]: process[gazebo-1] was required: shutting down launched system
+
+Script done on 2026-08-07 16:17:12+02:00 [COMMAND_EXIT_CODE="0"]

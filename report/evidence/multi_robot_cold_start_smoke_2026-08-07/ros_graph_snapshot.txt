@@ -1,0 +1,45 @@
+Captured from ROS_DOMAIN_ID=150 after discovery-daemon warm-up.
+
+Commands:
+ros2 node list
+ros2 topic list -t
+ros2 service list -t
+
+Declared runtime nodes:
+/clock_bridge
+/conveyor_loop_mode_controller
+/kuka1/robot_state_publisher
+/kuka1_bridge
+/room315_world_service_bridge
+/staubli1/robot_state_publisher
+/staubli1_bridge
+/tiago1/robot_state_publisher
+/tiago1_bridge
+/tiago_base1/robot_state_publisher
+/tiago_base1_bridge
+/yaskawa_hc10_1/robot_state_publisher
+/yaskawa_hc10_1_bridge
+/yaskawa_hc10dt_1/robot_state_publisher
+/yaskawa_hc10dt_1_bridge
+
+Required topics and observed types:
+/clock [rosgraph_msgs/msg/Clock]
+/kuka1/joint_states [sensor_msgs/msg/JointState]
+/kuka1/joint_trajectory [trajectory_msgs/msg/JointTrajectory]
+/staubli1/joint_states [sensor_msgs/msg/JointState]
+/staubli1/joint_trajectory [trajectory_msgs/msg/JointTrajectory]
+/yaskawa_hc10_1/joint_states [sensor_msgs/msg/JointState]
+/yaskawa_hc10_1/joint_trajectory [trajectory_msgs/msg/JointTrajectory]
+/yaskawa_hc10dt_1/joint_states [sensor_msgs/msg/JointState]
+/yaskawa_hc10dt_1/joint_trajectory [trajectory_msgs/msg/JointTrajectory]
+/tiago1/joint_states [sensor_msgs/msg/JointState]
+/tiago1/joint_trajectory [trajectory_msgs/msg/JointTrajectory]
+/tiago1/cmd_vel [geometry_msgs/msg/Twist]
+/tiago_base1/joint_states [sensor_msgs/msg/JointState]
+/tiago_base1/joint_trajectory [trajectory_msgs/msg/JointTrajectory]
+/tiago_base1/cmd_vel [geometry_msgs/msg/Twist]
+
+Required world services and observed types:
+/world/mfja_3rd_floor/create [ros_gz_interfaces/srv/SpawnEntity]
+/world/mfja_3rd_floor/remove [ros_gz_interfaces/srv/DeleteEntity]
+/world/mfja_3rd_floor/set_pose [ros_gz_interfaces/srv/SetEntityPose]

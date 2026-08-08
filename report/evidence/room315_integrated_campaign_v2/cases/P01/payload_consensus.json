@@ -1,0 +1,14 @@
+{
+  "confirmation_source": "accepted_visual_state_sequence",
+  "controller_payload_state_used": false,
+  "declared_minimum_consecutive_frames": 5,
+  "frames": 5,
+  "match_count": 1,
+  "matched_log_line": "Payload-qualified TaskGoal grounded by fresh visual consensus: selected=right_shuttle_1 filter=loaded frames=5/5 observations=5 source_state=room315-live-visual-40-730000000",
+  "observations": 5,
+  "payload_filter": "loaded",
+  "required_frames": 5,
+  "selected": "right_shuttle_1",
+  "source_state": "room315-live-visual-40-730000000",
+  "status": "passed"
+}

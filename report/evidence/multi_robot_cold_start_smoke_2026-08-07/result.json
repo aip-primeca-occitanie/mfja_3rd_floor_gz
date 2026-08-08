@@ -1,0 +1,49 @@
+{
+  "schema_version": "mfja.multi_robot_cold_start_smoke.v1",
+  "status": "passed",
+  "started_local": "2026-08-07T16:14:59+02:00",
+  "completed_local": "2026-08-07T16:17:32+02:00",
+  "scope": "one cold-start launch and observable interface check; no motion command",
+  "source": {
+    "git_head": "c44c501640e3dab35ab241384c99963e1b9d8745",
+    "worktree_patch_sha256": "d446c63192386b32b0d92e24aed6210b59bc53bfcb81c9af05a644ed421db0bd",
+    "runtime_source_file_count": 483,
+    "runtime_source_tree_sha256": "326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9",
+    "robot_config_sha256": "5d984e204517e69370374620c4578436036750226cee1715b81bedc46efdb145"
+  },
+  "isolation": {
+    "ros_domain_id": 150,
+    "ros_automatic_discovery_range": "LOCALHOST",
+    "gazebo_partition": "mfja_report_smoke_20260807"
+  },
+  "launch": {
+    "profile": "full_floor.launch.py",
+    "robots_selector": "all",
+    "gui": false,
+    "start_paused": false,
+    "kinematic_shuttle_runtime_enabled": false,
+    "vla_runtime_enabled": false,
+    "planned_shutdown_after_checks": true,
+    "launch_process_exit_code": 0
+  },
+  "observations": {
+    "expected_robot_count": 6,
+    "gazebo_models_present": 6,
+    "namespaced_joint_command_topics_present": 6,
+    "namespaced_joint_feedback_topics_present": 6,
+    "fresh_joint_state_samples_received": 6,
+    "mobile_cmd_vel_topics_present": 2,
+    "required_world_services_present": 3,
+    "active_log_error_pattern_count": 0
+  },
+  "expected_instances": [
+    "kuka1",
+    "staubli1",
+    "yaskawa_hc10_1",
+    "yaskawa_hc10dt_1",
+    "tiago1",
+    "tiago_base1"
+  ],
+  "claim_boundary": "The result verifies one headless cold start, model presence, namespaced command and feedback surfaces, and one feedback sample per configured instance. It does not evaluate motion accuracy, simultaneous robot motion, controller performance, or repeatability.",
+  "teardown_note": "The active log snapshot ends before the planned SIGINT and is free of the declared error patterns. The complete transcript retains the expected shutdown diagnostics after SIGINT."
+}

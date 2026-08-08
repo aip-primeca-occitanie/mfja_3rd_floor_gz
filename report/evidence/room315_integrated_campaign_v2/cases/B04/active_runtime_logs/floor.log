@@ -1,0 +1,4 @@
+[room_315_vla_supervisor.py-8] [INFO] [1786092783.803717030] [room_315_vla_supervisor]: shuttle command sent on right
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786092783.804291270] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_4': 'ENABLE@0.200m/s->slot1'}; shuttles=room315_right_shuttle_4:slot4:A34E@1.523:snap=0.000m
+[room_315_vla_supervisor.py-8] [INFO] [1786092801.089789268] [room_315_vla_supervisor]: shuttle command sent on right
+[room_315_kinematic_shuttle_node.py-5] [INFO] [1786092801.090252864] [room_315.rails.right.room_315_kinematic_shuttle]: Applied shuttle commands: {'room315_right_shuttle_4': 'DISABLE'}; shuttles=room315_right_shuttle_4:slot4:A12E@0.918:snap=0.000m

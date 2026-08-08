@@ -1,0 +1,198 @@
+\chapter[Mission, Project Management and Personal Contribution]
+{Mission, Project Management and\\Personal Contribution}
+\label{chap:mission}
+
+\section{Mission and work packages}
+
+The internship mission focused on unified ROS~2 access to industrial and mobile
+robots in simulation \citep{internshipagreement}. The first practical
+assignment was more specific:
+model Room~315 in Gazebo and establish a usable simulation environment for its
+robotic and transport equipment. This objective was completed earlier than
+expected, and the supervisors proposed an additional research direction
+combining overhead-camera perception with natural-language task interaction.
+The internship dates were unchanged.
+
+The implemented work is organised into two phases:
+
+\begin{description}
+  \item[Phase 1---initial practical work package] Room~315 Gazebo modelling and a
+  reusable, selectively launched multi-robot and rail simulation foundation.
+  \item[Phase 2---additional research direction] Paired cameras, visual-state
+  estimation, validated language goals, PDDL/PlanSys2 and safety-gated
+  neuro-symbolic control.
+\end{description}
+
+The phases describe the project chronology, whereas objectives O1--O4 in
+\cref{chap:introduction} define the units used to assess the completed work.
+The initial phase established the simulation, multi-robot and transport
+foundations. The additional research phase extended the typed interfaces and
+connected visual and language inputs to planning, supervised execution and
+effect verification.
+
+\section{Chronology and decision gates}
+
+The internship schedule was fixed from the outset. As shown in
+\cref{fig:timeline}, the technical phases overlap because integration, testing
+and correction continued after each main decision gate.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\textwidth}{!}{\input{figures/f03_project_timeline_v2.tex}}
+  \caption[Engineering, reporting and defence-preparation chronology.]
+  {Internship chronology. Engineering, integration and final verification run
+  through 7 August in panel~(a), overlapping the report-focused period that
+  began on 4 August. Documentation continues to 18 August; the final period,
+  18--28 August, is reserved for defence-presentation preparation.}
+  \label{fig:timeline}
+\end{figure}
+
+\section{Decision progression}
+
+\Cref{fig:stage-decision-chain} summarises how the project progressed from the
+initial simulation to the integrated neuro-symbolic system. Each stage depended
+on working results from the preceding stage.
+
+Major technical decisions were taken after weekly discussions with the
+supervisors. The agreed solutions were then implemented and checked through
+configuration, tests and integration runs.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{0.98\textwidth}{!}{\input{figures/f05_project_progression.tex}}
+  \caption[Dependency-driven progression of the two project phases.]
+  {Project progression as a dependency chain. Each stage converts a
+  technical objective into an engineering result required by
+  the next stage.}
+  \label{fig:stage-decision-chain}
+\end{figure}
+\FloatBarrier
+
+\section{Requirements and review process}
+
+Requirements were expressed at three levels. Launch arguments, topics and
+runbooks define how operators use the system. Executable contracts and tests
+specify what each component must accept, reject or preserve. Artefact manifests
+and hashes give datasets and models reproducible identities. The main
+requirements across these levels were robot isolation, stable shuttle identity,
+partial device updates without unintended changes, current state before planning,
+fixed translation rules and a new observation after each
+executed plan step.
+
+Each property was checked where it was implemented: geometry and coordinate
+frames, interface semantics, shared-rail coordination and learned-model output.
+The safeguards and data-leakage controls are detailed in
+\cref{chap:transport,chap:interfaces,chap:ai-development}.
+
+The agreed solutions were reflected in configuration and version-controlled
+code, then exercised through the corresponding tests and experiments. The
+identifiers for the relevant sources, datasets and models are listed in
+\cref{app:reproducibility}; the corresponding objective-to-result assessment
+is reported in \cref{tab:objective-results}.
+
+\section{Personal responsibility, collaboration and resources}
+
+Within the shared repository, I was responsible for the third-floor and
+Room~315 models; the selective multi-robot launch architecture; calibrated rail
+transport, device logic and typed interfaces; task contracts, PDDL/PlanSys2
+integration and supervised one-step execution; the paired-camera dataset and
+visual training pipeline; and the tests, manifests, runbooks and handover
+documentation.
+
+The supervisors provided scientific direction, technical review and knowledge
+of the platform. I used the weekly discussions to present alternatives and the
+information available for decisions that affected shared interfaces, software
+safeguards or experimental claims. Once a decision had been agreed, I was
+responsible for implementing it consistently in the relevant configuration,
+code, tests and documentation.
+
+In practice, resource management concerned the fixed schedule, shared platform
+access, simulation and training time, dataset and checkpoint storage, and the
+testing workload. I kept compute-intensive perception and language nodes
+optional, prioritised reusable configuration and regression tests, and prepared
+build and run instructions so that the host could continue using the work.
+
+\section{Autonomy and reflective engineering examples}
+
+I divided the broad integration objective into testable increments and kept
+early implementation choices reversible. I retained a design only after its
+interfaces and implementation were consistent and the corresponding regression
+tests passed. I brought
+decisions affecting shared interfaces, experimental claims or software
+safeguards to the supervisors for review before finalising them. The following
+two examples show how this process worked in practice.
+
+\subsection{Selecting a defensible level of rail fidelity}
+
+At the beginning of the rail work, I compared a dynamic wheel--rail simulation
+with a kinematic rail-following model. The measured mechanical parameters
+required for a credible dynamic model were not available, and that option was
+expected to require more integration time and computation. The project
+questions instead concerned routing, sensor crossings, slot arrival, perception
+and supervised execution. I therefore proposed the calibrated graph and
+arc-length solution detailed in \cref{chap:transport}. I discussed the
+comparison with the supervisors during a weekly review. The agreed priority was
+repeatable behaviour at the level required by those questions. Mechanical
+effects that could not be supported by the available data were left outside
+the model. I then implemented
+the model, checked the configured geometry and tested routing, sensor feedback
+and slot-arrival behaviour. This decision taught me to match model fidelity to
+the question being studied and to treat missing data, schedule and computing
+capacity as engineering constraints.
+
+\subsection{Choosing PDDL/PlanSys2 over end-to-end VLA control}
+
+The initial plan for the second phase was to train an end-to-end
+vision--language--action model that would infer actions directly, without PDDL.
+After discussing this option with my supervisors, they sent me several papers
+on VLA and hybrid planning architectures. From this comparison, I proposed a
+different division of responsibilities: the visual model estimates the scene
+state from the paired camera images, while PDDL/PlanSys2 determines the action
+sequence, which is then executed through the supervisor and controllers. This
+approach was better suited to Room~315 because its rail topology and device
+rules are explicit, whereas the available dataset contains scene-state labels
+rather than action demonstrations. It also made the plans easier to inspect and
+execution errors easier to locate. This became the architecture implemented in
+\cref{chap:ai-development,chap:neurosymbolic}.
+
+\section{Competencies and professional learning}
+
+\Cref{tab:competencies} relates the principal competencies developed during the
+internship to concrete examples from the project.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Engineering competencies and concrete project examples.}
+\label{tab:competencies}
+\begin{tabularx}{\textwidth}{@{}p{0.24\textwidth}X@{}}
+\toprule
+\textbf{Competency} & \textbf{Project example}\\
+\midrule
+Systems analysis & Separation of geometry, perception, planning, supervision
+and actuation-provider ownership\\
+\tablerowrule
+Robotics integration & ROS~2/Gazebo assets, controllers, launch composition,
+namespaces and device feedback\\
+\tablerowrule
+Algorithm design & Arc-length graph, topology-aware routing, reservations,
+clearance and effect checks\\
+\tablerowrule
+AI/ML method & Local language-model integration, leakage-controlled
+paired-image data, grouped splitting and multi-head visual training\\
+\tablerowrule
+Software quality & Typed contracts, focused regression tests, configuration
+manifests and reproducible result records\\
+\tablerowrule
+Project management and communication & Incremental milestones, supervisory
+reviews, diagrams, runbooks, result tables and explicit scope\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+These two decisions changed how I assessed technical alternatives. I initially
+associated a more detailed dynamic model or a more end-to-end learned policy
+with a more advanced solution. The comparisons showed me that each choice had
+to be justified by the available data, the behaviour required in Room~315 and
+the way the result could be tested. That lesson guided the later integration
+work.

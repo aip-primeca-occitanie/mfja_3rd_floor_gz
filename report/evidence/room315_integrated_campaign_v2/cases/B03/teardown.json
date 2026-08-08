@@ -1,0 +1,137 @@
+[
+  {
+    "command": [
+      "ros2",
+      "bag",
+      "record",
+      "--storage",
+      "mcap",
+      "--storage-preset-profile",
+      "zstd_fast",
+      "--use-sim-time",
+      "--disable-keyboard-controls",
+      "--output",
+      "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/report/evidence/room315_integrated_campaign_v2/cases/B03/rosbag",
+      "--custom-data",
+      "campaign_id=room315_integrated_campaign_v2",
+      "case_id=B03",
+      "--topics",
+      "/clock",
+      "/diagnostics",
+      "/room_315/task_goal",
+      "/room_315/task_goal/status",
+      "/room_315/visual_state/raw_model_prediction",
+      "/room_315/visual_state/raw",
+      "/room_315/visual_state/validation",
+      "/room_315/visual_state/observed_state",
+      "/room_315/vla/command",
+      "/room_315/vla/status",
+      "/room_315/vla/emergency_stop",
+      "/room_315/vla/right_rail_rgbd/image",
+      "/room_315/vla/right_rail_rgbd/camera_info",
+      "/room_315/vla/left_rail_rgbd/image",
+      "/room_315/vla/left_rail_rgbd/camera_info",
+      "/room_315/rails/right/shuttles/state",
+      "/room_315/rails/right/shuttles/command",
+      "/room_315/rails/right/shuttles/payload_state",
+      "/room_315/rails/right/shuttles/payload_command",
+      "/room_315/rails/right/switches/state",
+      "/room_315/rails/right/switches/command",
+      "/room_315/rails/right/stoppers/state",
+      "/room_315/rails/right/stoppers/command",
+      "/room_315/rails/right/sensors/feedback",
+      "/room_315/rails/left/shuttles/state",
+      "/room_315/rails/left/shuttles/command",
+      "/room_315/rails/left/shuttles/payload_state",
+      "/room_315/rails/left/shuttles/payload_command",
+      "/room_315/rails/left/switches/state",
+      "/room_315/rails/left/switches/command",
+      "/room_315/rails/left/stoppers/state",
+      "/room_315/rails/left/stoppers/command",
+      "/room_315/rails/left/sensors/feedback"
+    ],
+    "name": "rosbag",
+    "pid": 1925414,
+    "planned_shutdown": true,
+    "returncode": 0,
+    "signals": [
+      "SIGINT"
+    ]
+  },
+  {
+    "command": [
+      "ros2",
+      "launch",
+      "mfja_robot_control_config",
+      "room_315_task_execution.launch.py",
+      "use_sim_time:=true",
+      "execution_enabled:=true",
+      "enable_plansys2:=true",
+      "external_obstacles_disabled:=true"
+    ],
+    "name": "execution",
+    "pid": 1925227,
+    "planned_shutdown": true,
+    "returncode": 1,
+    "signals": [
+      "SIGINT"
+    ]
+  },
+  {
+    "command": [
+      "ros2",
+      "launch",
+      "mfja_robot_control_config",
+      "room_315_visual_state_runtime.launch.py",
+      "use_sim_time:=true",
+      "enable_camera_bridge:=false",
+      "device:=cuda",
+      "checkpoint_path:=/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+      "sidecar_directory:=/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run",
+      "dry_run_state_fusion:=true",
+      "plansys2_update_enabled:=false"
+    ],
+    "name": "visual",
+    "pid": 1925126,
+    "planned_shutdown": true,
+    "returncode": 0,
+    "signals": [
+      "SIGINT"
+    ]
+  },
+  {
+    "command": [
+      "ros2",
+      "launch",
+      "mfja_3rd_floor_bringup",
+      "room_315_only.launch.py",
+      "robots:=none",
+      "gui:=false",
+      "start_paused:=false",
+      "enable_room315_kinematic_shuttles:=true",
+      "enable_room315_right_rail:=true",
+      "enable_room315_left_rail:=true",
+      "enable_room315_vla:=true",
+      "enable_room315_vla_camera_bridge:=true",
+      "enable_room315_vla_dataset_recorder:=false",
+      "enable_room315_vla_obstacles:=false",
+      "room315_show_device_markers:=false",
+      "room315_visual_debug_colors:=false",
+      "room315_enable_payload_visuals:=true",
+      "room315_identity_selection_mode:=explicit",
+      "room315_shuttles_start_enabled:=false",
+      "room315_shuttle_speed:=0.2",
+      "room315_right_shuttle_count:=1",
+      "room315_right_active_identities:=R3",
+      "room315_right_start_slots:=3",
+      "room315_left_shuttle_count:=0"
+    ],
+    "name": "floor",
+    "pid": 1924733,
+    "planned_shutdown": true,
+    "returncode": 0,
+    "signals": [
+      "SIGINT"
+    ]
+  }
+]

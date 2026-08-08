@@ -30,9 +30,9 @@ from room_315_json_io import iter_jsonl_objects
 from room_315_pddl_validation_gate import load_validation_result
 from room_315_pddl_validation_gate import validation_approves_training
 from room_315_rail_defaults import LEFT_CALIBRATION_DEFAULTS
-from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
 from room_315_rail_defaults import RIGHT_CALIBRATION_DEFAULTS
 from room_315_rail_defaults import apply_rail_pose_calibration
+from room_315_rail_defaults import internal_rail_segment_name_to_public
 from room_315_rail_defaults import public_rail_segment_lengths
 from room_315_shuttle_geometry import SHUTTLE_COLLISION_CENTER_X_M
 from room_315_shuttle_geometry import SHUTTLE_COLLISION_SIZE_M
@@ -365,8 +365,7 @@ def visual_labels_from_event(
                 else 'unknown'
             )
             segment = str(state.get('segment') or '').strip().upper()
-            if side == 'left':
-                segment = LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
+            segment = internal_rail_segment_name_to_public(side, segment)
             location = {'side': side}
             if segment:
                 location['block'] = segment

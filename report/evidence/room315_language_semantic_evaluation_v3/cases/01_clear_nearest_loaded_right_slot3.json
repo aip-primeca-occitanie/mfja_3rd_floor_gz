@@ -1,0 +1,276 @@
+{
+  "actual_constraints": {
+    "goal_type": "transport",
+    "payload_filter": "loaded",
+    "payload_required": true,
+    "selection_strategy": "nearest",
+    "shuttle_selection": "nearest",
+    "side": "right",
+    "target_kind": "slot",
+    "target_slot": "3"
+  },
+  "actual_issue_codes": [],
+  "actual_status": "ok",
+  "backend_infer_call_delta": 1,
+  "constraints_match": true,
+  "elapsed_s": 4.638907382031903,
+  "expected_constraints": {
+    "goal_type": "transport",
+    "payload_filter": "loaded",
+    "selection_strategy": "nearest",
+    "side": "right",
+    "target_kind": "slot",
+    "target_slot": "3"
+  },
+  "expected_issue_codes": [],
+  "expected_status": "ok",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "clear_nearest_loaded_right_slot3",
+  "index": 1,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": null,
+    "parse": {
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-02ebc9ddd37c",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": "loaded",
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "slot",
+            "target_slot": "3"
+          },
+          "request": "Please move the nearest loaded right shuttle to slot 3."
+        },
+        "schema_version": 1,
+        "selection_strategy": "nearest",
+        "side": "right",
+        "source": "human",
+        "target_kind": "slot",
+        "target_shuttle": null,
+        "target_slot": "3",
+        "target_station": null
+      },
+      "issues": [],
+      "ok": true,
+      "parser_name": "conversational_intent_gateway",
+      "raw_output": {
+        "backend_result": {
+          "attempts": 1,
+          "backend": "llama_cpp",
+          "fallback_reason": "",
+          "latency_s": 4.6378113308455795,
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+          "model_ready": true,
+          "status": "ok",
+          "text": "{\"contract_type\":\"SemanticParseEnvelope\",\"dialogue_act\":\"new_goal\",\"draft_patch\":{\"goal_type\":\"transport\",\"selection_strategy\":\"nearest\",\"payload_filter\":\"loaded\",\"side\":\"right\",\"target_kind\":\"shuttle_selection\",\"target_slot\":\"3\"},\"provenance\":{\"goal_type\":\"semantic_inference\",\"selection_strategy\":\"semantic_inference\",\"payload_filter\":\"semantic_inference\",\"side\":\"semantic_inference\",\"target_kind\":\"semantic_inference\",\"target_slot\":\"semantic_inference\"},\"confidence\":{\"overall\":0.8}}"
+        },
+        "semantic_envelope": {
+          "alternatives": [],
+          "confidence": {
+            "overall": 0.8
+          },
+          "contract_type": "SemanticParseEnvelope",
+          "dialogue_act": "new_goal",
+          "draft_patch": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "shuttle_selection",
+            "target_slot": "3"
+          },
+          "evidence": {},
+          "provenance": {
+            "goal_type": "semantic_inference",
+            "payload_filter": "semantic_inference",
+            "selection_strategy": "semantic_inference",
+            "side": "semantic_inference",
+            "target_kind": "semantic_inference",
+            "target_slot": "semantic_inference"
+          },
+          "schema_version": 1
+        },
+        "trace": {
+          "dialogue_act": "new_goal",
+          "envelope_schema_version": 1,
+          "fallback_reason": "",
+          "fallback_used": false,
+          "field_provenance": {
+            "goal_type": "explicit_text",
+            "payload_filter": "explicit_text",
+            "selection_strategy": "explicit_text",
+            "side": "explicit_text",
+            "target_kind": "explicit_text",
+            "target_slot": "explicit_text"
+          },
+          "final_decision": "draft",
+          "latency_s": 4.6378744470421225,
+          "model_backend": "llama_cpp",
+          "model_evidence": {},
+          "model_fingerprint": "sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "model_ready": true,
+          "parser_disagreements": [
+            {
+              "authoritative": "slot",
+              "decision": "kept_authoritative_value",
+              "field": "target_kind",
+              "semantic": "shuttle_selection"
+            }
+          ],
+          "parser_name": "conversational_intent_gateway",
+          "prompt_schema_version": 1,
+          "semantic_model_invoked": true,
+          "shadow_mode": false,
+          "source_spans": [
+            {
+              "field": "goal_type",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 11,
+                "start": 7,
+                "text": "move"
+              },
+              "value": "transport"
+            },
+            {
+              "field": "selection_strategy",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 23,
+                "start": 16,
+                "text": "nearest"
+              },
+              "value": "nearest"
+            },
+            {
+              "field": "payload_filter",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 30,
+                "start": 24,
+                "text": "loaded"
+              },
+              "value": "loaded"
+            },
+            {
+              "field": "side",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 36,
+                "start": 31,
+                "text": "right"
+              },
+              "value": "right"
+            },
+            {
+              "field": "target_kind",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 54,
+                "start": 48,
+                "text": "slot 3"
+              },
+              "value": "slot"
+            },
+            {
+              "field": "target_slot",
+              "provenance": "explicit_text",
+              "span": {
+                "end": 54,
+                "start": 48,
+                "text": "slot 3"
+              },
+              "value": "3"
+            }
+          ],
+          "validation_status": ""
+        }
+      },
+      "status": "ok"
+    },
+    "validation": {
+      "clarifications": [],
+      "confirmation_prompt": "",
+      "confirmation_required": false,
+      "constraints": {
+        "goal_type": "transport",
+        "payload_filter": "loaded",
+        "payload_required": true,
+        "selection_strategy": "nearest",
+        "shuttle_selection": "nearest",
+        "side": "right",
+        "target_kind": "slot",
+        "target_slot": "3"
+      },
+      "description": "transport nearest / loaded shuttle on right rail to slot 3",
+      "draft": {
+        "confidence": null,
+        "contract_type": "TaskGoalDraft",
+        "draft_id": "room315-task-goal-draft-02ebc9ddd37c",
+        "goal_type": "transport",
+        "inspection_subject": null,
+        "language": "en",
+        "payload_filter": "loaded",
+        "raw": {
+          "fusion_values": {
+            "goal_type": "transport",
+            "payload_filter": "loaded",
+            "selection_strategy": "nearest",
+            "side": "right",
+            "target_kind": "slot",
+            "target_slot": "3"
+          },
+          "request": "Please move the nearest loaded right shuttle to slot 3."
+        },
+        "schema_version": 1,
+        "selection_strategy": "nearest",
+        "side": "right",
+        "source": "human",
+        "target_kind": "slot",
+        "target_shuttle": null,
+        "target_slot": "3",
+        "target_station": null
+      },
+      "errors": [],
+      "ok": true,
+      "risk_level": "high",
+      "status": "ok",
+      "task_goal": {
+        "confidence": 1.0,
+        "constraints": {
+          "goal_type": "transport",
+          "payload_filter": "loaded",
+          "payload_required": true,
+          "selection_strategy": "nearest",
+          "shuttle_selection": "nearest",
+          "side": "right",
+          "target_kind": "slot",
+          "target_slot": "3"
+        },
+        "contract_type": "TaskGoal",
+        "description": "transport nearest / loaded shuttle on right rail to slot 3",
+        "goal_id": "room315-task-goal-27493a159946",
+        "schema_version": 1,
+        "source": "human",
+        "timestamp": 0.0
+      }
+    }
+  },
+  "semantic_invocation_required": true,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "Please move the nearest loaded right shuttle to slot 3.",
+  "unsafe_auto_resolution": false
+}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "ros2",
+    "topic",
+    "pub",
+    "--once",
+    "/room_315/vla/command",
+    "std_msgs/msg/String",
+    "{data: \"{\\\"action\\\":\\\"stop_all\\\",\\\"close_stoppers\\\":false,\\\"reason\\\":\\\"campaign_case_B08_complete\\\"}\"}"
+  ],
+  "duration_s": 3.0557879428379238,
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "Waiting for at least 1 matching subscription(s)...\nWaiting for at least 1 matching subscription(s)...\npublisher: beginning loop\npublishing #1: std_msgs.msg.String(data='{\"action\":\"stop_all\",\"close_stoppers\":false,\"reason\":\"campaign_case_B08_complete\"}')\n\n"
+}

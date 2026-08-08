@@ -1,0 +1,27 @@
+{
+  "duration_ns": 54615000000,
+  "message_count": 32023,
+  "relative_files": [
+    "rosbag/rosbag_0.mcap"
+  ],
+  "required_topic_message_counts": {
+    "/clock": 10913,
+    "/room_315/rails/right/sensors/feedback": 1639,
+    "/room_315/rails/right/shuttles/command": 4,
+    "/room_315/rails/right/shuttles/payload_state": 1638,
+    "/room_315/rails/right/shuttles/state": 3274,
+    "/room_315/rails/right/stoppers/command": 2,
+    "/room_315/rails/right/switches/command": 2,
+    "/room_315/task_goal": 1,
+    "/room_315/task_goal/status": 4,
+    "/room_315/visual_state/observed_state": 176,
+    "/room_315/visual_state/raw_model_prediction": 181,
+    "/room_315/visual_state/validation": 180,
+    "/room_315/vla/command": 8,
+    "/room_315/vla/left_rail_rgbd/image": 546,
+    "/room_315/vla/right_rail_rgbd/image": 546,
+    "/room_315/vla/status": 62
+  },
+  "status": "passed",
+  "storage_identifier": "mcap"
+}

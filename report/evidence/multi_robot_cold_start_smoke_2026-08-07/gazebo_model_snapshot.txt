@@ -1,0 +1,16 @@
+Command:
+GZ_PARTITION=mfja_report_smoke_20260807 gz model --list
+
+World reported by Gazebo: mfja_3rd_floor
+
+Declared robot models present in the returned model list:
+kuka1
+staubli1
+yaskawa_hc10_1
+yaskawa_hc10dt_1
+tiago1
+tiago_base1
+
+The complete launch transcript separately records successful entity creation
+for all six names. This filtered snapshot does not claim to enumerate the
+room, furniture, rail, or other static world entities returned by the command.

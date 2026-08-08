@@ -1,0 +1,2421 @@
+{
+  "aggregate_sha256": "326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9",
+  "file_count": 483,
+  "files": [
+    {
+      "path": "mfja_3rd_floor_bringup/CMakeLists.txt",
+      "sha256": "9741a99e9a06ba3ad0b59105f271ac99274df6b4e792fb5388284eafbd6dc99a",
+      "size": 249
+    },
+    {
+      "path": "mfja_3rd_floor_bringup/launch/full_floor.launch.py",
+      "sha256": "3e30e6723cb5fbfad209bfc96def0ba762941472ab94d8b842ee139e058e149f",
+      "size": 239
+    },
+    {
+      "path": "mfja_3rd_floor_bringup/launch/room_315_floor_common.py",
+      "sha256": "018692269ac5e76af849d79d752e1b127dea9c8171823c9cd450d6a05d89c6b8",
+      "size": 24049
+    },
+    {
+      "path": "mfja_3rd_floor_bringup/launch/room_315_only.launch.py",
+      "sha256": "292a57f3cc832c74a242d80a8a2679fa227c86ad0ca56e036212b7a5fe540329",
+      "size": 242
+    },
+    {
+      "path": "mfja_3rd_floor_bringup/launch/single_industrial_robot.launch.py",
+      "sha256": "ef03c90f3584aeeb819577e1153bb81735d985b690d6cb585a45c12dacd35eef",
+      "size": 2668
+    },
+    {
+      "path": "mfja_3rd_floor_bringup/package.xml",
+      "sha256": "5191a806f518cbfcda4b45670ca8ac38d558f333e5bf36a26b25e5e383d1234f",
+      "size": 1011
+    },
+    {
+      "path": "mfja_3rd_floor_description/CMakeLists.txt",
+      "sha256": "9a2b2c970aef62ff521c642730d0103e9789051e55f582e5ed7517ddf615836c",
+      "size": 968
+    },
+    {
+      "path": "mfja_3rd_floor_description/THIRD_PARTY.md",
+      "sha256": "f6da079754a39aa4c07f6fd286201697b318a7869cc05a3a7cd12b2515fee186",
+      "size": 11173
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/carter_droit/meshes/carter_droit.stl",
+      "sha256": "92ff764585e0f740773479c82b8115175348d2e6583f6a91e8b8ba55d926d20d",
+      "size": 13784
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/carter_droit/model.config",
+      "sha256": "264b23a2562cd6d080d813b1f6347bfcec5b1cf8b362c03d5b775c83694ee7f6",
+      "size": 241
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/carter_droit/model.sdf",
+      "sha256": "790153c08d0a388b8b3d96b021530522a8bf24b78ac2faf52582385d3ff4a2f2",
+      "size": 680
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/carter_gauche/meshes/carter_gauche.stl",
+      "sha256": "1906cea79a353dac883e7c59b2c99d5e65f006461408ccf083a6abf8c4c0a3b6",
+      "size": 13784
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/carter_gauche/model.config",
+      "sha256": "9477f6c5ee21950dbcdbe541f3942e166d97b7430f0e083091601b4e76cb76bc",
+      "size": 241
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/carter_gauche/model.sdf",
+      "sha256": "fc6704559cb51676dd483da7f42bb3863d65c4c4671e0564ed4b345cdc91931b",
+      "size": 685
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_path_left/meshes/CELL_PATH_LEFT.STL",
+      "sha256": "2a51efec1415bd6921f9f706074313377353af0dca09de8d994437a77ae1c3dc",
+      "size": 936884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_path_left/model.config",
+      "sha256": "db5353a6def355a495ebcf67d73c4a043e21cd72ec1e16cf785d13f1259f6fd1",
+      "size": 245
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_path_left/model.sdf",
+      "sha256": "d4b5ebdabaf9f2bc006fb2ad5d20f6a0750af1c8a6e0c6fda0aee1cea96fe7b5",
+      "size": 939
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_path_right/meshes/CELL_PATH_RIGHT.STL",
+      "sha256": "00d388b0cac9298b77be9b1ff8f018f1584b5a9f8c8f1aaee3a2e151821efc04",
+      "size": 936884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_path_right/model.config",
+      "sha256": "8a3e29ad216bcf9e4f383f28f4ab9f753fd83a1e932b93417714de6b97683509",
+      "size": 247
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_path_right/model.sdf",
+      "sha256": "107b7013018458c9698232455750ea9a8bdc559cf4305abed342298f625c3f90",
+      "size": 1540
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_static_droit_final/meshes/cell_static_droit_final.STL",
+      "sha256": "1ca356255719aadfda97c0b16773e4f55af7fa1e42231fa6b0ce39c2ebcc3527",
+      "size": 1114284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_static_droit_final/model.config",
+      "sha256": "c2f58decf1dd4ed177db1da93bda8a5e2e47c9b25191dd409803d8d54c8ea4fa",
+      "size": 278
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_static_droit_final/model.sdf",
+      "sha256": "780dac14e9134985eb000465a7f8cf3137557bde50e0f39f5557655d54526b62",
+      "size": 879
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_static_gauche_final/meshes/cell_static_gauche_final.STL",
+      "sha256": "f6f97dff26d11807164a9f129787672149dcc51dda0c5896302b6be0da0ed967",
+      "size": 1114284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_static_gauche_final/model.config",
+      "sha256": "3da063e6d91039d7c7d2573b7bfade376ced2511139260da6dbed060fcff1fd2",
+      "size": 278
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/cell_static_gauche_final/model.sdf",
+      "sha256": "0cd5aacf5db5e0c806a0c393807ba5d5efcabddb029e817c90eb39f8a4f7857e",
+      "size": 887
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/ground_plane/model-1_2.sdf",
+      "sha256": "a099ecca53ba1d0af3babacb31a4e802099d896926ea9109d38f2e14e40a28d9",
+      "size": 944
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/ground_plane/model-1_3.sdf",
+      "sha256": "cc2bf63d600f382bbbe81dbd3cd9363ee0436de6bda1c273cae47dfd8ea65bcf",
+      "size": 938
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/ground_plane/model-1_4.sdf",
+      "sha256": "de8e04148a6b58735b63ea7500811ca1a1bae174d6da3a20f861c679534ddc99",
+      "size": 938
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/ground_plane/model.config",
+      "sha256": "4fefe57461ff15dd0b8931e249616eb719cf6760767a85db84762d85186ca94b",
+      "size": 409
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/ground_plane/model.sdf",
+      "sha256": "5a213f48e0cccb842035b8bc00d70cc6b470eec5238d53da9d04a1fce473b890",
+      "size": 933
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/cad/JAW_KUKA.stp",
+      "sha256": "131eab2fb93591d128acf5a769babbd8c0096ad01bc5189619cd20781362a963",
+      "size": 18124
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/cad/SCHUNK-0303070_KGG_140-60_011L5_MSS_22_01.stp",
+      "sha256": "de395e438e5b53214321f163a1a714aa3c29a3cc68834c66a2b7907b1ffb0fcb",
+      "size": 596405
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/cad/license_schunk.txt",
+      "sha256": "2e2a1e34535fdbcdbbae481eaa277ce774b3a644b6b15998209c570462b2fac5",
+      "size": 707
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/cad/readme-and-terms-of-use-3d-cad-models.txt",
+      "sha256": "b142ea27d3478fdba1373c4444a01d3a87f32636ba0ea604781b3fd145fd7326",
+      "size": 2740
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/base_link.stl",
+      "sha256": "e08fe36ae0acd1736fb236f46d6ec192536a4365b019f79dacca23cde234cb5f",
+      "size": 2638798
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_1.stl",
+      "sha256": "510b74f6b9abbee67e0e3fb527085be7ca2fb54f5117e6dc8c7b7b984d2222a7",
+      "size": 1367741
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_2.stl",
+      "sha256": "a91b3655077f390134b79cb427c9da89b08a1b545e89e52413af7385ee0d5a6d",
+      "size": 2046720
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_3.stl",
+      "sha256": "028f2b66a9beec932488452b9ce78eb56e598c36be70b22501b36ac0a5b4f58e",
+      "size": 1445758
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_4.stl",
+      "sha256": "5433f78c3c6d7639477d06e55b7dc049ecb3f676ad85664bb442d0f3a1dc50f5",
+      "size": 1946600
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_5.stl",
+      "sha256": "c750f39f1a278ddec0b0ff3b794369074b3311df7b6ece89ed176ea53be7ad6a",
+      "size": 741969
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/converted_visual/link_6.stl",
+      "sha256": "cf4ab2fd3bcf1c462a507a2025d7ff0cee8cf0f8d3b80469e5a5ec4381042fce",
+      "size": 437387
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/gripper/jaw_kuka.stl",
+      "sha256": "4697308a6a668573f48dd960811bb1891464efb86b199f3baf3823eb33fa7172",
+      "size": 20084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/gripper/schunk_kgg_140_60_011l5_mss_22_01.stl",
+      "sha256": "4f114bd1010a5c2b40c67471ab4f0ac3bf25643a42dae02aada2c38cf509e735",
+      "size": 1213973
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/base_link.stl",
+      "sha256": "1c4d8f9eb143de88933c5751891ba6d60baa37ec92e336665cad638c3e45a33b",
+      "size": 76884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_1.stl",
+      "sha256": "7c0ea2efc1b400e93ca88606abb0eab4152eebd35943b21de0898151fd430bf4",
+      "size": 955484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_3.stl",
+      "sha256": "cf6c1f4ced3076868c51d67def23ebe0a3bb7cc0073ab31bfa46a4956c3c849c",
+      "size": 339684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_5.stl",
+      "sha256": "f63adbfe520b1dc6b992e035ddef2dbc9b27146c4087d25a711bd4273f50ea3d",
+      "size": 83384
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6_agilus/collision/link_6.stl",
+      "sha256": "c63fc58b6cd036f988d96430b7653fe894bba6e6e506a16fbdf42a8b1ad3abc5",
+      "size": 33684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_2.stl",
+      "sha256": "c003f0ef654ff04486742be32bbcd5b8c863a473a64522672456e46966b8c1a8",
+      "size": 86484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/meshes/kr6r900sixx/collision/link_4.stl",
+      "sha256": "7601db4fcf920187335ed4ea224ef26ed60a8ccfb743a98ae3243c4998d0bf84",
+      "size": 39384
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/model.config",
+      "sha256": "19aeb248c74f893780b1bf7740c9ea96862a22832216c9314b02a6fe890dc50f",
+      "size": 346
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_kr6r900sixx/model.sdf",
+      "sha256": "884adf0131ef42d446fc03684c60880a7cac630d533fc376425ff2443e65b4fc",
+      "size": 13544
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_table/meshes/kuka_table.stl",
+      "sha256": "1ab12a173e3e7afa2f58869c2b4edcb1f097c9a883b2721e9ec8aa369551890c",
+      "size": 2052084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_table/model.config",
+      "sha256": "b22558d51662c2a962cf3470a7b1335677de3eb37fda269a7fe32840025fc96a",
+      "size": 240
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/kuka_table/model.sdf",
+      "sha256": "c09ddbf8a324949d531121716487edc2bfd7c2c4188b7f0aa3299c620ebc3941",
+      "size": 557
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_chair/meshes/CHAIR.STL",
+      "sha256": "5ca5085ce15adbc74750a4d44d9ea01b9d21f1b492da1ae8c223e1421ebba40b",
+      "size": 453984
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_chair/model.config",
+      "sha256": "5ea3be96e0adc7143bf96509f6c884b6d7b2455c2e2915b08ea8f695860f5b36",
+      "size": 275
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_chair/model.sdf",
+      "sha256": "61e3bffdd654bc899a164ca845a42e25d1e55c9df5093da193ae2417dbf601be",
+      "size": 973
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_table/meshes/table.stl",
+      "sha256": "1dc93025f214758ad2af0975998dedb38eb86abf9a81cac0139d3c43aaa79a51",
+      "size": 16284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_table/model.config",
+      "sha256": "5ff04e5afaefd44465cbf1f292918a8fa6bfe7a3b5b756bf68be56ac1586aadc",
+      "size": 275
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_table/model.sdf",
+      "sha256": "fad92432dbfa9962b4e229717cc5a2aabe5beb702a87d86079e3ac39017a68cf",
+      "size": 859
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_table_240cm/meshes/table_240cm.stl",
+      "sha256": "3f1ba292efb9756621610ffd29d26e41b779d5baafc15e5c5c68f0067c33cc8c",
+      "size": 16284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_table_240cm/model.config",
+      "sha256": "44a3d1622ddd32db8f7fe97970af171a9d7612f760e7d42960bcb10d33def2d4",
+      "size": 288
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/lab_table_240cm/model.sdf",
+      "sha256": "3ff8977742aa657fc003b8a9cc3f9ea6b34241868b438df64eac47a20eb23e7d",
+      "size": 907
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/mfja_3rd_floor/meshes/mfja_3rd_floor_v4.stl",
+      "sha256": "441d0a24720d3c4a511673439dcbaae72d16b9cdc2e123e0ad66551bd64ebce3",
+      "size": 246884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/mfja_3rd_floor/mfja_3rd_floor.sdf",
+      "sha256": "f41a1ed1a3ead281eb9f0fdbe96776d7aa2a4022ddb365d6afbfc0d10ad03898",
+      "size": 1233
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/mfja_3rd_floor/model.config",
+      "sha256": "efab6fb046ce031f7aba392abb6d097af1dd00589e658364f40318c17c7a5ca6",
+      "size": 293
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit/README.md",
+      "sha256": "7bc2a1434e6bfa2680d24f2e325122f8467f825b1ae8e918338be4ad9cfa5d76",
+      "size": 676
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit/meshes/aiguillage3.stl",
+      "sha256": "9d89613fdb2dab45e9f24eedab2c20c240f28698e6ecdb375942135bd5dd7bc2",
+      "size": 98184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit/meshes/cell_static_gauche_final.STL",
+      "sha256": "4ec0a1e7579f591f742858ac96b37c22c5605c69aa7ddb96541e9d05f2f71cee",
+      "size": 2050284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit/model.config",
+      "sha256": "6f7055143b4124b11317ac16e1d06e5ab4aa540f799d102c3b6afdf1805cf2c8",
+      "size": 342
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit/model.sdf",
+      "sha256": "7eb054cda1386ed6531235320fce55565021b4ed16acbe5edcf32fe926075088",
+      "size": 2465
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit_static_black/model.config",
+      "sha256": "92701859e411704878c1941f3d5ba3a5572d90d26da16a8465c1779d3cfb2b84",
+      "size": 351
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/rail_switch_3pos_droit_static_black/model.sdf",
+      "sha256": "66c9453d660b5c15716f99db1441179afae43e38c5a769f6f9191fea4c4e2d4e",
+      "size": 1627
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_closet115/meshes/closet115.stl",
+      "sha256": "4c42d6282b4aa6c9c2545bd9f20a3d4b379d5482b85d99d7069e9de59aad0877",
+      "size": 684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_closet115/model.config",
+      "sha256": "0b736e590d2091cea10bb920e6909c7779f3e5d310c4f675bf0afee31eef2494",
+      "size": 299
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_closet115/model.sdf",
+      "sha256": "4676a2503d59bde65da4f72c76ed1921f2f618ee0d4f91f7915fc4dae9033755",
+      "size": 911
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_table2000/meshes/table2000.stl",
+      "sha256": "df171eafa0f31956b85faddedea068b8efa78c8cb7f28e9ccf8693ab36373dd4",
+      "size": 3084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_table2000/model.config",
+      "sha256": "905c7c7761ef470af6dc4bfb9c71b9b16c86b1c09cb5cb7c0aa3aa541dd6f3e0",
+      "size": 306
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_table2000/model.sdf",
+      "sha256": "70126cc80e11fc5109b299fef86ed93e1a539e93e61fab222cb744c2ecdcd356",
+      "size": 915
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_tool_set/meshes/tool_set.stl",
+      "sha256": "8a074ae072a07c12be735e671da1053642a90687397e8c3980cab783d685a3f1",
+      "size": 684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_tool_set/model.config",
+      "sha256": "e976562fcc7b2646d5c1e5e501f899670ed516e76afcd5fb7a4c77b3854fe3c5",
+      "size": 300
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room115_tool_set/model.sdf",
+      "sha256": "177078666d2fa3b566f54bd79159a95aa1110f81016625ed7f0b666f0b545512",
+      "size": 903
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_charging_ergotron/meshes/charging_ergotron.stl",
+      "sha256": "b442129b55f542e1940d6ec767d12b4dbb00f5be0c2e32fbffc7d04602ea1426",
+      "size": 16884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_charging_ergotron/model.config",
+      "sha256": "8e1d7ac9fbe632cb57136c0f3a54c768e18f2f05103c4c0f66d228f32f6a31c6",
+      "size": 305
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_charging_ergotron/model.sdf",
+      "sha256": "61e17c2b6ce9601bdceb73e1b8cabf919b7f18232e94680eb3a6814f39db6bd5",
+      "size": 979
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_closet1/meshes/CLOSET1.stl",
+      "sha256": "c37c586c37bb587a19a8b7a07eb720abce0c387ef5c7101b995c1b657b745b58",
+      "size": 684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_closet1/model.config",
+      "sha256": "cadc06e592be9483d40947fa050ba8b6c6346338d3151613d0c2e704024c78a3",
+      "size": 284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_closet1/model.sdf",
+      "sha256": "cd7c331f8f5775c67680428d0a6c3ef17c836bba1c5644a810e65f5f28390f46",
+      "size": 893
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_table_180cm/meshes/table_180cm.stl",
+      "sha256": "5777b8f47ac8828032222571d441c7252f2f99121cc3460b32a2dc028c8ce782",
+      "size": 137484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_table_180cm/model.config",
+      "sha256": "83fb3960cdb8f78eb5db5c5e6498e53b0e2eedc048d8060987066e28dc3bbaea",
+      "size": 294
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_table_180cm/model.sdf",
+      "sha256": "65e10f70e643ebdefd006cf6a76fb43926b0cc2e2c6630467a1f59cbabea34b8",
+      "size": 931
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_tiagobox/meshes/tiagobox.stl",
+      "sha256": "e3b57cf32a860db8c12227c9d109cc635438164f1ef1e6c9a835607560ae3495",
+      "size": 684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_tiagobox/model.config",
+      "sha256": "5f1dac7d4199169d524ad9b9b9437266802e21584052d01152d983158832fa21",
+      "size": 288
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room314_tiagobox/model.sdf",
+      "sha256": "ef5ac1342da9cc0f0f70e9a0b90325f80eeca30b100e9d5320cdecc395db41de",
+      "size": 907
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle/meshes/shuttle.STL",
+      "sha256": "048ae8f05c3ce2d6976da9cca256536631ebea5c099a6f661eb807256626a104",
+      "size": 335284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle/model.config",
+      "sha256": "0796212ddf8a48f2bdf7582ea2c08261ed50582eb9b24fcdaaec3a5b65e15f87",
+      "size": 243
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle/model.sdf",
+      "sha256": "4cb29ffafd96a204be91391d986d01a6df55b2d3dc91bd4dbfcedad77ab35c12",
+      "size": 1908
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L1/model.config",
+      "sha256": "e7bbe743601ed57d0399effcf05f1981119acd7a8f930be88f1ef6f1ff8cc769",
+      "size": 281
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L1/model.sdf",
+      "sha256": "91e58af34db67d778da630f000d8e2b99e8d268de3a09aac0e71c47344ca74b1",
+      "size": 2652
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L2/model.config",
+      "sha256": "69cf98d30df3290bbf81f3bc9c833a1839f9f183cc58f0dcd8e1ff13329fe034",
+      "size": 281
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L2/model.sdf",
+      "sha256": "93392706c3c1406dd50270be39fcd1d4c84d27010b2eda4f58512d916a5cf90e",
+      "size": 2652
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L3/model.config",
+      "sha256": "1453943a03793af06fd9ac44fad55d81214b2c609cf94a5aa004283521ea850e",
+      "size": 281
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L3/model.sdf",
+      "sha256": "b2308f80bcfe267a0ae884e313e35bb22beff86a416c19042f8b1e4f76f520cb",
+      "size": 2652
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L4/model.config",
+      "sha256": "b1158bb7a41fd73ae648fc3f78be53c104b83e1585a71f240c1c3a0f03bfd8da",
+      "size": 281
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_L4/model.sdf",
+      "sha256": "9caaf6ca76acad4984a7545651a86a858b695e642c67483c1129bd9619949d54",
+      "size": 2652
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R1/model.config",
+      "sha256": "cb03277b0fbe39016726c6e7513bc9aa6cff3d134a22dc6bfaeb1703811faf5e",
+      "size": 282
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R1/model.sdf",
+      "sha256": "442775bbde1029426b050f435e2d469af8af066cff372ff26b7931dccd2805d2",
+      "size": 2870
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R2/model.config",
+      "sha256": "4206a1d8400c7b05fee9ac2766b77f96b63452da26caea2c970b090686f77756",
+      "size": 282
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R2/model.sdf",
+      "sha256": "59bcff6a0b9ae96193806d90af476dd5607d44be848cb7b0ce70117aa89dedcd",
+      "size": 2700
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R3/model.config",
+      "sha256": "f624a81b21540d74f78b6e67648ded4ba7286d647eef6644013a1fa574e150fe",
+      "size": 282
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R3/model.sdf",
+      "sha256": "d60e5cae1c60a6ca5acd468ad7cf530c46878406dadfad7e4779aba9a49ea5b0",
+      "size": 2652
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R4/model.config",
+      "sha256": "61b1ee2c6a4632b3ad2914d09db30510ef1ae0066726d9c57ef2495865990e36",
+      "size": 282
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_shuttle_R4/model.sdf",
+      "sha256": "2f871346beca478253fd7d597cb9802fd604148873ce3dc7695147d2899f828b",
+      "size": 2652
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_overhead_devices/model.config",
+      "sha256": "4f7c0535ce076f6cb0691243e2f991826b0f0d5d474b5eacc3347b15b26c7aea",
+      "size": 420
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_overhead_devices/model.sdf",
+      "sha256": "7c2c5d9063035e6517f9c077488dd4da43f7586b3c0f95f548c4c4a7c2e156d4",
+      "size": 6282
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_medium_box/model.config",
+      "sha256": "0a370690e4d0ba001fd75614b00e04d10a0bfc7e647118f09218b735d87182cf",
+      "size": 311
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_medium_box/model.sdf",
+      "sha256": "980b3309a2d8c00162722cd21e49f66b4d98325606316681b1e7a622efae6ca1",
+      "size": 803
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_partial_marker_occluder/model.config",
+      "sha256": "f191232920c60bd74789d08503701dc47e31ea1ae5a88acd54e5a8a54e38c7d9",
+      "size": 315
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_partial_marker_occluder/model.sdf",
+      "sha256": "ce7e4349883169282e922883979b2a8af6e0f0dae13593f7218fcd57cd7f73b2",
+      "size": 1152
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_small_box/model.config",
+      "sha256": "0ed4e2d6faa9013e13e64b2b7b34dc81e687fc2ef9c28359048589da0b549a6a",
+      "size": 291
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_small_box/model.sdf",
+      "sha256": "da91f1305f556bf22a311e4dd3ce4d47c3bc8355c3d1611cd2541054e3269649",
+      "size": 800
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_tall_box/model.config",
+      "sha256": "9b6b3314eee5381d138c3a91c035701e1f6f0c9a8dd5cafe75fe7ddde1ae5abf",
+      "size": 296
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_tall_box/model.sdf",
+      "sha256": "6ab9b96cb7a4e3c27de32ae65d86227943ff6126637c10a8351e98b3d27d2b54",
+      "size": 797
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_wide_box_within_keepout/model.config",
+      "sha256": "d19df2d9d441aea913400fe537c5137931eecf461e28bc697bdfbd4e1834df05",
+      "size": 307
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_payload_wide_box_within_keepout/model.sdf",
+      "sha256": "46c1026d48d46c027b07a6ef42c2bbd9062284040cc8d4c62f3ac1e006ad728b",
+      "size": 812
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_removable_obstacle_marker/model.config",
+      "sha256": "06cb9b01592ce1946f69ba55c8abc7c006c34bf3483ca933879636c5d955cc52",
+      "size": 373
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room315_vla_removable_obstacle_marker/model.sdf",
+      "sha256": "47bc8c2eda4efb236d3adc2ece06845238990035bea1097d63af0b3b9643c1d0",
+      "size": 1665
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room_315/meshes/315_room.stl",
+      "sha256": "4446e71f1f369c1d7e5d9e196d6e5e15c3030e234264e21059d21f61224cadf1",
+      "size": 10884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room_315/model.config",
+      "sha256": "c9f84d701b7ff495304af8cfd6b2a471d12a9acd42ed9e68c5ffd188952e9240",
+      "size": 289
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/room_315/model.sdf",
+      "sha256": "90febec3d05c32515652d6c6c033e8f9391bfba768f8eac0a62dd033012004fb",
+      "size": 839
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_table/meshes/staubli_table.stl",
+      "sha256": "a4a38cd5d6747a0ad575829532acfd1f10945863a58b0eb2ed84982532c6e156",
+      "size": 949284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_table/model.config",
+      "sha256": "70f1023c457c82410b44f9316a885ba217ab425ed5ad8a06b25bbacd3124cf36",
+      "size": 246
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_table/model.sdf",
+      "sha256": "6387825ff76910faac71f4dd39e69b4d2cc9e0c35b458f56d77395115bf46a71",
+      "size": 581
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/cad/SCHUNK-edited.stp",
+      "sha256": "7e26141c8a198c0f00376656c4fb8fd041dfc85486daadd174fa79b75c16745b",
+      "size": 1790440
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/gripper/schunk_edited.stl",
+      "sha256": "d48a91d1e755b2fb4c15262b81002b1dfc32e3240fc25f33e86d2ed81588d575",
+      "size": 11493584
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/base_link.stl",
+      "sha256": "984911463c54b72111165a544b0432b5cbea823c9297084d887ed59a2da2a788",
+      "size": 31684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_1.stl",
+      "sha256": "fa003a1ea7700177556ae89f4b4b485174d6fbfb09a5b9f63dba046c8508e622",
+      "size": 25084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_2.stl",
+      "sha256": "bf418620cd0a5a4c5af5a2daa06d9aa323ebc0b1c2ab3b98650c3b5e18169918",
+      "size": 97084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_3.stl",
+      "sha256": "9283a7b14a94ab7f731ff17046dac34ee7cabe13ddd50e2dc80d6fcf8a27e00c",
+      "size": 50084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_4.stl",
+      "sha256": "aea93a2434e851c35986156d650904373bee89a8a42c9b2e783a8d49b18010ce",
+      "size": 61584
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/base_link.stl",
+      "sha256": "81d52c78e09c6d75b487233067f0d8397f0ba508f8d5f1e64e1097f1ab14d874",
+      "size": 394784
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/link_1.stl",
+      "sha256": "6f7f96a9b87a920548fb1ddca1891cd79828a39411d0e12b726b37047275d05c",
+      "size": 284484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/link_2.stl",
+      "sha256": "f88ced00e62f30280df1e339c962a2b851988cf017fe90e3a9ca43b8426cb92a",
+      "size": 299384
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/link_3.stl",
+      "sha256": "bf8e165b6a250c090d0662233081b89a957d5ce1b71b521fa0e10730028c030c",
+      "size": 288184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/visual/link_4.stl",
+      "sha256": "83b1e63549650b533e9ba362e8f199e478681ae501f83bae23ab22caebd3dbb8",
+      "size": 375084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_2.stl",
+      "sha256": "348e303bd9da0b428f3ee7dee48fb12e0e47b9ceb1c840768373274d7fb9bac9",
+      "size": 50084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_4.stl",
+      "sha256": "ae251e6ed34b00bd82f39c60cf12ac871507beefaf80ef5357ffa83eb83bb57b",
+      "size": 50084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/visual/link_2.stl",
+      "sha256": "3bf48bee9bf17a5fa030944a464ebb06e1d0d88cf014faf1dc73ac27f2ea5b94",
+      "size": 279934
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/visual/link_4.stl",
+      "sha256": "a59b2ca023630f7f163abcf552640fe55d948cf51a9cd9e8fd575cff758c1e60",
+      "size": 331184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/base_link.stl",
+      "sha256": "0cf09ace3956b11ce22564dacc70511e7a2c5e8d9389334d0a5efac548d910ab",
+      "size": 13984
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_1.stl",
+      "sha256": "67d4fd285684e9a1bb52531ac5ce1c4b68d97ffca9cdab6393c538a90f5869ae",
+      "size": 72984
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_2.stl",
+      "sha256": "ddb612d786126cd0f5c1acb28c9a78be8b7e4975b8a77ba759198133bc50be46",
+      "size": 44484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_3.stl",
+      "sha256": "c036edcdd552651db944bd9396c6f5112dd716c81fa60fa8a5cd198c2b6b8f38",
+      "size": 57384
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_4.stl",
+      "sha256": "ee2e600b805f726bbdeb61b23027cf627469d9a8956f9972f77aa14fe8bd1782",
+      "size": 27784
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_5.stl",
+      "sha256": "fe32e6185c3aa89c4329ed48fa0a7534a5262bec41b035351369b3a8cd4a1421",
+      "size": 22084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_6.stl",
+      "sha256": "770690c738413b7082d779b5bba700ba1ba435d28be2e2072bac0b0b27b157b6",
+      "size": 11084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/base_link.stl",
+      "sha256": "00a147ab044b56e26f62902ff4184e2736b1385b53c5db739aca6d5219f31a78",
+      "size": 426784
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_1.stl",
+      "sha256": "4c9e2b6187c1952b6aa0226e3c2eb2eb2f50623109a84638915f4c25153ffcbc",
+      "size": 193584
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_2.stl",
+      "sha256": "ef5954c7bed0b4c9276ee15a93bf29f3cbf5411de071c95541ca2fbece2e5986",
+      "size": 338184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_3.stl",
+      "sha256": "cab53417ec078ee588ba67505d267ee4208683e8dcf3277a9f7dc14997bd5d6e",
+      "size": 203484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_4.stl",
+      "sha256": "58ca4e92bfce8d660be1d9e713ec7572cfc53efc68db93d7226dea55f3e169ea",
+      "size": 498334
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_5.stl",
+      "sha256": "e06ad46842d07a48f5a1f1d8fa83ef966631ce242270d619c053c1750de83827",
+      "size": 170734
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/visual/link_6.stl",
+      "sha256": "575dd1dccaea40c028df5d3b7165a300a9530f80d7d9320c44f5c6961096c076",
+      "size": 49684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/model.config",
+      "sha256": "c31dcc3a1c2f0c73d1d3b80d3f0cd2ddd9db53d1203d584c5ae7683cea23ebf9",
+      "size": 304
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/staubli_tx2_60l/model.sdf",
+      "sha256": "9ae2108d652ab706fb563fbb7b39a5e83b7473d67af7f11699463c126788ac95",
+      "size": 13438
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/sun/model-1_2.sdf",
+      "sha256": "fc90754e6502a6fa1ffd072ab5672ff6ac09f32ed91dd93f04c96b90fed535fe",
+      "size": 454
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/sun/model-1_3.sdf",
+      "sha256": "ce3396aeae0cdb02496f17386259716250095b1c1aa834c624aed7dafcc1cb63",
+      "size": 448
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/sun/model-1_4.sdf",
+      "sha256": "18a961f8c71774fc4691bf3453f81a84b466f07d85e53a43cd879ca91e87dc33",
+      "size": 470
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/sun/model.config",
+      "sha256": "f6d1f0e4b3919c21fc56ad24763275838944ec9acfc60bb86e2d31f23976688c",
+      "size": 410
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/sun/model.sdf",
+      "sha256": "5c53982225dd3b8664987f7f16e3f07ddaf2d7b1bad1ed347f1e86b5657d9da3",
+      "size": 468
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/table_yaskawa/meshes/table_yaskawa.stl",
+      "sha256": "4dcf5b9ec9d9173028e7612f87a4532b4b874e754c38ed014016387c43f67b49",
+      "size": 341884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/table_yaskawa/model.config",
+      "sha256": "b245d639e757dc4a96d56b85659473456f63445a40f9fe5ba9b551a28878258c",
+      "size": 246
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/table_yaskawa/model.sdf",
+      "sha256": "92e5b63058cfca94799f08d5617d5f782c48382c4de2393b216a6f1fddf00fe9",
+      "size": 671
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/arm/arm_1.stl",
+      "sha256": "a98a1becdaa0f17182ae242cbf829c327a108f11bb7dbdf1554ec76d7364c599",
+      "size": 240384
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/arm/arm_2.stl",
+      "sha256": "df8df6ed235678f8e0b48f99024cb5cd9cea83c0ca6963275fe704f07433f508",
+      "size": 988384
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/arm/arm_3.stl",
+      "sha256": "7894bc60a7c2b68cdeaa991e9ad03f48abcb5e72f8ffb5a50b1f4edadfb417e9",
+      "size": 491084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/arm/arm_4.stl",
+      "sha256": "12db11cef0bb9b743ce350946b08124e98890f30592516307a17c5b7c3582ea5",
+      "size": 407534
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/arm/arm_5-wrist-2010.stl",
+      "sha256": "a8fc5c84993eccfb5b4c916fcd06d21fbfb8927104757b5c329f784feb1edf18",
+      "size": 75084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/arm/arm_6-wrist-2010.stl",
+      "sha256": "9e0ce5b009fd374c3d8d6014e5c093b3b5107923731a257c79a3f0fdcd67b464",
+      "size": 18284
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/head/head_1.stl",
+      "sha256": "da15ef00f276d4692df912889dc49561fc6b7958bf925aada017f52a15036721",
+      "size": 80884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/head/head_2.stl",
+      "sha256": "8cc0b5fc791d313670f5d857cc83df415de6435a7c83d407b112dc6334a33158",
+      "size": 144884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/torso/torso_fix.stl",
+      "sha256": "66fff54e21d0bf8174acd445215c86d27720e6953d8f815a62bb9da82ef82a5d",
+      "size": 299684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/meshes/torso/torso_lift_with_arm.stl",
+      "sha256": "3626f883472f52f195393100ec9fe2ef35e29b417c7191cb7c18afd3ea1cad1a",
+      "size": 126784
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/model.config",
+      "sha256": "28808274d53de4db569d961527e12f2391be9583ccb5f0477c8e1ee0a3dce0fc",
+      "size": 304
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago/model.sdf",
+      "sha256": "91df43e382c16648d84cc374059889d2faaa9b4b45c29c15700a53474f531934",
+      "size": 28466
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago_base/model.config",
+      "sha256": "13fd8233d10136ed2199fa840c5ae5d056bc20087a5a39ffa07814a27d4b40a1",
+      "size": 308
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/tiago_base/model.sdf",
+      "sha256": "482793ab3e69e48d85b7592fbca6e0620d0bf9e2f9e4dda576b03b751b540957",
+      "size": 10762
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/cad/GEH6040IL-03-B01GEH6000IL.stp",
+      "sha256": "4b6d2222c33696691a2f61d943008a4edbda4720d7979aa6b4ac7d981bdd98db",
+      "size": 594857
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/cad/readme-and-terms-of-use-3d-cad-models.txt",
+      "sha256": "6369b6022278ee74e0b121dafe17ed3e3c97fa3c38e31aeac1eca73e03e49242",
+      "size": 2776
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/gripper/geh6040il_03_b01geh6000il.stl",
+      "sha256": "a114b86f43de77346db5aa2d208c5bcb00ae9306f38bf1e003767270153db5b7",
+      "size": 1885307
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/base_link.stl",
+      "sha256": "d39e6f47ae8c42c7499d897217f3ecfea18df97ba5f2dd7a6b55f1abdb2d64be",
+      "size": 36984
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/link_1_s.stl",
+      "sha256": "87c530e753743b20d173f6cf5debfc7aa8d1e3da21cd69886a4746831410591b",
+      "size": 67184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/link_2_l.stl",
+      "sha256": "7c3f46555e41e4251ca7962f57b5afd704728b9e7bf52e26074951f7a5f20f0b",
+      "size": 45484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/link_3_u.stl",
+      "sha256": "5de0fdb9da1e493617a38c22cbca99395e3e972d5ead89ad93ad77b37b5c10a0",
+      "size": 60084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/link_4_r.stl",
+      "sha256": "f8559de586137a429e3fd2e36575b2a776c407c86e586c95b7a038de18b4f616",
+      "size": 19484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/link_5_b.stl",
+      "sha256": "ac55415f4bc892545e0cf04dcad7927791ec2179707e9b22eec0a55c293d79fa",
+      "size": 71684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/collision/link_6_t.stl",
+      "sha256": "b4e768f951023cab23d3492e1d1dbe11d4a8d82364c7c14416ab8b0b9c2e8237",
+      "size": 13884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/base_link.dae",
+      "sha256": "c772bddfd1c7d0ccb23dcae89f46253b12e35a1dfe1a7ff7473b3be1d4409a91",
+      "size": 639841
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/link_1_s.dae",
+      "sha256": "8f2299536e7036e37730a9e74d26143a83b12381f33a1aa682bcd11ec91df045",
+      "size": 455921
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/link_2_l.dae",
+      "sha256": "ee22985fc5c992e0dc68b19ee8bffb22fd30d7bec83d84c98d88fe07d21856b3",
+      "size": 454154
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/link_3_u.dae",
+      "sha256": "b9f901a3a7067a162b574cf0c7640eb962afe53633f6a0718f5dec504a5881d6",
+      "size": 453215
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/link_4_r.dae",
+      "sha256": "8e07bf5f89d4e0e87565f60be20e88f9f17de91c63c1ebd6653b93ab4c9a49a5",
+      "size": 356606
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/link_5_b.dae",
+      "sha256": "7b127a4c91ed003f168e0684feba44146298789f7d0f884644effa6b96413116",
+      "size": 441147
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/meshes/hc10/visual/link_6_t.dae",
+      "sha256": "53cb930f83d7452e7bc5b2463b317a704ac167f8352c0074dcc3deef1cab8eea",
+      "size": 60980
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/model.config",
+      "sha256": "91f0f31ae28f0be18f5532694baafe0b497f8a9536acda7c73cfde895bc01bc1",
+      "size": 304
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10/model.sdf",
+      "sha256": "35b43f0c7f81207a39e881cce7c9318c569267b2f486bb902da789823b7ff3f0",
+      "size": 15397
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/cad/LWR50L-03-00001-A_000.stp",
+      "sha256": "b2ac5505b237be23a0b5745e8bbb00e6517aca9187963afc5e0c634f32f94c1d",
+      "size": 1570755
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/cad/readme-and-terms-of-use-3d-cad-models.txt",
+      "sha256": "f35229efe5fa576ac1e3d4f6a46205d42fc5fb334036dceb548260e34cabd4fe",
+      "size": 2764
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/gripper/lwr50l_03_00001_a_000.stl",
+      "sha256": "13c84841d5296e705ad7aa3f09a582e2eceedf42e61a7dcf1c0b5d40c7fdbc45",
+      "size": 8954664
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/base_link.stl",
+      "sha256": "d39e6f47ae8c42c7499d897217f3ecfea18df97ba5f2dd7a6b55f1abdb2d64be",
+      "size": 36984
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_1_s.stl",
+      "sha256": "87c530e753743b20d173f6cf5debfc7aa8d1e3da21cd69886a4746831410591b",
+      "size": 67184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_2_l.stl",
+      "sha256": "7c3f46555e41e4251ca7962f57b5afd704728b9e7bf52e26074951f7a5f20f0b",
+      "size": 45484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_3_u.stl",
+      "sha256": "5de0fdb9da1e493617a38c22cbca99395e3e972d5ead89ad93ad77b37b5c10a0",
+      "size": 60084
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_4_r.stl",
+      "sha256": "f8559de586137a429e3fd2e36575b2a776c407c86e586c95b7a038de18b4f616",
+      "size": 19484
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_5_b.stl",
+      "sha256": "ac55415f4bc892545e0cf04dcad7927791ec2179707e9b22eec0a55c293d79fa",
+      "size": 71684
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/collision/link_6_t.stl",
+      "sha256": "b4e768f951023cab23d3492e1d1dbe11d4a8d82364c7c14416ab8b0b9c2e8237",
+      "size": 13884
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/base_link.dae",
+      "sha256": "c772bddfd1c7d0ccb23dcae89f46253b12e35a1dfe1a7ff7473b3be1d4409a91",
+      "size": 639841
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/link_1_s.dae",
+      "sha256": "8f2299536e7036e37730a9e74d26143a83b12381f33a1aa682bcd11ec91df045",
+      "size": 455921
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/link_2_l.dae",
+      "sha256": "ee22985fc5c992e0dc68b19ee8bffb22fd30d7bec83d84c98d88fe07d21856b3",
+      "size": 454154
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/link_3_u.dae",
+      "sha256": "b9f901a3a7067a162b574cf0c7640eb962afe53633f6a0718f5dec504a5881d6",
+      "size": 453215
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/link_4_r.dae",
+      "sha256": "8e07bf5f89d4e0e87565f60be20e88f9f17de91c63c1ebd6653b93ab4c9a49a5",
+      "size": 356606
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/link_5_b.dae",
+      "sha256": "7b127a4c91ed003f168e0684feba44146298789f7d0f884644effa6b96413116",
+      "size": 441147
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10/visual/link_6_t.dae",
+      "sha256": "53cb930f83d7452e7bc5b2463b317a704ac167f8352c0074dcc3deef1cab8eea",
+      "size": 60980
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10dt/collision/link_6_t.stl",
+      "sha256": "569b87cce1ef41234d2eab4ed2b28fe2e251c8f2c0fedf6ea17f551c269f80b7",
+      "size": 19184
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/meshes/hc10dt/visual/link_6_t.dae",
+      "sha256": "aa7a7f282119daa462225f565e75f44ee5aa7a1461fa5b8e9a9992156c2f61b7",
+      "size": 378681
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/model.config",
+      "sha256": "eb68527adda173280f1f61b6f7d9cf3c4793dadb959202d520f481aead75717c",
+      "size": 308
+    },
+    {
+      "path": "mfja_3rd_floor_description/models/yaskawa_hc10dt/model.sdf",
+      "sha256": "cec045d5e343c7f5a347d00163ae5a4d2cd147e7181d8bccce2334dade76f454",
+      "size": 12113
+    },
+    {
+      "path": "mfja_3rd_floor_description/package.xml",
+      "sha256": "61bc2e70b8f60fc60b77e56e8d34cbc90ba52a48bb6b11ee9cc31ebec082af76",
+      "size": 859
+    },
+    {
+      "path": "mfja_3rd_floor_description/test/test_industrial_robot_collision_free.py",
+      "sha256": "8d62528cdf0c763ee3bed1c21471c2606b3c05c78f78536b596791f293b9348c",
+      "size": 1040
+    },
+    {
+      "path": "mfja_3rd_floor_description/test/test_kuka_initial_joint_positions.py",
+      "sha256": "3dd2d74536167700f2d94e39df40623593cec3e706d863198beeb4536abc2b76",
+      "size": 1114
+    },
+    {
+      "path": "mfja_3rd_floor_description/test/test_lightweight_world_physics.py",
+      "sha256": "2dd2bbe64f76b6466a23030e320be268bb2ffe4050cf5f7d8d6632161c877c0b",
+      "size": 643
+    },
+    {
+      "path": "mfja_3rd_floor_description/test/test_room315_shuttle_collision_free.py",
+      "sha256": "bc8834bfd2890df17c7359f88ef02c0ee37800ef1f462337fe410e2680b7ad6d",
+      "size": 584
+    },
+    {
+      "path": "mfja_3rd_floor_description/test/test_room315_vla_camera_model.py",
+      "sha256": "a3b7a0b43cbcb88e58923dd8d46051765da9518cb0a68bfb2c5512662283580b",
+      "size": 3693
+    },
+    {
+      "path": "mfja_3rd_floor_description/urdf/kuka_kr6r900sixx.urdf",
+      "sha256": "4483138cabb61cd68940b3902462a3c825c7226acf483f041b32941d3b546fbe",
+      "size": 4854
+    },
+    {
+      "path": "mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf",
+      "sha256": "10834d1d37883ff8b99ed9d5e83c8562762173f44e1889c2847e5fec1bc28014",
+      "size": 4920
+    },
+    {
+      "path": "mfja_3rd_floor_description/urdf/tiago.urdf",
+      "sha256": "404a071e341d94bf29d44844d311fbbfa4cce9b2c548b16276be4dfc16f49f83",
+      "size": 11160
+    },
+    {
+      "path": "mfja_3rd_floor_description/urdf/tiago_base.urdf",
+      "sha256": "6e449e3b53a5ba0551778655a0f5a9c8cceffe1d7ea0057532c3671bc38748a0",
+      "size": 4213
+    },
+    {
+      "path": "mfja_3rd_floor_description/urdf/yaskawa_hc10.urdf",
+      "sha256": "196ee1f0306c2f962d922d3c0875fc315d114a5be341f83a091b6648cf154e41",
+      "size": 6435
+    },
+    {
+      "path": "mfja_3rd_floor_description/urdf/yaskawa_hc10dt.urdf",
+      "sha256": "0047809cc151c9d2b032eed941043498e47e754649a595b6b6bea52449546e2e",
+      "size": 4737
+    },
+    {
+      "path": "mfja_3rd_floor_description/worlds/isolated_industrial_robot.world",
+      "sha256": "9dacb71920a628e5b8356b9f9a7901934cee55cccdebe03ae4d68d907f6dd108",
+      "size": 2044
+    },
+    {
+      "path": "mfja_3rd_floor_description/worlds/mfja_3rd_floor.world",
+      "sha256": "6c497457cb989c6340e8c61eaa8e33c40365e028829f1c9e9672ccd7f573cd44",
+      "size": 12999
+    },
+    {
+      "path": "mfja_3rd_floor_description/worlds/room_315_only.world",
+      "sha256": "c3dede6e4887f2cea64d6db3521d9cd537386f26ab60aee4a47191abc3df4db2",
+      "size": 7470
+    },
+    {
+      "path": "mfja_robot_control_config/CMakeLists.txt",
+      "sha256": "5dcfb62fea5d08a075587a0b46c18e94a16696d967eb7abaa7e5c6bdde037c9b",
+      "size": 13924
+    },
+    {
+      "path": "mfja_robot_control_config/config/gazebo_params.yaml",
+      "sha256": "1811aaaa4d6e91b6347ecd0ec2b2fc5689ecabf4d603a3b43de684a7dacdd32e",
+      "size": 51
+    },
+    {
+      "path": "mfja_robot_control_config/config/mfja_default.gui.config",
+      "sha256": "cca4af461a540adfd1fc460cc1ce1c93ebdd7924becb0b52159122841231d923",
+      "size": 8973
+    },
+    {
+      "path": "mfja_robot_control_config/config/mfja_light.gui.config",
+      "sha256": "a0158bbde93f3cb9390675e272a0b7f71ac25ab80028ddad98a46c55b91ddc67",
+      "size": 4441
+    },
+    {
+      "path": "mfja_robot_control_config/config/robots.yaml",
+      "sha256": "5d984e204517e69370374620c4578436036750226cee1715b81bedc46efdb145",
+      "size": 1087
+    },
+    {
+      "path": "mfja_robot_control_config/config/robots_room_315_only.yaml",
+      "sha256": "7e27fe829a05ef8c8e1b001163ed8327097ccb9453daea30f0702922e37389b8",
+      "size": 1106
+    },
+    {
+      "path": "mfja_robot_control_config/config/room315_runtime_safe.gui.config",
+      "sha256": "1bbaf6f796b73c66bf2a8f8bb0897ed694028c1fc4cdd5dfdfb7208826cff294",
+      "size": 3410
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/README.md",
+      "sha256": "ca15831085eb2dc4b7941135ab675172f8e755b9b0454b4b69425f3c3ea3bf9f",
+      "size": 25101
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/SEGMENT_CSV_MIGRATION.md",
+      "sha256": "d6b01ba1a239afb1520d3506614a5c14a86331e7a5ebf3dba49dd2bd30d6f3cd",
+      "size": 3116
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml",
+      "sha256": "a6aa815037fc78381512c2fc30da159d6db7976d927fd8c5b7400f336f3afc85",
+      "size": 2712
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml",
+      "sha256": "d8c9e79e1e0ae90b53b15038be91a5b25e44a4662c1d353c9919586a27a7e3c7",
+      "size": 2703
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml",
+      "sha256": "6473fdef8d50f7678836b0168bd146b7231d4e779eade406fe8541bb94744ccb",
+      "size": 6821
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml",
+      "sha256": "98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d",
+      "size": 6804
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A12E.csv",
+      "sha256": "6df5985fda1e63e7537c33a37da835e2f68ff6ffce183fbbd1cbc1d5de161f6c",
+      "size": 3155
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A12I.csv",
+      "sha256": "ee8274fb85fc54b9a8924d7a5959733b870dacbe760f5f5c708a19b831cdfa3f",
+      "size": 920
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A14.csv",
+      "sha256": "34cb6a69e7676f251329c13b624a60f1f2477bcbf006e4cb751a4ee4d3b018b3",
+      "size": 1786
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A1E.csv",
+      "sha256": "5a93b5de9d7f5145832b5a503189cc861b5889fa78b0a2ed14cfbb57884c90a7",
+      "size": 596
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A1I.csv",
+      "sha256": "3069478153bf7a1f58335f7463f6604cd312fd62ec52f6907f9d12d460725d96",
+      "size": 463
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A23.csv",
+      "sha256": "d831e0c6dbad314626df953687823967accb12ceb0a0c8e7dfdb5600ef31e149",
+      "size": 461
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A2E.csv",
+      "sha256": "fa5a22b70a02855ff469d9c57aae84c28ebbee7827c3dbca6df58d191791425b",
+      "size": 594
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A2I.csv",
+      "sha256": "f2e055dc028f33b5314bcce14c3c28fc30b93fc19070b4838f857164f7cf12af",
+      "size": 280
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A34E.csv",
+      "sha256": "051f091b782caf47fa967f7a1f2a46257cc9a73c67fba48625b238cbbbe63f0a",
+      "size": 1562
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A34I.csv",
+      "sha256": "d71c077c92a9cd76955aeca26e1fbf9c598fbde8230caba2881d6b485a5b5ada",
+      "size": 918
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A3E.csv",
+      "sha256": "acc176794fac14608b8d8e75b76fd25f73f13ef8f221714a084885f499c79a81",
+      "size": 596
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A3I.csv",
+      "sha256": "7a5c38eafd30ab10b804a176c3c85c71829ea57992cc25a4cd3f044e9a0341af",
+      "size": 372
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A4E.csv",
+      "sha256": "2f98bfabd93b6875c8f770cdbc1db3aedea0b56e259983624369b5190f7d4f2d",
+      "size": 459
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_kinematics/raw_segments/A4I.csv",
+      "sha256": "45e6d2cdd0c0042b5df5bc6a67a838bb7620abaff7795429a2e4f10514fc4646",
+      "size": 507
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_visual_state/README.md",
+      "sha256": "65bc0300a787ed7e4fca569c340861a7dc86943bdcdcce170d0da40d9b4b4af4",
+      "size": 7077
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_visual_state/blocker_training_scenarios.yaml",
+      "sha256": "c97e19b625c2667a9df080fbb7df06ad5f99a914e9d3ab80986918895a8d2bf7",
+      "size": 507
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_visual_state/training_scenarios.yaml",
+      "sha256": "44f27c6ff9903f7062d2f19b58506747532eb2705ac6337c0850745e76f32d6a",
+      "size": 701
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/payload_scenarios.yaml",
+      "sha256": "88db7455baeecd4635990f70c472746c772d5ea5f86b91f6ad4626d64c8954f1",
+      "size": 3257
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml",
+      "sha256": "123a5341501fe695a28f0c7db9c135c3eb7f82dc0d758208e9806c3cf28f042c",
+      "size": 182263
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl",
+      "sha256": "40cdeeaba3e6c43847793119e55d9ec35b0ffd6ed328c99e909cf067ab434d17",
+      "size": 22986
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl",
+      "sha256": "705fd5070503d08e8ec41696959e137afac4a610655317c412df1e4d9875414d",
+      "size": 24629
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml",
+      "sha256": "721de97f0aed54efae6a23ae923cdb141da9871ddfc28c9cd33373ee000af141",
+      "size": 5328
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml",
+      "sha256": "15d3eaee91e4090f874efeaa7cc2f1df37c78b0fd091466c06b4754e041e57a9",
+      "size": 3068
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/task_goal_english_benchmark.yaml",
+      "sha256": "1a945519f6b5b58e9c44ca8c7de823832f4898fb442276572048cf3d5903a9cc",
+      "size": 2207
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml",
+      "sha256": "af2957e3848830de0d9df15abafcf34e3e484b972d2e00b778aadf32962e4b25",
+      "size": 873
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/visual_observed_state_calibration.yaml",
+      "sha256": "d54dc9e0ed30343f191c1d441a26e2d60d82b389309c1eec2e3c875ac4eb454b",
+      "size": 2284
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml",
+      "sha256": "e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19",
+      "size": 2735
+    },
+    {
+      "path": "mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml",
+      "sha256": "f28b6b5477de2c012608c6ca344c0ab0ea73d0919057bf04a024f173f121baaf",
+      "size": 430
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_core.py",
+      "sha256": "82c0eebf9b10b3af60720940cae3c79c5eed1893d2285447b27a9efece817836",
+      "size": 23107
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_guard.py",
+      "sha256": "d2385304f87a00f251dfae05548c26b66ec69bb1e86a84734191529aa08e943c",
+      "size": 4007
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_local.py",
+      "sha256": "a253c3ad76332e550a503ee3e25809ed12fdab00f0b820a5992e7e158eaa3e59",
+      "size": 9602
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_prepare_inputs.py",
+      "sha256": "1cab575d3d9fd51d827b0bd3685d801240f536496e6e04002d7a96d0d3ef1c65",
+      "size": 6103
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_smoke_v2.py",
+      "sha256": "1fc68feb17bbc09ce072e228023d8d9b0810d85170543c75e3430351c76fec8c",
+      "size": 34306
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_smoke_v2_guard.py",
+      "sha256": "3a6f2818528b00a6471d0cab1f1260c1d287de0390220e2384e8929df48162dd",
+      "size": 2698
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_train.py",
+      "sha256": "5405c623fc1735b34835d7124b76cd9e974e131217c5d264ac4050e98ae4bd1f",
+      "size": 31486
+    },
+    {
+      "path": "mfja_robot_control_config/experiment_a_v3r1/experiment_a_verify.py",
+      "sha256": "b6a5e335910f2ecaf7d4271bc80b0b7e07b0b4e90271878b64bfa6f71d2ff344",
+      "size": 18510
+    },
+    {
+      "path": "mfja_robot_control_config/launch/isolated_industrial_robot.launch.py",
+      "sha256": "074f1c5344afe2f599deb87b7023d56bd30bac082d2853fb68fe2c9cc4163635",
+      "size": 13034
+    },
+    {
+      "path": "mfja_robot_control_config/launch/multi_robot_sim.launch.py",
+      "sha256": "42bd3fc19680cac46d504513bb612dadb3bcca46a60bcb91ce56769721770f59",
+      "size": 23966
+    },
+    {
+      "path": "mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py",
+      "sha256": "9f6e2d865f9176418ee31bd00c9809c6673ba9580825b5e3cf4d61107e588466",
+      "size": 12299
+    },
+    {
+      "path": "mfja_robot_control_config/launch/room_315_launch_utils.py",
+      "sha256": "1c741b016ee283b414558ae1e45b35c774eff7be8ccd751b7ab812479a15f3b1",
+      "size": 387
+    },
+    {
+      "path": "mfja_robot_control_config/launch/room_315_runtime_acceptance.launch.py",
+      "sha256": "22f0c0cfd787ed5c340fb315c836c63b83789743dfa125c2a539219f82368959",
+      "size": 13038
+    },
+    {
+      "path": "mfja_robot_control_config/launch/room_315_task_execution.launch.py",
+      "sha256": "ae1c179f098ad740ce1b7933b3d2881374e5d9c71d8d3995290767fa39e6c143",
+      "size": 4568
+    },
+    {
+      "path": "mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py",
+      "sha256": "dee3f3b7ae22f2ad8832f991ebb1fc522d36509554690e43569affa37dd8b4a8",
+      "size": 4475
+    },
+    {
+      "path": "mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py",
+      "sha256": "fa651fa8e96cb78ddb70b4cb549c86366cb31fb76f4d87e3273fa22e9772ef6e",
+      "size": 8008
+    },
+    {
+      "path": "mfja_robot_control_config/package.xml",
+      "sha256": "cd8de59fb489746664738aa5c40c117012e5e2007d53a565248bd09bed3258ab",
+      "size": 2214
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py",
+      "sha256": "5e6a4acfeca3e3baf0e86d1cac2c9124200d4b4085ddca88fccf72932a6ecfff",
+      "size": 46242
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/presentation_left_slot3_kuka_slot2.py",
+      "sha256": "55385facb0b76e2e173feca2795e63bae66082a3bac5437bb7cc0b42fddc0dcc",
+      "size": 7951
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/robot_joint_command.py",
+      "sha256": "27b9420d80261ca369ef2bb1dba42b251724fa681cd0c61442c59ef91c22907d",
+      "size": 14469
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_arbitrary_subset_capture_v2.py",
+      "sha256": "db157509053ca7983ca65c89c9ac0f12db34c9d2b30b8dbc16435456fe02b849",
+      "size": 145202
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_arbitrary_subset_visual.py",
+      "sha256": "df940f527ea08de14739a422aa12c4e42b59c86b5320181395ecb7a9474152f9",
+      "size": 74928
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_arbitrary_subset_visual_v2.py",
+      "sha256": "1383647b665538ba9c2c9f1f4d4bc443904e7a5b01e1b0002050d820853a420f",
+      "size": 84096
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_build_runtime_candidate.py",
+      "sha256": "2f2934368565ab01637023e0a5d203f907efab682a1d2a39ef2d275487e17dda",
+      "size": 23608
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_closed_loop_executive.py",
+      "sha256": "9212c0f97212cc55942fd07d92ea7eb5ceac8dffb74aa691a1ecc0ba2a5b697b",
+      "size": 163377
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_contracts.py",
+      "sha256": "af3552e33e20232112c21966f150c4432efcddd34b0b5580ddba5a2697b60e51",
+      "size": 21767
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_device_position_tool.py",
+      "sha256": "65020686fd5941f809e51e0e88b30df66fe7515398c89d13d34604ba0eacf237",
+      "size": 15036
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_experiment_a_smoke_v2_package.py",
+      "sha256": "091d5f5baf81da3832fc37a040d319127ce3bf1cd3a6a3a24dd55ac6af2df034",
+      "size": 11036
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_experiment_a_v3r1_corrected_package.py",
+      "sha256": "4208c4550ecba2cfad97316736f80b8417c85b5a4e5cb1732c0e3e12ebdb2c6a",
+      "size": 29291
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_experiment_a_v3r1_package.py",
+      "sha256": "9b4f2dd86175017a044fc0f903fbde54034a9f2b1382768624e7ea2194670efa",
+      "size": 35750
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_grouped_visual_splits.py",
+      "sha256": "ff0ef2cd8fdb06a4a8fbbc4b50fd67847e5b95151b3b76010ef0c901558c2815",
+      "size": 58788
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_json_io.py",
+      "sha256": "a9f2bef059ca5dd3885654798e136329220c3ecef35a472bdc789683ce830953",
+      "size": 930
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_kairos_package_checks.py",
+      "sha256": "628a515e930ea4ee88000240f1d157d54a0077c2528e96e6954dfbf22d820c95",
+      "size": 4983
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_kairos_visual_training_package.py",
+      "sha256": "5d8c94b5256ad77812ecd8a174e347afa4cada206f639502f7348900dd8fe651",
+      "size": 41336
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py",
+      "sha256": "4f663ad42f085f9002b03314a28342b95a8798d63710890920f62156c48f413b",
+      "size": 22674
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py",
+      "sha256": "8162971a1051ee8da69e4ae93d6afa1244e8a5d1d2b0bf1c6c2694e4377b9122",
+      "size": 204742
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_multi_shuttle.py",
+      "sha256": "74b6e45576d2e20349874c9128f28abc61dba9d028845efaaf0e2bdbc4f665f4",
+      "size": 63745
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_observed_state_provider.py",
+      "sha256": "4af4c3e410fdafb4b98f4fe740c6d9c6a1ecda0a6b97745a995df61705fd5b4b",
+      "size": 27379
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_payload_case_batch_runner.py",
+      "sha256": "885b6b88a657c23fdeeaa20a99d2936d79ca8883906f50b241f58b6c6cb45f37",
+      "size": 24358
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_payload_case_review.py",
+      "sha256": "d37b0fd13911e4f30628e4ba0b4c5c46c51434e6bf79d0b7de37804ab2846c82",
+      "size": 17293
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_pddl_dataset_report.py",
+      "sha256": "21e50516008ebd6e0c41890836bcd49e762d1dc99cb4c9ec6ff9acd3817d7c56",
+      "size": 30971
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_pddl_language_generator.py",
+      "sha256": "3fb2ddc0d27b15fef7e7db8dce0ebbeb4445e7d0422e6e6d98769884f7416b7b",
+      "size": 23499
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py",
+      "sha256": "97cbc106627be8781862f0e1abe9d378eb79b3233cae17ee0f8fe82ab85c1d80",
+      "size": 33021
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_pddl_scenario_generator.py",
+      "sha256": "ddb925fe535315fd9e0c53e33ad2d0c790621bcd30d3adf0e207eb59c5e27ed1",
+      "size": 438935
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_pddl_validation_gate.py",
+      "sha256": "1711408b70f21f5c772c4e7120c9fe79af72489e6e2684f7657f90a2316b7bff",
+      "size": 29986
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_presence_provider.py",
+      "sha256": "b0d5c416f754806cfb85e8fa5f2397f8299955fdfbd081f0de81be594cc60dac",
+      "size": 12034
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_rail_defaults.py",
+      "sha256": "74b1a924c344ee67715da450ab39417cfa5bdf3a470b50ddee832d9cd11a5809",
+      "size": 13782
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_rail_devices.py",
+      "sha256": "0efc362da3ac3766a7c7760db40f275698de3df25f861f866adea01b6ab05b86",
+      "size": 14241
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_runtime_acceptance_readiness.py",
+      "sha256": "074d0f8ffd53614ea8191dd7c2fc616a53329f8891aa2198956c6dbadf5b4f0e",
+      "size": 27785
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_runtime_acceptance_recorder.py",
+      "sha256": "0ab635c349a4fdc3b1dc3ab2d80edceeda52642790ec414b9aee6d3dbdbd3be1",
+      "size": 17958
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_runtime_acceptance_report.py",
+      "sha256": "fb9ff4470e1bfabe78f9a49660200aeab348b1fdc366743373dc5fc7b89e321a",
+      "size": 7168
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_runtime_contracts.py",
+      "sha256": "b0d697aba44f8127ebb745e0e44d07e0636fb7fef66376d5ac9f3c9bac7dc03a",
+      "size": 15392
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_shuttle_geometry.py",
+      "sha256": "beb66dabb07b07585fad5d48e97d41913cde26c7d12ca3a8afa032f3b578af2d",
+      "size": 6984
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_execution.py",
+      "sha256": "d40eb66fb4cf145f3cec0cb817842c40919d65a2be95cefe81e7bbdb5a12ee1d",
+      "size": 137240
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_execution_config.py",
+      "sha256": "4748832926cb786039f9efbbc899249836764b67621e8cdf7951d7bfd425ddcb",
+      "size": 6046
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_execution_node.py",
+      "sha256": "5ec6b01d0e0b9b26a3c30c92e144c718d9025f94a16be97013bc49a66e6897e0",
+      "size": 22888
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_benchmark.py",
+      "sha256": "de7071451bda010d0b0430dad7f8f9063a108293c441ce600984f5f8b29d641d",
+      "size": 5063
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_builder.py",
+      "sha256": "f18c6be0cada72aaf33d8979b8089dd0a5a95e06a6c053b74228e3bc9a154a17",
+      "size": 36840
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_cli.py",
+      "sha256": "bad7f2fbab2fa9c63a20decffce5b02508f695d5900c9f5b6b0cf1e2c95b4c79",
+      "size": 11283
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_dialogue.py",
+      "sha256": "5d84e6c14379c77ef3e756186eee8bfd06632ed40e5f35280ac56b75f669a12f",
+      "size": 24923
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_fusion.py",
+      "sha256": "15a8b2149f1d6bcab32b27e9b72ce0e6eeb9e57fba4115e357c2ff52687ae769",
+      "size": 29685
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_parsers.py",
+      "sha256": "d531a81456364c29813c3cc16f5eca47c7e6f11edaccd8c06f2098b147b8d3ad",
+      "size": 27556
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_schema.py",
+      "sha256": "efa50f8e67c24d2117ebb72bbedf91b37edbc5ffc842e244c19a6df23597330d",
+      "size": 17159
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_semantic.py",
+      "sha256": "e26ff46aea83e17d5b29c3eeb1cfa225d1630cd27e908a8b90edb773be59b752",
+      "size": 40706
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py",
+      "sha256": "9e6166e8da29e5c8b8f901f84b38a019eaa8824ac0affe318c52349e5ba5c60d",
+      "size": 5168
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_task_goal_validation.py",
+      "sha256": "e228be503d50326c163df521fb58ee5edd78353822f4b05479f55918a88a44a3",
+      "size": 26951
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_dataset_audit.py",
+      "sha256": "565f72be00414954987609098916fb05f265bd95875ffde0c06b49df7c75a331",
+      "size": 40272
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_error_analysis.py",
+      "sha256": "1e4377514e26e8e665ce0b10f3bdca1e9f89c533422908deb73bf6ca734fa587",
+      "size": 83059
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_fleet.py",
+      "sha256": "ec42fe7f4c42040d71611a7349ebe5c07976f2dccb8612fc81a4298a4dcfc156",
+      "size": 11866
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_label_exporter.py",
+      "sha256": "59eebcbddda5968825cda4e2e9179badff7ba689d3e227dd25792a825c5426e4",
+      "size": 28808
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_manual_review.py",
+      "sha256": "4876f2a33b7966f92be8c627d8d01731b77ea4de4023f7108235b0d49d3d601e",
+      "size": 56443
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_model.py",
+      "sha256": "22220b5a0d5a8c4ebd70f8d1e74e012327b21a757e6110b6baa53236806c16c4",
+      "size": 3837
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_observed_state_provider.py",
+      "sha256": "48f9b2e4a603cc253dd60f39982575a73d7f714071d92c1915e267e9bb0c9c7e",
+      "size": 42828
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_runtime.py",
+      "sha256": "5eb65cd22b8fbcbec95a8d1402893aa9fecd093f6d361bae692a900b58092c7b",
+      "size": 25703
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_runtime_cpu_smoke.py",
+      "sha256": "1fb0d7366a358ebd821301d6de60cd791f6f25bf299fb829580233e47fd24cfe",
+      "size": 7246
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_runtime_fusion.py",
+      "sha256": "640cc88939f413f2a6d51439c2cbb6d0a3c5397f3de26b07ea647d3d3acd5a85",
+      "size": 10918
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py",
+      "sha256": "31a948026159b883994b1da97c146e4a6012edc00e097c4b1b2552b4fabee52b",
+      "size": 16714
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_scenario_generator.py",
+      "sha256": "eb8e2566fd09f0a9626ca69b46fa1c63854de87c15d20a4b31d15d21057a6b09",
+      "size": 82131
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_scenario_runner.py",
+      "sha256": "ae2460c6e8abfaed7055a3d61359594d00ea7659f06c73391a6bd688f7deec9a",
+      "size": 16355
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_smoke_report.py",
+      "sha256": "0a501d0060274bfc058e763e546e53d99f95dade499b1dcffc4fcb9522060837",
+      "size": 8381
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_state_capture.py",
+      "sha256": "e316f40ef02a576416c2562b798fd121bd934b9847cc2eef693716fa344259b6",
+      "size": 29082
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_state_dataset.py",
+      "sha256": "e7198b9527641ebffdcfa3398dbf7d5fc80033e84103e5e726bf98a17c77ed5c",
+      "size": 65191
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py",
+      "sha256": "ccd2e30e30754fff5300a7b3e7f9199263afdadfee46317324e35151f04966a4",
+      "size": 34815
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_state_smoke.py",
+      "sha256": "7439adcd91003bf48d88475b545494fac586ce71b99fc4c994f20569a20dfbc0",
+      "size": 11469
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_audit.py",
+      "sha256": "b291ad26edadfab54e7ae315108c77ed53b0886a9e5f0ec31c5e1e9eb75c03b4",
+      "size": 30834
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_capture.py",
+      "sha256": "745198db0d218576edefa63342cf9c1bf73f198237a9261d75d4b105caae1d40",
+      "size": 14253
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_common.py",
+      "sha256": "9b423f81495dfda73a32a9202f06f1f039aa9658ee02bb01a36462c1b0b29972",
+      "size": 13044
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_generator.py",
+      "sha256": "db9de54f73ad45e6798f8f71174731c2d3223180ae76ff6ec7906dd51b46671c",
+      "size": 44243
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_pipeline.py",
+      "sha256": "a1084ab1518fdeaba0193b5665e81e968916b67365e3e59877ec3f6682c22a5d",
+      "size": 6474
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_quota_planner.py",
+      "sha256": "d29af45dbcbadbbe478cfe81e8c410ed41f7e5118aa66dceb466be743f7296a7",
+      "size": 23882
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3_splitter.py",
+      "sha256": "775fd7919beeaa0e77b9a770af0fe088f294bfe84a66dd123b7eaa9f00705dbe",
+      "size": 14672
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_audit.py",
+      "sha256": "4e0c096e5d75589acf84704bf4b3321910dcb269edfdc3e42e0471b606ee831f",
+      "size": 14548
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_capture.py",
+      "sha256": "bab048741e62eff6c3d615123cf61a1f904406993abd717ecea032bf47e6dea5",
+      "size": 4752
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_common.py",
+      "sha256": "c9781c78960dcb1df2a9bdeef5b57f8f5f6c6845e00124b1c100a968bd0d2daa",
+      "size": 4395
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_generator.py",
+      "sha256": "d6fc7dd447ad500e67648ecd6030bcdd1efbb24a0743227b31afb9b78b6acfd1",
+      "size": 25256
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_pipeline.py",
+      "sha256": "3b34e9ce499da0277ae08288d0ef4abe9d007e20fb92f4933a7407fcaf440a25",
+      "size": 7758
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_quota_planner.py",
+      "sha256": "a6c671f1537834b50e63f74a6e2b717a54cb6efe71b2e204c74f81798c4aaa21",
+      "size": 20289
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_reuse.py",
+      "sha256": "b41c2fd3a00dae5c4d03b572253c6d1441a4f191cb42c8cc7527530922141c40",
+      "size": 17882
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_visual_v3r1_splitter.py",
+      "sha256": "c67a6795e1b6497b6b8036e1f5c5b3b3680c506572bc1d88f6a0190771bb6468",
+      "size": 1906
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_benchmark_suite.py",
+      "sha256": "a70145333a976e205a6261df8acbcb3e5b37dd86296d2cfe9c29b5317bded928",
+      "size": 33033
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py",
+      "sha256": "9bee2f4c9a9e6cc5509aada67c6c627937f708ed608365c89c2ff24c5ebf6328",
+      "size": 85049
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_event_extractor.py",
+      "sha256": "2819b511566e14cacfa9f474f6612016d0276795882ebb64ac7f6c5486fae97b",
+      "size": 12087
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_obstacle_tool.py",
+      "sha256": "3410c89125398f23a0e485aa77804943fd62a5e56b006f59927dceb7cdcaae9a",
+      "size": 5797
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_shuttle_identity_tracker.py",
+      "sha256": "1695244a8017252768ff7f9be6bf1fe45dbd39d027639df6de8091e8c21318af",
+      "size": 7680
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_split_dataset.py",
+      "sha256": "80ce54e61e088e851b06ca6f514642765de46a5eb37bb4b4259e6c892ff9eade",
+      "size": 21014
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_supervisor.py",
+      "sha256": "10ba5053389db4c724ace052a2a5c201e0222a26cda37fc4ad953d284bc6b534",
+      "size": 132338
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_to_lerobot.py",
+      "sha256": "f284b54b7f2b488d2972c44286fcd372eb023d18d1bcc69f5f248ecb7df4dd31",
+      "size": 18057
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/room_315_vla_train_local.py",
+      "sha256": "c3c192ad2d75311ab9a8fe967c1d8127c2fb9a30be9dafa57d4387c590610fb5",
+      "size": 81611
+    },
+    {
+      "path": "mfja_robot_control_config/scripts/setup_room315_intent_model.py",
+      "sha256": "794230c975979ce50d5417432c2df84438b0bebd4a5d3754184585fb0b24bb5a",
+      "size": 7210
+    },
+    {
+      "path": "mfja_robot_control_config/test/fixtures/room315_segment_csv_pre_normalization.json",
+      "sha256": "66fb296b4307cc250032cc82bd63834826ef2184f26efadf4ad371889e067dc5",
+      "size": 12914
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_presentation_left_slot3_kuka_slot2.py",
+      "sha256": "ace6749076610347904412d6608f9a65826181c240f232fd8fb06423a6bb1c5b",
+      "size": 2748
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_robot_joint_command.py",
+      "sha256": "0c4094a4894b21f147cef16905655714a63f34ea13944d667bdc9b8fefc1843d",
+      "size": 3354
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_arbitrary_subset_capture_v2.py",
+      "sha256": "da097adb3bce829049722b848119f2f9c5021ab36070164bb250fa8094fb6a2a",
+      "size": 17992
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_arbitrary_subset_visual.py",
+      "sha256": "cf51b5f52d698f6058a4d292661d06544f82a93f08de5da65d3932b04399209c",
+      "size": 8777
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_arbitrary_subset_visual_v2.py",
+      "sha256": "83d2886c721f6f8f3435cff4992c503f113de0099f8ed803024270a40573a80d",
+      "size": 11172
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_block_reservation_runtime.py",
+      "sha256": "818776274256bd0a01c64c207db76873129acfde7257be8bc621b08955ab379b",
+      "size": 4038
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_camera_bbox_semantics.py",
+      "sha256": "eed457aed57db08b3b7f630a1c3dedef53142c8a699ff77b5ce210f931b64a58",
+      "size": 8195
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_closed_loop_executive.py",
+      "sha256": "7c257b837e8da1314a8e8f0200fd620a412db776be221fd14e96870c436b7f26",
+      "size": 81981
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_closed_loop_executive_ros_integration.py",
+      "sha256": "44c44d58216675f4aca4a2db7bf9086872637eb5bd82e484d0b5c26bc5ba7d77",
+      "size": 5152
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_contracts.py",
+      "sha256": "cff7281596150a5d50447d2f675c0f365834d7e80abfd2df58c1d0949e7a0e3f",
+      "size": 10008
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_device_marker_lifecycle.py",
+      "sha256": "bb036cb972a4e0e52a07dbb76689a9a97961e6beb8e876cf921956e16275ccfb",
+      "size": 27242
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_eight_shuttle_visual_pipeline.py",
+      "sha256": "d6c962e61b95ea67c702315c140b7269e8017611b810728d3bd7e87d246f2da7",
+      "size": 8839
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_experiment_a_v3r1.py",
+      "sha256": "57a87b9f6d38b925e5db71895cac08ab4c7741ae243c6d38352c14ef7e49cca1",
+      "size": 26379
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_fleet_supervisor_safety.py",
+      "sha256": "3591f1f75cc79728bb8535ee9373d58b5ea2ac8ebee7af580ab8bfc8a20d1374",
+      "size": 4499
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_floor_runtime_singleton.py",
+      "sha256": "ed138320eccd32df8071ddcda340b3f39eb2b248853c1c24efd7b51ab83d4d38",
+      "size": 1970
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_full_package_static.py",
+      "sha256": "cdec39a5b501832977ac6099b269c4121acb578261365fcb5c5eb4d2c381d3b9",
+      "size": 3626
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_grouped_visual_splits.py",
+      "sha256": "332ff562a87565addcf3eca18d8482dd77ded02388f66c520b10e6cc326ccfcb",
+      "size": 4749
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_headway_safety.py",
+      "sha256": "0bdbf20a3428f2fe1833f93e974baad7b07b5de6ac49b3235387ff544386f75a",
+      "size": 1883
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_identity_keepout_zones.py",
+      "sha256": "542e79ffeb3c17077f4c57d91146c17c15fc4cec7e0d8f7831922bca661f2bcc",
+      "size": 1610
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_kairos_visual_training_package.py",
+      "sha256": "93edd2edd00e78ae1ebced607cca929ff136276e25a8cd0b774a7b1653d9d054",
+      "size": 4814
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_kinematic_shuttle_core.py",
+      "sha256": "3bff29d79797897c3d9f8d5af411cc49b0f53376203480d295d5b86f2641392b",
+      "size": 2053
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_multi_shuttle_dataset_recorder.py",
+      "sha256": "66a574bd4ab1710b07c49a71d6c8c9b93c9fe182dee9acc060bf8563a46b5fa8",
+      "size": 5113
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_multi_shuttle_dataset_report.py",
+      "sha256": "cd969faf0222283a402fc4c65beac21428ad0d55039a84150c2603869fdcaff7",
+      "size": 4857
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_multi_shuttle_launch_args.py",
+      "sha256": "4761f40ace557468313b840f6493433dffc97b7ce79f5f725ce963f577f43e41",
+      "size": 8124
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_multi_shuttle_pddl_planning.py",
+      "sha256": "0a05da43ca3f6e4a8d8b8b1fa93ca9220d12972d3d6a997d21adb6985165ff14",
+      "size": 2760
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_multi_shuttle_registry.py",
+      "sha256": "741b4d6516e5d11d327876b5c14b481625e514b03d0364701e5c4b4ed780a4c6",
+      "size": 3798
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_observed_state_provider.py",
+      "sha256": "9bb57a1d2ae2635104e9ed7104020456eb7ae52e0c8af1f3e7a1881e29cfd467",
+      "size": 8999
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_payload_models.py",
+      "sha256": "9c53ab0453c7e2d7cede05a3d7b6e99d03e7627532fb280ea79bdbb2ea11f34d",
+      "size": 2850
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_payload_occlusion_metadata.py",
+      "sha256": "ac0af4dd4fe60822dbfc2435c8172006dbe5322f316e2e4c1a22b3ad6a8bc7e3",
+      "size": 2088
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_dataset_report.py",
+      "sha256": "b3b1ce1a4cf9a47d108b7c492cfa75c88a71628a53d03b334515c29e6d3ab915",
+      "size": 8461
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_language_generator.py",
+      "sha256": "f7e0c193642473e8607438cd2e7b79ed83cb9b36f274dd388f2896510a82d044",
+      "size": 7782
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_plan_translator.py",
+      "sha256": "1ce694abd7922032ba03d8495e12f84238b48891cd6846042aef642c669b5c94",
+      "size": 17744
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_planner_backend.py",
+      "sha256": "c64e970ab892657341852d190da015f43a0b76acf99ace9c93df43bb5530e53b",
+      "size": 46240
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_planning.py",
+      "sha256": "0077e0896fcc3b6811464d8a15913c50aa3c97f595aa6fbb0e3e095bebc12802",
+      "size": 10695
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_runtime_input_hardening.py",
+      "sha256": "09c7de1bc01cd5cc69241c10bcb6f3653066d0a9678a1a3b396e9782c621b02c",
+      "size": 13973
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_scenario_generator.py",
+      "sha256": "695f62e42704ffd9987357a0e234cd0ceb0852b8c8f0ca86a4ae493a3ce44b6a",
+      "size": 91206
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_pddl_scenario_validation_gate.py",
+      "sha256": "8cba56e9befcb108382f422b851700f03e9e3366643b9e49870b20b1ce3fbc05",
+      "size": 13667
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_rail_devices.py",
+      "sha256": "2ddfb87079f4a6fe9f81645b96cf22f679774a7466d3f073eb827106697e25f5",
+      "size": 1097
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_rail_segment_names.py",
+      "sha256": "0c74597a0e1d9c48a55cd97390dafb81d332b6af6d0782658372b52eee96dd12",
+      "size": 3914
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_route_topology.py",
+      "sha256": "72a491cd7c9117a2ab0d9a235247695d5691ff55bfb0b35f19f74b851cba2862",
+      "size": 15813
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_runtime_acceptance.py",
+      "sha256": "a1abdd11c06931f10179ac44a0f896233d4d2a5fbefa921482df80089d775fb3",
+      "size": 6093
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_runtime_candidate.py",
+      "sha256": "0a089e6ca930d8097a257d583cb577d53895a364be93ec321250c1e0b0f8b45b",
+      "size": 7084
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_runtime_contracts.py",
+      "sha256": "f2bc6b7bfd97ba23d2519636f8695a18cf9c7d98ae69dd490a2e2b70a383f21e",
+      "size": 7919
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_segment_csv_normalization.py",
+      "sha256": "102e536be3c3fc6ab33095e2a5516c2e4c97c3782843086f11ffd4628977b053",
+      "size": 8553
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_shuttle_identity_config.py",
+      "sha256": "b11f12f7ada836494e402e1a4d8ba0cc08ddd83b26dc4dc5d1ed0e2fa7c26ece",
+      "size": 1995
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_shuttle_identity_tracker.py",
+      "sha256": "20c9b85ff1922fec378a124cec09cb931398e018b549b6f6f3782422ddcf2ebb",
+      "size": 2996
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_shuttle_identity_visual_assets.py",
+      "sha256": "74cbd151269e8e9f8e3446532c0706d58442bbbde6912d631f2eca9ca4719c6e",
+      "size": 3570
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_shuttle_payload_visuals.py",
+      "sha256": "f582643111fb0e537530d9b9824d858d45ff8fae5cdfe9f067f8e2679127bc1b",
+      "size": 8199
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_switch_feedback_authority.py",
+      "sha256": "8a75e0d2fe9ec113d55d07c98eff39243324799c102e1121a9f175df0dce88ec",
+      "size": 3691
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_task_execution.py",
+      "sha256": "52550be0ed9329b123408402074d2fd0cae4a04c9fb15528a432dd6b7547bd9e",
+      "size": 316030
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_task_execution_config.py",
+      "sha256": "c9360e29352159f7000946f8d7134c2220deb34b7cdbb2441f6c145cd087ce87",
+      "size": 2996
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_task_execution_singleton.py",
+      "sha256": "8353982b10223c13ff12f49ef35256bf5b7ff7e9f49d03f806d119482c9549bf",
+      "size": 1076
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_task_goal_builder.py",
+      "sha256": "1c44e0f14d87c5a8c6fa60d02d26953088d15a817baf57e144661167da4012f5",
+      "size": 13873
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_task_goal_semantic_gateway.py",
+      "sha256": "d1fd619190d641d21efff0c960f9b055bd6b8e2c5ad8fbd2dd51b9b65b19d436",
+      "size": 26354
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_task_goal_validation.py",
+      "sha256": "1b746c3f865e7cc9f9e44fdf7a2b6be4b6d2be33a7d1597dff608f337797b30a",
+      "size": 8088
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_dataset_audit.py",
+      "sha256": "77eb60f0ab297645ff1887087de2d844bc10310d891a44bd93b0a567c4f942d6",
+      "size": 8466
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_debug_colors.py",
+      "sha256": "91db92d9a5213bbfeab415cb4ea84e67432b3c3b6694c957f946ff9822af5ec2",
+      "size": 9331
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_error_analysis.py",
+      "sha256": "0775150641be5934afde52aec7afddc1ebf955785d42525ab9e10d7e9e292460",
+      "size": 9467
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_label_exporter.py",
+      "sha256": "a29bdc4b1b5196ba33f5872dfc0aad23616459f3de50fa9cad0445248717de91",
+      "size": 5829
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_manual_review.py",
+      "sha256": "9d71088f8b5552cb6a68cf05f55a979b19d500008ea7730baf5de0a5888b4b59",
+      "size": 17227
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_observed_state_provider.py",
+      "sha256": "3901521189d7fcb065db553a308f727dd23c081be417b5e99012ddb24ec40247",
+      "size": 11749
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_runtime.py",
+      "sha256": "62b06c13ce23d15e6328340ee45bbf0e837ce933995f678552272a253912012d",
+      "size": 26610
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_runtime_ros_integration.py",
+      "sha256": "ecc63a524aef9fe719818b03445c94b81f2f09842a8e5d294ba791784ac4c8cc",
+      "size": 4698
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_scenario_generator.py",
+      "sha256": "2ab8bbc8e1c361d219ae7ebcc71b26b558b0e7b68be2521695fbd54b8ec25b3a",
+      "size": 9277
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_scenario_runner.py",
+      "sha256": "29b6abf0a5d1194e2aa56f0a9b6e876e88e384cf0fca444daaf3a8129cb7d87a",
+      "size": 3750
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_state_capture.py",
+      "sha256": "f281dfeaf8ea62ac9d263a7e097d5293e7124ec0ab68f0d7561002016e7b05d8",
+      "size": 5924
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_v3_dataset.py",
+      "sha256": "96b626da2e4956c6f75d666513ce5874ea3d6f9131a2a0bd91ff94b82beec78c",
+      "size": 10655
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_visual_v3r1_dataset.py",
+      "sha256": "05bf5985e2bfce782e72b03d1df07ac1d10a67cd8bd9939dabd4649a1eccf9bf",
+      "size": 15361
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_vla_benchmark_suite.py",
+      "sha256": "87cef4e1ddab27cc95e8167ddb5328f20322ef63a34ed4d9c8a105efaf0fbc28",
+      "size": 8550
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_vla_dataset_recorder.py",
+      "sha256": "d87d2cd10c0042f52386af2f0c73eb2a77b2f030ad0a8eed8b88ff875a659d00",
+      "size": 31043
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_vla_event_extractor.py",
+      "sha256": "1c0d34826f5a8a607f63f05bceb8ae2c78f80dc7c90d09316f928ef1c1e90585",
+      "size": 12690
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_vla_model_input_boundary.py",
+      "sha256": "1d0e6925c2346b10bcf4a711afb1e5f6154b0d6d9add75ece67881e90a2a76de",
+      "size": 3704
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_vla_supervisor.py",
+      "sha256": "ace05c0f86623f6418257f53acb19d0d2ea572c24274e3fcfad78a7914238301",
+      "size": 56881
+    },
+    {
+      "path": "mfja_robot_control_config/test/test_room315_vla_training_tools.py",
+      "sha256": "66d2f27fb6a49144098e6022a5c3d3147963235e05e1935c95b7a242287cfb59",
+      "size": 25471
+    },
+    {
+      "path": "mfja_rail_interfaces/CMakeLists.txt",
+      "sha256": "4b6d3bed01db5497d4e835acd9aaf7b165aca8fa999398bf4240699b277bebd3",
+      "size": 700
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/NamedState.msg",
+      "sha256": "d25848658b25a4e571de62be2fb67b66d6423c44fe4bfa6f8e4f0ad0a7bc1d34",
+      "size": 25
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/SensorFeedback.msg",
+      "sha256": "6e325b30277aa2669d256f44517530ce7fd5860f4d70c37a61ae722dd539cb01",
+      "size": 48
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/SensorReading.msg",
+      "sha256": "f9f23d80f9bac757584381cfd8ea2f70daaa5c87d25921b8fac575f7f93d581b",
+      "size": 205
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/ShuttleCommand.msg",
+      "sha256": "5e8dc30d07a0d47268d0c07b37d64697c91173a9d0f65e6de8dab5bd33d69dee",
+      "size": 469
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/ShuttleState.msg",
+      "sha256": "b71d55fae04f3a765a260062d139526b365591071d573ce746547f74b78065cd",
+      "size": 443
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/StopperCommand.msg",
+      "sha256": "1ba84c3ee9171bde2527a7006ea4ee370bce47956768c841057ca8a0ec65f186",
+      "size": 45
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/StopperState.msg",
+      "sha256": "1ba84c3ee9171bde2527a7006ea4ee370bce47956768c841057ca8a0ec65f186",
+      "size": 45
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/SwitchCommand.msg",
+      "sha256": "20a617bf7c351e929e10720d85e01a5ded4e1eab71c52a538f58efe886ef9dfb",
+      "size": 45
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/SwitchState.msg",
+      "sha256": "20a617bf7c351e929e10720d85e01a5ded4e1eab71c52a538f58efe886ef9dfb",
+      "size": 45
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/VisualShuttleState.msg",
+      "sha256": "215ae571c8aba172d3c723109b502b43d053cfb95936f163acb95e6f6ada1ecf",
+      "size": 181
+    },
+    {
+      "path": "mfja_rail_interfaces/msg/VisualStateObservation.msg",
+      "sha256": "b1e8325569da5b3d9649f7ebd799a64f140696bac61df4eb151f789a0ff7662e",
+      "size": 565
+    },
+    {
+      "path": "mfja_rail_interfaces/package.xml",
+      "sha256": "5f41aec16cdf920f671dd9bb097f1468d661e442498bec9187632a46904342e8",
+      "size": 1140
+    },
+    {
+      "path": "mfja_rail_interfaces/srv/AddShuttle.srv",
+      "sha256": "a2fbdb66a04f0eaa615db9a85a82eb7efd2f1f479ad947fb529eb390af0e8636",
+      "size": 107
+    }
+  ]
+}

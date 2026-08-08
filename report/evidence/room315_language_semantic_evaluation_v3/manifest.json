@@ -1,0 +1,116 @@
+{
+  "evaluation_id": "room315_language_semantic_evaluation_v3",
+  "files": [
+    {
+      "path": "cases/01_clear_nearest_loaded_right_slot3.json",
+      "sha256": "e95bc62b2771d52f7659ca601db1ebebe28466e289a8c73fbdb3ef2c4fe7e92a",
+      "size_bytes": 9063
+    },
+    {
+      "path": "cases/02_explicit_shuttle_station.json",
+      "sha256": "4d99048c3e2b4f09f6f6f672ae4bcdcf82e1963db00141d349564a7768354a86",
+      "size_bytes": 8598
+    },
+    {
+      "path": "cases/03_polite_indirect_loaded.json",
+      "sha256": "6f97cfa381e6017cd2bb6498d4b0ad7ab495ddb80eb6144251edc4ce1684a77f",
+      "size_bytes": 8427
+    },
+    {
+      "path": "cases/04_inspect_left_shuttle.json",
+      "sha256": "eac76ccaca4fc0686d546cd4a637444755dec1007bb664f123706f7d3795652a",
+      "size_bytes": 7946
+    },
+    {
+      "path": "cases/05_ambiguous_yaskawa.json",
+      "sha256": "b24c37a6613ab0cbe32b1e5e5d5288f4dbb452078998d37974bcb93f38a32539",
+      "size_bytes": 7584
+    },
+    {
+      "path": "cases/06_missing_side.json",
+      "sha256": "a54ff0d5614e9ae316eeeb34dd0081ef84ffa1ec56e49cc89a0440333e17ddbb",
+      "size_bytes": 7050
+    },
+    {
+      "path": "cases/07_invalid_slot.json",
+      "sha256": "0c22c0ae7e164736f4000769194223fe6ae104c3527a576eed3de9e17a471ee5",
+      "size_bytes": 4239
+    },
+    {
+      "path": "cases/08_conflicting_sides.json",
+      "sha256": "ad56bb406ca66e12fe38e0618026a24ab2ddd8d600000a7f49d4c83c68eb73ec",
+      "size_bytes": 5333
+    },
+    {
+      "path": "cases/09_shuttle_side_conflict.json",
+      "sha256": "f6710acd57159622a85fedd47ed2d3a5feaea734099b0747fd57a05600ba1355",
+      "size_bytes": 7621
+    },
+    {
+      "path": "cases/10_cancellation.json",
+      "sha256": "f90f3a059949e3470372d3275adc11e4c0ad73680d21a41a5f1dda7eb378cb55",
+      "size_bytes": 1581
+    },
+    {
+      "path": "corpus.yaml",
+      "sha256": "1a945519f6b5b58e9c44ca8c7de823832f4898fb442276572048cf3d5903a9cc",
+      "size_bytes": 2207
+    },
+    {
+      "path": "current_source_identity.txt",
+      "sha256": "639bcd1c53e0a4bdccdc8111220ed561256fb121685973eacd472a2ce61156d6",
+      "size_bytes": 891
+    },
+    {
+      "path": "protocol.yaml",
+      "sha256": "1c2765f4537797b8a7df81dfbf909c4716fd4500a7c9131f1352ee8bba2032d0",
+      "size_bytes": 2869
+    },
+    {
+      "path": "runner.py",
+      "sha256": "db9c50555fe6ec4cbfa4007b510e88a7fdcc8b65f1585835685df7e7386ab767",
+      "size_bytes": 16199
+    },
+    {
+      "path": "semantic_config.yaml",
+      "sha256": "6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea",
+      "size_bytes": 617
+    },
+    {
+      "path": "source_snapshot/room_315_task_goal_dialogue.py",
+      "sha256": "5d84e6c14379c77ef3e756186eee8bfd06632ed40e5f35280ac56b75f669a12f",
+      "size_bytes": 24923
+    },
+    {
+      "path": "source_snapshot/room_315_task_goal_fusion.py",
+      "sha256": "15a8b2149f1d6bcab32b27e9b72ce0e6eeb9e57fba4115e357c2ff52687ae769",
+      "size_bytes": 29685
+    },
+    {
+      "path": "source_snapshot/room_315_task_goal_parsers.py",
+      "sha256": "d531a81456364c29813c3cc16f5eca47c7e6f11edaccd8c06f2098b147b8d3ad",
+      "size_bytes": 27556
+    },
+    {
+      "path": "source_snapshot/room_315_task_goal_schema.py",
+      "sha256": "efa50f8e67c24d2117ebb72bbedf91b37edbc5ffc842e244c19a6df23597330d",
+      "size_bytes": 17159
+    },
+    {
+      "path": "source_snapshot/room_315_task_goal_semantic.py",
+      "sha256": "e26ff46aea83e17d5b29c3eeb1cfa225d1630cd27e908a8b90edb773be59b752",
+      "size_bytes": 40706
+    },
+    {
+      "path": "source_snapshot/room_315_task_goal_validation.py",
+      "sha256": "e228be503d50326c163df521fb58ee5edd78353822f4b05479f55918a88a44a3",
+      "size_bytes": 26951
+    },
+    {
+      "path": "summary.json",
+      "sha256": "38d015617856e3127da5a7082701caf5ab40523c6271cc7830d521800c8ecffd",
+      "size_bytes": 6776
+    }
+  ],
+  "schema_version": 1
+}

@@ -152,6 +152,46 @@ def test_fresh_present_and_explicitly_absent_shuttles():
     assert snapshot.by_identity()['L2'].state == PRESENCE_ABSENT
 
 
+def test_blank_empty_rail_heartbeat_initializes_zero_shuttle_side():
+    provider = _provider()
+    _observe(provider, 'left', '', 1.0)
+    _observe(provider, 'right', 'room315_right_shuttle_3', 1.0)
+
+    snapshot = provider.snapshot(now_s=1.2)
+
+    assert snapshot.ready
+    assert snapshot.reasons == ()
+    assert snapshot.initialized_sides == ('left', 'right')
+    assert snapshot.by_identity()['R3'].state == PRESENCE_PRESENT
+    assert all(
+        snapshot.by_identity()[identity].state == PRESENCE_ABSENT
+        for identity in ('L1', 'L2', 'L3', 'L4')
+    )
+
+
+def test_blank_heartbeats_can_represent_two_fresh_empty_rails():
+    provider = _provider()
+    _observe(provider, 'left', '', 1.0)
+    _observe(provider, 'right', '', 1.0)
+
+    snapshot = provider.snapshot(now_s=1.2)
+
+    assert snapshot.ready
+    assert snapshot.reasons == ()
+    assert all(entry.state == PRESENCE_ABSENT for entry in snapshot.entries)
+
+
+def test_blank_heartbeat_does_not_make_a_missing_other_side_ready():
+    provider = _provider()
+    _observe(provider, 'left', '', 1.0)
+
+    snapshot = provider.snapshot(now_s=1.2)
+
+    assert not snapshot.ready
+    assert 'presence_topic_not_initialized:right' in snapshot.reasons
+    assert all(entry.state == PRESENCE_UNKNOWN for entry in snapshot.entries)
+
+
 def test_topic_not_initialized_is_unknown_and_not_ready():
     provider = _provider()
     _observe(provider, 'left', 'room315_left_shuttle_1', 1.0)

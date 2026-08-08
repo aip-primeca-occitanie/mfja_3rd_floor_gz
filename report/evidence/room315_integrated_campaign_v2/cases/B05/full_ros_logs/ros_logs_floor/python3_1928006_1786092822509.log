@@ -1,0 +1,4 @@
+[INFO] [1786092823.024088065] [room_315_vla_supervisor]: Room 315 VLA supervisor ready. Command topic: /room_315/vla/command
+[INFO] [1786092855.279193468] [room_315_vla_supervisor]: shuttle command sent on left
+[INFO] [1786092858.111435923] [room_315_vla_supervisor]: shuttle command sent on left
+[INFO] [1786092866.215721104] [room_315_vla_supervisor]: stop all command: all shuttles OFF

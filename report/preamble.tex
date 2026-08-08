@@ -1,0 +1,162 @@
+\usepackage[a4paper,top=2.15cm,bottom=2.15cm,left=2.30cm,right=2.20cm,headheight=15pt]{geometry}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{tgpagella}
+  \usepackage{tgheros}
+  \usepackage{tgcursor}
+\else
+  \usepackage{fontspec}
+  \setmainfont{TeX Gyre Pagella}
+  \setsansfont{TeX Gyre Heros}
+  \setmonofont[Scale=0.88]{Linux Libertine Mono O}
+\fi
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.00}
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.30em}
+
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{threeparttable}
+\providecommand{\percent}{\%}
+\newcommand{\SI}[2]{#1\,#2}
+\usepackage[table]{xcolor}
+\definecolor{mfjablue}{HTML}{143D73}
+\definecolor{mfjagreen}{HTML}{167D6A}
+\definecolor{mfjaorange}{HTML}{D97706}
+\definecolor{mfjared}{HTML}{B42318}
+\definecolor{mfjalight}{HTML}{EEF4FA}
+\definecolor{codebg}{HTML}{F5F7FA}
+\definecolor{codecomment}{HTML}{5F6B7A}
+
+% A light but explicit separator between consecutive data rows.  The stronger
+% booktabs rules remain reserved for table headers and boundaries.
+\newcommand{\tablerowrule}{\specialrule{0.30pt}{0pt}{0pt}}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds,matrix}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{listings}
+\lstdefinestyle{reportcode}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{black!18},
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  showstringspaces=false,
+  commentstyle=\color{codecomment}\itshape,
+  keywordstyle=\color{mfjablue}\bfseries,
+  stringstyle=\color{mfjagreen},
+  numbers=left,
+  numberstyle=\tiny\color{black!50},
+  numbersep=7pt,
+  xleftmargin=1.4em,
+  framexleftmargin=1.1em
+}
+\lstset{style=reportcode}
+
+\usepackage{enumitem}
+\setlist{nosep}
+\setlist[itemize,enumerate]{leftmargin=*}
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{font=small,labelfont={bf,color=mfjablue},justification=justified,singlelinecheck=false}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{rotating}
+\usepackage{pdflscape}
+\usepackage{afterpage}
+
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage[nohyperlinks]{acronym}
+\usepackage[square,numbers,sort&compress]{natbib}
+\usepackage{xurl}
+\usepackage[hidelinks,pdfencoding=auto]{hyperref}
+\hypersetup{
+  pdftitle={From a Multi-Robot Digital Twin to Safety-Gated Neuro-Symbolic Language-to-Motion Control},
+  pdfauthor={Ali IBRAHIM},
+  pdfsubject={M2 Industrial Robotics internship report},
+  pdfkeywords={ROS 2, Gazebo, digital twin, multi-robot, PlanSys2, PDDL,
+    computer vision, vision-language-action research, neuro-symbolic control}
+}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{bookmark}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{black!65}{\nouppercase{\leftmark}}}
+\fancyhead[R]{\small\textcolor{black!65}{Final internship report}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+\usepackage[explicit]{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\sffamily}
+  {\color{mfjablue}\Large\bfseries Chapter \thechapter}
+  {0.6ex}
+  {\color{mfjablue}\huge\bfseries #1}
+  [\vspace{0.5ex}\color{mfjablue}\titlerule]
+\titlespacing*{\chapter}{0pt}{-10pt}{24pt}
+\titleformat{\section}{\Large\sffamily\bfseries\color{mfjablue}}{\thesection}{0.7em}{#1}
+\titleformat{\subsection}{\large\sffamily\bfseries\color{mfjagreen}}{\thesubsection}{0.7em}{#1}
+\titleformat{\subsubsection}{\normalsize\sffamily\bfseries}{\thesubsubsection}{0.7em}{#1}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{1}
+
+\usepackage[most]{tcolorbox}
+\newtcolorbox{keybox}[1][]{
+  colback=mfjalight,
+  colframe=mfjablue,
+  boxrule=0.6pt,
+  arc=1.5mm,
+  title=#1,
+  fonttitle=\bfseries\sffamily
+}
+\newtcolorbox{warningbox}[1][]{
+  colback=mfjaorange!7,
+  colframe=mfjaorange,
+  boxrule=0.6pt,
+  arc=1.5mm,
+  title=#1,
+  fonttitle=\bfseries\sffamily
+}
+\newtcolorbox{resultbox}[1][]{
+  colback=mfjagreen!6,
+  colframe=mfjagreen,
+  boxrule=0.6pt,
+  arc=1.5mm,
+  title=#1,
+  fonttitle=\bfseries\sffamily
+}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\term}[1]{\emph{#1}}
+\newcommand{\sourcefile}[1]{\path{#1}}
+\newcommand{\pass}{\textcolor{mfjagreen}{\textbf{PASS}}}
+\newcommand{\fail}{\textcolor{mfjared}{\textbf{FAIL}}}
+\newcommand{\pending}{\textcolor{mfjaorange}{\textbf{PENDING}}}
+\newcommand{\metric}[2]{\textbf{#1}: #2}
+
+\widowpenalty=10000
+\clubpenalty=10000
+\displaywidowpenalty=10000
+\raggedbottom

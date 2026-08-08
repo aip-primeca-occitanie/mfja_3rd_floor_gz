@@ -42,7 +42,8 @@ from room_315_pddl_scenario_generator import ScenarioTransport
 from room_315_pddl_scenario_generator import SLOT_SENSOR_BY_SIDE_AND_SLOT
 from room_315_pddl_scenario_generator import SLOT_STATION_BY_SIDE_AND_SLOT
 from room_315_multi_shuttle import load_rail_topology
-from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import internal_rail_segment_name_to_public
+from room_315_rail_defaults import public_rail_segment_name_to_internal
 from room_315_rail_defaults import rail_segment_lengths
 from room_315_runtime_contracts import CONTROLLER_DISABLED_MODE
 from room_315_runtime_contracts import MIN_PAYLOAD_CONFIRMATION_FRAMES
@@ -131,7 +132,7 @@ class VisualSlotMatcher:
         if side == 'left':
             slots = {
                 slot: (
-                    LEFT_PUBLIC_SEGMENT_NAME_MAP.get(location.segment, location.segment),
+                    internal_rail_segment_name_to_public(side, location.segment),
                     float(location.s_ratio),
                 )
                 for slot, location in self._topologies[side].slots.items()
@@ -271,12 +272,10 @@ class VisualSlotMatcher:
             return {
                 slot: float(location.s_ratio)
                 for slot, location in self._topologies[side].slots.items()
-                if str(
-                    LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
-                        location.segment,
-                        location.segment,
-                    )
-                ).upper() == segment
+                if internal_rail_segment_name_to_public(
+                    side,
+                    location.segment,
+                ) == segment
             }
         return {
             slot: float(location.s_ratio)
@@ -3269,8 +3268,7 @@ def _visual_route_distance_m(
         if position is not None and isinstance(position.value, dict):
             raw = position.value
             segment = str(raw.get('segment') or '').strip().upper()
-            if spec.side == 'left':
-                segment = LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment)
+            segment = public_rail_segment_name_to_internal(spec.side, segment)
             source_ratio = raw.get('s_ratio')
         else:
             # Static scenario states and deterministic slot-sensor anchors may

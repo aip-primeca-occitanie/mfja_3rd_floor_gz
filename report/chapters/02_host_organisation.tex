@@ -1,0 +1,144 @@
+\chapter{Host Organisation and MFJA Robotics Platforms}
+\label{chap:host}
+
+\section{Université de Toulouse}
+
+The internship was formally hosted by Université de Toulouse and carried out at
+the MFJA site, 1 rue Tarfaya, Toulouse. As a public university, the institution
+combines higher education, research and knowledge transfer. Its official
+Nomenclature d'activités française/Activité principale exercée (NAF/APE) code
+is 85.42Z \citep{univtoulousesirene}, which INSEE classifies as \emph{higher
+education}, including first-, second- and third-cycle university programmes
+\citep{insee8542z}.
+
+Université de Toulouse has operated as an experimental public institution since
+January 2025. Official figures published for 2026 indicate approximately 39,000
+students and 4,200 staff \citep{univtoulousefigures}. These figures concern the
+university as a whole, while the internship took place within the smaller MFJA
+environment.
+
+\section{Maison de la Formation Jacqueline Auriol}
+
+The MFJA is a shared centre for engineering education on the Toulouse Aerospace
+innovation campus. Its activities cover research and innovation, knowledge and
+skills transfer, and initial and continuing education. According to its official
+presentation, the site brings together more than 1,500 students from 15
+mechanical-engineering programmes associated with Université de Toulouse, INSA
+and ISAE. It supports work in mechanical engineering, manufacturing,
+aeronautics, automation and robotics in collaboration with industrial partners
+and research laboratories \citep{mfjaofficial}.
+
+Because the facilities are shared across teaching and research activities, the
+software developed for the platform must support several configurations, remain
+usable by different operators and be maintainable beyond a single development
+environment. These requirements influenced the package and launch architecture
+presented in Chapters~5--6.
+
+\section{The Room 315 robotics environment}
+
+Room~315 contains two mirrored flexible transport cells, each with four work
+positions associated with industrial robots. In the configuration used for
+this project, the right rail serves Yaskawa HC10DT positions~1--2 and Stäubli
+TX2 positions~3--4, while the left rail serves Yaskawa HC10 positions~1--2 and
+KUKA KR6 positions~3--4. Each circuit contains outer and inner branches, four
+switching zones, indexing detectors and stoppers. A shuttle may be empty or
+carry a payload.
+
+This arrangement brings together several engineering disciplines:
+
+\begin{itemize}
+  \item mechanical layout, computer-aided design (CAD), kinematics and
+  collision geometry;
+  \item industrial automation, sensors, stoppers and route switching;
+  \item robot middleware, namespacing, timing and distributed interfaces;
+  \item planning, scheduling and multi-agent resource conflicts;
+  \item computer vision, data collection and model evaluation;
+  \item human--robot interaction through task-level language.
+\end{itemize}
+
+Together, these disciplines make Room~315 a practical platform for studying the
+integration of robotics, transport, perception and control.
+\Cref{fig:room315-orientation} shows the simulated layout; Chapters~7--8 define
+the rail topology, device semantics and supervisory constraints.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.96\textwidth]{f04_room315_gazebo_overview.png}
+  \caption[Gazebo overview of Room~315 and its four robot workstations.]
+  {Gazebo view of Room~315. Four industrial-robot workstations surround two
+  mirrored rail-transport cells containing eight stopped shuttles. The measured
+  rail geometry and device locations are presented in \cref{chap:transport}.}
+  \label{fig:room315-orientation}
+\end{figure}
+
+\section{Organisation and responsibilities}
+
+\Cref{fig:organisation} presents the supervision and responsibilities directly
+associated with the internship.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm and 16mm,
+  box/.style={draw,rounded corners,align=center,minimum height=10mm,text width=42mm,fill=mfjalight},
+  role/.style={draw,rounded corners,align=left,minimum height=13mm,text width=58mm,fill=white},
+  arr/.style={-{Latex[length=2.2mm]},thick,mfjablue}
+]
+  \node[box] (host) {Université de Toulouse\\MFJA};
+  \node[box,below=of host] (tutor) {Host supervisors\\Joint scientific supervision};
+  \node[box,below=of tutor] (student) {Ali Ibrahim\\M2 intern};
+  \node[role,below left=of student] (ops) {Operational knowledge\\Platform access\\Review of platform constraints};
+  \node[role,below right=of student] (dev) {Architecture and implementation\\Testing and experiments\\Documentation and handover};
+  \draw[arr] (host) -- (tutor);
+  \draw[arr] (tutor) -- (student);
+  \draw[arr] (student) -- (ops);
+  \draw[arr] (student) -- (dev);
+\end{tikzpicture}
+}
+\caption{Organisation of the internship and distribution of responsibilities.}
+\label{fig:organisation}
+\end{figure}
+
+The host supervisors provided joint scientific direction and reviewed choices
+related to the platform. MFJA personnel supported access, scheduling and
+practical organisation. I was responsible for the architecture, implementation,
+evaluation, documentation and handover described in \cref{chap:mission}.
+
+\section{Position of the mission within the host}
+
+The mission connects platform operation with research prototyping. Platform
+managers, students and researchers can use the system to launch robots and rail
+scenarios reproducibly. The same foundation can support synthetic-data
+generation, task-planning experiments and comparisons between simulation
+configurations. Possible uses include a teaching exercise on ROS~2 topics, a
+planner benchmark, a visual-perception dataset or a simulation demonstrator.
+
+This range of uses motivated the emphasis on reusable configuration, explicit
+interfaces and documented operating procedures.
+
+\section{Economic and strategic value}
+
+Because MFJA is a public teaching and research platform, the mission's value is
+assessed through practical reuse, training capacity and reduced integration
+effort. The main benefits are:
+
+\begin{itemize}
+  \item \textbf{reuse}: one model and launch framework avoids recreating an
+  integration for each practical class or research project;
+  \item \textbf{risk reduction}: simulation and supervised execution check
+  naming, topology and commands before access to costly equipment;
+  \item \textbf{asset visibility}: a digital twin makes robot capabilities
+  available for remote preparation, including capabilities that might otherwise
+  remain under-used;
+  \item \textbf{training capacity}: repeatable scenario generation creates
+  data and exercises without monopolising the physical cell;
+  \item \textbf{maintenance}: typed interfaces, tests and documentation reduce
+  dependence on knowledge held by a single developer;
+  \item \textbf{technology transfer}: the MFJA can demonstrate current ROS~2,
+  planning and AI methods while maintaining clear safety boundaries.
+\end{itemize}
+
+These benefits align with the MFJA's institutional role of sharing costly
+engineering resources and connecting education with contemporary industrial
+methods.

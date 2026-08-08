@@ -1,0 +1,26 @@
+{
+  "duration_ns": 61185000000,
+  "message_count": 35920,
+  "relative_files": [
+    "rosbag/rosbag_0.mcap"
+  ],
+  "required_topic_message_counts": {
+    "/clock": 12228,
+    "/room_315/rails/left/sensors/feedback": 1835,
+    "/room_315/rails/left/shuttles/command": 4,
+    "/room_315/rails/left/shuttles/state": 3668,
+    "/room_315/rails/left/stoppers/command": 2,
+    "/room_315/rails/left/switches/command": 2,
+    "/room_315/task_goal": 1,
+    "/room_315/task_goal/status": 4,
+    "/room_315/visual_state/observed_state": 205,
+    "/room_315/visual_state/raw_model_prediction": 214,
+    "/room_315/visual_state/validation": 214,
+    "/room_315/vla/command": 8,
+    "/room_315/vla/left_rail_rgbd/image": 612,
+    "/room_315/vla/right_rail_rgbd/image": 611,
+    "/room_315/vla/status": 70
+  },
+  "status": "passed",
+  "storage_identifier": "mcap"
+}

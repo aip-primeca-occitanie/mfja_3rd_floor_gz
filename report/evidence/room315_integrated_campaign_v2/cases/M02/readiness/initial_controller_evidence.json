@@ -1,0 +1,320 @@
+{
+  "sides": {
+    "left": {
+      "sensor_echo": {
+        "command": [
+          "ros2",
+          "topic",
+          "echo",
+          "--no-daemon",
+          "--full-length",
+          "/room_315/rails/left/sensors/feedback",
+          "mfja_rail_interfaces/msg/SensorFeedback",
+          "--once"
+        ],
+        "duration_s": 2.368197087896988,
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "header:\n  stamp:\n    sec: 7\n    nanosec: 370000000\n  frame_id: world\nreadings:\n- name: DZI2L\n  sensor_type: sensor\n  active: 1\n  shuttle_name: room315_left_shuttle_2\n  segment: A12E\n  s: 1.501885831066611\n  s_ratio: 0.674370792\n- name: DZI1L\n  sensor_type: sensor\n  active: 1\n  shuttle_name: room315_left_shuttle_1\n  segment: A12E\n  s: 0.9539324188022182\n  s_ratio: 0.428330934\n- name: DZI4L\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A34E\n  s: 1.4891205527013205\n  s_ratio: 0.668424664\n- name: DZI3L\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A34E\n  s: 0.9525799857254589\n  s_ratio: 0.427586575\n- name: DA1L\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A14\n  s: 0.27212822868188313\n  s_ratio: 0.982548832\n- name: DA1EL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A1E\n  s: 0.18278696259117666\n  s_ratio: 0.993647404\n- name: DA1IL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A12I\n  s: 0.01126788274928266\n  s_ratio: 0.007953208\n- name: DA2L\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A23\n  s: 0.09999999977210204\n  s_ratio: 0.077595236\n- name: DA2EL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A12E\n  s: 2.2102532095839065\n  s_ratio: 0.99243909\n- name: DA2IL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A12I\n  s: 1.4003511028184101\n  s_ratio: 0.98840961\n- name: DA3L\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A23\n  s: 1.2755042651644544\n  s_ratio: 0.9897305469999998\n- name: DA3EL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A3E\n  s: 0.1952476831340356\n  s_ratio: 0.954620974\n- name: DA3IL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A34I\n  s: 0.025781336742276673\n  s_ratio: 0.018279507\n- name: DA4L\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A4E\n  s: 0.18120360501865093\n  s_ratio: 0.9665019239999999\n- name: DA4EL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A4E\n  s: 0.0016502579736604984\n  s_ratio: 0.008802129\n- name: DA4IL\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A34I\n  s: 1.4065381995056299\n  s_ratio: 0.997265003\n- name: A1_STOPPER_SENSOR\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A14\n  s: 0.0969615308602681\n  s_ratio: 0.3500902473703233\n- name: A2_STOPPER_SENSOR\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A12E\n  s: 2.047092052733726\n  s_ratio: 0.9191771174234624\n- name: A3_STOPPER_SENSOR\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A23\n  s: 1.1087389087424009\n  s_ratio: 0.8603285748231619\n- name: A4_STOPPER_SENSOR\n  sensor_type: sensor\n  active: 0\n  shuttle_name: ''\n  segment: A34E\n  s: 2.0478061125670615\n  s_ratio: 0.9192030223790293\n---\n"
+      },
+      "sensor_payload": {
+        "header": {
+          "frame_id": "world",
+          "stamp": {
+            "nanosec": 370000000,
+            "sec": 7
+          }
+        },
+        "readings": [
+          {
+            "active": 1,
+            "name": "DZI2L",
+            "s": 1.501885831066611,
+            "s_ratio": 0.674370792,
+            "segment": "A12E",
+            "sensor_type": "sensor",
+            "shuttle_name": "room315_left_shuttle_2"
+          },
+          {
+            "active": 1,
+            "name": "DZI1L",
+            "s": 0.9539324188022182,
+            "s_ratio": 0.428330934,
+            "segment": "A12E",
+            "sensor_type": "sensor",
+            "shuttle_name": "room315_left_shuttle_1"
+          },
+          {
+            "active": 0,
+            "name": "DZI4L",
+            "s": 1.4891205527013205,
+            "s_ratio": 0.668424664,
+            "segment": "A34E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DZI3L",
+            "s": 0.9525799857254589,
+            "s_ratio": 0.427586575,
+            "segment": "A34E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA1L",
+            "s": 0.27212822868188313,
+            "s_ratio": 0.982548832,
+            "segment": "A14",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA1EL",
+            "s": 0.18278696259117666,
+            "s_ratio": 0.993647404,
+            "segment": "A1E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA1IL",
+            "s": 0.01126788274928266,
+            "s_ratio": 0.007953208,
+            "segment": "A12I",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA2L",
+            "s": 0.09999999977210204,
+            "s_ratio": 0.077595236,
+            "segment": "A23",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA2EL",
+            "s": 2.2102532095839065,
+            "s_ratio": 0.99243909,
+            "segment": "A12E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA2IL",
+            "s": 1.4003511028184101,
+            "s_ratio": 0.98840961,
+            "segment": "A12I",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA3L",
+            "s": 1.2755042651644544,
+            "s_ratio": 0.9897305469999998,
+            "segment": "A23",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA3EL",
+            "s": 0.1952476831340356,
+            "s_ratio": 0.954620974,
+            "segment": "A3E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA3IL",
+            "s": 0.025781336742276673,
+            "s_ratio": 0.018279507,
+            "segment": "A34I",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA4L",
+            "s": 0.18120360501865093,
+            "s_ratio": 0.9665019239999999,
+            "segment": "A4E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA4EL",
+            "s": 0.0016502579736604984,
+            "s_ratio": 0.008802129,
+            "segment": "A4E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "DA4IL",
+            "s": 1.4065381995056299,
+            "s_ratio": 0.997265003,
+            "segment": "A34I",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "A1_STOPPER_SENSOR",
+            "s": 0.0969615308602681,
+            "s_ratio": 0.3500902473703233,
+            "segment": "A14",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "A2_STOPPER_SENSOR",
+            "s": 2.047092052733726,
+            "s_ratio": 0.9191771174234624,
+            "segment": "A12E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "A3_STOPPER_SENSOR",
+            "s": 1.1087389087424009,
+            "s_ratio": 0.8603285748231619,
+            "segment": "A23",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          },
+          {
+            "active": 0,
+            "name": "A4_STOPPER_SENSOR",
+            "s": 2.0478061125670615,
+            "s_ratio": 0.9192030223790293,
+            "segment": "A34E",
+            "sensor_type": "sensor",
+            "shuttle_name": ""
+          }
+        ]
+      },
+      "shuttles": [
+        {
+          "declared_start_sensor": "DZI1L",
+          "declared_start_slot": "1",
+          "entity": "room315_left_shuttle_1",
+          "identity": "L1",
+          "sensor_reading": {
+            "active": 1,
+            "name": "DZI1L",
+            "s": 0.9539324188022182,
+            "s_ratio": 0.428330934,
+            "segment": "A12E",
+            "sensor_type": "sensor",
+            "shuttle_name": "room315_left_shuttle_1"
+          },
+          "state": {
+            "current_segment": "A12E",
+            "header": {
+              "frame_id": "world",
+              "stamp": {
+                "nanosec": 370000000,
+                "sec": 10
+              }
+            },
+            "mode": "DISABLED",
+            "name": "room315_left_shuttle_1",
+            "reached_target_slot": "",
+            "s": 0.9539324188022182,
+            "speed": 0.2,
+            "x": -13.065700730229244,
+            "y": -4.720986572861623,
+            "yaw": 3.1413525630099897,
+            "z": 0.8393460000000001
+          },
+          "state_echo": {
+            "command": [
+              "ros2",
+              "topic",
+              "echo",
+              "--no-daemon",
+              "--full-length",
+              "/room_315/rails/left/shuttles/state",
+              "mfja_rail_interfaces/msg/ShuttleState",
+              "--once",
+              "--filter",
+              "m.name == 'room315_left_shuttle_1'"
+            ],
+            "duration_s": 3.0054389361757785,
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "header:\n  stamp:\n    sec: 10\n    nanosec: 370000000\n  frame_id: world\nname: room315_left_shuttle_1\nmode: DISABLED\ncurrent_segment: A12E\ns: 0.9539324188022182\nx: -13.065700730229244\ny: -4.720986572861623\nz: 0.8393460000000001\nyaw: 3.1413525630099897\nspeed: 0.2\nreached_target_slot: ''\n---\n"
+          }
+        },
+        {
+          "declared_start_sensor": "DZI2L",
+          "declared_start_slot": "2",
+          "entity": "room315_left_shuttle_2",
+          "identity": "L2",
+          "sensor_reading": {
+            "active": 1,
+            "name": "DZI2L",
+            "s": 1.501885831066611,
+            "s_ratio": 0.674370792,
+            "segment": "A12E",
+            "sensor_type": "sensor",
+            "shuttle_name": "room315_left_shuttle_2"
+          },
+          "state": {
+            "current_segment": "A12E",
+            "header": {
+              "frame_id": "world",
+              "stamp": {
+                "nanosec": 370000000,
+                "sec": 13
+              }
+            },
+            "mode": "DISABLED",
+            "name": "room315_left_shuttle_2",
+            "reached_target_slot": "",
+            "s": 1.501885831066611,
+            "speed": 0.2,
+            "x": -13.61365406734327,
+            "y": -4.7207050928228655,
+            "yaw": 3.141109268615362,
+            "z": 0.8393459999999999
+          },
+          "state_echo": {
+            "command": [
+              "ros2",
+              "topic",
+              "echo",
+              "--no-daemon",
+              "--full-length",
+              "/room_315/rails/left/shuttles/state",
+              "mfja_rail_interfaces/msg/ShuttleState",
+              "--once",
+              "--filter",
+              "m.name == 'room315_left_shuttle_2'"
+            ],
+            "duration_s": 3.0135058879386634,
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "header:\n  stamp:\n    sec: 13\n    nanosec: 370000000\n  frame_id: world\nname: room315_left_shuttle_2\nmode: DISABLED\ncurrent_segment: A12E\ns: 1.501885831066611\nx: -13.61365406734327\ny: -4.7207050928228655\nz: 0.8393459999999999\nyaw: 3.141109268615362\nspeed: 0.2\nreached_target_slot: ''\n---\n"
+          }
+        }
+      ]
+    }
+  },
+  "status": "passed"
+}

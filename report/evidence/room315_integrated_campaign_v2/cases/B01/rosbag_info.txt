@@ -1,0 +1,41 @@
+
+Files:             rosbag_0.mcap
+Bag size:          19.0 MiB
+Storage id:        mcap
+ROS Distro:        jazzy
+Duration:          30.320000000s
+Start:             Jan  1 1970 01:00:18.755000000 (18.755000000)
+End:               Jan  1 1970 01:00:49.075000000 (49.075000000)
+Messages:          16678
+Topic information: Topic: /clock | Type: rosgraph_msgs/msg/Clock | Count: 6065 | Serialization Format: cdr
+                   Topic: /diagnostics | Type: diagnostic_msgs/msg/DiagnosticArray | Count: 62 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/sensors/feedback | Type: mfja_rail_interfaces/msg/SensorFeedback | Count: 881 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/shuttles/command | Type: mfja_rail_interfaces/msg/ShuttleCommand | Count: 0 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/shuttles/payload_state | Type: std_msgs/msg/String | Count: 881 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/shuttles/state | Type: mfja_rail_interfaces/msg/ShuttleState | Count: 881 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/stoppers/command | Type: mfja_rail_interfaces/msg/StopperCommand | Count: 0 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/stoppers/state | Type: mfja_rail_interfaces/msg/StopperState | Count: 881 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/switches/command | Type: mfja_rail_interfaces/msg/SwitchCommand | Count: 0 | Serialization Format: cdr
+                   Topic: /room_315/rails/left/switches/state | Type: mfja_rail_interfaces/msg/SwitchState | Count: 881 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/sensors/feedback | Type: mfja_rail_interfaces/msg/SensorFeedback | Count: 900 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/shuttles/command | Type: mfja_rail_interfaces/msg/ShuttleCommand | Count: 2 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/shuttles/payload_state | Type: std_msgs/msg/String | Count: 900 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/shuttles/state | Type: mfja_rail_interfaces/msg/ShuttleState | Count: 900 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/stoppers/command | Type: mfja_rail_interfaces/msg/StopperCommand | Count: 0 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/stoppers/state | Type: mfja_rail_interfaces/msg/StopperState | Count: 900 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/switches/command | Type: mfja_rail_interfaces/msg/SwitchCommand | Count: 0 | Serialization Format: cdr
+                   Topic: /room_315/rails/right/switches/state | Type: mfja_rail_interfaces/msg/SwitchState | Count: 900 | Serialization Format: cdr
+                   Topic: /room_315/task_goal | Type: std_msgs/msg/String | Count: 1 | Serialization Format: cdr
+                   Topic: /room_315/task_goal/status | Type: std_msgs/msg/String | Count: 4 | Serialization Format: cdr
+                   Topic: /room_315/visual_state/observed_state | Type: mfja_rail_interfaces/msg/VisualStateObservation | Count: 98 | Serialization Format: cdr
+                   Topic: /room_315/visual_state/raw | Type: mfja_rail_interfaces/msg/VisualStateObservation | Count: 98 | Serialization Format: cdr
+                   Topic: /room_315/visual_state/raw_model_prediction | Type: std_msgs/msg/String | Count: 98 | Serialization Format: cdr
+                   Topic: /room_315/visual_state/validation | Type: mfja_rail_interfaces/msg/VisualStateObservation | Count: 98 | Serialization Format: cdr
+                   Topic: /room_315/vla/command | Type: std_msgs/msg/String | Count: 2 | Serialization Format: cdr
+                   Topic: /room_315/vla/left_rail_rgbd/camera_info | Type: sensor_msgs/msg/CameraInfo | Count: 303 | Serialization Format: cdr
+                   Topic: /room_315/vla/left_rail_rgbd/image | Type: sensor_msgs/msg/Image | Count: 303 | Serialization Format: cdr
+                   Topic: /room_315/vla/right_rail_rgbd/camera_info | Type: sensor_msgs/msg/CameraInfo | Count: 303 | Serialization Format: cdr
+                   Topic: /room_315/vla/right_rail_rgbd/image | Type: sensor_msgs/msg/Image | Count: 303 | Serialization Format: cdr
+                   Topic: /room_315/vla/status | Type: std_msgs/msg/String | Count: 33 | Serialization Format: cdr
+Service:           0
+Service information: 

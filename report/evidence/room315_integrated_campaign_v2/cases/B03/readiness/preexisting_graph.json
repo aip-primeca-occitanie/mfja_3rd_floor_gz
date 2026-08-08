@@ -1,0 +1,47 @@
+{
+  "commands": {
+    "nodes": {
+      "command": [
+        "ros2",
+        "node",
+        "list",
+        "--no-daemon"
+      ],
+      "duration_s": 0.9421879160217941,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    "services": {
+      "command": [
+        "ros2",
+        "service",
+        "list",
+        "--no-daemon"
+      ],
+      "duration_s": 0.9450873879250139,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    "topics": {
+      "command": [
+        "ros2",
+        "topic",
+        "list",
+        "--no-daemon"
+      ],
+      "duration_s": 0.9476720329839736,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "/parameter_events\n/rosout\n"
+    }
+  },
+  "nodes": [],
+  "services": [],
+  "status": "empty",
+  "topics": [
+    "/parameter_events",
+    "/rosout"
+  ]
+}

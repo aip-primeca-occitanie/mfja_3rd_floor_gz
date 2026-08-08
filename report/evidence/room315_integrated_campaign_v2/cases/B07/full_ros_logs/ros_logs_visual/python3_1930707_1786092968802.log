@@ -1,0 +1,2 @@
+[INFO] [1786092971.244621372] [room_315_visual_state_inference_node]: Approved visual checkpoint loaded strictly on cuda; load_ms=2291.722
+[INFO] [1786092971.245152860] [room_315_visual_state_inference_node]: Room 315 visual-state runtime initialized fail-closed; no planner, executor, or command publisher is owned by this node.

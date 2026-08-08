@@ -1,0 +1,112 @@
+{
+  "approved_for_capture": false,
+  "approved_for_training": false,
+  "canary_scenario_count": 64,
+  "capture_executed": false,
+  "dataset_inferred_capacity": false,
+  "expected_image_count": 4080,
+  "fixed_identity_order": [
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "R1",
+    "R2",
+    "R3",
+    "R4"
+  ],
+  "fixed_vector_dimension": 200,
+  "mutable_files_excluded_from_static_hashes": [
+    "capture_state.json",
+    "production_capture_approval.json"
+  ],
+  "package_root": "/home/tiago/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729",
+  "scenario_count": 2040,
+  "schema_version": "room315.arbitrary_subset_capture_package.v2",
+  "seed": 31520260729,
+  "static_files": {
+    "README.md": {
+      "bytes": 3166,
+      "sha256": "fed02ada49ac94a1a031c02916b176df186d2678101b28cae43efa828b66fc25"
+    },
+    "audit_captured_canary.sh": {
+      "bytes": 384,
+      "sha256": "c03cc3c226984496e87524fa73ce9b474ba2bb0b95df3b8d288023fbec7fc1b5"
+    },
+    "audit_captured_production.sh": {
+      "bytes": 386,
+      "sha256": "9c3b1cdc64b76cd3deeeeaa3d6b5ad576122f80e49997d8f84fdce3e52b115c0"
+    },
+    "audit_production_manifest.sh": {
+      "bytes": 256,
+      "sha256": "361bd2025005d912cada80cd6b167aa9514a3cd9265826386c1b20bc8b87c1db"
+    },
+    "capture_canary.sh": {
+      "bytes": 402,
+      "sha256": "8b27727a85e2a17b4f74c5e4e766ee50afdb25fb5fa7bc027ef8cb4bc673b318"
+    },
+    "capture_full.sh": {
+      "bytes": 406,
+      "sha256": "93a0d65a980a3ac9f59df049928f7de6be459760ff7c5d59b003a409873840f1"
+    },
+    "capture_status.py": {
+      "bytes": 145202,
+      "sha256": "db157509053ca7983ca65c89c9ac0f12db34c9d2b30b8dbc16435456fe02b849"
+    },
+    "create_canary_gallery.py": {
+      "bytes": 317,
+      "sha256": "2cfcdd1dddd56f90231ad49dc577e64a240a1b094b41f0ba9fa4d896662e815e"
+    },
+    "create_production_review_gallery.py": {
+      "bytes": 315,
+      "sha256": "6fd17a90c0c9de278ba806b17428bb0cf24e764c98004c6cca1f986221daf06c"
+    },
+    "generate_production_manifest.sh": {
+      "bytes": 256,
+      "sha256": "361bd2025005d912cada80cd6b167aa9514a3cd9265826386c1b20bc8b87c1db"
+    },
+    "production_canary_audit.json": {
+      "bytes": 4098,
+      "sha256": "c0bfa1b0642400a122563fc28f999094c142501f1dcc52cd8554e30c4d4e9e1c"
+    },
+    "production_canary_audit.md": {
+      "bytes": 311,
+      "sha256": "dce14d00658a8457876d6107503dbadaea860eca9f986ed96614414c896dc45e"
+    },
+    "production_canary_scenario_ids.json": {
+      "bytes": 4055,
+      "sha256": "7981eba3797df9338613942d6113bd86ecabd63c2213061d976892f790473a5d"
+    },
+    "production_manifest_audit.json": {
+      "bytes": 12941,
+      "sha256": "821c3b65622f28d963d48586f7560afa0c1a7dda1e9fdb763296f4eb4164c35d"
+    },
+    "production_manifest_audit.md": {
+      "bytes": 325,
+      "sha256": "6f30eb5eb75ef178c4f28cfd72eaa79e1144dbc1c22efd8f7246309d14a3fe6e"
+    },
+    "resume_capture.sh": {
+      "bytes": 252,
+      "sha256": "152169dd0f1ee08dc22756cbf5fed1d50192d543696d8668bac2f6b1a509af18"
+    },
+    "scenario_manifest.jsonl": {
+      "bytes": 15944660,
+      "sha256": "4243af6e5e9245fb65c2d36542213e52994b8aad887b7861ce449326aadb4060"
+    },
+    "validate_canary_gallery_approval.py": {
+      "bytes": 236,
+      "sha256": "9fcc5fac736fc0435f1d592c76008c21de667fe16f90fcb25dbe3bb231871d5f"
+    },
+    "validate_full_gallery_approval.py": {
+      "bytes": 234,
+      "sha256": "2df1ccc1124ac9b81e97ecdbff6a50ad9b6f86482d411d30cc223d2612d8d708"
+    },
+    "validate_production_approval.py": {
+      "bytes": 446,
+      "sha256": "00534ad5255cc62afe59546ab5ce57fd561bc2dd0871a05e7aff33cb1790e5b4"
+    }
+  },
+  "v2_source": "/home/tiago/room315_arbitrary_subset_visual_2040_v2_seed31520260729/configuration_variant_plan_v2.jsonl",
+  "v2_source_sha256": "23cb73bf1c98ded0a21ee74314e4d448bd7525f65fd2afcdf23f309179ce17c1",
+  "visual_state_schema": "room315.visual_state.v3"
+}

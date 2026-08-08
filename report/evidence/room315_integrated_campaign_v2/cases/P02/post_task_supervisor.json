@@ -1,0 +1,2449 @@
+{
+  "echo": {
+    "command": [
+      "ros2",
+      "topic",
+      "echo",
+      "--no-daemon",
+      "--full-length",
+      "/room_315/vla/status",
+      "std_msgs/msg/String",
+      "--once"
+    ],
+    "duration_s": 1.9161589718423784,
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "data: '{\"active_tasks\": {}, \"completed_tasks\": [], \"emergency_stop\": false, \"last_command\": \"{\\\"action\\\": \\\"shuttle\\\", \\\"closed_loop_executive\\\": {\\\"final_arrival_source\\\": \\\"deterministic_slot_sensor\\\", \\\"mode\\\": \\\"slot_sensor_target_arrival_finalize\\\", \\\"planner_localization_source\\\": \\\"accepted_visual_state\\\", \\\"target_sensor\\\": \\\"DZI3L\\\", \\\"target_slot\\\": \\\"3\\\"}, \\\"command\\\": \\\"OFF\\\", \\\"shuttle\\\": \\\"left_shuttle_1\\\", \\\"side\\\": \\\"left\\\"}\", \"last_primitive_command\": {\"action\": \"shuttle\", \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\", \"speed\": 0.0, \"start_slot\": \"\", \"target_slot\": \"\", \"task_id\": \"\", \"time_s\": 1257249.479565}, \"last_result\": \"shuttle command sent on left\", \"payload_state\": {\"by_shuttle\": {\"room315_left_shuttle_1\": {\"entity_name\": \"room315_left_shuttle_1\", \"loaded\": true, \"model_input_exposure\": \"excluded\", \"payload_type\": \"box\", \"short_id\": \"L1\", \"shuttle_id\": \"left_shuttle_1\", \"shuttle_index\": 0, \"side\": \"left\"}, \"room315_left_shuttle_2\": {\"entity_name\": \"room315_left_shuttle_2\", \"loaded\": false, \"model_input_exposure\": \"excluded\", \"payload_type\": \"none\", \"short_id\": \"L2\", \"shuttle_id\": \"left_shuttle_2\", \"shuttle_index\": 1, \"side\": \"left\"}}, \"model_input_exposure\": \"excluded\", \"shuttles\": [{\"entity_name\": \"room315_left_shuttle_1\", \"loaded\": true, \"model_input_exposure\": \"excluded\", \"payload_type\": \"box\", \"short_id\": \"L1\", \"shuttle_id\": \"left_shuttle_1\", \"shuttle_index\": 0, \"side\": \"left\"}, {\"entity_name\": \"room315_left_shuttle_2\", \"loaded\": false, \"model_input_exposure\": \"excluded\", \"payload_type\": \"none\", \"short_id\": \"L2\", \"shuttle_id\": \"left_shuttle_2\", \"shuttle_index\": 1, \"side\": \"left\"}]}, \"rails\": {\"left\": {\"active_position_sensors\": [], \"active_sensors\": [{\"name\": \"DZI3L\", \"s\": 0.9526, \"s_ratio\": 0.4276, \"segment\": \"A34E\", \"shuttle\": \"room315_left_shuttle_1\", \"type\": \"sensor\"}], \"payloads\": {\"room315_left_shuttle_1\": {\"entity_name\": \"room315_left_shuttle_1\", \"loaded\": true, \"model_input_exposure\": \"excluded\", \"payload_type\": \"box\", \"short_id\": \"L1\", \"shuttle_id\": \"left_shuttle_1\", \"shuttle_index\": 0, \"side\": \"left\"}, \"room315_left_shuttle_2\": {\"entity_name\": \"room315_left_shuttle_2\", \"loaded\": false, \"model_input_exposure\": \"excluded\", \"payload_type\": \"none\", \"short_id\": \"L2\", \"shuttle_id\": \"left_shuttle_2\", \"shuttle_index\": 1, \"side\": \"left\"}}, \"shuttles\": {\"room315_left_shuttle_1\": {\"mode\": \"DISABLED\", \"reached_target_slot\": \"3\", \"s\": 0.9526, \"segment\": \"A34E\", \"speed\": 0.2, \"x\": -13.3882, \"y\": -3.4369, \"yaw\": -0.0004, \"z\": 0.8393}, \"room315_left_shuttle_2\": {\"mode\": \"DISABLED\", \"reached_target_slot\": \"\", \"s\": 1.0539, \"segment\": \"A34I\", \"speed\": 0.2, \"x\": -12.9912, \"y\": -3.8647, \"yaw\": -0.0005, \"z\": 0.8393}}, \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}, \"switches\": {\"A1\": \"E\", \"A2\": \"E\", \"A3\": \"E\", \"A4\": \"E\"}}, \"right\": {\"active_position_sensors\": [], \"active_sensors\": [], \"payloads\": {}, \"shuttles\": {}, \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}, \"switches\": {\"A1\": \"E\", \"A2\": \"E\", \"A3\": \"E\", \"A4\": \"E\"}}}, \"safety_decoder\": {\"fleet_state\": {\"block_occupancy\": {\"left:A34E\": \"L1\", \"left:A34I\": \"L2\"}, \"block_reservations\": {}, \"min_headway_blocks\": 1, \"model_input_exposure\": \"excluded\", \"shuttle_blocks\": {\"L1\": \"left:A34E\", \"L2\": \"left:A34I\"}, \"station_slot_targets\": {}}, \"last_decision\": {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1257249.479316}, \"metrics\": {\"accepted_actions\": 8, \"average_wait_time_by_shuttle\": {}, \"block_occupancy_violation_count\": 0, \"block_reservation_rejection_count\": 0, \"deadlock_avoided_count\": 0, \"deadlock_detected_count\": 0, \"fail_safe_abort_count\": 0, \"fleet_throughput_tasks_per_minute\": null, \"headway_violation_count\": 0, \"illegal_proposal_rate\": 0.0, \"multi_shuttle_task_success\": null, \"obstacle_stop_count\": 0, \"occupied_target_rejection_count\": 0, \"per_shuttle_task_success\": {}, \"rejected_action_rate\": 0.0, \"rejected_actions\": 0, \"rejection_reasons\": {}, \"safety_recovery_count\": 0, \"sensor_dropout_count\": 0, \"shuttle_id_accuracy\": null, \"timeout_rejection_count\": 0, \"total_proposed_actions\": 8, \"trusted_state_rejection_count\": 0, \"unknown_localization_rejection_count\": 0, \"wrong_shuttle_command_rate\": 0.0}, \"recent_decisions\": [{\"accepted\": true, \"corrected_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}}, \"executed_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}}, \"raw_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": false, \"time_s\": 1257206.460696}, {\"accepted\": true, \"corrected_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}}, \"executed_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}}, \"raw_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"clearance_route_switch_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"begin_route_clearance_hold_interior\", \"plan_length\": 2, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1\", \"route_normalization_proof\": {\"active_clearance_gate\": \"\", \"all_stoppers_open\": true, \"certificate_segment_consistency\": {}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [], \"certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": false, \"clearance_pause_safe\": false, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [], \"normal_route\": true, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"already_normal\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"open\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"exterior\", \"A4\": \"exterior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": []}, \"runtime_clearance_certificates\": {}, \"step_index\": 0, \"symbolic_step\": \"begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": false, \"time_s\": 1257207.871335}, {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"clearance_motion_route_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}, \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"plansys2_supervised_interior_clearance\", \"plan_length\": 1, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1\", \"step_index\": 1, \"symbolic_step\": \"relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"room315_left_shuttle_2\", \"side\": \"left\", \"speed\": 0.2, \"target_stopper\": \"A4\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"clearance_motion_route_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}, \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"plansys2_supervised_interior_clearance\", \"plan_length\": 1, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1\", \"step_index\": 1, \"symbolic_step\": \"relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"room315_left_shuttle_2\", \"side\": \"left\", \"speed\": 0.2, \"target_stopper\": \"A4\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"clearance_motion_route_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}, \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"plansys2_supervised_interior_clearance\", \"plan_length\": 1, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1\", \"step_index\": 1, \"symbolic_step\": \"relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"speed\": 0.2, \"target_stopper\": \"A4\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"clearance_motion_route_proof\": {\"controller_position_fields_used_for_localization\": false, \"exit_switch\": \"A4\", \"gate_switch\": \"A3\", \"required_stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"1\"}, \"required_switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"INTERIOR\", \"A4\": \"INTERIOR\"}, \"route_specific_switch_assignment\": true, \"side\": \"left\", \"target_segment\": \"A34I\"}, \"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"plansys2_supervised_interior_clearance\", \"plan_length\": 1, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1\", \"step_index\": 1, \"symbolic_step\": \"relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"speed\": 0.2, \"target_stopper\": \"A4\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1257209.115905}, {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"advance_from_certified_interior_origin\": false, \"controller_position_fields_used_for_localization\": false, \"entry_sensor\": \"DA3IL\", \"minimum_clearance_delay_s\": 5.3019799999999995, \"mode\": \"guarded_interior_clearance_stop\", \"motion_origin_s_m\": null, \"stop_trigger\": \"interior_entry_sensor_plus_bounded_travel_time\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_2\", \"side\": \"left\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"advance_from_certified_interior_origin\": false, \"controller_position_fields_used_for_localization\": false, \"entry_sensor\": \"DA3IL\", \"minimum_clearance_delay_s\": 5.3019799999999995, \"mode\": \"guarded_interior_clearance_stop\", \"motion_origin_s_m\": null, \"stop_trigger\": \"interior_entry_sensor_plus_bounded_travel_time\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_2\", \"side\": \"left\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"advance_from_certified_interior_origin\": false, \"controller_position_fields_used_for_localization\": false, \"entry_sensor\": \"DA3IL\", \"minimum_clearance_delay_s\": 5.3019799999999995, \"mode\": \"guarded_interior_clearance_stop\", \"motion_origin_s_m\": null, \"stop_trigger\": \"interior_entry_sensor_plus_bounded_travel_time\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"advance_from_certified_interior_origin\": false, \"controller_position_fields_used_for_localization\": false, \"entry_sensor\": \"DA3IL\", \"minimum_clearance_delay_s\": 5.3019799999999995, \"mode\": \"guarded_interior_clearance_stop\", \"motion_origin_s_m\": null, \"stop_trigger\": \"interior_entry_sensor_plus_bounded_travel_time\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1257226.877867}, {\"accepted\": true, \"corrected_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"EXTERIOR\", \"A4\": \"EXTERIOR\"}}, \"executed_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"EXTERIOR\", \"A4\": \"EXTERIOR\"}}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"EXTERIOR\", \"A4\": \"EXTERIOR\"}}, \"raw_action\": {\"action\": \"switches\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"switches\": {\"A1\": \"EXTERIOR\", \"A2\": \"EXTERIOR\", \"A3\": \"EXTERIOR\", \"A4\": \"EXTERIOR\"}}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": false, \"time_s\": 1257227.230601}, {\"accepted\": true, \"corrected_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}}, \"executed_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}}, \"raw_action\": {\"action\": \"stoppers\", \"closed_loop_executive\": {\"controller_position_fields_used_for_localization\": false, \"localization_source\": \"accepted_visual_state\", \"mode\": \"restore_normal_route_after_interior_clearance\", \"plan_length\": 6, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-2\", \"route_normalization_proof\": {\"active_clearance_gate\": \"A3\", \"all_stoppers_open\": false, \"certificate_segment_consistency\": {\"left_shuttle_2\": {\"accepted_visual_internal_segment\": \"A12I\", \"certificate_target_internal_segment\": \"A12I\", \"certificate_target_public_segment\": \"A34I\", \"certificate_used_as_localization\": false, \"reason\": \"certificate_and_visual_segment_match\", \"required\": true, \"satisfied\": true}}, \"certificate_segment_mismatches\": [], \"certified_interior_shuttles\": [\"left_shuttle_2\"], \"certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_certificate_used_as_localization\": false, \"clearance_lifecycle_certified_stopped_interior_shuttles\": [\"left_shuttle_2\"], \"clearance_lifecycle_uncertified_interior_shuttles\": [], \"clearance_lifecycle_visual_disagreements\": [], \"clearance_lifecycle_visual_prediction_preserved\": true, \"clearance_mode\": true, \"clearance_pause_safe\": true, \"configured_clear_clearance_route\": false, \"configured_clear_clearance_route_bindings\": [], \"configured_clear_goal_route\": false, \"configured_clear_goal_route_bindings\": [], \"configured_clear_motion_route\": false, \"controller_position_fields_used_for_localization\": false, \"external_obstacles\": [], \"interior_shuttles\": [\"left_shuttle_2\"], \"normal_route\": false, \"normalization_required_before_goal_motion\": false, \"normalization_required_before_planned_motion\": false, \"planning_interior_shuttles\": [\"left_shuttle_2\"], \"raw_interior_overridden_by_verified_exterior_slot\": [], \"raw_visual_position_preserved\": true, \"reason\": \"active_clearance_configuration_must_finish_explicitly\", \"reconfiguration_required\": false, \"reconfiguration_safe\": false, \"reconfiguration_visual_disagreements_proved\": true, \"side\": \"left\", \"stoppers\": {\"A1\": \"open\", \"A2\": \"open\", \"A3\": \"open\", \"A4\": \"closed\"}, \"switches\": {\"A1\": \"exterior\", \"A2\": \"exterior\", \"A3\": \"interior\", \"A4\": \"interior\"}, \"uncertified_interior_shuttles\": [], \"visually_interior_shuttles\": [\"left_shuttle_2\"]}, \"runtime_clearance_certificates\": {\"L2\": {\"absolute_error_m\": 0.052955909820556535, \"bounded_commanded_motion_completed\": true, \"bounded_motion_distance_m\": 1.060396, \"clearance_mode_held\": true, \"controller_position_fields_used_for_localization\": false, \"controller_stop_confirmed\": true, \"entry_sensor\": \"DA3IL\", \"entry_sensor_identity_confirmed\": true, \"identity\": \"L2\", \"interior_advance_origin_certified\": false, \"longitudinal_effect_verification_source\": \"binary_entry_sensor_plus_bounded_commanded_motion_and_stop\", \"matched_by\": \"interior_entry_sensor_plus_bounded_travel_time\", \"model_prediction_replaced\": false, \"model_segment_disagreement\": false, \"motion_origin_s_m\": null, \"normal_route_restored\": false, \"observed_s_m\": 1.0074400901794434, \"observed_segment\": \"A34I\", \"origin_clearance_proof\": {}, \"post_stop_visual_confirmation\": true, \"post_stop_visual_frame_received\": true, \"proof\": \"interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved\", \"segment_effect_verification_source\": \"identity_bearing_binary_interior_entry_sensor_and_held_route\", \"shuttle\": \"left_shuttle_2\", \"side\": \"left\", \"target_s_m\": 1.060396, \"target_segment\": \"A34I\", \"tolerance_m\": 0.08, \"visual_longitudinal_prediction_preserved\": true, \"visual_prediction_disagreement\": false, \"visual_s_within_tolerance\": true, \"visual_segment_prediction_preserved\": true}}, \"step_index\": 2, \"symbolic_step\": \"finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3\"}, \"side\": \"left\", \"stoppers\": {\"A1\": \"0\", \"A2\": \"0\", \"A3\": \"0\", \"A4\": \"0\"}}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": false, \"time_s\": 1257228.367451}, {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 19.624070131841123, \"route_distance_m\": 3.9248140263682245, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-3\", \"step_index\": 3, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_1\", \"source_station\": \"left_yaskawa\", \"speed\": 0.2, \"target_slot\": \"3\", \"target_station\": \"left_kuka\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 19.624070131841123, \"route_distance_m\": 3.9248140263682245, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-3\", \"step_index\": 3, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_1\", \"source_station\": \"left_yaskawa\", \"speed\": 0.2, \"target_slot\": \"3\", \"target_station\": \"left_kuka\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 19.624070131841123, \"route_distance_m\": 3.9248140263682245, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-3\", \"step_index\": 3, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_1\", \"source_station\": \"left_yaskawa\", \"speed\": 0.2, \"target_slot\": \"3\", \"target_station\": \"left_kuka\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"arrival_timeout\": {\"base_timeout_s\": 30.0, \"commanded_speed_mps\": 0.2, \"controller_position_fields_used_for_localization\": false, \"margin_s\": 5.0, \"nominal_travel_s\": 19.624070131841123, \"route_distance_m\": 3.9248140263682245, \"scale\": 1.25, \"source\": \"authoritative_slot_to_slot_topology_route\", \"timeout_s\": 30.0, \"topology_source\": \"authoritative_room315_rail_configuration\"}, \"mode\": \"plansys2_first_atomic_step\", \"plan_length\": 3, \"problem_name\": \"closed-loop-room315-task-goal-d63385b7fcce-3\", \"step_index\": 3, \"symbolic_step\": \"move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2\"}, \"command\": \"ON\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\", \"slot_route_move\": true, \"source_slot\": \"left_slot_1\", \"source_station\": \"left_yaskawa\", \"speed\": 0.2, \"target_slot\": \"3\", \"target_station\": \"left_kuka\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1257229.638273}, {\"accepted\": true, \"corrected_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\"}, \"executed_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"room315_left_shuttle_1\", \"side\": \"left\"}, \"illegal_proposal\": false, \"original_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\"}, \"raw_action\": {\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\"}, \"reason\": \"\", \"rejected_action\": null, \"safe_correction\": true, \"time_s\": 1257249.479316}], \"recovery\": {\"model_input_exposure\": \"excluded\", \"next_step\": \"\", \"phase\": \"idle\", \"reason\": \"\", \"retry_count\": 0}}, \"safety_decoder_metrics\": {\"accepted_actions\": 8, \"average_wait_time_by_shuttle\": {}, \"block_occupancy_violation_count\": 0, \"block_reservation_rejection_count\": 0, \"deadlock_avoided_count\": 0, \"deadlock_detected_count\": 0, \"fail_safe_abort_count\": 0, \"fleet_throughput_tasks_per_minute\": null, \"headway_violation_count\": 0, \"illegal_proposal_rate\": 0.0, \"multi_shuttle_task_success\": null, \"obstacle_stop_count\": 0, \"occupied_target_rejection_count\": 0, \"per_shuttle_task_success\": {}, \"rejected_action_rate\": 0.0, \"rejected_actions\": 0, \"rejection_reasons\": {}, \"safety_recovery_count\": 0, \"sensor_dropout_count\": 0, \"shuttle_id_accuracy\": null, \"timeout_rejection_count\": 0, \"total_proposed_actions\": 8, \"trusted_state_rejection_count\": 0, \"unknown_localization_rejection_count\": 0, \"wrong_shuttle_command_rate\": 0.0}, \"vision\": {\"camera_info_frame_id\": \"room315_vla_left_rail_rgbd_optical_frame\", \"cameras\": {\"left_rail_rgb\": {\"camera_info_frame_id\": \"room315_vla_left_rail_rgbd_optical_frame\", \"image_frames\": 775, \"last_camera_info_age_s\": 0.082, \"last_image_age_s\": 0.073}, \"right_rail_rgb\": {\"camera_info_frame_id\": \"room315_vla_right_rail_rgbd_optical_frame\", \"image_frames\": 775, \"last_camera_info_age_s\": 0.1, \"last_image_age_s\": 0.083}}, \"image_frames\": 1550, \"last_camera_info_age_s\": 0.082, \"last_image_age_s\": 0.073}}'\n---\n"
+  },
+  "payload": {
+    "active_tasks": {},
+    "completed_tasks": [],
+    "emergency_stop": false,
+    "last_command": "{\"action\": \"shuttle\", \"closed_loop_executive\": {\"final_arrival_source\": \"deterministic_slot_sensor\", \"mode\": \"slot_sensor_target_arrival_finalize\", \"planner_localization_source\": \"accepted_visual_state\", \"target_sensor\": \"DZI3L\", \"target_slot\": \"3\"}, \"command\": \"OFF\", \"shuttle\": \"left_shuttle_1\", \"side\": \"left\"}",
+    "last_primitive_command": {
+      "action": "shuttle",
+      "command": "OFF",
+      "shuttle": "room315_left_shuttle_1",
+      "side": "left",
+      "speed": 0.0,
+      "start_slot": "",
+      "target_slot": "",
+      "task_id": "",
+      "time_s": 1257249.479565
+    },
+    "last_result": "shuttle command sent on left",
+    "payload_state": {
+      "by_shuttle": {
+        "room315_left_shuttle_1": {
+          "entity_name": "room315_left_shuttle_1",
+          "loaded": true,
+          "model_input_exposure": "excluded",
+          "payload_type": "box",
+          "short_id": "L1",
+          "shuttle_id": "left_shuttle_1",
+          "shuttle_index": 0,
+          "side": "left"
+        },
+        "room315_left_shuttle_2": {
+          "entity_name": "room315_left_shuttle_2",
+          "loaded": false,
+          "model_input_exposure": "excluded",
+          "payload_type": "none",
+          "short_id": "L2",
+          "shuttle_id": "left_shuttle_2",
+          "shuttle_index": 1,
+          "side": "left"
+        }
+      },
+      "model_input_exposure": "excluded",
+      "shuttles": [
+        {
+          "entity_name": "room315_left_shuttle_1",
+          "loaded": true,
+          "model_input_exposure": "excluded",
+          "payload_type": "box",
+          "short_id": "L1",
+          "shuttle_id": "left_shuttle_1",
+          "shuttle_index": 0,
+          "side": "left"
+        },
+        {
+          "entity_name": "room315_left_shuttle_2",
+          "loaded": false,
+          "model_input_exposure": "excluded",
+          "payload_type": "none",
+          "short_id": "L2",
+          "shuttle_id": "left_shuttle_2",
+          "shuttle_index": 1,
+          "side": "left"
+        }
+      ]
+    },
+    "rails": {
+      "left": {
+        "active_position_sensors": [],
+        "active_sensors": [
+          {
+            "name": "DZI3L",
+            "s": 0.9526,
+            "s_ratio": 0.4276,
+            "segment": "A34E",
+            "shuttle": "room315_left_shuttle_1",
+            "type": "sensor"
+          }
+        ],
+        "payloads": {
+          "room315_left_shuttle_1": {
+            "entity_name": "room315_left_shuttle_1",
+            "loaded": true,
+            "model_input_exposure": "excluded",
+            "payload_type": "box",
+            "short_id": "L1",
+            "shuttle_id": "left_shuttle_1",
+            "shuttle_index": 0,
+            "side": "left"
+          },
+          "room315_left_shuttle_2": {
+            "entity_name": "room315_left_shuttle_2",
+            "loaded": false,
+            "model_input_exposure": "excluded",
+            "payload_type": "none",
+            "short_id": "L2",
+            "shuttle_id": "left_shuttle_2",
+            "shuttle_index": 1,
+            "side": "left"
+          }
+        },
+        "shuttles": {
+          "room315_left_shuttle_1": {
+            "mode": "DISABLED",
+            "reached_target_slot": "3",
+            "s": 0.9526,
+            "segment": "A34E",
+            "speed": 0.2,
+            "x": -13.3882,
+            "y": -3.4369,
+            "yaw": -0.0004,
+            "z": 0.8393
+          },
+          "room315_left_shuttle_2": {
+            "mode": "DISABLED",
+            "reached_target_slot": "",
+            "s": 1.0539,
+            "segment": "A34I",
+            "speed": 0.2,
+            "x": -12.9912,
+            "y": -3.8647,
+            "yaw": -0.0005,
+            "z": 0.8393
+          }
+        },
+        "stoppers": {
+          "A1": "0",
+          "A2": "0",
+          "A3": "0",
+          "A4": "0"
+        },
+        "switches": {
+          "A1": "E",
+          "A2": "E",
+          "A3": "E",
+          "A4": "E"
+        }
+      },
+      "right": {
+        "active_position_sensors": [],
+        "active_sensors": [],
+        "payloads": {},
+        "shuttles": {},
+        "stoppers": {
+          "A1": "0",
+          "A2": "0",
+          "A3": "0",
+          "A4": "0"
+        },
+        "switches": {
+          "A1": "E",
+          "A2": "E",
+          "A3": "E",
+          "A4": "E"
+        }
+      }
+    },
+    "safety_decoder": {
+      "fleet_state": {
+        "block_occupancy": {
+          "left:A34E": "L1",
+          "left:A34I": "L2"
+        },
+        "block_reservations": {},
+        "min_headway_blocks": 1,
+        "model_input_exposure": "excluded",
+        "shuttle_blocks": {
+          "L1": "left:A34E",
+          "L2": "left:A34I"
+        },
+        "station_slot_targets": {}
+      },
+      "last_decision": {
+        "accepted": true,
+        "corrected_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI3L",
+            "target_slot": "3"
+          },
+          "command": "OFF",
+          "shuttle": "room315_left_shuttle_1",
+          "side": "left"
+        },
+        "executed_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI3L",
+            "target_slot": "3"
+          },
+          "command": "OFF",
+          "shuttle": "room315_left_shuttle_1",
+          "side": "left"
+        },
+        "illegal_proposal": false,
+        "original_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI3L",
+            "target_slot": "3"
+          },
+          "command": "OFF",
+          "shuttle": "left_shuttle_1",
+          "side": "left"
+        },
+        "raw_action": {
+          "action": "shuttle",
+          "closed_loop_executive": {
+            "final_arrival_source": "deterministic_slot_sensor",
+            "mode": "slot_sensor_target_arrival_finalize",
+            "planner_localization_source": "accepted_visual_state",
+            "target_sensor": "DZI3L",
+            "target_slot": "3"
+          },
+          "command": "OFF",
+          "shuttle": "left_shuttle_1",
+          "side": "left"
+        },
+        "reason": "",
+        "rejected_action": null,
+        "safe_correction": true,
+        "time_s": 1257249.479316
+      },
+      "metrics": {
+        "accepted_actions": 8,
+        "average_wait_time_by_shuttle": {},
+        "block_occupancy_violation_count": 0,
+        "block_reservation_rejection_count": 0,
+        "deadlock_avoided_count": 0,
+        "deadlock_detected_count": 0,
+        "fail_safe_abort_count": 0,
+        "fleet_throughput_tasks_per_minute": null,
+        "headway_violation_count": 0,
+        "illegal_proposal_rate": 0.0,
+        "multi_shuttle_task_success": null,
+        "obstacle_stop_count": 0,
+        "occupied_target_rejection_count": 0,
+        "per_shuttle_task_success": {},
+        "rejected_action_rate": 0.0,
+        "rejected_actions": 0,
+        "rejection_reasons": {},
+        "safety_recovery_count": 0,
+        "sensor_dropout_count": 0,
+        "shuttle_id_accuracy": null,
+        "timeout_rejection_count": 0,
+        "total_proposed_actions": 8,
+        "trusted_state_rejection_count": 0,
+        "unknown_localization_rejection_count": 0,
+        "wrong_shuttle_command_rate": 0.0
+      },
+      "recent_decisions": [
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "INTERIOR",
+              "A4": "INTERIOR"
+            }
+          },
+          "executed_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "INTERIOR",
+              "A4": "INTERIOR"
+            }
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "INTERIOR",
+              "A4": "INTERIOR"
+            }
+          },
+          "raw_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "INTERIOR",
+              "A4": "INTERIOR"
+            }
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": false,
+          "time_s": 1257206.460696
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "1"
+            }
+          },
+          "executed_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "1"
+            }
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "1"
+            }
+          },
+          "raw_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "clearance_route_switch_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "begin_route_clearance_hold_interior",
+              "plan_length": 2,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-0-clearance-1",
+              "route_normalization_proof": {
+                "active_clearance_gate": "",
+                "all_stoppers_open": true,
+                "certificate_segment_consistency": {},
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [],
+                "certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": false,
+                "clearance_pause_safe": false,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [],
+                "normal_route": true,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "already_normal",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "open"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "exterior",
+                  "A4": "exterior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": []
+              },
+              "runtime_clearance_certificates": {},
+              "step_index": 0,
+              "symbolic_step": "begin_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "1"
+            }
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": false,
+          "time_s": 1257207.871335
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "clearance_motion_route_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_stoppers": {
+                  "A1": "0",
+                  "A2": "0",
+                  "A3": "0",
+                  "A4": "1"
+                },
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "plansys2_supervised_interior_clearance",
+              "plan_length": 1,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1",
+              "step_index": 1,
+              "symbolic_step": "relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "room315_left_shuttle_2",
+            "side": "left",
+            "speed": 0.2,
+            "target_stopper": "A4"
+          },
+          "executed_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "clearance_motion_route_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_stoppers": {
+                  "A1": "0",
+                  "A2": "0",
+                  "A3": "0",
+                  "A4": "1"
+                },
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "plansys2_supervised_interior_clearance",
+              "plan_length": 1,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1",
+              "step_index": 1,
+              "symbolic_step": "relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "room315_left_shuttle_2",
+            "side": "left",
+            "speed": 0.2,
+            "target_stopper": "A4"
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "clearance_motion_route_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_stoppers": {
+                  "A1": "0",
+                  "A2": "0",
+                  "A3": "0",
+                  "A4": "1"
+                },
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "plansys2_supervised_interior_clearance",
+              "plan_length": 1,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1",
+              "step_index": 1,
+              "symbolic_step": "relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "left_shuttle_2",
+            "side": "left",
+            "speed": 0.2,
+            "target_stopper": "A4"
+          },
+          "raw_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "clearance_motion_route_proof": {
+                "controller_position_fields_used_for_localization": false,
+                "exit_switch": "A4",
+                "gate_switch": "A3",
+                "required_stoppers": {
+                  "A1": "0",
+                  "A2": "0",
+                  "A3": "0",
+                  "A4": "1"
+                },
+                "required_switches": {
+                  "A1": "EXTERIOR",
+                  "A2": "EXTERIOR",
+                  "A3": "INTERIOR",
+                  "A4": "INTERIOR"
+                },
+                "route_specific_switch_assignment": true,
+                "side": "left",
+                "target_segment": "A34I"
+              },
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "plansys2_supervised_interior_clearance",
+              "plan_length": 1,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-1-clearance-1",
+              "step_index": 1,
+              "symbolic_step": "relocate_blocker_to_interior left_shuttle_2 left_shuttle_1 left left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "left_shuttle_2",
+            "side": "left",
+            "speed": 0.2,
+            "target_stopper": "A4"
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": true,
+          "time_s": 1257209.115905
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "advance_from_certified_interior_origin": false,
+              "controller_position_fields_used_for_localization": false,
+              "entry_sensor": "DA3IL",
+              "minimum_clearance_delay_s": 5.3019799999999995,
+              "mode": "guarded_interior_clearance_stop",
+              "motion_origin_s_m": null,
+              "stop_trigger": "interior_entry_sensor_plus_bounded_travel_time",
+              "target_s_m": 1.060396,
+              "target_segment": "A34I",
+              "tolerance_m": 0.08
+            },
+            "command": "OFF",
+            "shuttle": "room315_left_shuttle_2",
+            "side": "left"
+          },
+          "executed_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "advance_from_certified_interior_origin": false,
+              "controller_position_fields_used_for_localization": false,
+              "entry_sensor": "DA3IL",
+              "minimum_clearance_delay_s": 5.3019799999999995,
+              "mode": "guarded_interior_clearance_stop",
+              "motion_origin_s_m": null,
+              "stop_trigger": "interior_entry_sensor_plus_bounded_travel_time",
+              "target_s_m": 1.060396,
+              "target_segment": "A34I",
+              "tolerance_m": 0.08
+            },
+            "command": "OFF",
+            "shuttle": "room315_left_shuttle_2",
+            "side": "left"
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "advance_from_certified_interior_origin": false,
+              "controller_position_fields_used_for_localization": false,
+              "entry_sensor": "DA3IL",
+              "minimum_clearance_delay_s": 5.3019799999999995,
+              "mode": "guarded_interior_clearance_stop",
+              "motion_origin_s_m": null,
+              "stop_trigger": "interior_entry_sensor_plus_bounded_travel_time",
+              "target_s_m": 1.060396,
+              "target_segment": "A34I",
+              "tolerance_m": 0.08
+            },
+            "command": "OFF",
+            "shuttle": "left_shuttle_2",
+            "side": "left"
+          },
+          "raw_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "advance_from_certified_interior_origin": false,
+              "controller_position_fields_used_for_localization": false,
+              "entry_sensor": "DA3IL",
+              "minimum_clearance_delay_s": 5.3019799999999995,
+              "mode": "guarded_interior_clearance_stop",
+              "motion_origin_s_m": null,
+              "stop_trigger": "interior_entry_sensor_plus_bounded_travel_time",
+              "target_s_m": 1.060396,
+              "target_segment": "A34I",
+              "tolerance_m": 0.08
+            },
+            "command": "OFF",
+            "shuttle": "left_shuttle_2",
+            "side": "left"
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": true,
+          "time_s": 1257226.877867
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "EXTERIOR",
+              "A4": "EXTERIOR"
+            }
+          },
+          "executed_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "EXTERIOR",
+              "A4": "EXTERIOR"
+            }
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "EXTERIOR",
+              "A4": "EXTERIOR"
+            }
+          },
+          "raw_action": {
+            "action": "switches",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "switches": {
+              "A1": "EXTERIOR",
+              "A2": "EXTERIOR",
+              "A3": "EXTERIOR",
+              "A4": "EXTERIOR"
+            }
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": false,
+          "time_s": 1257227.230601
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "0"
+            }
+          },
+          "executed_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "0"
+            }
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "0"
+            }
+          },
+          "raw_action": {
+            "action": "stoppers",
+            "closed_loop_executive": {
+              "controller_position_fields_used_for_localization": false,
+              "localization_source": "accepted_visual_state",
+              "mode": "restore_normal_route_after_interior_clearance",
+              "plan_length": 6,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-2",
+              "route_normalization_proof": {
+                "active_clearance_gate": "A3",
+                "all_stoppers_open": false,
+                "certificate_segment_consistency": {
+                  "left_shuttle_2": {
+                    "accepted_visual_internal_segment": "A12I",
+                    "certificate_target_internal_segment": "A12I",
+                    "certificate_target_public_segment": "A34I",
+                    "certificate_used_as_localization": false,
+                    "reason": "certificate_and_visual_segment_match",
+                    "required": true,
+                    "satisfied": true
+                  }
+                },
+                "certificate_segment_mismatches": [],
+                "certified_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_certificate_used_as_localization": false,
+                "clearance_lifecycle_certified_stopped_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "clearance_lifecycle_uncertified_interior_shuttles": [],
+                "clearance_lifecycle_visual_disagreements": [],
+                "clearance_lifecycle_visual_prediction_preserved": true,
+                "clearance_mode": true,
+                "clearance_pause_safe": true,
+                "configured_clear_clearance_route": false,
+                "configured_clear_clearance_route_bindings": [],
+                "configured_clear_goal_route": false,
+                "configured_clear_goal_route_bindings": [],
+                "configured_clear_motion_route": false,
+                "controller_position_fields_used_for_localization": false,
+                "external_obstacles": [],
+                "interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "normal_route": false,
+                "normalization_required_before_goal_motion": false,
+                "normalization_required_before_planned_motion": false,
+                "planning_interior_shuttles": [
+                  "left_shuttle_2"
+                ],
+                "raw_interior_overridden_by_verified_exterior_slot": [],
+                "raw_visual_position_preserved": true,
+                "reason": "active_clearance_configuration_must_finish_explicitly",
+                "reconfiguration_required": false,
+                "reconfiguration_safe": false,
+                "reconfiguration_visual_disagreements_proved": true,
+                "side": "left",
+                "stoppers": {
+                  "A1": "open",
+                  "A2": "open",
+                  "A3": "open",
+                  "A4": "closed"
+                },
+                "switches": {
+                  "A1": "exterior",
+                  "A2": "exterior",
+                  "A3": "interior",
+                  "A4": "interior"
+                },
+                "uncertified_interior_shuttles": [],
+                "visually_interior_shuttles": [
+                  "left_shuttle_2"
+                ]
+              },
+              "runtime_clearance_certificates": {
+                "L2": {
+                  "absolute_error_m": 0.052955909820556535,
+                  "bounded_commanded_motion_completed": true,
+                  "bounded_motion_distance_m": 1.060396,
+                  "clearance_mode_held": true,
+                  "controller_position_fields_used_for_localization": false,
+                  "controller_stop_confirmed": true,
+                  "entry_sensor": "DA3IL",
+                  "entry_sensor_identity_confirmed": true,
+                  "identity": "L2",
+                  "interior_advance_origin_certified": false,
+                  "longitudinal_effect_verification_source": "binary_entry_sensor_plus_bounded_commanded_motion_and_stop",
+                  "matched_by": "interior_entry_sensor_plus_bounded_travel_time",
+                  "model_prediction_replaced": false,
+                  "model_segment_disagreement": false,
+                  "motion_origin_s_m": null,
+                  "normal_route_restored": false,
+                  "observed_s_m": 1.0074400901794434,
+                  "observed_segment": "A34I",
+                  "origin_clearance_proof": {},
+                  "post_stop_visual_confirmation": true,
+                  "post_stop_visual_frame_received": true,
+                  "proof": "interior_entry_sensor_identity+held_clearance_route+bounded_commanded_motion+controller_stop+fresh_visual_prediction_preserved",
+                  "segment_effect_verification_source": "identity_bearing_binary_interior_entry_sensor_and_held_route",
+                  "shuttle": "left_shuttle_2",
+                  "side": "left",
+                  "target_s_m": 1.060396,
+                  "target_segment": "A34I",
+                  "tolerance_m": 0.08,
+                  "visual_longitudinal_prediction_preserved": true,
+                  "visual_prediction_disagreement": false,
+                  "visual_s_within_tolerance": true,
+                  "visual_segment_prediction_preserved": true
+                }
+              },
+              "step_index": 2,
+              "symbolic_step": "finish_route_clearance left_shuttle_1 left left_slot_1 left_slot_3"
+            },
+            "side": "left",
+            "stoppers": {
+              "A1": "0",
+              "A2": "0",
+              "A3": "0",
+              "A4": "0"
+            }
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": false,
+          "time_s": 1257228.367451
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 19.624070131841123,
+                "route_distance_m": 3.9248140263682245,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-3",
+              "step_index": 3,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "room315_left_shuttle_1",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_1",
+            "source_station": "left_yaskawa",
+            "speed": 0.2,
+            "target_slot": "3",
+            "target_station": "left_kuka"
+          },
+          "executed_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 19.624070131841123,
+                "route_distance_m": 3.9248140263682245,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-3",
+              "step_index": 3,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "room315_left_shuttle_1",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_1",
+            "source_station": "left_yaskawa",
+            "speed": 0.2,
+            "target_slot": "3",
+            "target_station": "left_kuka"
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 19.624070131841123,
+                "route_distance_m": 3.9248140263682245,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-3",
+              "step_index": 3,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "left_shuttle_1",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_1",
+            "source_station": "left_yaskawa",
+            "speed": 0.2,
+            "target_slot": "3",
+            "target_station": "left_kuka"
+          },
+          "raw_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "arrival_timeout": {
+                "base_timeout_s": 30.0,
+                "commanded_speed_mps": 0.2,
+                "controller_position_fields_used_for_localization": false,
+                "margin_s": 5.0,
+                "nominal_travel_s": 19.624070131841123,
+                "route_distance_m": 3.9248140263682245,
+                "scale": 1.25,
+                "source": "authoritative_slot_to_slot_topology_route",
+                "timeout_s": 30.0,
+                "topology_source": "authoritative_room315_rail_configuration"
+              },
+              "mode": "plansys2_first_atomic_step",
+              "plan_length": 3,
+              "problem_name": "closed-loop-room315-task-goal-d63385b7fcce-3",
+              "step_index": 3,
+              "symbolic_step": "move_shuttle_to_slot left_shuttle_1 left left_yaskawa left_kuka left_slot_1 left_slot_3 speed=0.2"
+            },
+            "command": "ON",
+            "shuttle": "left_shuttle_1",
+            "side": "left",
+            "slot_route_move": true,
+            "source_slot": "left_slot_1",
+            "source_station": "left_yaskawa",
+            "speed": 0.2,
+            "target_slot": "3",
+            "target_station": "left_kuka"
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": true,
+          "time_s": 1257229.638273
+        },
+        {
+          "accepted": true,
+          "corrected_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI3L",
+              "target_slot": "3"
+            },
+            "command": "OFF",
+            "shuttle": "room315_left_shuttle_1",
+            "side": "left"
+          },
+          "executed_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI3L",
+              "target_slot": "3"
+            },
+            "command": "OFF",
+            "shuttle": "room315_left_shuttle_1",
+            "side": "left"
+          },
+          "illegal_proposal": false,
+          "original_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI3L",
+              "target_slot": "3"
+            },
+            "command": "OFF",
+            "shuttle": "left_shuttle_1",
+            "side": "left"
+          },
+          "raw_action": {
+            "action": "shuttle",
+            "closed_loop_executive": {
+              "final_arrival_source": "deterministic_slot_sensor",
+              "mode": "slot_sensor_target_arrival_finalize",
+              "planner_localization_source": "accepted_visual_state",
+              "target_sensor": "DZI3L",
+              "target_slot": "3"
+            },
+            "command": "OFF",
+            "shuttle": "left_shuttle_1",
+            "side": "left"
+          },
+          "reason": "",
+          "rejected_action": null,
+          "safe_correction": true,
+          "time_s": 1257249.479316
+        }
+      ],
+      "recovery": {
+        "model_input_exposure": "excluded",
+        "next_step": "",
+        "phase": "idle",
+        "reason": "",
+        "retry_count": 0
+      }
+    },
+    "safety_decoder_metrics": {
+      "accepted_actions": 8,
+      "average_wait_time_by_shuttle": {},
+      "block_occupancy_violation_count": 0,
+      "block_reservation_rejection_count": 0,
+      "deadlock_avoided_count": 0,
+      "deadlock_detected_count": 0,
+      "fail_safe_abort_count": 0,
+      "fleet_throughput_tasks_per_minute": null,
+      "headway_violation_count": 0,
+      "illegal_proposal_rate": 0.0,
+      "multi_shuttle_task_success": null,
+      "obstacle_stop_count": 0,
+      "occupied_target_rejection_count": 0,
+      "per_shuttle_task_success": {},
+      "rejected_action_rate": 0.0,
+      "rejected_actions": 0,
+      "rejection_reasons": {},
+      "safety_recovery_count": 0,
+      "sensor_dropout_count": 0,
+      "shuttle_id_accuracy": null,
+      "timeout_rejection_count": 0,
+      "total_proposed_actions": 8,
+      "trusted_state_rejection_count": 0,
+      "unknown_localization_rejection_count": 0,
+      "wrong_shuttle_command_rate": 0.0
+    },
+    "vision": {
+      "camera_info_frame_id": "room315_vla_left_rail_rgbd_optical_frame",
+      "cameras": {
+        "left_rail_rgb": {
+          "camera_info_frame_id": "room315_vla_left_rail_rgbd_optical_frame",
+          "image_frames": 775,
+          "last_camera_info_age_s": 0.082,
+          "last_image_age_s": 0.073
+        },
+        "right_rail_rgb": {
+          "camera_info_frame_id": "room315_vla_right_rail_rgbd_optical_frame",
+          "image_frames": 775,
+          "last_camera_info_age_s": 0.1,
+          "last_image_age_s": 0.083
+        }
+      },
+      "image_frames": 1550,
+      "last_camera_info_age_s": 0.082,
+      "last_image_age_s": 0.073
+    }
+  }
+}

@@ -1,0 +1,3 @@
+Move yellow R4 to the Yaskawa station on the right rail.
+yes
+quit

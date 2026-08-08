@@ -1,0 +1,64 @@
+{
+  "actual_constraints": {},
+  "actual_issue_codes": [
+    "dialogue_cancelled"
+  ],
+  "actual_status": "cancelled",
+  "backend_infer_call_delta": 0,
+  "constraints_match": true,
+  "elapsed_s": 9.14139673113823e-05,
+  "expected_constraints": {},
+  "expected_issue_codes": [],
+  "expected_status": "cancelled",
+  "fallback_reason": "",
+  "fallback_used": false,
+  "id": "cancellation",
+  "index": 10,
+  "issues_match": true,
+  "passed": true,
+  "raw": {
+    "dialogue": {
+      "clarifications": [
+        {
+          "code": "dialogue_cancelled",
+          "field": "dialogue",
+          "message": "Goal entry was cancelled. No TaskGoal was finalized."
+        }
+      ],
+      "confirmation_prompt": "",
+      "confirmation_required": false,
+      "draft": null,
+      "errors": [],
+      "ok": false,
+      "questions": [
+        "Goal entry was cancelled. No TaskGoal was finalized."
+      ],
+      "state": {
+        "attempts": 0,
+        "awaiting_confirmation": false,
+        "confirmation_prompt": "",
+        "confirmed_draft": null,
+        "history": [
+          {
+            "result": {
+              "status": "cancelled"
+            },
+            "utterance": "cancel"
+          }
+        ],
+        "max_attempts": 3,
+        "pending_draft": null,
+        "requires_confirmation": false
+      },
+      "status": "cancelled",
+      "task_goal": null
+    },
+    "parse": null,
+    "validation": null
+  },
+  "semantic_invocation_required": false,
+  "semantic_requirement_met": true,
+  "status_match": true,
+  "text": "cancel",
+  "unsafe_auto_resolution": false
+}

@@ -1,0 +1,104 @@
+{
+  "captured_at_utc": "2026-08-07T09:04:43.633172Z",
+  "matches_pre_campaign_artifacts": true,
+  "matches_pre_campaign_runtime_source": true,
+  "runtime_artifact_contract": {
+    "artifact_count": 15,
+    "artifacts": [
+      {
+        "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+        "role": "visual_checkpoint",
+        "sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+        "size_bytes": 113868535
+      },
+      {
+        "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/target_stats.json",
+        "role": "visual_target_statistics",
+        "sha256": "2d48078641842aa2db7a59b9285fc5bbedaaa3a0039fc39986ca230db983b18c",
+        "size_bytes": 8705
+      },
+      {
+        "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/visual_label_vectorizer.json",
+        "role": "visual_label_vectorizer",
+        "sha256": "637c854556f3331c4e187db4aa7fc70457f01df8877947b9a0e988a543f7113e",
+        "size_bytes": 17458
+      },
+      {
+        "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/training_config.json",
+        "role": "visual_training_configuration",
+        "sha256": "5c45544af7766afff397dafa7c14c0b3b05083f07a93122308ef50c2e8f452eb",
+        "size_bytes": 15630
+      },
+      {
+        "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/run_metadata.json",
+        "role": "visual_run_metadata",
+        "sha256": "d86c0ebfda3f5b174fc3c06f4ce8a3e083d2048db7b44d20efe951aaa7e5428d",
+        "size_bytes": 5560
+      },
+      {
+        "path": "/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "role": "intent_language_model",
+        "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "size_bytes": 1117320736
+      },
+      {
+        "path": "/home/tiago/models/room315_intent/task_goal_understanding.local.yaml",
+        "role": "intent_runtime_configuration",
+        "sha256": "6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea",
+        "size_bytes": 617
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml",
+        "role": "visual_state_runtime_configuration",
+        "sha256": "e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19",
+        "size_bytes": 2735
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml",
+        "role": "task_execution_runtime_configuration",
+        "sha256": "15d3eaee91e4090f874efeaa7cc2f1df37c78b0fd091466c06b4754e041e57a9",
+        "size_bytes": 3068
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl",
+        "role": "plansys2_runtime_domain",
+        "sha256": "705fd5070503d08e8ec41696959e137afac4a610655317c412df1e4d9875414d",
+        "size_bytes": 24629
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml",
+        "role": "shuttle_identity_configuration",
+        "sha256": "721de97f0aed54efae6a23ae923cdb141da9871ddfc28c9cd33373ee000af141",
+        "size_bytes": 5328
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml",
+        "role": "right_rail_network_configuration",
+        "sha256": "98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d",
+        "size_bytes": 6804
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml",
+        "role": "left_rail_network_configuration",
+        "sha256": "6473fdef8d50f7678836b0168bd146b7231d4e779eade406fe8541bb94744ccb",
+        "size_bytes": 6821
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml",
+        "role": "right_rail_device_configuration",
+        "sha256": "d8c9e79e1e0ae90b53b15038be91a5b25e44a4662c1d353c9919586a27a7e3c7",
+        "size_bytes": 2703
+      },
+      {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml",
+        "role": "left_rail_device_configuration",
+        "sha256": "a6aa815037fc78381512c2fc30da159d6db7976d927fd8c5b7400f336f3afc85",
+        "size_bytes": 2712
+      }
+    ],
+    "hash_algorithm": "sha256",
+    "status": "passed"
+  },
+  "runtime_source_file_count": 483,
+  "runtime_source_tree_sha256": "326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9"
+}

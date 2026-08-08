@@ -1,0 +1,233 @@
+{
+  "after": {
+    "empty_placeholder_count": 0,
+    "opposite_rail_bbox_violation_count": 0,
+    "per_camera": {
+      "left_rail_rgb": {
+        "bbox_training_mask_violation_count": 0,
+        "empty_placeholder_count": 0,
+        "masked_bbox_count": 12224,
+        "maximum_valid_bbox_count_in_one_scenario": 4,
+        "opposite_rail_bbox_violation_count": 0,
+        "rendered_rectangle_count": 4096,
+        "valid_bbox_count": 4096
+      },
+      "right_rail_rgb": {
+        "bbox_training_mask_violation_count": 0,
+        "empty_placeholder_count": 0,
+        "masked_bbox_count": 12224,
+        "maximum_valid_bbox_count_in_one_scenario": 4,
+        "opposite_rail_bbox_violation_count": 0,
+        "rendered_rectangle_count": 4096,
+        "valid_bbox_count": 4096
+      }
+    },
+    "present_but_opposite_camera_masked_count": 8192,
+    "rendered_rectangle_count": 8192
+  },
+  "before": {
+    "empty_placeholder_count": 0,
+    "opposite_rail_bbox_violation_count": 8192,
+    "per_camera": {
+      "left_rail_rgb": {
+        "empty_placeholder_count": 0,
+        "opposite_rail_bbox_violation_count": 4096,
+        "rendered_rectangle_count": 8192,
+        "scenario_examples": [
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0121_no_relation_observation_bc4fb41b"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0122_no_relation_observation_c4bc1031"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0123_no_relation_observation_e820e0c8"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0124_no_relation_observation_f055395f"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0125_no_relation_observation_346e53e3"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0126_no_relation_observation_6a4b4fde"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0127_no_relation_observation_fdfc8590"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0128_no_relation_observation_7e169d67"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0129_no_relation_observation_a7d8fa8b"
+          },
+          {
+            "opposite_identities_rendered": [
+              "R1"
+            ],
+            "scenario_id": "arbitrary_v2_0130_no_relation_observation_8bff3a56"
+          }
+        ]
+      },
+      "right_rail_rgb": {
+        "empty_placeholder_count": 0,
+        "opposite_rail_bbox_violation_count": 4096,
+        "rendered_rectangle_count": 8192,
+        "scenario_examples": [
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0001_no_relation_observation_53acde51"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0002_no_relation_observation_d2671a88"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0003_no_relation_observation_b309b20e"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0004_no_relation_observation_a9d90c4f"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0005_no_relation_observation_a7ff2892"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0006_no_relation_observation_36adecb5"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0007_no_relation_observation_8fe0e583"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L1"
+            ],
+            "scenario_id": "arbitrary_v2_0008_no_relation_observation_7819bba1"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L2"
+            ],
+            "scenario_id": "arbitrary_v2_0009_no_relation_observation_d87baf1e"
+          },
+          {
+            "opposite_identities_rendered": [
+              "L2"
+            ],
+            "scenario_id": "arbitrary_v2_0010_no_relation_observation_db7851b3"
+          }
+        ]
+      }
+    },
+    "rendered_rectangle_count": 16384,
+    "renderer_contract": "pre-fix renderer drew every globally present and visually available shuttle on both camera overlays"
+  },
+  "checks": {
+    "all_scope_events_valid": true,
+    "all_unavailable_bbox_targets_masked": true,
+    "every_valid_bbox_is_camera_compatible": true,
+    "fixed_global_identity_order": true,
+    "fixed_vector_dimension_200": true,
+    "gallery_contract_valid_if_required": true,
+    "global_presence_independent_of_camera_visibility": true,
+    "left_has_zero_valid_right_boxes": true,
+    "masked_boxes_excluded_from_training_loss": true,
+    "masked_boxes_not_rendered": true,
+    "maximum_four_boxes_per_camera": true,
+    "no_empty_placeholder_boxes": true,
+    "right_has_zero_valid_left_boxes": true
+  },
+  "classification": {
+    "audit_bug": true,
+    "camera_specific_training_mask_support_was_missing": true,
+    "evidence": "capture projected each shuttle with cameras[side], so the global bbox is a canonical own-rail-camera box; the old renderer reused it on both views and no audit rejected that",
+    "label_contract_ambiguity": true,
+    "oracle_bbox_geometry_bug": false,
+    "overlay_bug": true,
+    "paired_training_mask_bug": false
+  },
+  "expected_fixed_slots_per_camera": 16320,
+  "fixed_schema": {
+    "identity_order": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ],
+    "vectorizer_dimension": 200,
+    "visual_state_schema": "room315.visual_state.v3"
+  },
+  "gallery_validation": {
+    "manifest_exists": true,
+    "manifest_passed": true,
+    "render_counts_match": true,
+    "rendered_identities_match": true,
+    "required": true,
+    "violations": []
+  },
+  "passed": true,
+  "raw_label_metadata": {
+    "explicit_camera_observation_slot_count": 16320,
+    "missing_camera_observation_slot_count": 0
+  },
+  "required_scenario_examples": {
+    "4+4": "arbitrary_v2_2033_blocker_ahead_same_segment_d3c4c98f",
+    "L2+L4": "arbitrary_v2_0073_blocker_ahead_same_segment_91a42792",
+    "L3": "arbitrary_v2_0025_no_relation_observation_f0ff2b3a",
+    "R1+R3": "arbitrary_v2_0633_blocker_ahead_same_segment_c9a72540",
+    "R4": "arbitrary_v2_1017_no_relation_observation_5c0b1059"
+  },
+  "scenario_count": 2040,
+  "schema_version": "room315.camera_bbox_semantics_audit.v1",
+  "scope": "full",
+  "validation_failures": {}
+}

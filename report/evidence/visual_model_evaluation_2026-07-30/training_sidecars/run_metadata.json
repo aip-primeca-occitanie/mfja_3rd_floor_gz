@@ -1,0 +1,151 @@
+{
+  "adaptation": {
+    "lora_rank": 0,
+    "mode": "partial_finetune",
+    "trainable_scope": "layer4"
+  },
+  "augmentations": [],
+  "backbone": {
+    "architecture": "resnet18",
+    "checkpoint_identifier": "ResNet18_Weights.IMAGENET1K_V1",
+    "checkpoint_path": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/torch_cache/hub/checkpoints/resnet18-f37072fd.pth",
+    "checkpoint_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec",
+    "checkpoint_source": "https://download.pytorch.org/models/resnet18-f37072fd.pth",
+    "library": "torchvision",
+    "library_version": "0.22.0a0",
+    "pretrained_loaded": true,
+    "pretrained_requested": true
+  },
+  "dataset_split_paths": {
+    "test": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/test.jsonl",
+    "test_labels": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/test_visual_labels.jsonl",
+    "train": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/train.jsonl",
+    "train_labels": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/train_visual_labels.jsonl",
+    "validation": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/validation.jsonl",
+    "validation_labels": "/kairos4/p26065/p26065brhm/room315_kairos_visual_state_training_v1_seed31520260730/dataset/splits/validation_visual_labels.jsonl"
+  },
+  "image_preprocessing": {
+    "augmentations": [],
+    "input_resolution": [
+      224,
+      224
+    ],
+    "normalization_mean_per_rgb_view": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std_per_rgb_view": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resize": "direct_bilinear_resize",
+    "value_range": [
+      0.0,
+      1.0
+    ]
+  },
+  "loss": {
+    "absent_shuttle_slots_masked": true,
+    "element_loss": "SmoothL1Loss",
+    "element_reduction": "none",
+    "head_reduction": "mean over valid elements per sample, then mean over samples",
+    "head_weights": {
+      "bbox": 1.0,
+      "loaded_state": 1.0,
+      "s_m": 1.0,
+      "s_ratio": 1.0,
+      "segment_location": 1.0
+    },
+    "kind": "masked_per_sample_smooth_l1_equal_head_weight_v1",
+    "output_decoding": "pred_raw = pred_normalized * target_std + target_mean",
+    "sample_weighting": "uniform",
+    "segment_length_m_head": "segment_location",
+    "target_normalization": "train-split per-target mean/population-std over valid shuttle slots only",
+    "total_reduction": "weighted mean over five heads"
+  },
+  "parameters": {
+    "frozen_parameters": 2782784,
+    "frozen_tensors": [
+      "backbone.conv1.weight",
+      "backbone.bn1.weight",
+      "backbone.bn1.bias",
+      "backbone.layer1.0.conv1.weight",
+      "backbone.layer1.0.bn1.weight",
+      "backbone.layer1.0.bn1.bias",
+      "backbone.layer1.0.conv2.weight",
+      "backbone.layer1.0.bn2.weight",
+      "backbone.layer1.0.bn2.bias",
+      "backbone.layer1.1.conv1.weight",
+      "backbone.layer1.1.bn1.weight",
+      "backbone.layer1.1.bn1.bias",
+      "backbone.layer1.1.conv2.weight",
+      "backbone.layer1.1.bn2.weight",
+      "backbone.layer1.1.bn2.bias",
+      "backbone.layer2.0.conv1.weight",
+      "backbone.layer2.0.bn1.weight",
+      "backbone.layer2.0.bn1.bias",
+      "backbone.layer2.0.conv2.weight",
+      "backbone.layer2.0.bn2.weight",
+      "backbone.layer2.0.bn2.bias",
+      "backbone.layer2.0.downsample.0.weight",
+      "backbone.layer2.0.downsample.1.weight",
+      "backbone.layer2.0.downsample.1.bias",
+      "backbone.layer2.1.conv1.weight",
+      "backbone.layer2.1.bn1.weight",
+      "backbone.layer2.1.bn1.bias",
+      "backbone.layer2.1.conv2.weight",
+      "backbone.layer2.1.bn2.weight",
+      "backbone.layer2.1.bn2.bias",
+      "backbone.layer3.0.conv1.weight",
+      "backbone.layer3.0.bn1.weight",
+      "backbone.layer3.0.bn1.bias",
+      "backbone.layer3.0.conv2.weight",
+      "backbone.layer3.0.bn2.weight",
+      "backbone.layer3.0.bn2.bias",
+      "backbone.layer3.0.downsample.0.weight",
+      "backbone.layer3.0.downsample.1.weight",
+      "backbone.layer3.0.downsample.1.bias",
+      "backbone.layer3.1.conv1.weight",
+      "backbone.layer3.1.bn1.weight",
+      "backbone.layer3.1.bn1.bias",
+      "backbone.layer3.1.conv2.weight",
+      "backbone.layer3.1.bn2.weight",
+      "backbone.layer3.1.bn2.bias"
+    ],
+    "total_parameters": 11335560,
+    "trainable_fraction": 0.754508,
+    "trainable_parameters": 8552776,
+    "trainable_tensors": [
+      "backbone.layer4.0.conv1.weight",
+      "backbone.layer4.0.bn1.weight",
+      "backbone.layer4.0.bn1.bias",
+      "backbone.layer4.0.conv2.weight",
+      "backbone.layer4.0.bn2.weight",
+      "backbone.layer4.0.bn2.bias",
+      "backbone.layer4.0.downsample.0.weight",
+      "backbone.layer4.0.downsample.1.weight",
+      "backbone.layer4.0.downsample.1.bias",
+      "backbone.layer4.1.conv1.weight",
+      "backbone.layer4.1.bn1.weight",
+      "backbone.layer4.1.bn1.bias",
+      "backbone.layer4.1.conv2.weight",
+      "backbone.layer4.1.bn2.weight",
+      "backbone.layer4.1.bn2.bias",
+      "head.0.weight",
+      "head.0.bias",
+      "head.1.weight",
+      "head.1.bias",
+      "head.4.weight",
+      "head.4.bias"
+    ]
+  },
+  "schema_version": "room315.visual_training_run.v2",
+  "seed": {
+    "numpy": 1455489658,
+    "python": 31520260730,
+    "requested": 31520260730,
+    "torch": 31520260730
+  }
+}

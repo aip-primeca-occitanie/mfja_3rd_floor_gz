@@ -1,0 +1,131 @@
+\begin{tikzpicture}[
+  font=\sffamily\footnotesize,
+  execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000},
+  input/.style={draw=black!42,rounded corners=2pt,fill=black!3,
+    align=center,text width=66mm,minimum height=13mm,inner sep=1.4mm},
+  encoder/.style={draw=mfjablue,very thick,rounded corners=2pt,
+    fill=mfjalight,align=center,text width=66mm,minimum height=24mm,
+    inner sep=1.5mm},
+  learned/.style={draw=mfjablue,very thick,rounded corners=2pt,
+    fill=mfjablue!5,align=center,text width=152mm,minimum height=14mm,
+    inner sep=1.5mm},
+  contract/.style={draw=black!55,very thick,rounded corners=2pt,
+    fill=white,align=center,text width=152mm,minimum height=30mm,
+    inner sep=1.6mm},
+  runtimeinput/.style={draw=black!48,rounded corners=2pt,fill=black!3,
+    align=center,text width=68mm,minimum height=13mm,inner sep=1.3mm},
+  gate/.style={draw=mfjagreen,very thick,rounded corners=2pt,
+    fill=mfjagreen!7,align=center,text width=152mm,minimum height=19mm,
+    inner sep=1.6mm},
+  presentcase/.style={draw=mfjagreen,very thick,rounded corners=2pt,
+    fill=mfjagreen!7,align=center,text width=47mm,minimum height=23mm,
+    inner sep=1.4mm},
+  absentcase/.style={draw=black!58,very thick,rounded corners=2pt,
+    fill=black!3,align=center,text width=47mm,minimum height=23mm,
+    inner sep=1.4mm},
+  rejectcase/.style={draw=mfjared,very thick,rounded corners=2pt,
+    fill=mfjared!6,align=center,text width=47mm,minimum height=23mm,
+    inner sep=1.4mm},
+  accepted/.style={draw=mfjagreen,very thick,rounded corners=2pt,
+    fill=mfjagreen!10,align=center,text width=152mm,minimum height=23mm,
+    inner sep=1.6mm},
+  paneltitle/.style={anchor=west,font=\sffamily\small\bfseries,
+    text=mfjablue},
+  flow/.style={-{Latex[length=2.1mm]},very thick,draw=mfjablue},
+  gateflow/.style={-{Latex[length=2.1mm]},very thick,
+    draw=mfjagreen!80!black},
+  caseflow/.style={-{Latex[length=1.9mm]},very thick,draw=black!75}
+]
+  % Panel A: the actual paired-view architecture used in training and runtime.
+  \node[paneltitle] at (-79mm,11mm)
+    {A \enspace LEARNED PAIRED-VIEW STATE ESTIMATOR};
+  \draw[mfjablue!28,line width=0.55pt] (-79mm,7mm) -- (79mm,7mm);
+
+  \node[input] (left) at (-42mm,0) {
+    \textbf{Left RGB image}\\
+    resize to \(224\!\times\!224\); ImageNet normalisation};
+  \node[input] (right) at (42mm,0) {
+    \textbf{Right RGB image}\\
+    resize to \(224\!\times\!224\); ImageNet normalisation};
+
+  \node[encoder] (leftencoder) at (-42mm,-25mm) {
+    \textbf{Shared-weight ResNet-18}\\[-0.2ex]
+    left view processed as three-channel RGB\\
+    ImageNet-pretrained; early stages frozen\\
+    \texttt{layer4} fine-tuned $\rightarrow$ 512-D feature \(f_L\)};
+  \node[encoder] (rightencoder) at (42mm,-25mm) {
+    \textbf{Shared-weight ResNet-18}\\[-0.2ex]
+    right view processed as three-channel RGB\\
+    ImageNet-pretrained; early stages frozen\\
+    \texttt{layer4} fine-tuned $\rightarrow$ 512-D feature \(f_R\)};
+
+  \node[learned] (concat) at (0,-51mm) {
+    \textbf{Feature fusion}\qquad
+    \([f_L;f_R]\): \(512+512\rightarrow1024\) values};
+  \node[learned,minimum height=17mm] (head) at (0,-69mm) {
+    \textbf{Post-fusion prediction head}\\[-0.2ex]
+    LayerNorm(1024) $\rightarrow$ Linear(128) $\rightarrow$ SiLU
+    $\rightarrow$ Dropout(0.05) $\rightarrow$ Linear(200)};
+
+  \node[contract] (contract) at (0,-95mm) {
+    \textbf{Fixed named state proposal: 200 normalised outputs}\\[0.6mm]
+    Decoder identities: \texttt{L1 L2 L3 L4 R1 R2 R3 R4}\\[0.4mm]
+    Per-identity semantics: \textcolor{mfjablue}{18 categorical scores}
+    (side 2, block 14, payload 2)\\[-0.1ex]
+    + \textcolor{mfjaorange}{7 numeric targets}
+    (bounding box 4, \(s_m\), \(s_{ratio}\), auxiliary \(L_{segment}\))\\[0.3mm]
+    \textbf{\(8\times(18+7)=200\)} };
+
+  \draw[flow] (left) -- (leftencoder);
+  \draw[flow] (right) -- (rightencoder);
+  \draw[flow] (leftencoder.south) -- ([xshift=-42mm]concat.north);
+  \draw[flow] (rightencoder.south) -- ([xshift=42mm]concat.north);
+  \draw[flow] (concat) -- (head);
+  \draw[flow] (head) -- (contract);
+
+  % Panel B: the configured registry decides which identity values may be
+  % decoded; the neural network itself never decides presence.
+  \node[paneltitle,anchor=center] at (0,-117mm)
+    {B \enspace RUNTIME DECODING AND CHECKS};
+  \draw[mfjablue!28,line width=0.55pt] (-79mm,-121mm) -- (79mm,-121mm);
+
+  \node[runtimeinput] (proposal) at (-40mm,-133mm) {
+    \textbf{Model proposal + selected artefacts}\\
+    denormalise with training statistics};
+  \node[runtimeinput] (presence) at (40mm,-133mm) {
+    \textbf{Current identity registry}\\
+    \texttt{ShuttleState} names and timestamps only};
+
+  \node[gate] (decode) at (0,-153mm) {
+    \textbf{Identity-aware presence gate}\\[-0.2ex]
+    pair each fixed decoder identity with its independent
+    \texttt{present}, \texttt{absent} or \texttt{unknown} state};
+
+  \node[presentcase] (present) at (-53mm,-177mm) {
+    \textbf{present}\\[-0.2ex]
+    decode this identity's learned state values};
+  \node[absentcase] (absent) at (0,-177mm) {
+    \textbf{absent}\\[-0.2ex]
+    ignore its learned values; retain configured absence};
+  \node[rejectcase] (reject) at (53mm,-177mm) {
+    \textbf{unknown / conflict}\\[-0.2ex]
+    reject this observation; publish no visual update};
+
+  \node[accepted] (accepted) at (0,-203mm) {
+    \textbf{After all identities are consistent: build the visual observation}\\[-0.2ex]
+    check artefacts, freshness, vocabulary and numeric consistency\\
+    $\rightarrow$ publish \texttt{VisualStateObservation}};
+
+  % Keep every connector vertical by using aligned ports on the wide nodes.
+  % This preserves the two independent inputs without diagonal crossings.
+  \draw[flow] ([xshift=-40mm]contract.south) -- (proposal.north);
+  \draw[gateflow] (proposal.south) -- ([xshift=-40mm]decode.north);
+  \draw[gateflow] (presence.south) -- ([xshift=40mm]decode.north);
+  \draw[caseflow] ([xshift=-53mm]decode.south) -- (present.north);
+  \draw[caseflow] (decode.south) -- (absent.north);
+  \draw[caseflow] ([xshift=53mm]decode.south) -- (reject.north);
+  \draw[gateflow] (present.south) -- ([xshift=-53mm]accepted.north);
+  \draw[gateflow] (absent.south) -- (accepted.north);
+
+  \path[use as bounding box] (-82mm,14mm) rectangle (82mm,-216mm);
+\end{tikzpicture}

@@ -44,8 +44,9 @@ from room_315_multi_shuttle import validate_fleet_command
 from room_315_pddl_scenario_generator import INTERIOR_HOLDING_BRANCH_BY_GATE
 from room_315_pddl_scenario_generator import INTERIOR_LOOP_ENTRY_SENSOR_BY_SIDE_AND_GATE
 from room_315_pddl_scenario_generator import SLOT_SENSOR_BY_SIDE_AND_SLOT
-from room_315_rail_defaults import LEFT_PUBLIC_SEGMENT_NAME_MAP
+from room_315_rail_defaults import LEFT_PUBLIC_TO_INTERNAL_SEGMENT_NAME_MAP
 from room_315_rail_defaults import default_rail_network_path
+from room_315_rail_defaults import public_rail_segment_name_to_internal
 from room_315_runtime_contracts import CONTROLLER_DISABLED_MODE
 from room_315_runtime_contracts import normalize_runtime_clearance_certificate
 
@@ -514,20 +515,13 @@ def _shuttle_safety_segments(
         return set()
     segments = {segment}
     if side == 'left':
-        segments.add(LEFT_PUBLIC_SEGMENT_NAME_MAP.get(segment, segment))
+        segments.add(public_rail_segment_name_to_internal(side, segment))
     return segments
 
 
 def _left_controller_segment_to_internal() -> dict[str, str]:
     """Return the validated inverse of the public left-segment vocabulary."""
-
-    inverse = {
-        str(public).strip().upper(): str(internal).strip().upper()
-        for internal, public in LEFT_PUBLIC_SEGMENT_NAME_MAP.items()
-    }
-    if len(inverse) != len(LEFT_PUBLIC_SEGMENT_NAME_MAP):
-        raise ValueError('left public segment map is not one-to-one')
-    return inverse
+    return dict(LEFT_PUBLIC_TO_INTERNAL_SEGMENT_NAME_MAP)
 
 
 LEFT_CONTROLLER_SEGMENT_TO_INTERNAL = _left_controller_segment_to_internal()
@@ -874,6 +868,7 @@ def _current_interior_safety_occupants(
     rails: dict[str, Any],
     *,
     side: str,
+    allow_empty: bool = False,
 ) -> tuple[dict[str, dict[str, Any]], str]:
     """Return controller-confirmed stopped shuttles on the interior branch.
 
@@ -885,6 +880,11 @@ def _current_interior_safety_occupants(
     retained speed setting, is the authoritative OFF effect at this boundary.
     An enabled shuttle held by a stopper or collision also reports ``WAITING``
     and must not authorize a route change that could release it.
+
+    ``allow_empty`` is reserved for restoring a mixed route before ordinary
+    slot motion.  In that case an exact empty proof is safer than the
+    certificate exception needed when an interior shuttle is present.  Active
+    clearance finish/pause paths keep the default non-empty requirement.
     """
 
     occupants: dict[str, dict[str, Any]] = {}
@@ -905,7 +905,7 @@ def _current_interior_safety_occupants(
         if mode != CONTROLLER_DISABLED_MODE:
             return {}, f'{spec.short_id} has no explicit disabled controller mode'
         occupants[spec.shuttle_id] = state
-    if not occupants:
+    if not occupants and not allow_empty:
         return {}, 'route-normalization exception has no stopped interior shuttle'
     return occupants, ''
 
@@ -966,10 +966,12 @@ def _normalization_certificates_reason(
     *,
     rails: dict[str, Any],
     side: str,
+    allow_empty_interior: bool = False,
 ) -> str:
     interior_states, reason = _current_interior_safety_occupants(
         rails,
         side=side,
+        allow_empty=allow_empty_interior,
     )
     if reason:
         return reason
@@ -1075,13 +1077,9 @@ def _normalization_certificates_reason(
         expected_public_segment = _clean_token(
             consistency.get('certificate_target_public_segment')
         ).upper()
-        expected_visual_segment = (
-            LEFT_PUBLIC_SEGMENT_NAME_MAP.get(
-                expected_public_segment,
-                expected_public_segment,
-            )
-            if side == 'left'
-            else expected_public_segment
+        expected_visual_segment = public_rail_segment_name_to_internal(
+            side,
+            expected_public_segment,
         )
         strict_visual_match = (
             consistency.get('required') is not True
@@ -1361,11 +1359,15 @@ def _guarded_route_normalization_proof_reason(
         or proof.get('clearance_pause_safe') is not True
     ):
         return 'active-clearance normalization is not proven safe'
+    allow_empty_interior = (
+        mode == 'restore_normal_route_before_slot_motion'
+    )
     reason = _normalization_certificates_reason(
         metadata,
         proof,
         rails=rails,
         side=side,
+        allow_empty_interior=allow_empty_interior,
     )
     if reason:
         return reason
@@ -1374,6 +1376,7 @@ def _guarded_route_normalization_proof_reason(
     interior_ids, reason = _current_interior_safety_occupants(
         rails,
         side=side,
+        allow_empty=allow_empty_interior,
     )
     if reason:
         return reason
@@ -2306,7 +2309,17 @@ class Room315VlaSupervisor(Node):
         camera['camera_info_frame_id'] = msg.header.frame_id
 
     def _on_shuttle_state(self, side: str, msg: ShuttleState) -> None:
-        self.rails[side]['shuttles'][msg.name] = {
+        name = str(msg.name or '').strip()
+        if not name:
+            # The kinematic controller publishes a fresh blank-name state when
+            # this side has no active shuttles.  It is an empty-inventory
+            # heartbeat, not a phantom shuttle.  Clear cached entity/payload
+            # entries so a removed last shuttle cannot remain in the safety
+            # registry, then keep waiting for normal named states.
+            self.rails[side]['shuttles'].clear()
+            self.rails[side]['payloads'].clear()
+            return
+        self.rails[side]['shuttles'][name] = {
             'mode': msg.mode,
             'segment': msg.current_segment,
             's': round(float(msg.s), 4),

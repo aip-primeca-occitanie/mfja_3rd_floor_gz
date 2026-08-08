@@ -1,0 +1,10 @@
+[INFO] [1786093190.953280175] [room_315_vla_supervisor]: Room 315 VLA supervisor ready. Command topic: /room_315/vla/command
+[INFO] [1786093224.979878325] [room_315_vla_supervisor]: switches commanded on left: {'A1': 'EXTERIOR', 'A2': 'EXTERIOR', 'A3': 'INTERIOR', 'A4': 'INTERIOR'}
+[INFO] [1786093226.390282579] [room_315_vla_supervisor]: stoppers commanded on left: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '1'}
+[INFO] [1786093227.634784294] [room_315_vla_supervisor]: shuttle command sent on left
+[INFO] [1786093245.397033799] [room_315_vla_supervisor]: shuttle command sent on left
+[INFO] [1786093245.749528025] [room_315_vla_supervisor]: switches commanded on left: {'A1': 'EXTERIOR', 'A2': 'EXTERIOR', 'A3': 'EXTERIOR', 'A4': 'EXTERIOR'}
+[INFO] [1786093246.886493433] [room_315_vla_supervisor]: stoppers commanded on left: {'A1': '0', 'A2': '0', 'A3': '0', 'A4': '0'}
+[INFO] [1786093248.157126554] [room_315_vla_supervisor]: shuttle command sent on left
+[INFO] [1786093267.998429973] [room_315_vla_supervisor]: shuttle command sent on left
+[INFO] [1786093277.906513223] [room_315_vla_supervisor]: stop all command: all shuttles OFF

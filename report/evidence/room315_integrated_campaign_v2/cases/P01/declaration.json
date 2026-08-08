@@ -1,0 +1,81 @@
+{
+  "coverage": [
+    "R1",
+    "R2",
+    "loaded",
+    "nearest",
+    "multi_shuttle"
+  ],
+  "expected": {
+    "constraints": {
+      "goal_type": "transport",
+      "payload_filter": "loaded",
+      "selection_strategy": "nearest",
+      "side": "right",
+      "target_kind": "slot",
+      "target_slot": "3"
+    },
+    "exact_executed_step_count": 4,
+    "payload_consensus": {
+      "confirmation_contract": "room315.visual_payload_confirmation.v1",
+      "confirmation_source": "accepted_visual_state_sequence",
+      "consecutive_identity_agreement": true,
+      "controller_payload_state_used": false,
+      "minimum_consecutive_frames": 5,
+      "payload_filter": "loaded",
+      "required": true,
+      "runtime_grounding_contract": "room315.runtime_payload_grounding.v2",
+      "runtime_grounding_source": "accepted_visual_temporal_consensus",
+      "selected_identity": "R1",
+      "selected_shuttle": "right_shuttle_1"
+    },
+    "prompt_fragments": [
+      "Rail: Right",
+      "Destination: Slot 3"
+    ],
+    "route_clearance": {
+      "blocker_identity": "R2",
+      "blocker_shuttle": "right_shuttle_2",
+      "exact_action_names": [
+        "begin_route_clearance",
+        "relocate_blocker_to_interior",
+        "finish_route_clearance",
+        "move_shuttle_to_slot"
+      ],
+      "exact_symbolic_steps": [
+        "begin_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+        "relocate_blocker_to_interior right_shuttle_2 right_shuttle_1 right right_slot_1 right_slot_3 speed=0.2",
+        "finish_route_clearance right_shuttle_1 right right_slot_1 right_slot_3",
+        "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_staubli right_slot_1 right_slot_3 speed=0.2"
+      ],
+      "required": true
+    },
+    "selected_identity": "R1",
+    "target_slot": "3",
+    "target_station": "staubli"
+  },
+  "family": "payload_qualified_nearest",
+  "id": "P01",
+  "launch": {
+    "left": {
+      "identities": [],
+      "loaded": [],
+      "start_slots": []
+    },
+    "right": {
+      "identities": [
+        "R1",
+        "R2"
+      ],
+      "loaded": [
+        "R1"
+      ],
+      "start_slots": [
+        "1",
+        "2"
+      ]
+    }
+  },
+  "side": "right",
+  "utterance": "Please move the nearest loaded right shuttle to slot 3."
+}
