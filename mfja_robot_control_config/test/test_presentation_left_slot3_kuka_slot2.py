@@ -81,5 +81,8 @@ def test_video_scenario_08_uses_presentation_script_not_vla():
     assert 'room315_sync_sensor_feedback_to_motion_tick:=true' in text
     assert 'room315_gazebo_set_pose_rate_hz:=30.0' in text
     assert '-p slot3_overshoot_m:=0.15' in text
-    assert 'KUKA يرجع إلى الوضع الابتدائي' in text
+    initial_pose_row = next(
+        line for line in text.splitlines() if '0 -90 110 0 -2 0' in line
+    )
+    assert 'KUKA' in initial_pose_row
     assert 'vla_teleop_generator.py' not in text

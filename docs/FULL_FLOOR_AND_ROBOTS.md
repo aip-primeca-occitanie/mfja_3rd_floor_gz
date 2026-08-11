@@ -242,6 +242,119 @@ ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit deg --posi
 When `--unit deg` is used, angular joints are converted to radians before
 publishing. Linear joints, such as TIAGo's `torso_lift_joint`, stay in meters.
 
+### Industrial Gripper Motion
+
+Each industrial robot exposes a separate gripper position command:
+
+```text
+/<robot_name>/gripper/position_command
+```
+
+The ROS bridge forwards this command to one local symmetric controller inside
+Gazebo, which applies the same bounded per-jaw target to both opposite-axis jaws.
+
+Use the gripper helper to list the configured travel ranges or to open and
+close each gripper:
+
+```bash
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka close
+
+ros2 run mfja_robot_control_config robot_gripper_command.py staubli open
+ros2 run mfja_robot_control_config robot_gripper_command.py staubli close
+
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 open
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 close
+
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10dt open
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10dt close
+```
+
+An optional percentage can follow the action. The percentage is an absolute
+fraction of the interval configured for that robot: `open 100` targets its
+configured 100% position, `close 100` targets its configured 0% position, and
+both `open 50` and `close 50` target the midpoint.
+
+```bash
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open 75
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka close 100
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 open 50
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 close 100
+```
+
+The per-robot percentage endpoints and the percentages used by bare `open` and
+`close` commands are read from:
+
+```text
+mfja_robot_control_config/config/gripper_command_defaults.yaml
+```
+
+Each robot entry has four editable values:
+
+```yaml
+position_at_0_percent_m: 0.0
+position_at_100_percent_m: 0.010
+default_open_percentage: 100.0
+default_close_percentage: 100.0
+```
+
+The two `position_at_*_percent_m` values are per-jaw positions in meters. For
+example, setting Stäubli's `position_at_100_percent_m` to `0.020` gives each
+jaw 20 mm of configured travel, so the total full opening
+becomes 40 mm because the jaws move symmetrically. The 0% position must be zero or
+greater, and the 100% position must be greater than the 0% position.
+
+The command mapping is:
+
+```text
+open(P)  = q0 + (q100 - q0) * P / 100
+close(P) = q100 - (q100 - q0) * P / 100
+```
+
+where `q0` and `q100` are the configured endpoint positions. All command modes,
+including an explicit percentage and `--position`, load this file. `--position`
+must be inside `[q0, q100]`.
+
+Default action percentages of 100 preserve fully-open / fully-closed behavior.
+At launch, the configured endpoints are also applied to the active gripper joint
+and controller limits, so restart the robot simulation after changing them. The
+launch files accept `gripper_config:=PATH`, while the command helper accepts
+`--defaults-file PATH`. Use the same absolute path for both when overriding the
+default: relative launch paths are resolved inside the package share, while
+relative helper paths use the terminal's current directory. With a non-symlink
+installation, rebuild the package after editing the source file. Show the
+currently configured endpoints instead of relying on fixed documentation:
+
+```bash
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+```
+
+For a partially open gripper, send a configured-range per-jaw position in meters:
+
+```bash
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 --position 0.012
+```
+
+Preview the resolved topic and target without publishing:
+
+```bash
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open --dry-run
+```
+
+The helper waits for the gripper command subscriber and live robot joint states,
+then publishes a short command burst. These commands animate the jaws only; the
+models do not yet provide physical grasping or payload attachment.
+
+Several supplied gripper CAD files are monolithic assemblies with the fingers
+baked into one mesh. Those source files remain untouched, but they are not used
+as the runtime gripper visuals. The simulation uses separate local body and
+left/right jaw visuals instead, which prevents fixed fingers from remaining
+visible underneath the moving jaws. For KUKA, the body remains simplified while
+both moving jaws reuse the unmodified `jaw_kuka.stl` asset at unit scale; the
+opposite jaw is rotated 180 degrees at runtime.
+
 ### KUKA KR6 R900 Sixx
 
 ```bash

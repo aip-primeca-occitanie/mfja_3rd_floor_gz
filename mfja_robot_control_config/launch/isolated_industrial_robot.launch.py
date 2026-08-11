@@ -21,6 +21,11 @@ _LAUNCH_UTILS = run_path(
     os.path.join(os.path.dirname(__file__), 'room_315_launch_utils.py')
 )
 _get_world_entity_name = _LAUNCH_UTILS['get_world_entity_name']
+_GRIPPER_RANGE_UTILS = run_path(
+    os.path.join(os.path.dirname(__file__), 'gripper_range_config.py')
+)
+_load_gripper_range_config = _GRIPPER_RANGE_UTILS['load_gripper_range_config']
+_materialize_gripper_assets = _GRIPPER_RANGE_UTILS['materialize_gripper_assets']
 
 
 DESCRIPTION_PACKAGE = 'mfja_3rd_floor_description'
@@ -161,6 +166,13 @@ def _make_bridge_yaml(robot_name, world_name):
             'gz_type_name': 'gz.msgs.Float',
             'direction': 'GZ_TO_ROS',
         },
+        {
+            'ros_topic_name': f'/{robot_name}/gripper/position_command',
+            'gz_topic_name': f'/model/{robot_name}/gripper/position_command',
+            'ros_type_name': 'std_msgs/msg/Float64',
+            'gz_type_name': 'gz.msgs.Double',
+            'direction': 'ROS_TO_GZ',
+        },
     ]
     output_path = os.path.join(tempfile.gettempdir(), f'{robot_name}_isolated_bridge.yaml')
     with open(output_path, 'w', encoding='utf-8') as stream:
@@ -205,10 +217,13 @@ def _launch_setup(context, *args, **kwargs):
     start_paused = LaunchConfiguration('start_paused').perform(context).lower() == 'true'
     use_sim_time = LaunchConfiguration('use_sim_time').perform(context).lower() == 'true'
     robot_config = LaunchConfiguration('robot_config').perform(context)
+    gripper_config = LaunchConfiguration('gripper_config').perform(context)
     robot_selector = LaunchConfiguration('robot').perform(context)
 
     if not os.path.isabs(robot_config):
         robot_config = os.path.join(control_pkg_path, robot_config)
+    if not os.path.isabs(gripper_config):
+        gripper_config = os.path.join(control_pkg_path, gripper_config)
 
     robot = _select_single_industrial_robot(robot_config, robot_selector)
     robot_name = str(robot['name'])
@@ -216,6 +231,15 @@ def _launch_setup(context, *args, **kwargs):
     layout = ISOLATED_LAYOUTS[model_name]
 
     robot_sdf, urdf_path = _resolve_robot_assets(description_pkg_path, model_name)
+    gripper_ranges = _load_gripper_range_config(gripper_config, [robot_name])
+    gripper_assets = _materialize_gripper_assets(
+        robot_sdf,
+        urdf_path,
+        robot_name,
+        gripper_ranges[robot_name],
+    )
+    robot_sdf = gripper_assets['sdf_path']
+    robot_description = gripper_assets['robot_description']
     table_sdf = os.path.join(
         description_pkg_path,
         'models',
@@ -224,9 +248,6 @@ def _launch_setup(context, *args, **kwargs):
     )
     if not os.path.exists(table_sdf):
         raise RuntimeError(f'Missing table model file: {table_sdf}')
-
-    with open(urdf_path, 'r', encoding='utf-8') as infp:
-        robot_description = infp.read()
 
     bridge_file = _make_bridge_yaml(robot_name, world_entity_name)
     model_path = os.path.join(description_pkg_path, 'models')
@@ -328,6 +349,14 @@ def generate_launch_description():
             'robot_config',
             default_value='config/robots_room_315_only.yaml',
             description='Absolute path or path relative to mfja_robot_control_config.',
+        ),
+        DeclareLaunchArgument(
+            'gripper_config',
+            default_value='config/gripper_command_defaults.yaml',
+            description=(
+                'Per-robot gripper percentage ranges. Relative paths are '
+                'resolved inside mfja_robot_control_config.'
+            ),
         ),
         DeclareLaunchArgument(
             'world_name',

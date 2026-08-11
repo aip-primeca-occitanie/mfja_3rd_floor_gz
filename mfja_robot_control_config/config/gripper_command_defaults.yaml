@@ -1,0 +1,37 @@
+# Percentage endpoints and default actions for every industrial gripper.
+#
+# Examples:
+#   open 100  -> fully open
+#   close 100 -> fully closed
+#   open 50 and close 50 -> half of the configured jaw travel
+#
+# Positions are per-jaw prismatic positions in meters. At launch, the configured
+# endpoints also define the active joint/controller range for that robot.
+# Position 0% must be >= 0, position 100% must be greater than position 0%, and
+# default percentages must stay between 0 and 100.
+schema_version: 2
+
+grippers:
+  kuka1:
+    position_at_0_percent_m: 0.0
+    position_at_100_percent_m: 0.030
+    default_open_percentage: 100.0
+    default_close_percentage: 100.0
+
+  staubli1:
+    position_at_0_percent_m: 0.0
+    position_at_100_percent_m: 0.01
+    default_open_percentage: 100.0
+    default_close_percentage: 100.0
+
+  yaskawa_hc10_1:
+    position_at_0_percent_m: 0.0
+    position_at_100_percent_m: 0.040
+    default_open_percentage: 100.0
+    default_close_percentage: 100.0
+
+  yaskawa_hc10dt_1:
+    position_at_0_percent_m: 0.0
+    position_at_100_percent_m: 0.010
+    default_open_percentage: 100.0
+    default_close_percentage: 100.0

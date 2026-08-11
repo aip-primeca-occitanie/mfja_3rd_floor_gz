@@ -79,9 +79,58 @@
 
   <link name="gripper">
     <visual>
-      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+      <origin xyz="0 0 -0.01115" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/gripper/schunk_edited.stl"/>
+        <cylinder radius="0.0375" length="0.0225"/>
+      </geometry>
+      <material name="schunk_dark"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0074" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.050 0.025 0.0148"/>
+      </geometry>
+      <material name="schunk_dark"/>
+    </visual>
+  </link>
+  <link name="gripper_left_jaw">
+    <inertial>
+      <origin xyz="-0.0125 0 0.0447" rpy="0 0 0"/>
+      <mass value="0.04"/>
+      <inertia ixx="0.00000567" ixy="0" ixz="0" iyy="0.00000667" iyz="0" izz="0.00000167"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0116 0 0.01975" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.0218 0.011 0.0099"/>
+      </geometry>
+      <material name="schunk_dark"/>
+    </visual>
+    <visual>
+      <origin xyz="-0.0125 0 0.0447" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.020 0.010 0.040"/>
+      </geometry>
+      <material name="schunk_dark"/>
+    </visual>
+  </link>
+  <link name="gripper_right_jaw">
+    <inertial>
+      <origin xyz="0.0125 0 0.0447" rpy="0 0 0"/>
+      <mass value="0.04"/>
+      <inertia ixx="0.00000567" ixy="0" ixz="0" iyy="0.00000667" iyz="0" izz="0.00000167"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0116 0 0.01975" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.0218 0.011 0.0099"/>
+      </geometry>
+      <material name="schunk_dark"/>
+    </visual>
+    <visual>
+      <origin xyz="0.0125 0 0.0447" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.020 0.010 0.040"/>
       </geometry>
       <material name="schunk_dark"/>
     </visual>
@@ -158,6 +207,24 @@
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <parent link="tool0"/>
     <child link="gripper"/>
+  </joint>
+
+  <joint name="gripper_left_jaw_joint" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="gripper"/>
+    <child link="gripper_left_jaw"/>
+    <axis xyz="-1 0 0"/>
+    <limit lower="0" upper="0.0025" effort="100" velocity="0.17"/>
+    <dynamics damping="0.2" friction="0.0"/>
+  </joint>
+
+  <joint name="gripper_right_jaw_joint" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="gripper"/>
+    <child link="gripper_right_jaw"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0" upper="0.0025" effort="100" velocity="0.17"/>
+    <dynamics damping="0.2" friction="0.0"/>
   </joint>
 
   <joint name="gripper_tcp_joint" type="fixed">

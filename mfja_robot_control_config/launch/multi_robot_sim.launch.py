@@ -23,6 +23,11 @@ _LAUNCH_UTILS = run_path(
     os.path.join(os.path.dirname(__file__), 'room_315_launch_utils.py')
 )
 _get_world_entity_name = _LAUNCH_UTILS['get_world_entity_name']
+_GRIPPER_RANGE_UTILS = run_path(
+    os.path.join(os.path.dirname(__file__), 'gripper_range_config.py')
+)
+_load_gripper_range_config = _GRIPPER_RANGE_UTILS['load_gripper_range_config']
+_materialize_gripper_assets = _GRIPPER_RANGE_UTILS['materialize_gripper_assets']
 
 TIAGO_WITH_ARM_ALIASES = {'tiago', 'tiago_with_arm', 'tiago_arm'}
 TIAGO_BASE_ALIASES = {'tiago_base', 'tiago_no_arm', 'tiago_mobile_base'}
@@ -31,6 +36,12 @@ MODEL_ALIASES = {
     **{alias: 'tiago_base' for alias in TIAGO_BASE_ALIASES},
 }
 MOBILE_MODELS = {'tiago', 'tiago_base'}
+INDUSTRIAL_MODELS = {
+    'kuka_kr6r900sixx',
+    'staubli_tx2_60l',
+    'yaskawa_hc10',
+    'yaskawa_hc10dt',
+}
 DESCRIPTION_PACKAGE = 'mfja_3rd_floor_description'
 CONTROL_CONFIG_PACKAGE = 'mfja_robot_control_config'
 ROOM315_VLA_OBSTACLE_MODEL_URI = 'model://room315_vla_removable_obstacle_marker'
@@ -274,6 +285,15 @@ def _make_bridge_yaml(robot_name, world_name, model_name):
         },
     ]
 
+    if model_name in INDUSTRIAL_MODELS:
+        bridge_config.append({
+            'ros_topic_name': f'/{robot_name}/gripper/position_command',
+            'gz_topic_name': f'/model/{robot_name}/gripper/position_command',
+            'ros_type_name': 'std_msgs/msg/Float64',
+            'gz_type_name': 'gz.msgs.Double',
+            'direction': 'ROS_TO_GZ',
+        })
+
     if model_name in MOBILE_MODELS:
         bridge_config.extend([
             {
@@ -410,6 +430,7 @@ def _launch_setup(context, *args, **kwargs):
         LaunchConfiguration('visual_debug_colors').perform(context).lower() == 'true'
     )
     robot_config = LaunchConfiguration('robot_config').perform(context)
+    gripper_config = LaunchConfiguration('gripper_config').perform(context)
     selected_robots = _parse_selected_robots(
         LaunchConfiguration('robots').perform(context)
     )
@@ -417,8 +438,19 @@ def _launch_setup(context, *args, **kwargs):
 
     if not os.path.isabs(robot_config):
         robot_config = os.path.join(control_pkg_path, robot_config)
+    if not os.path.isabs(gripper_config):
+        gripper_config = os.path.join(control_pkg_path, gripper_config)
 
     robots = _load_robots(robot_config, selected_robots)
+    industrial_robot_names = [
+        str(robot['name'])
+        for robot in robots
+        if _resolve_robot_model_name(robot) in INDUSTRIAL_MODELS
+    ]
+    gripper_ranges = _load_gripper_range_config(
+        gripper_config,
+        industrial_robot_names,
+    )
     model_path = os.path.join(description_pkg_path, 'models')
     resource_path = model_path
 
@@ -525,12 +557,22 @@ def _launch_setup(context, *args, **kwargs):
         spawn_sdf = model_sdf
         frame_prefix = '' if model_name in MOBILE_MODELS else f'{robot_name}/'
 
-        if model_name in MOBILE_MODELS:
-            spawn_sdf = _materialize_mobile_model_sdf(model_sdf, robot_name)
-
-        if urdf_path not in robot_descriptions:
-            with open(urdf_path, 'r', encoding='utf-8') as infp:
-                robot_descriptions[urdf_path] = infp.read()
+        if model_name in INDUSTRIAL_MODELS:
+            gripper_assets = _materialize_gripper_assets(
+                model_sdf,
+                urdf_path,
+                robot_name,
+                gripper_ranges[robot_name],
+            )
+            spawn_sdf = gripper_assets['sdf_path']
+            robot_description = gripper_assets['robot_description']
+        else:
+            if model_name in MOBILE_MODELS:
+                spawn_sdf = _materialize_mobile_model_sdf(model_sdf, robot_name)
+            if urdf_path not in robot_descriptions:
+                with open(urdf_path, 'r', encoding='utf-8') as infp:
+                    robot_descriptions[urdf_path] = infp.read()
+            robot_description = robot_descriptions[urdf_path]
 
         bridge_file = _make_bridge_yaml(robot_name, world_entity_name, model_name)
 
@@ -559,7 +601,7 @@ def _launch_setup(context, *args, **kwargs):
                 remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')],
                 parameters=[{
                     'use_sim_time': use_sim_time,
-                    'robot_description': robot_descriptions[urdf_path],
+                    'robot_description': robot_description,
                     'frame_prefix': frame_prefix,
                 }],
             ),
@@ -592,6 +634,14 @@ def generate_launch_description():
             'robot_config',
             default_value='config/robots.yaml',
             description='Absolute path or path relative to mfja_robot_control_config.',
+        ),
+        DeclareLaunchArgument(
+            'gripper_config',
+            default_value='config/gripper_command_defaults.yaml',
+            description=(
+                'Per-robot gripper percentage ranges. Relative paths are '
+                'resolved inside mfja_robot_control_config.'
+            ),
         ),
         DeclareLaunchArgument(
             'robots',

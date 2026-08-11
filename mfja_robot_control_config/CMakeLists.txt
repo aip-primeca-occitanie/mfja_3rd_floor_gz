@@ -13,6 +13,7 @@ install(
 install(
   FILES
     config/gazebo_params.yaml
+    config/gripper_command_defaults.yaml
     config/mfja_default.gui.config
     config/mfja_light.gui.config
     config/room315_runtime_safe.gui.config
@@ -69,6 +70,7 @@ install(
   PROGRAMS
     scripts/conveyor_loop_mode_controller.py
     scripts/presentation_left_slot3_kuka_slot2.py
+    scripts/robot_gripper_command.py
     scripts/robot_joint_command.py
     scripts/setup_room315_intent_model.py
     scripts/room_315_contracts.py
@@ -187,6 +189,18 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_visual_v3_dataset
     test/test_room315_visual_v3_dataset.py
+  )
+  ament_add_pytest_test(
+    test_robot_gripper_bridge
+    test/test_robot_gripper_bridge.py
+  )
+  ament_add_pytest_test(
+    test_robot_gripper_command
+    test/test_robot_gripper_command.py
+  )
+  ament_add_pytest_test(
+    test_gripper_range_launch
+    test/test_gripper_range_launch.py
   )
   ament_add_pytest_test(
     test_robot_joint_command

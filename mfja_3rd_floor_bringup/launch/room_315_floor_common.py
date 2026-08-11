@@ -170,6 +170,14 @@ def generate_floor_launch_description(profile_name):
             description='Robot spawn YAML relative to mfja_robot_control_config.',
         ),
         DeclareLaunchArgument(
+            'gripper_config',
+            default_value='config/gripper_command_defaults.yaml',
+            description=(
+                'Per-robot gripper percentage ranges. Relative paths are '
+                'resolved inside mfja_robot_control_config.'
+            ),
+        ),
+        DeclareLaunchArgument(
             'gz_partition',
             default_value=f'{profile["gz_partition_prefix"]}_{os.getpid()}',
             description='Gazebo transport partition used to isolate this launch instance.',
@@ -432,6 +440,7 @@ def generate_floor_launch_description(profile_name):
     base_launch_arguments = {
         'world_name': LaunchConfiguration('world_name'),
         'robot_config': LaunchConfiguration('robot_config'),
+        'gripper_config': LaunchConfiguration('gripper_config'),
         'robots': LaunchConfiguration('robots'),
         'gz_partition': LaunchConfiguration('gz_partition'),
         'use_sim_time': LaunchConfiguration('use_sim_time'),

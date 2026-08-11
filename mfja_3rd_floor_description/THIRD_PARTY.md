@@ -71,7 +71,9 @@ Local modifications in this repository:
 Local files:
 
 - `models/kuka_kr6r900sixx/meshes/gripper/schunk_kgg_140_60_011l5_mss_22_01.stl`
+- `models/kuka_kr6r900sixx/meshes/gripper/jaw_kuka.stl`
 - `models/kuka_kr6r900sixx/cad/SCHUNK-0303070_KGG_140-60_011L5_MSS_22_01.stp`
+- `models/kuka_kr6r900sixx/cad/JAW_KUKA.stp`
 - `models/kuka_kr6r900sixx/cad/license_schunk.txt`
 - `models/kuka_kr6r900sixx/cad/readme-and-terms-of-use-3d-cad-models.txt`
 
@@ -86,8 +88,13 @@ Known source metadata:
 Local modifications in this repository:
 
 - source filenames were normalized for package-local mesh paths
-- STL mesh is scaled from millimeters to meters in the KUKA URDF/SDF
-- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
+- the original monolithic CC BY-ND STL remains unmodified in the package, but is
+  no longer used as the runtime visual because it contains fixed jaws
+- `jaw_kuka.stl` also remains unmodified and is instantiated twice at runtime at
+  unit scale, with one instance rotated 180 degrees to provide the opposite jaw
+- the runtime gripper body uses MFJA-local primitive geometry and is fixed to
+  `tool0`; the two mesh-based, visual-only jaws use symmetric prismatic joints
+  and have no collision geometry
 
 ### Staeubli TX2-60L
 
@@ -136,8 +143,11 @@ Known source metadata:
 Local modifications in this repository:
 
 - source filenames were normalized for package-local mesh paths
-- the STL mesh is used at native meter scale in the Staubli URDF/SDF
-- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
+- the monolithic source STL remains unmodified in the package, but is no longer
+  used as the runtime visual because it contains fixed jaws
+- the runtime gripper body and two jaws use MFJA-local primitive geometry; the
+  body is fixed to `tool0`, while the visual-only jaws use symmetric prismatic
+  joints and have no collision geometry
 
 ### Yaskawa HC10 and HC10DT
 
@@ -191,9 +201,13 @@ Known source metadata:
 Local modifications in this repository:
 
 - source filenames were normalized for package-local mesh paths
-- STL mesh is scaled from millimeters to meters in the Yaskawa HC10 URDF/SDF
-- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
-- simple local jaw geometry was added as primitive boxes and is MFJA-local integration work
+- the monolithic CC BY-ND source STL remains unmodified in the package, but is no
+  longer used as the runtime visual because it contains fixed jaw-base components
+- the runtime gripper body and two jaws use MFJA-local primitive geometry; the
+  body is fixed to `tool0`, while the visual-only jaws use symmetric prismatic
+  joints and have no collision geometry
+- the configured per-jaw travel is `40 mm` and maximum velocity is `60 mm/s`,
+  matching the Zimmer Group technical data for `GEH6040IL-03-B`
 
 ### Yaskawa HC10DT Zimmer LWR50L Gripper Extension
 
@@ -214,8 +228,13 @@ Known source metadata:
 Local modifications in this repository:
 
 - source filenames were normalized for package-local mesh paths
-- STL mesh is scaled from millimeters to meters in the Yaskawa HC10DT URDF/SDF
-- the gripper visual is fixed to `tool0` with a simplified fixed collision envelope
+- the monolithic source STL remains unmodified in the package, but is no longer used
+  as the runtime visual because it contains fixed fingers
+- the runtime gripper body and two jaws use MFJA-local primitive geometry; the body
+  is fixed to `tool0`, while the visual-only jaws use symmetric prismatic joints
+  and have no collision geometry
+- the configured per-jaw travel is `10 mm`, matching the Zimmer Group technical
+  data for `LWR50L-03-00001-A`
 
 ### TIAGo
 
@@ -246,7 +265,9 @@ Local modifications in this repository:
 
 ## Redistribution Notes
 
-- This package should be treated as containing both Apache-2.0 and BSD-licensed upstream material.
+- This package contains Apache-2.0, BSD, and CC BY-ND 4.0 upstream material as
+  documented by asset family above; the MFJA-local primitive gripper visuals are
+  separate integration work.
 - Attribution to the upstream repositories above should be preserved in any redistribution of the corresponding robot assets.
 - If this repository will be published outside the lab or submitted externally, the safest next step is to vendor the exact upstream license texts into a local `LICENSES/` directory and pin the specific upstream commit SHAs used for each imported robot family.
 
@@ -261,4 +282,6 @@ Local modifications in this repository:
 - ROS Index entry for `staubli_tx2_60_support`: <https://index.ros.org/p/staubli_tx2_60_support/>
 - ROS-Industrial Motoman repository: <https://github.com/ros-industrial/motoman>
 - ROS Index entry for `motoman_hc10_support`: <https://index.ros.org/p/motoman_hc10_support/>
+- Zimmer Group `GEH6040IL-03-B` technical data: <https://www.zimmer-group.com/en-us/products/components/handling-technology/2-jaw-parallel-grippers/series-geh6000il/products/geh6040il-03-b>
+- Zimmer Group `LWR50L-03-00001-A` datasheet: <https://www.zimmer-group.com/fileadmin/pim/MER/GD/PG/MER_GD_PG_LWR50L-03-00001-A__SEN__APD__V1.pdf>
 - direct source clarification from the MFJA project contributor for TIAGo assets: <https://github.com/Tiago-Harmonic>
