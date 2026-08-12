@@ -35,6 +35,12 @@ CHECKPOINT_SHA256 = (
 ROLLBACK_SHA256 = (
     '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
 )
+V4_CHECKPOINT_SHA256 = (
+    '869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d'
+)
+V4_RUNTIME_MANIFEST_SHA256 = (
+    '506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da'
+)
 
 
 def _candidate_or_skip() -> Path:
@@ -151,16 +157,32 @@ def test_acceptance_scenarios_cover_required_cases_and_report_never_approves():
     )
 
 
-def test_candidate_selection_is_explicit_and_rollback_remains_default():
-    candidate = _candidate_or_skip()
-    default_yaml = (
+def test_v4_is_active_default_and_v3_is_explicit_rollback_only():
+    visual_default = (
         ROOT / 'config/room_315_vla/visual_state_runtime.yaml'
     ).read_text()
-    assert ROLLBACK_SHA256 in default_yaml
-    assert CHECKPOINT_SHA256 not in default_yaml
-    environment = (candidate / 'activate_candidate.env').read_text()
-    assert 'ROOM315_VISUAL_MODEL_PATH' in environment
-    assert CHECKPOINT_SHA256 in environment
+    task_default = (
+        ROOT / 'config/room_315_vla/task_execution_runtime.yaml'
+    ).read_text()
+    visual_rollback = (
+        ROOT / 'config/room_315_vla/visual_state_runtime_v3_rollback.yaml'
+    ).read_text()
+
+    assert 'runtime_generation: v4' in visual_default
+    assert 'runtime_mode: active' in visual_default
+    assert V4_RUNTIME_MANIFEST_SHA256 in visual_default
+    assert ROLLBACK_SHA256 not in visual_default
+    assert CHECKPOINT_SHA256 not in visual_default
+    assert 'room315.visual_state.v4' in task_default
+    assert V4_CHECKPOINT_SHA256 in task_default
+    assert 'execution_enabled: false' in task_default
+    assert 'runtime_generation: v3' in visual_rollback
+    assert ROLLBACK_SHA256 in visual_rollback
+
+    if CANDIDATE.is_dir():
+        environment = (CANDIDATE / 'activate_candidate.env').read_text()
+        assert 'ROOM315_VISUAL_MODEL_PATH' in environment
+        assert CHECKPOINT_SHA256 in environment
     node_source = (SCRIPTS / 'room_315_visual_state_inference_node.py').read_text()
     assert 'ROOM315_VISUAL_MODEL_PATH' in node_source
     assert 'raw_model_prediction_topic' in node_source

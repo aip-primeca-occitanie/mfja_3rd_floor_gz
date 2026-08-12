@@ -47,7 +47,10 @@ reports/
 /report/main.lot
 /report/baseline/
 /report/final_rendered/
+/report/html_assets/
+/report/report_figures_tables_code_guide.html
 /report/evidence/superseded_not_reported/
+/report/evidence/room315_visual_runtime_v4_2026-08-11/
 /report/evidence/room315_integrated_campaign_v2/cases/*/rosbag/*.mcap
 
 # Keep checksum-bound runtime logs that support the versioned English report.

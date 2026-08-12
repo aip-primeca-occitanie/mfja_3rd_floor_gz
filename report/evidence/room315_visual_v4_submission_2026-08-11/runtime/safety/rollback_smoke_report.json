@@ -1,0 +1,219 @@
+{
+  "accepted_observation_observed": true,
+  "accepted_observation_received": true,
+  "actuation_command_count": 0,
+  "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "checks": [
+    {
+      "evidence": {
+        "runtime_generation": "v3",
+        "runtime_mode": "active",
+        "v4_promotion_manifest_path": ""
+      },
+      "name": "v3_selected_and_v4_not_selected",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "artifact_sha256": {
+          "best.pt": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+          "run_metadata.json": "d86c0ebfda3f5b174fc3c06f4ce8a3e083d2048db7b44d20efe951aaa7e5428d",
+          "target_stats.json": "2d48078641842aa2db7a59b9285fc5bbedaaa3a0039fc39986ca230db983b18c",
+          "training_config.json": "5c45544af7766afff397dafa7c14c0b3b05083f07a93122308ef50c2e8f452eb",
+          "visual_label_vectorizer.json": "637c854556f3331c4e187db4aa7fc70457f01df8877947b9a0e988a543f7113e"
+        }
+      },
+      "name": "v3_artifact_hashes_verified",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "checkpoint_loading": "strict",
+        "model_load_duration_ms": 1608.78912685439,
+        "ready": true,
+        "selected_device": "cpu"
+      },
+      "name": "v3_checkpoint_strict_model_load",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "left_shape": [
+          480,
+          640,
+          3
+        ],
+        "output_dimension": 200,
+        "right_shape": [
+          480,
+          640,
+          3
+        ],
+        "timings_ms": {
+          "complete_cycle": 26.704789139330387,
+          "decode": 0.0841550063341856,
+          "inference": 22.418614011257887,
+          "preprocessing": 4.199526971206069
+        }
+      },
+      "name": "synthetic_paired_inference",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "present_identities": [
+          "L1",
+          "R1"
+        ],
+        "ready": true,
+        "reasons": []
+      },
+      "name": "synthetic_presence_ready",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "active_identities": [
+          "L1",
+          "R1"
+        ],
+        "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+        "predicted_side_and_segment": [
+          {
+            "identity": "L1",
+            "segment": "A23",
+            "side": "left"
+          },
+          {
+            "identity": "R1",
+            "segment": "A34E",
+            "side": "right"
+          }
+        ],
+        "schema_version": "room315.visual_state.v3"
+      },
+      "name": "v3_raw_observation_possible",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "clamped_fields": [],
+        "state_fusion_ready": true,
+        "state_fusion_reasons": [],
+        "validation_accepted": true,
+        "validation_reasons": []
+      },
+      "name": "v3_accepted_observation_possible",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+        "schema_version": "room315.visual_state.v3"
+      },
+      "name": "task_visual_allowlist_v3_exact",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "add_predicates": [],
+        "dry_run_state_fusion": true,
+        "gate_reasons": [
+          "plansys2_updates_disabled",
+          "safety_supervisor_not_ready"
+        ],
+        "gate_update_accepted": false,
+        "plansys2_update_enabled": false,
+        "remove_predicates": [],
+        "update_attempt_count": 0
+      },
+      "name": "plansys2_disabled_and_zero_updates",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "actuation_command_count": 0,
+        "execution_enabled": false,
+        "planner_requests_sent": 0,
+        "supervisor_commands_published": 0,
+        "task_execution_node_started": false
+      },
+      "name": "task_execution_disabled_and_zero_actuation",
+      "passed": true,
+      "status": "passed"
+    }
+  ],
+  "command": "rollback-smoke",
+  "completed_at_utc": "2026-08-11T13:31:09Z",
+  "created_at_utc": "2026-08-11T13:31:07Z",
+  "data_access": {
+    "canary_split_opened": false,
+    "datasets_opened": false,
+    "note": "only the signed V3 checkpoint/sidecars and runtime configuration were read",
+    "test_split_opened": false,
+    "training_split_opened": false,
+    "validation_split_opened": false
+  },
+  "immutable": true,
+  "integrity": {
+    "algorithm": "sha256",
+    "scope": "canonical_json_excluding_integrity",
+    "sha256": "bc11263ee111113b2bc80cf3cc205ef5a942c147c3da7a51e1a26f18136f8e7e"
+  },
+  "model_ready": true,
+  "overall_passed": true,
+  "plansys2_mutation_count": 0,
+  "plansys2_update_enabled": false,
+  "raw_prediction_observed": true,
+  "raw_prediction_received": true,
+  "report_path": "/home/tiago/room315_visual_runtime_v4_verification/rollback_smoke_promotion_contract_report_attempt2.json",
+  "requested_device": "cpu",
+  "runtime": {
+    "checkpoint_path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+    "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "device": "cpu",
+    "generation": "v3",
+    "mode": "active",
+    "model_ready": true,
+    "runtime_config_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml",
+    "runtime_config_sha256": "e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19",
+    "schema_version": "room315.visual_state.v3",
+    "task_config_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml",
+    "task_config_sha256": "8c57c69448cb2c649ff972ef4ec327d7af32458c0c777048f6a25f3e0ad955d7"
+  },
+  "safety": {
+    "actuation_command_count": 0,
+    "planner_requests_sent": 0,
+    "plansys2_predicates_added": 0,
+    "plansys2_predicates_removed": 0,
+    "plansys2_update_attempt_count": 0,
+    "plansys2_update_enabled": false,
+    "task_execution_enabled": false,
+    "v4_selected": false
+  },
+  "schema_version": "room315.visual_runtime_v4.rollback_smoke.v1",
+  "status": "passed",
+  "summary": {
+    "accepted_observation_possible": true,
+    "actuation_command_count": 0,
+    "check_count": 10,
+    "failed_check_count": 0,
+    "passed_check_count": 10,
+    "plansys2_update_attempt_count": 0,
+    "raw_observation_possible": true
+  },
+  "task_allowlist_matched": true,
+  "v3_checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+  "v3_schema_version": "room315.visual_state.v3",
+  "v4_runtime_selected": false,
+  "v4_selected": false
+}

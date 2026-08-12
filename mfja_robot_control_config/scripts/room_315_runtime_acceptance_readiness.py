@@ -40,6 +40,12 @@ from room_315_visual_fleet import AUTHORITATIVE_VISUAL_FLEET
 
 PHASES = ('world', 'scene', 'camera', 'runtime')
 DEFAULT_FRESHNESS_S = 2.0
+V3_RAW_PREDICTION_SCHEMA = 'room315.raw_model_prediction.v1'
+V4_RAW_PREDICTION_SCHEMA = 'room315.visual_runtime_v4.diagnostic.v1'
+SUPPORTED_RAW_PREDICTION_SCHEMAS = (
+    V3_RAW_PREDICTION_SCHEMA,
+    V4_RAW_PREDICTION_SCHEMA,
+)
 
 
 @dataclass(frozen=True)
@@ -171,6 +177,13 @@ def _balanced_blocks(text: str, token: str) -> list[str]:
 
 
 def gazebo_model_poses(scene_text: str) -> dict[str, dict[str, float]]:
+    """Parse the static ``scene/info`` model snapshot.
+
+    This parser is retained for offline evidence/tests only.  Gazebo's scene
+    service reports the models' initial poses and therefore must not be used as
+    runtime visibility evidence after ``set_pose`` moves a shuttle.
+    """
+
     models: dict[str, dict[str, float]] = {}
     for block in _balanced_blocks(scene_text, 'model {'):
         name_match = re.search(r'\bname:\s*"([^"]+)"', block)
@@ -189,6 +202,77 @@ def gazebo_model_poses(scene_text: str) -> dict[str, dict[str, float]]:
             coordinates[axis] = float(match.group(1)) if match else 0.0
         models[name_match.group(1)] = coordinates
     return models
+
+
+def gazebo_live_model_poses(pose_info_text: str) -> dict[str, dict[str, float]]:
+    """Parse one live ``gz.msgs.Pose_V`` message from ``pose/info``."""
+
+    models: dict[str, dict[str, float]] = {}
+    for block in _balanced_blocks(pose_info_text, 'pose {'):
+        name_match = re.search(r'\bname:\s*"([^"]+)"', block)
+        if not name_match:
+            continue
+        position_blocks = _balanced_blocks(block, 'position {')
+        if not position_blocks:
+            continue
+        position = position_blocks[0]
+        coordinates: dict[str, float] = {}
+        valid = True
+        for axis in ('x', 'y', 'z'):
+            match = re.search(rf'\b{axis}:\s*([^\s}}]+)', position)
+            # Protobuf DebugString omits coordinates whose value is zero.
+            try:
+                coordinates[axis] = float(match.group(1)) if match else 0.0
+            except ValueError:
+                valid = False
+                break
+        if valid and all(math.isfinite(value) for value in coordinates.values()):
+            models[name_match.group(1)] = coordinates
+    return models
+
+
+def query_gazebo_live_model_poses(
+    world_name: str,
+    *,
+    environment: dict[str, str] | None = None,
+    timeout_s: float = 2.5,
+    runner: Any = None,
+) -> tuple[dict[str, dict[str, float]], str]:
+    """Read exactly one live pose message, returning no models on any failure."""
+
+    env = os.environ.copy() if environment is None else environment.copy()
+    if not str(env.get('GZ_PARTITION') or '').strip():
+        return {}, 'GZ_PARTITION is empty'
+    if not str(world_name or '').strip():
+        return {}, 'world_name is empty'
+    command = [
+        'gz', 'topic', '--echo',
+        '--topic', f'/world/{world_name}/pose/info',
+        '--num', '1',
+    ]
+    run = subprocess.run if runner is None else runner
+    try:
+        completed = run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        return {}, f'live pose query timed out after {timeout_s:.3f}s'
+    except OSError as exc:
+        return {}, f'live pose query failed: {exc}'
+    if completed.returncode != 0:
+        detail = (
+            completed.stderr or completed.stdout or 'gz pose topic query failed'
+        ).strip()
+        return {}, detail
+    models = gazebo_live_model_poses(completed.stdout)
+    if not models:
+        return {}, 'live pose query returned no parseable poses'
+    return models, ''
 
 
 def scene_entity_checks(
@@ -228,6 +312,73 @@ def scene_entity_checks(
     }
 
 
+def validate_raw_prediction_contract(
+    prediction: Any,
+    *,
+    expected_checkpoint_sha256: str,
+    expected_schema_version: str,
+) -> tuple[bool, dict[str, Any]]:
+    """Validate the diagnostic-only raw prediction for V3 or V4 readiness."""
+
+    errors: list[str] = []
+    if not isinstance(prediction, dict):
+        return False, {
+            'schema_version': None,
+            'checkpoint_sha256': None,
+            'output_dimension': None,
+            'output_value_count': 0,
+            'control_input': None,
+            'errors': ['prediction_not_object'],
+        }
+    if expected_schema_version not in SUPPORTED_RAW_PREDICTION_SCHEMAS:
+        errors.append('unsupported_expected_schema')
+    if prediction.get('schema_version') != expected_schema_version:
+        errors.append('schema_version_mismatch')
+    if prediction.get('checkpoint_sha256') != expected_checkpoint_sha256:
+        errors.append('checkpoint_sha256_mismatch')
+    output_dimension = prediction.get('output_dimension')
+    if (
+        isinstance(output_dimension, bool)
+        or not isinstance(output_dimension, int)
+        or output_dimension != 200
+    ):
+        errors.append('output_dimension_mismatch')
+    vector = prediction.get('denormalized_output')
+    if not isinstance(vector, list) or len(vector) != 200:
+        errors.append('output_vector_length_mismatch')
+        output_count = len(vector) if isinstance(vector, list) else 0
+    else:
+        output_count = len(vector)
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            for value in vector
+        ):
+            errors.append('output_vector_nonfinite_or_nonnumeric')
+    if prediction.get('control_input') is not False:
+        errors.append('raw_prediction_not_diagnostic_only')
+    if expected_schema_version == V4_RAW_PREDICTION_SCHEMA:
+        if prediction.get('model_schema_version') != 'room315.visual_state.v4':
+            errors.append('v4_model_schema_mismatch')
+        if prediction.get('runtime_generation') != 'v4':
+            errors.append('v4_runtime_generation_mismatch')
+        if prediction.get('runtime_mode') not in {'shadow', 'active'}:
+            errors.append('v4_runtime_mode_invalid')
+        if not isinstance(prediction.get('acceptance_envelope'), dict):
+            errors.append('v4_acceptance_envelope_missing')
+    return not errors, {
+        'schema_version': prediction.get('schema_version'),
+        'checkpoint_sha256': prediction.get('checkpoint_sha256'),
+        'output_dimension': output_dimension,
+        'output_value_count': output_count,
+        'control_input': prediction.get('control_input'),
+        'runtime_generation': prediction.get('runtime_generation'),
+        'runtime_mode': prediction.get('runtime_mode'),
+        'errors': errors,
+    }
+
+
 class Room315AcceptanceReadiness(Node):
     def __init__(self) -> None:
         super().__init__('room_315_runtime_acceptance_readiness')
@@ -241,6 +392,7 @@ class Room315AcceptanceReadiness(Node):
             'freshness_s': DEFAULT_FRESHNESS_S,
             'position_ratio_tolerance': 0.02,
             'expected_checkpoint_sha256': '',
+            'expected_raw_prediction_schema': V4_RAW_PREDICTION_SCHEMA,
             'left_state_topic': '/room_315/rails/left/shuttles/state',
             'right_state_topic': '/room_315/rails/right/shuttles/state',
             'left_payload_topic': '/room_315/rails/left/shuttles/payload_state',
@@ -277,9 +429,9 @@ class Room315AcceptanceReadiness(Node):
         self.payloads: dict[str, tuple[dict[str, Any], float]] = {}
         self.images: dict[str, tuple[dict[str, Any], float]] = {}
         self.raw_prediction: tuple[dict[str, Any], float] | None = None
-        self.last_scene_query_s = 0.0
-        self.scene_models: dict[str, dict[str, float]] = {}
-        self.scene_query_error = 'not_queried'
+        self.last_live_pose_query_s = 0.0
+        self.live_pose_models: dict[str, dict[str, float]] = {}
+        self.live_pose_query_error = 'not_queried'
 
         self.create_subscription(Clock, '/clock', self._on_clock, qos_profile_sensor_data)
         self.create_subscription(
@@ -399,9 +551,12 @@ class Room315AcceptanceReadiness(Node):
         if self.finished:
             return
         now = time.monotonic()
-        if now - self.last_scene_query_s >= 1.0 and self.phase != 'world':
-            self._query_scene()
-            self.last_scene_query_s = now
+        if now - self.last_live_pose_query_s >= 1.0 and self.phase != 'world':
+            self._query_live_poses()
+            # Querying is bounded but synchronous; freshness must be evaluated
+            # at completion, not against the timestamp from before the read.
+            now = time.monotonic()
+            self.last_live_pose_query_s = now
         checks, evidence = self._checks(now)
         if all(checks.values()):
             self._finish(True, checks, evidence, ())
@@ -425,7 +580,11 @@ class Room315AcceptanceReadiness(Node):
 
         state_evidence = self._state_checks(now)
         payload_check, payload_evidence = self._payload_checks(now)
-        scene_check = scene_entity_checks(self.scene_models, self.expectation)
+        scene_check = scene_entity_checks(self.live_pose_models, self.expectation)
+        live_pose_ready = bool(
+            not self.live_pose_query_error
+            and scene_check['ready']
+        )
         checks.update({
             'exact_fresh_shuttle_state_inventory': state_evidence['exact_inventory'],
             'configured_segment_and_ratio_match': state_evidence['positions_match'],
@@ -433,14 +592,17 @@ class Room315AcceptanceReadiness(Node):
                 state_evidence['presence_provider_ready']
             ),
             'payload_state_matches': payload_check,
-            'gazebo_entities_visible_and_payloads_match': scene_check['ready'],
+            'gazebo_entities_visible_and_payloads_match': live_pose_ready,
         })
         evidence.update({
             'shuttle_state': state_evidence,
             'payload_state': payload_evidence,
-            'gazebo_scene': {
+            'gazebo_live_pose': {
                 **scene_check,
-                'query_error': self.scene_query_error,
+                'ready': live_pose_ready,
+                'source_topic': f'/world/{self.world_name}/pose/info',
+                'static_scene_info_used': False,
+                'query_error': self.live_pose_query_error,
             },
         })
         if self.phase == 'scene':
@@ -601,53 +763,30 @@ class Room315AcceptanceReadiness(Node):
         prediction, received = self.raw_prediction
         age = now - received
         expected_hash = self._string('expected_checkpoint_sha256').strip()
+        expected_schema = self._string(
+            'expected_raw_prediction_schema'
+        ).strip()
+        contract_ready, contract_evidence = validate_raw_prediction_contract(
+            prediction,
+            expected_checkpoint_sha256=expected_hash,
+            expected_schema_version=expected_schema,
+        )
         ready = bool(
             age <= self._float('freshness_s')
-            and prediction.get('schema_version') == 'room315.raw_model_prediction.v1'
-            and prediction.get('checkpoint_sha256') == expected_hash
-            and int(prediction.get('output_dimension', -1)) == 200
-            and len(prediction.get('denormalized_output') or []) == 200
+            and contract_ready
         )
         return ready, {
             'status': 'observed',
             'age_s': age,
-            'checkpoint_sha256': prediction.get('checkpoint_sha256'),
-            'output_dimension': prediction.get('output_dimension'),
-            'output_value_count': len(prediction.get('denormalized_output') or []),
+            **contract_evidence,
         }
 
-    def _query_scene(self) -> None:
-        partition = os.environ.get('GZ_PARTITION', '').strip()
-        if not partition:
-            self.scene_query_error = 'GZ_PARTITION is empty'
-            return
-        command = [
-            'gz', 'service',
-            '-s', f'/world/{self.world_name}/scene/info',
-            '--reqtype', 'gz.msgs.Empty',
-            '--reptype', 'gz.msgs.Scene',
-            '--timeout', '1500',
-            '--req', '',
-        ]
-        try:
-            completed = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=2.5,
-                check=False,
-                env=os.environ.copy(),
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            self.scene_query_error = str(exc)
-            return
-        if completed.returncode != 0:
-            self.scene_query_error = (
-                completed.stderr or completed.stdout or 'gz scene query failed'
-            ).strip()
-            return
-        self.scene_models = gazebo_model_poses(completed.stdout)
-        self.scene_query_error = ''
+    def _query_live_poses(self) -> None:
+        # Replace, rather than retain, prior evidence.  A transport failure must
+        # never allow the last successful (or initial scene) snapshot to pass.
+        self.live_pose_models, self.live_pose_query_error = (
+            query_gazebo_live_model_poses(self.world_name)
+        )
 
     def _finish(
         self,

@@ -1,0 +1,1111 @@
+{
+  "accepted": true,
+  "automatic_runtime_switch": false,
+  "base_v4_acceptance": {
+    "accepted": true,
+    "automatic_runtime_switch": false,
+    "inputs": {
+      "approved_v3_loaded_accuracy_provided": true,
+      "counterfactual_report_provided": true,
+      "gates_config_mapping": true,
+      "required_scene_presence_densities": [
+        "sparse",
+        "medium",
+        "dense"
+      ],
+      "validation_metrics_mapping": true
+    },
+    "per_gate": {
+      "correct_segment_s_m_coverage.left": {
+        "comparison": ">=",
+        "evidence": {
+          "correct_segment_count": 2352,
+          "side": "left"
+        },
+        "metric_path": "breakdowns.side.left.correct_segment_s_m_coverage",
+        "observed": 0.9987261146496815,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_correct_segment_s_m_coverage_each_side"
+      },
+      "correct_segment_s_m_coverage.right": {
+        "comparison": ">=",
+        "evidence": {
+          "correct_segment_count": 2325,
+          "side": "right"
+        },
+        "metric_path": "breakdowns.side.right.correct_segment_s_m_coverage",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_correct_segment_s_m_coverage_each_side"
+      },
+      "correct_segment_s_m_mae.global": {
+        "comparison": "<=",
+        "evidence": {
+          "correct_segment_count": 4677,
+          "support_metric_path": "correct_segment_s_m_count"
+        },
+        "metric_path": "correct_segment_s_m_mae_m",
+        "observed": 0.01572997309267521,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.12,
+        "threshold_key": "maximum_correct_segment_s_m_mae_m"
+      },
+      "correct_segment_s_m_mae.left": {
+        "comparison": "<=",
+        "evidence": {
+          "correct_segment_count": 2352,
+          "side": "left",
+          "support_metric_path": "breakdowns.side.left.correct_segment_s_m_count"
+        },
+        "metric_path": "breakdowns.side.left.correct_segment_s_m_mae_m",
+        "observed": 0.01552290003746748,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.12,
+        "threshold_key": "maximum_correct_segment_s_m_mae_m_each_side"
+      },
+      "correct_segment_s_m_mae.right": {
+        "comparison": "<=",
+        "evidence": {
+          "correct_segment_count": 2325,
+          "side": "right",
+          "support_metric_path": "breakdowns.side.right.correct_segment_s_m_count"
+        },
+        "metric_path": "breakdowns.side.right.correct_segment_s_m_mae_m",
+        "observed": 0.01593945175409317,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.12,
+        "threshold_key": "maximum_correct_segment_s_m_mae_m_each_side"
+      },
+      "counterfactual.camera_order_swap_segment_top1_drop": {
+        "comparison": ">=",
+        "evidence": {
+          "interpretation": "camera-order swap must cause at least the configured segment top1 degradation"
+        },
+        "metric_path": "camera_order_swap.segment_top1_drop",
+        "observed": 0.9213675213675214,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.3,
+        "threshold_key": "minimum_camera_order_swap_segment_top1_drop"
+      },
+      "counterfactual.maximum_cross_side_output_change": {
+        "comparison": "<=",
+        "evidence": {
+          "blank_opposite_camera": {
+            "maximum_own_side_output_change": 0.0,
+            "metric_path": "blank_opposite_camera.maximum_own_side_output_change"
+          },
+          "camera_order_swap_diagnostics_present": true,
+          "shuffle_opposite_camera": {
+            "maximum_own_side_output_change": 0.0,
+            "metric_path": "shuffle_opposite_camera.maximum_own_side_output_change"
+          }
+        },
+        "metric_path": "maximum_cross_side_output_change",
+        "observed": 0.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 1e-06,
+        "threshold_key": "cross_side_output_change_tolerance"
+      },
+      "global_supported_segment_zero_recall_count": {
+        "comparison": "==",
+        "evidence": {
+          "zero_recall_classes": []
+        },
+        "metric_path": "segment_per_class[*].recall",
+        "observed": 0.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_segment_classes_with_zero_recall"
+      },
+      "identity_zone.segment_top1.boundary": {
+        "comparison": ">=",
+        "evidence": {
+          "support_metric_path": "breakdowns.zone_by_identity.boundary.visible_count",
+          "visible_count": 230,
+          "zone": "boundary"
+        },
+        "metric_path": "breakdowns.zone_by_identity.boundary.segment_top1_accuracy",
+        "observed": 0.991304347826087,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_identity_zone_boundary_segment_top1"
+      },
+      "identity_zone.segment_top1.switch": {
+        "comparison": ">=",
+        "evidence": {
+          "support_metric_path": "breakdowns.zone_by_identity.switch.visible_count",
+          "visible_count": 134,
+          "zone": "switch"
+        },
+        "metric_path": "breakdowns.zone_by_identity.switch.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_identity_zone_switch_segment_top1"
+      },
+      "joint_segment_and_ratio_005.global": {
+        "comparison": ">=",
+        "evidence": {},
+        "metric_path": "joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.908974358974359,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_joint_segment_and_ratio_005_accuracy"
+      },
+      "joint_segment_and_ratio_005.left": {
+        "comparison": ">=",
+        "evidence": {
+          "side": "left"
+        },
+        "metric_path": "breakdowns.side.left.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.8980891719745223,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_joint_segment_and_ratio_005_accuracy_each_side"
+      },
+      "joint_segment_and_ratio_005.right": {
+        "comparison": ">=",
+        "evidence": {
+          "side": "right"
+        },
+        "metric_path": "breakdowns.side.right.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.92,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_joint_segment_and_ratio_005_accuracy_each_side"
+      },
+      "loaded_accuracy.maximum_approved_v3_drop": {
+        "comparison": "<=",
+        "evidence": {
+          "approved_v3_loaded_accuracy": 0.6619343389529725,
+          "v4_loaded_accuracy": 0.9991452693939209
+        },
+        "metric_path": "approved_v3_loaded_accuracy - loaded_accuracy",
+        "observed": -0.3372109304409484,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.01,
+        "threshold_key": "maximum_loaded_accuracy_drop"
+      },
+      "loaded_accuracy.minimum": {
+        "comparison": ">=",
+        "evidence": {},
+        "metric_path": "loaded_accuracy",
+        "observed": 0.9991452693939209,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.95,
+        "threshold_key": "minimum_loaded_accuracy"
+      },
+      "position_bin.joint_005.p05": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p05",
+          "support_metric_path": "breakdowns.position_bin.p05.visible_count",
+          "visible_count": 516
+        },
+        "metric_path": "breakdowns.position_bin.p05.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9224806201550387,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p15": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p15",
+          "support_metric_path": "breakdowns.position_bin.p15.visible_count",
+          "visible_count": 307
+        },
+        "metric_path": "breakdowns.position_bin.p15.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9250814332247557,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p25": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p25",
+          "support_metric_path": "breakdowns.position_bin.p25.visible_count",
+          "visible_count": 320
+        },
+        "metric_path": "breakdowns.position_bin.p25.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.84375,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p40": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p40",
+          "support_metric_path": "breakdowns.position_bin.p40.visible_count",
+          "visible_count": 803
+        },
+        "metric_path": "breakdowns.position_bin.p40.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9265255292652553,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p50": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p50",
+          "support_metric_path": "breakdowns.position_bin.p50.visible_count",
+          "visible_count": 694
+        },
+        "metric_path": "breakdowns.position_bin.p50.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9121037463976945,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p60": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p60",
+          "support_metric_path": "breakdowns.position_bin.p60.visible_count",
+          "visible_count": 744
+        },
+        "metric_path": "breakdowns.position_bin.p60.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9193548387096774,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p75": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p75",
+          "support_metric_path": "breakdowns.position_bin.p75.visible_count",
+          "visible_count": 453
+        },
+        "metric_path": "breakdowns.position_bin.p75.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.8962472406181016,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p85": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p85",
+          "support_metric_path": "breakdowns.position_bin.p85.visible_count",
+          "visible_count": 317
+        },
+        "metric_path": "breakdowns.position_bin.p85.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9274447949526814,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.joint_005.p95": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p95",
+          "support_metric_path": "breakdowns.position_bin.p95.visible_count",
+          "visible_count": 526
+        },
+        "metric_path": "breakdowns.position_bin.p95.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.8802281368821293,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_position_bin_joint_segment_and_ratio_005_accuracy"
+      },
+      "position_bin.segment_top1.p05": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p05",
+          "support_metric_path": "breakdowns.position_bin.p05.visible_count",
+          "visible_count": 516
+        },
+        "metric_path": "breakdowns.position_bin.p05.segment_top1_accuracy",
+        "observed": 0.9941860465116279,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p15": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p15",
+          "support_metric_path": "breakdowns.position_bin.p15.visible_count",
+          "visible_count": 307
+        },
+        "metric_path": "breakdowns.position_bin.p15.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p25": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p25",
+          "support_metric_path": "breakdowns.position_bin.p25.visible_count",
+          "visible_count": 320
+        },
+        "metric_path": "breakdowns.position_bin.p25.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p40": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p40",
+          "support_metric_path": "breakdowns.position_bin.p40.visible_count",
+          "visible_count": 803
+        },
+        "metric_path": "breakdowns.position_bin.p40.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p50": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p50",
+          "support_metric_path": "breakdowns.position_bin.p50.visible_count",
+          "visible_count": 694
+        },
+        "metric_path": "breakdowns.position_bin.p50.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p60": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p60",
+          "support_metric_path": "breakdowns.position_bin.p60.visible_count",
+          "visible_count": 744
+        },
+        "metric_path": "breakdowns.position_bin.p60.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p75": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p75",
+          "support_metric_path": "breakdowns.position_bin.p75.visible_count",
+          "visible_count": 453
+        },
+        "metric_path": "breakdowns.position_bin.p75.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p85": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p85",
+          "support_metric_path": "breakdowns.position_bin.p85.visible_count",
+          "visible_count": 317
+        },
+        "metric_path": "breakdowns.position_bin.p85.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "position_bin.segment_top1.p95": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "p95",
+          "support_metric_path": "breakdowns.position_bin.p95.visible_count",
+          "visible_count": 526
+        },
+        "metric_path": "breakdowns.position_bin.p95.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_position_bin_segment_top1"
+      },
+      "scene_occlusion.joint_005.clear": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "clear",
+          "support_metric_path": "breakdowns.scene_occlusion_class.clear.visible_count",
+          "visible_count": 4228
+        },
+        "metric_path": "breakdowns.scene_occlusion_class.clear.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9150898770104068,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_scene_occlusion_joint_segment_and_ratio_005_accuracy"
+      },
+      "scene_occlusion.joint_005.partial_risk": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "partial_risk",
+          "support_metric_path": "breakdowns.scene_occlusion_class.partial_risk.visible_count",
+          "visible_count": 452
+        },
+        "metric_path": "breakdowns.scene_occlusion_class.partial_risk.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.8517699115044248,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_scene_occlusion_joint_segment_and_ratio_005_accuracy"
+      },
+      "scene_occlusion.segment_top1.clear": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "clear",
+          "support_metric_path": "breakdowns.scene_occlusion_class.clear.visible_count",
+          "visible_count": 4228
+        },
+        "metric_path": "breakdowns.scene_occlusion_class.clear.segment_top1_accuracy",
+        "observed": 0.999763481551561,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_scene_occlusion_segment_top1"
+      },
+      "scene_occlusion.segment_top1.partial_risk": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "partial_risk",
+          "support_metric_path": "breakdowns.scene_occlusion_class.partial_risk.visible_count",
+          "visible_count": 452
+        },
+        "metric_path": "breakdowns.scene_occlusion_class.partial_risk.segment_top1_accuracy",
+        "observed": 0.995575221238938,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_scene_occlusion_segment_top1"
+      },
+      "scene_presence_density.joint_005.dense": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "dense",
+          "support_metric_path": "breakdowns.scene_presence_density.dense.visible_count",
+          "visible_count": 3380
+        },
+        "metric_path": "breakdowns.scene_presence_density.dense.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.8970414201183432,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_scene_presence_density_joint_segment_and_ratio_005_accuracy"
+      },
+      "scene_presence_density.joint_005.medium": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "medium",
+          "support_metric_path": "breakdowns.scene_presence_density.medium.visible_count",
+          "visible_count": 520
+        },
+        "metric_path": "breakdowns.scene_presence_density.medium.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9307692307692308,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_scene_presence_density_joint_segment_and_ratio_005_accuracy"
+      },
+      "scene_presence_density.joint_005.sparse": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "sparse",
+          "support_metric_path": "breakdowns.scene_presence_density.sparse.visible_count",
+          "visible_count": 780
+        },
+        "metric_path": "breakdowns.scene_presence_density.sparse.joint_localization_accuracy_s_ratio_0_05",
+        "observed": 0.9461538461538461,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.6,
+        "threshold_key": "minimum_scene_presence_density_joint_segment_and_ratio_005_accuracy"
+      },
+      "scene_presence_density.segment_top1.dense": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "dense",
+          "support_metric_path": "breakdowns.scene_presence_density.dense.visible_count",
+          "visible_count": 3380
+        },
+        "metric_path": "breakdowns.scene_presence_density.dense.segment_top1_accuracy",
+        "observed": 0.999112426035503,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_scene_presence_density_segment_top1"
+      },
+      "scene_presence_density.segment_top1.medium": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "medium",
+          "support_metric_path": "breakdowns.scene_presence_density.medium.visible_count",
+          "visible_count": 520
+        },
+        "metric_path": "breakdowns.scene_presence_density.medium.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_scene_presence_density_segment_top1"
+      },
+      "scene_presence_density.segment_top1.sparse": {
+        "comparison": ">=",
+        "evidence": {
+          "category": "sparse",
+          "support_metric_path": "breakdowns.scene_presence_density.sparse.visible_count",
+          "visible_count": 780
+        },
+        "metric_path": "breakdowns.scene_presence_density.sparse.segment_top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.7,
+        "threshold_key": "minimum_scene_presence_density_segment_top1"
+      },
+      "side_segment_macro_recall.left": {
+        "comparison": ">=",
+        "evidence": {
+          "side": "left"
+        },
+        "metric_path": "per_side.left.macro_recall",
+        "observed": 0.9961734693877551,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_segment_macro_recall_each_side"
+      },
+      "side_segment_macro_recall.right": {
+        "comparison": ">=",
+        "evidence": {
+          "side": "right"
+        },
+        "metric_path": "per_side.right.macro_recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_segment_macro_recall_each_side"
+      },
+      "side_segment_nonzero_recall.left.A12E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A12E",
+          "side": "left",
+          "support": 188
+        },
+        "metric_path": "per_side.left.per_class[A12E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A12I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A12I",
+          "side": "left",
+          "support": 205
+        },
+        "metric_path": "per_side.left.per_class[A12I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A14": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A14",
+          "side": "left",
+          "support": 56
+        },
+        "metric_path": "per_side.left.per_class[A14].recall",
+        "observed": 0.9464285714285714,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A1E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A1E",
+          "side": "left",
+          "support": 113
+        },
+        "metric_path": "per_side.left.per_class[A1E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A1I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A1I",
+          "side": "left",
+          "support": 166
+        },
+        "metric_path": "per_side.left.per_class[A1I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A23": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A23",
+          "side": "left",
+          "support": 81
+        },
+        "metric_path": "per_side.left.per_class[A23].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A2E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A2E",
+          "side": "left",
+          "support": 197
+        },
+        "metric_path": "per_side.left.per_class[A2E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A2I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A2I",
+          "side": "left",
+          "support": 245
+        },
+        "metric_path": "per_side.left.per_class[A2I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A34E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A34E",
+          "side": "left",
+          "support": 219
+        },
+        "metric_path": "per_side.left.per_class[A34E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A34I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A34I",
+          "side": "left",
+          "support": 252
+        },
+        "metric_path": "per_side.left.per_class[A34I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A3E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A3E",
+          "side": "left",
+          "support": 121
+        },
+        "metric_path": "per_side.left.per_class[A3E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A3I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A3I",
+          "side": "left",
+          "support": 136
+        },
+        "metric_path": "per_side.left.per_class[A3I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A4E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A4E",
+          "side": "left",
+          "support": 185
+        },
+        "metric_path": "per_side.left.per_class[A4E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.left.A4I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A4I",
+          "side": "left",
+          "support": 191
+        },
+        "metric_path": "per_side.left.per_class[A4I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A12E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A12E",
+          "side": "right",
+          "support": 186
+        },
+        "metric_path": "per_side.right.per_class[A12E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A12I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A12I",
+          "side": "right",
+          "support": 201
+        },
+        "metric_path": "per_side.right.per_class[A12I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A14": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A14",
+          "side": "right",
+          "support": 132
+        },
+        "metric_path": "per_side.right.per_class[A14].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A1E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A1E",
+          "side": "right",
+          "support": 132
+        },
+        "metric_path": "per_side.right.per_class[A1E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A1I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A1I",
+          "side": "right",
+          "support": 148
+        },
+        "metric_path": "per_side.right.per_class[A1I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A23": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A23",
+          "side": "right",
+          "support": 109
+        },
+        "metric_path": "per_side.right.per_class[A23].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A2E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A2E",
+          "side": "right",
+          "support": 148
+        },
+        "metric_path": "per_side.right.per_class[A2E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A2I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A2I",
+          "side": "right",
+          "support": 183
+        },
+        "metric_path": "per_side.right.per_class[A2I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A34E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A34E",
+          "side": "right",
+          "support": 246
+        },
+        "metric_path": "per_side.right.per_class[A34E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A34I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A34I",
+          "side": "right",
+          "support": 244
+        },
+        "metric_path": "per_side.right.per_class[A34I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A3E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A3E",
+          "side": "right",
+          "support": 127
+        },
+        "metric_path": "per_side.right.per_class[A3E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A3I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A3I",
+          "side": "right",
+          "support": 116
+        },
+        "metric_path": "per_side.right.per_class[A3I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A4E": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A4E",
+          "side": "right",
+          "support": 161
+        },
+        "metric_path": "per_side.right.per_class[A4E].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_nonzero_recall.right.A4I": {
+        "comparison": ">",
+        "evidence": {
+          "segment": "A4I",
+          "side": "right",
+          "support": 192
+        },
+        "metric_path": "per_side.right.per_class[A4I].recall",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.0,
+        "threshold_key": "zero_supported_side_x_segment_cells_with_zero_recall"
+      },
+      "side_segment_top1.left": {
+        "comparison": ">=",
+        "evidence": {
+          "side": "left"
+        },
+        "metric_path": "per_side.left.top1_accuracy",
+        "observed": 0.9987261146496815,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_segment_top1_each_side"
+      },
+      "side_segment_top1.right": {
+        "comparison": ">=",
+        "evidence": {
+          "side": "right"
+        },
+        "metric_path": "per_side.right.top1_accuracy",
+        "observed": 1.0,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.75,
+        "threshold_key": "minimum_segment_top1_each_side"
+      },
+      "worst_side_x_segment_recall": {
+        "comparison": ">=",
+        "evidence": {
+          "evaluated_cell_count": 28,
+          "segment": "A14",
+          "side": "left",
+          "support": 56
+        },
+        "metric_path": "per_side.left.per_class[A14].recall",
+        "observed": 0.9464285714285714,
+        "required": true,
+        "status": "passed",
+        "threshold": 0.5,
+        "threshold_key": "minimum_worst_side_x_segment_recall"
+      }
+    },
+    "schema_version": "room315.visual_acceptance.v4.v1",
+    "status": "passed",
+    "summary": {
+      "failed": 0,
+      "gate_count": 76,
+      "passed": 76,
+      "pending": 0
+    }
+  },
+  "data_role": "sealed_final_test_only",
+  "dataset_coverage_passed": true,
+  "human_review_required": true,
+  "schema_version": "room315.visual_v4.final_test_acceptance.v1",
+  "status": "passed",
+  "test_specific_runtime_gates": {
+    "runtime_threshold.minimum_joint_confidence_coverage": {
+      "comparison": ">=",
+      "observed": 0.9995726495726496,
+      "required": true,
+      "status": "passed",
+      "threshold": 0.9,
+      "threshold_source": "preregistered_final_test_coverage_contract"
+    },
+    "runtime_threshold.minimum_loaded_confidence_coverage": {
+      "comparison": ">=",
+      "observed": 1.0,
+      "required": true,
+      "status": "passed",
+      "threshold": 0.95,
+      "threshold_source": "preregistered_final_test_coverage_contract"
+    },
+    "runtime_threshold.minimum_segment_confidence_coverage": {
+      "comparison": ">=",
+      "observed": 0.9995726495726496,
+      "required": true,
+      "status": "passed",
+      "threshold": 0.9,
+      "threshold_source": "preregistered_final_test_coverage_contract"
+    },
+    "runtime_threshold.minimum_segment_selective_accuracy": {
+      "comparison": ">=",
+      "observed": 0.9995724668661822,
+      "required": true,
+      "status": "passed",
+      "threshold": 0.95,
+      "threshold_source": "preregistered_final_test_coverage_contract"
+    }
+  }
+}

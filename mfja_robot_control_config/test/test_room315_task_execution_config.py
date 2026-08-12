@@ -15,6 +15,9 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from room_315_task_execution_config import RUNTIME_PDDL_DOMAIN_PATH
+from room_315_task_execution_config import (
+    TASK_EXECUTION_AUTHORIZATION_PARAMETER_DEFAULTS,
+)
 from room_315_task_execution_config import TASK_EXECUTION_PARAMETER_DEFAULTS
 from room_315_task_execution_config import validate_task_execution_parameters
 from room_315_closed_loop_executive import ClosedLoopExecutiveConfig
@@ -25,6 +28,25 @@ CONFIG_PATH = (
     / 'config'
     / 'room_315_vla'
     / 'task_execution_runtime.yaml'
+)
+ROLLBACK_CONFIG_PATH = CONFIG_PATH.with_name(
+    'task_execution_runtime_v3_rollback.yaml'
+)
+ACTIVE_RUNTIME_BUNDLE = Path(
+    '/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_'
+    'epoch11_869d6404_closed_loop_runtime_attempt1'
+)
+ACTIVE_RUNTIME_MANIFEST_SHA256 = (
+    '506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da'
+)
+ACTIVE_RUNTIME_STATE_SHA256 = (
+    '14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1'
+)
+V4_CHECKPOINT_SHA256 = (
+    '869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d'
+)
+V3_ROLLBACK_CHECKPOINT_SHA256 = (
+    '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
 )
 
 
@@ -39,10 +61,70 @@ def test_runtime_yaml_and_node_fallback_defaults_cannot_drift():
     loaded = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8'))
     configured = loaded['room_315_task_execution_node']['ros__parameters']
     defaults = dict(TASK_EXECUTION_PARAMETER_DEFAULTS)
+    authorization_names = set(TASK_EXECUTION_AUTHORIZATION_PARAMETER_DEFAULTS)
+    configured_without_authorization = {
+        name: value
+        for name, value in configured.items()
+        if name not in authorization_names
+    }
 
-    assert set(configured) == set(defaults) - {'planner_domain_path'}
-    for name, value in configured.items():
+    assert set(configured_without_authorization) == (
+        set(defaults) - {'planner_domain_path'} - authorization_names
+    )
+    for name, value in configured_without_authorization.items():
         assert value == defaults[name], name
+    assert set(configured) & authorization_names == authorization_names
+
+
+def test_active_runtime_yaml_is_v4_pinned_disabled_and_authorized():
+    loaded = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8'))
+    configured = loaded['room_315_task_execution_node']['ros__parameters']
+    manifest_path = ACTIVE_RUNTIME_BUNDLE / 'runtime_promotion_manifest.json'
+    state_path = ACTIVE_RUNTIME_BUNDLE / 'candidate_state.json'
+
+    assert configured['execution_enabled'] is False
+    assert configured['allowed_visual_schema_version'] == (
+        'room315.visual_state.v4'
+    )
+    assert configured['allowed_visual_checkpoint_sha256'] == (
+        V4_CHECKPOINT_SHA256
+    )
+    assert configured['task_execution_authorization_path'] == str(state_path)
+    assert configured['task_execution_authorization_sha256'] == (
+        ACTIVE_RUNTIME_STATE_SHA256
+    )
+    assert configured['task_execution_promotion_manifest_path'] == str(
+        manifest_path
+    )
+
+    enabled = dict(TASK_EXECUTION_PARAMETER_DEFAULTS)
+    enabled.update(configured)
+    enabled['execution_enabled'] = True
+    verified = validate_task_execution_parameters(enabled)
+    assert verified is not None
+    assert verified['authorization_scope'] == (
+        'gazebo_v4_closed_loop_runtime_only'
+    )
+    assert verified['sha256'] == ACTIVE_RUNTIME_STATE_SHA256
+    assert verified['promotion_manifest_sha256'] == (
+        ACTIVE_RUNTIME_MANIFEST_SHA256
+    )
+
+
+def test_explicit_rollback_yaml_is_v3_and_execution_disabled():
+    loaded = yaml.safe_load(ROLLBACK_CONFIG_PATH.read_text(encoding='utf-8'))
+    configured = loaded['room_315_task_execution_node']['ros__parameters']
+
+    assert configured['execution_enabled'] is False
+    assert configured['allowed_visual_schema_version'] == (
+        'room315.visual_state.v3'
+    )
+    assert configured['allowed_visual_checkpoint_sha256'] == (
+        V3_ROLLBACK_CHECKPOINT_SHA256
+    )
+    assert not (
+        set(configured) & set(TASK_EXECUTION_AUTHORIZATION_PARAMETER_DEFAULTS)
+    )
 
 
 def test_executive_defaults_match_authoritative_runtime_defaults():

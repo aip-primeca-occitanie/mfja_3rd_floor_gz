@@ -1,0 +1,73 @@
+{
+  "calibration_refit_performed": false,
+  "data_role": "sealed_final_test_only",
+  "joint": {
+    "accepted_count": 4678,
+    "coverage": 0.9995726495726496,
+    "selective_both_correct_accuracy": 0.9987174005985464,
+    "visible_count": 4680
+  },
+  "loaded": {
+    "accepted_count": 4680,
+    "correct_and_accepted_rate": 0.9991452991452991,
+    "coverage": 1.0,
+    "selective_accuracy": 0.9991452991452991,
+    "threshold": 0.5,
+    "visible_count": 4680
+  },
+  "per_side": {
+    "left": {
+      "loaded": {
+        "accepted_count": 2355,
+        "correct_and_accepted_rate": 0.9991507430997877,
+        "coverage": 1.0,
+        "selective_accuracy": 0.9991507430997877,
+        "threshold": 0.5,
+        "visible_count": 2355
+      },
+      "segment": {
+        "accepted_count": 2353,
+        "correct_and_accepted_rate": 0.9983014861995754,
+        "coverage": 0.9991507430997877,
+        "selective_accuracy": 0.9991500212494687,
+        "threshold": 0.9139089813389109,
+        "visible_count": 2355
+      }
+    },
+    "right": {
+      "loaded": {
+        "accepted_count": 2325,
+        "correct_and_accepted_rate": 0.9991397849462366,
+        "coverage": 1.0,
+        "selective_accuracy": 0.9991397849462366,
+        "threshold": 0.5,
+        "visible_count": 2325
+      },
+      "segment": {
+        "accepted_count": 2325,
+        "correct_and_accepted_rate": 1.0,
+        "coverage": 1.0,
+        "selective_accuracy": 1.0,
+        "threshold": 0.9139089813389109,
+        "visible_count": 2325
+      }
+    }
+  },
+  "runtime_manifest": {
+    "bytes": 6265,
+    "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/runtime_promotion_manifest.json",
+    "sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574"
+  },
+  "schema_version": "room315.visual_v4.final_test_runtime_thresholds.v1",
+  "segment": {
+    "accepted_count": 4678,
+    "correct_and_accepted_rate": 0.9991452991452991,
+    "coverage": 0.9995726495726496,
+    "selective_accuracy": 0.9995724668661822,
+    "threshold": 0.9139089813389109,
+    "visible_count": 4680
+  },
+  "threshold_selection_performed": false,
+  "threshold_source": "frozen_validation_and_runtime_manifest_only",
+  "validation_temperature": 0.6007370031399095
+}

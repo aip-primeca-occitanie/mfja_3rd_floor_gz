@@ -112,6 +112,12 @@ class Room315TaskExecutionNode(Node):
             external_obstacles_disabled=self._bool(
                 'external_obstacles_disabled'
             ),
+            allowed_visual_schema_version=self._string(
+                'allowed_visual_schema_version'
+            ),
+            allowed_visual_checkpoint_sha256=self._string(
+                'allowed_visual_checkpoint_sha256'
+            ),
         )
         self.state_builder = VisualObservedStateBuilder(state_config)
         self.state_provider = LatestVisualObservedStateProvider(
@@ -196,15 +202,51 @@ class Room315TaskExecutionNode(Node):
             'slot arrival requires deterministic sensor identity plus '
             'controller-stop confirmation.'
         )
+        if self._execution_authorization is not None:
+            self.get_logger().info(
+                'Immutable V4 Gazebo closed-loop authorization verified: '
+                f'authorization_sha256='
+                f'{self._execution_authorization["sha256"]} '
+                f'promotion_manifest_sha256='
+                f'{self._execution_authorization["promotion_manifest_sha256"]}'
+            )
 
     def _declare_parameters(self) -> None:
         for name, default in TASK_EXECUTION_PARAMETER_DEFAULTS.items():
             if not self.has_parameter(name):
                 self.declare_parameter(name, default)
-        validate_task_execution_parameters({
+        self._execution_authorization = validate_task_execution_parameters({
             name: self.get_parameter(name).value
             for name in TASK_EXECUTION_PARAMETER_DEFAULTS
         })
+
+    def _verify_current_execution_authorization(self) -> bool:
+        """Revalidate dynamic parameters and the immutable file per goal."""
+
+        try:
+            authorization = validate_task_execution_parameters({
+                name: self.get_parameter(name).value
+                for name in TASK_EXECUTION_PARAMETER_DEFAULTS
+            })
+        except ValueError as exc:
+            self._execution_authorization = None
+            self.get_logger().error(
+                f'V4 task execution authorization rejected: {exc}'
+            )
+            self._reject_goal(
+                goal_id='',
+                reason=f'task_execution_authorization_invalid:{exc}',
+            )
+            return False
+        if authorization is None:
+            self._execution_authorization = None
+            self._reject_goal(
+                goal_id='',
+                reason='task_execution_disabled',
+            )
+            return False
+        self._execution_authorization = authorization
+        return True
 
     def _on_visual_observation(
         self,
@@ -255,11 +297,13 @@ class Room315TaskExecutionNode(Node):
         )
 
     def _on_task_goal(self, message: String) -> None:
-        if not self._bool('execution_enabled'):
+        if self.get_parameter('execution_enabled').value is not True:
             self._reject_goal(
                 goal_id='',
                 reason='task_execution_disabled',
             )
+            return
+        if not self._verify_current_execution_authorization():
             return
         try:
             payload = json.loads(message.data or '{}')
@@ -477,6 +521,9 @@ class Room315TaskExecutionNode(Node):
             'status': str(status),
             'reason': str(reason),
             'execution_enabled': self._bool('execution_enabled'),
+            'execution_authorization_verified': (
+                self._execution_authorization is not None
+            ),
             'location_source': 'accepted_visual_state',
             'presence_source':
                 'controller_ShuttleState_name_and_timestamps_only',
@@ -521,6 +568,19 @@ class Room315TaskExecutionNode(Node):
             status.message = self._last_status
         values = {
             'execution_enabled': self._bool('execution_enabled'),
+            'execution_authorization_verified': (
+                self._execution_authorization is not None
+            ),
+            'execution_authorization_sha256': (
+                self._execution_authorization['sha256']
+                if self._execution_authorization is not None
+                else ''
+            ),
+            'promotion_manifest_sha256': (
+                self._execution_authorization['promotion_manifest_sha256']
+                if self._execution_authorization is not None
+                else ''
+            ),
             'state_ready': ready,
             'state_reason': reason,
             'active_goal_id': self._active_goal_id,
@@ -584,6 +644,8 @@ def _visual_message_dict(message: VisualStateObservation) -> dict[str, Any]:
                 's_ratio': float(item.s_ratio),
                 'segment_length_m': float(item.segment_length_m),
                 'loaded_state': item.loaded_state,
+                'segment_confidence': float(item.segment_confidence),
+                'loaded_confidence': float(item.loaded_confidence),
             }
             for item in message.shuttles
         ],

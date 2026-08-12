@@ -330,12 +330,56 @@ def test_package_manifest_verifies():
 
 def test_deterministic_regeneration_is_byte_identical(tmp_path):
     regenerated = tmp_path / 'regenerated'
+    repeated = tmp_path / 'repeated'
     v2.prepare_v2_package(
         regenerated,
         declared_root=PACKAGE_ROOT,
     )
+    v2.prepare_v2_package(
+        repeated,
+        declared_root=PACKAGE_ROOT,
+    )
 
-    assert _file_map(regenerated) == _file_map(PACKAGE_ROOT)
+    # Reproducibility is a statement about identical inputs.  The archived
+    # package records the rail-network hashes that were current when it was
+    # frozen; a present-day regeneration intentionally binds the current
+    # authoritative networks.  Compare two current regenerations byte for byte
+    # and separately prove that topology-independent frozen payloads did not
+    # drift.
+    regenerated_files = _file_map(regenerated)
+    assert regenerated_files == _file_map(repeated)
+
+    topology_derived = {
+        'package_manifest.json',
+        'topology_zone_compatibility.json',
+    }
+    archived_files = _file_map(PACKAGE_ROOT)
+    assert {
+        name: digest
+        for name, digest in regenerated_files.items()
+        if name not in topology_derived
+    } == {
+        name: digest
+        for name, digest in archived_files.items()
+        if name not in topology_derived
+    }
+
+    topology = json.loads(
+        (regenerated / 'topology_zone_compatibility.json').read_text(
+            encoding='utf-8'
+        )
+    )
+    for source in topology['authoritative_sources'].values():
+        path = Path(source['path'])
+        assert path.is_file()
+        assert source['sha256'] == hashlib.sha256(
+            path.read_bytes()
+        ).hexdigest()
+
+    validation = v2.validate_package_manifest(regenerated)
+    assert validation['passed']
+    assert validation['verified_file_count'] == 9
+    assert not validation['failures']
 
 
 def test_all_protected_artifacts_remain_byte_identical():

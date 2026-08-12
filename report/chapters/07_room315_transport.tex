@@ -139,7 +139,7 @@ Table~\ref{tab:rail-topology} uses only the public ROS naming domain. For the
 left rail, current and successor segments are converted from internal geometry
 identifiers to public labels, while switch identifiers already use the public
 physical labels. The resulting public successor contract is identical for the
-two mirrored rails.
+two rails at the public-topology level.
 
 \begingroup
 \renewcommand{\arraystretch}{1.12}
@@ -192,7 +192,7 @@ exterior or interior successor, as shown in \cref{fig:a23-transition-key}.
   \caption[Public A2--A23--A3 transition rule.]
   {A2 is the fixed entry boundary into public segment A23. Once the shuttle is
   on A23, switch A3 selects the exterior or interior successor. The same public
-  rule applies to both mirrored rails.}
+  rule applies to both rails.}
   \label{fig:a23-transition-key}
 \end{figure}
 
@@ -230,7 +230,7 @@ devices in YAML. The resulting right-rail layout is shown in
 
 Switches A1--A4 select exterior or interior branches. Commands and feedback
 use separate topics. A switch update runs without globally pausing Gazebo, so
-other robot processes continue normally. The protected physical neighbourhood
+other robot processes continue normally. The protected geometric neighbourhood
 extends \SI{0.35}{m} along the rail coordinate; \cref{chap:interfaces} defines
 how controller feedback authorises or vetoes a change.
 
@@ -253,7 +253,7 @@ evaluation, but it is not exposed as a learned model input.
 
 \section{Multi-shuttle identity and lifecycle}
 
-The current fleet supports four identities on each mirrored rail. Stable short
+The current fleet supports four identities on each rail. Stable short
 identities L1--L4 and R1--R4 map to Gazebo entity names such as
 \code{room315\_right\_shuttle\_4}. Identity is not inferred from array order.
 The operator-facing lifecycle supports:
@@ -301,8 +301,7 @@ the two camera views used by the visual pipeline.
   \caption[Paired Gazebo camera views of the complete eight-shuttle fleet.]
   {Synchronous overhead Gazebo views of the complete eight-shuttle
   configuration. Identity colours remain visible while device markers are
-  hidden, making presence and payload appearance readable on both mirrored
-  rails.}
+  hidden, making presence and payload appearance readable on both rails.}
   \label{fig:dense-eight-shuttle}
 \end{figure}
 
@@ -370,14 +369,14 @@ free centre. With the current geometry, each branch admits at most two safely
 separated shuttles; the positions are calculated rather than fixed. A later
 \code{ON} command invalidates the corresponding stop certificate.
 
-These calculated centres impose physical capacity constraints on later
-relocation. The closed-loop selection, re-observation and recovery
-policy is described in \cref{chap:neurosymbolic}.
+These calculated centres impose geometric and capacity constraints on later
+relocation. The closed-loop selection, re-observation and recovery policy is
+described in \cref{chap:neurosymbolic}.
 
 \section{Validation of the transport model}
 
 Static and behavioural checks cover calibrated geometry, topology, devices,
 identity reconciliation, separation and interior capacity. The corresponding
-results are presented in \cref{chap:results}. The physical constraints are
-enforced through the typed commands and supervisory mechanisms described in
-\cref{chap:interfaces}.
+results are presented in \cref{chap:results}. The geometric and capacity
+constraints are enforced through the typed commands and supervisory mechanisms
+described in \cref{chap:interfaces}.

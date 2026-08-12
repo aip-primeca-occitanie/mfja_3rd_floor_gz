@@ -1,0 +1,233 @@
+{
+  "accepted_supervisor_decision_count": 2,
+  "actuating_step_count": 1,
+  "all_controllers_stopped": true,
+  "all_final_effects_verified": true,
+  "all_terminal_statuses_succeeded": true,
+  "campaign_id": "room315_integrated_campaign_v4",
+  "case_count": 1,
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "completed_case_count": 1,
+  "declared_case_count": 12,
+  "evidence_scope": "partial_smoke",
+  "executed_step_count": 1,
+  "failed_case_count": 0,
+  "failure_reason": "",
+  "finished_at_utc": "2026-08-12T00:44:54.390506Z",
+  "full_declared_campaign": false,
+  "left_rail_case_count": 0,
+  "non_actuating_step_count": 0,
+  "partial_smoke_evidence": true,
+  "passed_case_count": 1,
+  "physical_deployment": false,
+  "planned_case_ids": [
+    "B01"
+  ],
+  "qualification_manifest_sha256": "6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a",
+  "results": [
+    {
+      "accepted_actuating_step_count": 1,
+      "accepted_supervisor_decision_count": 2,
+      "accepted_supervisor_decision_source": "safety_decoder_metrics_delta",
+      "actuating_step_count": 1,
+      "case_id": "B01",
+      "controller_mode_at_arrival": "DISABLED",
+      "duration_s": 59.69888219796121,
+      "executed_step_count": 1,
+      "final_visual_checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "final_visual_frame_progression": {
+        "accepted_frame_count_delta": 118,
+        "final_accepted_frame_count": 119,
+        "final_header_stamp": {
+          "nanosec": 125000000,
+          "sec": 47
+        },
+        "initial_accepted_frame_count": 1,
+        "initial_header_stamp": {
+          "nanosec": 230000000,
+          "sec": 11
+        },
+        "status": "passed"
+      },
+      "final_visual_identity_oracle": {
+        "comparisons": {
+          "R1": {
+            "expected": {
+              "devices_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml",
+              "devices_sha256": "d8c9e79e1e0ae90b53b15038be91a5b25e44a4662c1d353c9919586a27a7e3c7",
+              "identity": "R1",
+              "kind": "declared_slot",
+              "loaded_state": "empty",
+              "network_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml",
+              "network_sha256": "98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d",
+              "phase": "final",
+              "s_ratio": 0.653073633,
+              "s_ratio_tolerance": 0.12,
+              "segment": "A12E",
+              "side": "right",
+              "slot": "2",
+              "start_slot": "1"
+            },
+            "observed": {
+              "loaded_state": "empty",
+              "s_ratio": 0.6383453607559204,
+              "segment": "A12E",
+              "side": "right"
+            },
+            "s_ratio_absolute_error": 0.014728272244079577,
+            "status": "passed"
+          }
+        },
+        "identity_count": 1,
+        "phase": "final",
+        "s_ratio_maximum_absolute_error": 0.12,
+        "status": "passed"
+      },
+      "finished_at_utc": "2026-08-12T00:44:51.522681Z",
+      "goal_id": "room315-task-goal-088f52995b2c",
+      "initial_controller_evidence_status": "passed",
+      "initial_visual_checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "initial_visual_identity_oracle": {
+        "comparisons": {
+          "R1": {
+            "expected": {
+              "devices_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml",
+              "devices_sha256": "d8c9e79e1e0ae90b53b15038be91a5b25e44a4662c1d353c9919586a27a7e3c7",
+              "identity": "R1",
+              "kind": "declared_slot",
+              "loaded_state": "empty",
+              "network_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml",
+              "network_sha256": "98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d",
+              "phase": "initial",
+              "s_ratio": 0.411866742,
+              "s_ratio_tolerance": 0.12,
+              "segment": "A12E",
+              "side": "right",
+              "slot": "1",
+              "start_slot": "1"
+            },
+            "observed": {
+              "loaded_state": "empty",
+              "s_ratio": 0.40994152426719666,
+              "segment": "A12E",
+              "side": "right"
+            },
+            "s_ratio_absolute_error": 0.0019252177328033526,
+            "status": "passed"
+          }
+        },
+        "identity_count": 1,
+        "phase": "initial",
+        "s_ratio_maximum_absolute_error": 0.12,
+        "status": "passed"
+      },
+      "non_actuating_step_count": 0,
+      "payload_consensus": {
+        "status": "not_applicable"
+      },
+      "plan_attempts": 1,
+      "post_task_controller_evidence_status": "passed",
+      "primitive_steps": [
+        "SHUTTLE_ON"
+      ],
+      "replans": 0,
+      "ros_domain_id": 170,
+      "rosbag": {
+        "duration_ns": 27330000000,
+        "message_count": 14301,
+        "relative_files": [
+          "rosbag/rosbag_0.mcap"
+        ],
+        "required_topic_message_counts": {
+          "/clock": 5467,
+          "/room_315/rails/right/sensors/feedback": 741,
+          "/room_315/rails/right/shuttles/command": 2,
+          "/room_315/rails/right/shuttles/state": 741,
+          "/room_315/task_goal": 1,
+          "/room_315/task_goal/status": 4,
+          "/room_315/visual_state/observed_state": 88,
+          "/room_315/visual_state/raw_model_prediction": 88,
+          "/room_315/visual_state/validation": 88,
+          "/room_315/vla/command": 2,
+          "/room_315/vla/left_rail_rgbd/image": 243,
+          "/room_315/vla/right_rail_rgbd/image": 243,
+          "/room_315/vla/status": 29
+        },
+        "status": "passed",
+        "storage_identifier": "mcap",
+        "visual_schema_audit": {
+          "accepted_count": 88,
+          "checkpoint_counts": {
+            "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d": 88
+          },
+          "observation_count": 88,
+          "schema_counts": {
+            "room315.visual_state.v4": 88
+          },
+          "v3_observation_count": 0,
+          "v4_observation_count": 88
+        }
+      },
+      "safe_abort_sent": false,
+      "satisfied_postcondition_count": 1,
+      "selected_identity": "R1",
+      "sensor_confirmation_frames": 2,
+      "started_at_utc": "2026-08-12T00:43:51.823805Z",
+      "status": "passed",
+      "supervisor_metrics": {
+        "delta": {
+          "accepted_actions": 2,
+          "rejected_actions": 0,
+          "total_proposed_actions": 2
+        },
+        "final": {
+          "accepted_actions": 2,
+          "rejected_actions": 0,
+          "total_proposed_actions": 2
+        },
+        "initial": {
+          "accepted_actions": 0,
+          "rejected_actions": 0,
+          "total_proposed_actions": 0
+        }
+      },
+      "symbolic_declaration_validation": {
+        "declared_blocker_identity": "",
+        "declared_exact_symbolic_steps": [],
+        "declared_prefixes": [],
+        "exact_executed_step_count": null,
+        "symbolic_steps": [
+          "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_yaskawa right_slot_1 right_slot_2 speed=0.2"
+        ]
+      },
+      "symbolic_steps": [
+        "move_shuttle_to_slot right_shuttle_1 right right_yaskawa right_yaskawa right_slot_1 right_slot_2 speed=0.2"
+      ],
+      "target_sensor": "DZI2R",
+      "target_slot": "2",
+      "unknown_retries": 0
+    }
+  ],
+  "right_rail_case_count": 1,
+  "runtime_manifest_sha256": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+  "safe_abort_count": 0,
+  "satisfied_postcondition_count": 1,
+  "schema_version": "room315.v4_closed_loop_campaign.v1",
+  "selected_case_count": 1,
+  "selected_identities": [
+    "R1"
+  ],
+  "semantic_families": [
+    "colour_alias"
+  ],
+  "source_qualification_manifest_sha256": "6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a",
+  "started_at_utc": "2026-08-12T00:43:47.448083Z",
+  "status": "partial",
+  "total_plan_attempts": 1,
+  "total_replans": 0,
+  "total_unknown_retries": 0,
+  "unique_utterance_count": 1,
+  "v3_observation_count": 0,
+  "v4_observation_count": 88,
+  "visual_schema_version": "room315.visual_state.v4"
+}

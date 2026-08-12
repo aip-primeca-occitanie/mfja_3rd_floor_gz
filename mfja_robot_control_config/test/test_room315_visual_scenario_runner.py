@@ -51,12 +51,25 @@ def test_builds_clean_launch_switch_and_capture_commands(tmp_path):
     assert 'robots:=none' in launch
     assert not any("'none'" in argument for argument in launch)
     assert not any(argument.endswith(':=') for argument in launch)
-    assert all(
-        argument.split(':=', 1)[1].startswith("'")
-        for argument in launch
-        if '_start_slots:=' in argument
-    )
-    assert switch[:4] == ['ros2', 'topic', 'pub', '--once']
+    start_slot_arguments = [
+        argument for argument in launch if '_start_slots:=' in argument
+    ]
+    assert start_slot_arguments
+    assert all("'" not in argument for argument in start_slot_arguments)
+    assert runner._launch_value('room315_right_start_slots', '3') == '3'
+    assert runner._launch_value('room315_left_start_slots', '1,4') == '1,4'
+    assert switch[:10] == [
+        'ros2',
+        'topic',
+        'pub',
+        '--times',
+        '3',
+        '--rate',
+        '2',
+        '--keep-alive',
+        '0.5',
+        '/mfja/conveyor/switch_cmd',
+    ]
     assert '/mfja/conveyor/switch_cmd' in switch
     assert capture[:4] == [
         'ros2',

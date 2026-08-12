@@ -1,0 +1,42 @@
+{
+  "blank_opposite_camera": {
+    "left": {
+      "bbox": 0.0,
+      "loaded_logits": 0.0,
+      "s_ratio": 0.0,
+      "segment_logits": 0.0
+    },
+    "maximum_own_side_output_change": 0.0,
+    "right": {
+      "bbox": 0.0,
+      "loaded_logits": 0.0,
+      "s_ratio": 0.0,
+      "segment_logits": 0.0
+    }
+  },
+  "camera_order_swap": {
+    "baseline_joint_segment_and_ratio_005": 0.908974358974359,
+    "baseline_segment_top1": 0.9993589743589744,
+    "segment_top1_drop": 0.9213675213675214,
+    "swapped_joint_segment_and_ratio_005": 0.00811965811965812,
+    "swapped_segment_top1": 0.07799145299145299
+  },
+  "effective_shuffle_batches": 44,
+  "maximum_cross_side_output_change": 0.0,
+  "sample_count": 1040,
+  "shuffle_opposite_camera": {
+    "left": {
+      "bbox": 0.0,
+      "loaded_logits": 0.0,
+      "s_ratio": 0.0,
+      "segment_logits": 0.0
+    },
+    "maximum_own_side_output_change": 0.0,
+    "right": {
+      "bbox": 0.0,
+      "loaded_logits": 0.0,
+      "s_ratio": 0.0,
+      "segment_logits": 0.0
+    }
+  }
+}

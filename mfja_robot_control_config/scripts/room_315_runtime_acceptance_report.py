@@ -129,6 +129,53 @@ def build_report(
         for record in records
     )
     failed = sum(record.get('record_status') == 'failed' for record in records)
+    quantitative_rows: list[dict[str, Any]] = []
+    for record in records:
+        reobservation = record.get('reobservation_and_effect_verification') or {}
+        observations = reobservation.get('accepted_reobservations') or []
+        comparisons = [
+            item.get('ground_truth_comparison') or {}
+            for item in observations
+            if isinstance(item, dict)
+        ]
+        matching = sum(bool(item.get('passed')) for item in comparisons)
+        identity_checks = [
+            identity_result
+            for comparison in comparisons
+            for identity_result in (comparison.get('per_identity') or {}).values()
+            if isinstance(identity_result, dict)
+        ]
+        tight_ratio_checks = [
+            float(item['s_ratio_absolute_error']) <= 0.05
+            for item in identity_checks
+            if item.get('s_ratio_absolute_error') is not None
+        ]
+        quantitative_rows.append({
+            'scenario_id': record.get('scenario_id'),
+            'record_status': record.get('record_status', 'not_run'),
+            'accepted_reobservation_count': len(observations),
+            'ground_truth_matching_reobservation_count': matching,
+            'all_recorded_segments_payloads_and_planning_positions_match': bool(
+                comparisons and matching == len(comparisons)
+            ),
+            'tight_s_ratio_0_05_identity_check_count': sum(tight_ratio_checks),
+            'tight_s_ratio_identity_check_count': len(tight_ratio_checks),
+            'tight_s_ratio_0_05_rate': (
+                sum(tight_ratio_checks) / len(tight_ratio_checks)
+                if tight_ratio_checks else None
+            ),
+        })
+    quantitative_complete = bool(
+        quantitative_rows
+        and all(
+            row['record_status'] == 'complete'
+            and row['ground_truth_matching_reobservation_count'] >= 3
+            and row[
+                'all_recorded_segments_payloads_and_planning_positions_match'
+            ]
+            for row in quantitative_rows
+        )
+    )
     return {
         'schema_version': 'room315.runtime_acceptance_report.v1',
         'candidate_id': candidate_state.get('candidate_id'),
@@ -137,12 +184,20 @@ def build_report(
         'automatic_deployment_approval': False,
         'acceptance_status': (
             'complete_pending_human_decision'
-            if completed == len(records)
+            if completed == len(records) and quantitative_complete
             else 'not_run' if not events else 'incomplete'
         ),
         'scenario_count': len(records),
         'complete_scenario_count': completed,
         'failed_scenario_count': failed,
+        'quantitative_acceptance': {
+            'required_exact_fields': ['side', 'segment', 'loaded_state'],
+            'required_planning_s_ratio_tolerance': 0.12,
+            'tight_s_ratio_0_05_is_diagnostic': True,
+            'all_scenarios_quantitatively_complete': quantitative_complete,
+            'scenarios': quantitative_rows,
+            'ground_truth_used_as_model_input': False,
+        },
         'records': records,
         'approval': {
             'approved': False,

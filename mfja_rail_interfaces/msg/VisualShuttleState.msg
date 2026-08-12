@@ -8,3 +8,5 @@ float64 s_m
 float64 s_ratio
 float64 segment_length_m
 string loaded_state
+float64 segment_confidence
+float64 loaded_confidence

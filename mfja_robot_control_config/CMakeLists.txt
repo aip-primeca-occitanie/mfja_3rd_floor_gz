@@ -36,9 +36,14 @@ install(
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
     config/room_315_vla/task_execution_runtime.yaml
+    config/room_315_vla/task_execution_runtime_v3_rollback.yaml
+    config/room_315_vla/task_execution_runtime_v4.yaml
     config/room_315_vla/task_goal_english_benchmark.yaml
     config/room_315_vla/task_goal_understanding.yaml
     config/room_315_vla/visual_state_runtime.yaml
+    config/room_315_vla/visual_state_runtime_v3_rollback.yaml
+    config/room_315_vla/visual_state_final_test_v4.json
+    config/room_315_vla/visual_state_training_v4.json
     config/room_315_vla/visual_observed_state_calibration.yaml
     config/room_315_vla/vla_supervisor.yaml
   DESTINATION share/${PROJECT_NAME}/config/room_315_vla
@@ -95,9 +100,14 @@ install(
     scripts/room_315_presence_provider.py
     scripts/room_315_runtime_contracts.py
     scripts/room_315_build_runtime_candidate.py
+    scripts/room_315_build_runtime_candidate_v4.py
+    scripts/room_315_promote_runtime_v4.py
+    scripts/room_315_authorize_runtime_v4_closed_loop.py
+    scripts/room_315_v4_closed_loop_fault_campaign.py
     scripts/room_315_runtime_acceptance_readiness.py
     scripts/room_315_runtime_acceptance_recorder.py
     scripts/room_315_runtime_acceptance_report.py
+    scripts/room_315_runtime_acceptance_campaign_v4.py
     scripts/room_315_task_goal_builder.py
     scripts/room_315_task_goal_benchmark.py
     scripts/room_315_task_goal_cli.py
@@ -136,13 +146,22 @@ install(
     scripts/room_315_visual_state_capture.py
     scripts/room_315_visual_state_dataset.py
     scripts/room_315_visual_model.py
+    scripts/room_315_visual_model_v4.py
+    scripts/room_315_visual_contract_v4.py
+    scripts/room_315_visual_calibration_v4.py
+    scripts/room_315_visual_acceptance_v4.py
+    scripts/room_315_visual_training_v4.py
     scripts/room_315_visual_runtime.py
+    scripts/room_315_visual_runtime_v4.py
+    scripts/room_315_visual_runtime_v4_fault_and_rollback.py
     scripts/room_315_visual_runtime_cpu_smoke.py
     scripts/room_315_visual_runtime_fusion.py
     scripts/room_315_visual_runtime_validation.py
     scripts/room_315_visual_scenario_generator.py
     scripts/room_315_visual_scenario_runner.py
     scripts/room_315_visual_smoke_report.py
+    scripts/room_315_visual_shadow_compare.py
+    scripts/room_315_visual_v4_final_test.py
     scripts/room_315_visual_state_inference_node.py
     scripts/room_315_visual_state_smoke.py
     scripts/room_315_visual_v3_audit.py
@@ -160,11 +179,19 @@ install(
     scripts/room_315_visual_v3r1_quota_planner.py
     scripts/room_315_visual_v3r1_reuse.py
     scripts/room_315_visual_v3r1_splitter.py
+    scripts/room_315_vla_train_v4.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" -c "import torch"
+    RESULT_VARIABLE ROOM315_TORCH_TESTS_AVAILABLE
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
 
   ament_add_pytest_test(
     test_room315_runtime_candidate
@@ -237,6 +264,22 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_task_execution
     test/test_room315_task_execution.py
+  )
+  ament_add_pytest_test(
+    test_room315_task_execution_config
+    test/test_room315_task_execution_config.py
+  )
+  ament_add_pytest_test(
+    test_room315_task_execution_authorization
+    test/test_room315_task_execution_authorization.py
+  )
+  ament_add_pytest_test(
+    test_room315_v4_closed_loop_fault_campaign
+    test/test_room315_v4_closed_loop_fault_campaign.py
+  )
+  ament_add_pytest_test(
+    test_room315_authorize_runtime_v4_closed_loop
+    test/test_room315_authorize_runtime_v4_closed_loop.py
   )
   ament_add_pytest_test(
     test_room315_closed_loop_executive
@@ -445,6 +488,76 @@ if(BUILD_TESTING)
     test_room315_visual_runtime_ros_integration
     test/test_room315_visual_runtime_ros_integration.py
     TIMEOUT 30
+  )
+  ament_add_pytest_test(
+    test_room315_visual_runtime_v4
+    test/test_room315_visual_runtime_v4.py
+    TIMEOUT 180
+  )
+  if(ROOM315_TORCH_TESTS_AVAILABLE EQUAL 0)
+    ament_add_pytest_test(
+      test_room315_runtime_candidate_v4
+      test/test_room315_runtime_candidate_v4.py
+      TIMEOUT 180
+    )
+  endif()
+  ament_add_pytest_test(
+    test_room315_runtime_acceptance_campaign_v4
+    test/test_room315_runtime_acceptance_campaign_v4.py
+  )
+  ament_add_pytest_test(
+    test_room315_promote_runtime_v4
+    test/test_room315_promote_runtime_v4.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_state_v4_shadow_scenario
+    test/test_room315_visual_state_v4_shadow_scenario.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_shadow_compare
+    test/test_room315_visual_shadow_compare.py
+  )
+  ament_add_pytest_test(
+    test_room315_visual_contract_v4
+    test/test_room315_visual_contract_v4.py
+  )
+  if(ROOM315_TORCH_TESTS_AVAILABLE EQUAL 0)
+    ament_add_pytest_test(
+      test_room315_visual_model_v4
+      test/test_room315_visual_model_v4.py
+    )
+    ament_add_pytest_test(
+      test_room315_visual_training_v4
+      test/test_room315_visual_training_v4.py
+    )
+    ament_add_pytest_test(
+      test_room315_visual_calibration_v4
+      test/test_room315_visual_calibration_v4.py
+    )
+    ament_add_pytest_test(
+      test_room315_visual_runtime_v4_fault_and_rollback
+      test/test_room315_visual_runtime_v4_fault_and_rollback.py
+      TIMEOUT 180
+    )
+  endif()
+  ament_add_pytest_test(
+    test_room315_visual_acceptance_v4
+    test/test_room315_visual_acceptance_v4.py
+  )
+  ament_add_pytest_test(
+    test_room315_vla_train_v4
+    test/test_room315_vla_train_v4.py
+    TIMEOUT 180
+  )
+  ament_add_pytest_test(
+    test_room315_visual_final_test_v4
+    test/test_room315_visual_final_test_v4.py
+    TIMEOUT 180
+  )
+  ament_add_pytest_test(
+    test_room315_visual_v4_final_test
+    test/test_room315_visual_v4_final_test.py
+    TIMEOUT 180
   )
   ament_add_pytest_test(
     test_room315_visual_scenario_runner

@@ -38,9 +38,37 @@ REPO = Path(__file__).resolve().parents[2]
 WORKSPACE = REPO.parents[1]
 INSTALL_SETUP = WORKSPACE / 'install' / 'setup.bash'
 SCRIPTS = REPO / 'mfja_robot_control_config' / 'scripts'
-DEFAULT_MATRIX = Path(__file__).with_name('room315_integrated_campaign_v2.yaml')
-VISUAL_RUN = Path(
-    '/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run'
+DEFAULT_MATRIX = Path(__file__).with_name('room315_integrated_campaign_v4.yaml')
+VISUAL_RUNTIME_BUNDLE = Path(
+    '/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_'
+    'epoch11_869d6404_closed_loop_runtime_attempt1'
+)
+VISUAL_CHECKPOINT = VISUAL_RUNTIME_BUNDLE / 'checkpoint_epoch_011.pt'
+VISUAL_MANIFEST = VISUAL_RUNTIME_BUNDLE / 'runtime_promotion_manifest.json'
+VISUAL_MANUAL_DECISION = VISUAL_RUNTIME_BUNDLE / 'manual_decision_record.json'
+VISUAL_RUNTIME_CONFIG = VISUAL_RUNTIME_BUNDLE / 'runtime_ros_parameters.yaml'
+VISUAL_MANIFEST_SHA256 = (
+    '506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da'
+)
+SOURCE_QUALIFICATION_MANIFEST_SHA256 = (
+    '6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a'
+)
+VISUAL_MANUAL_DECISION_SHA256 = (
+    'df16e885051000117ca914715ace76a58b7f39ffbb6a7ccd6787f7885d18ffdc'
+)
+VISUAL_RUNTIME_CONFIG_SHA256 = (
+    '22f12a9f96b3d54e0ab3d0bc05c202024ac6912cb50dd6e29ceb4a0a564d24f8'
+)
+TASK_RUNTIME_CONFIG = (
+    REPO / 'mfja_robot_control_config/config/room_315_vla/'
+    'task_execution_runtime.yaml'
+)
+TASK_RUNTIME_CONFIG_SHA256 = (
+    '08eaedd7d6feed3dd1268ef18bfa2545348f203f1ff0dad3c2e9fb1a9f25b6ca'
+)
+TASK_EXECUTION_AUTHORIZATION = VISUAL_RUNTIME_BUNDLE / 'candidate_state.json'
+TASK_EXECUTION_AUTHORIZATION_SHA256 = (
+    '14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1'
 )
 VISUAL_VENV = Path(
     '/home/tiago/room315_local_training/venv/lib/python3.12/site-packages'
@@ -55,7 +83,25 @@ RUNTIME_LOCK = Path('/tmp/mfja_room315_floor_runtime.lock')
 TERMINAL_STATUSES = {'succeeded', 'aborted', 'failed', 'rejected'}
 PLANNER_SERVICE = '/planner/get_plan'
 PLANNER_SERVICE_TYPE = 'plansys2_msgs/srv/GetPlan'
-VISUAL_SCHEMA = 'room315.visual_state.v3'
+VISUAL_SCHEMA = 'room315.visual_state.v4'
+VISUAL_CHECKPOINT_SHA256 = (
+    '869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d'
+)
+VISUAL_S_RATIO_ORACLE_TOLERANCE = 0.12
+VISUAL_SHUTTLE_SCHEMA_FIELDS = (
+    'identity',
+    'presence_state',
+    'visual_facts_valid',
+    'side',
+    'block',
+    'bbox_xywh',
+    's_m',
+    's_ratio',
+    'segment_length_m',
+    'loaded_state',
+    'segment_confidence',
+    'loaded_confidence',
+)
 TERMINAL_SYMBOLIC_ACTIONS = {
     'finish_task', 'finish_candidate_task', 'inspect_state',
 }
@@ -460,6 +506,328 @@ def header_stamp(payload: dict[str, Any]) -> tuple[int, int]:
     return int(stamp.get('sec') or 0), int(stamp.get('nanosec') or 0)
 
 
+def _room315_topology_api() -> tuple[Any, Any, Any]:
+    scripts_path = str(SCRIPTS)
+    if scripts_path not in sys.path:
+        sys.path.insert(0, scripts_path)
+    try:
+        from room_315_multi_shuttle import load_rail_topology
+        from room_315_rail_defaults import internal_rail_segment_name_to_public
+        from room_315_rail_defaults import public_rail_segment_lengths
+    except (ImportError, OSError, ValueError) as exc:
+        raise CampaignError(
+            f'authoritative Room 315 rail topology API is unavailable: {exc}'
+        ) from exc
+    return (
+        load_rail_topology,
+        internal_rail_segment_name_to_public,
+        public_rail_segment_lengths,
+    )
+
+
+def authoritative_slot_oracle(side: str, slot: str) -> dict[str, Any]:
+    normalized_side = str(side or '').strip().casefold()
+    normalized_slot = str(slot or '').strip()
+    if normalized_side not in {'right', 'left'}:
+        raise CampaignError(f'invalid rail side for visual oracle: {side!r}')
+    load_rail_topology, to_public_segment, _ = _room315_topology_api()
+    topology_root = REPO / 'mfja_robot_control_config/config/room_315_kinematics'
+    network_path = topology_root / f'rail_network_{normalized_side}.yaml'
+    devices_path = topology_root / f'rail_devices_{normalized_side}.yaml'
+    try:
+        topology = load_rail_topology(
+            network_path,
+            devices_path,
+            side=normalized_side,
+        )
+        location = topology.slots[normalized_slot]
+        public_segment = to_public_segment(normalized_side, location.segment)
+        s_ratio = float(location.s_ratio)
+    except (KeyError, OSError, TypeError, ValueError) as exc:
+        raise CampaignError(
+            f'authoritative {normalized_side} slot {normalized_slot!r} '
+            f'cannot be resolved: {exc}'
+        ) from exc
+    if not public_segment or not math.isfinite(s_ratio) or not 0.0 <= s_ratio <= 1.0:
+        raise CampaignError(
+            f'authoritative {normalized_side} slot {normalized_slot!r} is invalid'
+        )
+    return {
+        'kind': 'declared_slot',
+        'slot': normalized_slot,
+        'segment': str(public_segment).upper(),
+        's_ratio': s_ratio,
+        'network_path': str(network_path),
+        'network_sha256': sha256_file(network_path),
+        'devices_path': str(devices_path),
+        'devices_sha256': sha256_file(devices_path),
+    }
+
+
+def declared_visual_identity_contracts(
+    case: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    contracts: dict[str, dict[str, Any]] = {}
+    for side in ('right', 'left'):
+        declaration = (case.get('launch') or {}).get(side) or {}
+        identities = [
+            str(value).strip().upper()
+            for value in declaration.get('identities') or []
+        ]
+        slots = [str(value).strip() for value in declaration.get('start_slots') or []]
+        loaded = {
+            str(value).strip().upper()
+            for value in declaration.get('loaded') or []
+        }
+        if len(identities) != len(slots) or not loaded.issubset(identities):
+            raise CampaignError(
+                f'{case.get("id")} has inconsistent {side} visual oracle declaration'
+            )
+        for identity, start_slot in zip(identities, slots):
+            if identity in contracts or identity_parts(identity)[1] != side:
+                raise CampaignError(
+                    f'{case.get("id")} has duplicate or wrong-side identity {identity}'
+                )
+            contracts[identity] = {
+                'identity': identity,
+                'side': side,
+                'start_slot': start_slot,
+                'loaded_state': 'loaded' if identity in loaded else 'empty',
+            }
+    return contracts
+
+
+def _route_clearance_visual_oracle(
+    response: dict[str, Any],
+    *,
+    identity: str,
+    side: str,
+) -> dict[str, Any]:
+    steps = ((response.get('result') or {}).get('executed_steps') or [])
+    expected_symbol = symbolic_entity(identity)
+    matching_step: dict[str, Any] | None = None
+    for step in steps:
+        tokens = str(step.get('symbolic_step') or '').split()
+        if (
+            len(tokens) >= 2
+            and tokens[0] in {
+                'relocate_blocker_to_interior',
+                'relocate_segment_blocker_to_interior',
+            }
+            and tokens[1] == expected_symbol
+        ):
+            matching_step = step
+            break
+    if matching_step is None:
+        raise CampaignError(
+            f'final visual oracle has no relocation target for blocker {identity}'
+        )
+    postcondition = matching_step.get('postcondition') or {}
+    details = postcondition.get('details') or {}
+    certificate = details.get('route_clearance_certificate') or {}
+    raw_segment = details.get('target_segment') or certificate.get('target_segment')
+    raw_s_m = details.get('target_s_m', certificate.get('target_s_m'))
+    try:
+        target_s_m = float(raw_s_m)
+    except (TypeError, ValueError) as exc:
+        raise CampaignError(
+            f'final visual oracle has no valid relocation target_s_m for {identity}'
+        ) from exc
+    _, to_public_segment, public_segment_lengths = _room315_topology_api()
+    lengths = public_segment_lengths(side)
+    target_segment = str(raw_segment or '').strip().upper()
+    if target_segment not in lengths:
+        target_segment = str(to_public_segment(side, target_segment)).upper()
+    try:
+        segment_length_m = float(lengths[target_segment])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise CampaignError(
+            f'final visual oracle cannot resolve relocation segment '
+            f'{raw_segment!r} for {identity}'
+        ) from exc
+    target_s_ratio = target_s_m / segment_length_m
+    if (
+        postcondition.get('status') != 'satisfied'
+        or not target_segment
+        or not math.isfinite(target_s_m)
+        or not math.isfinite(target_s_ratio)
+        or not 0.0 <= target_s_ratio <= 1.0
+    ):
+        raise CampaignError(
+            f'final visual oracle has an invalid verified relocation target for {identity}'
+        )
+    return {
+        'kind': 'verified_route_clearance_target',
+        'slot': None,
+        'segment': target_segment,
+        's_ratio': target_s_ratio,
+        'target_s_m': target_s_m,
+        'segment_length_m': segment_length_m,
+        'symbolic_step': matching_step.get('symbolic_step'),
+    }
+
+
+def expected_visual_identity_oracle(
+    case: dict[str, Any],
+    *,
+    phase: str,
+    target_slot: str = '',
+    response: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    if phase not in {'initial', 'final'}:
+        raise CampaignError(f'invalid visual oracle phase: {phase!r}')
+    contracts = declared_visual_identity_contracts(case)
+    selected_identity = str(
+        (case.get('expected') or {}).get('selected_identity') or ''
+    ).upper()
+    route_contract = (case.get('expected') or {}).get('route_clearance') or {}
+    blocker_identity = str(route_contract.get('blocker_identity') or '').upper()
+    rows: dict[str, dict[str, Any]] = {}
+    for identity, contract in sorted(contracts.items()):
+        if phase == 'initial':
+            location = authoritative_slot_oracle(
+                contract['side'], contract['start_slot'],
+            )
+        elif identity == selected_identity:
+            if not target_slot:
+                raise CampaignError(
+                    f'{case.get("id")} final visual oracle has no target slot'
+                )
+            location = authoritative_slot_oracle(contract['side'], target_slot)
+        elif route_contract.get('required') is True and identity == blocker_identity:
+            location = _route_clearance_visual_oracle(
+                response or {}, identity=identity, side=contract['side'],
+            )
+        else:
+            location = authoritative_slot_oracle(
+                contract['side'], contract['start_slot'],
+            )
+        rows[identity] = {
+            **contract,
+            **location,
+            'phase': phase,
+            's_ratio_tolerance': VISUAL_S_RATIO_ORACLE_TOLERANCE,
+        }
+    return rows
+
+
+def validate_visual_identity_oracle(
+    payload: dict[str, Any],
+    case: dict[str, Any],
+    *,
+    phase: str,
+    target_slot: str = '',
+    response: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    expected = expected_visual_identity_oracle(
+        case,
+        phase=phase,
+        target_slot=target_slot,
+        response=response,
+    )
+    shuttles = [
+        item for item in payload.get('shuttles') or [] if isinstance(item, dict)
+    ]
+    by_identity = {
+        str(item.get('identity') or '').strip().upper(): item
+        for item in shuttles
+    }
+    if len(by_identity) != len(shuttles):
+        raise CampaignError(
+            f'{case.get("id")} {phase} visual oracle found duplicate identities'
+        )
+    comparisons: dict[str, dict[str, Any]] = {}
+    mismatches: dict[str, dict[str, Any]] = {}
+    for identity, oracle in expected.items():
+        item = by_identity.get(identity)
+        if item is None:
+            mismatches[identity] = {'identity': {'expected': identity, 'actual': None}}
+            continue
+        observed_side = str(item.get('side') or '').strip().casefold()
+        observed_segment = str(item.get('block') or '').strip().upper()
+        observed_loaded = str(item.get('loaded_state') or '').strip().casefold()
+        try:
+            observed_s_ratio = float(item.get('s_ratio'))
+        except (TypeError, ValueError):
+            observed_s_ratio = float('nan')
+        s_ratio_error = abs(observed_s_ratio - float(oracle['s_ratio']))
+        field_mismatches: dict[str, Any] = {}
+        for field, expected_value, actual_value in (
+            ('side', oracle['side'], observed_side),
+            ('segment', oracle['segment'], observed_segment),
+            ('loaded_state', oracle['loaded_state'], observed_loaded),
+        ):
+            if actual_value != expected_value:
+                field_mismatches[field] = {
+                    'expected': expected_value,
+                    'actual': actual_value,
+                }
+        if (
+            not math.isfinite(observed_s_ratio)
+            or s_ratio_error > VISUAL_S_RATIO_ORACLE_TOLERANCE
+        ):
+            field_mismatches['s_ratio'] = {
+                'expected': oracle['s_ratio'],
+                'actual': item.get('s_ratio'),
+                'absolute_error': s_ratio_error,
+                'maximum_absolute_error': VISUAL_S_RATIO_ORACLE_TOLERANCE,
+            }
+        comparisons[identity] = {
+            'status': 'passed' if not field_mismatches else 'failed',
+            'expected': oracle,
+            'observed': {
+                'side': observed_side,
+                'segment': observed_segment,
+                's_ratio': item.get('s_ratio'),
+                'loaded_state': observed_loaded,
+            },
+            's_ratio_absolute_error': s_ratio_error,
+        }
+        if field_mismatches:
+            mismatches[identity] = field_mismatches
+    if mismatches:
+        raise CampaignError(
+            f'{case.get("id")} {phase} V4 visual oracle mismatch: '
+            f'{json.dumps(mismatches, sort_keys=True)}'
+        )
+    return {
+        'status': 'passed',
+        'phase': phase,
+        'identity_count': len(comparisons),
+        's_ratio_maximum_absolute_error': VISUAL_S_RATIO_ORACLE_TOLERANCE,
+        'comparisons': comparisons,
+    }
+
+
+def validate_visual_frame_progression(
+    initial_payload: dict[str, Any],
+    final_payload: dict[str, Any],
+    case_id: str,
+) -> dict[str, Any]:
+    initial_stamp = header_stamp(initial_payload)
+    final_stamp = header_stamp(final_payload)
+    initial_count = int(initial_payload.get('accepted_frame_count') or 0)
+    final_count = int(final_payload.get('accepted_frame_count') or 0)
+    if final_stamp <= initial_stamp or final_count <= initial_count:
+        raise CampaignError(
+            f'{case_id} final accepted V4 observation is not newer: '
+            f'stamp={initial_stamp}->{final_stamp}, '
+            f'accepted_frame_count={initial_count}->{final_count}'
+        )
+    return {
+        'status': 'passed',
+        'initial_header_stamp': {
+            'sec': initial_stamp[0], 'nanosec': initial_stamp[1],
+        },
+        'final_header_stamp': {
+            'sec': final_stamp[0], 'nanosec': final_stamp[1],
+        },
+        'initial_accepted_frame_count': initial_count,
+        'final_accepted_frame_count': final_count,
+        'accepted_frame_count_delta': final_count - initial_count,
+    }
+
+
 def side_launch_arguments(side: str, declaration: dict[str, Any]) -> list[str]:
     prefix = f'room315_{side}'
     identities = [str(value) for value in declaration.get('identities') or []]
@@ -510,8 +878,11 @@ def visual_command() -> list[str]:
         'use_sim_time:=true',
         'enable_camera_bridge:=false',
         'device:=cuda',
-        f'checkpoint_path:={VISUAL_RUN / "best.pt"}',
-        f'sidecar_directory:={VISUAL_RUN}',
+        f'runtime_config:={VISUAL_RUNTIME_CONFIG}',
+        'runtime_generation:=v4',
+        'runtime_mode:=active',
+        f'v4_promotion_manifest:={VISUAL_MANIFEST}',
+        f'v4_promotion_manifest_sha256:={VISUAL_MANIFEST_SHA256}',
         'dry_run_state_fusion:=true',
         'plansys2_update_enabled:=false',
     ]
@@ -522,6 +893,7 @@ def execution_command() -> list[str]:
         'ros2', 'launch', 'mfja_robot_control_config',
         'room_315_task_execution.launch.py',
         'use_sim_time:=true',
+        f'runtime_config:={TASK_RUNTIME_CONFIG}',
         'execution_enabled:=true',
         'enable_plansys2:=true',
         'external_obstacles_disabled:=true',
@@ -827,14 +1199,24 @@ def validate_initial_visual(
                 f'{case["id"]} visual payload state contradicts the declared '
                 f'payload-qualified scene: {payload_mismatches}'
             )
+    visual_oracle = validate_visual_identity_oracle(
+        payload,
+        case,
+        phase='initial',
+    )
     return {
         'expected_present_identities': sorted(expected_present),
         'actual_present_identities': sorted(actual_present),
         'checkpoint_sha256': payload.get('checkpoint_sha256'),
-        'accepted_frame_count': payload.get('accepted_frame_count'),
+        'accepted_frame_count': int(payload.get('accepted_frame_count') or 0),
+        'header_stamp': {
+            'sec': header_stamp(payload)[0],
+            'nanosec': header_stamp(payload)[1],
+        },
         'validation_reasons': validation_reasons,
         'clamped_fields': clamped_fields,
         'canonical_s_m_projection_count': len(clamped_fields),
+        'visual_identity_oracle': visual_oracle,
         'initial_visual_shuttles': payload.get('shuttles') or [],
     }
 
@@ -843,6 +1225,10 @@ def validate_final_visual(
     payload: dict[str, Any],
     case: dict[str, Any],
     expected_checkpoint_sha256: str,
+    *,
+    initial_payload: dict[str, Any],
+    target_slot: str,
+    response: dict[str, Any],
 ) -> dict[str, Any]:
     required_true = (
         'accepted', 'model_ready', 'input_ready', 'presence_ready',
@@ -874,11 +1260,26 @@ def validate_final_visual(
             f'validation_reasons={payload.get("validation_reasons")}, '
             f'unexpected_clamped_fields={unexpected_clamps}'
         )
+    if str((payload.get('header') or {}).get('frame_id') or '') != 'room_315':
+        raise CampaignError(f'{case["id"]} final visual frame_id is not room_315')
+    if header_stamp(payload) <= (0, 0):
+        raise CampaignError(
+            f'{case["id"]} final visual observation has no simulation timestamp'
+        )
     by_identity = {
         str(item.get('identity') or '').upper(): item
         for item in payload.get('shuttles') or []
         if isinstance(item, dict)
     }
+    expected_identity_set = {
+        *(f'L{index}' for index in range(1, 5)),
+        *(f'R{index}' for index in range(1, 5)),
+    }
+    if set(by_identity) != expected_identity_set:
+        raise CampaignError(
+            f'{case["id"]} final visual identity vector is incomplete: '
+            f'{sorted(by_identity)}'
+        )
     expected_present = {
         str(identity).upper()
         for side in ('right', 'left')
@@ -903,6 +1304,18 @@ def validate_final_visual(
         raise CampaignError(
             f'{case["id"]} final visual facts are invalid for {invalid_final}'
         )
+    frame_progression = validate_visual_frame_progression(
+        initial_payload,
+        payload,
+        str(case['id']),
+    )
+    visual_oracle = validate_visual_identity_oracle(
+        payload,
+        case,
+        phase='final',
+        target_slot=target_slot,
+        response=response,
+    )
     return {
         'checkpoint_sha256': payload.get('checkpoint_sha256'),
         'accepted_frame_count': int(payload.get('accepted_frame_count') or 0),
@@ -910,6 +1323,8 @@ def validate_final_visual(
         'actual_present_identities': sorted(actual_present),
         'clamped_fields': clamped_fields,
         'canonical_s_m_projection_count': len(clamped_fields),
+        'frame_progression': frame_progression,
+        'visual_identity_oracle': visual_oracle,
     }
 
 
@@ -1659,6 +2074,20 @@ def validate_rosbag(
     write_text(case_dir / 'rosbag_info.txt', str(info.get('stdout') or ''))
     if info.get('returncode') != 0 or 'Messages:' not in str(info.get('stdout') or ''):
         raise CampaignError(f'{case["id"]} ros2 bag info failed')
+    visual_schema_audit = audit_visual_observations_in_bag(bag_dir)
+    if (
+        visual_schema_audit['observation_count'] < 1
+        or visual_schema_audit['schema_counts'] != {
+            VISUAL_SCHEMA: visual_schema_audit['observation_count'],
+        }
+        or visual_schema_audit['checkpoint_counts'] != {
+            VISUAL_CHECKPOINT_SHA256: visual_schema_audit['observation_count'],
+        }
+    ):
+        raise CampaignError(
+            f'{case["id"]} rosbag contains non-V4 or wrong-checkpoint '
+            f'observations: {visual_schema_audit}'
+        )
     validation = {
         'status': 'passed',
         'storage_identifier': information.get('storage_identifier'),
@@ -1668,9 +2097,64 @@ def validate_rosbag(
             topic: topic_counts[topic] for topic in sorted(required_topics)
         },
         'relative_files': [str(path.relative_to(case_dir)) for path in relative_files],
+        'visual_schema_audit': visual_schema_audit,
     }
     write_json(case_dir / 'rosbag_validation.json', validation)
     return validation
+
+
+def audit_visual_observations_in_bag(bag_dir: Path) -> dict[str, Any]:
+    """Deserialize every accepted-observation message, not just snapshots."""
+
+    try:
+        import rosbag2_py
+        from rclpy.serialization import deserialize_message
+        from rosidl_runtime_py.utilities import get_message
+    except ImportError as exc:
+        raise CampaignError(
+            'ROS bag Python APIs are required for the V4 schema audit'
+        ) from exc
+
+    reader = rosbag2_py.SequentialReader()
+    reader.open(
+        rosbag2_py.StorageOptions(uri=str(bag_dir), storage_id='mcap'),
+        rosbag2_py.ConverterOptions(
+            input_serialization_format='cdr',
+            output_serialization_format='cdr',
+        ),
+    )
+    target_topic = '/room_315/visual_state/observed_state'
+    topic_types = {
+        topic.name: topic.type for topic in reader.get_all_topics_and_types()
+    }
+    message_type_name = topic_types.get(target_topic)
+    if message_type_name != 'mfja_rail_interfaces/msg/VisualStateObservation':
+        raise CampaignError(
+            f'V4 observation topic type is missing or wrong: {message_type_name!r}'
+        )
+    message_type = get_message(message_type_name)
+    schema_counts: dict[str, int] = {}
+    checkpoint_counts: dict[str, int] = {}
+    accepted_count = 0
+    while reader.has_next():
+        topic, serialized, _timestamp = reader.read_next()
+        if topic != target_topic:
+            continue
+        message = deserialize_message(serialized, message_type)
+        schema = str(message.schema_version)
+        checkpoint = str(message.checkpoint_sha256)
+        schema_counts[schema] = schema_counts.get(schema, 0) + 1
+        checkpoint_counts[checkpoint] = checkpoint_counts.get(checkpoint, 0) + 1
+        accepted_count += int(bool(message.accepted))
+    observation_count = sum(schema_counts.values())
+    return {
+        'observation_count': observation_count,
+        'accepted_count': accepted_count,
+        'schema_counts': dict(sorted(schema_counts.items())),
+        'checkpoint_counts': dict(sorted(checkpoint_counts.items())),
+        'v3_observation_count': schema_counts.get('room315.visual_state.v3', 0),
+        'v4_observation_count': schema_counts.get(VISUAL_SCHEMA, 0),
+    }
 
 
 def send_stop_all(env: dict[str, str], reason: str) -> dict[str, Any]:
@@ -1779,7 +2263,15 @@ def run_case(
         if visual_echo.get('returncode') != 0:
             raise CampaignError(f'{case["id"]} accepted visual state did not become ready')
         visual_payload = parse_ros_yaml(visual_echo['stdout'])
-        expected_checkpoint_sha256 = sha256_file(VISUAL_RUN / 'best.pt')
+        write_json(
+            case_dir / 'readiness' / 'initial_visual_observation.json',
+            visual_payload,
+        )
+        expected_checkpoint_sha256 = sha256_file(VISUAL_CHECKPOINT)
+        if expected_checkpoint_sha256 != VISUAL_CHECKPOINT_SHA256:
+            raise CampaignError(
+                f'{case["id"]} V4 runtime checkpoint changed before use'
+            )
         visual_check = validate_initial_visual(
             visual_payload, case, expected_checkpoint_sha256,
         )
@@ -1873,7 +2365,12 @@ def run_case(
             case_dir / 'final_visual_observation.json', final_visual_payload,
         )
         final_visual_check = validate_final_visual(
-            final_visual_payload, case, expected_checkpoint_sha256,
+            final_visual_payload,
+            case,
+            expected_checkpoint_sha256,
+            initial_payload=visual_payload,
+            target_slot=str(validation['target_slot']),
+            response=response,
         )
         write_json(case_dir / 'final_visual_validation.json', final_visual_check)
 
@@ -1906,6 +2403,15 @@ def run_case(
         validation['initial_visual_checkpoint_sha256'] = expected_checkpoint_sha256
         validation['final_visual_checkpoint_sha256'] = final_visual_check[
             'checkpoint_sha256'
+        ]
+        validation['initial_visual_identity_oracle'] = visual_check[
+            'visual_identity_oracle'
+        ]
+        validation['final_visual_identity_oracle'] = final_visual_check[
+            'visual_identity_oracle'
+        ]
+        validation['final_visual_frame_progression'] = final_visual_check[
+            'frame_progression'
         ]
         validation['rosbag'] = bag_validation
         validation['payload_consensus'] = payload_consensus
@@ -1994,17 +2500,213 @@ def command_text(command: list[str]) -> str:
     return subprocess.list2cmdline(command)
 
 
+def source_install_parity_pairs() -> list[tuple[str, Path, Path]]:
+    control_source = REPO / 'mfja_robot_control_config'
+    control_install = WORKSPACE / 'install/mfja_robot_control_config'
+    interface_source = REPO / 'mfja_rail_interfaces/msg'
+    interface_install = WORKSPACE / 'install/mfja_rail_interfaces/share/mfja_rail_interfaces/msg'
+    bringup_source = REPO / 'mfja_3rd_floor_bringup/launch'
+    bringup_install = WORKSPACE / 'install/mfja_3rd_floor_bringup/share/mfja_3rd_floor_bringup/launch'
+    executable_install = control_install / 'lib/mfja_robot_control_config'
+    share_install = control_install / 'share/mfja_robot_control_config'
+    return [
+        (
+            'v4_visual_runtime_core',
+            control_source / 'scripts/room_315_visual_runtime_v4.py',
+            executable_install / 'room_315_visual_runtime_v4.py',
+        ),
+        (
+            'visual_inference_node',
+            control_source / 'scripts/room_315_visual_state_inference_node.py',
+            executable_install / 'room_315_visual_state_inference_node.py',
+        ),
+        (
+            'task_execution_core',
+            control_source / 'scripts/room_315_task_execution.py',
+            executable_install / 'room_315_task_execution.py',
+        ),
+        (
+            'task_execution_node',
+            control_source / 'scripts/room_315_task_execution_node.py',
+            executable_install / 'room_315_task_execution_node.py',
+        ),
+        (
+            'task_execution_configuration_code',
+            control_source / 'scripts/room_315_task_execution_config.py',
+            executable_install / 'room_315_task_execution_config.py',
+        ),
+        (
+            'visual_runtime_launch',
+            control_source / 'launch/room_315_visual_state_runtime.launch.py',
+            share_install / 'launch/room_315_visual_state_runtime.launch.py',
+        ),
+        (
+            'task_execution_launch',
+            control_source / 'launch/room_315_task_execution.launch.py',
+            share_install / 'launch/room_315_task_execution.launch.py',
+        ),
+        (
+            'room315_floor_launch',
+            bringup_source / 'room_315_only.launch.py',
+            bringup_install / 'room_315_only.launch.py',
+        ),
+        (
+            'task_execution_runtime_yaml',
+            control_source / 'config/room_315_vla/task_execution_runtime.yaml',
+            share_install / 'config/room_315_vla/task_execution_runtime.yaml',
+        ),
+        (
+            'visual_shuttle_state_msg',
+            interface_source / 'VisualShuttleState.msg',
+            interface_install / 'VisualShuttleState.msg',
+        ),
+        (
+            'visual_state_observation_msg',
+            interface_source / 'VisualStateObservation.msg',
+            interface_install / 'VisualStateObservation.msg',
+        ),
+    ]
+
+
+def verify_exact_source_install_pairs(
+    pairs: list[tuple[str, Path, Path]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for role, source, installed in pairs:
+        missing = [
+            label
+            for label, path in (('source', source), ('installed', installed))
+            if not path.is_file()
+        ]
+        if missing:
+            raise CampaignError(
+                f'source/install parity missing {" and ".join(missing)} file '
+                f'for {role}: source={source}, installed={installed}'
+            )
+        source_sha256 = sha256_file(source)
+        installed_sha256 = sha256_file(installed)
+        if source_sha256 != installed_sha256:
+            raise CampaignError(
+                f'stale installed runtime file for {role}: '
+                f'source_sha256={source_sha256}, '
+                f'installed_sha256={installed_sha256}, '
+                f'source={source}, installed={installed}'
+            )
+        rows.append({
+            'role': role,
+            'status': 'matched',
+            'source_path': str(source),
+            'source_size_bytes': source.stat().st_size,
+            'source_sha256': source_sha256,
+            'installed_path': str(installed),
+            'installed_resolved_path': str(installed.resolve()),
+            'installed_is_symlink': installed.is_symlink(),
+            'installed_size_bytes': installed.stat().st_size,
+            'installed_sha256': installed_sha256,
+        })
+    return rows
+
+
+def _visual_shuttle_schema_field_names(path: Path) -> tuple[str, ...]:
+    fields: list[str] = []
+    for raw_line in path.read_text(encoding='utf-8').splitlines():
+        line = raw_line.split('#', 1)[0].strip()
+        if not line:
+            continue
+        tokens = line.split()
+        if len(tokens) != 2 or '=' in tokens[1]:
+            raise CampaignError(f'unsupported VisualShuttleState schema line: {raw_line!r}')
+        fields.append(tokens[1])
+    return tuple(fields)
+
+
+def verify_generated_visual_shuttle_schema() -> dict[str, Any]:
+    source_msg = REPO / 'mfja_rail_interfaces/msg/VisualShuttleState.msg'
+    installed_root = (
+        WORKSPACE / 'install/mfja_rail_interfaces/share/mfja_rail_interfaces/msg'
+    )
+    installed_msg = installed_root / 'VisualShuttleState.msg'
+    fields = _visual_shuttle_schema_field_names(source_msg)
+    if fields != VISUAL_SHUTTLE_SCHEMA_FIELDS:
+        raise CampaignError(
+            'source VisualShuttleState schema differs from the required V4 '
+            f'field contract: expected={VISUAL_SHUTTLE_SCHEMA_FIELDS}, actual={fields}'
+        )
+    python_schema = (
+        WORKSPACE
+        / 'install/mfja_rail_interfaces/lib'
+        / f'python{sys.version_info.major}.{sys.version_info.minor}'
+        / 'site-packages/mfja_rail_interfaces/msg/_visual_shuttle_state.py'
+    )
+    generated_paths = [
+        installed_msg,
+        installed_root / 'VisualShuttleState.idl',
+        installed_root / 'VisualShuttleState.json',
+        python_schema,
+    ]
+    rows: list[dict[str, Any]] = []
+    source_mtime_ns = source_msg.stat().st_mtime_ns
+    for path in generated_paths:
+        if not path.is_file():
+            raise CampaignError(f'generated VisualShuttleState schema is missing: {path}')
+        if path.stat().st_mtime_ns < source_mtime_ns:
+            raise CampaignError(
+                f'generated VisualShuttleState schema predates its source: {path}'
+            )
+        text_value = path.read_text(encoding='utf-8', errors='replace')
+        missing_fields = [
+            field
+            for field in VISUAL_SHUTTLE_SCHEMA_FIELDS
+            if not re.search(rf'\b{re.escape(field)}\b', text_value)
+        ]
+        if missing_fields:
+            raise CampaignError(
+                f'generated VisualShuttleState schema {path} omits fields '
+                f'{missing_fields}'
+            )
+        rows.append({
+            'path': str(path),
+            'size_bytes': path.stat().st_size,
+            'sha256': sha256_file(path),
+            'mtime_ns': path.stat().st_mtime_ns,
+        })
+    return {
+        'status': 'matched',
+        'required_fields': list(VISUAL_SHUTTLE_SCHEMA_FIELDS),
+        'source_path': str(source_msg),
+        'source_sha256': sha256_file(source_msg),
+        'source_mtime_ns': source_mtime_ns,
+        'generated_artifacts': rows,
+    }
+
+
+def verify_source_install_parity() -> dict[str, Any]:
+    rows = verify_exact_source_install_pairs(source_install_parity_pairs())
+    generated_schema = verify_generated_visual_shuttle_schema()
+    canonical = json.dumps(
+        {'pairs': rows, 'generated_schema': generated_schema},
+        sort_keys=True,
+        separators=(',', ':'),
+    ).encode()
+    return {
+        'status': 'passed',
+        'pair_count': len(rows),
+        'pairs': rows,
+        'generated_visual_shuttle_schema': generated_schema,
+        'aggregate_sha256': sha256_bytes(canonical),
+    }
+
+
 def required_artifacts() -> list[Path]:
     return [
-        VISUAL_RUN / 'best.pt',
-        VISUAL_RUN / 'target_stats.json',
-        VISUAL_RUN / 'visual_label_vectorizer.json',
-        VISUAL_RUN / 'training_config.json',
-        VISUAL_RUN / 'run_metadata.json',
+        VISUAL_CHECKPOINT,
+        VISUAL_MANIFEST,
+        VISUAL_MANUAL_DECISION,
+        VISUAL_RUNTIME_CONFIG,
+        TASK_RUNTIME_CONFIG,
+        TASK_EXECUTION_AUTHORIZATION,
         INTENT_MODEL,
         INTENT_CONFIG,
-        REPO / 'mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml',
-        REPO / 'mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml',
         REPO / 'mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl',
         REPO / 'mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml',
         REPO / 'mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml',
@@ -2069,10 +2771,76 @@ def verify_runtime_artifact_contract(payload: dict[str, Any]) -> dict[str, Any]:
             f'missing={sorted(str(path) for path in required_paths - paths)}, '
             f'extra={sorted(str(path) for path in paths - required_paths)}'
         )
+
+    by_role = {row['role']: row for row in rows}
+    final_runtime_bindings = {
+        'visual_promotion_manifest': (
+            VISUAL_MANIFEST, VISUAL_MANIFEST_SHA256, 9338,
+        ),
+        'visual_manual_decision': (
+            VISUAL_MANUAL_DECISION, VISUAL_MANUAL_DECISION_SHA256, 1907,
+        ),
+        'visual_runtime_configuration': (
+            VISUAL_RUNTIME_CONFIG, VISUAL_RUNTIME_CONFIG_SHA256, 821,
+        ),
+        'task_execution_runtime_configuration': (
+            TASK_RUNTIME_CONFIG, TASK_RUNTIME_CONFIG_SHA256, 3848,
+        ),
+        'task_execution_authorization': (
+            TASK_EXECUTION_AUTHORIZATION,
+            TASK_EXECUTION_AUTHORIZATION_SHA256,
+            785,
+        ),
+    }
+    for role, (path, expected_sha256, expected_size) in (
+        final_runtime_bindings.items()
+    ):
+        row = by_role.get(role)
+        expected_path = str(path.expanduser().resolve())
+        if (
+            row is None
+            or row['path'] != expected_path
+            or row['sha256'] != expected_sha256
+            or row['size_bytes'] != expected_size
+        ):
+            raise CampaignError(
+                f'runtime artifact contract does not match the final V4 '
+                f'runtime binding for {role}'
+            )
+
+    manifest = json.loads(VISUAL_MANIFEST.read_text(encoding='utf-8'))
+    authorization = json.loads(
+        TASK_EXECUTION_AUTHORIZATION.read_text(encoding='utf-8')
+    )
+    manual_decision = json.loads(
+        VISUAL_MANUAL_DECISION.read_text(encoding='utf-8')
+    )
+    if (
+        manifest.get('source_active_manifest_sha256')
+        != SOURCE_QUALIFICATION_MANIFEST_SHA256
+        or authorization.get('state') != 'active_closed_loop_runtime'
+        or authorization.get('authorization_scope')
+        != 'gazebo_v4_closed_loop_runtime_only'
+        or authorization.get('promotion_manifest_sha256')
+        != VISUAL_MANIFEST_SHA256
+        or manual_decision.get('scope')
+        != 'gazebo_v4_closed_loop_runtime_only'
+        or manual_decision.get('qualification_only') is not False
+        or manual_decision.get('source_active_manifest_sha256')
+        != SOURCE_QUALIFICATION_MANIFEST_SHA256
+    ):
+        raise CampaignError(
+            'final V4 runtime metadata does not preserve the exact source '
+            'qualification/runtime authorization chain'
+        )
     return {
         'status': 'passed',
         'hash_algorithm': 'sha256',
         'artifact_count': len(rows),
+        'source_qualification_manifest_sha256': (
+            SOURCE_QUALIFICATION_MANIFEST_SHA256
+        ),
+        'runtime_manifest_sha256': VISUAL_MANIFEST_SHA256,
         'artifacts': rows,
     }
 
@@ -2106,6 +2874,7 @@ def campaign_environment(
     matrix_path: Path,
     domain_id: int,
     output_root: Path,
+    source_install_parity: dict[str, Any],
 ) -> dict[str, Any]:
     env = clean_environment(domain_id)
     git_status = run_capture(
@@ -2174,6 +2943,7 @@ def campaign_environment(
             'ros_automatic_discovery_range': 'LOCALHOST',
         },
         'artifacts': artifacts,
+        'source_install_parity': source_install_parity,
         'diagnostic_commands': commands,
     }
 
@@ -2215,7 +2985,7 @@ def finalise_artifacts(output_root: Path, summary: dict[str, Any]) -> None:
 def validate_matrix(payload: dict[str, Any]) -> None:
     if payload.get('schema_version') != 2:
         raise CampaignError('campaign matrix schema_version must be 2')
-    if payload.get('campaign_id') != 'room315_integrated_campaign_v2':
+    if payload.get('campaign_id') != 'room315_integrated_campaign_v4':
         raise CampaignError('campaign matrix identifier is not the expected campaign')
     protocol = payload.get('protocol')
     if not isinstance(protocol, dict):
@@ -2290,18 +3060,48 @@ def build_summary(
     passed = [row for row in results if row.get('status') == 'passed']
     total_steps = sum(int(row.get('executed_step_count') or 0) for row in passed)
     identities = sorted({str(row.get('selected_identity')) for row in passed})
+    full_declared_campaign = (
+        len(selected_cases) == declared_case_count
+        and len(results) == declared_case_count
+        and len(passed) == declared_case_count
+        and status == 'passed'
+    )
+    partial_smoke_evidence = (
+        len(selected_cases) < declared_case_count
+        and len(results) == len(selected_cases)
+        and len(passed) == len(selected_cases)
+        and status == 'partial'
+    )
     return {
-        'schema_version': 1,
+        'schema_version': 'room315.v4_closed_loop_campaign.v1',
         'campaign_id': campaign_id,
         'status': status,
+        'visual_schema_version': VISUAL_SCHEMA,
+        'checkpoint_sha256': VISUAL_CHECKPOINT_SHA256,
+        # Keep the schema-v1 compatibility field bound to the actual source
+        # qualification, never to the final runtime manifest.
+        'qualification_manifest_sha256': (
+            SOURCE_QUALIFICATION_MANIFEST_SHA256
+        ),
+        'source_qualification_manifest_sha256': (
+            SOURCE_QUALIFICATION_MANIFEST_SHA256
+        ),
+        'runtime_manifest_sha256': VISUAL_MANIFEST_SHA256,
+        'evidence_scope': (
+            'full_declared_campaign'
+            if full_declared_campaign
+            else 'partial_smoke'
+            if partial_smoke_evidence
+            else 'incomplete_or_failed'
+        ),
+        'partial_smoke_evidence': partial_smoke_evidence,
+        'physical_deployment': False,
         'started_at_utc': started_at_utc,
         'finished_at_utc': utc_now(),
         'declared_case_count': declared_case_count,
+        'case_count': len(selected_cases),
         'selected_case_count': len(selected_cases),
-        'full_declared_campaign': (
-            len(selected_cases) == declared_case_count
-            and status != 'partial'
-        ),
+        'full_declared_campaign': full_declared_campaign,
         'planned_case_ids': [case['id'] for case in selected_cases],
         'completed_case_count': len(results),
         'passed_case_count': len(passed),
@@ -2325,6 +3125,36 @@ def build_summary(
             int(row.get('accepted_supervisor_decision_count') or 0) for row in passed
         ),
         'safe_abort_count': sum(bool(row.get('safe_abort_sent')) for row in results),
+        'v3_observation_count': sum(
+            int(
+                (((row.get('rosbag') or {}).get('visual_schema_audit') or {}).get(
+                    'v3_observation_count'
+                ))
+                or 0
+            )
+            for row in results
+        ),
+        'v4_observation_count': sum(
+            int(
+                (((row.get('rosbag') or {}).get('visual_schema_audit') or {}).get(
+                    'v4_observation_count'
+                ))
+                or 0
+            )
+            for row in results
+        ),
+        'all_terminal_statuses_succeeded': (
+            len(passed) == len(selected_cases) == len(results)
+        ),
+        'all_final_effects_verified': bool(passed) and all(
+            int(row.get('satisfied_postcondition_count') or -1)
+            == int(row.get('executed_step_count') or 0)
+            for row in passed
+        ),
+        'all_controllers_stopped': bool(passed) and all(
+            row.get('controller_mode_at_arrival') == 'DISABLED'
+            for row in passed
+        ),
         'total_plan_attempts': sum(int(row.get('plan_attempts') or 0) for row in passed),
         'total_replans': sum(int(row.get('replans') or 0) for row in passed),
         'total_unknown_retries': sum(
@@ -2353,6 +3183,7 @@ def main() -> int:
     payload = yaml.safe_load(matrix_bytes.decode('utf-8')) or {}
     validate_matrix(payload)
     artifact_contract_pre = verify_runtime_artifact_contract(payload)
+    source_install_parity_pre = verify_source_install_parity()
     selected_cases = select_cases(payload, args.case)
     declared_case_ids = [str(case['id']) for case in payload['cases']]
     selected_case_ids = [str(case['id']) for case in selected_cases]
@@ -2373,7 +3204,10 @@ def main() -> int:
     shutil.copy2(Path(__file__).resolve(), output_root / 'campaign_runner.py')
     started_at_utc = utc_now()
     environment = campaign_environment(
-        campaign_matrix_copy, args.domain_id, output_root,
+        campaign_matrix_copy,
+        args.domain_id,
+        output_root,
+        source_install_parity_pre,
     )
     environment['platform']['base_ros_domain_id'] = args.domain_id
     environment['platform']['case_ros_domain_ids'] = case_domains
@@ -2381,6 +3215,10 @@ def main() -> int:
     write_json(
         output_root / 'runtime_artifact_contract_pre.json',
         artifact_contract_pre,
+    )
+    write_json(
+        output_root / 'source_install_parity_pre.json',
+        source_install_parity_pre,
     )
     write_json(output_root / 'launch_templates.json', {
         'floor_example': floor_command(
@@ -2441,10 +3279,12 @@ def main() -> int:
 
     try:
         artifact_contract_post = verify_runtime_artifact_contract(payload)
+        source_install_parity_post = verify_source_install_parity()
         source_post = source_file_manifest()
         environment_after = {
             'captured_at_utc': utc_now(),
             'runtime_artifact_contract': artifact_contract_post,
+            'source_install_parity': source_install_parity_post,
             'runtime_source_tree_sha256': source_post['aggregate_sha256'],
             'runtime_source_file_count': source_post['file_count'],
             'matches_pre_campaign_artifacts': (
@@ -2454,14 +3294,19 @@ def main() -> int:
                 source_post['aggregate_sha256']
                 == environment['git']['runtime_source_tree_sha256']
             ),
+            'matches_pre_campaign_source_install_parity': (
+                source_install_parity_post == source_install_parity_pre
+            ),
         }
         write_json(output_root / 'environment_after.json', environment_after)
         if (
             not environment_after['matches_pre_campaign_artifacts']
             or not environment_after['matches_pre_campaign_runtime_source']
+            or not environment_after['matches_pre_campaign_source_install_parity']
         ):
             raise CampaignError(
-                'runtime artifacts or source tree changed during the campaign'
+                'runtime artifacts, source tree, or source/install parity '
+                'changed during the campaign'
             )
     except Exception as exc:  # noqa: BLE001 - bind post-run state to summary
         status = 'failed'

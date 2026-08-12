@@ -6,26 +6,25 @@
   learned/.style={draw=mfjablue,very thick,rounded corners=2pt,
     fill=mfjalight,align=center,text width=34mm,minimum height=14mm,
     inner sep=1.3mm},
+  visualmodel/.style={learned,text width=72mm,minimum height=16mm,
+    inner xsep=1.3mm,inner ysep=1mm},
   accepted/.style={draw=mfjagreen,very thick,rounded corners=2pt,
-    fill=mfjagreen!7,align=center,text width=72mm,minimum height=18mm,
-    inner sep=1.4mm},
-  state/.style={draw=mfjagreen,very thick,rounded corners=2pt,
-    fill=mfjagreen!7,align=center,text width=72mm,minimum height=17mm,
-    inner sep=1.4mm},
+    fill=mfjagreen!7,align=center,text width=72mm,minimum height=20mm,
+    inner sep=1.3mm},
   gateway/.style={draw=mfjagreen,very thick,rounded corners=2pt,
-    fill=mfjagreen!7,align=center,text width=154mm,minimum height=17mm,
-    inner sep=1.5mm},
+    fill=mfjagreen!7,align=center,text width=154mm,minimum height=19mm,
+    inner sep=1.4mm},
   loopstage/.style={draw=mfjagreen,very thick,rounded corners=2pt,
     fill=mfjagreen!7,align=center,text width=112mm,minimum height=11mm,
     inner sep=1.2mm},
   planner/.style={draw=mfjaorange,very thick,rounded corners=2pt,
-    fill=mfjaorange!8,align=center,text width=112mm,minimum height=11mm,
+    fill=mfjaorange!8,align=center,text width=112mm,minimum height=12mm,
     inner sep=1.2mm},
   supervisor/.style={draw=mfjared,very thick,rounded corners=2pt,
-    fill=mfjared!6,align=center,text width=112mm,minimum height=11mm,
+    fill=mfjared!6,align=center,text width=112mm,minimum height=12mm,
     inner sep=1.2mm},
   controller/.style={draw=black!58,very thick,rounded corners=2pt,
-    fill=black!5,align=center,text width=112mm,minimum height=11mm,
+    fill=black!5,align=center,text width=112mm,minimum height=14mm,
     inner sep=1.2mm},
   verify/.style={draw=mfjagreen,very thick,rounded corners=2pt,
     fill=mfjagreen!7,align=center,text width=112mm,minimum height=14mm,
@@ -43,9 +42,10 @@
   feedback/.style={-{Latex[length=2.1mm]},very thick,densely dashed,
     draw=mfjagreen}
 ]
-  % Panel A: the two inputs become the task and current state.
+  % Panel A: the confirmed task and the visual path meet in
+  % the task gateway.  Every label is at least footnotesize for A4 printing.
   \node[paneltitle] at (-79mm,10mm)
-    {A \enspace INTERPRET THE REQUEST AND READ THE CURRENT STATE};
+    {A \enspace INTERPRET THE REQUEST AND ACCEPT THE SCENE STATE};
   \draw[mfjablue!28,line width=0.55pt] (-79mm,7mm) -- (79mm,7mm);
 
   \node[input,text width=40mm] (english) at (-43mm,0) {
@@ -57,79 +57,66 @@
     at (-24mm,-19mm) {
     \textbf{Explicit-fact extractor}\\
     explicit fields from the same request};
-  \node[accepted] (task) at (-43mm,-40mm) {
+  \node[accepted] (task) at (-43mm,-42mm) {
     \textbf{Combine model and explicit fields}\\[-0.2ex]
     field fusion $\rightarrow$ \texttt{TaskGoalDraft}\\
     validate, clarify if needed and confirm $\rightarrow$ \texttt{TaskGoal}};
 
-  \node[input] (images) at (24mm,0) {
-    \textbf{Synchronised input}\\left/right RGB pair};
-  \node[input] (presence) at (62mm,0) {
-    \textbf{Configured input}\\current \texttt{ShuttleState}\\names and timestamps};
-  \node[learned] (resnet) at (24mm,-19mm) {
-    \textbf{Paired-view ResNet-18}\\
-    project-fine-tuned; 200-value proposal};
-  \node[accepted] (visual) at (43mm,-40mm) {
-    \textbf{Decode and check the visual state}\\[-0.2ex]
-    presence-gated decoding, freshness and consistency checks\\
-    $\rightarrow$ current \texttt{VisualStateObservation}};
-  \node[state] (observed) at (43mm,-60mm) {
-    \textbf{Build the current \texttt{ObservedState}}\\[-0.2ex]
-    visual observation (including presence) + supervisor/device state
-    + identity-bearing DZI readings};
+  \node[input,text width=72mm] (visualinputs) at (42mm,0) {
+    \textbf{Paired camera inputs}\\synchronised left/right RGB frames +
+    shuttle identity, presence and timestamps};
+  \node[visualmodel] (vfour) at (42mm,-21mm) {
+    \textbf{Split-rail visual model}\\[-0.2ex]
+    shared low-level stem + rail-isolated left/right branches};
+  \node[accepted] (visual) at (42mm,-45mm) {
+    \textbf{Calibrate and validate the complete frame}\\[-0.2ex]
+    segment and loaded-state gates + freshness/contract checks\\
+    $\rightarrow$ accepted \texttt{VisualStateObservation} (declared schema)};
 
-  \node[gateway] (ground) at (0,-81mm) {
-    \textbf{Task-execution gateway}\\[-0.2ex]
-    combine \texttt{TaskGoal} with the current \texttt{ObservedState};
-    validate readiness and, when requested, ground the shuttle-selection policy once};
+  \node[gateway] (ground) at (0,-70mm) {
+    \textbf{Task gateway: ground the goal and build a fresh PDDL problem}\\[-0.2ex]
+    confirmed \texttt{TaskGoal} + accepted visual observation + presence/device/DZI state
+    $\rightarrow$ validated \texttt{ObservedState} and current symbolic facts\\[-0.2ex]
+    \textit{Optional direct ProblemExpert predicate mirror: disabled}};
 
   \draw[flow] ([xshift=-19mm]english.south) -- (qwen.north);
   \draw[flow] ([xshift=19mm]english.south) -- (facts.north);
   \draw[flow] (qwen.south) -- ([xshift=-19mm]task.north);
   \draw[flow] (facts.south) -- ([xshift=19mm]task.north);
-  \draw[flow] (images) -- (resnet);
-  \draw[flow] (resnet.south) -- ([xshift=-19mm]visual.north);
-  \draw[flow] (presence.south) -- ([xshift=19mm]visual.north);
-  \draw[flow] (visual) -- (observed);
+  \draw[flow] (visualinputs) -- (vfour);
+  \draw[flow] (vfour) -- (visual);
   \draw[flow] (task.south) -- ([xshift=-43mm]ground.north);
-  \draw[flow] (observed.south) -- ([xshift=43mm]ground.north);
+  \draw[flow] (visual.south) -- ([xshift=43mm]ground.north);
 
   % Panel B: one-step receding-horizon planning and result checking.
-  \node[paneltitle] at (-79mm,-94mm)
-    {B \enspace PLAN, EXECUTE ONE STEP, AND CHECK THE RESULT};
-  \draw[mfjablue!28,line width=0.55pt] (-79mm,-97mm) -- (79mm,-97mm);
+  \node[paneltitle] at (-79mm,-85mm)
+    {B \enspace PLAN, EXECUTE ONE SAFE STEP, AND CHECK THE RESULT};
+  \draw[mfjablue!28,line width=0.55pt] (-79mm,-88mm) -- (79mm,-88mm);
 
-  \node[loopstage] (formulate) at (0,-107mm) {
-    \textbf{Refresh state and formulate}\\[-0.2ex]
-    newest \texttt{ObservedState} + grounded goal
-    $\rightarrow$ fresh PDDL problem};
-  \node[planner] (plan) at (0,-122mm) {
-    \textbf{PlanSys2 / POPF}\\[-0.2ex]
-    normal path: fresh problem $\rightarrow$ symbolic plan};
-  \node[loopstage] (translate) at (0,-137mm) {
-    \textbf{Translate and select the first step}\\[-0.2ex]
-    returned plan $\rightarrow$ first supported \texttt{TranslatedPlanStep}
-    + sparse named live command};
-  \node[supervisor] (supervise) at (0,-152mm) {
-    \textbf{Safety supervisor}\\[-0.2ex]
-    check sparse command $\rightarrow$ publish typed ROS~2 command};
-  \node[controller] (controller) at (0,-167mm) {
-    \textbf{Kinematic controller}\\[-0.2ex]
-    typed command $\rightarrow$ Gazebo shuttle pose and controller-state change};
-
-  \node[verify] (verify) at (0,-183mm) {
-    \textbf{Wait for the resulting state and compare}\\[-0.2ex]
-    after-state + supervisor/controller status + identity-bearing DZI
-    + camera observation where required};
-  \node[success] (success) at (-35mm,-202mm)
+  \node[planner] (plan) at (0,-99mm) {
+    \textbf{PlanSys2 planner service / POPF}\\[-0.2ex]
+    current domain + gateway-built problem $\rightarrow$ symbolic plan};
+  \node[loopstage] (translate) at (0,-115mm) {
+    \textbf{Translate and select the first supported step}\\[-0.2ex]
+    first plan step $\rightarrow$ sparse named live command};
+  \node[supervisor] (supervise) at (0,-131mm) {
+    \textbf{Deterministic safety supervisor}\\[-0.2ex]
+    verify the sparse command $\rightarrow$ publish a typed ROS~2 command};
+  \node[controller] (controller) at (0,-148mm) {
+    \textbf{Kinematic rail controller and Gazebo}\\[-0.2ex]
+    apply the command $\rightarrow$ shuttle motion; return controller state
+    and identity-bearing DZI readings};
+  \node[verify] (verify) at (0,-167mm) {
+    \textbf{Wait for newer evidence and compare the observed effect}\\[-0.2ex]
+    accepted visual observation + supervisor/controller state + DZI evidence};
+  \node[success] (success) at (-35mm,-186mm)
     {complete $\rightarrow$ \texttt{task\_goal\_satisfied}};
-  \node[replan] (replan) at (35mm,-202mm)
+  \node[replan] (replan) at (35mm,-186mm)
     {not complete $\rightarrow$ re-observe and replan};
 
-  % The main execution path is deliberately top-to-bottom: every solid arrow
-  % points in the same reading direction.
-  \draw[flow] ([xshift=50mm]ground.south) -- ([xshift=50mm]formulate.north);
-  \draw[flow] (formulate) -- (plan);
+  % Enter Panel B at the right margin so the arrow does not cross its title.
+  \draw[flow] ([xshift=72mm]ground.south) -- (72mm,-90mm)
+    -- ([xshift=50mm]plan.north);
   \draw[flow] (plan) -- (translate);
   \draw[flow] (translate) -- (supervise);
   \draw[flow] (supervise) -- (controller);
@@ -137,12 +124,9 @@
   \draw[flow,draw=mfjagreen] (verify.south) -- (success.north);
   \draw[feedback] (verify.south) -- (replan.north);
 
-  % Only an incomplete task returns to fresh observation.  The horizontal
-  % label sits inside its decision card, and the arrowhead is visibly located
-  % at the re-observation stage.
-  \draw[feedback] (replan.east) -- (75mm,-202mm) |- (formulate.east);
+  % Only an incomplete task returns to a post-command accepted observation.
+  \draw[feedback] (replan.east) -- (80mm,-186mm) |- (visual.east);
 
-  % Make both panel extents explicit so the source fits \textwidth without
-  % global scaling that would shrink the labels.
-  \path[use as bounding box] (-82mm,14mm) rectangle (82mm,-211mm);
+  % Explicit extent avoids global scaling, preserving the footnotesize text.
+  \path[use as bounding box] (-82mm,14mm) rectangle (82mm,-196mm);
 \end{tikzpicture}

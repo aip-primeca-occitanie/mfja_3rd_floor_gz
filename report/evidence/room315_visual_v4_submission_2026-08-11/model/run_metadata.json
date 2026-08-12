@@ -1,0 +1,58 @@
+{
+  "automatic_mixed_precision": true,
+  "automatic_runtime_switch": false,
+  "canary_loaded": false,
+  "completed_unix_s": 1786447757.0735128,
+  "device": "cuda",
+  "epochs_completed": 12,
+  "initial_stage": {
+    "assertions_passed": true,
+    "epoch": 1,
+    "groups": {
+      "heads": {
+        "name": "heads",
+        "parameter_count": 1855018,
+        "parameter_tensors": 46,
+        "trainable_parameter_count": 1855018,
+        "trainable_tensors": 46
+      },
+      "layer4": {
+        "name": "layer4",
+        "parameter_count": 16787456,
+        "parameter_tensors": 30,
+        "trainable_parameter_count": 0,
+        "trainable_tensors": 0
+      },
+      "shared_layer3": {
+        "name": "shared_layer3",
+        "parameter_count": 2099712,
+        "parameter_tensors": 15,
+        "trainable_parameter_count": 0,
+        "trainable_tensors": 0
+      }
+    },
+    "heads_open": true,
+    "layer4_open": false,
+    "rail_layer4_batch_norm_training": false,
+    "shared_batch_norm_count": 15,
+    "shared_batch_norm_running_stats_frozen": true,
+    "shared_layer3_batch_norm_affine_trainable": false,
+    "shared_layer3_open": false,
+    "stage": "heads_only"
+  },
+  "promotion_status": "pending_post_selection_canary",
+  "runtime_s": 1003.729593038559,
+  "schema_version": "room315.visual_training.v4.run.v1",
+  "seed": 31520260811,
+  "selected_checkpoint": {
+    "epoch": 11,
+    "filename": "epoch_011.pt",
+    "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+  },
+  "started_unix_s": 1786446753.3439198,
+  "status": "completed",
+  "test_loaded": false,
+  "torch": "2.10.0+cu128",
+  "torchvision": "0.25.0+cu128",
+  "validation_acceptance_status": "passed"
+}

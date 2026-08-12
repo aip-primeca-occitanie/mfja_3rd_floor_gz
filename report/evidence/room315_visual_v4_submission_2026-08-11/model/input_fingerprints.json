@@ -1,0 +1,477 @@
+{
+  "approved_v3_validation_baseline": {
+    "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "data_role": "validation_only",
+    "loaded_accuracy": 0.6619343389529725,
+    "loaded_correct_count": 1492,
+    "preprocessing_contract": "v3_direct_bilinear_224_imagenet_normalization_target_stats_decode",
+    "provenance_checks": {
+      "checkpoint_sha256": true,
+      "loaded_accuracy_exact_counts": true,
+      "sample_count": true,
+      "validation_labels_sha256": true,
+      "validation_rows_sha256": true,
+      "visible_count": true
+    },
+    "sample_count": 512,
+    "segment_correct_count": 1164,
+    "segment_top1_accuracy": 0.5164152617568767,
+    "segment_top1_left": 0.4534562211981567,
+    "segment_top1_right": 0.5748502994011976,
+    "validation_labels_sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab",
+    "validation_rows_sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7",
+    "verified": true,
+    "visible_count": 2254
+  },
+  "canary_loaded": false,
+  "class_count_provenance": "train_only",
+  "class_counts": {
+    "aggregate": [
+      2764,
+      2519,
+      1333,
+      936,
+      1177,
+      1173,
+      1356,
+      1465,
+      3302,
+      2516,
+      933,
+      1254,
+      1280,
+      1644
+    ],
+    "all_side_x_segment_cells_supported": true,
+    "by_side": {
+      "left": [
+        1394,
+        1169,
+        727,
+        509,
+        558,
+        816,
+        694,
+        796,
+        1316,
+        1342,
+        501,
+        654,
+        624,
+        770
+      ],
+      "right": [
+        1370,
+        1350,
+        606,
+        427,
+        619,
+        357,
+        662,
+        669,
+        1986,
+        1174,
+        432,
+        600,
+        656,
+        874
+      ]
+    },
+    "provenance": "train_only",
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "slot_target_count": 23652,
+    "train_sample_count": 5528,
+    "zero_support_side_x_segment": []
+  },
+  "class_weights_by_side": {
+    "left": [
+      0.7456153035163879,
+      0.8142147064208984,
+      1.0324736833572388,
+      1.233920931816101,
+      1.1784987449645996,
+      0.9745432734489441,
+      1.0567359924316406,
+      0.9867103099822998,
+      0.7673937678337097,
+      0.7599236369132996,
+      1.243733525276184,
+      1.0885725021362305,
+      1.11443293094635,
+      1.0032308101654053
+    ],
+    "right": [
+      0.7172773480415344,
+      0.7225710153579712,
+      1.0784775018692017,
+      1.2847939729690552,
+      1.0670925378799438,
+      1.4051196575164795,
+      1.0318543910980225,
+      1.0264418125152588,
+      0.5957413911819458,
+      0.774842381477356,
+      1.2773371934890747,
+      1.083856463432312,
+      1.0365625619888306,
+      0.8980317711830139
+    ]
+  },
+  "configuration": {
+    "bytes": 9451,
+    "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_training_v4.json",
+    "sha256": "e49497df453ac729949422edcb9633141b2f86e5f280d3535f9070284596727b"
+  },
+  "effective_config_sha256": "719c4c8eaa3a16c98c1346cc6e5d6259c2e8c77d0a325802b72abc13c9e3b523",
+  "image_contract": {
+    "aspect_ratio": "4:3",
+    "camera_order": [
+      "left_rail_rgb",
+      "right_rail_rgb"
+    ],
+    "camera_swap": false,
+    "decoded_during_preflight": true,
+    "horizontal_flip": false,
+    "photometric_only_augmentation": true,
+    "resize": [
+      320,
+      240
+    ]
+  },
+  "initialization_checkpoint": {
+    "bytes": 113868535,
+    "expected_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+    "sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "verified": true
+  },
+  "public_topology_contract": {
+    "authoritative": true,
+    "fingerprint_sha256": "02ddcd78b1e1f410e7565ab018a9b4f25297ccf2d74c41232e981ebfc9eed344",
+    "lengths_by_side": {
+      "left": {
+        "A12E": 2.2270920521519426,
+        "A12I": 1.416772043341839,
+        "A14": 0.2769615308869281,
+        "A1E": 0.18395555793267757,
+        "A1I": 0.24215749184602656,
+        "A23": 1.2887389088178305,
+        "A2E": 0.2058056882302571,
+        "A2I": 0.26017007391945235,
+        "A34E": 2.2278061132425844,
+        "A34I": 1.41039562731515,
+        "A3E": 0.20452901041543173,
+        "A3I": 0.25935531709291115,
+        "A4E": 0.18748395685413136,
+        "A4I": 0.24283411726061258
+      },
+      "right": {
+        "A12E": 2.2278061132425844,
+        "A12I": 1.41039562731515,
+        "A14": 1.2887389088178305,
+        "A1E": 0.20452901041543173,
+        "A1I": 0.25935531709291115,
+        "A23": 0.2769615308869281,
+        "A2E": 0.18748395685413136,
+        "A2I": 0.24283411726061258,
+        "A34E": 2.2270920521519426,
+        "A34I": 1.416772043341839,
+        "A3E": 0.18395555793267757,
+        "A3I": 0.24215749184602656,
+        "A4E": 0.2058056882302571,
+        "A4I": 0.26017007391945235
+      }
+    },
+    "lengths_m_by_side": [
+      [
+        2.2270920521519426,
+        1.416772043341839,
+        0.2769615308869281,
+        0.18395555793267757,
+        0.24215749184602656,
+        1.2887389088178305,
+        0.2058056882302571,
+        0.26017007391945235,
+        2.2278061132425844,
+        1.41039562731515,
+        0.20452901041543173,
+        0.25935531709291115,
+        0.18748395685413136,
+        0.24283411726061258
+      ],
+      [
+        2.2278061132425844,
+        1.41039562731515,
+        1.2887389088178305,
+        0.20452901041543173,
+        0.25935531709291115,
+        0.2769615308869281,
+        0.18748395685413136,
+        0.24283411726061258,
+        2.2270920521519426,
+        1.416772043341839,
+        0.18395555793267757,
+        0.24215749184602656,
+        0.2058056882302571,
+        0.26017007391945235
+      ]
+    ],
+    "loader": "room_315_rail_defaults.public_rail_segment_lengths",
+    "schema_version": "room315.public_segment_length_contract.v1",
+    "segment_name_domain": "public_ros_label",
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "side_order": [
+      "left",
+      "right"
+    ],
+    "source": "room_315_rail_defaults.public_rail_segment_lengths"
+  },
+  "sampler_epoch_one": {
+    "by_source": {
+      "old_replay": 4000,
+      "v3r1_hard_case": 4000
+    },
+    "selection_count": 8000,
+    "selection_sha256": "a84cae80e00944ba1ff65145fc67c96663aedd4c76dda219ff3a859bc3ce29d3"
+  },
+  "schema_version": "room315.visual_training.v4.run.v1",
+  "split_disjoint_audit": {
+    "dimensions": {
+      "configuration_core_family_id": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 3910,
+        "validation_unique": 505
+      },
+      "configuration_family_id": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 3910,
+        "validation_unique": 505
+      },
+      "episode_id": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 5528,
+        "validation_unique": 512
+      },
+      "image_content_sha256": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 10539,
+        "validation_unique": 889
+      },
+      "image_realpath": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 11056,
+        "validation_unique": 1024
+      },
+      "sample_id": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 5528,
+        "validation_unique": 512
+      },
+      "scenario_family": {
+        "overlap_count": 0,
+        "overlap_examples": [],
+        "train_unique": 5528,
+        "validation_unique": 512
+      }
+    },
+    "disjoint": true,
+    "train_role": "train_only",
+    "validation_role": "validation_only"
+  },
+  "status": "passed",
+  "test_loaded": false,
+  "topology_label_audit": {
+    "checked_visible_targets": 25906,
+    "mapping_fingerprint_sha256": "02ddcd78b1e1f410e7565ab018a9b4f25297ccf2d74c41232e981ebfc9eed344",
+    "matches_public_mapping": true,
+    "maximum_absolute_error_m": 4.918460265457281e-07
+  },
+  "topology_length_provenance": "room_315_rail_defaults.public_rail_segment_lengths",
+  "topology_lengths_by_side": {
+    "left": {
+      "A12E": 2.2270920521519426,
+      "A12I": 1.416772043341839,
+      "A14": 0.2769615308869281,
+      "A1E": 0.18395555793267757,
+      "A1I": 0.24215749184602656,
+      "A23": 1.2887389088178305,
+      "A2E": 0.2058056882302571,
+      "A2I": 0.26017007391945235,
+      "A34E": 2.2278061132425844,
+      "A34I": 1.41039562731515,
+      "A3E": 0.20452901041543173,
+      "A3I": 0.25935531709291115,
+      "A4E": 0.18748395685413136,
+      "A4I": 0.24283411726061258
+    },
+    "right": {
+      "A12E": 2.2278061132425844,
+      "A12I": 1.41039562731515,
+      "A14": 1.2887389088178305,
+      "A1E": 0.20452901041543173,
+      "A1I": 0.25935531709291115,
+      "A23": 0.2769615308869281,
+      "A2E": 0.18748395685413136,
+      "A2I": 0.24283411726061258,
+      "A34E": 2.2270920521519426,
+      "A34I": 1.416772043341839,
+      "A3E": 0.18395555793267757,
+      "A3I": 0.24215749184602656,
+      "A4E": 0.2058056882302571,
+      "A4I": 0.26017007391945235
+    }
+  },
+  "train_sample_count": 5528,
+  "train_sources": {
+    "old_replay": {
+      "dataset_root": "/home/tiago/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/dataset",
+      "decoded_images": 3056,
+      "expected_records": 1528,
+      "image_references": 3056,
+      "labels": {
+        "bytes": 8714600,
+        "path": "/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train_visual_labels.jsonl",
+        "sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583"
+      },
+      "name": "old_replay",
+      "paired_records": 1528,
+      "role": "train",
+      "rows": {
+        "bytes": 3558755,
+        "path": "/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train.jsonl",
+        "sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095"
+      }
+    },
+    "v3r1_hard_case": {
+      "dataset_root": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/dataset",
+      "decoded_images": 8000,
+      "expected_records": 4000,
+      "image_references": 8000,
+      "labels": {
+        "bytes": 30150369,
+        "path": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/train_visual_labels.jsonl",
+        "sha256": "ec98fd5a94ed9d29fbb0b33dbed33877d571d263ea4a497be99d088673b71921"
+      },
+      "name": "v3r1_hard_case",
+      "paired_records": 4000,
+      "role": "train",
+      "rows": {
+        "bytes": 9231106,
+        "path": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/train.jsonl",
+        "sha256": "396e3b83822dcd2ed541025fc033802592a609e288dbb28be555c6d9f586361c"
+      }
+    }
+  },
+  "validation": {
+    "dataset_root": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/dataset",
+    "decoded_images": 1024,
+    "expected_records": 512,
+    "image_references": 1024,
+    "labels": {
+      "bytes": 3899374,
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/validation_visual_labels.jsonl",
+      "sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab"
+    },
+    "name": "v3r1_validation",
+    "paired_records": 512,
+    "role": "validation",
+    "rows": {
+      "bytes": 1226594,
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/validation.jsonl",
+      "sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7"
+    }
+  },
+  "validation_sample_count": 512,
+  "validation_support": {
+    "all_side_x_segment_cells_supported": true,
+    "by_side": {
+      "left": [
+        148,
+        105,
+        84,
+        43,
+        42,
+        49,
+        50,
+        77,
+        133,
+        116,
+        47,
+        48,
+        80,
+        63
+      ],
+      "right": [
+        90,
+        104,
+        38,
+        73,
+        38,
+        28,
+        32,
+        55,
+        429,
+        114,
+        22,
+        36,
+        19,
+        91
+      ]
+    },
+    "macro_gate_interpretation_valid": true,
+    "role": "validation",
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "zero_support_side_x_segment": []
+  }
+}

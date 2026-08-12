@@ -1,0 +1,225 @@
+{
+  "campaign_id": "room315_integrated_campaign_v4",
+  "campaign_summary_sha256": "1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479",
+  "case_id": "B03",
+  "claim_boundary": "The raw PNGs are exact RGB decodes of V4 observation-bound right-camera frames. The composite only resizes those frames and adds labels. Exact slot identity and stopped arrival come from the preserved DZI/controller certificate, not from pixels alone. This is Gazebo evidence; physical deployment is false.",
+  "declared_transition": {
+    "side": "right",
+    "start_slot": "3",
+    "target_slot": "4",
+    "utterance": "Move the green shuttle to slot 4 on the right rail."
+  },
+  "derived_at_utc": "2026-08-12T00:11:58.616043+00:00",
+  "derived_files": {
+    "b03_v4_closed_loop_right_camera_initial_final.png": {
+      "bytes": 172479,
+      "sha256": "3afef390900901598926f0d11226bb460a70b818ce0c4c765594aefb6fd614dc"
+    },
+    "b03_v4_right_camera_final.png": {
+      "bytes": 20005,
+      "sha256": "88d740c92862652caf06133d51d4773edeff6f02418133423d005c48283df9cd"
+    },
+    "b03_v4_right_camera_initial.png": {
+      "bytes": 20078,
+      "sha256": "fdf6b892eaea1bf307923edea6ebe3a937b0191d47abe675a57734e18ff0a9c4"
+    },
+    "report/images/b03_v4_closed_loop_right_camera_initial_final.png": {
+      "bytes": 172479,
+      "sha256": "3afef390900901598926f0d11226bb460a70b818ce0c4c765594aefb6fd614dc"
+    }
+  },
+  "image_contract": {
+    "composite_operations": [
+      "resizing",
+      "panel layout",
+      "text labels"
+    ],
+    "encoding": "rgb8",
+    "frame_id": "room315_vla_right_rail_rgbd_optical_frame",
+    "height": 480,
+    "raw_pngs_are_direct_rgb_decodes": true,
+    "slot_labels_are_not_inferred_from_pixels": true,
+    "visual_bbox_overlay_used": false,
+    "width": 640
+  },
+  "independent_b03_v4_schema_audit": {
+    "accepted_count": 80,
+    "checkpoint_counts": {
+      "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d": 80
+    },
+    "observation_count": 80,
+    "schema_counts": {
+      "room315.visual_state.v4": 80
+    },
+    "selected_observations": {
+      "final": {
+        "accepted": true,
+        "accepted_frame_count": 121,
+        "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+        "header_ns": 46220000000,
+        "record_ns": 46235000000,
+        "schema_version": "room315.visual_state.v4"
+      },
+      "initial": {
+        "accepted": true,
+        "accepted_frame_count": 82,
+        "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+        "header_ns": 35335000000,
+        "record_ns": 35350000000,
+        "schema_version": "room315.visual_state.v4"
+      }
+    },
+    "v3_observation_count": 0,
+    "v4_observation_count": 80
+  },
+  "schema_version": "room315.v4_campaign_figure_provenance.v1",
+  "selected_identity": "R3",
+  "selected_visual_observations": {
+    "final": {
+      "accepted": true,
+      "accepted_frame_count": 121,
+      "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "header_ns": 46220000000,
+      "r3": {
+        "bbox_xywh": [
+          427.6834411621094,
+          197.45660400390625,
+          50.04010009765625,
+          69.99798583984375
+        ],
+        "block": "A34E",
+        "presence_state": "present",
+        "side": "right",
+        "visual_facts_valid": true
+      },
+      "record_ns": 46235000000,
+      "right_image_ns": 46200000000
+    },
+    "initial": {
+      "accepted": true,
+      "accepted_frame_count": 82,
+      "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "header_ns": 35335000000,
+      "r3": {
+        "bbox_xywh": [
+          427.6910705566406,
+          274.271484375,
+          50.35896682739258,
+          71.58517456054688
+        ],
+        "block": "A34E",
+        "presence_state": "present",
+        "side": "right",
+        "visual_facts_valid": true
+      },
+      "record_ns": 35350000000,
+      "right_image_ns": 35300000000
+    }
+  },
+  "selection_contract": {
+    "final": "Accepted V4 observation whose header stamp exactly matches final_visual_observation.json; its exact right_image_stamp selects the camera frame.",
+    "initial": "Latest accepted V4 observation recorded strictly before the single TaskGoal; the exact right_image_stamp selects the camera frame.",
+    "no_approximate_timestamp_matching": true
+  },
+  "slot_evidence": {
+    "final": {
+      "controller_mode": "DISABLED",
+      "controller_stop_confirmed": true,
+      "sensor": "DZI4R",
+      "sensor_confirmation_frames": 2,
+      "sensor_identity_confirmed": true,
+      "slot": "4"
+    },
+    "initial": {
+      "controller_mode": "DISABLED",
+      "sensor": "DZI3R",
+      "sensor_identity_confirmed": true,
+      "slot": "3"
+    }
+  },
+  "software": {
+    "font_bold": {
+      "path": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+      "sha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895"
+    },
+    "font_regular": {
+      "path": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+      "sha256": "ae7b7855e115a5966d8b1b3f80f254ccc117ec86f9965e202ee2940453837280"
+    },
+    "historical_template_sha256": "e1aee4c9a7fdaa7952f9c9efda1e3ed725970d98280db0c77ad32773df6a9f8d",
+    "numpy": "1.26.4",
+    "pillow": "10.2.0",
+    "python": "3.12.3",
+    "script_sha256": "d45888deb9f11671f8b6c07982b91665c3bae25591c4d39ec29e7135319763a1"
+  },
+  "source_integrity": {
+    "campaign_checksum_contract_unchanged": true,
+    "campaign_checksum_entry_count": 953,
+    "campaign_checksum_manifest_sha256_after": "8ec1b8a456c5f83034fce0d92a3dc067d9d271e02e66a4471bc51acd9dc0e9f8",
+    "campaign_checksum_manifest_sha256_before": "8ec1b8a456c5f83034fce0d92a3dc067d9d271e02e66a4471bc51acd9dc0e9f8",
+    "campaign_sha256sums_verified": true
+  },
+  "sources": {
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/SHA256SUMS": {
+      "bytes": 114488,
+      "sha256": "8ec1b8a456c5f83034fce0d92a3dc067d9d271e02e66a4471bc51acd9dc0e9f8"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/case_summary.json": {
+      "bytes": 6174,
+      "sha256": "bd42654afce60a70c6e021f6b59821984e5607675115c60833f594179770c87c"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/declaration.json": {
+      "bytes": 914,
+      "sha256": "8163976b11a412284f6db26973c6832f148829ec4a9a31080ea8cd495efced1f"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/final_visual_observation.json": {
+      "bytes": 4159,
+      "sha256": "ac46848b37d05cfd98f40b328169fb528f0e9414951da946155c1d71893ac4d3"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/readiness/initial_controller_evidence.json": {
+      "bytes": 10638,
+      "sha256": "4be11c6f1903636bec32810472809eda4d6c5c9c53f59e94964b68826a35f4d2"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/rosbag/metadata.yaml": {
+      "bytes": 24248,
+      "sha256": "21e7d70a6a6d31f0573216f3d20e8de83ee848fe7596470ed77536a17ee707ac"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/rosbag/rosbag_0.mcap": {
+      "bytes": 16092954,
+      "sha256": "6deebb800d0c6b7dc27756bc22fb03befff32692b4beee8552c51b7868e4811b"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/task_goal.json": {
+      "bytes": 522,
+      "sha256": "3375cac668fe35d91412977faed35406bb82168d1f017937dc48bd500ae381f5"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/cases/B03/terminal_response.json": {
+      "bytes": 4215,
+      "sha256": "c82b12824bc51eb070657cf4812ba76f7b9c7505bb996d63ebd1e2fb9627a5e6"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/manifest.json": {
+      "bytes": 177504,
+      "sha256": "15d6362980751dd3e2bdd7fdab2b5ccb70118f73e1bd2cb2cf71d87bc96fdece"
+    },
+    "/home/tiago/room315_integrated_campaign_v4_attempt1/summary.json": {
+      "bytes": 99642,
+      "sha256": "1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479"
+    },
+    "report/evidence/room315_campaign_figures_2026-08-07/extract_b03_initial_final.py": {
+      "bytes": 26753,
+      "sha256": "e1aee4c9a7fdaa7952f9c9efda1e3ed725970d98280db0c77ad32773df6a9f8d"
+    }
+  },
+  "timestamps": {
+    "final": {
+      "image_header_ns": 46200000000,
+      "observation_header_ns": 46220000000,
+      "observation_record_ns": 46235000000
+    },
+    "initial": {
+      "image_header_ns": 35300000000,
+      "observation_header_ns": 35335000000,
+      "observation_record_ns": 35350000000
+    },
+    "task_goal_record_ns": 35355000000
+  }
+}

@@ -1,0 +1,341 @@
+{
+  "dataset_role": "sealed_final_test_only",
+  "generator_version": "room315.visual_v4.final_test_coverage_extension.v2",
+  "inference_count": 0,
+  "inference_status": "not_run",
+  "planned_image_count": 2080,
+  "reference_source_counts": {
+    "old_replay_train": {
+      "individual_image_hashes": 3056,
+      "labels": 1528,
+      "rows": 1528
+    },
+    "v3r1_canary": {
+      "individual_image_hashes": 512,
+      "labels": 256,
+      "rows": 256
+    },
+    "v3r1_train": {
+      "individual_image_hashes": 8000,
+      "labels": 4000,
+      "rows": 4000
+    },
+    "v3r1_validation": {
+      "individual_image_hashes": 1024,
+      "labels": 512,
+      "rows": 512
+    }
+  },
+  "scenario_count": 1040,
+  "schema_version": "room315.visual_v4.final_test_coverage_extension_plan_summary.v2",
+  "seed": 3152026081101,
+  "static_reference_disjoint_audit": {
+    "candidate_counts": {
+      "capture_configuration_fingerprints": 1040,
+      "configuration_core_family_digests": 1040,
+      "configuration_family_digests": 1040,
+      "geometry_fingerprints": 1040,
+      "scenario_family_digests": 1040,
+      "scenario_ids": 1040,
+      "semantic_fingerprints": 1040,
+      "trajectory_fingerprints": 1040
+    },
+    "overlap_counts": {
+      "capture_configuration_fingerprints": 0,
+      "configuration_core_family_digests": 0,
+      "configuration_family_digests": 0,
+      "geometry_fingerprints": 0,
+      "scenario_family_digests": 0,
+      "scenario_ids": 0,
+      "semantic_fingerprints": 0,
+      "trajectory_fingerprints": 0
+    },
+    "overlap_examples": {},
+    "passed": true,
+    "reference_counts": {
+      "capture_configuration_fingerprints": 4768,
+      "configuration_core_family_digests": 4660,
+      "configuration_family_digests": 4671,
+      "geometry_fingerprints": 4065,
+      "scenario_family_digests": 4768,
+      "scenario_ids": 6296,
+      "semantic_fingerprints": 6252,
+      "trajectory_fingerprints": 5593
+    }
+  },
+  "support": {
+    "lattice_scenario_count": 1008,
+    "occlusion_claim_scope": "static calibrated-projection risk estimate; not a measured pixel-occlusion percentage",
+    "presence_cardinality_counts": {
+      "1": 130,
+      "2": 130,
+      "3": 130,
+      "4": 130,
+      "5": 130,
+      "6": 130,
+      "7": 130,
+      "8": 130
+    },
+    "records_by_estimated_occlusion_class": {
+      "clear": 971,
+      "partial_risk": 69
+    },
+    "records_by_relation_family": {
+      "blocker_ahead_same_segment": 4,
+      "blocker_intermediate_segment": 4,
+      "multi_blocker": 4,
+      "no_relation_observation": 1012,
+      "nonblocker_adjacent_branch": 8,
+      "nonblocker_behind_same_segment": 8
+    },
+    "scenario_count": 1040,
+    "stress_scenario_count": 32,
+    "target_by_identity": {
+      "L1": 129,
+      "L2": 131,
+      "L3": 131,
+      "L4": 129,
+      "R1": 129,
+      "R2": 131,
+      "R3": 131,
+      "R4": 129
+    },
+    "target_by_loaded_state": {
+      "empty": 520,
+      "loaded": 520
+    },
+    "target_by_position_bin": {
+      "p05": 117,
+      "p15": 114,
+      "p25": 114,
+      "p40": 116,
+      "p50": 116,
+      "p60": 119,
+      "p75": 116,
+      "p85": 114,
+      "p95": 114
+    },
+    "target_by_side_x_segment": {
+      "left": {
+        "A12E": 38,
+        "A12I": 40,
+        "A14": 38,
+        "A1E": 36,
+        "A1I": 37,
+        "A23": 38,
+        "A2E": 36,
+        "A2I": 36,
+        "A34E": 40,
+        "A34I": 37,
+        "A3E": 36,
+        "A3I": 36,
+        "A4E": 36,
+        "A4I": 36
+      },
+      "right": {
+        "A12E": 39,
+        "A12I": 37,
+        "A14": 39,
+        "A1E": 36,
+        "A1I": 36,
+        "A23": 36,
+        "A2E": 37,
+        "A2I": 36,
+        "A34E": 41,
+        "A34I": 39,
+        "A3E": 36,
+        "A3I": 36,
+        "A4E": 36,
+        "A4I": 36
+      }
+    },
+    "target_by_zone": {
+      "boundary": 230,
+      "buffer": 84,
+      "merge_conflict": 54,
+      "ordinary": 484,
+      "slot": 54,
+      "switch": 134
+    },
+    "visible_by_identity": {
+      "L1": 562,
+      "L2": 589,
+      "L3": 608,
+      "L4": 596,
+      "R1": 582,
+      "R2": 556,
+      "R3": 592,
+      "R4": 595
+    },
+    "visible_by_identity_zone": {
+      "L1": {
+        "adjacent_branch": 1,
+        "ahead_region": 1,
+        "boundary": 28,
+        "buffer": 12,
+        "merge_conflict": 5,
+        "ordinary": 60,
+        "relation_neutral": 431,
+        "slot": 8,
+        "switch": 16
+      },
+      "L2": {
+        "adjacent_branch": 1,
+        "behind_region": 2,
+        "boundary": 30,
+        "buffer": 10,
+        "merge_conflict": 7,
+        "ordinary": 62,
+        "relation_neutral": 455,
+        "slot": 4,
+        "switch": 18
+      },
+      "L3": {
+        "ahead_region": 1,
+        "behind_region": 1,
+        "boundary": 30,
+        "buffer": 10,
+        "merge_conflict": 7,
+        "ordinary": 60,
+        "relation_neutral": 475,
+        "slot": 8,
+        "switch": 16
+      },
+      "L4": {
+        "adjacent_branch": 2,
+        "behind_region": 1,
+        "boundary": 26,
+        "buffer": 10,
+        "intermediate_route": 2,
+        "merge_conflict": 9,
+        "ordinary": 60,
+        "relation_neutral": 462,
+        "slot": 8,
+        "switch": 16
+      },
+      "R1": {
+        "ahead_region": 2,
+        "behind_region": 2,
+        "boundary": 28,
+        "buffer": 14,
+        "intermediate_route": 3,
+        "merge_conflict": 5,
+        "ordinary": 60,
+        "relation_neutral": 446,
+        "slot": 6,
+        "switch": 16
+      },
+      "R2": {
+        "adjacent_branch": 3,
+        "behind_region": 1,
+        "boundary": 30,
+        "buffer": 10,
+        "merge_conflict": 5,
+        "ordinary": 64,
+        "relation_neutral": 421,
+        "slot": 4,
+        "switch": 18
+      },
+      "R3": {
+        "ahead_region": 2,
+        "behind_region": 1,
+        "boundary": 32,
+        "buffer": 8,
+        "intermediate_route": 2,
+        "merge_conflict": 7,
+        "ordinary": 60,
+        "relation_neutral": 456,
+        "slot": 8,
+        "switch": 16
+      },
+      "R4": {
+        "adjacent_branch": 1,
+        "ahead_region": 2,
+        "boundary": 26,
+        "buffer": 10,
+        "intermediate_route": 1,
+        "merge_conflict": 9,
+        "ordinary": 58,
+        "relation_neutral": 462,
+        "slot": 8,
+        "switch": 18
+      }
+    },
+    "visible_by_side_x_segment": {
+      "left": {
+        "A12E": 188,
+        "A12I": 205,
+        "A14": 56,
+        "A1E": 113,
+        "A1I": 166,
+        "A23": 81,
+        "A2E": 197,
+        "A2I": 245,
+        "A34E": 219,
+        "A34I": 252,
+        "A3E": 121,
+        "A3I": 136,
+        "A4E": 185,
+        "A4I": 191
+      },
+      "right": {
+        "A12E": 186,
+        "A12I": 201,
+        "A14": 132,
+        "A1E": 132,
+        "A1I": 148,
+        "A23": 109,
+        "A2E": 148,
+        "A2I": 183,
+        "A34E": 246,
+        "A34I": 244,
+        "A3E": 127,
+        "A3I": 116,
+        "A4E": 161,
+        "A4I": 192
+      }
+    }
+  },
+  "uniqueness": {
+    "capture_configuration_fingerprint": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "configuration_core_family_id": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "configuration_family_id": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "geometry_fingerprint": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "scenario_family": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "scenario_id": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "semantic_fingerprint": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    },
+    "trajectory_fingerprint": {
+      "count": 1040,
+      "unique": true,
+      "unique_count": 1040
+    }
+  }
+}

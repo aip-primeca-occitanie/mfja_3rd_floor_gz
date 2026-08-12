@@ -5,39 +5,53 @@
     align=center,minimum height=10mm,text width=61mm,inner sep=1.6mm,
     font=\sffamily\scriptsize},
   complete/.style={layer,draw=mfjagreen,fill=mfjagreen!7},
+  review/.style={layer,draw=mfjaorange,fill=mfjaorange!8},
   purpose/.style={draw=black!35,fill=white,rounded corners=2pt,align=left,
     text width=70mm,minimum height=10mm,inner sep=1.8mm,
     font=\sffamily\scriptsize},
   link/.style={thin,black!45}
 ]
   \draw[-{Latex[length=2.7mm]},very thick,mfjablue]
-    (-7.25,-5.15) -- (-7.25,0.70);
+    (-7.25,-7.15) -- (-7.25,0.70);
   \node[rotate=90,font=\sffamily\scriptsize\bfseries,text=mfjablue]
-    at (-7.62,-2.20) {increasing system integration};
+    at (-7.62,-3.20) {increasing system integration};
 
-  \node[complete] (campaign) at (-3.80,0.00)
-    {Integrated campaign\\complete normal workflow in Gazebo};
-  \node[layer] (offline) at (-3.80,-1.65)
-    {Offline model evaluation\\language cases and locked visual Test};
-  \node[layer] (integration) at (-3.80,-3.30)
+  \node[complete] (runtime) at (-3.80,0.00)
+    {Active Gazebo runtime\\manual, hash-bound closed-loop authority};
+  \node[complete] (campaign) at (-3.80,-1.55)
+    {Closed-loop qualification\\12/12 positive + 5/5 fault scenarios};
+  \node[complete] (finaltest) at (-3.80,-3.10)
+    {Sealed Final Test\\one-shot; 1040 Gazebo scenes};
+  \node[layer] (offline) at (-3.80,-4.65)
+    {Offline development evidence\\language cases; Validation and exposed Canary};
+  \node[layer] (integration) at (-3.80,-6.20)
     {Controlled integration tests\\providers, planning and supervision};
-  \node[layer] (local) at (-3.80,-4.95)
+  \node[layer] (local) at (-3.80,-7.75)
     {Unit and configuration checks\\geometry, contracts and translation};
 
   \node[purpose] (p1) at (3.45,0.00)
-    {Shows the complete request-to-motion path in the selected positive
-      scenes.};
-  \node[purpose] (p2) at (3.45,-1.65)
-    {Measures the language interface and visual model offline.};
-  \node[purpose] (p3) at (3.45,-3.30)
+    {Binds the passed positive and fault reports; automatic activation and
+      physical deployment remain forbidden.};
+  \node[purpose] (p2) at (3.45,-1.55)
+    {Shows the request-to-motion path in selected valid scenes and
+      fail-closed behaviour under five closed-loop faults.};
+  \node[purpose] (p3) at (3.45,-3.10)
+    {Measures the frozen visual model once on 4680 visible targets; Gazebo only,
+      with no control or physical-deployment claim.};
+  \node[purpose] (p4) at (3.45,-4.65)
+    {Measures the language interface and visual-model development behaviour;
+      the exposed Canary is not Test evidence.};
+  \node[purpose] (p5) at (3.45,-6.20)
     {Exercises interactions and protective cases in controlled test
       harnesses.};
-  \node[purpose] (p4) at (3.45,-4.95)
+  \node[purpose] (p6) at (3.45,-7.75)
     {Checks local rules, data structures and configuration consistency.};
 
-  \draw[link] (campaign.east) -- (p1.west);
-  \draw[link] (offline.east) -- (p2.west);
-  \draw[link] (integration.east) -- (p3.west);
-  \draw[link] (local.east) -- (p4.west);
+  \draw[link] (runtime.east) -- (p1.west);
+  \draw[link] (campaign.east) -- (p2.west);
+  \draw[link] (finaltest.east) -- (p3.west);
+  \draw[link] (offline.east) -- (p4.west);
+  \draw[link] (integration.east) -- (p5.west);
+  \draw[link] (local.east) -- (p6.west);
 
 \end{tikzpicture}

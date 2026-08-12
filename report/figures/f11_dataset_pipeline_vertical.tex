@@ -2,10 +2,10 @@
   font=\sffamily\small,
   number/.style={circle,draw=mfjablue,fill=mfjablue,text=white,
     minimum size=8mm,inner sep=0pt,font=\sffamily\small\bfseries},
-  title/.style={draw,rounded corners=2pt,align=center,text width=38mm,
-    minimum height=10mm,inner sep=1.5mm,font=\sffamily\small\bfseries},
-  detail/.style={draw,rounded corners=2pt,align=center,text width=92mm,
-    minimum height=10mm,inner sep=1.5mm,font=\sffamily\small},
+  title/.style={draw,rounded corners=2pt,align=center,text width=39mm,
+    minimum height=11mm,inner sep=1.4mm,font=\sffamily\small\bfseries},
+  detail/.style={draw,rounded corners=2pt,align=center,text width=91mm,
+    minimum height=11mm,inner sep=1.4mm,font=\sffamily\small},
   teal/.style={draw=mfjagreen,fill=mfjagreen!6},
   blue/.style={draw=mfjablue,fill=mfjalight},
   green/.style={draw=mfjagreen!90!black,fill=mfjagreen!7},
@@ -14,54 +14,51 @@
   flow/.style={-{Latex[length=2mm]},thick,mfjablue}
 ]
   \node[number] (n1) at (-7.45,0) {1};
-  \node[title,teal] at (-4.95,0) {Generate\\varied scenes};
+  \node[title,teal] at (-4.90,0) {Build the rail-isolated\\training pool};
   \node[detail,teal] at (2.25,0)
-    {Create eight geometric variants for\\every non-empty identity configuration};
+    {5528 training scenes: 1528 replay scenes + 4000 hard cases;\\
+     pretrained weights initialise training; only the rail-isolated model enters runtime};
 
-  \node[number] (n2) at (-7.45,-1.45) {2};
-  \node[title,teal] at (-4.95,-1.45) {Capture paired images};
-  \node[detail,teal] at (2.25,-1.45)
-    {Record synchronised left- and right-camera RGB frames for each scene};
+  \node[number] (n2) at (-7.45,-2.00) {2};
+  \node[title,blue] at (-4.90,-2.00) {Select and calibrate\\on Validation};
+  \node[detail,blue] at (2.25,-2.00)
+    {512 scenes / 2254 present shuttles; select epoch 11 and fit\\
+     calibration and runtime thresholds without Final Test access};
 
-  \node[number] (n3) at (-7.45,-3.30) {3};
-  \node[title,blue,minimum height=22mm] at (-4.95,-3.30)
-    {Separate inputs\\and labels};
-  \node[detail,blue,minimum height=22mm] at (2.25,-3.30) {};
-  \node[draw=mfjablue,fill=mfjalight,rounded corners=2pt,align=center,
-    text width=40mm,minimum height=13mm,font=\sffamily\small]
-    at (-0.15,-3.30) {\textbf{Model input}\\Paired RGB only};
-  \node[draw=black!50,fill=black!4,rounded corners=2pt,align=center,
-    text width=40mm,minimum height=13mm,font=\sffamily\small]
-    at (4.65,-3.30) {\textbf{Training labels}\\Simulator state and target mask};
+  \node[number] (n3) at (-7.45,-4.00) {3};
+  \node[title,green] at (-4.90,-4.00) {Freeze checkpoint and\\Final Test protocol};
+  \node[detail,green] at (2.25,-4.00)
+    {Freeze epoch-11 checkpoint, evaluator, coverage and acceptance rules;\\
+     preregister one-shot execution before opening Final Test data};
 
-  \node[number] (n4) at (-7.45,-5.15) {4};
-  \node[title,green] at (-4.95,-5.15) {Group related scenes};
-  \node[detail,green] at (2.25,-5.15)
-    {Keep all variants of one identity configuration in the same partition};
+  \node[number] (n4) at (-7.45,-6.00) {4};
+  \node[title,red] at (-4.90,-6.00) {Fix coverage before\\inference};
+  \node[detail,red] at (2.25,-6.00)
+    {Audit the 1024-scene base plan using control metadata only;\\
+     no attempt reserved and no prediction or metric inspected};
 
-  \node[number] (n5) at (-7.45,-7.15) {5};
-  \node[title,orange,minimum height=28mm] at (-4.95,-7.15)
-    {Train, select\\and evaluate};
-  \node[detail,orange,minimum height=28mm] at (2.25,-7.15) {};
-  \node[draw=mfjaorange,fill=mfjaorange!7,rounded corners=2pt,align=center,
-    text width=39mm,minimum height=11mm,font=\sffamily\small]
-    at (-0.20,-6.50) {Train};
-  \node[draw=mfjaorange,fill=mfjaorange!7,rounded corners=2pt,align=center,
-    text width=39mm,minimum height=11mm,font=\sffamily\small]
-    at (4.70,-6.50) {Validation\\model selection};
-  \node[draw=mfjared,fill=mfjared!5,rounded corners=2pt,align=center,
-    text width=82mm,minimum height=11mm,font=\sffamily\small]
-    at (2.25,-7.80) {Final Test evaluation};
+  \node[number] (n5) at (-7.45,-8.00) {5};
+  \node[title,orange] at (-4.90,-8.00) {Complete the declared\\coverage};
+  \node[detail,orange] at (2.25,-8.00)
+    {Add 16 preregistered stress scenes: 1040 scenes / 2080 images;\\
+     canonical control schemas and byte-identical captured data};
 
-  \node[number] (n6) at (-7.45,-9.35) {6};
-  \node[title,red,minimum height=18mm] at (-4.95,-9.35)
-    {Use the selected\\runtime model};
-  \node[detail,red,minimum height=18mm] at (2.25,-9.35)
-    {Deploy the selected epoch with its\\preprocessing and output description};
+  \node[number] (n6) at (-7.45,-10.00) {6};
+  \node[title,blue] at (-4.90,-10.00) {Reserve and run\\exactly once};
+  \node[detail,blue] at (2.25,-10.00)
+    {Evaluate 4680 visible shuttles; no training, checkpoint selection,\\
+     calibration refit or threshold selection on Final Test};
+
+  \node[number] (n7) at (-7.45,-12.00) {7};
+  \node[title,green] at (-4.90,-12.00) {Seal the primary\\result};
+  \node[detail,green] at (2.25,-12.00)
+    {Pass 76/76 base gates + 4/4 preregistered runtime-threshold gates;\\
+     immutable result requires human review and grants no actuation authority};
 
   \draw[flow] (n1) -- (n2);
   \draw[flow] (n2) -- (n3);
   \draw[flow] (n3) -- (n4);
   \draw[flow] (n4) -- (n5);
   \draw[flow] (n5) -- (n6);
+  \draw[flow] (n6) -- (n7);
 \end{tikzpicture}

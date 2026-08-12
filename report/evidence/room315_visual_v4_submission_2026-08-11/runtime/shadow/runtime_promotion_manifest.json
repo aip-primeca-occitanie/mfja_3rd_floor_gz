@@ -1,0 +1,207 @@
+{
+  "acceptance_thresholds": {
+    "active_frame_policy": "all_present_slots_must_pass",
+    "loaded_confidence": {
+      "calibrated": false,
+      "derivation": "binary_argmax_floor; validation loaded accuracy is diagnostic",
+      "interpretation": "uncalibrated_softmax_argmax_decision_floor",
+      "probability_guarantee": false,
+      "validation_loaded_accuracy": 0.9986690282821655
+    },
+    "minimum_loaded_confidence": 0.5,
+    "minimum_segment_confidence": 0.9139089813389109,
+    "presence_contract": {
+      "absent_slots": "masked_and_never_accepted",
+      "missing_or_stale_presence": "reject_frame",
+      "source": "authoritative_runtime_presence_provider",
+      "threshold_scope": "present_slots_only"
+    },
+    "s_ratio": {
+      "acceptance_absolute_error_tolerance": 0.12,
+      "confidence_gate": false,
+      "diagnostic_absolute_error_tolerance": 0.05,
+      "runtime_ground_truth_error_available": false,
+      "threshold_source": "validation_only_task_contract",
+      "validation_joint_accuracy_at_acceptance_tolerance": 0.9946761313220941,
+      "validation_joint_accuracy_at_diagnostic_tolerance": 0.9498669032830523
+    },
+    "segment_confidence": {
+      "calibrated": true,
+      "derivation": "validation_selective_curve_100_percent_coverage_floor",
+      "requested_coverage": 1.0,
+      "temperature": 0.6007370031399095
+    }
+  },
+  "artifacts": {
+    "canary_completion_ledger": {
+      "path": "canary_completion_ledger.json",
+      "sha256": "db43722df617a1a05b884fa3ebd6b35e9d6d87258c2d3cb9f871e70844c2b251"
+    },
+    "canary_final_report": {
+      "path": "canary_final_report.json",
+      "sha256": "fda9a772fac67d36d59544af0299c3aad4fba599c1ea8c0edf39b56f62b42e04"
+    },
+    "checkpoint": {
+      "path": "checkpoint_epoch_011.pt",
+      "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+    },
+    "effective_config": {
+      "path": "effective_config.json",
+      "sha256": "53f68426ceb0f79fb2c44dbd85302f2d9dad0da364da66959682ae6f3f512371"
+    },
+    "public_topology_contract": {
+      "path": "public_topology_contract.json",
+      "sha256": "6d2c4fd5bb42b90c89058094f91d1aba03c63d2db22499a45231b8c46f9fb90d"
+    },
+    "training_final_report": {
+      "path": "training_final_report.json",
+      "sha256": "d1e2fd2d360f724fb092fe22d8cd3b9237d80f8bd4c62ba134b61ee9a8875218"
+    },
+    "validation_acceptance": {
+      "path": "validation_acceptance.json",
+      "sha256": "e87e90fb72f24bd2fecfb54eb758a899f95a3851a0cdd9293b61125193581a6a"
+    },
+    "validation_segment_calibration": {
+      "path": "validation_segment_calibration.json",
+      "sha256": "e86c9cc084a7b0260f2749ee49eed3ba5d4027383ac8e8de75031019abec44d0"
+    }
+  },
+  "automatic_promotion_allowed": false,
+  "calibration_contract": {
+    "data_role": "validation",
+    "fit_scope": "validation_only",
+    "schema_version": "room315.visual_segment_calibration.v4.v1",
+    "temperature": 0.6007370031399095
+  },
+  "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+  "deployment_mode": "shadow",
+  "eligibility": {
+    "active_runtime_review": false,
+    "active_runtime_selected": false,
+    "active_transition_requires_new_immutable_manifest": true,
+    "shadow_load_and_evaluation": true
+  },
+  "evidence_policy": {
+    "canary_attempt_key": "e5b24314038c7d92596b7153f6c0013688de04c312706c0f3a5dce5cdd100807",
+    "canary_handoff_trusted": true,
+    "canary_role": "post_selection_development_regression",
+    "checkpoint_selection": "validation_only",
+    "datasets_bundled": false,
+    "test_loaded": false,
+    "training_or_evaluation_during_build": false
+  },
+  "immutable": true,
+  "manual_only": true,
+  "manual_review_approved": false,
+  "manual_runtime_review_status": "pending",
+  "model_contract": {
+    "attention_heads": 8,
+    "checkpoint_epoch": 11,
+    "checkpoint_loading": "strict",
+    "checkpoint_schema_version": "room315.visual_training.v4.checkpoint.v1",
+    "cross_camera_feature_path": false,
+    "dropout": 0.1,
+    "effective_config_fingerprint_sha256": "719c4c8eaa3a16c98c1346cc6e5d6259c2e8c77d0a325802b72abc13c9e3b523",
+    "head_type": "spatial_query",
+    "hidden_dim": 256,
+    "model_kind": "room315_visual_state_resnet18_split_rails_v4",
+    "output_keys": [
+      "segment_logits",
+      "loaded_logits",
+      "bbox",
+      "s_ratio"
+    ],
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "side_source": "fixed_identity_prefix",
+    "slot_order": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ]
+  },
+  "preprocessing_contract": {
+    "camera_order": [
+      "left_rail_rgb",
+      "right_rail_rgb"
+    ],
+    "channel_order": [
+      "left_rgb",
+      "right_rgb"
+    ],
+    "height": 240,
+    "input_shape": [
+      "B",
+      6,
+      240,
+      320
+    ],
+    "normalization_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resampling": "bilinear",
+    "resize": "aspect_preserving_bilinear_4_by_3",
+    "runtime_augmentations": false,
+    "width": 320
+  },
+  "rollback_contract": {
+    "backend": "v3",
+    "checkpoint_path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+    "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "preserved_unchanged": true
+  },
+  "schema_version": "room315.visual_runtime_promotion.v4.v1",
+  "shadow_execution_authorized": true,
+  "topology_contract": {
+    "fingerprint_sha256": "02ddcd78b1e1f410e7565ab018a9b4f25297ccf2d74c41232e981ebfc9eed344",
+    "schema_version": "room315.public_segment_length_contract.v1",
+    "segment_name_domain": "public_ros_label",
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "side_order": [
+      "left",
+      "right"
+    ],
+    "source": "room_315_rail_defaults.public_rail_segment_lengths"
+  }
+}

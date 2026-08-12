@@ -2,12 +2,19 @@ room_315_task_execution_node:
   ros__parameters:
     use_sim_time: true
 
-    # Fail closed by default. The guarded launch command must opt in.
+    # Fail closed by default. The guarded launch command must opt in, after
+    # re-verifying this exact immutable V4 Gazebo runtime authorization.
     execution_enabled: false
+    task_execution_authorization_path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/candidate_state.json
+    task_execution_authorization_sha256: 14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1
+    task_execution_promotion_manifest_path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/runtime_promotion_manifest.json
 
     task_goal_topic: /room_315/task_goal
     task_status_topic: /room_315/task_goal/status
     accepted_observed_state_topic: /room_315/visual_state/observed_state
+    # V4 is the sole visual provenance admitted to the active planning path.
+    allowed_visual_schema_version: room315.visual_state.v4
+    allowed_visual_checkpoint_sha256: 869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d
     supervisor_command_topic: /room_315/vla/command
     supervisor_status_topic: /room_315/vla/status
     # Direct 30 Hz deterministic binary feedback anchors exact slot occupancy

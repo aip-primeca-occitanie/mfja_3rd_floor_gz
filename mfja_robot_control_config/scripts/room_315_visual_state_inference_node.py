@@ -9,6 +9,8 @@ import os
 import re
 import sys
 import time
+from dataclasses import asdict
+from dataclasses import is_dataclass
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +44,7 @@ from room_315_visual_runtime import ArtifactPaths
 from room_315_visual_runtime import DecodedVisualPrediction
 from room_315_visual_runtime import FIXED_IDENTITY_ORDER
 from room_315_visual_runtime import InferenceTimings
+from room_315_visual_runtime import MODEL_KIND as V3_MODEL_KIND
 from room_315_visual_runtime import MODEL_SCHEMA
 from room_315_visual_runtime import Room315VisualModelRuntime
 from room_315_visual_runtime import VisualRuntimeError
@@ -55,6 +58,12 @@ from room_315_visual_runtime_validation import DeterministicTemporalStabilizer
 from room_315_visual_runtime_validation import ValidationConfig
 from room_315_visual_runtime_validation import ValidationResult
 from room_315_visual_runtime_validation import validate_prediction
+
+
+V4_MODEL_SCHEMA = 'room315.visual_state.v4'
+V4_MODEL_KIND = 'room315_visual_state_resnet18_split_rails_v4'
+V4_RAW_PREDICTION_SCHEMA = 'room315.raw_model_prediction.v4'
+SHADOW_TOPIC_ROOT = '/room_315/visual_state/shadow_v4'
 
 
 def image_message_to_rgb8(message: Image) -> np.ndarray:
@@ -163,6 +172,21 @@ class Room315VisualStateInferenceNode(Node):
     def __init__(self) -> None:
         super().__init__('room_315_visual_state_inference_node')
         self._declare_parameters()
+        self.runtime_generation = self._choice(
+            'runtime_generation',
+            {'v3', 'v4'},
+        )
+        self.runtime_mode = self._choice(
+            'runtime_mode',
+            {'active', 'shadow'},
+        )
+        self.model_schema = (
+            V4_MODEL_SCHEMA if self.runtime_generation == 'v4' else MODEL_SCHEMA
+        )
+        self.model_kind = ''
+        self.promotion_manifest_sha256 = ''
+        self.v4_promotion: Any | None = None
+        self.v4_api: Any | None = None
         self.presence = ShuttleStatePresenceProvider(
             timeout_s=self._float('presence_state_timeout_s'),
             warmup_s=self._float('presence_warmup_s'),
@@ -193,35 +217,43 @@ class Room315VisualStateInferenceNode(Node):
             ema_alpha=self._float('temporal_ema_alpha'),
         )
         self.plan_gate = DeterministicPlanSys2FactGate()
-        self.plan_client = PlanSys2PredicateClient(
-            self,
-            add_service=self._string('plansys2_add_predicate_service'),
-            remove_service=self._string('plansys2_remove_predicate_service'),
-        )
+        self.plan_client: PlanSys2PredicateClient | None = None
+        if self.runtime_mode != 'shadow':
+            self.plan_client = PlanSys2PredicateClient(
+                self,
+                add_service=self._string('plansys2_add_predicate_service'),
+                remove_service=self._string('plansys2_remove_predicate_service'),
+            )
 
         self.raw_pub = self.create_publisher(
             VisualStateObservation,
-            self._string('raw_observation_topic'),
+            self._output_topic('raw_observation_topic', 'raw'),
             10,
         )
         self.raw_model_prediction_pub = self.create_publisher(
             String,
-            self._string('raw_model_prediction_topic'),
+            self._output_topic(
+                'raw_model_prediction_topic',
+                'raw_model_prediction',
+            ),
             10,
         )
         self.validation_pub = self.create_publisher(
             VisualStateObservation,
-            self._string('validation_topic'),
+            self._output_topic('validation_topic', 'validation'),
             10,
         )
         self.observed_state_pub = self.create_publisher(
             VisualStateObservation,
-            self._string('accepted_observed_state_topic'),
+            self._output_topic(
+                'accepted_observed_state_topic',
+                'observed_state',
+            ),
             10,
         )
         self.diagnostics_pub = self.create_publisher(
             DiagnosticArray,
-            self._string('diagnostics_topic'),
+            self._output_topic('diagnostics_topic', 'diagnostics'),
             10,
         )
 
@@ -268,8 +300,10 @@ class Room315VisualStateInferenceNode(Node):
         self.model_runtime: Room315VisualModelRuntime | None = None
         self.artifacts = None
         self.artifact_error = ''
-        self.checkpoint_sha256 = self._artifact_string(
-            'expected_checkpoint_sha256'
+        self.checkpoint_sha256 = (
+            ''
+            if self.runtime_generation == 'v4'
+            else self._artifact_string('expected_checkpoint_sha256')
         )
         self.last_inference_stamp_s: float | None = None
         self.last_accepted_stamp_s: float | None = None
@@ -295,10 +329,14 @@ class Room315VisualStateInferenceNode(Node):
 
     def _declare_parameters(self) -> None:
         parameters = {
+            'runtime_generation': 'v4',
+            'runtime_mode': 'active',
             'left_image_topic': '/room_315/vla/left_rail_rgbd/image',
             'right_image_topic': '/room_315/vla/right_rail_rgbd/image',
             'left_presence_topic': '/room_315/rails/left/shuttles/state',
             'right_presence_topic': '/room_315/rails/right/shuttles/state',
+            'v4_promotion_manifest_path': '',
+            'expected_v4_promotion_manifest_sha256': '',
             'checkpoint_path': '',
             'sidecar_directory': '',
             'expected_checkpoint_sha256': '',
@@ -341,6 +379,10 @@ class Room315VisualStateInferenceNode(Node):
             self.declare_parameter(name, default)
 
     def _load_artifacts_and_model(self) -> None:
+        if self.runtime_generation == 'v4':
+            self._load_v4_promotion_and_model()
+            return
+        self.model_kind = V3_MODEL_KIND
         try:
             checkpoint_value = self._artifact_string('checkpoint_path')
             sidecar_value = self._artifact_string('sidecar_directory')
@@ -393,6 +435,89 @@ class Room315VisualStateInferenceNode(Node):
             self.artifact_error = str(exc)
             self.get_logger().error(
                 f'Visual runtime not ready; artifact/model load failed: {exc}'
+            )
+
+    def _load_v4_promotion_and_model(self) -> None:
+        """Load only a fully verified V4 promotion manifest and checkpoint."""
+
+        self.model_kind = V4_MODEL_KIND
+        try:
+            from room_315_visual_runtime_v4 import (
+                Room315VisualModelRuntimeV4,
+            )
+            from room_315_visual_runtime_v4 import (
+                build_diagnostic_legacy_output_v4,
+            )
+            from room_315_visual_runtime_v4 import decode_active_slots_v4
+            from room_315_visual_runtime_v4 import verify_v4_runtime_promotion
+
+            manifest_value = self._v4_artifact_string(
+                'v4_promotion_manifest_path'
+            )
+            expected_sha256 = self._v4_artifact_string(
+                'expected_v4_promotion_manifest_sha256'
+            )
+            if not manifest_value:
+                raise VisualRuntimeError(
+                    'v4_promotion_manifest_path parameter is empty'
+                )
+            if not expected_sha256:
+                raise VisualRuntimeError(
+                    'expected_v4_promotion_manifest_sha256 parameter is empty'
+                )
+            promotion = verify_v4_runtime_promotion(
+                Path(manifest_value).expanduser().resolve(),
+                expected_sha256,
+            )
+            if promotion.deployment_mode != self.runtime_mode:
+                raise VisualRuntimeError(
+                    'V4 promotion deployment_mode does not authorize requested '
+                    f'runtime_mode: {promotion.deployment_mode!r} != '
+                    f'{self.runtime_mode!r}'
+                )
+            requested_guards = {
+                'dry_run_state_fusion': self._effective_dry_run_state_fusion(),
+                'plansys2_update_enabled': (
+                    self._effective_plansys2_update_enabled()
+                ),
+            }
+            approved_guards = dict(promotion.runtime_guards)
+            for guard_name, requested_value in requested_guards.items():
+                if approved_guards.get(guard_name) is not requested_value:
+                    raise VisualRuntimeError(
+                        'V4 launch guard exceeds or contradicts the immutable '
+                        f'authorization: {guard_name}={requested_value!r}, '
+                        f'approved={approved_guards.get(guard_name)!r}'
+                    )
+            runtime = Room315VisualModelRuntimeV4(
+                promotion,
+                device=self._string('device'),
+            )
+            runtime.load()
+            self.v4_promotion = promotion
+            self.v4_api = {
+                'decode': decode_active_slots_v4,
+                'diagnostic': build_diagnostic_legacy_output_v4,
+            }
+            self.model_runtime = runtime
+            self.promotion_manifest_sha256 = promotion.manifest_sha256
+            self.checkpoint_sha256 = promotion.checkpoint_sha256
+            self.model_kind = promotion.model_kind
+            self.artifact_error = ''
+            self.get_logger().info(
+                f'V4 visual checkpoint loaded strictly on {runtime.device}; '
+                f'mode={self.runtime_mode}; '
+                f'scope={promotion.authorization_scope}; '
+                f'load_ms={runtime.model_load_duration_ms:.3f}'
+            )
+        except Exception as exc:  # noqa: BLE001 - fail-closed startup boundary
+            self.model_runtime = None
+            self.v4_promotion = None
+            self.v4_api = None
+            self.artifact_error = str(exc)
+            self.get_logger().error(
+                'V4 visual runtime not ready; promotion/model load failed: '
+                f'{exc}'
             )
 
     def _on_presence(self, side: str, message: ShuttleState) -> None:
@@ -457,32 +582,78 @@ class Room315VisualStateInferenceNode(Node):
         try:
             left_rgb = image_message_to_rgb8(left_message)
             right_rgb = image_message_to_rgb8(right_message)
-            if self.model_runtime is None or self.artifacts is None:
+            if self.model_runtime is None:
                 raise VisualRuntimeError('model runtime is not ready')
-            raw, timings = self.model_runtime.infer(left_rgb, right_rgb)
-            self.last_timings = timings
-            raw_message = String()
-            raw_message.data = json.dumps({
-                'schema_version': 'room315.raw_model_prediction.v1',
-                'checkpoint_sha256': self.checkpoint_sha256,
-                'timestamp_s': now_s,
-                'left_image_stamp_s': left_stamp,
-                'right_image_stamp_s': right_stamp,
-                'output_dimension': int(raw.shape[0]),
-                'denormalized_output': [float(value) for value in raw],
-                'control_input': False,
-            }, sort_keys=True)
-            self.raw_model_prediction_pub.publish(raw_message)
-            prediction = decode_active_slots(
-                raw,
-                vectorizer=self.artifacts.vectorizer,
-                presence=presence,
-                timestamp_s=now_s,
-                left_image_stamp_s=left_stamp,
-                right_image_stamp_s=right_stamp,
-                left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
-                right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
-            )
+            if self.runtime_generation == 'v4':
+                if self.v4_promotion is None or self.v4_api is None:
+                    raise VisualRuntimeError('V4 promotion runtime is not ready')
+                structured, timings = self.model_runtime.infer(
+                    left_rgb,
+                    right_rgb,
+                )
+                self.last_timings = timings
+                diagnostic = self.v4_api['diagnostic'](
+                    structured,
+                    promotion=self.v4_promotion,
+                    presence=presence,
+                    left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
+                    right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
+                )
+                if diagnostic.control_input_permitted is not False:
+                    raise VisualRuntimeError(
+                        'V4 diagnostic legacy output attempted to permit control'
+                    )
+                raw_payload = _v4_raw_prediction_payload(
+                    diagnostic,
+                    checkpoint_sha256=self.checkpoint_sha256,
+                    promotion_manifest_sha256=(
+                        self.promotion_manifest_sha256
+                    ),
+                    runtime_mode=self.runtime_mode,
+                    timestamp_s=now_s,
+                    left_image_stamp_s=left_stamp,
+                    right_image_stamp_s=right_stamp,
+                )
+                raw_message = String()
+                raw_message.data = json.dumps(raw_payload, sort_keys=True)
+                self.raw_model_prediction_pub.publish(raw_message)
+                prediction = self.v4_api['decode'](
+                    structured,
+                    promotion=self.v4_promotion,
+                    presence=presence,
+                    timestamp_s=now_s,
+                    left_image_stamp_s=left_stamp,
+                    right_image_stamp_s=right_stamp,
+                    left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
+                    right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
+                )
+            else:
+                if self.artifacts is None:
+                    raise VisualRuntimeError('V3 artifacts are not ready')
+                raw, timings = self.model_runtime.infer(left_rgb, right_rgb)
+                self.last_timings = timings
+                raw_message = String()
+                raw_message.data = json.dumps({
+                    'schema_version': 'room315.raw_model_prediction.v1',
+                    'checkpoint_sha256': self.checkpoint_sha256,
+                    'timestamp_s': now_s,
+                    'left_image_stamp_s': left_stamp,
+                    'right_image_stamp_s': right_stamp,
+                    'output_dimension': int(raw.shape[0]),
+                    'denormalized_output': [float(value) for value in raw],
+                    'control_input': False,
+                }, sort_keys=True)
+                self.raw_model_prediction_pub.publish(raw_message)
+                prediction = decode_active_slots(
+                    raw,
+                    vectorizer=self.artifacts.vectorizer,
+                    presence=presence,
+                    timestamp_s=now_s,
+                    left_image_stamp_s=left_stamp,
+                    right_image_stamp_s=right_stamp,
+                    left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
+                    right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
+                )
             self.raw_pub.publish(self._observation_message(
                 stage='raw',
                 prediction=prediction,
@@ -520,7 +691,7 @@ class Room315VisualStateInferenceNode(Node):
             result,
             presence,
             checkpoint_sha256=self.checkpoint_sha256,
-            schema_version=MODEL_SCHEMA,
+            schema_version=self.model_schema,
             stale_after_s=self._float('stale_image_timeout_s'),
             state_id=f'room315-visual-{int(now_s * 1_000_000)}',
         )
@@ -631,8 +802,11 @@ class Room315VisualStateInferenceNode(Node):
             self.rejection_counts[reason] = self.rejection_counts.get(reason, 0) + 1
 
     def _maybe_update_plansys2(self, fusion: StateFusionResult) -> None:
-        enabled = self._bool('plansys2_update_enabled')
-        dry_run = self._bool('dry_run_state_fusion')
+        if self.runtime_mode == 'shadow':
+            self.plan_gate.reset()
+            return
+        enabled = self._effective_plansys2_update_enabled()
+        dry_run = self._effective_dry_run_state_fusion()
         safety_ready = self._safety_ready()
         update = self.plan_gate.build_update(
             fusion,
@@ -641,6 +815,8 @@ class Room315VisualStateInferenceNode(Node):
             safety_ready=safety_ready,
             enabled=enabled and not dry_run,
         )
+        if self.plan_client is None:
+            return
         if update.accepted and not self.plan_client.apply(update):
             self.get_logger().error(
                 f'PlanSys2 predicate update failed closed: {self.plan_client.last_error}'
@@ -675,7 +851,7 @@ class Room315VisualStateInferenceNode(Node):
         message.header.frame_id = 'room_315'
         message.left_image_stamp = left_message.header.stamp
         message.right_image_stamp = right_message.header.stamp
-        message.schema_version = MODEL_SCHEMA
+        message.schema_version = self.model_schema
         message.checkpoint_sha256 = self.checkpoint_sha256
         message.stage = stage
         message.accepted = bool(
@@ -719,7 +895,11 @@ class Room315VisualStateInferenceNode(Node):
             <= self._float('stale_image_timeout_s')
         )
         level = DiagnosticStatus.OK
-        summary = 'visual runtime ready'
+        summary = (
+            'visual runtime ready'
+            if self.runtime_mode == 'active'
+            else 'visual runtime ready in isolated shadow mode'
+        )
         if not model_ready:
             level = DiagnosticStatus.ERROR
             summary = 'model/artifact runtime not ready'
@@ -732,6 +912,22 @@ class Room315VisualStateInferenceNode(Node):
         status.hardware_id = self.checkpoint_sha256[:12] or 'unverified'
         status.message = summary
         values = {
+            'runtime_generation': self.runtime_generation,
+            'runtime_mode': self.runtime_mode,
+            'model_kind': self.model_kind,
+            'promotion_manifest_sha256': self.promotion_manifest_sha256,
+            'v4_authorization_scope': (
+                self.v4_promotion.authorization_scope
+                if self.v4_promotion is not None
+                else ''
+            ),
+            'v4_actuation_authorized': bool(
+                self.v4_promotion is not None
+                and self.v4_promotion.runtime_guards.get(
+                    'actuation_enabled',
+                    False,
+                )
+            ),
             'model_ready': model_ready,
             'input_ready': input_ready,
             'presence_ready': presence.ready,
@@ -745,7 +941,7 @@ class Room315VisualStateInferenceNode(Node):
                 else self._string('device')
             ),
             'checkpoint_sha256': self.checkpoint_sha256,
-            'schema_version': MODEL_SCHEMA,
+            'schema_version': self.model_schema,
             'last_inference_timestamp_s': self.last_inference_stamp_s,
             'last_accepted_observation_timestamp_s': self.last_accepted_stamp_s,
             'inference_latency_ms': self.last_timings.inference_ms,
@@ -760,9 +956,15 @@ class Room315VisualStateInferenceNode(Node):
             ),
             'presence_reasons': list(presence.reasons),
             'safety_ready': self._safety_ready(),
-            'plansys2_update_enabled': self._bool('plansys2_update_enabled'),
-            'dry_run_state_fusion': self._bool('dry_run_state_fusion'),
-            'plansys2_last_error': self.plan_client.last_error,
+            'plansys2_update_enabled': (
+                self._effective_plansys2_update_enabled()
+            ),
+            'dry_run_state_fusion': self._effective_dry_run_state_fusion(),
+            'plansys2_last_error': (
+                self.plan_client.last_error
+                if self.plan_client is not None
+                else 'disabled_in_shadow_mode'
+            ),
         }
         status.values = [
             KeyValue(key=key, value=json.dumps(value, sort_keys=True))
@@ -803,6 +1005,54 @@ class Room315VisualStateInferenceNode(Node):
                 return override
         return self._string(name).strip()
 
+    def _v4_artifact_string(self, name: str) -> str:
+        environment_names = {
+            'v4_promotion_manifest_path': (
+                'ROOM315_VISUAL_V4_PROMOTION_MANIFEST_PATH',
+                'ROOM315_VISUAL_V4_MANIFEST_PATH',
+            ),
+            'expected_v4_promotion_manifest_sha256': (
+                'ROOM315_VISUAL_EXPECTED_V4_PROMOTION_MANIFEST_SHA256',
+                'ROOM315_VISUAL_V4_EXPECTED_PROMOTION_MANIFEST_SHA256',
+            ),
+        }
+        overrides = {
+            os.environ[environment_name].strip()
+            for environment_name in environment_names.get(name, ())
+            if os.environ.get(environment_name, '').strip()
+        }
+        if len(overrides) > 1:
+            raise VisualRuntimeError(
+                f'conflicting V4 environment overrides for {name}'
+            )
+        if overrides:
+            return overrides.pop()
+        return self._string(name).strip()
+
+    def _output_topic(self, parameter: str, shadow_leaf: str) -> str:
+        if self.runtime_mode == 'shadow':
+            return f'{SHADOW_TOPIC_ROOT}/{shadow_leaf}'
+        return self._string(parameter)
+
+    def _effective_dry_run_state_fusion(self) -> bool:
+        return bool(
+            self.runtime_mode == 'shadow'
+            or self._bool('dry_run_state_fusion')
+        )
+
+    def _effective_plansys2_update_enabled(self) -> bool:
+        return bool(
+            self.runtime_mode != 'shadow'
+            and self._bool('plansys2_update_enabled')
+        )
+
+    def _choice(self, name: str, allowed: set[str]) -> str:
+        value = self._string(name).strip().lower()
+        if value not in allowed:
+            choices = ','.join(sorted(allowed))
+            raise ValueError(f'{name} must be one of {{{choices}}}, got {value!r}')
+        return value
+
     def _float(self, name: str) -> float:
         return float(self.get_parameter(name).value)
 
@@ -811,6 +1061,61 @@ class Room315VisualStateInferenceNode(Node):
 
     def _bool(self, name: str) -> bool:
         return bool(self.get_parameter(name).value)
+
+
+def _v4_raw_prediction_payload(
+    diagnostic: Any,
+    *,
+    checkpoint_sha256: str,
+    promotion_manifest_sha256: str,
+    runtime_mode: str,
+    timestamp_s: float,
+    left_image_stamp_s: float,
+    right_image_stamp_s: float,
+) -> dict[str, Any]:
+    """Build an explicitly diagnostic-only JSON payload for V4 shadowing."""
+
+    if getattr(diagnostic, 'control_input_permitted', None) is not False:
+        raise VisualRuntimeError(
+            'V4 diagnostic compatibility output is not fail-closed'
+        )
+    vector = tuple(float(value) for value in diagnostic.legacy_vector)
+    if len(vector) != 200 or not all(math.isfinite(value) for value in vector):
+        raise VisualRuntimeError(
+            'V4 diagnostic legacy output must contain 200 finite values'
+        )
+    return {
+        'schema_version': str(
+            getattr(diagnostic, 'schema_version', V4_RAW_PREDICTION_SCHEMA)
+        ),
+        'model_schema_version': V4_MODEL_SCHEMA,
+        'runtime_generation': 'v4',
+        'runtime_mode': str(runtime_mode),
+        'model_kind': V4_MODEL_KIND,
+        'checkpoint_sha256': str(checkpoint_sha256),
+        'promotion_manifest_sha256': str(promotion_manifest_sha256),
+        'timestamp_s': float(timestamp_s),
+        'left_image_stamp_s': float(left_image_stamp_s),
+        'right_image_stamp_s': float(right_image_stamp_s),
+        'output_dimension': len(vector),
+        'output_representation': 'diagnostic_legacy_v3_adapter',
+        'denormalized_output': list(vector),
+        'acceptance_envelope': _json_safe(diagnostic.acceptance),
+        'shuttles': _json_safe(diagnostic.shuttles),
+        'control_input': False,
+    }
+
+
+def _json_safe(value: Any) -> Any:
+    if is_dataclass(value) and not isinstance(value, type):
+        return _json_safe(asdict(value))
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
 
 
 def _shuttle_messages(
@@ -838,6 +1143,8 @@ def _shuttle_messages(
             item.s_ratio = float(shuttle.s_ratio)
             item.segment_length_m = float(shuttle.segment_length_m)
             item.loaded_state = shuttle.loaded_state
+            item.segment_confidence = float(shuttle.segment_confidence)
+            item.loaded_confidence = float(shuttle.loaded_confidence)
         messages.append(item)
     return messages
 

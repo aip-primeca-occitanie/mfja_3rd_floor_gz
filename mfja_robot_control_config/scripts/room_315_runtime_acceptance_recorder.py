@@ -26,10 +26,159 @@ from room_315_runtime_acceptance_report import load_json
 from room_315_runtime_acceptance_report import validate_scenario_manifest
 
 
+def evaluate_observation_against_ground_truth(
+    observation: dict[str, Any],
+    ground_truth: dict[str, Any],
+    *,
+    maximum_s_ratio_error: float,
+) -> dict[str, Any]:
+    """Compare one accepted visual observation with the frozen scene truth.
+
+    The acceptance workflow remains observation-only.  Ground truth is used
+    exclusively by this offline/runtime-review recorder; it is never passed to
+    the visual node, validator, state fuser, planner, or controller.
+    """
+
+    try:
+        tolerance = float(maximum_s_ratio_error)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('maximum_s_ratio_error must be numeric') from exc
+    if not 0.0 <= tolerance <= 1.0:
+        raise ValueError('maximum_s_ratio_error must be in [0, 1]')
+    truth_rows = ground_truth.get('shuttles')
+    observed_rows = observation.get('shuttles')
+    if not isinstance(truth_rows, list) or not isinstance(observed_rows, list):
+        return {
+            'passed': False,
+            'maximum_s_ratio_error': tolerance,
+            'errors': ['invalid_ground_truth_or_observation_shuttle_list'],
+            'per_identity': {},
+        }
+
+    expected: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+    for row in truth_rows:
+        if not isinstance(row, dict):
+            errors.append('invalid_ground_truth_shuttle')
+            continue
+        identity = str(row.get('identity') or '').strip().upper()
+        if not identity or identity in expected:
+            errors.append(f'invalid_or_duplicate_ground_truth_identity:{identity}')
+            continue
+        expected[identity] = row
+
+    observed: dict[str, dict[str, Any]] = {}
+    for row in observed_rows:
+        if not isinstance(row, dict):
+            errors.append('invalid_observed_shuttle')
+            continue
+        identity = str(row.get('identity') or '').strip().upper()
+        if not identity or identity in observed:
+            errors.append(f'invalid_or_duplicate_observed_identity:{identity}')
+            continue
+        observed[identity] = row
+
+    expected_present = set(expected)
+    declared_present = {
+        str(identity).strip().upper()
+        for identity in ground_truth.get('present_identities') or ()
+    }
+    if declared_present != expected_present:
+        errors.append('ground_truth_present_identity_set_mismatch')
+
+    observed_visual = {
+        identity
+        for identity, row in observed.items()
+        if bool(row.get('visual_facts_valid'))
+    }
+    if observed_visual != expected_present:
+        errors.append(
+            'visual_identity_set_mismatch:'
+            f'expected={sorted(expected_present)},observed={sorted(observed_visual)}'
+        )
+
+    per_identity: dict[str, Any] = {}
+    for identity in sorted(expected_present):
+        truth = expected[identity]
+        item = observed.get(identity)
+        identity_errors: list[str] = []
+        if item is None:
+            identity_errors.append('missing_observation_slot')
+            per_identity[identity] = {
+                'passed': False,
+                'errors': identity_errors,
+            }
+            errors.append(f'{identity}:missing_observation_slot')
+            continue
+        expected_side = str(truth.get('side') or '').strip().lower()
+        expected_segment = str(truth.get('segment') or '').strip().upper()
+        expected_loaded = str(truth.get('loaded_state') or '').strip().lower()
+        actual_side = str(item.get('side') or '').strip().lower()
+        actual_segment = str(item.get('block') or '').strip().upper()
+        actual_loaded = str(item.get('loaded_state') or '').strip().lower()
+        if item.get('presence_state') != 'present':
+            identity_errors.append('presence_not_present')
+        if not bool(item.get('visual_facts_valid')):
+            identity_errors.append('visual_facts_not_valid')
+        if actual_side != expected_side:
+            identity_errors.append(
+                f'side_mismatch:{actual_side}!={expected_side}'
+            )
+        if actual_segment != expected_segment:
+            identity_errors.append(
+                f'segment_mismatch:{actual_segment}!={expected_segment}'
+            )
+        if actual_loaded != expected_loaded:
+            identity_errors.append(
+                f'loaded_state_mismatch:{actual_loaded}!={expected_loaded}'
+            )
+        ratio_error: float | None = None
+        try:
+            ratio_error = abs(
+                float(item.get('s_ratio')) - float(truth.get('s_ratio'))
+            )
+        except (TypeError, ValueError):
+            identity_errors.append('invalid_s_ratio')
+        else:
+            if ratio_error > tolerance:
+                identity_errors.append(
+                    f's_ratio_error:{ratio_error:.9f}>{tolerance:.9f}'
+                )
+        per_identity[identity] = {
+            'passed': not identity_errors,
+            'expected': {
+                'side': expected_side,
+                'segment': expected_segment,
+                'loaded_state': expected_loaded,
+                's_ratio': float(truth.get('s_ratio')),
+            },
+            'observed': {
+                'side': actual_side,
+                'segment': actual_segment,
+                'loaded_state': actual_loaded,
+                's_ratio': item.get('s_ratio'),
+            },
+            's_ratio_absolute_error': ratio_error,
+            'errors': identity_errors,
+        }
+        errors.extend(f'{identity}:{error}' for error in identity_errors)
+
+    return {
+        'passed': not errors,
+        'maximum_s_ratio_error': tolerance,
+        'errors': errors,
+        'per_identity': per_identity,
+        'ground_truth_used_as_model_input': False,
+        'comparison_role': 'observation_only_runtime_acceptance',
+    }
+
+
 def observation_dict(message: VisualStateObservation) -> dict[str, Any]:
     return {
         'status': 'observed',
         'timestamp_s': _stamp_s(message.header.stamp),
+        'left_image_stamp_s': _stamp_s(message.left_image_stamp),
+        'right_image_stamp_s': _stamp_s(message.right_image_stamp),
         'schema_version': message.schema_version,
         'checkpoint_sha256': message.checkpoint_sha256,
         'stage': message.stage,
@@ -51,6 +200,8 @@ def observation_dict(message: VisualStateObservation) -> dict[str, Any]:
                 's_ratio': float(item.s_ratio),
                 'segment_length_m': float(item.segment_length_m),
                 'loaded_state': item.loaded_state,
+                'segment_confidence': float(item.segment_confidence),
+                'loaded_confidence': float(item.loaded_confidence),
             }
             for item in message.shuttles
         ],
@@ -66,6 +217,7 @@ class Room315RuntimeAcceptanceRecorder(Node):
         self.declare_parameter('record_duration_s', 60.0)
         self.declare_parameter('minimum_record_duration_s', 3.0)
         self.declare_parameter('minimum_accepted_observations', 3)
+        self.declare_parameter('maximum_s_ratio_error', 0.12)
         self.declare_parameter('readiness_proof_path', '')
         self.declare_parameter('expected_checkpoint_sha256', '')
         self.declare_parameter('observation_only', True)
@@ -233,6 +385,11 @@ class Room315RuntimeAcceptanceRecorder(Node):
 
     def _on_accepted(self, message: VisualStateObservation) -> None:
         value = observation_dict(message)
+        truth_comparison = evaluate_observation_against_ground_truth(
+            value,
+            self.scenario['ground_truth'],
+            maximum_s_ratio_error=self._float('maximum_s_ratio_error'),
+        )
         self.fusion_result = {
             'status': 'observed',
             'ready': value['state_fusion_ready'],
@@ -243,6 +400,7 @@ class Room315RuntimeAcceptanceRecorder(Node):
             'timestamp_s': value['timestamp_s'],
             'accepted': value['accepted'],
             'shuttles': value['shuttles'],
+            'ground_truth_comparison': truth_comparison,
         })
         self.accepted_reobservations = self.accepted_reobservations[-20:]
 
@@ -345,6 +503,15 @@ class Room315RuntimeAcceptanceRecorder(Node):
                 f'insufficient_accepted_reobservations:'
                 f'{len(self.accepted_reobservations)}<{minimum}'
             )
+        matching = sum(
+            bool(row.get('ground_truth_comparison', {}).get('passed'))
+            for row in self.accepted_reobservations
+        )
+        if matching < minimum:
+            failures.append(
+                f'insufficient_ground_truth_matching_reobservations:'
+                f'{matching}<{minimum}'
+            )
         if self.execution_decision.get('allowed') is not False:
             failures.append('observation_only_execution_not_rejected')
         if self.effect_verification.get('actuation_performed') is not False:
@@ -375,7 +542,17 @@ class Room315RuntimeAcceptanceRecorder(Node):
             'validation_result': self.validation_result,
             'safety_supervisor_decision': self.safety_supervisor_decision,
             'execution_decision': self.execution_decision,
-            'reobservation_and_effect_verification': self.effect_verification,
+            'reobservation_and_effect_verification': {
+                **self.effect_verification,
+                'accepted_reobservations': list(self.accepted_reobservations),
+                'minimum_ground_truth_matching_reobservations': self._int(
+                    'minimum_accepted_observations'
+                ),
+                'planning_s_ratio_tolerance': self._float(
+                    'maximum_s_ratio_error'
+                ),
+                'tight_s_ratio_diagnostic_tolerance': 0.05,
+            },
             'readiness_proof': self.readiness_proof,
             'observation_only': True,
             'record_duration_s': time.monotonic() - self.started_monotonic,

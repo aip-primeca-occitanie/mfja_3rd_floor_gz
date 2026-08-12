@@ -1,0 +1,81 @@
+{
+  "artifacts": {
+    "approved_v3_canary_baseline.json": {
+      "bytes": 3746,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/approved_v3_canary_baseline.json",
+      "sha256": "51f67f7936fcd5345ea999dba91e573eb6a81107339e78aefc8c03a385d79528"
+    },
+    "canary_acceptance.json": {
+      "bytes": 33721,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_acceptance.json",
+      "sha256": "69dee15af11e910a190ff4425f9a98f60859c86dad61dc3df1f431292ceac333"
+    },
+    "canary_attempt_started.json": {
+      "bytes": 617,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_attempt_started.json",
+      "sha256": "af0217f9c3f79d6812f83621437d50782c806a735d25cabd1183403e3d19010d"
+    },
+    "canary_camera_counterfactuals.json": {
+      "bytes": 1019,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_camera_counterfactuals.json",
+      "sha256": "db687c2eebe5934701d9dbac9af0f601da383f172cc2040ae4519208d3af09af"
+    },
+    "canary_coverage_audit.json": {
+      "bytes": 232,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_coverage_audit.json",
+      "sha256": "9205bfa7fa47e430d388e15fc49842dfb85bd7a4e9c456ad275d35259e702fe1"
+    },
+    "canary_coverage_contract.json": {
+      "bytes": 6665,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_coverage_contract.json",
+      "sha256": "50d222044c873350c84f65e1a4406da50f7bfcd1377e2616e36fc3860efa8ec5"
+    },
+    "canary_disjoint_audit.json": {
+      "bytes": 5093,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_disjoint_audit.json",
+      "sha256": "4bdb504928ba32bdd4bb0c66c4de8054e5d112355a518003e3a6ffc683a10827"
+    },
+    "canary_image_pair_manifest.json": {
+      "bytes": 411,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_image_pair_manifest.json",
+      "sha256": "17b82dc4414f1e67188e143e0398c917e187a84885e30812382640a9e6f08a8e"
+    },
+    "canary_input_fingerprint.json": {
+      "bytes": 707,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_input_fingerprint.json",
+      "sha256": "04ee0287ddaf7bbfc357893981e77a82cffc81ca555fddc89af5c22f2e0482f5"
+    },
+    "canary_metrics.json": {
+      "bytes": 138538,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_metrics.json",
+      "sha256": "032cb14db1b296184a06a378bca5b28ac8c57fe8b776f7ae4a66b492d3d7d5b4"
+    },
+    "canary_segment_calibration.json": {
+      "bytes": 6385,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/canary_segment_calibration.json",
+      "sha256": "558bfd11f5e05c181d2db35b1c23b10721f9763b0484853883cefff2cdc1d49c"
+    },
+    "effective_config.json": {
+      "bytes": 10203,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/effective_config.json",
+      "sha256": "53f68426ceb0f79fb2c44dbd85302f2d9dad0da364da66959682ae6f3f512371"
+    },
+    "final_report.json": {
+      "bytes": 216680,
+      "path": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1/final_report.json",
+      "sha256": "fda9a772fac67d36d59544af0299c3aad4fba599c1ea8c0edf39b56f62b42e04"
+    }
+  },
+  "attempt_key": "e5b24314038c7d92596b7153f6c0013688de04c312706c0f3a5dce5cdd100807",
+  "automatic_runtime_switch": false,
+  "canary_used_for_checkpoint_selection": false,
+  "completed_unix_s": 1786450064.4654276,
+  "output": "/home/tiago/room315_visual_v4_outputs/canary_v4_e5b24314038c7d92_attempt1",
+  "reservation": {
+    "path": "/home/tiago/room315_visual_v4_outputs/canary_attempt_ledger_v1/e5b24314038c7d92596b7153f6c0013688de04c312706c0f3a5dce5cdd100807.reserved.json",
+    "sha256": "2b69660d9f0695219a7e79b728f9cd0e6b8f3811c433fa4739644617dbadde1d"
+  },
+  "schema_version": "room315.visual_v4.canary_attempt.v1",
+  "state": "completed_immutable",
+  "test_loaded": false
+}

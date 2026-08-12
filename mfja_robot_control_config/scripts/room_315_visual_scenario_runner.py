@@ -49,8 +49,6 @@ def _launch_value(name: str, value: Any) -> str:
     if value is None:
         return ''
     if isinstance(value, str):
-        if name.endswith('_start_slots'):
-            return f"'{value}'"
         return value
     return str(value)
 
@@ -79,7 +77,12 @@ def switch_command(scenario: dict[str, Any]) -> list[str]:
         'ros2',
         'topic',
         'pub',
-        '--once',
+        '--times',
+        '3',
+        '--rate',
+        '2',
+        '--keep-alive',
+        '0.5',
         setup['switch_topic'],
         'std_msgs/msg/String',
         message,

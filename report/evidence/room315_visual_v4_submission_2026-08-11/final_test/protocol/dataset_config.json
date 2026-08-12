@@ -1,0 +1,97 @@
+{
+  "schema_version": "room315.visual_v4.final_test_config.v1",
+  "dataset_role": "sealed_final_test_only",
+  "purpose": "One-shot, post-freeze V4 final evaluation. Never use for training, checkpoint selection, calibration, threshold selection, or debugging.",
+  "seed": 3152026081101,
+  "output_root": "/home/tiago/room315_visual_v4_final_test_seed3152026081101",
+  "scenario_count": 1024,
+  "composition": {
+    "lattice_scenarios": 1008,
+    "stress_scenarios": 16,
+    "lattice_definition": "side(2) x public_segment(14) x position_bin(9) x loaded_state(2) x replicate(2)",
+    "micro_offsets_from_position_bin_center": [-0.0037, 0.0037],
+    "presence_cardinality_counts": {
+      "1": 128,
+      "2": 128,
+      "3": 128,
+      "4": 128,
+      "5": 128,
+      "6": 128,
+      "7": 128,
+      "8": 128
+    },
+    "required_target_zones": [
+      "boundary",
+      "switch",
+      "slot",
+      "merge_conflict",
+      "buffer",
+      "ordinary"
+    ],
+    "required_relation_families": [
+      "no_relation_observation",
+      "blocker_ahead_same_segment",
+      "nonblocker_behind_same_segment",
+      "blocker_intermediate_segment",
+      "nonblocker_adjacent_branch",
+      "multi_blocker"
+    ],
+    "occlusion_contract": {
+      "required_estimated_classes": ["clear", "partial_risk"],
+      "claim_scope": "static calibrated-projection risk estimate; not a measured pixel-occlusion percentage"
+    }
+  },
+  "frozen_model": {
+    "checkpoint": "/home/tiago/room315_visual_v4_outputs/pilot_v4_seed31520260811_attempt1/checkpoints/epoch_011.pt",
+    "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+    "frozen_at_utc": "2026-08-11T11:27:43Z"
+  },
+  "reference_sources": [
+    {
+      "name": "old_replay_train",
+      "role": "train",
+      "rows": "/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train.jsonl",
+      "rows_sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095",
+      "labels": "/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train_visual_labels.jsonl",
+      "labels_sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583"
+    },
+    {
+      "name": "v3r1_train",
+      "role": "train",
+      "rows": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/train.jsonl",
+      "rows_sha256": "396e3b83822dcd2ed541025fc033802592a609e288dbb28be555c6d9f586361c",
+      "labels": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/train_visual_labels.jsonl",
+      "labels_sha256": "ec98fd5a94ed9d29fbb0b33dbed33877d571d263ea4a497be99d088673b71921",
+      "image_hash_manifest": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/train_finalization.json",
+      "image_hash_manifest_sha256": "a24aaf396ab8dc1b8688b1ee6344ce343035964ef7aafab8e8deb3e74f3ae5b1"
+    },
+    {
+      "name": "v3r1_validation",
+      "role": "validation",
+      "rows": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/validation.jsonl",
+      "rows_sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7",
+      "labels": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/validation_visual_labels.jsonl",
+      "labels_sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab",
+      "image_hash_manifest": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/validation_finalization.json",
+      "image_hash_manifest_sha256": "521446d530b92a0544c99b4b7fe8d7195c46276e518307029781c5b057ed939c"
+    },
+    {
+      "name": "v3r1_canary",
+      "role": "canary",
+      "rows": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary.jsonl",
+      "rows_sha256": "28568e8ebf793e0a0a18ad9327f36639b2fd9c27021b9bccc4b318dd48192541",
+      "labels": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_visual_labels.jsonl",
+      "labels_sha256": "42d1d6ccab49d4a6bfdb2c2b79d77e404e5f9cb23066a816c1a3851d552b02db",
+      "image_hash_manifest": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_finalization.json",
+      "image_hash_manifest_sha256": "9a8a640062c220a00e6bef426f88823592dc24466267e7355d56f75720064e20"
+    }
+  ],
+  "prohibitions": {
+    "historical_test_access": true,
+    "training_use": true,
+    "checkpoint_selection": true,
+    "calibration_or_threshold_selection": true,
+    "automatic_runtime_promotion": true,
+    "more_than_one_final_inference": true
+  }
+}

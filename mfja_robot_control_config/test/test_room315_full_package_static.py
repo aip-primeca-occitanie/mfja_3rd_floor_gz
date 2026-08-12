@@ -71,15 +71,60 @@ def test_package_manifest_hashes_and_capture_boundary():
             encoding='utf-8'
         )
     )
+    post_manifest_repairs = {
+        'capture_full.sh',
+        'resume_capture.sh',
+    }
+    observed_repairs = set()
     for relative, expected in package_manifest['files'].items():
         path = PACKAGE_ROOT / relative
         assert path.is_file()
-        assert path.stat().st_size == expected['bytes']
-        assert _sha256(path) == expected['sha256']
+        if (
+            path.stat().st_size == expected['bytes']
+            and _sha256(path) == expected['sha256']
+        ):
+            continue
 
+        # The two launch wrappers were repaired after manifest freeze so ROS
+        # setup files can be sourced safely under bash nounset.  Their exact
+        # pre-repair bytes remain beside them; audit both the frozen provenance
+        # and the narrowly defined repair instead of pretending the live file
+        # still has the historical hash.
+        assert relative in post_manifest_repairs
+        observed_repairs.add(relative)
+        frozen = path.with_name(f'{path.name}.before_ros_nounset_fix')
+        assert frozen.is_file()
+        assert frozen.stat().st_size == expected['bytes']
+        assert _sha256(frozen) == expected['sha256']
+        frozen_text = frozen.read_text(encoding='utf-8')
+        expected_repaired_text = frozen_text.replace(
+            'set -euo pipefail',
+            'set -eo pipefail',
+            1,
+        )
+        for setup in (
+            '/opt/ros/jazzy/setup.bash',
+            '/home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash',
+        ):
+            expected_repaired_text = expected_repaired_text.replace(
+                f'source {setup}',
+                f'set +u\nsource {setup}\nset -u',
+                1,
+            )
+        assert path.read_text(encoding='utf-8') == expected_repaired_text
+
+    assert observed_repairs == post_manifest_repairs
+
+    snapshot = json.loads(
+        (PACKAGE_ROOT / 'manifest_approval_snapshot.json').read_text(
+            encoding='utf-8'
+        )
+    )
+    assert snapshot['approved_for_full_manifest_generation'] is True
+    assert snapshot['approved_for_full_capture'] is False
     approval = json.loads(SMOKE_APPROVAL.read_text(encoding='utf-8'))
     assert approval['approved_for_full_manifest_generation'] is True
-    assert approval['approved_for_full_capture'] is False
+    assert approval['approved_for_full_capture'] is True
 
     completed = subprocess.run(
         [
@@ -91,25 +136,55 @@ def test_package_manifest_hashes_and_capture_boundary():
         capture_output=True,
         text=True,
     )
-    assert completed.returncode == 3
-    assert completed.stdout.strip() == 'WAITING_FOR_FULL_CAPTURE_APPROVAL'
+    assert completed.returncode == 0
+    assert completed.stdout.splitlines()[0] == 'MANUAL_APPROVAL_VALID'
 
 
 @pytest.mark.skipif(
     not (PACKAGE_ROOT / 'capture_state.json').is_file(),
     reason='Phase B static package is not available',
 )
-def test_static_phase_has_no_capture_or_dataset_split():
+def test_completed_capture_has_exact_dataset_without_split_leakage():
     state = json.loads(
         (PACKAGE_ROOT / 'capture_state.json').read_text(encoding='utf-8')
     )
 
-    assert state['captured_scenario_count'] == 0
-    assert state['capture_has_started'] is False
-    assert state['existing_valid_image_count'] == 0
-    assert not (
+    assert state['capture_complete'] is True
+    assert state['capture_has_started'] is True
+    assert state['captured_scenario_count'] == 320
+    assert state['expected_scenario_count'] == 320
+    assert state['existing_valid_image_count'] == 640
+    assert state['expected_image_count'] == 640
+    assert state['aggregate_training_event_count'] == 320
+    assert state['remaining_scenario_count'] == 0
+    for empty_field in (
+        'missing_scenarios',
+        'incomplete_episodes',
+        'event_index_missing',
+        'event_index_unexpected',
+        'duplicate_training_event_rows',
+    ):
+        assert state[empty_field] == []
+
+    captured_audit_path = PACKAGE_ROOT / 'captured_dataset_audit.json'
+    captured_audit = json.loads(
+        captured_audit_path.read_text(encoding='utf-8')
+    )
+    assert captured_audit['passed'] is True
+    assert captured_audit['capture_status'] == state
+    expected_audit_hash = (
+        PACKAGE_ROOT / 'captured_dataset_audit.sha256'
+    ).read_text(encoding='utf-8').split()[0]
+    assert _sha256(captured_audit_path) == expected_audit_hash
+
+    training_events = (
         PACKAGE_ROOT / 'dataset' / 'meta' / 'training_events.jsonl'
-    ).exists()
+    )
+    assert training_events.is_file()
+    assert len(training_events.read_text(encoding='utf-8').splitlines()) == 320
+    assert _sha256(training_events) == captured_audit['fingerprints'][
+        'training_events.jsonl'
+    ]
     assert not list(
         PACKAGE_ROOT.glob('**/train.jsonl')
     )

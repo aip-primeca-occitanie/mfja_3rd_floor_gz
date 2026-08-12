@@ -10,18 +10,57 @@ geometry, topology, coordination, device and identity functions.
 
 Objectives O3 and O4 extended this foundation with typed command and state
 interfaces, task planning, language interpretation and paired-camera
-perception. Together, these elements formed the evaluated English-to-motion
-workflow.
+perception. The command-producing integration campaigns and the independent
+perception evaluation have distinct scopes. The active schema separates the
+two rail branches, derives side from the fixed identity contract, adds confidence-bearing typed
+state and enforces exact schema/checkpoint allowlists with fail-closed input
+validation.
 
 The language interface also produced the intended outcome in all ten evaluation
 cases, including clarification, rejection and cancellation.
 
 The complete path from an English request to shuttle motion was exercised in
-12 isolated cold-start runs. Every run reached its intended terminal state, and
-all 24 recorded step postconditions were satisfied. On the
-locked 256-scenario Test set, the configured visual checkpoint achieved 100\%
-rail-side accuracy, 99.2537\% loaded-state accuracy and 65.2985\% exact-block
-accuracy.
+12 isolated cold-start runs. Every run reached its intended terminal state; all
+24 recorded step postconditions and all 48 supervisor decisions passed. The
+executive made 24 planning attempts with four occupancy-triggered replans. The
+twelve bags contained 1784 schema-compliant observations, every final
+effect was verified and every controller stopped. This integration result is
+separate from the visual-model Final Test rather than a measurement of it.
+
+Epoch~11 was selected and calibrated on Validation only, then frozen.
+Its one-shot Final Test comprised 1040 independent scenes and 4680 present-shuttle
+instances, with no overlap against training, Validation or Canary in the
+predeclared audit dimensions. Segment top-one accuracy was 99.9359\%, segment
+macro F1 was 99.9117\%, loaded-state accuracy was 99.9145\%, and joint
+segment/longitudinal accuracy was 90.8974\% at
+$|\Delta s_{ratio}|\leq0.05$ (99.0385\% at $0.12$). Correct-segment
+metric-position MAE was \SI{0.01573}{m}, its 95th percentile was
+\SI{0.05850}{m}, and mean bounding-box IoU was 0.8340. The worst supported
+rail--segment-cell recall was 94.6429\%. All 80/80 frozen gates passed: 76
+general acceptance gates and four Test-specific runtime-threshold gates.
+Opposite-camera
+blanking and shuffling caused exactly zero cross-rail output change, directly
+confirming the intended rail isolation; swapping camera order reduced segment
+top-one accuracy by 92.1368 percentage points and confirmed that order must be
+enforced.
+
+Observation-only qualification accepted 52 of 55 paired shadow frames without
+processing errors or wrong-side identities; all seven acceptance scenes
+completed with 53/53 exact planning-tolerance reobservations; all eight injected
+faults were rejected fail closed; and the separately allowlisted rollback
+smoke passed. These records were dry-run only. The closed-loop fault campaign
+passed 5/5 scenarios with 424 schema-compliant observations,
+no false success and every controller disabled. The positive and fault reports
+are bound into a manually approved
+\code{active\_closed\_loop\_runtime} profile with scope
+\path{gazebo_v4_closed_loop_runtime_only}. The inference node's dry-run fusion
+guard prevents direct ProblemExpert mutation, while the separately authorised
+task gateway owns the Gazebo planning and actuation path. Automatic activation
+and physical deployment remain forbidden.
+A B01 partial runtime smoke also passed with 88 schema-compliant observations,
+one verified actuating step and a stopped final controller; this
+single selected case confirms the authorised bundle but does not replace the 12/12
+campaign.
 
 For MFJA, the project provides a reusable platform for practical teaching,
 software integration, synthetic-data generation and further planning or
@@ -31,6 +70,8 @@ implement and test one at a time. I also prepared the configuration, regression
 tests and run instructions so that the host team can continue using and
 extending the work.
 
-The immediate next step is to repeat the campaign across controlled seeds and
-conduct a live-graph fault-injection study before extending the simulated
-workflow to broader scenarios.
+The next steps are to test camera and appearance domain shift, repeat the
+positive and fault campaigns across controlled seeds, exercise timed restart
+and long-duration recovery, and develop a physical-deployment approval
+process. The reported command authority remains restricted to Gazebo; no
+physical deployment is claimed.

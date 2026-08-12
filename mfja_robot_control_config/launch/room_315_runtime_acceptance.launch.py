@@ -1,4 +1,4 @@
-"""Launch one guarded, observation-only Room 315 acceptance scenario."""
+"""Launch one guarded, observation-only Room 315 V4 acceptance scenario."""
 
 import hashlib
 import json
@@ -20,12 +20,28 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
+V4_CANDIDATE_STATE_SCHEMA = 'room315.deployment_candidate_state.v4.v1'
+V4_RAW_PREDICTION_SCHEMA = 'room315.visual_runtime_v4.diagnostic.v1'
+
+
 def _sha256(path):
     digest = hashlib.sha256()
     with path.open('rb') as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _require_v4_candidate_state(state):
+    if not isinstance(state, dict):
+        raise RuntimeError('candidate_state.json must contain a JSON object')
+    candidate_state_schema = str(state.get('schema_version') or '').strip()
+    if candidate_state_schema != V4_CANDIDATE_STATE_SCHEMA:
+        raise RuntimeError(
+            'acceptance requires the exact V4 candidate-state schema: '
+            f'{candidate_state_schema!r} != {V4_CANDIDATE_STATE_SCHEMA!r}'
+        )
+    return V4_RAW_PREDICTION_SCHEMA
 
 
 def _after_success(phase, actions):
@@ -96,12 +112,20 @@ def _acceptance_actions(context):
     manifest_path = candidate / 'acceptance_scenarios.json'
     runtime_config = candidate / 'runtime_ros_parameters.yaml'
     state_path = candidate / 'candidate_state.json'
-    checkpoint_path = candidate / 'best.pt'
-    for required in (manifest_path, runtime_config, state_path, checkpoint_path):
+    for required in (manifest_path, runtime_config, state_path):
         if not required.is_file():
             raise RuntimeError(f'candidate artifact is missing: {required}')
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     state = json.loads(state_path.read_text(encoding='utf-8'))
+    expected_raw_prediction_schema = _require_v4_candidate_state(state)
+    checkpoint_filename = str(
+        state.get('checkpoint_filename') or 'best.pt'
+    ).strip()
+    if Path(checkpoint_filename).name != checkpoint_filename:
+        raise RuntimeError('candidate checkpoint_filename must be a basename')
+    checkpoint_path = candidate / checkpoint_filename
+    if not checkpoint_path.is_file():
+        raise RuntimeError(f'candidate artifact is missing: {checkpoint_path}')
     matches = [
         row for row in manifest.get('scenarios', [])
         if row.get('scenario_id') == scenario_id
@@ -113,6 +137,24 @@ def _acceptance_actions(context):
     expected_checkpoint_sha256 = str(state.get('checkpoint_sha256') or '')
     if _sha256(checkpoint_path) != expected_checkpoint_sha256:
         raise RuntimeError('candidate checkpoint SHA-256 failed before Gazebo startup')
+    default_topics = {
+        'raw_prediction': '/room_315/visual_state/raw_model_prediction',
+        'raw_observation': '/room_315/visual_state/raw',
+        'validation': '/room_315/visual_state/validation',
+        'accepted_observed_state': '/room_315/visual_state/observed_state',
+    }
+    configured_topics = state.get('runtime_topics') or default_topics
+    if not isinstance(configured_topics, dict):
+        raise RuntimeError('candidate runtime_topics must be a mapping')
+    runtime_topics = {
+        name: str(configured_topics.get(name) or '').strip()
+        for name in default_topics
+    }
+    if any(
+        not topic.startswith('/room_315/visual_state/')
+        for topic in runtime_topics.values()
+    ):
+        raise RuntimeError('candidate runtime topics are missing or outside visual state')
 
     readiness_dir = output_root / 'readiness'
     event_path = output_root / 'events' / f'{scenario_id}.json'
@@ -133,6 +175,10 @@ def _acceptance_actions(context):
                 'world_name': 'room_315_only',
                 'timeout_s': LaunchConfiguration(timeout_argument),
                 'expected_checkpoint_sha256': expected_checkpoint_sha256,
+                'expected_raw_prediction_schema': (
+                    expected_raw_prediction_schema
+                ),
+                'raw_prediction_topic': runtime_topics['raw_prediction'],
             }],
         )
 
@@ -226,6 +272,12 @@ def _acceptance_actions(context):
             'minimum_record_duration_s': 3.0,
             'minimum_accepted_observations': 3,
             'observation_only': True,
+            'raw_model_prediction_topic': runtime_topics['raw_prediction'],
+            'raw_observation_topic': runtime_topics['raw_observation'],
+            'validation_topic': runtime_topics['validation'],
+            'accepted_observed_state_topic': (
+                runtime_topics['accepted_observed_state']
+            ),
         }],
     )
     report = ExecuteProcess(

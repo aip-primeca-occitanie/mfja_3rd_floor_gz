@@ -15,7 +15,7 @@
 % ---------------------------------------------------------------------------
 % Panel A: engineering and research work.
 % The horizontal positions are proportional to calendar time from 2 March
-% (x=-25 mm) to 7 August (x=73 mm).  The wider left margin keeps every lane
+% (x=-25 mm) to 11 August (x=73 mm).  The wider left margin keeps every lane
 % label on one line.
 % ---------------------------------------------------------------------------
 \node[panel,minimum width=158mm,minimum height=104mm] (engineering) at (0,0) {};
@@ -24,7 +24,7 @@
   {(a) Engineering and research chronology};
 \node[anchor=east,font=\sffamily\small,text=black!62]
   at ([xshift=-5mm,yshift=-6mm]engineering.north east)
-  {2 March--7 August 2026};
+  {2 March--11 August 2026};
 
 % Calendar axis and month grid.
 \draw[mfjablue,line width=0.8pt] (-25mm,25mm) -- (73mm,25mm);
@@ -34,7 +34,7 @@
   13.0/{May},
   32.6/{Jun},
   51.5/{Jul},
-  73/{7 Aug}}
+  73/{11 Aug}}
 {
   \draw[mfjablue,line width=0.7pt] (\x mm,23.8mm) -- (\x mm,26.2mm);
   \node[anchor=north,font=\sffamily\small,text=black!70]
@@ -66,7 +66,7 @@
   -12/{Typed interfaces / safety},
   -20/{Visual data / perception},
   -28/{PDDL / PlanSys2},
-  -36/{Closed-loop runtime /\\visual evaluation}}
+  -36/{Perception qualification /\\Final-Test preparation}}
 {
   \node[anchor=east,align=right,font=\sffamily\small]
     at (-30mm,\y mm) {\label};
@@ -82,7 +82,7 @@
 
 \node[align=center,font=\sffamily\scriptsize\itshape,text=black!62]
   at (24mm,-46mm)
-  {Bars show principal activity windows; integration and verification\\
+  {Bars show principal activity windows; integration and perception validation\\
    continued across the connected work packages.};
 
 % ---------------------------------------------------------------------------

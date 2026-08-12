@@ -4,19 +4,29 @@
 \section{Software environment and handover}
 
 The reproducibility package identifies the final implementation and the records
-used for its evaluation. The handover includes an archived or committed copy
-of the exact source, together with the current configuration and report bundle
-\citep{mfjarepository}. The integrated campaign is retained in two layers: its
-lightweight records are versioned with the report, and its complete raw bundle
-is published as a checksum-identified release asset. The summary, file manifest
-and full-archive checksum list identify the workflow reported in
-\cref{chap:results}.
+used for its evaluation. The project source repository is identified by
+\citep{mfjarepository}; a reproducible handover must separately archive or
+commit the exact source, current configuration and report bundle used for this
+evaluation. The active evidence package retains byte-exact lightweight copies
+of the positive campaign, fault campaign, authorised runtime and B01 smoke
+records. The
+source manifests and checksum lists identify their external raw bundles without
+embedding the ROS bags in the report repository. Records excluded from the
+reported claims are listed separately.
 
 The reference environment is Ubuntu~24.04, ROS~2 Jazzy, Gazebo Harmonic and
 Python~3.12. Manifests and hashes provide stable identifiers for generated data
-and model results. The report sources and lightweight evidence are versioned
-under \path{report/} in the software repository and are also included in the
-submission bundle.
+and model results. The report sources and lightweight evidence are stored under
+\path{report/} and are committed with the implementation and submission PDF.
+
+The primary visual-model record is the repository-relative package
+\path{report/evidence/room315_visual_v4_submission_2026-08-11}. Its manifest
+binds the packaged files, the external checkpoint and sealed dataset, the two
+closed-loop campaigns, the runtime authorisation, its B01 smoke and the exact
+JSON Pointers used for the reported claims. The adjacent \path{SHA256SUMS} file permits an
+independent integrity check. Some byte-exact machine-generated copies retain
+archival paths from the evaluation host; the package explicitly marks those
+embedded paths as non-normative.
 
 The workspace can be identified and built from its root with:
 
@@ -44,8 +54,17 @@ A reproducible handover records this output and archives or commits the same
 source. Test collection confirms discovery, while the executed results are
 presented in \cref{chap:results}. From \path{report/}, \code{make check} builds
 the PDF, rejects unresolved references or citations and reports the page size
-and count. Its diagnostics are preserved as
-\path{report/evidence/final_report_build_2026-08-08.log}.
+and count. The final build log and delivery-PDF fingerprint are stored beside
+the active evidence index; keeping these identities outside the PDF avoids a
+self-referential document hash.
+
+The repository revision carrying this report commits the implementation,
+active and recovery configurations, tests, submission PDF and lightweight
+evidence package together. A clean checkout of that revision therefore
+reconstructs the source-side handover; the checkpoint, sealed dataset and raw
+ROS bags remain external hash-identified objects because they are deliberately
+excluded from Git. The immutable evaluation records retain their original
+generation-time source and environment identities.
 
 User-facing launch profiles and their current arguments are documented in
 \path{docs/INSTALLATION.md},
@@ -55,11 +74,23 @@ User-facing launch profiles and their current arguments are documented in
 checks. \Cref{app:interfaces} provides a concise index of the corresponding
 capabilities and operator interfaces.
 
+The visual tools expose separate commands for the observation-only shadow,
+seven-scene acceptance, eight visual-input fault checks and explicit rollback
+smoke. The
+closed-loop tools independently run the twelve positive cases and five live
+fault scenarios. Runtime authorisation consumes the expected hashes of both
+completed campaigns and creates a manually reviewed Gazebo-only bundle; it
+neither approves physical deployment nor launches the system. The active task
+configuration remains fail closed with \code{execution\_enabled=false}, so an
+operator must explicitly opt in after the runtime evidence is reverified.
+
 \section{Evaluation files and identifiers}
 
 \Cref{tab:evidence-roots} associates each reported result with the files and
-identifiers needed to inspect it, without depending on host-specific storage
-paths.
+identifiers needed to inspect it. All authored locations are repository- or
+release-relative. Package subpaths are relative to
+\path{report/evidence/room315_visual_v4_submission_2026-08-11} unless stated
+otherwise.
 
 \begin{longtable}{@{}
 >{\raggedright\arraybackslash}p{0.22\textwidth}
@@ -74,7 +105,137 @@ paths.
 \textbf{Result group} & \textbf{Files and identifiers}\\
 \midrule
 \endhead
-Software and configuration & Git HEAD
+Visual evidence package & The primary package is
+\path{report/evidence/room315_visual_v4_submission_2026-08-11}. Its final
+\path{evidence_manifest.json} has SHA-256
+\path{840787b617e0f671628dfc7d8122ff559d76664506ff8f94ac31d043737da446};
+the package-wide \path{SHA256SUMS} file has SHA-256
+\path{dec74565a8ccfba57a32d83dfdd03236daeafeff226d5243594e328fa4adc5ab};
+the package README has SHA-256
+\path{33b3a44f2e5e12b34721abcd1b47af609db3b55557c94c6871fa9c6eeb602a3e}.
+The manifest records 67/67 successful byte-exact source-copy comparisons,
+69 checksum entries and 87 claim-to-JSON-Pointer mappings. It excludes the
+checkpoint binary, Test images, rows, labels, predictions and logs while
+retaining their controlling fingerprints.\\
+\tablerowrule
+Selected visual model & Epoch~11 is pinned by checkpoint SHA-256
+\path{869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d}.
+The package subdirectory \path{model/} contains the effective configuration,
+input fingerprints, topology contract, final training report, Validation
+metrics, acceptance report and frozen segment calibration. Checkpoint selection
+and calibration used Validation only. The separately labelled \path{canary/}
+records an exposed development regression check; it is not the
+Final Test.\\
+\tablerowrule
+Sealed Final Test dataset & The external sealed dataset contains 1,040
+scenes, 2,080 images and 4,680 visible shuttle slots, and has fingerprint
+SHA-256
+\path{226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef}.
+The controls under \path{final_test/final/controls/} include finalization
+SHA-256
+\path{1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee},
+seal SHA-256
+\path{ca6c1dcb6bb06c8ba1f6c9f861af44c032c4f43cee6ecd80e40182868686bbe9}
+and a disjointness audit with SHA-256
+\path{cda625ae9f03211a61e88434c2f713d2f6a9f40c27e996f8e7da9d5f4da292c2}.
+All 12 declared overlap dimensions are zero and all 69/69 coverage checks
+pass.\\
+\tablerowrule
+Final Test one-shot contract & The frozen evaluation contract
+\path{final_test/final/controls/evaluation_contract.json} has SHA-256
+\path{e04a227c589046ee5ebc561de51002a01f3b989effcd7f3d81ba9673ef3d8608}.
+The single reserved attempt has key
+\path{2e18d6124b24438243a93d207d0c245fc1b87e25d2c08d1edca4040637e90aad}.
+Its immutable completed ledger,
+\path{final_test/final/results/attempt.completed.json}, has SHA-256
+\path{4068df2d7bad8592cb1fdbfac69d9b22661124241c19faba9e0d023a7f0df71a};
+the final report has SHA-256
+\path{f789bde50f49fa61412c8d407b95129f0e0e9bde13ad810d9999f91a7a87daea}.
+The record states \code{completed}, \code{passed} and no automatic runtime
+switch.\\
+\tablerowrule
+Final Test measurements & On 4,680 visible slots, segment top-1 accuracy is
+99.936\%, macro-F1 is 99.912\% and loaded-state accuracy is 99.915\%. Joint
+correct-segment and within-5\%-of-segment accuracy is 90.897\%; within 12\% it
+is 99.038\%. Conditional on the correct segment, physical-position MAE is
+0.01573\,m and p95 is 0.05850\,m; mean bounding-box IoU is 0.8340. Left/right
+segment top-1 is 99.873\%/100\%. Blank and shuffled opposite-camera checks have
+zero maximum cross-side influence, whereas camera-order swapping reduces
+segment top-1 by 92.137 percentage points. Exact values and pointers are in
+\path{final_test/final/results/final_report.json} and
+\path{evidence_manifest.json}.\\
+\tablerowrule
+Final Test coverage provenance & A support-only pre-inference audit of the
+1,024-scene base plan found three aggregate conditions below their frozen
+minimum of eight. The declared Test therefore contains 16 additional stress
+scenes and meets every support threshold. No prediction or metric was inspected
+while fixing coverage. The byte-exact records are under
+\path{final_test/provenance/} and \path{final_test/final/controls/}.\\
+\tablerowrule
+Observation-only runtime qualification & Package subdirectories
+\path{runtime/shadow/}, \path{runtime/campaign/}, \path{runtime/safety/} and
+\path{runtime/promotion/} retain the same-frame comparison, 7/7 Gazebo-scene
+campaign, 8/8 fail-closed fault cases, 10/10 explicit rollback checks and the
+manual dry-run decision. That authority was limited to
+Gazebo dry-run; PlanSys2 mutation, task execution, actuation and automatic
+switching remained disabled.\\
+\tablerowrule
+Positive closed-loop campaign & The byte-exact
+\path{runtime/closed_loop/positive/summary.json} has SHA-256
+\path{1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479};
+its evidence manifest and source checksum list have SHA-256 values
+\path{15d6362980751dd3e2bdd7fdab2b5ccb70118f73e1bd2cb2cf71d87bc96fdece}
+and
+\path{8ec1b8a456c5f83034fce0d92a3dc067d9d271e02e66a4471bc51acd9dc0e9f8}.
+The campaign passed 12/12 cases, recorded 1784 observations under the selected
+schema and none under the alternate schema, verified 24/24 postconditions and
+48 supervisor decisions, and left every controller stopped.\\
+\tablerowrule
+Closed-loop fault campaign & The byte-exact
+\path{runtime/closed_loop/fault/summary.json} has SHA-256
+\path{330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7};
+its evidence manifest and source checksum list have SHA-256 values
+\path{71c6286f021d4dce993d40603df5714506f0732d0739a937f1ab0cfce7ee7d55}
+and
+\path{be40c331b30c7375886b42a576ec2ac97e21c0bcd940140a77a2c170d102ecd8}.
+F01--F05 passed 5/5 with 424 selected-schema observations, none under the
+alternate schema, no false success and every final controller disabled.\\
+\tablerowrule
+Gazebo runtime authorisation & The manifest under
+\path{runtime/closed_loop/active_runtime/} has SHA-256
+\path{506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da};
+the state-record and source-checksum-list SHA-256 values are
+\path{14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1}
+and
+\path{5fae4bc7430606bc474dbbc78c9f89de29b3747d1425054e806b6fae62783f55}.
+The state is \code{active\_closed\_loop\_runtime} under scope
+\path{gazebo_v4_closed_loop_runtime_only}; manual review is approved, while
+automatic profile selection and physical deployment are not approved.\\
+\tablerowrule
+Authorised-runtime B01 smoke & The selected-case summary under
+\path{runtime/closed_loop/active_runtime/smoke_B01/} has SHA-256
+\path{15d5f9cf9503f414c0baa3a4ff84932a717aab3add2f3334e88577b4fc70c576};
+its evidence manifest and source checksum list have SHA-256 values
+\path{dd2b3e7a6b3cb07a14538287329a13d3607bec8fd483a9210eebbec21e3b6574}
+and
+\path{e215ad6391dade682b397614ddcf8ece5ba76653b9728c28b8302c25126ea28d}.
+The \code{partial\_smoke} record passed B01 with 88 selected-schema observations
+and none under the alternate schema, one actuating step, one satisfied
+postcondition, two accepted
+supervisor decisions, a verified final effect and a stopped controller. It is
+one selected-case smoke, not a replacement for the 12/12 campaign,
+and records \code{physical\_deployment=false}.\\
+\tablerowrule
+Runtime defaults & The current files
+\path{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}
+and \path{task_execution_runtime.yaml} have SHA-256 values
+\path{22f12a9f96b3d54e0ab3d0bc05c202024ac6912cb50dd6e29ceb4a0a564d24f8}
+and
+\path{08eaedd7d6feed3dd1268ef18bfa2545348f203f1ff0dad3c2e9fb1a9f25b6ca}.
+The latter selects the exact runtime authorisation but defaults to
+\code{execution\_enabled=false}.\\
+\tablerowrule
+Archived campaign source snapshot & Git HEAD
 \path{c44c501640e3dab35ab241384c99963e1b9d8745}, the stored binary worktree
 patch, and the 483-file source manifest with aggregate SHA-256
 \path{326ccd537a65c43bca5780610d4fb9a0d7bd95791b047f3a1e174fc481f889f9}.
@@ -102,18 +263,20 @@ The final protocol records 10/10 declared outcomes, nine model invocations,
 eight strict envelopes without fallback, one expected schema rejection and no
 unsafe automatic resolution.\\
 \tablerowrule
-Configured visual runtime and evaluation & Checkpoint SHA-256
+Explicit rollback profile & Checkpoint SHA-256
 \path{8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d},
 bound to the preserved \path{training_config.json}, \path{metrics.json},
 \path{run_metadata.json}, target/vectoriser sidecars and runtime preflight.
-\path{visual_state_runtime.yaml} selects this hash and has SHA-256
-\path{e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19}.
-The evidence root is
-\path{report/evidence/visual_model_evaluation_2026-07-30}; its checksum-list
-SHA-256 is
-\path{912438606d432c8acc48bbf20aa624c65c29ea51ddef03142d75d2259c13c3b9}.\\
-\tablerowrule
-Training and validation data & The preserved \path{split_manifest.json}
+Configuration files \path{visual_state_runtime_v3_rollback.yaml} and
+\path{task_execution_runtime_v3_rollback.yaml} have SHA-256 values
+\path{a61b72dacbb928b3170d2439c744ff0f2e2ccb227a83e70aab84e4cbdac26cd4}
+and
+\path{8c57c69448cb2c649ff972ef4ec327d7af32458c0c777048f6a25f3e0ad955d7}.
+The evidence root
+\path{report/evidence/visual_model_evaluation_2026-07-30} has checksum-list
+SHA-256
+\path{912438606d432c8acc48bbf20aa624c65c29ea51ddef03142d75d2259c13c3b9}.
+Its preserved \path{split_manifest.json}
 (SHA-256 \path{8516f38ffbfdfb5a70cab17bb480e31f4c1f2b0d4c360b9d91a0bf10c122ca93})
 records 1528 training, 256 validation and 256 locked-Test scenarios. The leakage
 audit (SHA-256 \path{205e1d8f47109aa17b936190b86c66d3e7c6b0fbf49116c9477f75d1eeb97a03})
@@ -121,8 +284,8 @@ and final review (SHA-256
 \path{aa21e1991a1ffac6070231cae25a880528bf4bc6e19b27f39e450483c1f9e7e0})
 retain the split and Test-evaluation checks.\\
 \tablerowrule
-Automated verification & Three logs retain each command, result and the same
-source identity as the campaign:
+Recorded 7 August verification & Three logs retain each command and
+result from the recorded source snapshot:
 \path{pytest_current_source_focused_2026-08-07.log}, 190/190, SHA-256
 \path{cf4804917505d61465559924b3c776dbc7e2c3418dfeec16bf8bc2de11a17110};
 \path{pytest_current_source_transport_2026-08-07.log}, 96/96, SHA-256
@@ -140,33 +303,31 @@ fresh state samples. \path{result.json} has SHA-256
 the checksum-list SHA-256 is
 \path{5c3d60f5d6324eafb989b577369b50f686e8c8d62d37a8bf27008cfff384d8c0}.\\
 \tablerowrule
-Integrated runtime & The lightweight evidence root is
-\path{report/evidence/room315_integrated_campaign_v2}. Its
-\path{summary.json} has SHA-256
-\path{3c065872051d0e26b5425b64132c3a6f4f1ab8b79b3088fda5d9894e721f0d1e},
-and \path{manifest.json} has SHA-256
-\path{3a381517e2c3bf33d575606caf871f07b5fbe7ccf307e760fc77a7c1ba47e318},
-while the complete bundle with per-case ROS bags is indexed by
-\path{ROOM315_INTEGRATED_CAMPAIGN_ARCHIVE.md} and published under
-\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-evidence-v2}{\texttt{room315-evidence-v2}};
-its archive SHA-256 is
-\path{7775885867f8fde6c23d24e881d339447d5fc622be0143f2be5ca21d7f259b1b}.
-The summary records 12/12 successful cold-start runs across the 12 declared
-positive cases: six on each rail, all eight shuttle identities and five
-predeclared case families.\\
-\tablerowrule
-B03 camera figure & The exact archived frames, extraction script and provenance
-are retained under
-\path{report/evidence/room315_campaign_figures_2026-08-07}. The figure SHA-256
-is \path{c1272484031885f0ec32334eec343fb284d52588f7b198429e7718a0af26551c};
+B03 camera figure & The exact frames, extraction script and provenance are
+retained under
+\path{report/evidence/room315_v4_closed_loop_campaign_figures_2026-08-12}.
+The composite figure SHA-256 is
+\path{3afef390900901598926f0d11226bb460a70b818ce0c4c765594aefb6fd614dc};
 the derivative checksum-list SHA-256 is
-\path{466772cfd0ab4dc4e57a6cc261b3ca507d2cc6c09882f2755d10f117e76bb502}.\\
+\path{9914684e2333a5ccc0053c0521f4bbdade217374c253875c31475fcaa20af39c}.
+The exact image used in \cref{fig:b03-camera-evidence} is bound to this record.\\
 \bottomrule
 \end{longtable}
 
-The repository retains the declarations, readiness records, resolved commands,
-runtime logs and terminal verification. The release adds the twelve raw ROS
-bags and the original checksum list; a separate checksum list verifies the 929
-retained files. The campaign environment records the Git and runtime identities
-and isolated ROS domains. The current-source supplement preserves the two test
-files required to reconstruct the recorded 483-file source state.
+The repository-relative package preserves 67 byte-exact payloads and 87
+claim-to-JSON-Pointer mappings. Its copied source manifests and source checksum
+lists identify the deliberately excluded ROS bags and other large objects. The
+release archive and current-source supplement remain available to reconstruct
+that recorded source state, but they do not substitute for the selected-model
+records.
+
+The evidence layers remain deliberately separated: Validation-only checkpoint
+selection, the exposed development Canary, the sealed one-shot Final Test,
+observation-only checks, the 12-case positive campaign, the five-case fault
+campaign, manual runtime authorisation and its one-case authorised-runtime
+smoke. The inference node retains its dry-run state-fusion guard, while the
+separately authorised task gateway
+owns the Gazebo actuation path. Every current runtime claim remains limited to
+Gazebo; automatic profile switching and physical deployment are not approved.
+Rollback material is retained only to reconstruct and verify that explicit
+fallback path.

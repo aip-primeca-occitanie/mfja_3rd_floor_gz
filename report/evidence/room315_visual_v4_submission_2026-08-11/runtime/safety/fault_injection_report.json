@@ -1,0 +1,600 @@
+{
+  "actuation_command_count": 0,
+  "all_faults_rejected": true,
+  "candidate": {
+    "actual_promotion_manifest_sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574",
+    "baseline_verified": true,
+    "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+    "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+    "deployment_mode": "shadow",
+    "directory": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+    "expected_promotion_manifest_sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574",
+    "model_schema_version": "room315.visual_state.v4",
+    "promotion_manifest_path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/runtime_promotion_manifest.json"
+  },
+  "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+  "cases": [
+    {
+      "case_id": "manifest_hash_mismatch",
+      "detection_layer": "v4_promotion_manifest_digest",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "promotion manifest SHA-256 mismatch",
+      "fail_closed": true,
+      "injection": "expected manifest SHA-256 changed in memory",
+      "name": "manifest_hash_mismatch",
+      "observed_rejection": "V4 promotion manifest SHA-256 mismatch: a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574 != 01a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "checkpoint_hash_mismatch",
+      "detection_layer": "v4_artifact_digest",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "artifact SHA-256 mismatch for checkpoint",
+      "fail_closed": true,
+      "injection": "temporary manifest pins a wrong checkpoint digest",
+      "name": "checkpoint_hash_mismatch",
+      "observed_rejection": "V4 artifact SHA-256 mismatch for checkpoint: 869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d != 069d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "topology_fingerprint_mismatch",
+      "detection_layer": "v4_topology_contract",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "topology artifact fingerprint mismatch",
+      "fail_closed": true,
+      "injection": "temporary manifest pins a wrong public-topology fingerprint",
+      "name": "topology_fingerprint_mismatch",
+      "observed_rejection": "V4 topology artifact fingerprint mismatch",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "camera_order_mismatch",
+      "detection_layer": "v4_preprocessing_contract",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "preprocessing contract is incompatible",
+      "fail_closed": true,
+      "injection": "temporary manifest reverses the fixed left/right camera order",
+      "name": "camera_order_mismatch",
+      "observed_rejection": "V4 preprocessing contract is incompatible: ['camera_order']",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "stale_left_image",
+      "detection_layer": "node_prediction_validation",
+      "expected_rejection": "left_image_is_stale",
+      "fail_closed": true,
+      "injection": "left_image timestamp is 2.0 s old",
+      "name": "stale_left_image",
+      "observed_rejection": "left_image_is_stale",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "left_image_is_stale"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "left_image_is_stale"
+      ]
+    },
+    {
+      "case_id": "stale_right_image",
+      "detection_layer": "node_prediction_validation",
+      "expected_rejection": "right_image_is_stale",
+      "fail_closed": true,
+      "injection": "right_image timestamp is 2.0 s old",
+      "name": "stale_right_image",
+      "observed_rejection": "right_image_is_stale",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "right_image_is_stale"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "right_image_is_stale"
+      ]
+    },
+    {
+      "case_id": "stale_presence",
+      "detection_layer": "presence_provider+v4_decode+node_prediction_validation",
+      "expected_rejection": "presence_source_stale",
+      "fail_closed": true,
+      "injection": "both initialized presence sources are 2.0 s old",
+      "name": "stale_presence",
+      "observed_rejection": "V4 presence registry is not ready: presence_source_stale:left,presence_source_stale:right",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "presence_source_stale:left",
+          "presence_source_stale:right",
+          "presence_contains_unknown_slot",
+          "active_identity_set_does_not_match_presence_registry",
+          "absent_identity_set_does_not_match_presence_registry",
+          "decoded_slot_order_does_not_match_active_identity_order",
+          "prediction_is_stale",
+          "left_image_is_stale",
+          "right_image_is_stale"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "presence_reasons": [
+        "presence_source_stale:left",
+        "presence_source_stale:right"
+      ],
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "presence_source_stale:left",
+        "presence_source_stale:right",
+        "presence_contains_unknown_slot",
+        "active_identity_set_does_not_match_presence_registry",
+        "absent_identity_set_does_not_match_presence_registry",
+        "decoded_slot_order_does_not_match_active_identity_order",
+        "prediction_is_stale",
+        "left_image_is_stale",
+        "right_image_is_stale"
+      ]
+    },
+    {
+      "case_id": "unknown_identity",
+      "detection_layer": "presence_provider+v4_decode+node_prediction_validation",
+      "expected_rejection": "unknown_presence_entity",
+      "fail_closed": true,
+      "injection": "unregistered non-empty entity on the left presence source",
+      "name": "unknown_identity",
+      "observed_rejection": "V4 presence registry is not ready: unknown_presence_entity:room315_unregistered_shuttle_99",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "unknown_presence_entity:room315_unregistered_shuttle_99",
+          "presence_contains_unknown_slot",
+          "active_identity_set_does_not_match_presence_registry",
+          "absent_identity_set_does_not_match_presence_registry",
+          "decoded_slot_order_does_not_match_active_identity_order"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "presence_reasons": [
+        "unknown_presence_entity:room315_unregistered_shuttle_99"
+      ],
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "unknown_presence_entity:room315_unregistered_shuttle_99",
+        "presence_contains_unknown_slot",
+        "active_identity_set_does_not_match_presence_registry",
+        "absent_identity_set_does_not_match_presence_registry",
+        "decoded_slot_order_does_not_match_active_identity_order"
+      ]
+    }
+  ],
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "checks": [
+    {
+      "case_id": "manifest_hash_mismatch",
+      "detection_layer": "v4_promotion_manifest_digest",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "promotion manifest SHA-256 mismatch",
+      "fail_closed": true,
+      "injection": "expected manifest SHA-256 changed in memory",
+      "name": "manifest_hash_mismatch",
+      "observed_rejection": "V4 promotion manifest SHA-256 mismatch: a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574 != 01a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "checkpoint_hash_mismatch",
+      "detection_layer": "v4_artifact_digest",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "artifact SHA-256 mismatch for checkpoint",
+      "fail_closed": true,
+      "injection": "temporary manifest pins a wrong checkpoint digest",
+      "name": "checkpoint_hash_mismatch",
+      "observed_rejection": "V4 artifact SHA-256 mismatch for checkpoint: 869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d != 069d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "topology_fingerprint_mismatch",
+      "detection_layer": "v4_topology_contract",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "topology artifact fingerprint mismatch",
+      "fail_closed": true,
+      "injection": "temporary manifest pins a wrong public-topology fingerprint",
+      "name": "topology_fingerprint_mismatch",
+      "observed_rejection": "V4 topology artifact fingerprint mismatch",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "camera_order_mismatch",
+      "detection_layer": "v4_preprocessing_contract",
+      "error_type": "VisualRuntimeV4Error",
+      "expected_rejection": "preprocessing contract is incompatible",
+      "fail_closed": true,
+      "injection": "temporary manifest reverses the fixed left/right camera order",
+      "name": "camera_order_mismatch",
+      "observed_rejection": "V4 preprocessing contract is incompatible: ['camera_order']",
+      "passed": true,
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed"
+    },
+    {
+      "case_id": "stale_left_image",
+      "detection_layer": "node_prediction_validation",
+      "expected_rejection": "left_image_is_stale",
+      "fail_closed": true,
+      "injection": "left_image timestamp is 2.0 s old",
+      "name": "stale_left_image",
+      "observed_rejection": "left_image_is_stale",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "left_image_is_stale"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "left_image_is_stale"
+      ]
+    },
+    {
+      "case_id": "stale_right_image",
+      "detection_layer": "node_prediction_validation",
+      "expected_rejection": "right_image_is_stale",
+      "fail_closed": true,
+      "injection": "right_image timestamp is 2.0 s old",
+      "name": "stale_right_image",
+      "observed_rejection": "right_image_is_stale",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "right_image_is_stale"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "right_image_is_stale"
+      ]
+    },
+    {
+      "case_id": "stale_presence",
+      "detection_layer": "presence_provider+v4_decode+node_prediction_validation",
+      "expected_rejection": "presence_source_stale",
+      "fail_closed": true,
+      "injection": "both initialized presence sources are 2.0 s old",
+      "name": "stale_presence",
+      "observed_rejection": "V4 presence registry is not ready: presence_source_stale:left,presence_source_stale:right",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "presence_source_stale:left",
+          "presence_source_stale:right",
+          "presence_contains_unknown_slot",
+          "active_identity_set_does_not_match_presence_registry",
+          "absent_identity_set_does_not_match_presence_registry",
+          "decoded_slot_order_does_not_match_active_identity_order",
+          "prediction_is_stale",
+          "left_image_is_stale",
+          "right_image_is_stale"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "presence_reasons": [
+        "presence_source_stale:left",
+        "presence_source_stale:right"
+      ],
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "presence_source_stale:left",
+        "presence_source_stale:right",
+        "presence_contains_unknown_slot",
+        "active_identity_set_does_not_match_presence_registry",
+        "absent_identity_set_does_not_match_presence_registry",
+        "decoded_slot_order_does_not_match_active_identity_order",
+        "prediction_is_stale",
+        "left_image_is_stale",
+        "right_image_is_stale"
+      ]
+    },
+    {
+      "case_id": "unknown_identity",
+      "detection_layer": "presence_provider+v4_decode+node_prediction_validation",
+      "expected_rejection": "unknown_presence_entity",
+      "fail_closed": true,
+      "injection": "unregistered non-empty entity on the left presence source",
+      "name": "unknown_identity",
+      "observed_rejection": "V4 presence registry is not ready: unknown_presence_entity:room315_unregistered_shuttle_99",
+      "passed": true,
+      "plansys_evidence": {
+        "add_predicates": [],
+        "passed": true,
+        "reasons": [
+          "plansys2_updates_disabled",
+          "input_not_ready",
+          "safety_supervisor_not_ready",
+          "unknown_presence_entity:room315_unregistered_shuttle_99",
+          "presence_contains_unknown_slot",
+          "active_identity_set_does_not_match_presence_registry",
+          "absent_identity_set_does_not_match_presence_registry",
+          "decoded_slot_order_does_not_match_active_identity_order"
+        ],
+        "remove_predicates": [],
+        "update_accepted": false
+      },
+      "presence_reasons": [
+        "unknown_presence_entity:room315_unregistered_shuttle_99"
+      ],
+      "rejected": true,
+      "safety_effects": {
+        "actuation_command_count": 0,
+        "plansys2_predicates_added": 0,
+        "plansys2_predicates_removed": 0,
+        "plansys2_update_attempt_count": 0,
+        "shadow_plan_client_present": false
+      },
+      "status": "passed",
+      "validation_reasons": [
+        "unknown_presence_entity:room315_unregistered_shuttle_99",
+        "presence_contains_unknown_slot",
+        "active_identity_set_does_not_match_presence_registry",
+        "absent_identity_set_does_not_match_presence_registry",
+        "decoded_slot_order_does_not_match_active_identity_order"
+      ]
+    }
+  ],
+  "command": "faults",
+  "completed_at_utc": "2026-08-11T13:31:07Z",
+  "created_at_utc": "2026-08-11T13:31:07Z",
+  "data_access": {
+    "canary_split_opened": false,
+    "datasets_opened": false,
+    "note": "only promotion artifacts, runtime configuration, and source contracts were read",
+    "test_split_opened": false,
+    "training_split_opened": false,
+    "validation_split_opened": false
+  },
+  "expected_faults": [
+    "manifest_hash_mismatch",
+    "checkpoint_hash_mismatch",
+    "topology_fingerprint_mismatch",
+    "camera_order_mismatch",
+    "stale_left_image",
+    "stale_right_image",
+    "stale_presence",
+    "unknown_identity"
+  ],
+  "immutable": true,
+  "integrity": {
+    "algorithm": "sha256",
+    "scope": "canonical_json_excluding_integrity",
+    "sha256": "48a79058ec5ff3167922b5200cf4672cd4e417fcd101522ee9dcc12acde2abed"
+  },
+  "overall_passed": true,
+  "plansys2_mutation_count": 0,
+  "report_path": "/home/tiago/room315_visual_runtime_v4_verification/fault_injection_promotion_contract_report_attempt2.json",
+  "schema_version": "room315.visual_runtime_v4.fault_injection.v1",
+  "shadow_safety": {
+    "actuation_command_count": 0,
+    "actuation_publishers_owned": false,
+    "candidate_state_path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/candidate_state.json",
+    "candidate_state_sha256": "3a8e90668ef6bf14f5b52169bcb6986f25587b919625df3e163dcf9d230f8f27",
+    "configuration_checks": {
+      "candidate_manual_review_pending": true,
+      "candidate_not_active": true,
+      "dry_run_enabled": true,
+      "manifest_sha_exact": true,
+      "plansys2_disabled": true,
+      "runtime_generation_v4": true,
+      "runtime_mode_shadow": true,
+      "shadow_topics_exact": true
+    },
+    "node_contract": {
+      "actuation_publisher_message_types": [],
+      "checks": {
+        "no_actuation_publisher_message_type": true,
+        "no_supervisor_command_topic_literal": true,
+        "plan_client_created_only_outside_shadow": true,
+        "plan_client_initialized_absent": true,
+        "shadow_plansys_update_returns_before_client": true
+      },
+      "passed": true,
+      "publisher_message_types": [
+        "DiagnosticArray",
+        "String",
+        "VisualStateObservation"
+      ],
+      "source_path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py",
+      "source_sha256": "1a4614db0a1a5b07c421452584db3cdb7a2a933e5c1c19da7a54a3d1db9d1ae6"
+    },
+    "passed": true,
+    "plan_client_present": false,
+    "plansys2_update_attempt_count": 0,
+    "plansys2_update_enabled": false,
+    "runtime_parameters_path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/runtime_ros_parameters.yaml",
+    "runtime_parameters_sha256": "ba708a93ffabbfbe3713abc7055fa05a45fcec730dbf6521e4131b885e909c16",
+    "verification_method": "candidate_configuration_plus_python_ast_contract"
+  },
+  "status": "passed",
+  "summary": {
+    "actuation_command_count": 0,
+    "every_fault_failed_closed": true,
+    "executed_fault_count": 8,
+    "expected_fault_count": 8,
+    "failed_fault_count": 0,
+    "passed_fault_count": 8,
+    "plan_client_present": false,
+    "plansys2_predicates_added": 0,
+    "plansys2_predicates_removed": 0,
+    "plansys2_update_attempt_count": 0
+  }
+}

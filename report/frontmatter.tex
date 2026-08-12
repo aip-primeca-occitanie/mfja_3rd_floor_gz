@@ -26,7 +26,7 @@
     \end{tabularx}
 
     \vspace{1.30cm}
-    {\fontsize{20}{23}\selectfont Université Évry Paris-Saclay\par}
+    {\fontsize{20}{23}\selectfont Université d'Évry Paris-Saclay\par}
     \vspace{0.42cm}
     {\fontsize{17}{20}\selectfont\bfseries
       \underline{Mention :}\ \ReportProgrammeMention\par}
@@ -91,8 +91,10 @@ Email & \ReportStudentEmail\\
 \midrule
 Organisation & \ReportHost\\
 Host service & \ReportService\\
-Address & \ReportHostAddress\\
+Legal address & \ReportHostAddress\\
+Internship site & \ReportSiteAddress\\
 Telephone & \ReportHostPhone\\
+Fax & \ReportHostFax\\
 \addlinespace
 \multicolumn{2}{@{}l}{\large\sffamily\bfseries Host supervisors}\\
 \midrule
@@ -106,13 +108,14 @@ Telephone & \ReportHostPhone\\
 Name & \ReportAcademicSupervisor\\
 Role & \ReportAcademicSupervisorRole\\
 Email & \ReportAcademicSupervisorEmail\\
+Telephone & \ReportAcademicSupervisorPhone\\
 \addlinespace
 \multicolumn{2}{@{}l}{\large\sffamily\bfseries Mission}\\
 \midrule
 Period & \ReportStartDate{} -- \ReportEndDate\\
-Host unit & Robotics platforms, MFJA\\
+Host unit & MFJA\\
 Official title & \ReportMissionTitle\\
-Report language & English\\
+Report language & English (international programme language)\\
 \bottomrule
 \end{tabularx}
 \endgroup
@@ -132,21 +135,51 @@ language-and-vision interface rather than an end-to-end VLA policy.
 The resulting system combines configuration-driven robot launch, calibrated
 rail geometry, continuous multi-shuttle motion and typed ROS~2 command and
 state interfaces. A locally deployed Qwen2.5-1.5B-Instruct model converts an
-English request into a structured task proposal, while a paired-view ResNet-18
-estimates shuttle state from the simulated cameras. Schema and domain checks
-are applied before PDDL/PlanSys2 produces a plan, and the resulting motion is
-supervised and confirmed from the observed system state.
+English request into a structured task proposal. The paired-view ResNet-18
+estimator---identified as V4 in the versioned artefacts---shares generic visual
+processing through \code{layer3},
+but uses independent \code{layer4} modules and prediction heads for the
+non-symmetric left and right rails. Rail side is derived from the fixed shuttle
+identity rather than predicted. Schema and domain checks are applied before
+a Planning Domain Definition Language (PDDL) problem is solved through
+PlanSys2 in a separately evaluated closed-loop integration profile; the
+resulting motion is supervised and confirmed from the observed system state.
 
-The English-to-motion workflow completed 12/12 isolated cold-start
-runs: six on each rail, covering all eight shuttle identities and five planned
-case families. Every run reached its expected terminal state. A
-separate ten-case language evaluation matched the expected result in every
-case, including clarification, rejection and cancellation. On the locked
-256-scenario Test set, the configured visual checkpoint achieved 100\%
-rail-side accuracy, 99.2537\% loaded-state accuracy and 65.2985\% exact-block
-accuracy.
+The principal perception result comes from a preregistered, one-shot Final Test
+kept disjoint from training, Validation and the exposed Development Canary.
+Across 1040 scenes and 4680 present-shuttle
+instances, the frozen epoch-11 checkpoint achieved 99.9359\% public-segment
+top-1 accuracy, 99.9117\% segment macro F1, 99.9145\% loaded-state accuracy
+and 90.8974\% joint segment-and-position accuracy at
+\(\lvert\Delta\rho\rvert\leq0.05\). Correct-segment metric-position error was
+\SI{0.01573}{m} MAE and \SI{0.05850}{m} at the 95th percentile; mean bounding-box
+IoU was 0.8340. All 80/80 frozen gates passed: 76 base gates and four
+preregistered Final Test runtime-threshold gates. The least-recalled supported
+rail--segment cell still reached 94.6429\%. The fixed rail-specific architecture
+also produced exactly zero cross-rail output change when the opposite view was
+blanked or shuffled, while deliberately swapping camera order reduced segment
+top-1 accuracy by 92.1368 percentage points. Camera order is therefore a
+safety-relevant input contract.
 
-All implementation and evaluation took place in Gazebo simulation.
+The complementary closed-loop Gazebo campaign completed 12/12 isolated
+cold-start runs: six on each rail, covering all eight shuttle identities and
+five predeclared case families. All 24 recorded step postconditions and all 48
+supervisor decisions passed. The executive made 24 planning attempts, including
+four occupancy-triggered replans; every final effect was verified, every
+controller stopped, and the twelve bags contained 1784 observations, all under
+the active schema. A separate ten-case language evaluation matched every
+declared outcome, including clarification, rejection and cancellation.
+
+The runtime-acceptance review also passed its same-frame comparison,
+seven-scene acceptance and visual-input fault checks. A five-scenario
+closed-loop fault campaign exercised corrupt authorisation, an incorrect
+runtime manifest, planner unavailability, an emergency stop during
+motion and right-sensor feedback loss. All 5/5 scenarios completed without a
+false success, left every controller disabled and recorded 424 observations,
+all under the active schema. The positive and fault-campaign reports are
+hash-bound into a manually approved runtime restricted to Gazebo closed-loop
+execution. Automatic runtime authorisation and physical deployment remain
+forbidden.
 
 \textbf{Keywords:} ROS~2; Gazebo Harmonic; industrial robotics; digital twin;
 multi-robot systems; flexible manufacturing; PDDL; PlanSys2; computer vision;
@@ -168,35 +201,64 @@ un contrôle déterministe de l'actionnement.
 Le développement a suivi une démarche incrémentale. Chaque couche s'appuie sur
 une représentation de référence et une interface ROS~2 limitée, validées avant
 l'intégration de la couche suivante. Le travail a produit quatre contributions
-liées: un socle de jumeau numérique simulé avec lancement piloté par
-configuration; des graphes ferroviaires calibrés et un mouvement continu
-multi-navette supervisé; des contrats commande/état typés avec supervision
-déterministe et vérification des effets; enfin, une boucle neuro-symbolique
+liées : un socle de jumeau numérique simulé avec lancement piloté par
+configuration ; des graphes ferroviaires calibrés et un mouvement continu
+multi-navette supervisé ; des contrats commande/état typés avec supervision
+déterministe et vérification des effets ; enfin, une boucle neuro-symbolique
 dotée de deux interfaces apprises limitées. Un modèle
 Qwen2.5-1.5B-Instruct déployé localement propose une représentation sémantique
 soumise à un schéma strict, tandis qu'un ResNet-18 à deux vues, entraîné sur le
-corpus généré de la salle~315, estime des valeurs d'état structurées. La fusion
-et la validation de domaine déterministes créent la tâche acceptée.
+corpus généré de la salle~315, estime des valeurs d'état structurées. Le modèle
+partage le traitement visuel générique jusqu'à \code{layer3}, puis emploie
+des modules \code{layer4} et des têtes de prédiction indépendants pour les deux
+rails non symétriques. Le côté du rail est déduit de l'identité fixe de la
+navette, et non prédit. La fusion et la validation de domaine déterministes
+créent la tâche acceptée. Dans un profil en boucle fermée évalué séparément,
 PDDL/PlanSys2, la traduction du plan, la supervision et la vérification des
 effets conservent l'autorité de décision et d'exécution.
 
-Dans le périmètre simulé de la salle~315, la campagne intégrée allant de la
-requête en anglais au mouvement a mené à bien les douze exécutions isolées
-démarrées à froid. Elle comprenait six exécutions par rail, couvrait les huit
-identités de navette et cinq familles de cas prédéclarées ; le résultat
-terminal déclaré a été vérifié dans chaque cas. Une évaluation distincte et
-figée du contrat linguistique sur dix cas a reproduit chaque résultat final
-déclaré sans aucune résolution automatique non sûre. Le checkpoint visuel utilisé
-pour l'évaluation est identifié par hachage. Il a atteint 100\,\% de précision
-du côté de rail, 99,2537\,\% de précision de l'état de charge et 65,2985\,\% de
-précision pour la classification exacte du bloc lors d'une unique évaluation
-sur l'ensemble Test verrouillé de 256 scénarios.
+Le résultat perceptif principal provient d'un test final défini à l'avance,
+disjoint des données d'entraînement, de validation et du jeu témoin de
+développement, puis évalué une seule fois. Sur 1040
+scènes et 4680 instances de navette présentes, le point de contrôle figé de
+l'époque~11 a atteint 99,9359\,\% de précision top-1 du segment public,
+99,9117\,\% de macro F1, 99,9145\,\% de précision de l'état de charge et
+90,8974\,\% pour le critère conjoint segment--position au seuil de 0,05.
+L'erreur de position métrique, conditionnée
+par un segment correct, vaut \SI{0.01573}{m} en moyenne et \SI{0.05850}{m} au
+95\textsuperscript{e} centile ; l'IoU moyenne des boîtes est de 0,8340. Les
+80/80 critères figés ont été satisfaits : 76 critères de base et quatre critères
+d'exécution préenregistrés du test final. La cellule rail--segment la moins bien
+rappelée parmi celles prises en charge a néanmoins atteint 94,6429\,\%. Masquer la vue opposée ou la
+mélanger entre échantillons n'a produit aucun changement de sortie inter-rail,
+tandis que l'inversion volontaire de l'ordre des caméras a réduit la précision
+top-1 du segment de 92,1368 points. Cet ordre appartient donc au contrat
+d'entrée de sûreté.
 
-La mise en œuvre et son évaluation restent limitées à la simulation. La
-configuration actuelle utilise le checkpoint visuel identifié. Le projet
-fournit à la MFJA une base réutilisable pour l'enseignement et la recherche,
-des contrats d'intégration explicites et un socle traçable pour poursuivre les
-développements et les expérimentations en simulation.
+En complément, la campagne en boucle fermée dans Gazebo a mené à bien les
+12/12 exécutions isolées démarrées à froid. Elle comprenait six exécutions par
+rail, couvrait les huit identités de navette et cinq familles de cas
+prédéclarées. Les 24/24 postconditions d'étape et les 48/48 décisions du
+superviseur ont été validées. Les 24 tentatives de planification comprenaient
+quatre replanifications déclenchées par l'occupation ; chaque effet final a été
+vérifié, chaque contrôleur a été arrêté et les douze enregistrements contenaient
+1784 observations, toutes conformes au schéma actif. Une évaluation distincte et
+figée du contrat linguistique sur dix cas a reproduit chaque résultat déclaré,
+y compris la clarification, le rejet et l'annulation.
+
+La revue d'acceptation du profil d'exécution a également validé la comparaison
+simultanée, les sept scènes d'acceptation et les fautes d'entrée visuelle. Une
+campagne de cinq scénarios de panne en boucle fermée a couvert une autorisation
+corrompue, un manifeste d'exécution erroné, l'indisponibilité du planificateur,
+un arrêt d'urgence pendant le mouvement et la perte du retour du capteur droit.
+Les 5/5 scénarios se sont
+terminés sans faux succès, avec tous les contrôleurs désactivés et 424
+observations, toutes conformes au schéma actif. Les rapports positifs et de
+panne sont liés par leurs empreintes à un profil approuvé manuellement et
+limité à l'exécution en boucle fermée dans Gazebo. L'autorisation automatique du
+profil et le déploiement physique restent interdits. Le projet fournit ainsi à
+la MFJA une base réutilisable et traçable pour poursuivre les expérimentations
+en simulation.
 
 \textbf{Mots-clés :} ROS~2 ; Gazebo ; robotique industrielle ; jumeau
 numérique ; système multi-robot ; PDDL ; PlanSys2 ; vision ; VLA ; commande
@@ -241,17 +303,25 @@ reporting guidance \citep{evryreportinstructions2026}.
 \chapter*{Glossary and Acronyms}
 \section*{Acronyms}
 \begin{acronym}[PlanSys2]
+  \acro{AI}{Artificial Intelligence}
   \acro{APE}{Activité Principale Exercée, the French principal-activity code}
+  \acro{API}{Application Programming Interface}
   \acro{CAD}{Computer-Aided Design}
   \acro{CLI}{Command-Line Interface}
+  \acro{CPU}{Central Processing Unit}
   \acro{CSV}{Comma-Separated Values}
-  \acro{DDS}{Data Distribution Service}
+  \acro{DZI}{Project device-name prefix for an indexing-zone detector}
+  \acro{F1}{Harmonic mean of precision and recall}
   \acro{GUI}{Graphical User Interface}
+  \acro{GPU}{Graphics Processing Unit}
+  \acro{IoU}{Intersection over Union}
   \acro{JSON}{JavaScript Object Notation}
+  \acro{LLM}{Large Language Model}
+  \acro{MAE}{Mean Absolute Error}
   \acro{MFJA}{Maison de la Formation Jacqueline Auriol}
+  \acro{ML}{Machine Learning}
   \acro{NAF}{Nomenclature d'Activités Française}
   \acro{PDDL}{Planning Domain Definition Language}
-  \acro{PLC}{Programmable Logic Controller}
   \acro{POPF}{Partial Order Planning Forwards}
   \acro{QoS}{Quality of Service}
   \acro{RGB}{Red--Green--Blue colour representation}
@@ -261,6 +331,7 @@ reporting guidance \citep{evryreportinstructions2026}.
   \acro{TF}{ROS transform tree}
   \acro{URDF}{Unified Robot Description Format}
   \acro{VLA}{Vision--Language--Action}
+  \acro{VLM}{Vision--Language Model}
   \acro{YAML}{YAML Ain't Markup Language}
 \end{acronym}
 
@@ -270,6 +341,12 @@ reporting guidance \citep{evryreportinstructions2026}.
   system that includes its relevant information flows.
   \item[Fail-closed] A policy that withholds an operation when required state is
   missing, stale, contradictory or from an unapproved source.
+  \item[Validation] The development partition used to select epoch~11, fit the
+  segment temperature and freeze runtime thresholds; it is not the Final Test.
+  \item[Development Canary] A post-selection regression partition exposed
+  during development and used to check the frozen candidate without selecting it.
+  \item[Final Test] The disjoint partition opened once only after the
+  checkpoint, evaluator, gates and environment had been frozen.
   \item[\code{ObservedState}] A versioned collection of current observed facts
   and their provenance at one state identifier.
   \item[SHA-256] A cryptographic digest used here to identify the exact files or

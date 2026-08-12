@@ -33,12 +33,18 @@ light/full GUI choices on the Room~315 and full-floor paths; optional device
 markers & Inspection and resource-control options; markers support debugging
 and calibration and can be hidden during image capture\\
 \tablerowrule
+Visual-runtime review & The rail-isolated visual contract is selected through
+profiles that pin the exact manifest, schema and checkpoint & A
+visual-profile selection authorises observations only. Planner or command use
+requires its own immutable runtime authorisation, and no profile authorises
+physical deployment\\
+\tablerowrule
 Robot inventory and control & Four fixed-base arms, full TIAGo and base-only
 TIAGo from the current full-floor registry; namespaced joint command/state
 surfaces and independent TIAGo base velocity & The helper checks profiles,
 vector length and units; collision-free trajectories require a separate planner\\
 \tablerowrule
-Mirrored rail setup & Independent left/right enablement, shuttle count, start
+Dual-rail setup & Independent left/right enablement, shuttle count, start
 slots, stored speed setting and initial enabled state & Current low-level simulator
 configuration. Supervised tasks retain the fixed L1--L4/R1--R4 identity domain\\
 \tablerowrule
@@ -96,11 +102,13 @@ stored speed and reached target; these fields support runtime checks\\
 \code{SensorFeedback} & Binary occupancy readings with detected identity,
 segment and calibrated coordinates\\
 \tablerowrule
-\small\path{VisualShuttleState} & Fused identity/presence validity plus learned side,
-block, box, \(s_m\), ratio, segment length and loaded state\\
+\small\path{VisualShuttleState} & Fused identity/presence validity, derived
+side, public segment, box, \(s_m\), ratio, segment length, loaded state and the
+two decision confidences\\
 \tablerowrule
-{\footnotesize\path{VisualStateObservation}} & Image stamps, schema/checkpoint, readiness,
-validation reasons, provenance and eight shuttle records\\
+{\footnotesize\path{VisualStateObservation}} & Image stamps, exact
+schema/checkpoint identity, readiness, validation reasons, provenance and eight
+fixed-identity shuttle records\\
 \tablerowrule
 \code{AddShuttle} service & Requested identity/start state and explicit
 acceptance result\\
@@ -118,8 +126,13 @@ Three fields require careful interpretation. \code{ShuttleState.speed} stores a
 speed setting rather than instantaneous velocity.
 \code{reached\_target\_slot} indicates low-level setpoint completion; the full
 task effect requires additional evidence. \code{VisualStateObservation.accepted}
-indicates that the structural and freshness checks passed, while individual
-learned values remain estimates.
+indicates that the structural, freshness, presence and required-confidence
+checks passed for the complete frame, while individual learned values remain
+estimates. In this contract, \code{side} is derived from the fixed L/R identity prefix and
+is not predicted. \code{segment\_confidence} uses Validation-only temperature
+calibration; \code{loaded\_confidence} is an uncalibrated softmax decision value
+and must not be interpreted as a probability guarantee. An absent identity has
+no accepted visual facts.
 
 \section{Canonical assets}
 
@@ -157,10 +170,19 @@ Interpret an English request & The local model proposes semantic fields;
 explicit parsing, field fusion, domain validation and dialogue produce the
 confirmed \code{TaskGoal}\\
 \tablerowrule
-Estimate visible shuttle state & The paired-camera model estimates location and
-payload state for identities supplied by the configured presence registry\\
+Estimate visible shuttle state & The paired-camera model estimates public
+segment, longitudinal location, box and payload state for identities supplied
+by the configured presence registry; the fixed identity contract supplies rail
+side\\
 \tablerowrule
-Create the symbolic plan & PlanSys2/POPF solves the current PDDL problem\\
+Select a visual input contract & The task runtime requires an exact visual
+schema and checkpoint SHA-256 allowlist. An immutable authorisation manifest and
+operator review can select a software profile, but do not themselves enable
+planning or actuation\\
+\tablerowrule
+Create the symbolic plan & PlanSys2/POPF solves the current PDDL problem in a
+separately command-authorised Gazebo profile. Selecting the visual contract
+does not by itself grant planner mutation or actuation\\
 \tablerowrule
 Select the next operation & The project executive takes the first supported
 plan step and observes the result before replanning\\

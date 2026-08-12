@@ -1,0 +1,19 @@
+{
+  "artifacts": {
+    "../plan_lock.json": "911e90f2e540ee973f5decc92b69e89a54bc40f1d611a72776510684f20c8c5c",
+    "../preregistration.json": "6c582ed3e108ec5a1a71c5795eee32953f53f4356977e3a1a11f31c6b6b7eba5",
+    "../scenario_manifest.jsonl": "590dd942f60cdeadb40238b2db95e54f8eb2022005985fed13ca4f76b28f1d7f",
+    "final_test.jsonl": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9",
+    "final_test_disjoint_audit.json": "cda625ae9f03211a61e88434c2f713d2f6a9f40c27e996f8e7da9d5f4da292c2",
+    "final_test_finalization.json": "1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee",
+    "final_test_visual_labels.jsonl": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4"
+  },
+  "dataset_role": "sealed_final_test_only",
+  "image_hash_map_sha256": "c63fabaf7c670192585046e75fe1ce83a1a3167ab8c3850c549fa0d94aa32a89",
+  "inference_count": 0,
+  "inference_status": "not_run",
+  "passed": true,
+  "scenario_count": 1040,
+  "schema_version": "room315.visual_v4.final_test_seal.v1",
+  "sealed_at_utc": "2026-08-11T19:39:39Z"
+}

@@ -1,0 +1,229 @@
+{
+  "coverage_contract": {
+    "minimum_records_per_scene_occlusion_class": 32,
+    "minimum_records_per_scene_presence_density": 32,
+    "minimum_sample_count": 512,
+    "minimum_visible_per_identity": 32,
+    "minimum_visible_per_identity_zone": 8,
+    "minimum_visible_per_position_bin": 16,
+    "minimum_visible_per_side_x_segment": 8,
+    "minimum_visible_per_target_zone": 8,
+    "minimum_visible_total": 512,
+    "required_identities": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ],
+    "required_identity_zones": [
+      "adjacent_branch",
+      "ahead_region",
+      "behind_region",
+      "boundary",
+      "buffer",
+      "intermediate_route",
+      "merge_conflict",
+      "ordinary",
+      "relation_neutral",
+      "slot",
+      "switch"
+    ],
+    "required_position_bins": [
+      "p05",
+      "p15",
+      "p25",
+      "p40",
+      "p50",
+      "p60",
+      "p75",
+      "p85",
+      "p95"
+    ],
+    "required_scene_occlusion_classes": [
+      "clear",
+      "partial_risk"
+    ],
+    "required_scene_presence_densities": [
+      "sparse",
+      "medium",
+      "dense"
+    ],
+    "required_segments": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "required_sides": [
+      "left",
+      "right"
+    ],
+    "required_target_zones": [
+      "boundary",
+      "switch",
+      "slot",
+      "merge_conflict",
+      "buffer",
+      "ordinary"
+    ],
+    "runtime_threshold_gates": {
+      "minimum_joint_confidence_coverage": 0.9,
+      "minimum_loaded_confidence_coverage": 0.95,
+      "minimum_segment_confidence_coverage": 0.9,
+      "minimum_segment_selective_accuracy": 0.95
+    }
+  },
+  "dataset": {
+    "dataset_fingerprint_sha256": "226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef",
+    "finalization": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test_finalization.json",
+      "sha256": "1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee"
+    },
+    "image_count": 2080,
+    "image_manifest_sha256": "f6193a812b810e8792dcaf3df528664652f32ef9d24d7e4e6c8fc1416826def3",
+    "image_root": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/dataset",
+    "labels": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test_visual_labels.jsonl",
+      "sha256": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4"
+    },
+    "root": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat",
+    "rows": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test.jsonl",
+      "sha256": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9"
+    },
+    "sample_count": 1040
+  },
+  "dataset_config": {
+    "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4_coverage_compat_v1.json",
+    "sha256": "035e73b0796628432b6c1caf0e15c8b26f63703b2e217200fc76b0c9a7b1ac00"
+  },
+  "dataset_role": "sealed_final_test_only",
+  "evaluation_protocol_lock": {
+    "bytes": 17956,
+    "path": "/home/tiago/room315_visual_v4_final_test_evaluation_protocol_lock_coveragecompat_seed3152026081101.json",
+    "sha256": "03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182"
+  },
+  "execution_policy": {
+    "actuation_enabled": false,
+    "automatic_runtime_switch": false,
+    "calibration_refit_performed": false,
+    "canary_opened": false,
+    "checkpoint_selection_performed": false,
+    "historical_test_opened": false,
+    "one_shot": true,
+    "plansys_updates_enabled": false,
+    "threshold_selection_performed": false,
+    "training_performed": false
+  },
+  "frozen_candidate": {
+    "checkpoint": {
+      "path": "/home/tiago/room315_visual_v4_outputs/pilot_v4_seed31520260811_attempt1/checkpoints/epoch_011.pt",
+      "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+    },
+    "effective_config": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/effective_config.json",
+      "sha256": "53f68426ceb0f79fb2c44dbd85302f2d9dad0da364da66959682ae6f3f512371"
+    },
+    "public_topology_contract": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/public_topology_contract.json",
+      "sha256": "6d2c4fd5bb42b90c89058094f91d1aba03c63d2db22499a45231b8c46f9fb90d"
+    },
+    "runtime_promotion_manifest": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/runtime_promotion_manifest.json",
+      "sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574"
+    },
+    "training_final_report": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/training_final_report.json",
+      "sha256": "d1e2fd2d360f724fb092fe22d8cd3b9237d80f8bd4c62ba134b61ee9a8875218"
+    },
+    "validation_acceptance": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/validation_acceptance.json",
+      "sha256": "e87e90fb72f24bd2fecfb54eb758a899f95a3851a0cdd9293b61125193581a6a"
+    },
+    "validation_segment_calibration": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/validation_segment_calibration.json",
+      "sha256": "e86c9cc084a7b0260f2749ee49eed3ba5d4027383ac8e8de75031019abec44d0"
+    }
+  },
+  "frozen_contract": {
+    "acceptance_gates_sha256": "092ce965b4f3c813399594d384deed849500dc1d92d2e610211c8ab0ce0c6eb0",
+    "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+    "dataset_config_sha256": "035e73b0796628432b6c1caf0e15c8b26f63703b2e217200fc76b0c9a7b1ac00",
+    "effective_config_canonical_sha256": "719c4c8eaa3a16c98c1346cc6e5d6259c2e8c77d0a325802b72abc13c9e3b523",
+    "evaluation_protocol_lock_sha256": "03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182",
+    "finalization_sha256": "1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee",
+    "implementation_aggregate_sha256": "e94e0c86435a4fcdbdaab81995761b68a6b1edae0ecd4e0d07302c70608c448d",
+    "model_contract_sha256": "15e4f499fe1cbafd9a5c52a7bf12c60e202ea46b073ce12c6a0bafc32e433f3c",
+    "plan_lock_sha256": "911e90f2e540ee973f5decc92b69e89a54bc40f1d611a72776510684f20c8c5c",
+    "preregistration_sha256": "6c582ed3e108ec5a1a71c5795eee32953f53f4356977e3a1a11f31c6b6b7eba5",
+    "protocol_frozen_sha256": "0ebb390fd6196aef77c2496203b373d9b8307dce07b760320072e005656ec0d1",
+    "runtime_manifest_sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574",
+    "runtime_thresholds": {
+      "minimum_loaded_confidence": 0.5,
+      "minimum_segment_confidence": 0.9139089813389109
+    },
+    "topology_fingerprint_sha256": "02ddcd78b1e1f410e7565ab018a9b4f25297ccf2d74c41232e981ebfc9eed344",
+    "validation_calibration_sha256": "e86c9cc084a7b0260f2749ee49eed3ba5d4027383ac8e8de75031019abec44d0",
+    "validation_temperature": 0.6007370031399095
+  },
+  "generated_after_model_freeze": true,
+  "historical_image_references": [
+    {
+      "hash_field_path": [
+        "source_image_hashes"
+      ],
+      "path": "/home/tiago/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/captured_production_audit.json",
+      "role": "old_replay_superset",
+      "sha256": "f380a9cb5c5a49e6dfa4a858c99620f7886d32e8e0fa262b4dcec83ae8fb0028"
+    },
+    {
+      "hash_field_path": [
+        "image_hashes"
+      ],
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/train_finalization.json",
+      "role": "v3r1_train",
+      "sha256": "a24aaf396ab8dc1b8688b1ee6344ce343035964ef7aafab8e8deb3e74f3ae5b1"
+    },
+    {
+      "hash_field_path": [
+        "image_hashes"
+      ],
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/validation_finalization.json",
+      "role": "v3r1_validation",
+      "sha256": "521446d530b92a0544c99b4b7fe8d7195c46276e518307029781c5b057ed939c"
+    },
+    {
+      "hash_field_path": [
+        "image_hashes"
+      ],
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_finalization.json",
+      "role": "v3r1_canary",
+      "sha256": "9a8a640062c220a00e6bef426f88823592dc24466267e7355d56f75720064e20"
+    }
+  ],
+  "output_root": "/home/tiago/room315_visual_v4_final_test_outputs",
+  "plan_lock": {
+    "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/plan_lock.json",
+    "sha256": "911e90f2e540ee973f5decc92b69e89a54bc40f1d611a72776510684f20c8c5c"
+  },
+  "preregistration": {
+    "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/preregistration.json",
+    "sha256": "6c582ed3e108ec5a1a71c5795eee32953f53f4356977e3a1a11f31c6b6b7eba5"
+  },
+  "prior_exposure": false,
+  "schema_version": "room315.visual_v4.final_test_contract.v1"
+}

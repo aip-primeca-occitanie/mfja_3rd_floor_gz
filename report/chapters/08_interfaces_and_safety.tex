@@ -29,7 +29,7 @@ The interface distinguishes three message roles:
 
 Command publication and effect observation are separate events. The executive
 checks controller or supervisor state for the requested effect.
-Exact slot arrival requires new DZI and controller reports, while switch and
+Exact slot arrival requires post-command DZI and controller reports, while switch and
 stopper feedback is subject to the freshness conditions of the corresponding
 command-result check.
 
@@ -61,7 +61,7 @@ devices may change.
   \caption[Supervised sparse commands and controller feedback.]
   {Live command semantics. The supervisor checks a sparse command dictionary
   before publishing typed ROS~2 device messages. Controller feedback establishes
-  the observed result, and omitted device names retain their previous state.}
+  the observed result, and omitted device names retain their existing state.}
   \label{fig:contract-semantics}
 \end{figure}
 \FloatBarrier
@@ -114,13 +114,13 @@ defined route-normalisation prerequisite when required\\
 \code{TranslatedPlanStep} & Parsed action, live sparse named command and
 auxiliary event-action record & Plan translator\\
 \tablerowrule
-Checked command dictionary & One physical-command request, including
+Checked command dictionary & One actuation-intent request, including
 only the named device updates to apply & Executive or macro dispatcher;
 published only after supervisor authorisation\\
 \tablerowrule
 \makecell[l]{\code{SwitchCommand}/\\\code{StopperCommand}/\\
 \code{ShuttleCommand}} & Typed ROS~2 execution messages; device messages carry
-sparse \code{NamedState[]} updates & Safety supervisor after current-state
+sparse \code{NamedState[]} updates & Rule-based software supervisor after current-state
 validation\\
 \tablerowrule
 \makecell[l]{\code{PostconditionCheck}\\and closed-loop records} & Recorded effect status,
@@ -142,7 +142,7 @@ operator confirmation before it becomes a task. The permitted producers in
 Every critical fact has four possible statuses:
 \emph{known}, \emph{unknown}, \emph{stale} and \emph{conflicting}. This is more
 expressive than a Boolean value plus confidence. Unknown means the value was
-not observed; stale means it was once known but is too old; conflicting means
+not observed; stale means its freshness limit has elapsed; conflicting means
 authorised sources disagree. The system preserves these statuses instead of
 silently coercing them to false.
 \Cref{fig:observed-fact-eligibility} shows which fact statuses may authorise
@@ -166,7 +166,7 @@ planner predicates and actuation.
   freshness metadata after source reconciliation.
 \end{description}
 
-The live task gateway retains the latest visual observation together
+The live task gateway retains the latest accepted visual observation together
 with supervisor and device reports. The provider interface supplies one current
 snapshot to the executive. Live operation keeps oracle and visual providers
 distinct, and test-only providers remain isolated from the live path.
@@ -175,9 +175,8 @@ distinct, and test-only providers remain isolated from the live path.
 
 The Room~315 execution supervisor, implemented in
 \code{room\_315\_vla\_supervisor.py}, provides the final software authorisation
-before a command is published. The filename retains the early project
-terminology; the component is a rule-based command supervisor, not a learned
-VLA policy. It subscribes to command dictionaries encoded as
+before a command is published. The component is a rule-based command supervisor,
+not a learned VLA policy. It subscribes to command dictionaries encoded as
 JavaScript Object Notation (JSON), validates their sparse named updates,
 observes the current rail state and publishes typed device or shuttle commands
 only after the checks pass. The kinematic rail controller consumes these
@@ -193,12 +192,12 @@ The supervisor gates include:
   \item same-segment and block headway;
   \item switch change within the \SI{0.35}{m} protected distance;
   \item stopper and route-clearance state;
-  \item newly observed occupancy by another shuttle and sensor dropout;
+  \item post-command occupancy by another shuttle and sensor dropout;
   \item timeout, unknown localisation and impossible/falling pose;
   \item limited retry and lexicographic reservation-conflict tie-breaking.
 \end{itemize}
 
-Safety metrics and recent decisions are stored for diagnostics. For every
+Supervisor metrics and recent decisions are stored for diagnostics. For every
 published command, the supervisor records the reason for authorisation. A
 rejected command leaves the requested device unchanged and records the reason
 for rejection. If an execution exception occurs, or the system shuts down
@@ -208,14 +207,14 @@ during an active goal, the gateway sends \code{stop\_all}.
 
 A block reservation associates a route resource with one shuttle and task.
 Reservations prevent two primitives from entering the same protected
-block. A separate headway check prevents physical overlap on the current segment
+block. A separate headway check prevents geometric overlap on the current segment
 even when the destination block is free.
 
 When crossed reservations form a detected deadlock, a lexicographic identity
 tie-break grants priority to one identity. The other participants remain safely
 stopped before observing and planning again. The implemented detector handles
 these crossed reservations; temporal non-progress and larger wait-for cycles
-would require a separate detector. Any subsequent recovery motion still requires a planned,
+would require a separate detector. Any recovery motion still requires a planned,
 reachable destination, available capacity and an effect check.
 
 \section{Source of switch feedback}

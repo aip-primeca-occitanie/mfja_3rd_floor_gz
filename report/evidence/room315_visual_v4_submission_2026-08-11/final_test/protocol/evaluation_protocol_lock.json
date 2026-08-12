@@ -1,0 +1,381 @@
+{
+  "candidate_artifacts": {
+    "checkpoint": {
+      "path": "/home/tiago/room315_visual_v4_outputs/pilot_v4_seed31520260811_attempt1/checkpoints/epoch_011.pt",
+      "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+    },
+    "effective_config": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/effective_config.json",
+      "sha256": "53f68426ceb0f79fb2c44dbd85302f2d9dad0da364da66959682ae6f3f512371"
+    },
+    "public_topology_contract": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/public_topology_contract.json",
+      "sha256": "6d2c4fd5bb42b90c89058094f91d1aba03c63d2db22499a45231b8c46f9fb90d"
+    },
+    "runtime_promotion_manifest": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/runtime_promotion_manifest.json",
+      "sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574"
+    },
+    "training_final_report": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/training_final_report.json",
+      "sha256": "d1e2fd2d360f724fb092fe22d8cd3b9237d80f8bd4c62ba134b61ee9a8875218"
+    },
+    "validation_acceptance": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/validation_acceptance.json",
+      "sha256": "e87e90fb72f24bd2fecfb54eb758a899f95a3851a0cdd9293b61125193581a6a"
+    },
+    "validation_segment_calibration": {
+      "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow/validation_segment_calibration.json",
+      "sha256": "e86c9cc084a7b0260f2749ee49eed3ba5d4027383ac8e8de75031019abec44d0"
+    }
+  },
+  "coverage_contract": {
+    "minimum_records_per_scene_occlusion_class": 32,
+    "minimum_records_per_scene_presence_density": 32,
+    "minimum_sample_count": 512,
+    "minimum_visible_per_identity": 32,
+    "minimum_visible_per_identity_zone": 8,
+    "minimum_visible_per_position_bin": 16,
+    "minimum_visible_per_side_x_segment": 8,
+    "minimum_visible_per_target_zone": 8,
+    "minimum_visible_total": 512,
+    "required_identities": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ],
+    "required_identity_zones": [
+      "adjacent_branch",
+      "ahead_region",
+      "behind_region",
+      "boundary",
+      "buffer",
+      "intermediate_route",
+      "merge_conflict",
+      "ordinary",
+      "relation_neutral",
+      "slot",
+      "switch"
+    ],
+    "required_position_bins": [
+      "p05",
+      "p15",
+      "p25",
+      "p40",
+      "p50",
+      "p60",
+      "p75",
+      "p85",
+      "p95"
+    ],
+    "required_scene_occlusion_classes": [
+      "clear",
+      "partial_risk"
+    ],
+    "required_scene_presence_densities": [
+      "sparse",
+      "medium",
+      "dense"
+    ],
+    "required_segments": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "required_sides": [
+      "left",
+      "right"
+    ],
+    "required_target_zones": [
+      "boundary",
+      "switch",
+      "slot",
+      "merge_conflict",
+      "buffer",
+      "ordinary"
+    ],
+    "runtime_threshold_gates": {
+      "minimum_joint_confidence_coverage": 0.9,
+      "minimum_loaded_confidence_coverage": 0.95,
+      "minimum_segment_confidence_coverage": 0.9,
+      "minimum_segment_selective_accuracy": 0.95
+    }
+  },
+  "coverage_contract_sha256": "53b821db1d5a1f3f582ab01a78220ca445a2dac667717a1c2c6ab9bc5bbb00ce",
+  "created_at_utc": "2026-08-11T15:27:40.673384+00:00",
+  "dataset_role": "sealed_final_test_only",
+  "dataset_root": "/home/tiago/room315_visual_v4_final_test_seed3152026081101",
+  "design_artifacts": {
+    "dataset_config": {
+      "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4.json",
+      "sha256": "ca202ed1b98d4129e6a474e874032b5d397545da3a3f677e11fbe7c1963ffb5a"
+    },
+    "plan_lock": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101/plan_lock.json",
+      "sha256": "39e12180961a96046e0d3f3cc5698a8c268069891778731ca8db831a150d221e"
+    },
+    "preregistration": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101/preregistration.json",
+      "sha256": "a0e8ec9ad97a13b82ffa73a03c1ccd20915f82fae449ed2a913e12c290b8fd49"
+    },
+    "scenario_manifest": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101/scenario_manifest.jsonl",
+      "sha256": "c2147e28d3116798648acfbc3da1488c615e5131c3835deef38f8f552239a282"
+    },
+    "scenario_summary": {
+      "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101/scenario_summary.json",
+      "sha256": "c83dba51ad37d812bcf548c115bc7fa289925edac1841740296fefee0bc63478"
+    }
+  },
+  "environment": {
+    "byteorder": "little",
+    "cuda_available": true,
+    "cuda_device_count": 1,
+    "cuda_devices": [
+      {
+        "compute_capability": [
+          8,
+          6
+        ],
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3080 Laptop GPU",
+        "total_memory_bytes": 16749625344
+      }
+    ],
+    "cudnn_version": 91002,
+    "package_versions": {
+      "numpy": "1.26.4",
+      "pillow": "10.2.0",
+      "pyyaml": "6.0.1",
+      "torch": "2.10.0",
+      "torchvision": "0.25.0"
+    },
+    "platform_machine": "x86_64",
+    "platform_release": "6.14.0-34-generic",
+    "platform_system": "Linux",
+    "python_base_prefix": "/usr",
+    "python_executable": "/home/tiago/room315_local_training/venv/bin/python",
+    "python_implementation": "CPython",
+    "python_prefix": "/home/tiago/room315_local_training/venv",
+    "python_version": "3.12.3",
+    "torch_cuda_build": "12.8",
+    "torch_version": "2.10.0+cu128"
+  },
+  "environment_sha256": "3f67d473e6a9b135ea3e1011d83d03210a5273ac45c44a3ab7379ef2cfeee08c",
+  "execution_layout": "source_tree_only",
+  "execution_policy": {
+    "actuation_enabled": false,
+    "automatic_runtime_switch": false,
+    "calibration_refit_performed": false,
+    "canary_opened": false,
+    "checkpoint_selection_performed": false,
+    "historical_test_opened": false,
+    "one_shot": true,
+    "plansys_updates_enabled": false,
+    "threshold_selection_performed": false,
+    "training_performed": false
+  },
+  "execution_policy_sha256": "41e356ea3f9eb5be71a3d963cbae69e35f6e43ff1cfce35029ecef7234b07988",
+  "historical_reference_artifacts": {
+    "old_replay_superset": {
+      "path": "/home/tiago/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/captured_production_audit.json",
+      "sha256": "f380a9cb5c5a49e6dfa4a858c99620f7886d32e8e0fa262b4dcec83ae8fb0028"
+    },
+    "v3r1_canary": {
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_finalization.json",
+      "sha256": "9a8a640062c220a00e6bef426f88823592dc24466267e7355d56f75720064e20"
+    },
+    "v3r1_train": {
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/train_finalization.json",
+      "sha256": "a24aaf396ab8dc1b8688b1ee6344ce343035964ef7aafab8e8deb3e74f3ae5b1"
+    },
+    "v3r1_validation": {
+      "path": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/validation_finalization.json",
+      "sha256": "521446d530b92a0544c99b4b7fe8d7195c46276e518307029781c5b057ed939c"
+    }
+  },
+  "implementation_aggregate_sha256": "e94e0c86435a4fcdbdaab81995761b68a6b1edae0ecd4e0d07302c70608c448d",
+  "implementation_artifacts": {
+    "code": {
+      "acceptance": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_acceptance_v4.py",
+        "sha256": "df859f25622286938c403c6e50271d1f31e55fc66860b3fb3a2dcaf987c2146e"
+      },
+      "calibration": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_calibration_v4.py",
+        "sha256": "382c77c72fb79e8f114b5eef871affbfbf1cd50126d2ed8943dbb26d1e94a913"
+      },
+      "dataset_loader": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_state_dataset.py",
+        "sha256": "e7198b9527641ebffdcfa3398dbf7d5fc80033e84103e5e726bf98a17c77ed5c"
+      },
+      "evaluator": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_final_test_v4.py",
+        "sha256": "c1dabdd44f65e681ff7f0ff09d32075563db0ce4e30e8b8029563e284d93b8e3"
+      },
+      "json_io": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_json_io.py",
+        "sha256": "a9f2bef059ca5dd3885654798e136329220c3ecef35a472bdc789683ce830953"
+      },
+      "kinematic_shuttle": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py",
+        "sha256": "4f663ad42f085f9002b03314a28342b95a8798d63710890920f62156c48f413b"
+      },
+      "model": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_model_v4.py",
+        "sha256": "402203ae20e67cb8b7d384170d4cf3c9a96a81547bf6a3a3ad9206e08f5e7aa1"
+      },
+      "multi_shuttle": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_multi_shuttle.py",
+        "sha256": "74b6e45576d2e20349874c9128f28abc61dba9d028845efaaf0e2bdbc4f665f4"
+      },
+      "protocol_tests": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/test/test_room315_visual_final_test_v4.py",
+        "sha256": "18e21169ba679e4a4003197a11f794c2d1bf2cc1de4b11c7cf760bdd605db19e"
+      },
+      "rail_defaults": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_rail_defaults.py",
+        "sha256": "74b1a924c344ee67715da450ab39417cfa5bdf3a470b50ddee832d9cd11a5809"
+      },
+      "topology_contract": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_contract_v4.py",
+        "sha256": "2f45cb55a4a6e2b4528f0c958a8d313bd4dc8722179675f84becab61e979a2fc"
+      },
+      "trainer_evaluation_api": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_vla_train_v4.py",
+        "sha256": "4320594aa55edb1c0f43b472b877e112dc552b1b35fa47ef01951e6f112c282a"
+      },
+      "training_runtime": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_training_v4.py",
+        "sha256": "5f39f69478d8419ba9633ce2e0fa978d729662f6b658fc6f797213ae4ecf5f24"
+      },
+      "v3_common_dependency": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_v3_common.py",
+        "sha256": "9b423f81495dfda73a32a9202f06f1f039aa9658ee02bb01a36462c1b0b29972"
+      },
+      "visual_fleet": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/scripts/room_315_visual_fleet.py",
+        "sha256": "ec42fe7f4c42040d71611a7349ebe5c07976f2dccb8612fc81a4298a4dcfc156"
+      }
+    },
+    "config": {
+      "rail_network_left": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml",
+        "sha256": "6473fdef8d50f7678836b0168bd146b7231d4e779eade406fe8541bb94744ccb"
+      },
+      "rail_network_right": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml",
+        "sha256": "98d1d39337ebec6b54fb488e80b8e979153572b837828fc657a33da7ff07667d"
+      },
+      "raw_segment_A12E": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A12E.csv",
+        "sha256": "6df5985fda1e63e7537c33a37da835e2f68ff6ffce183fbbd1cbc1d5de161f6c"
+      },
+      "raw_segment_A12I": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A12I.csv",
+        "sha256": "ee8274fb85fc54b9a8924d7a5959733b870dacbe760f5f5c708a19b831cdfa3f"
+      },
+      "raw_segment_A14": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A14.csv",
+        "sha256": "34cb6a69e7676f251329c13b624a60f1f2477bcbf006e4cb751a4ee4d3b018b3"
+      },
+      "raw_segment_A1E": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A1E.csv",
+        "sha256": "5a93b5de9d7f5145832b5a503189cc861b5889fa78b0a2ed14cfbb57884c90a7"
+      },
+      "raw_segment_A1I": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A1I.csv",
+        "sha256": "3069478153bf7a1f58335f7463f6604cd312fd62ec52f6907f9d12d460725d96"
+      },
+      "raw_segment_A23": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A23.csv",
+        "sha256": "d831e0c6dbad314626df953687823967accb12ceb0a0c8e7dfdb5600ef31e149"
+      },
+      "raw_segment_A2E": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A2E.csv",
+        "sha256": "fa5a22b70a02855ff469d9c57aae84c28ebbee7827c3dbca6df58d191791425b"
+      },
+      "raw_segment_A2I": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A2I.csv",
+        "sha256": "f2e055dc028f33b5314bcce14c3c28fc30b93fc19070b4838f857164f7cf12af"
+      },
+      "raw_segment_A34E": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A34E.csv",
+        "sha256": "051f091b782caf47fa967f7a1f2a46257cc9a73c67fba48625b238cbbbe63f0a"
+      },
+      "raw_segment_A34I": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A34I.csv",
+        "sha256": "d71c077c92a9cd76955aeca26e1fbf9c598fbde8230caba2881d6b485a5b5ada"
+      },
+      "raw_segment_A3E": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A3E.csv",
+        "sha256": "acc176794fac14608b8d8e75b76fd25f73f13ef8f221714a084885f499c79a81"
+      },
+      "raw_segment_A3I": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A3I.csv",
+        "sha256": "7a5c38eafd30ab10b804a176c3c85c71829ea57992cc25a4cd3f044e9a0341af"
+      },
+      "raw_segment_A4E": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A4E.csv",
+        "sha256": "2f98bfabd93b6875c8f770cdbc1db3aedea0b56e259983624369b5190f7d4f2d"
+      },
+      "raw_segment_A4I": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_kinematics/raw_segments/A4I.csv",
+        "sha256": "45e6d2cdd0c0042b5df5bc6a67a838bb7620abaff7795429a2e4f10514fc4646"
+      },
+      "shuttle_identity": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml",
+        "sha256": "721de97f0aed54efae6a23ae923cdb141da9871ddfc28c9cd33373ee000af141"
+      },
+      "simulation_world": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_3rd_floor_description/worlds/room_315_only.world",
+        "sha256": "c3dede6e4887f2cea64d6db3521d9cd537386f26ab60aee4a47191abc3df4db2"
+      }
+    }
+  },
+  "inference_count": 0,
+  "inference_status": "not_run",
+  "one_shot": {
+    "attempt_identity": "checkpoint_sha256+dataset_fingerprint_sha256",
+    "enabled": true,
+    "evaluation_device": "cuda",
+    "failed_or_interrupted_attempt_is_consumed": true,
+    "global_ledger_root": "/home/tiago/room315_visual_v4_final_test_attempt_ledger_v1",
+    "ledger_override_allowed": false
+  },
+  "protocol_frozen_sha256": "881bcc077631552a5398214df5fd291ae8a6d1ef095c0c1d3fbba6ddfe64893c",
+  "schema_version": "room315.visual_v4.final_test_evaluation_protocol_lock.v1",
+  "source_tree": {
+    "anchors": {
+      "cmake": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/CMakeLists.txt",
+        "sha256": "2957a6ccfe5613a1be3511f79bf17d167776430c99b6b803b8524073208649ea"
+      },
+      "package_manifest": {
+        "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/package.xml",
+        "sha256": "cd8de59fb489746664738aa5c40c117012e5e2007d53a565248bd09bed3258ab"
+      }
+    },
+    "package_root": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config",
+    "repository_root": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz"
+  },
+  "test_images_opened": false,
+  "test_labels_opened": false,
+  "test_rows_opened": false
+}

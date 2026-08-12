@@ -3,15 +3,25 @@
 
 \section{Runtime architecture}
 
-\Cref{fig:neurosymbolic-architecture} follows the runtime from interpretation
-to an observed result. Qwen supplies candidate task fields and the paired-view
-ResNet-18 supplies scene estimates. After task confirmation and state checks,
-the gateway builds a PDDL problem, requests a PlanSys2/POPF plan and selects its
-first supported step. The supervisor publishes the corresponding typed ROS~2
-command, the rail controller changes the Gazebo state, and the executive
-compares the resulting state with the expected effect. If the goal is not yet
-complete, the cycle begins again from a new observation. The interface and
-safety rules behind this sequence are defined in \cref{chap:interfaces}.
+\Cref{fig:neurosymbolic-architecture} follows the closed-loop runtime from
+interpretation to an observed Gazebo result. Qwen supplies candidate task
+fields and the split-rail visual model supplies scene estimates. Whole-observation
+validation admits a typed \code{VisualStateObservation} only after its calibrated
+confidence, freshness and contract checks pass. The task gateway combines that
+observation with the confirmed task and device evidence, builds a fresh PDDL
+problem, requests a PlanSys2/POPF plan and selects its first supported step. The
+deterministic supervisor publishes the corresponding typed ROS~2 command, the
+rail controller changes the Gazebo state, and the executive compares the
+post-command visual observation, controller state and identity-bearing DZI
+evidence with the expected effect. If the
+goal is not yet complete, the cycle begins again from a new observation. The
+interface and safety rules behind this sequence are defined in
+\cref{chap:interfaces}.
+
+The inference node's optional direct ProblemExpert predicate mirror remains
+disabled. This does not interrupt the active command path: the task gateway
+consumes the accepted visual observation, constructs the current PDDL problem
+and calls the PlanSys2 planner service directly.
 
 The colours distinguish roles: blue boxes show learned outputs, green boxes
 show project logic, orange denotes symbolic planning, red marks permission to
@@ -20,9 +30,11 @@ publish an actuation command, and grey denotes the Gazebo rail controller.
 \begin{figure}[p]
   \centering
   \input{figures/f10_runtime_vertical.tex}
-  \caption[Current Room~315 English-to-motion architecture.]
-  {A confirmed task and current camera state feed one symbolic step. The dashed
-  path returns to observation and planning while the goal remains incomplete.}
+  \caption[Room~315 English-to-motion runtime architecture.]
+  {End-to-end sequence from task and paired-camera inputs to a verified Gazebo
+  result. The optional direct ProblemExpert predicate mirror is disabled; the
+  dashed green path requests a post-command observation while the grounded goal
+  remains incomplete.}
   \label{fig:neurosymbolic-architecture}
 \end{figure}
 \FloatBarrier
@@ -47,12 +59,32 @@ assigning an identity prematurely.
 
 \section{Step 2---read the current scene and ground the goal}
 
-The visual runtime synchronises the left and right RGB camera topics and runs
-the selected ResNet-18 checkpoint. It decodes the 200 predicted values only for
-identities marked as present in the configured registry. Before
-publishing a typed \code{VisualStateObservation}, it checks the artefact,
-timestamp, vocabulary and internal consistency. A current observation supplies
-planner facts only after these checks pass.
+The visual runtime first verifies the immutable runtime manifest, checkpoint,
+preprocessing contract, camera order, topology fingerprint and confidence
+policy. It synchronises the left and right RGB topics, requires their declared
+4:3 geometry, resizes each image to \(320\times240\), and preserves their fixed
+order. The shared low-level stem is followed by independent left and right
+branches: L1--L4 can depend only on the left image and R1--R4 only on the right
+image. The 168 learned values cover public-segment logits, loaded-state logits,
+normalised bounding boxes and normalised longitudinal position
+\(\rho=s/L\), serialised as \code{s\_ratio}. Rail side is derived from identity;
+segment length and \(s_m\) come from the fingerprinted public-topology contract.
+
+For every identity declared present by the independent presence provider, the
+runtime applies the validation-calibrated segment threshold and the loaded-state
+decision floor. A stale, missing or conflicting input rejects the complete
+frame, whereas absent identities emit no accepted visual facts. A typed
+\code{VisualStateObservation} additionally carries schema, checkpoint and
+confidence metadata.
+
+The Gazebo control profile keeps the inference node's
+\code{dry\_run\_state\_fusion} guard true and
+\code{plansys2\_update\_enabled} false while separately authorising the task
+gateway's Gazebo actuation path. These flags prevent the inference node from
+mutating ProblemExpert predicates; they do not make the gateway observation-only.
+The gateway verifies the accepted schema and checkpoint, constructs the PDDL
+problem from that observation and invokes the planner service through its own
+authorised interface. Physical deployment remains outside this profile.
 
 The task gateway combines the current visual observation and configured
 presence registry with supervisor device state and identity-bearing rail sensor
@@ -136,7 +168,7 @@ entry is clear & The clearance family enters \code{clearance\_mode} and selects
 one permitted next relocation. Each completed step produces a fresh problem;
 finish or pause actions control route restoration\\
 \tablerowrule
-A previous mixed route needs normalisation & Route reconfiguration is allowed;
+Mixed route requiring normalisation & Route reconfiguration is allowed;
 clearance mode is inactive; no relocation remains &
 \path{restore_normal_route} restores the exterior route and its readiness facts\\
 \tablerowrule
@@ -149,9 +181,9 @@ inspection without an actuation command\\
 \end{table}
 
 PDDL effects describe the state expected after an action. The next planning
-cycle nevertheless uses the newly observed state rather than assuming that the
+cycle nevertheless uses the observed post-action state rather than assuming that the
 prediction occurred. The complete B03 run later in this chapter shows this
-difference between a symbolic effect and a reported physical result.
+difference between a symbolic effect and an observed controller result.
 
 In the normal planning path, the executive sends the domain and problem to the
 PlanSys2 planner service, configured with the POPF solver. Planning uses the
@@ -225,7 +257,7 @@ slot~4 free. The motion portion therefore contains one
 a topology relocation\\
 \tablerowrule
 Motion command & \code{move\_shuttle\_to\_slot} for R3 from right
-slot~3 to right slot~4 within the Staubli section at \SI{0.2}{m/s}\\
+slot~3 to right slot~4 within the Stäubli TX2-60L section at \SI{0.2}{m/s}\\
 \tablerowrule
 Arrival & Two separately timestamped DZI4R readings report identity R3;
 the matching \code{ShuttleState} reports target slot~4 and \code{DISABLED}, and

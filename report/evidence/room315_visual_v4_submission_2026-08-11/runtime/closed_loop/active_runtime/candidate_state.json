@@ -1,0 +1,18 @@
+{
+  "authorization_scope": "gazebo_v4_closed_loop_runtime_only",
+  "automatic_promotion_allowed": false,
+  "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+  "checkpoint_filename": "checkpoint_epoch_011.pt",
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "deployment_mode": "active",
+  "manual_review_approved": true,
+  "physical_deployment_approved": false,
+  "promotion_manifest_sha256": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+  "runtime_guards": {
+    "actuation_enabled": true,
+    "dry_run_state_fusion": true,
+    "plansys2_update_enabled": false
+  },
+  "schema_version": "room315.deployment_candidate_state.v4.v1",
+  "state": "active_closed_loop_runtime"
+}

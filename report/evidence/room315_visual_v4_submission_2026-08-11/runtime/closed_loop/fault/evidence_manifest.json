@@ -1,0 +1,675 @@
+{
+  "campaign_schema": "room315.v4_closed_loop_fault_campaign.v1",
+  "campaign_status": "passed",
+  "created_at_utc": "2026-08-12T00:27:33.122091Z",
+  "file_count_excluding_manifest_and_checksums": 133,
+  "files": [
+    {
+      "path": "cases/F01/case_summary.json",
+      "sha256": "5ae4638f45a46ff8d932c17e97722d73c657bcf0512d45d5ad08d3f772ff6a9a",
+      "size_bytes": 73265
+    },
+    {
+      "path": "cases/F01/derived_input_hashes.json",
+      "sha256": "a6d3a8655a3655af50424fef6bfb9d59d9d609d867aa40a05ac1d4f33c36624f",
+      "size_bytes": 553
+    },
+    {
+      "path": "cases/F01/fault_inputs/corrupt_authorization.json",
+      "sha256": "b309746db56870d967005cf32998c1af66a143ffb1400748ac622ca8b06e50ec",
+      "size_bytes": 22
+    },
+    {
+      "path": "cases/F01/fault_inputs/task_execution_runtime.yaml",
+      "sha256": "1ac6800271506b80c127598adbd5a4ba11711a11e488c1f51edca0b6a088d463",
+      "size_bytes": 1960
+    },
+    {
+      "path": "cases/F01/final_controller_state.json",
+      "sha256": "6417ceca5ad052e359d6b6dee40861a6a20f20af571280a4f826b1446844b0a5",
+      "size_bytes": 385
+    },
+    {
+      "path": "cases/F01/initial_controller_state.json",
+      "sha256": "a8034b02ed39195e0aa42dcd2366ae78731ad618de39d46e755e7e55061b837b",
+      "size_bytes": 384
+    },
+    {
+      "path": "cases/F01/logs/execution.log",
+      "sha256": "17360cd96e78c0ede4c866f08c3e2b81bdf8454cbf7b1320a4bed78b250eb007",
+      "size_bytes": 5642
+    },
+    {
+      "path": "cases/F01/logs/floor.log",
+      "sha256": "c0dad361351d1a4ff8d5b083aaf7a424d4968cab97059a5887a70e0cc429231d",
+      "size_bytes": 13904
+    },
+    {
+      "path": "cases/F01/logs/rosbag.log",
+      "sha256": "2373bbefaa691972020836dc19c29427268baef7b7080738ef3a5007597f293f",
+      "size_bytes": 1461
+    },
+    {
+      "path": "cases/F01/logs/visual.log",
+      "sha256": "43292b2c0298998a537633edae646abf26fa7e9a0db8cce6bd545a622f177567",
+      "size_bytes": 928
+    },
+    {
+      "path": "cases/F01/preexisting_graph.json",
+      "sha256": "f82773613e0c21ca8a33e7cbca5842b94578a732b22890a10540025d09642ee6",
+      "size_bytes": 55
+    },
+    {
+      "path": "cases/F01/readiness_clock.json",
+      "sha256": "b9c7a8a89253ea1ffc3401d3e686ec1d76afef252347b194ec5f0511a0180b7c",
+      "size_bytes": 59
+    },
+    {
+      "path": "cases/F01/rosbag/metadata.yaml",
+      "sha256": "0e88d0945f4a719dc974dedc89bfe5cf811ffd35fdfa708465ec900359d1884c",
+      "size_bytes": 5967
+    },
+    {
+      "path": "cases/F01/rosbag/rosbag_0.mcap",
+      "sha256": "cae04bbb3db9fbc25c7a84d792400a4f64fc72bbf7992f960c6bb7688c651def",
+      "size_bytes": 134180
+    },
+    {
+      "path": "cases/F01/rosbag_audit.json",
+      "sha256": "b7e0b6560c954c6236755618a6e766ef84e6d3f20583d1efaa729fbf0b762c1a",
+      "size_bytes": 66479
+    },
+    {
+      "path": "cases/F01/rosbag_stop.json",
+      "sha256": "fda394be99a548ade92fa71f0980d6389218ea50481d47a7f472d3d49f80a884",
+      "size_bytes": 858
+    },
+    {
+      "path": "cases/F01/stationary_proof.json",
+      "sha256": "a1ec76f87e1b74cfa3dc20d434df5d0edc04d9c3bedbb14f097ed94eae5757e2",
+      "size_bytes": 155
+    },
+    {
+      "path": "cases/F01/stop_all.json",
+      "sha256": "32bd5de7239705e3d0c89671453fa52d0b0db5a0deb87ea630506a929b67668e",
+      "size_bytes": 675
+    },
+    {
+      "path": "cases/F01/teardown.json",
+      "sha256": "bcbb6b0153509df415a0c15629956ef25a4ad672f035f34d1e3c7ff2aed0f180",
+      "size_bytes": 3391
+    },
+    {
+      "path": "cases/F01/validation.json",
+      "sha256": "83bca74b35fab4853eef27bda832383469cc20e3699784e56c93dcd9c99d2143",
+      "size_bytes": 435
+    },
+    {
+      "path": "cases/F01/visual_readiness.json",
+      "sha256": "79a53c30a5e5173cbc971bc9a46405e5fcb4bd06ff86a1241e1f0318c3d7796c",
+      "size_bytes": 232
+    },
+    {
+      "path": "cases/F01/worker_process.log",
+      "sha256": "3ba2124b346a10d9d7f1bbfc5cd274ea999efbbefd4525bf79dcb07b4752694f",
+      "size_bytes": 53097
+    },
+    {
+      "path": "cases/F02/case_summary.json",
+      "sha256": "e8ebd513280b2c2ccf6631ee94ea72a171c48ff956eb8ff87acc5e619f50cddf",
+      "size_bytes": 58288
+    },
+    {
+      "path": "cases/F02/derived_input_hashes.json",
+      "sha256": "d5109764faadc3de205b7c74a9fb529ef1ace9fe7bc79771e0ffa867a0624e2e",
+      "size_bytes": 557
+    },
+    {
+      "path": "cases/F02/fault_inputs/task_execution_runtime.yaml",
+      "sha256": "c670a4d9384b6e77c23d15328760435f64b21c08a6ef3080f94d2b9801e4473d",
+      "size_bytes": 1952
+    },
+    {
+      "path": "cases/F02/fault_inputs/wrong_promotion_manifest.json",
+      "sha256": "58b6370e202faffc34181eac8bb2820680ee58f3c1c54f1f94fbe9fe05ee6202",
+      "size_bytes": 137
+    },
+    {
+      "path": "cases/F02/final_controller_state.json",
+      "sha256": "71ace19ffdd6c11925691e76604d7434d46781211fd4fc738d86e94b23ca93eb",
+      "size_bytes": 385
+    },
+    {
+      "path": "cases/F02/initial_controller_state.json",
+      "sha256": "91db4d08d7c6efd05ab31aa6ed4b93c50cb758a760f5154d98a0871a45138b5b",
+      "size_bytes": 383
+    },
+    {
+      "path": "cases/F02/logs/execution.log",
+      "sha256": "1bb59cbf13591ac734bd926522eff45a0f084dcd1fe030889249abaa07fbb33d",
+      "size_bytes": 3310
+    },
+    {
+      "path": "cases/F02/logs/floor.log",
+      "sha256": "e0ba6199f6ba92e1e653b060813acef1a8b17090a979f72a2e5ff058a4f87ba0",
+      "size_bytes": 13904
+    },
+    {
+      "path": "cases/F02/logs/rosbag.log",
+      "sha256": "513d91252a43189aa604b148fcef4009bcfc4842abb62f94b3817a79880982e6",
+      "size_bytes": 1461
+    },
+    {
+      "path": "cases/F02/logs/visual.log",
+      "sha256": "5aa3e20b750c103af3a12691beca94728f9d7d6e510c5c19f09e97e038bcea23",
+      "size_bytes": 928
+    },
+    {
+      "path": "cases/F02/preexisting_graph.json",
+      "sha256": "f82773613e0c21ca8a33e7cbca5842b94578a732b22890a10540025d09642ee6",
+      "size_bytes": 55
+    },
+    {
+      "path": "cases/F02/readiness_clock.json",
+      "sha256": "b9c7a8a89253ea1ffc3401d3e686ec1d76afef252347b194ec5f0511a0180b7c",
+      "size_bytes": 59
+    },
+    {
+      "path": "cases/F02/rosbag/metadata.yaml",
+      "sha256": "60ec6a1a5b4b24c078ddf77127f661df1704908b31575c89925163f9bafc3f39",
+      "size_bytes": 5967
+    },
+    {
+      "path": "cases/F02/rosbag/rosbag_0.mcap",
+      "sha256": "d678b2541bb612f08cc7389e7f60ac05f84caf9df98391e35c6e4e797c6624bc",
+      "size_bytes": 116123
+    },
+    {
+      "path": "cases/F02/rosbag_audit.json",
+      "sha256": "b7b797c0519eb344bda29a0f6fad81d0af04cad8318b93e220c0945e7de3bc80",
+      "size_bytes": 52750
+    },
+    {
+      "path": "cases/F02/rosbag_stop.json",
+      "sha256": "e846ac069963bfac6ccfd32457fab0b5c599d0946108e9e6d88b186d02e30859",
+      "size_bytes": 858
+    },
+    {
+      "path": "cases/F02/stationary_proof.json",
+      "sha256": "a1ec76f87e1b74cfa3dc20d434df5d0edc04d9c3bedbb14f097ed94eae5757e2",
+      "size_bytes": 155
+    },
+    {
+      "path": "cases/F02/stop_all.json",
+      "sha256": "dd50420f22963cd5b17ee1533562f37d09c42a7a9581602af9e03bc4538e0a16",
+      "size_bytes": 623
+    },
+    {
+      "path": "cases/F02/teardown.json",
+      "sha256": "a3ca941bc7f0923145742802952400d44cf5795bd8c20966f3712211698be800",
+      "size_bytes": 3391
+    },
+    {
+      "path": "cases/F02/validation.json",
+      "sha256": "3e3b68e26f07bfc3d1e51bc029b0e8a4d87fb93c7c4f32420072bba204ba9df1",
+      "size_bytes": 438
+    },
+    {
+      "path": "cases/F02/visual_readiness.json",
+      "sha256": "79a53c30a5e5173cbc971bc9a46405e5fcb4bd06ff86a1241e1f0318c3d7796c",
+      "size_bytes": 232
+    },
+    {
+      "path": "cases/F02/worker_process.log",
+      "sha256": "c281c963bcf49ed8c6ceb52c11fc9e1286dea7007a5dfec579b11e8a12c39f9b",
+      "size_bytes": 42278
+    },
+    {
+      "path": "cases/F03/case_summary.json",
+      "sha256": "64c93771e8d87ba99a811e3ac884bca3a366d5c484aaf068e26c6c0cfe09bef1",
+      "size_bytes": 179261
+    },
+    {
+      "path": "cases/F03/derived_input_hashes.json",
+      "sha256": "ddbe61c4fecef65040ebede3ae95265c66c6fdeadfb03cff44f2ca177225b694",
+      "size_bytes": 288
+    },
+    {
+      "path": "cases/F03/fault_inputs/task_execution_runtime.yaml",
+      "sha256": "cea7aeeaf91f9541aa6f4db4ba0e977dba3306ffb846bc63d6c403eb667d1076",
+      "size_bytes": 1988
+    },
+    {
+      "path": "cases/F03/final_controller_state.json",
+      "sha256": "17e957cadcfe345f14bda55b629ba54e77330a47e9612eb93689045b98ffd24a",
+      "size_bytes": 385
+    },
+    {
+      "path": "cases/F03/initial_controller_state.json",
+      "sha256": "b045be0ca741f8c7a953b33f07de9bb8f8a541cc6a318546a310339c82daa472",
+      "size_bytes": 384
+    },
+    {
+      "path": "cases/F03/logs/execution.log",
+      "sha256": "6c96790a7fb95e0a8da57020d28620d0f1b6e08cc57b9504f2f3406a9cef4876",
+      "size_bytes": 2392
+    },
+    {
+      "path": "cases/F03/logs/floor.log",
+      "sha256": "d0a6980f29089e61854af3f557de88b5c15a52a237fd80f152e6b3236ab84ed5",
+      "size_bytes": 14275
+    },
+    {
+      "path": "cases/F03/logs/rosbag.log",
+      "sha256": "951bf06ce137b3ddb1ffeed7cf74c0820ab5a1f772cd4f63480cd0c4c12392f5",
+      "size_bytes": 1746
+    },
+    {
+      "path": "cases/F03/logs/terminal_status_echo.log",
+      "sha256": "582546e8ed00ea028bac903bee514de08c67bf1a4452d0ccb4ca9733e19bd7e5",
+      "size_bytes": 1165
+    },
+    {
+      "path": "cases/F03/logs/visual.log",
+      "sha256": "168bd765f752df3f1ecb6485d59bec050f3bb810e6ed05e8adbbab2bcdf4c49b",
+      "size_bytes": 928
+    },
+    {
+      "path": "cases/F03/planner_unavailable_proof.json",
+      "sha256": "7f3a37266865349c7efb8eb5c06edbf0cf806a4df3804863f9647ddce358b48c",
+      "size_bytes": 194
+    },
+    {
+      "path": "cases/F03/preexisting_graph.json",
+      "sha256": "f82773613e0c21ca8a33e7cbca5842b94578a732b22890a10540025d09642ee6",
+      "size_bytes": 55
+    },
+    {
+      "path": "cases/F03/readiness_clock.json",
+      "sha256": "b9c7a8a89253ea1ffc3401d3e686ec1d76afef252347b194ec5f0511a0180b7c",
+      "size_bytes": 59
+    },
+    {
+      "path": "cases/F03/rosbag/metadata.yaml",
+      "sha256": "a6f8c687763a12b36fb6ef3d7baeb4fb4a8303f867a0dc9c7f404b69d7e2261a",
+      "size_bytes": 8212
+    },
+    {
+      "path": "cases/F03/rosbag/rosbag_0.mcap",
+      "sha256": "0e6350f8e07541c06cb64f7e2450fdcc4cafd8507025c89083502c96216f0144",
+      "size_bytes": 312691
+    },
+    {
+      "path": "cases/F03/rosbag_audit.json",
+      "sha256": "7b404a6c1767ef8bb576b2226e169d0d9367da268977764ef94148d5cd3af670",
+      "size_bytes": 165161
+    },
+    {
+      "path": "cases/F03/rosbag_stop.json",
+      "sha256": "408a4a5d8de6364718d6ae3cd310a06c46a9da3b596dcacc7376e9abc2aff148",
+      "size_bytes": 858
+    },
+    {
+      "path": "cases/F03/stationary_proof.json",
+      "sha256": "a1ec76f87e1b74cfa3dc20d434df5d0edc04d9c3bedbb14f097ed94eae5757e2",
+      "size_bytes": 155
+    },
+    {
+      "path": "cases/F03/stop_all.json",
+      "sha256": "788525c3b9e1e9c7d2262e8a10d2efb3b9104a0bff559093c8b9f907d2e2a59a",
+      "size_bytes": 622
+    },
+    {
+      "path": "cases/F03/task_publish.json",
+      "sha256": "1c284980413322986a3a7210086b5f8754839a93cf7b2d5c5c9d110582d8b34b",
+      "size_bytes": 2672
+    },
+    {
+      "path": "cases/F03/task_subscriber.json",
+      "sha256": "163f000f7099559b74db67332c48e2d2094e214ceeca6cc7ff951b18a61c31f2",
+      "size_bytes": 385
+    },
+    {
+      "path": "cases/F03/teardown.json",
+      "sha256": "8757048b99cbe1114606a5f217a97f31df874919ab9101371333a180912963dd",
+      "size_bytes": 3412
+    },
+    {
+      "path": "cases/F03/terminal_status.json",
+      "sha256": "40fbe7510ccf0774856a74edc48bca90bc2693909a85bf78a8f18a4c4ad87922",
+      "size_bytes": 1217
+    },
+    {
+      "path": "cases/F03/validation.json",
+      "sha256": "8ccb20b4f79bf61a57d32814006cc1577edfa1aeb32370d085556e923d4ca607",
+      "size_bytes": 439
+    },
+    {
+      "path": "cases/F03/visual_readiness.json",
+      "sha256": "79a53c30a5e5173cbc971bc9a46405e5fcb4bd06ff86a1241e1f0318c3d7796c",
+      "size_bytes": 232
+    },
+    {
+      "path": "cases/F03/worker_process.log",
+      "sha256": "816e7d64421e07ef3ffa52dc3af9a770f6b3b8781aecb4a3150e5e7df6ef3278",
+      "size_bytes": 129323
+    },
+    {
+      "path": "cases/F04/actuating_command.json",
+      "sha256": "191d9a37aeeb1218c6a5f10120740f41fc904eecb82948976b8b35f8b8e21b39",
+      "size_bytes": 221
+    },
+    {
+      "path": "cases/F04/case_summary.json",
+      "sha256": "b002f9522cc26ae7720cc551a24cccfe3b49781729e314aca914acef885ab1aa",
+      "size_bytes": 257095
+    },
+    {
+      "path": "cases/F04/derived_input_hashes.json",
+      "sha256": "b81960e83bad44bc36735e01a2a2053ff315366bf99e43f084b15c247b1ba7f9",
+      "size_bytes": 288
+    },
+    {
+      "path": "cases/F04/emergency_stop_publish.json",
+      "sha256": "354c6c6d74ff7cbfa1ec37a3d9d1992cc0220c7ed6877c9deb0eebed947059a3",
+      "size_bytes": 1087
+    },
+    {
+      "path": "cases/F04/fault_inputs/task_execution_runtime.yaml",
+      "sha256": "cea7aeeaf91f9541aa6f4db4ba0e977dba3306ffb846bc63d6c403eb667d1076",
+      "size_bytes": 1988
+    },
+    {
+      "path": "cases/F04/final_controller_state.json",
+      "sha256": "c77730711584ac741517b4c40fabee3cb048001ee692702840f0d3d1d31d2116",
+      "size_bytes": 377
+    },
+    {
+      "path": "cases/F04/initial_controller_state.json",
+      "sha256": "7cfd6c3e8b146c57fe9693197675ed5cd83dbfe0ee0aad8da6e066ac86d88c1f",
+      "size_bytes": 384
+    },
+    {
+      "path": "cases/F04/logs/actuating_command_echo.log",
+      "sha256": "0240c693fbfad176ed84f470e443297d7baa5829fd79b1f33bc6f2cf376a72b6",
+      "size_bytes": 158
+    },
+    {
+      "path": "cases/F04/logs/execution.log",
+      "sha256": "70552dc22bcad9d3351363d6866729b07b18e9ab721fe48e858aa2896b0da372",
+      "size_bytes": 3639
+    },
+    {
+      "path": "cases/F04/logs/floor.log",
+      "sha256": "d9a0bf534baadb118ec17c13dcd917aa8e11719969d68d716909f69f6a183037",
+      "size_bytes": 16113
+    },
+    {
+      "path": "cases/F04/logs/rosbag.log",
+      "sha256": "b52c8584fc6f089298fb87ed8f6564d51c97a9be0de8f918191056b84584a28c",
+      "size_bytes": 1956
+    },
+    {
+      "path": "cases/F04/logs/terminal_status_echo.log",
+      "sha256": "2f3fff656aec18c7f309b2af32025fefd72990f9bd88d35f06574042728ba045",
+      "size_bytes": 835
+    },
+    {
+      "path": "cases/F04/logs/visual.log",
+      "sha256": "a5be66c15b7cf71cdf3a523bcddfb504d35fafaf93f89af3a5fa18746268aa64",
+      "size_bytes": 928
+    },
+    {
+      "path": "cases/F04/planner_readiness.json",
+      "sha256": "4f7b39d2dce40ac95116ea73900a22eeb1535b7476065aecbe34f274ec8c3e2c",
+      "size_bytes": 1279
+    },
+    {
+      "path": "cases/F04/preexisting_graph.json",
+      "sha256": "f82773613e0c21ca8a33e7cbca5842b94578a732b22890a10540025d09642ee6",
+      "size_bytes": 55
+    },
+    {
+      "path": "cases/F04/readiness_clock.json",
+      "sha256": "edcbaf20e83f12ada176a16dddac49a2744fffd356809a13215fd78ac97cae07",
+      "size_bytes": 59
+    },
+    {
+      "path": "cases/F04/rosbag/metadata.yaml",
+      "sha256": "33be987d89c74b1d39b7cb25d28766f293fbdd809ca86778ac0273508f5e5ea8",
+      "size_bytes": 8969
+    },
+    {
+      "path": "cases/F04/rosbag/rosbag_0.mcap",
+      "sha256": "e8a0d6783af2395717ecaf70728fc8bd96fb2aed1aefd7ea1ff083cddc32352b",
+      "size_bytes": 462618
+    },
+    {
+      "path": "cases/F04/rosbag_audit.json",
+      "sha256": "30410d661229a1ce74e2ec05592033ebed049e208aaede2d20f6b022f9c3c6ba",
+      "size_bytes": 237266
+    },
+    {
+      "path": "cases/F04/rosbag_stop.json",
+      "sha256": "d5e4e0c5a740c2cb0056a37b25c627111c1f52d56b9c904598d4b6bf37149f1b",
+      "size_bytes": 858
+    },
+    {
+      "path": "cases/F04/stop_all.json",
+      "sha256": "668ef4031b54942781f4114f697f09bbcb55dd4faf78b735f2904f16c6f5b2f3",
+      "size_bytes": 623
+    },
+    {
+      "path": "cases/F04/task_publish.json",
+      "sha256": "c9fa2e3f153d835f7d97b1158f66516ac881e5a3120d6397cef5b487b37371ad",
+      "size_bytes": 2670
+    },
+    {
+      "path": "cases/F04/task_subscriber.json",
+      "sha256": "b24195fe1e021d310b31a5937f5df735c79aff57387ee7b888009da2bb644c2e",
+      "size_bytes": 1308
+    },
+    {
+      "path": "cases/F04/teardown.json",
+      "sha256": "7ebd1bfff81e5dc3e4987520c83022e9a5ba02b8ddbc75bb5d69605c10cd0f56",
+      "size_bytes": 3411
+    },
+    {
+      "path": "cases/F04/terminal_status.json",
+      "sha256": "6a856b13ea6eabb1d0274a2e010a4ea13f1f176f400b48ba615c332dfedfd437",
+      "size_bytes": 891
+    },
+    {
+      "path": "cases/F04/validation.json",
+      "sha256": "62faebcbe2ce20a0cb7fb5078353b87dd47c3a1e1d9409f61126ce0af6282083",
+      "size_bytes": 452
+    },
+    {
+      "path": "cases/F04/visual_readiness.json",
+      "sha256": "79a53c30a5e5173cbc971bc9a46405e5fcb4bd06ff86a1241e1f0318c3d7796c",
+      "size_bytes": 232
+    },
+    {
+      "path": "cases/F04/worker_process.log",
+      "sha256": "71b366c8628d9d5183274fdf50a05d092c75137a7a7a27d133cc42ebc74395f1",
+      "size_bytes": 185113
+    },
+    {
+      "path": "cases/F05/actuating_command.json",
+      "sha256": "f535414863bb48bf3a31fd0f76680a51591812d5ceec035fc4cbe1392a7ee8c2",
+      "size_bytes": 221
+    },
+    {
+      "path": "cases/F05/case_summary.json",
+      "sha256": "0908ab9408114b37dc09e2ce8165745773c9e83a09e4309870b8a8582eb6521b",
+      "size_bytes": 329107
+    },
+    {
+      "path": "cases/F05/derived_input_hashes.json",
+      "sha256": "dbc92f4bcf216dfeed9b32262112d6686ef7ba47b031b10c87d2e7ca9c031e93",
+      "size_bytes": 288
+    },
+    {
+      "path": "cases/F05/fault_inputs/task_execution_runtime.yaml",
+      "sha256": "4e7031a4f3479663ee327febbf4e06c554b60bb521630ffb5997c823175d119c",
+      "size_bytes": 1992
+    },
+    {
+      "path": "cases/F05/feedback_unavailable_proof.json",
+      "sha256": "2587ff259261172fd3edb84737f9656d29593f8403268af719b001dc1a6d69b8",
+      "size_bytes": 2788
+    },
+    {
+      "path": "cases/F05/final_controller_state.json",
+      "sha256": "42d1cc747529dd911a921b70a8d466c6a1e0fbd076073806487194619bb12205",
+      "size_bytes": 373
+    },
+    {
+      "path": "cases/F05/initial_controller_state.json",
+      "sha256": "33163b8ed90c1a5082e09ff60f9e2d9346ec3c1abc0082d19923f95c758f6941",
+      "size_bytes": 384
+    },
+    {
+      "path": "cases/F05/logs/actuating_command_echo.log",
+      "sha256": "e6c63f45756973097046351f250fea3c20b3c3060f5648369a17369dac98fcf4",
+      "size_bytes": 158
+    },
+    {
+      "path": "cases/F05/logs/execution.log",
+      "sha256": "7c6957db77bbaeba5e6a65719fab885812f513d8521e859e681d000b57b05f39",
+      "size_bytes": 3639
+    },
+    {
+      "path": "cases/F05/logs/floor.log",
+      "sha256": "733966ac4a70572f6da785c345d570155d970eda89ccc4bb4d73f79d00c8a663",
+      "size_bytes": 14656
+    },
+    {
+      "path": "cases/F05/logs/rosbag.log",
+      "sha256": "092f8fe15f97a8b27b0fdcaa25f803e43540286d55fb7e33514a3438953e20b4",
+      "size_bytes": 1746
+    },
+    {
+      "path": "cases/F05/logs/terminal_status_echo.log",
+      "sha256": "a064d142148f680ef2856f47ba41e49f017cb14f9c642d7dd07692b245773ebe",
+      "size_bytes": 835
+    },
+    {
+      "path": "cases/F05/logs/visual.log",
+      "sha256": "358936cbcb93e63ed804e2989cf96f47ef2f14609b5986b38595879ebee40749",
+      "size_bytes": 928
+    },
+    {
+      "path": "cases/F05/planner_readiness.json",
+      "sha256": "19fe47e8f5cd1c9a12a1fb6427928c6a8d2bf2c0aadfca80a20cecd07760f1f2",
+      "size_bytes": 2461
+    },
+    {
+      "path": "cases/F05/preexisting_graph.json",
+      "sha256": "f82773613e0c21ca8a33e7cbca5842b94578a732b22890a10540025d09642ee6",
+      "size_bytes": 55
+    },
+    {
+      "path": "cases/F05/readiness_clock.json",
+      "sha256": "b9c7a8a89253ea1ffc3401d3e686ec1d76afef252347b194ec5f0511a0180b7c",
+      "size_bytes": 59
+    },
+    {
+      "path": "cases/F05/rosbag/metadata.yaml",
+      "sha256": "731ca51765d4905ed452bbf0fde7d7abb8a5a496c85fd79d9bc0b2e8759ca739",
+      "size_bytes": 8219
+    },
+    {
+      "path": "cases/F05/rosbag/rosbag_0.mcap",
+      "sha256": "ffdb39fb729e21de0ec87f13b9ae86a78a1b997b27ab21d26e297ea17d00b515",
+      "size_bytes": 584504
+    },
+    {
+      "path": "cases/F05/rosbag_audit.json",
+      "sha256": "b28170f144c7a18b28b0f43acbdd26140c8c2377af5e0c1d3b78e01494618eb0",
+      "size_bytes": 304037
+    },
+    {
+      "path": "cases/F05/rosbag_stop.json",
+      "sha256": "9c44b4e9c59e8d5c09afd1b99593c444c916d2b19e730e42cac578ba6fad7ed2",
+      "size_bytes": 858
+    },
+    {
+      "path": "cases/F05/stop_all.json",
+      "sha256": "e13641d282367fcdf34e874e048cb13482a6c5a2c93d157a42049b0291091da4",
+      "size_bytes": 778
+    },
+    {
+      "path": "cases/F05/task_publish.json",
+      "sha256": "d89f133eda75499624653227a9d7d1ccb212082ff67a2d91286b1e6e91cda87a",
+      "size_bytes": 2671
+    },
+    {
+      "path": "cases/F05/task_subscriber.json",
+      "sha256": "2063abb485a3b88af2ded6765c262e401a9c115a88ec40df29ccaa3c00a5d207",
+      "size_bytes": 692
+    },
+    {
+      "path": "cases/F05/teardown.json",
+      "sha256": "4bc3bdecb74edfaa1a24458c418df64c1226d327956787f7137c4ecf9a23bea4",
+      "size_bytes": 3411
+    },
+    {
+      "path": "cases/F05/terminal_status.json",
+      "sha256": "515e6e06bd7f0016ea4ad3f4413a9b7cbb46cfac24bf9f333038cd1348a0c53d",
+      "size_bytes": 891
+    },
+    {
+      "path": "cases/F05/validation.json",
+      "sha256": "cff6de808d2de809e53017baefb2fcac6d0838000a09c2a46d58b51482474451",
+      "size_bytes": 447
+    },
+    {
+      "path": "cases/F05/visual_readiness.json",
+      "sha256": "79a53c30a5e5173cbc971bc9a46405e5fcb4bd06ff86a1241e1f0318c3d7796c",
+      "size_bytes": 232
+    },
+    {
+      "path": "cases/F05/worker_process.log",
+      "sha256": "7611ce0aa65a945856ebb2770763ca26fed7afa4b481c1c313dac1f155801a14",
+      "size_bytes": 236887
+    },
+    {
+      "path": "command_templates.json",
+      "sha256": "410da5915e77a6f42e68b34bfa7f6e2f4a94e607b3be89985b0ac9eac57b5212",
+      "size_bytes": 2065
+    },
+    {
+      "path": "declaration.json",
+      "sha256": "c78a42dfb0091a1b7e76a1bcab95bbb3f470dfbab9378ff752dbbf127ad2e56a",
+      "size_bytes": 2596
+    },
+    {
+      "path": "fixed_artifact_verification.json",
+      "sha256": "c5ff63c0b9dfa0998ecf7722da895fe5f97e84c28e6e5fd869072bef30d0fca0",
+      "size_bytes": 2567
+    },
+    {
+      "path": "source_lock.json",
+      "sha256": "951805295ad423ba96f40d8926d69357ef90187fcdb3462d19e83f98e0e081c7",
+      "size_bytes": 11373
+    },
+    {
+      "path": "source_lock_post_verification.json",
+      "sha256": "bbcc08f30b6be3ce81621c74b3bf0a3efd5666623a66b9d4bbac6e54a499e5db",
+      "size_bytes": 11618
+    },
+    {
+      "path": "source_lock_verification.json",
+      "sha256": "64641691ed0ef87b52b1b0afffc90e107cc0af7074573da646343ce7ff08db0a",
+      "size_bytes": 11618
+    },
+    {
+      "path": "summary.json",
+      "sha256": "330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7",
+      "size_bytes": 1028378
+    }
+  ],
+  "physical_deployment": false,
+  "schema_version": "room315.v4_closed_loop_fault_evidence.v1"
+}

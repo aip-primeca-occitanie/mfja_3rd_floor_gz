@@ -1,0 +1,1215 @@
+{
+  "schema_version": "room315.report.visual_v4_submission_evidence.v4",
+  "created_on": "2026-08-11",
+  "finalized_at_utc": "2026-08-12T00:46:09Z",
+  "language": "en",
+  "package_status": "final",
+  "inventory_scope": "The included_files array inventories byte-exact evidence payloads; README.md, evidence_manifest.json, and SHA256SUMS are package administration files.",
+  "path_policy": {
+    "authored_paths_are_package_relative": true,
+    "archival_absolute_paths_may_exist_inside_byte_exact_copies": true,
+    "archival_absolute_paths_are_normative": false
+  },
+  "integrity_verification": {
+    "byte_exact_payload_count": 67,
+    "source_copy_comparisons_passed": 67,
+    "source_copy_comparison_method": "byte_for_byte_cmp_and_sha256",
+    "all_json_payloads_parsed": true,
+    "symlink_count": 0,
+    "prohibited_payload_count": 0,
+    "sha256sums_covers_all_files_except_itself": true
+  },
+  "final_test_state": {
+    "result_available": true,
+    "status": "completed",
+    "acceptance_status": "passed",
+    "accepted": true,
+    "immutable_completion": true,
+    "one_shot": true,
+    "attempt_key": "2e18d6124b24438243a93d207d0c245fc1b87e25d2c08d1edca4040637e90aad",
+    "evaluation_artifacts_included": true,
+    "automatic_runtime_switch": false,
+    "primary_contract": "final_test/final/controls/evaluation_contract.json",
+    "primary_seal": "final_test/final/controls/seal.json",
+    "primary_report": "final_test/final/results/final_report.json",
+    "completion_ledger": "final_test/final/results/attempt.completed.json"
+  },
+  "closed_loop_runtime_state": {
+    "evidence_available": true,
+    "environment": "Gazebo simulation",
+    "authorization_scope": "gazebo_v4_closed_loop_runtime_only",
+    "physical_deployment_approved": false,
+    "model_identity": {
+      "model_kind": "room315_visual_state_resnet18_split_rails_v4",
+      "visual_schema_version": "room315.visual_state.v4",
+      "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+    },
+    "positive_campaign": {
+      "source_identity": {
+        "schema_version": "room315.v4_closed_loop_campaign.v1",
+        "campaign_id": "room315_integrated_campaign_v4",
+        "qualification_manifest_sha256": "6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a",
+        "finished_at_utc": "2026-08-11T23:43:41.585705Z"
+      },
+      "summary_path": "runtime/closed_loop/positive/summary.json",
+      "summary_sha256": "1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479",
+      "evidence_manifest_path": "runtime/closed_loop/positive/evidence_manifest.json",
+      "evidence_manifest_sha256": "15d6362980751dd3e2bdd7fdab2b5ccb70118f73e1bd2cb2cf71d87bc96fdece",
+      "source_sha256s_path": "runtime/closed_loop/positive/source_SHA256SUMS",
+      "source_sha256s_sha256": "8ec1b8a456c5f83034fce0d92a3dc067d9d271e02e66a4471bc51acd9dc0e9f8",
+      "status": "passed",
+      "passed_case_count": 12,
+      "failed_case_count": 0,
+      "v4_observation_count": 1784,
+      "v3_observation_count": 0,
+      "physical_deployment": false
+    },
+    "fault_campaign": {
+      "source_identity": {
+        "schema_version": "room315.v4_closed_loop_fault_campaign.v1",
+        "qualification_manifest_sha256": "6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a",
+        "finished_at_utc": "2026-08-12T00:27:33.091797Z"
+      },
+      "summary_path": "runtime/closed_loop/fault/summary.json",
+      "summary_sha256": "330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7",
+      "evidence_manifest_path": "runtime/closed_loop/fault/evidence_manifest.json",
+      "evidence_manifest_sha256": "71c6286f021d4dce993d40603df5714506f0732d0739a937f1ab0cfce7ee7d55",
+      "source_sha256s_path": "runtime/closed_loop/fault/source_SHA256SUMS",
+      "source_sha256s_sha256": "be40c331b30c7375886b42a576ec2ac97e21c0bcd940140a77a2c170d102ecd8",
+      "status": "passed",
+      "scenario_ids": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05"
+      ],
+      "passed_scenario_count": 5,
+      "failed_scenario_count": 0,
+      "v4_observation_count": 424,
+      "v3_observation_count": 0,
+      "physical_deployment": false
+    },
+    "active_runtime": {
+      "source_identity": {
+        "schema_version": "room315.visual_runtime_promotion.v4.v1",
+        "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+        "source_active_manifest_sha256": "6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a"
+      },
+      "promotion_manifest_path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "promotion_manifest_sha256": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+      "candidate_state_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "candidate_state_sha256": "14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1",
+      "source_sha256s_path": "runtime/closed_loop/active_runtime/source_SHA256SUMS",
+      "source_sha256s_sha256": "5fae4bc7430606bc474dbbc78c9f89de29b3747d1425054e806b6fae62783f55",
+      "state": "active_closed_loop_runtime",
+      "deployment_mode": "active",
+      "manual_review_approved": true,
+      "physical_deployment_approved": false
+    },
+    "active_runtime_smoke_B01": {
+      "source_identity": {
+        "schema_version": "room315.v4_closed_loop_campaign.v1",
+        "campaign_id": "room315_integrated_campaign_v4",
+        "evidence_scope": "partial_smoke",
+        "case_id": "B01",
+        "runtime_manifest_sha256": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+        "finished_at_utc": "2026-08-12T00:44:54.390506Z"
+      },
+      "summary_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "summary_sha256": "15d5f9cf9503f414c0baa3a4ff84932a717aab3add2f3334e88577b4fc70c576",
+      "evidence_manifest_path": "runtime/closed_loop/active_runtime/smoke_B01/evidence_manifest.json",
+      "evidence_manifest_sha256": "dd2b3e7a6b3cb07a14538287329a13d3607bec8fd483a9210eebbec21e3b6574",
+      "source_sha256s_path": "runtime/closed_loop/active_runtime/smoke_B01/source_SHA256SUMS",
+      "source_sha256s_sha256": "e215ad6391dade682b397614ddcf8ece5ba76653b9728c28b8302c25126ea28d",
+      "status": "partial",
+      "partial_smoke_evidence": true,
+      "selected_case_count": 1,
+      "passed_case_count": 1,
+      "failed_case_count": 0,
+      "v4_observation_count": 88,
+      "v3_observation_count": 0,
+      "physical_deployment": false
+    }
+  },
+  "limitations": {
+    "environment_scope": "Gazebo simulation only",
+    "physical_robot_results_included": false,
+    "physical_deployment_approved": false,
+    "authorization_scope": "gazebo_v4_closed_loop_runtime_only",
+    "does_not_establish": [
+      "physical_robot_generalization",
+      "physical_deployment_permission",
+      "unbounded_operational_safety"
+    ],
+    "compact_package_excludes_runtime_bags": true,
+    "active_runtime_smoke_is_one_selected_case_not_a_full_campaign": true,
+    "source_manifests_and_source_sha256s_may_index_external_excluded_payloads": true
+  },
+  "final_test_provenance": {
+    "v1_pre_inference_support_no_go": {
+      "decision": "NO-GO_before_inference",
+      "scenario_count": 1024,
+      "inference_status": "not_run",
+      "frozen_minimum_aggregate_identity_zone_support": 8,
+      "minimum_evidence": {
+        "path": "final_test/provenance/v1_pre_inference_no_go/evaluation_contract_unexecuted.json",
+        "json_pointer": "/coverage_contract/minimum_visible_per_identity_zone"
+      },
+      "inference_evidence": {
+        "path": "final_test/provenance/v1_pre_inference_no_go/finalization.json",
+        "json_pointer": "/inference_status"
+      },
+      "derived_aggregate_support": {
+        "adjacent_branch": {
+          "value": 2,
+          "calculation": "R2(2); absent identity keys contribute zero",
+          "evidence_path": "final_test/provenance/v1_pre_inference_no_go/finalization.json",
+          "json_pointers": [
+            "/support_summary/visible_by_identity_zone/R2/adjacent_branch"
+          ]
+        },
+        "behind_region": {
+          "value": 2,
+          "calculation": "L2(1) + L4(1); absent identity keys contribute zero",
+          "evidence_path": "final_test/provenance/v1_pre_inference_no_go/finalization.json",
+          "json_pointers": [
+            "/support_summary/visible_by_identity_zone/L2/behind_region",
+            "/support_summary/visible_by_identity_zone/L4/behind_region"
+          ]
+        },
+        "intermediate_route": {
+          "value": 6,
+          "calculation": "L4(2) + R1(2) + R3(2); absent identity keys contribute zero",
+          "evidence_path": "final_test/provenance/v1_pre_inference_no_go/finalization.json",
+          "json_pointers": [
+            "/support_summary/visible_by_identity_zone/L4/intermediate_route",
+            "/support_summary/visible_by_identity_zone/R1/intermediate_route",
+            "/support_summary/visible_by_identity_zone/R3/intermediate_route"
+          ]
+        }
+      }
+    },
+    "v2_preregistered_coverage_extension": {
+      "decision": "extend_before_any_model_inference_without_lowering_gates",
+      "v1_byte_identical_prefix_scenarios": 1024,
+      "added_scenarios": 16,
+      "composite_scenario_count": 1040,
+      "source_inference_status": "not_run",
+      "evidence": [
+        {
+          "path": "final_test/provenance/v2_coverage_extension/preregistration.json",
+          "json_pointer": "/coverage_contract/v1_byte_identical_prefix_scenarios"
+        },
+        {
+          "path": "final_test/provenance/v2_coverage_extension/preregistration.json",
+          "json_pointer": "/coverage_contract/added_pre_inference_stress_scenarios"
+        },
+        {
+          "path": "final_test/provenance/v2_coverage_extension/preregistration.json",
+          "json_pointer": "/scenario_manifest/scenario_count"
+        },
+        {
+          "path": "final_test/provenance/v2_coverage_extension/preregistration.json",
+          "json_pointer": "/inference_status"
+        },
+        {
+          "path": "final_test/provenance/v2_coverage_extension/seal.json",
+          "json_pointer": "/inference_count"
+        }
+      ]
+    },
+    "pre_inference_schema_compatibility_projection": {
+      "reason": "The frozen evaluator requires canonical V1 control schemas.",
+      "scope": "control_schema_and_fresh_root_only",
+      "manifest_or_capture_content_changed": false,
+      "source_inference_status": "not_run",
+      "evidence": [
+        {
+          "path": "final_test/final/controls/dataset_config.json",
+          "json_pointer": "/composition/compatibility_provenance/projection_scope"
+        },
+        {
+          "path": "final_test/final/controls/dataset_config.json",
+          "json_pointer": "/composition/compatibility_provenance/manifest_or_capture_content_changed"
+        },
+        {
+          "path": "final_test/final/controls/dataset_config.json",
+          "json_pointer": "/composition/compatibility_provenance/source_inference_status"
+        },
+        {
+          "path": "final_test/final/controls/dataset_config.json",
+          "json_pointer": "/coverage_v2_compatibility_source/projection_type"
+        }
+      ]
+    }
+  },
+  "external_objects": [
+    {
+      "role": "selected_model_checkpoint",
+      "logical_id": "pilot_v4_epoch_011",
+      "included_in_package": false,
+      "bytes": 85876329,
+      "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+    },
+    {
+      "role": "sealed_final_test_dataset",
+      "logical_id": "visual_v4_final_test_coverage_compat_seed3152026081101",
+      "included_in_package": false,
+      "scenario_count": 1040,
+      "image_count": 2080,
+      "dataset_fingerprint_sha256": "226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef",
+      "finalization_sha256": "1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee",
+      "seal_sha256": "ca6c1dcb6bb06c8ba1f6c9f861af44c032c4f43cee6ecd80e40182868686bbe9",
+      "rows_sha256": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9",
+      "labels_sha256": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4",
+      "image_manifest_sha256": "f6193a812b810e8792dcaf3df528664652f32ef9d24d7e4e6c8fc1416826def3"
+    }
+  ],
+  "excluded_payload_classes": [
+    "checkpoint_binaries",
+    "final_test_rows",
+    "final_test_labels",
+    "final_test_images",
+    "final_test_captured_episodes",
+    "closed_loop_campaign_rosbags",
+    "fault_campaign_rosbags",
+    "runtime_bundle_checkpoint_binary",
+    "predictions",
+    "logs"
+  ],
+  "reported_claims": [
+    {
+      "id": "final_test_status",
+      "value": "completed",
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/status"
+    },
+    {
+      "id": "final_test_acceptance_status",
+      "value": "passed",
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/acceptance_status"
+    },
+    {
+      "id": "final_test_accepted",
+      "value": true,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/acceptance/accepted"
+    },
+    {
+      "id": "sample_count",
+      "value": 1040,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/sample_count"
+    },
+    {
+      "id": "visible_count",
+      "value": 4680,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/visible_count"
+    },
+    {
+      "id": "segment_top1_accuracy",
+      "value": 0.9993589743589744,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/segment_top1_accuracy"
+    },
+    {
+      "id": "segment_macro_f1",
+      "value": 0.9991171826996464,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/segment_macro_f1"
+    },
+    {
+      "id": "loaded_accuracy",
+      "value": 0.9991452693939209,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/loaded_accuracy"
+    },
+    {
+      "id": "joint_segment_and_ratio_005_accuracy",
+      "value": 0.908974358974359,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/joint_localization_accuracy_s_ratio_0_05"
+    },
+    {
+      "id": "correct_segment_s_m_mae_m",
+      "value": 0.01572997309267521,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/correct_segment_s_m_mae_m"
+    },
+    {
+      "id": "correct_segment_s_m_p95_m",
+      "value": 0.058498889207839966,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/correct_segment_s_m_p95_m"
+    },
+    {
+      "id": "bbox_iou",
+      "value": 0.8339976072311401,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/bbox_iou"
+    },
+    {
+      "id": "left_segment_top1_accuracy",
+      "value": 0.9987261146496815,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/breakdowns/side/left/segment_top1_accuracy"
+    },
+    {
+      "id": "right_segment_top1_accuracy",
+      "value": 1.0,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/breakdowns/side/right/segment_top1_accuracy"
+    },
+    {
+      "id": "left_joint_segment_and_ratio_005_accuracy",
+      "value": 0.8980891719745223,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/breakdowns/side/left/joint_localization_accuracy_s_ratio_0_05"
+    },
+    {
+      "id": "right_joint_segment_and_ratio_005_accuracy",
+      "value": 0.92,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/breakdowns/side/right/joint_localization_accuracy_s_ratio_0_05"
+    },
+    {
+      "id": "left_A14_segment_top1_accuracy",
+      "value": 0.9464285714285714,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/breakdowns/side_x_segment/left/A14/segment_top1_accuracy"
+    },
+    {
+      "id": "left_A14_visible_count",
+      "value": 56,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/metrics/breakdowns/side_x_segment/left/A14/visible_count"
+    },
+    {
+      "id": "segment_confidence_coverage",
+      "value": 0.9995726495726496,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/runtime_thresholds/segment/coverage"
+    },
+    {
+      "id": "joint_confidence_coverage",
+      "value": 0.9995726495726496,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/runtime_thresholds/joint/coverage"
+    },
+    {
+      "id": "loaded_confidence_coverage",
+      "value": 1.0,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/runtime_thresholds/loaded/coverage"
+    },
+    {
+      "id": "maximum_cross_side_output_change",
+      "value": 0.0,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/camera_counterfactuals/maximum_cross_side_output_change"
+    },
+    {
+      "id": "camera_order_swap_segment_top1_drop",
+      "value": 0.9213675213675214,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/camera_counterfactuals/camera_order_swap/segment_top1_drop"
+    },
+    {
+      "id": "automatic_runtime_switch",
+      "value": false,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/automatic_runtime_switch"
+    },
+    {
+      "id": "actuation_enabled",
+      "value": false,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/actuation_enabled"
+    },
+    {
+      "id": "test_used_for_training",
+      "value": false,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/test_used_for_training"
+    },
+    {
+      "id": "test_used_for_checkpoint_selection",
+      "value": false,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/test_used_for_checkpoint_selection"
+    },
+    {
+      "id": "test_used_for_calibration",
+      "value": false,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/test_used_for_calibration"
+    },
+    {
+      "id": "test_used_for_threshold_selection",
+      "value": false,
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/test_used_for_threshold_selection"
+    },
+    {
+      "id": "checkpoint_sha256",
+      "value": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/checkpoint/sha256"
+    },
+    {
+      "id": "dataset_fingerprint_sha256",
+      "value": "226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef",
+      "evidence_path": "final_test/final/results/final_report.json",
+      "json_pointer": "/dataset/dataset_fingerprint_sha256"
+    },
+    {
+      "id": "positive_closed_loop_status",
+      "value": "passed",
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/status"
+    },
+    {
+      "id": "positive_closed_loop_case_count",
+      "value": 12,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/case_count"
+    },
+    {
+      "id": "positive_closed_loop_passed_case_count",
+      "value": 12,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/passed_case_count"
+    },
+    {
+      "id": "positive_closed_loop_failed_case_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/failed_case_count"
+    },
+    {
+      "id": "positive_closed_loop_left_rail_case_count",
+      "value": 6,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/left_rail_case_count"
+    },
+    {
+      "id": "positive_closed_loop_right_rail_case_count",
+      "value": 6,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/right_rail_case_count"
+    },
+    {
+      "id": "positive_closed_loop_executed_step_count",
+      "value": 24,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/executed_step_count"
+    },
+    {
+      "id": "positive_closed_loop_satisfied_postcondition_count",
+      "value": 24,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/satisfied_postcondition_count"
+    },
+    {
+      "id": "positive_closed_loop_accepted_supervisor_decision_count",
+      "value": 48,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/accepted_supervisor_decision_count"
+    },
+    {
+      "id": "positive_closed_loop_total_replans",
+      "value": 4,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/total_replans"
+    },
+    {
+      "id": "positive_closed_loop_safe_abort_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/safe_abort_count"
+    },
+    {
+      "id": "positive_closed_loop_all_controllers_stopped",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/all_controllers_stopped"
+    },
+    {
+      "id": "positive_closed_loop_v4_observation_count",
+      "value": 1784,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/v4_observation_count"
+    },
+    {
+      "id": "positive_closed_loop_v3_observation_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/v3_observation_count"
+    },
+    {
+      "id": "positive_closed_loop_physical_deployment",
+      "value": false,
+      "evidence_path": "runtime/closed_loop/positive/summary.json",
+      "json_pointer": "/physical_deployment"
+    },
+    {
+      "id": "fault_closed_loop_status",
+      "value": "passed",
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/status"
+    },
+    {
+      "id": "fault_closed_loop_scenario_ids",
+      "value": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05"
+      ],
+      "evidence_path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "json_pointer": "/closed_loop_fault_campaign/scenario_ids"
+    },
+    {
+      "id": "fault_closed_loop_passed_scenario_count",
+      "value": 5,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/passed_scenario_count"
+    },
+    {
+      "id": "fault_closed_loop_failed_scenario_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/failed_scenario_count"
+    },
+    {
+      "id": "fault_closed_loop_all_controllers_disabled",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/all_controllers_disabled"
+    },
+    {
+      "id": "fault_closed_loop_all_false_success_counts_zero",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/all_false_success_counts_zero"
+    },
+    {
+      "id": "fault_closed_loop_v4_observation_count",
+      "value": 424,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/v4_observation_count"
+    },
+    {
+      "id": "fault_closed_loop_v3_observation_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/v3_observation_count"
+    },
+    {
+      "id": "fault_closed_loop_physical_deployment",
+      "value": false,
+      "evidence_path": "runtime/closed_loop/fault/summary.json",
+      "json_pointer": "/physical_deployment"
+    },
+    {
+      "id": "active_runtime_state",
+      "value": "active_closed_loop_runtime",
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/state"
+    },
+    {
+      "id": "active_runtime_deployment_mode",
+      "value": "active",
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/deployment_mode"
+    },
+    {
+      "id": "active_runtime_authorization_scope",
+      "value": "gazebo_v4_closed_loop_runtime_only",
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/authorization_scope"
+    },
+    {
+      "id": "active_runtime_manual_review_approved",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/manual_review_approved"
+    },
+    {
+      "id": "active_runtime_physical_deployment_approved",
+      "value": false,
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/physical_deployment_approved"
+    },
+    {
+      "id": "active_runtime_actuation_enabled",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/runtime_guards/actuation_enabled"
+    },
+    {
+      "id": "active_runtime_dry_run_state_fusion",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/runtime_guards/dry_run_state_fusion"
+    },
+    {
+      "id": "active_runtime_plansys2_update_enabled",
+      "value": false,
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/runtime_guards/plansys2_update_enabled"
+    },
+    {
+      "id": "active_runtime_promotion_manifest_sha256",
+      "value": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+      "evidence_path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "json_pointer": "/promotion_manifest_sha256"
+    },
+    {
+      "id": "active_runtime_positive_campaign_report_sha256",
+      "value": "1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479",
+      "evidence_path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "json_pointer": "/closed_loop_qualification/campaign_report_sha256"
+    },
+    {
+      "id": "active_runtime_fault_campaign_report_sha256",
+      "value": "330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7",
+      "evidence_path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "json_pointer": "/closed_loop_fault_campaign/report_sha256"
+    },
+    {
+      "id": "active_runtime_fault_campaign_manifest_sha256",
+      "value": "71c6286f021d4dce993d40603df5714506f0732d0739a937f1ab0cfce7ee7d55",
+      "evidence_path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "json_pointer": "/closed_loop_fault_campaign/evidence_manifest_sha256"
+    },
+    {
+      "id": "active_runtime_fault_campaign_source_sha256s_sha256",
+      "value": "be40c331b30c7375886b42a576ec2ac97e21c0bcd940140a77a2c170d102ecd8",
+      "evidence_path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "json_pointer": "/closed_loop_fault_campaign/source_sha256s_sha256"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_status",
+      "value": "partial",
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/status"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_evidence_scope",
+      "value": "partial_smoke",
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/evidence_scope"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_flag",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/partial_smoke_evidence"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_case_id",
+      "value": "B01",
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/results/0/case_id"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_selected_case_count",
+      "value": 1,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/selected_case_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_completed_case_count",
+      "value": 1,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/completed_case_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_passed_case_count",
+      "value": 1,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/passed_case_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_failed_case_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/failed_case_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_v4_observation_count",
+      "value": 88,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/v4_observation_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_v3_observation_count",
+      "value": 0,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/v3_observation_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_actuating_step_count",
+      "value": 1,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/actuating_step_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_satisfied_postcondition_count",
+      "value": 1,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/satisfied_postcondition_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_accepted_supervisor_decision_count",
+      "value": 2,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/accepted_supervisor_decision_count"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_terminal_statuses_succeeded",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/all_terminal_statuses_succeeded"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_final_effects_verified",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/all_final_effects_verified"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_controller_evidence_status",
+      "value": "passed",
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/results/0/post_task_controller_evidence_status"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_all_controllers_stopped",
+      "value": true,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/all_controllers_stopped"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_runtime_manifest_sha256",
+      "value": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/runtime_manifest_sha256"
+    },
+    {
+      "id": "active_runtime_B01_partial_smoke_physical_deployment",
+      "value": false,
+      "evidence_path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "json_pointer": "/physical_deployment"
+    }
+  ],
+  "included_files": [
+    {
+      "role": "development_canary_completed_attempt",
+      "path": "canary/attempt.completed.json",
+      "sha256": "db43722df617a1a05b884fa3ebd6b35e9d6d87258c2d3cb9f871e70844c2b251",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "development_canary_final_report",
+      "path": "canary/final_report.json",
+      "sha256": "fda9a772fac67d36d59544af0299c3aad4fba599c1ea8c0edf39b56f62b42e04",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_compatibility_config",
+      "path": "final_test/final/controls/dataset_config.json",
+      "sha256": "035e73b0796628432b6c1caf0e15c8b26f63703b2e217200fc76b0c9a7b1ac00",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_disjoint_audit",
+      "path": "final_test/final/controls/disjoint_audit.json",
+      "sha256": "cda625ae9f03211a61e88434c2f713d2f6a9f40c27e996f8e7da9d5f4da292c2",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_evaluation_contract",
+      "path": "final_test/final/controls/evaluation_contract.json",
+      "sha256": "e04a227c589046ee5ebc561de51002a01f3b989effcd7f3d81ba9673ef3d8608",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_evaluation_protocol_lock",
+      "path": "final_test/final/controls/evaluation_protocol_lock.json",
+      "sha256": "03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_finalization",
+      "path": "final_test/final/controls/finalization.json",
+      "sha256": "1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_plan_lock",
+      "path": "final_test/final/controls/plan_lock.json",
+      "sha256": "911e90f2e540ee973f5decc92b69e89a54bc40f1d611a72776510684f20c8c5c",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_preregistration",
+      "path": "final_test/final/controls/preregistration.json",
+      "sha256": "6c582ed3e108ec5a1a71c5795eee32953f53f4356977e3a1a11f31c6b6b7eba5",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_scenario_summary",
+      "path": "final_test/final/controls/scenario_summary.json",
+      "sha256": "bbb1e3bdb4d7cf2dd2fc48cbcda22fffc8b8aafe7238380f3d62ffc4497c4b87",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_dataset_seal",
+      "path": "final_test/final/controls/seal.json",
+      "sha256": "ca6c1dcb6bb06c8ba1f6c9f861af44c032c4f43cee6ecd80e40182868686bbe9",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_acceptance",
+      "path": "final_test/final/results/acceptance.json",
+      "sha256": "09248b27625f76c423df75b3469db5a4cd8a8e6041403d586bc75eada04321e8",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_completed_attempt",
+      "path": "final_test/final/results/attempt.completed.json",
+      "sha256": "4068df2d7bad8592cb1fdbfac69d9b22661124241c19faba9e0d023a7f0df71a",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_camera_counterfactuals",
+      "path": "final_test/final/results/camera_counterfactuals.json",
+      "sha256": "e9cbc50872eaabe632767c7ba155d4cd1991daa6662231273a21f1b013768a6d",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_coverage_audit",
+      "path": "final_test/final/results/coverage_audit.json",
+      "sha256": "67c99ba7ed40271e8c213bc33b8482c7e1e297f13ccf40a8bd3608e801ca7dde",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_report",
+      "path": "final_test/final/results/final_report.json",
+      "sha256": "f789bde50f49fa61412c8d407b95129f0e0e9bde13ad810d9999f91a7a87daea",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_input_fingerprint",
+      "path": "final_test/final/results/input_fingerprint.json",
+      "sha256": "1f56000d03daf1fd1f3b5de1dd745eb9562b84c23da3678c4d2a34f6be427cae",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_metrics",
+      "path": "final_test/final/results/metrics.json",
+      "sha256": "1e46e864a56c2364f21fb9a2292b45486b65bcc764644297c92503bea6d5ca18",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_runtime_thresholds",
+      "path": "final_test/final/results/runtime_thresholds.json",
+      "sha256": "cbbcba0c23210954c1922d7370908985fb40375f38b750c8124fee635f86fc1f",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "final_test_segment_calibration",
+      "path": "final_test/final/results/segment_calibration.json",
+      "sha256": "c08b001eeafb4a297fa967505bf24818fe9b159c37d424fe568c7670592c735e",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "initial_v1_plan_lock",
+      "path": "final_test/plan/plan_lock.json",
+      "sha256": "39e12180961a96046e0d3f3cc5698a8c268069891778731ca8db831a150d221e",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "initial_v1_preregistration",
+      "path": "final_test/plan/preregistration.json",
+      "sha256": "a0e8ec9ad97a13b82ffa73a03c1ccd20915f82fae449ed2a913e12c290b8fd49",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "initial_v1_scenario_manifest",
+      "path": "final_test/plan/scenario_manifest.jsonl",
+      "sha256": "c2147e28d3116798648acfbc3da1488c615e5131c3835deef38f8f552239a282",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "initial_v1_scenario_summary",
+      "path": "final_test/plan/scenario_summary.json",
+      "sha256": "c83dba51ad37d812bcf548c115bc7fa289925edac1841740296fefee0bc63478",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "initial_v1_dataset_config",
+      "path": "final_test/protocol/dataset_config.json",
+      "sha256": "ca202ed1b98d4129e6a474e874032b5d397545da3a3f677e11fbe7c1963ffb5a",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "initial_v1_evaluation_protocol_lock",
+      "path": "final_test/protocol/evaluation_protocol_lock.json",
+      "sha256": "71310756cdb624387267ef47f2efd03d1b38a126ad84f584e8ca2a13dd72f7ec",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "frozen_final_test_evaluator_source",
+      "path": "final_test/protocol/evaluator.py",
+      "sha256": "c1dabdd44f65e681ff7f0ff09d32075563db0ce4e30e8b8029563e284d93b8e3",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "frozen_final_test_evaluator_tests",
+      "path": "final_test/protocol/test_evaluator.py",
+      "sha256": "18e21169ba679e4a4003197a11f794c2d1bf2cc1de4b11c7cf760bdd605db19e",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v1_unexecuted_evaluation_contract",
+      "path": "final_test/provenance/v1_pre_inference_no_go/evaluation_contract_unexecuted.json",
+      "sha256": "c189830e6154c4cfa772ab0b6a372420e92dc6ffbd350e3a2ed325c40c06ca50",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v1_pre_inference_finalization",
+      "path": "final_test/provenance/v1_pre_inference_no_go/finalization.json",
+      "sha256": "c4c655b60cf68d505b3f654486819354a9bc31a69972531e3ee9ece9221aa2c3",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v1_pre_inference_seal",
+      "path": "final_test/provenance/v1_pre_inference_no_go/seal.json",
+      "sha256": "50fdf28ec3220f0d701febad610a59ddea5ab6f6f4059b6d5921af96c1af2ff8",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v2_coverage_extension_config",
+      "path": "final_test/provenance/v2_coverage_extension/dataset_config.json",
+      "sha256": "42fd32c7ee1fa7cbb02dd28fd38a3411d4a8602cda903364754fcdc9e8fb29ec",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v2_coverage_extension_protocol_lock",
+      "path": "final_test/provenance/v2_coverage_extension/evaluation_protocol_lock.json",
+      "sha256": "f0fe2738d5a4caabf0300d59e8c892569a9e186dc8ff424cef7aaac2903f152e",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v2_coverage_extension_plan_lock",
+      "path": "final_test/provenance/v2_coverage_extension/plan_lock.json",
+      "sha256": "ef279fdbacf80c7e756c6d307d557a4a207ac3466e7863e9b5e7a7cff8e2d0fd",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v2_coverage_extension_preregistration",
+      "path": "final_test/provenance/v2_coverage_extension/preregistration.json",
+      "sha256": "3cb3d59271f56569ef760aa705f8229040c0bef844e460c6a8cc7b7e24515b0f",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v2_coverage_extension_scenario_summary",
+      "path": "final_test/provenance/v2_coverage_extension/scenario_summary.json",
+      "sha256": "17c45911c2d69f80e37d66fcebd273c945a2298a9fdbf63abe7be978a1432b4a",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v2_coverage_extension_seal",
+      "path": "final_test/provenance/v2_coverage_extension/seal.json",
+      "sha256": "cc2964bf28e523c19c57d39e302ee70ba46e07685669ad5a3557c2c45be6a43c",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_effective_config",
+      "path": "model/effective_config.json",
+      "sha256": "53f68426ceb0f79fb2c44dbd85302f2d9dad0da364da66959682ae6f3f512371",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_training_final_report",
+      "path": "model/final_report.json",
+      "sha256": "d1e2fd2d360f724fb092fe22d8cd3b9237d80f8bd4c62ba134b61ee9a8875218",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_final_validation_metrics",
+      "path": "model/final_validation_metrics.json",
+      "sha256": "a408e1d637e013329d095dc51802df6504832683cab33cb9825e55b83e95850d",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_input_fingerprints",
+      "path": "model/input_fingerprints.json",
+      "sha256": "a0bb2cbdebfd2859031732f8d8ac5c8a52577c4cb5120597809b0c08ed748dd1",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_public_topology_contract",
+      "path": "model/public_topology_contract.json",
+      "sha256": "6d2c4fd5bb42b90c89058094f91d1aba03c63d2db22499a45231b8c46f9fb90d",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_run_metadata",
+      "path": "model/run_metadata.json",
+      "sha256": "92c2aa361fbb382205baa59d070b305783e95dbdd090a8d7454e2a9f751be78d",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_validation_acceptance",
+      "path": "model/validation_acceptance.json",
+      "sha256": "e87e90fb72f24bd2fecfb54eb758a899f95a3851a0cdd9293b61125193581a6a",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "model_validation_segment_calibration",
+      "path": "model/validation_segment_calibration.json",
+      "sha256": "e86c9cc084a7b0260f2749ee49eed3ba5d4027383ac8e8de75031019abec44d0",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_active_dry_run_acceptance_report",
+      "path": "runtime/active_dry_run/acceptance_report.json",
+      "sha256": "9128adb1ce4d3a01ad52869676c652355756d64ad519e52dad6eef546589acdf",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_active_dry_run_dense_event",
+      "path": "runtime/active_dry_run/accept_dense_event.json",
+      "sha256": "fa2a5672b40972b4fabe702d2d62e3f6245bd62b2670f83122b2e03d6545b359",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_campaign_acceptance_report",
+      "path": "runtime/campaign/acceptance_report.json",
+      "sha256": "6805bc46c9550a4200701812a6cc50d4759f55649d6a09351a4f5119eec723a0",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_campaign_summary",
+      "path": "runtime/campaign/campaign_summary.json",
+      "sha256": "10ae7a983fb9d0f30c26a98d1b593f8df5e40c07be8819e5bd9c4796f7aa2632",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_manual_decision_record",
+      "path": "runtime/promotion/manual_decision_record.json",
+      "sha256": "09e4f05b408d47ca86381a7739470071c690f67069d1573f14a4f5cefb7ada2d",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_active_promotion_manifest",
+      "path": "runtime/promotion/runtime_promotion_manifest.json",
+      "sha256": "8cb1674fe50bc8fbd372ade36fcb05d188f519ab36ea6d22dbb23ecfac3286c3",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_fault_injection_report",
+      "path": "runtime/safety/fault_injection_report.json",
+      "sha256": "1f5ee62d74189136df53c1e22a449bb002dd15335122d28556196f897e5f5773",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_rollback_smoke_report",
+      "path": "runtime/safety/rollback_smoke_report.json",
+      "sha256": "be0c2db24a44461c3777fccaff07e9bb60d0e4904f3bd1f25dc8fd5ae37ddd2b",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_shadow_promotion_manifest",
+      "path": "runtime/shadow/runtime_promotion_manifest.json",
+      "sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "runtime_shadow_comparison",
+      "path": "runtime/shadow/shadow_comparison.json",
+      "sha256": "dc09fd61fce5c720703aa0456bee42291c1eca77b98cd025a787a567eb0151b5",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_positive_closed_loop_summary",
+      "path": "runtime/closed_loop/positive/summary.json",
+      "sha256": "1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_positive_closed_loop_evidence_manifest",
+      "path": "runtime/closed_loop/positive/evidence_manifest.json",
+      "sha256": "15d6362980751dd3e2bdd7fdab2b5ccb70118f73e1bd2cb2cf71d87bc96fdece",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_positive_closed_loop_source_sha256s",
+      "path": "runtime/closed_loop/positive/source_SHA256SUMS",
+      "sha256": "8ec1b8a456c5f83034fce0d92a3dc067d9d271e02e66a4471bc51acd9dc0e9f8",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_fault_closed_loop_summary",
+      "path": "runtime/closed_loop/fault/summary.json",
+      "sha256": "330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_fault_closed_loop_evidence_manifest",
+      "path": "runtime/closed_loop/fault/evidence_manifest.json",
+      "sha256": "71c6286f021d4dce993d40603df5714506f0732d0739a937f1ab0cfce7ee7d55",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_fault_closed_loop_source_sha256s",
+      "path": "runtime/closed_loop/fault/source_SHA256SUMS",
+      "sha256": "be40c331b30c7375886b42a576ec2ac97e21c0bcd940140a77a2c170d102ecd8",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_active_closed_loop_runtime_promotion_manifest",
+      "path": "runtime/closed_loop/active_runtime/runtime_promotion_manifest.json",
+      "sha256": "506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_active_closed_loop_candidate_state",
+      "path": "runtime/closed_loop/active_runtime/candidate_state.json",
+      "sha256": "14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_active_closed_loop_runtime_source_sha256s",
+      "path": "runtime/closed_loop/active_runtime/source_SHA256SUMS",
+      "sha256": "5fae4bc7430606bc474dbbc78c9f89de29b3747d1425054e806b6fae62783f55",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_active_runtime_B01_partial_smoke_summary",
+      "path": "runtime/closed_loop/active_runtime/smoke_B01/summary.json",
+      "sha256": "15d5f9cf9503f414c0baa3a4ff84932a717aab3add2f3334e88577b4fc70c576",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_active_runtime_B01_partial_smoke_evidence_manifest",
+      "path": "runtime/closed_loop/active_runtime/smoke_B01/evidence_manifest.json",
+      "sha256": "dd2b3e7a6b3cb07a14538287329a13d3607bec8fd483a9210eebbec21e3b6574",
+      "copy_mode": "byte_exact"
+    },
+    {
+      "role": "v4_active_runtime_B01_partial_smoke_source_sha256s",
+      "path": "runtime/closed_loop/active_runtime/smoke_B01/source_SHA256SUMS",
+      "sha256": "e215ad6391dade682b397614ddcf8ece5ba76653b9728c28b8302c25126ea28d",
+      "copy_mode": "byte_exact"
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+{
+  "acceptance_thresholds": {
+    "active_frame_policy": "all_present_slots_must_pass",
+    "loaded_confidence": {
+      "calibrated": false,
+      "derivation": "binary_argmax_floor; validation loaded accuracy is diagnostic",
+      "interpretation": "uncalibrated_softmax_argmax_decision_floor",
+      "probability_guarantee": false,
+      "validation_loaded_accuracy": 0.9986690282821655
+    },
+    "minimum_loaded_confidence": 0.5,
+    "minimum_segment_confidence": 0.9139089813389109,
+    "presence_contract": {
+      "absent_slots": "masked_and_never_accepted",
+      "missing_or_stale_presence": "reject_frame",
+      "source": "authoritative_runtime_presence_provider",
+      "threshold_scope": "present_slots_only"
+    },
+    "s_ratio": {
+      "acceptance_absolute_error_tolerance": 0.12,
+      "confidence_gate": false,
+      "diagnostic_absolute_error_tolerance": 0.05,
+      "runtime_ground_truth_error_available": false,
+      "threshold_source": "validation_only_task_contract",
+      "validation_joint_accuracy_at_acceptance_tolerance": 0.9946761313220941,
+      "validation_joint_accuracy_at_diagnostic_tolerance": 0.9498669032830523
+    },
+    "segment_confidence": {
+      "calibrated": true,
+      "derivation": "validation_selective_curve_100_percent_coverage_floor",
+      "requested_coverage": 1.0,
+      "temperature": 0.6007370031399095
+    }
+  },
+  "artifacts": {
+    "canary_completion_ledger": {
+      "path": "canary_completion_ledger.json",
+      "sha256": "db43722df617a1a05b884fa3ebd6b35e9d6d87258c2d3cb9f871e70844c2b251"
+    },
+    "canary_final_report": {
+      "path": "canary_final_report.json",
+      "sha256": "fda9a772fac67d36d59544af0299c3aad4fba599c1ea8c0edf39b56f62b42e04"
+    },
+    "checkpoint": {
+      "path": "checkpoint_epoch_011.pt",
+      "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+    },
+    "effective_config": {
+      "path": "effective_config.json",
+      "sha256": "53f68426ceb0f79fb2c44dbd85302f2d9dad0da364da66959682ae6f3f512371"
+    },
+    "public_topology_contract": {
+      "path": "public_topology_contract.json",
+      "sha256": "6d2c4fd5bb42b90c89058094f91d1aba03c63d2db22499a45231b8c46f9fb90d"
+    },
+    "training_final_report": {
+      "path": "training_final_report.json",
+      "sha256": "d1e2fd2d360f724fb092fe22d8cd3b9237d80f8bd4c62ba134b61ee9a8875218"
+    },
+    "validation_acceptance": {
+      "path": "validation_acceptance.json",
+      "sha256": "e87e90fb72f24bd2fecfb54eb758a899f95a3851a0cdd9293b61125193581a6a"
+    },
+    "validation_segment_calibration": {
+      "path": "validation_segment_calibration.json",
+      "sha256": "e86c9cc084a7b0260f2749ee49eed3ba5d4027383ac8e8de75031019abec44d0"
+    }
+  },
+  "automatic_promotion_allowed": false,
+  "calibration_contract": {
+    "data_role": "validation",
+    "fit_scope": "validation_only",
+    "schema_version": "room315.visual_segment_calibration.v4.v1",
+    "temperature": 0.6007370031399095
+  },
+  "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+  "closed_loop_fault_campaign": {
+    "evidence_manifest_path": "closed_loop_fault_campaign_evidence_manifest.json",
+    "evidence_manifest_sha256": "71c6286f021d4dce993d40603df5714506f0732d0739a937f1ab0cfce7ee7d55",
+    "failed_scenario_count": 0,
+    "passed_scenario_count": 5,
+    "physical_deployment": false,
+    "report_path": "closed_loop_fault_campaign_report.json",
+    "report_sha256": "330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7",
+    "scenario_ids": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05"
+    ],
+    "schema_version": "room315.v4_closed_loop_fault_campaign.v1",
+    "source_sha256s_path": "closed_loop_fault_campaign_source_SHA256SUMS",
+    "source_sha256s_sha256": "be40c331b30c7375886b42a576ec2ac97e21c0bcd940140a77a2c170d102ecd8"
+  },
+  "closed_loop_qualification": {
+    "campaign_report_path": "closed_loop_campaign_report.json",
+    "campaign_report_sha256": "1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479",
+    "physical_deployment_approved": false,
+    "qualification_only": false
+  },
+  "deployment_mode": "active",
+  "eligibility": {
+    "active_runtime_review": true,
+    "active_runtime_selected": true,
+    "active_transition_requires_new_immutable_manifest": false,
+    "shadow_load_and_evaluation": true
+  },
+  "evidence_policy": {
+    "canary_attempt_key": "e5b24314038c7d92596b7153f6c0013688de04c312706c0f3a5dce5cdd100807",
+    "canary_handoff_trusted": true,
+    "canary_role": "post_selection_development_regression",
+    "checkpoint_selection": "validation_only",
+    "datasets_bundled": false,
+    "test_loaded": false,
+    "training_or_evaluation_during_build": false
+  },
+  "immutable": true,
+  "manual_decision_record": {
+    "path": "manual_decision_record.json",
+    "schema_version": "room315.visual_runtime_v4.manual_decision.v1",
+    "sha256": "df16e885051000117ca914715ace76a58b7f39ffbb6a7ccd6787f7885d18ffdc"
+  },
+  "manual_only": true,
+  "manual_review_approved": true,
+  "manual_runtime_review_status": "approved",
+  "model_contract": {
+    "attention_heads": 8,
+    "checkpoint_epoch": 11,
+    "checkpoint_loading": "strict",
+    "checkpoint_schema_version": "room315.visual_training.v4.checkpoint.v1",
+    "cross_camera_feature_path": false,
+    "dropout": 0.1,
+    "effective_config_fingerprint_sha256": "719c4c8eaa3a16c98c1346cc6e5d6259c2e8c77d0a325802b72abc13c9e3b523",
+    "head_type": "spatial_query",
+    "hidden_dim": 256,
+    "model_kind": "room315_visual_state_resnet18_split_rails_v4",
+    "output_keys": [
+      "segment_logits",
+      "loaded_logits",
+      "bbox",
+      "s_ratio"
+    ],
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "side_source": "fixed_identity_prefix",
+    "slot_order": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ]
+  },
+  "preprocessing_contract": {
+    "camera_order": [
+      "left_rail_rgb",
+      "right_rail_rgb"
+    ],
+    "channel_order": [
+      "left_rgb",
+      "right_rgb"
+    ],
+    "height": 240,
+    "input_shape": [
+      "B",
+      6,
+      240,
+      320
+    ],
+    "normalization_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resampling": "bilinear",
+    "resize": "aspect_preserving_bilinear_4_by_3",
+    "runtime_augmentations": false,
+    "width": 320
+  },
+  "rollback_contract": {
+    "automatic_rollback_allowed": false,
+    "backend": "v3",
+    "checkpoint_path": "/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt",
+    "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "preserved_unchanged": true,
+    "rollback_smoke_report_path": "rollback_smoke_report.json",
+    "rollback_smoke_report_sha256": "be0c2db24a44461c3777fccaff07e9bb60d0e4904f3bd1f25dc8fd5ae37ddd2b",
+    "rollback_smoke_status": "passed"
+  },
+  "runtime_review_evidence": {
+    "fault_injection": {
+      "path": "fault_injection_report.json",
+      "schema_version": "room315.visual_runtime_v4.fault_injection.v1",
+      "sha256": "1f5ee62d74189136df53c1e22a449bb002dd15335122d28556196f897e5f5773",
+      "status": "passed"
+    },
+    "seven_scenario_quantitative_acceptance": {
+      "path": "runtime_acceptance_report.json",
+      "schema_version": "room315.runtime_acceptance_report.v1",
+      "sha256": "6805bc46c9550a4200701812a6cc50d4759f55649d6a09351a4f5119eec723a0",
+      "status": "complete_pending_human_decision"
+    },
+    "shadow_comparison": {
+      "path": "shadow_comparison_report.json",
+      "schema_version": "room315.visual_shadow_comparison.v4.v1",
+      "sha256": "dc09fd61fce5c720703aa0456bee42291c1eca77b98cd025a787a567eb0151b5",
+      "status": "passed"
+    },
+    "v3_rollback_smoke": {
+      "path": "rollback_smoke_report.json",
+      "schema_version": "room315.visual_runtime_v4.rollback_smoke.v1",
+      "sha256": "be0c2db24a44461c3777fccaff07e9bb60d0e4904f3bd1f25dc8fd5ae37ddd2b",
+      "status": "passed"
+    }
+  },
+  "schema_version": "room315.visual_runtime_promotion.v4.v1",
+  "shadow_execution_authorized": false,
+  "source_active_manifest_sha256": "6f9828219c22599825f5a14e405c8f11ce017984cc0d65821a357240d6529e2a",
+  "source_shadow_candidate": {
+    "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+    "promotion_manifest_path": "shadow_candidate_promotion_manifest.json",
+    "promotion_manifest_sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574"
+  },
+  "topology_contract": {
+    "fingerprint_sha256": "02ddcd78b1e1f410e7565ab018a9b4f25297ccf2d74c41232e981ebfc9eed344",
+    "schema_version": "room315.public_segment_length_contract.v1",
+    "segment_name_domain": "public_ros_label",
+    "segment_order": [
+      "A12E",
+      "A12I",
+      "A14",
+      "A1E",
+      "A1I",
+      "A23",
+      "A2E",
+      "A2I",
+      "A34E",
+      "A34I",
+      "A3E",
+      "A3I",
+      "A4E",
+      "A4I"
+    ],
+    "side_order": [
+      "left",
+      "right"
+    ],
+    "source": "room_315_rail_defaults.public_rail_segment_lengths"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "automatic_promotion": false,
+  "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "decision": "approved",
+  "evidence": {
+    "fault_injection_report": {
+      "path": "fault_injection_report.json",
+      "schema_version": "room315.visual_runtime_v4.fault_injection.v1",
+      "sha256": "1f5ee62d74189136df53c1e22a449bb002dd15335122d28556196f897e5f5773",
+      "status": "passed"
+    },
+    "rollback_smoke_report": {
+      "path": "rollback_smoke_report.json",
+      "schema_version": "room315.visual_runtime_v4.rollback_smoke.v1",
+      "sha256": "be0c2db24a44461c3777fccaff07e9bb60d0e4904f3bd1f25dc8fd5ae37ddd2b",
+      "status": "passed"
+    },
+    "runtime_acceptance_report": {
+      "path": "runtime_acceptance_report.json",
+      "schema_version": "room315.runtime_acceptance_report.v1",
+      "sha256": "6805bc46c9550a4200701812a6cc50d4759f55649d6a09351a4f5119eec723a0",
+      "status": "complete_pending_human_decision"
+    },
+    "shadow_comparison_report": {
+      "path": "shadow_comparison_report.json",
+      "schema_version": "room315.visual_shadow_comparison.v4.v1",
+      "sha256": "dc09fd61fce5c720703aa0456bee42291c1eca77b98cd025a787a567eb0151b5",
+      "status": "passed"
+    }
+  },
+  "physical_deployment_approved": false,
+  "review_assertions": {
+    "actuation_command_count": 0,
+    "all_faults_rejected": true,
+    "plansys2_mutation_count": 0,
+    "same_checkpoint_bound_across_v4_evidence": true,
+    "same_frame_shadow_passed": true,
+    "seven_scenarios_quantitatively_complete": true,
+    "v3_rollback_smoke_passed": true,
+    "wrong_side_identity_count": 0
+  },
+  "reviewed_at_utc": "2026-08-11T13:31:42Z",
+  "reviewer": "Ali Ibrahim (project-owner delegated review)",
+  "runtime_guards": {
+    "actuation_enabled": false,
+    "dry_run_state_fusion": true,
+    "plansys2_update_enabled": false
+  },
+  "schema_version": "room315.visual_runtime_v4.manual_decision.v1",
+  "scope": "gazebo_runtime_dry_run_only",
+  "source_shadow_candidate": {
+    "deployment_mode": "shadow",
+    "path": "/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+    "promotion_manifest_sha256": "a1a39ca48dc5cbb29e60ae51a6f25876c69dcd4ade377f2d6a2a3240d1a81574"
+  }
+}

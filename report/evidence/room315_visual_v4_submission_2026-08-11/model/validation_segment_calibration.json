@@ -1,0 +1,246 @@
+{
+  "calibrated": {
+    "accuracy": 0.9991126885536823,
+    "ece": 0.0005241830150030562,
+    "mean_confidence": 0.9995604820224022,
+    "nll": 0.0038775895813913407,
+    "visible_count": 2254
+  },
+  "calibrated_ece": 0.0005241830150030562,
+  "calibrated_nll": 0.0038775895813913407,
+  "coverage_targets": [
+    1.0,
+    0.95,
+    0.9,
+    0.8,
+    0.7
+  ],
+  "data_role": "validation",
+  "ece_bins": 15,
+  "ece_improvement": 0.017466147796138084,
+  "fit": {
+    "candidate_evaluations": 645,
+    "grid_size": 129,
+    "method": "bounded_log_grid_refinement",
+    "objective": "visible_validation_segment_nll",
+    "objective_nll": 0.0038775895813913407,
+    "refinement_steps": 4
+  },
+  "fit_scope": "validation_only",
+  "nll_improvement": 0.017058044144167304,
+  "per_side": {
+    "left": {
+      "available": true,
+      "calibrated": {
+        "accuracy": 0.9981566820276497,
+        "ece": 0.0014656866295785775,
+        "mean_confidence": 0.9996223686572283,
+        "nll": 0.007513378537066055,
+        "visible_count": 1085
+      },
+      "calibrated_ece": 0.0014656866295785775,
+      "calibrated_nll": 0.007513378537066055,
+      "selective_curve": [
+        {
+          "accuracy": 0.9981566820276497,
+          "achieved_coverage": 1.0,
+          "confidence_threshold": 0.9395328770340433,
+          "mean_confidence": 0.9996223686572281,
+          "requested_coverage": 1.0,
+          "retained_count": 1085,
+          "total_count": 1085
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.9502304147465438,
+          "confidence_threshold": 0.999390294208302,
+          "mean_confidence": 0.9997699583743078,
+          "requested_coverage": 0.95,
+          "retained_count": 1031,
+          "total_count": 1085
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.9004608294930876,
+          "confidence_threshold": 0.9995721636706323,
+          "mean_confidence": 0.9997844421562337,
+          "requested_coverage": 0.9,
+          "retained_count": 977,
+          "total_count": 1085
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.8,
+          "confidence_threshold": 0.9996692260585478,
+          "mean_confidence": 0.9998041959334238,
+          "requested_coverage": 0.8,
+          "retained_count": 868,
+          "total_count": 1085
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.7004608294930875,
+          "confidence_threshold": 0.9997308858523319,
+          "mean_confidence": 0.9998183241818271,
+          "requested_coverage": 0.7,
+          "retained_count": 760,
+          "total_count": 1085
+        }
+      ],
+      "slot_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "uncalibrated": {
+        "accuracy": 0.9981566820276497,
+        "ece": 0.018999153447428606,
+        "mean_confidence": 0.9815504702887382,
+        "nll": 0.022992800796518345,
+        "visible_count": 1085
+      },
+      "uncalibrated_ece": 0.018999153447428606,
+      "uncalibrated_nll": 0.022992800796518345,
+      "visible_count": 1085
+    },
+    "right": {
+      "available": true,
+      "calibrated": {
+        "accuracy": 1.0,
+        "ece": 0.000496957668603423,
+        "mean_confidence": 0.9995030423313965,
+        "nll": 0.0005030549219327735,
+        "visible_count": 1169
+      },
+      "calibrated_ece": 0.000496957668603423,
+      "calibrated_nll": 0.0005030549219327735,
+      "selective_curve": [
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 1.0,
+          "confidence_threshold": 0.9139089813389109,
+          "mean_confidence": 0.9995030423313965,
+          "requested_coverage": 1.0,
+          "retained_count": 1169,
+          "total_count": 1169
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.9503849443969205,
+          "confidence_threshold": 0.9993214566088843,
+          "mean_confidence": 0.9997813669840523,
+          "requested_coverage": 0.95,
+          "retained_count": 1111,
+          "total_count": 1169
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.9007698887938409,
+          "confidence_threshold": 0.9996262763330754,
+          "mean_confidence": 0.9997952563063409,
+          "requested_coverage": 0.9,
+          "retained_count": 1053,
+          "total_count": 1169
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.8006843455945253,
+          "confidence_threshold": 0.9997310750101004,
+          "mean_confidence": 0.9998085099094591,
+          "requested_coverage": 0.8,
+          "retained_count": 936,
+          "total_count": 1169
+        },
+        {
+          "accuracy": 1.0,
+          "achieved_coverage": 0.7005988023952096,
+          "confidence_threshold": 0.9997611175775036,
+          "mean_confidence": 0.9998172588275022,
+          "requested_coverage": 0.7,
+          "retained_count": 819,
+          "total_count": 1169
+        }
+      ],
+      "slot_indices": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "uncalibrated": {
+        "accuracy": 1.0,
+        "ece": 0.018732494359886966,
+        "mean_confidence": 0.9812675056401131,
+        "nll": 0.019026287042931387,
+        "visible_count": 1169
+      },
+      "uncalibrated_ece": 0.018732494359886966,
+      "uncalibrated_nll": 0.019026287042931387,
+      "visible_count": 1169
+    }
+  },
+  "schema_version": "room315.visual_segment_calibration.v4.v1",
+  "selective_curve": [
+    {
+      "accuracy": 0.9991126885536823,
+      "achieved_coverage": 1.0,
+      "confidence_threshold": 0.9139089813389109,
+      "mean_confidence": 0.9995604820224024,
+      "requested_coverage": 1.0,
+      "retained_count": 2254,
+      "total_count": 2254
+    },
+    {
+      "accuracy": 1.0,
+      "achieved_coverage": 0.9503105590062112,
+      "confidence_threshold": 0.9993626888923914,
+      "mean_confidence": 0.9997759736269684,
+      "requested_coverage": 0.95,
+      "retained_count": 2142,
+      "total_count": 2254
+    },
+    {
+      "accuracy": 1.0,
+      "achieved_coverage": 0.9001774622892635,
+      "confidence_threshold": 0.9995929352549009,
+      "mean_confidence": 0.9997904426632223,
+      "requested_coverage": 0.9,
+      "retained_count": 2029,
+      "total_count": 2254
+    },
+    {
+      "accuracy": 1.0,
+      "achieved_coverage": 0.8003549245785271,
+      "confidence_threshold": 0.9997043470635169,
+      "mean_confidence": 0.9998072094159365,
+      "requested_coverage": 0.8,
+      "retained_count": 1804,
+      "total_count": 2254
+    },
+    {
+      "accuracy": 1.0,
+      "achieved_coverage": 0.7000887311446318,
+      "confidence_threshold": 0.9997505009498078,
+      "mean_confidence": 0.9998182321146207,
+      "requested_coverage": 0.7,
+      "retained_count": 1578,
+      "total_count": 2254
+    }
+  ],
+  "temperature": 0.6007370031399095,
+  "temperature_bounds": {
+    "maximum": 20.0,
+    "minimum": 0.05
+  },
+  "uncalibrated": {
+    "accuracy": 0.9991126885536823,
+    "ece": 0.01799033081114114,
+    "mean_confidence": 0.9814037153312214,
+    "nll": 0.020935633725558647,
+    "visible_count": 2254
+  },
+  "uncalibrated_ece": 0.01799033081114114,
+  "uncalibrated_nll": 0.020935633725558647,
+  "visible_count": 2254
+}

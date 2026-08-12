@@ -151,78 +151,151 @@ def _room315_smoke_rgbd_streams() -> dict[str, Any]:
     }
 
 
-def _room315_smoke_trusted_status() -> dict[str, Any]:
-    segment_by_slot = {'1': 'A1E', '2': 'A12E', '3': 'A23', '4': 'A34E'}
-    sensor_by_side = {
-        'right': {'1': 'DZI1R', '2': 'DZI2R', '3': 'DZI3R', '4': 'DZI4R'},
-        'left': {'1': 'DZI1L', '2': 'DZI2L', '3': 'DZI3L', '4': 'DZI4L'},
+def _room315_smoke_fixture(
+    generator: Any,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Return a full-fleet visual fixture bound to the current slot topology.
+
+    The planner deliberately rejects an exact DZI slot anchor unless the raw
+    visual segment and longitudinal ratio agree.  Build the synthetic camera
+    geometry from the same loaded topology so this smoke exercises that safety
+    contract instead of carrying a second, stale slot-to-segment table.
+    """
+
+    topologies = {
+        side: generator._planning_rail_topology(side)
+        for side in ('right', 'left')
     }
-    rails: dict[str, Any] = {}
-    for side in ('right', 'left'):
-        active = [
-            {
-                'name': sensor_by_side[side][slot],
-                'shuttle': f'room315_{side}_shuttle_{slot}',
-                'segment': segment_by_slot[slot],
-            }
-            for slot in ('1', '2', '3', '4')
-        ]
-        rails[side] = {
-            'switches': {f'A{index}': 'EXTERIOR' for index in range(1, 5)},
-            'stoppers': {f'A{index}': 'open' for index in range(1, 5)},
-            'payloads': {
-                f'room315_{side}_shuttle_{index}': {
-                    'loaded': side == 'right' and index == 1,
-                }
-                for index in range(1, 5)
-            },
-            'active_position_sensors': active,
-            'obstacles': {},
-        }
-    return {
+    calibration: dict[str, Any] = {
+        'schema_version': 1,
+        'calibration_id': 'room315_visual_plansys2_smoke_v2',
+        'thresholds': {
+            'stale_after_s': 1.0,
+            'min_detection_confidence': 0.6,
+            'min_identity_confidence': 0.65,
+            'min_loaded_confidence': 0.65,
+            'rail_position_uncertainty_m': 0.05,
+        },
+        'cameras': {},
+        'rail_geometry': {},
+    }
+    label: dict[str, Any] = {
+        'visual_state_labels': {
+            'schema_version': VISUAL_STATE_SCHEMA_VERSION,
+            'calibration_version': calibration['calibration_id'],
+            'scenario_family': 'visual_state_plansys2_smoke',
+            'confidence': 0.96,
+            'shuttles': [],
+            'switches': [
+                {
+                    'id': 'right:A1',
+                    'state': 'EXTERIOR',
+                    'confidence': 0.91,
+                },
+            ],
+            'obstacles': [],
+        },
+    }
+    trusted_status: dict[str, Any] = {
         'timestamp': 10.0,
-        'rails': rails,
+        'rails': {},
         'obstacles': {'right': [], 'left': []},
     }
 
-
-def _room315_smoke_visual_label() -> dict[str, Any]:
-    return {
-        'visual_state_labels': {
-            'schema_version': VISUAL_STATE_SCHEMA_VERSION,
-            'calibration_version': 'room315_visual_observed_state_v1',
-            'scenario_family': 'visual_state_plansys2_smoke',
-            'confidence': 0.96,
-            'shuttles': [
-                {
-                    'id': 'R1',
-                    'presence': True,
-                    'visually_available': True,
-                    'bbox': [55.0, 45.0, 10.0, 10.0],
-                    'location': {'side': 'right', 'block': 'A1E'},
-                    'rail_position': {
-                        'available': True,
-                        's_m': 0.5,
-                        's_ratio': 0.5,
-                        'segment_length_m': 1.0,
-                        'position_uncertainty_m': 0.0,
-                    },
-                    'loaded_state': 'loaded',
-                    'confidence': 0.94,
-                }
+    for side in ('right', 'left'):
+        topology = topologies[side]
+        rail_y = 0.0 if side == 'right' else 1.0
+        camera_name = f'overhead_{side}_rgbd'
+        calibration['cameras'][camera_name] = {
+            'role': 'overhead_rgbd',
+            'rail_side': side,
+            'frame_id': f'{camera_name}_optical_frame',
+            'depth_scale': 1.0,
+            'room_from_camera': [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, rail_y],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
             ],
-            'switches': [
-                {'id': 'right:A1', 'state': 'EXTERIOR', 'confidence': 0.91},
-            ],
-            'obstacles': [],
         }
-    }
+        slot_segments = sorted({
+            location.segment
+            for location in topology.slots.values()
+        })
+        segment_x = {
+            segment: 2.0 * index
+            for index, segment in enumerate(slot_segments)
+        }
+        geometry = {'segments': {}, 'slots': {}}
+        for segment, start_x in segment_x.items():
+            geometry['segments'][segment] = {
+                'start_m': [start_x, rail_y, 2.0],
+                'end_m': [start_x + 1.0, rail_y, 2.0],
+                'max_distance_m': 0.12,
+            }
+
+        active_sensors: list[dict[str, Any]] = []
+        payloads: dict[str, Any] = {}
+        for slot in ('1', '2', '3', '4'):
+            location = topology.slots[slot]
+            x_m = segment_x[location.segment] + location.s_ratio
+            geometry['slots'][slot] = {
+                'center_m': [x_m, rail_y, 2.0],
+                'radius_m': 0.08,
+            }
+            short_id = f'{side[0].upper()}{slot}'
+            entity = f'room315_{side}_shuttle_{slot}'
+            # With fx=100, cx=50, and depth=2 m, u=50+50*x.
+            bbox_center_u = 50.0 + 50.0 * x_m
+            label['visual_state_labels']['shuttles'].append({
+                'id': short_id,
+                'presence': True,
+                'visually_available': True,
+                'bbox': [bbox_center_u - 5.0, 45.0, 10.0, 10.0],
+                'location': {
+                    'side': side,
+                    'block': location.segment,
+                },
+                'rail_position': {
+                    'available': True,
+                    's_m': location.s_ratio,
+                    's_ratio': location.s_ratio,
+                    'segment_length_m': 1.0,
+                    'position_uncertainty_m': 0.0,
+                },
+                'loaded_state': 'loaded' if short_id == 'R1' else 'empty',
+                'confidence': 0.94,
+            })
+            active_sensors.append({
+                'name': f'DZI{slot}{side[0].upper()}',
+                'shuttle': entity,
+                'segment': location.segment,
+            })
+            payloads[entity] = {'loaded': short_id == 'R1'}
+
+        calibration['rail_geometry'][side] = geometry
+        trusted_status['rails'][side] = {
+            'switches': {
+                f'A{index}': 'EXTERIOR'
+                for index in range(1, 5)
+            },
+            'stoppers': {
+                f'A{index}': 'open'
+                for index in range(1, 5)
+            },
+            'payloads': payloads,
+            'active_position_sensors': active_sensors,
+            'obstacles': {},
+        }
+
+    return calibration, trusted_status, label
 
 
 def visual_state_plansys2_smoke() -> dict[str, Any]:
     provider = load_local_script_module('room_315_visual_observed_state_provider')
     generator = load_local_script_module('room_315_pddl_scenario_generator')
-    scene = visual_label_to_provider_compact_scene(_room315_smoke_visual_label(), timestamp=10.0)
+    calibration, trusted_status, label = _room315_smoke_fixture(generator)
+    scene = visual_label_to_provider_compact_scene(label, timestamp=10.0)
     adapter = provider.StrictJsonCompactModelAdapter()
     adapter.parse(scene)
     bad_scene = copy.deepcopy(scene)
@@ -233,8 +306,8 @@ def visual_state_plansys2_smoke() -> dict[str, Any]:
     except provider.VisualObservationError:
         command_boundary_rejected = True
 
-    trusted_status = _room315_smoke_trusted_status()
     visual_state = provider.VisualObservedStateProvider(
+        calibration=calibration,
         compact_model=provider.DeterministicFixtureCompactModel(scene),
         trusted_status_snapshot=trusted_status,
         stale_after_s=1.0,

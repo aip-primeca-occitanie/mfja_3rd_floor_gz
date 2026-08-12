@@ -11,19 +11,23 @@ streams, explicit request--response operations and isolated namespaces for the
 project. The resulting interfaces are presented in
 \cref{chap:multi-robot,chap:interfaces}.
 
-ROS~2 Quality of Service (QoS) matters because camera data, state and commands
-have different reliability and latency needs \citep{ros2qos}. The current
-design therefore combines conservative communication defaults with explicit
-freshness checks. Profiles for other network conditions would require
-measurement in their target environment.
+ROS~2 Quality of Service (QoS) policies configure delivery properties such as
+reliability and deadline; the standard sensor-data profile explicitly favours
+timely receipt over guaranteed delivery of every sample \citep{ros2qos}. In
+this project, camera data, state and commands have different reliability and
+latency needs. The design therefore combines conservative
+communication defaults with explicit freshness checks. Profiles for other
+network conditions would require measurement in their target environment.
 
 \section{Gazebo Harmonic and description formats}
 
 Gazebo Harmonic is the recommended Gazebo pairing for ROS~2 Jazzy on
-Ubuntu~24.04 \citep{gazeboharmonic}. The Simulation Description
-Format (SDF) describes the world, environment models, sensors, physics and
-plugins \citep{sdfspec}; the Unified Robot Description Format (URDF) remains useful for robot
-kinematic trees and \code{robot\_state\_publisher}. The
+Ubuntu~24.04 \citep{gazeboharmonic}. At its root, the Simulation Description
+Format (SDF) can contain a model, actor, light or one or more worlds; a world
+encapsulates models, scene, physics and plugins. SDF also defines sensor
+elements on links or joints, including their type and properties
+\citep{sdfspec}. The Unified Robot Description Format (URDF) remains useful for
+robot kinematic trees and \code{robot\_state\_publisher}. The
 \code{ros\_gz\_bridge} translates selected Gazebo Transport messages to or
 from ROS~2 \citep{gazeborosintegration}.
 
@@ -44,8 +48,9 @@ continuous, repeatable transport rather than detailed wheel--rail contact
 dynamics; it therefore uses kinematic pose control. The corresponding transport
 assumptions are detailed in \cref{chap:transport}.
 
-ISO~23247 defines general principles and requirements for manufacturing
-digital-twin frameworks \citep{iso23247}. In this project, the digital-twin
+ISO~23247-1 provides an overview and general principles for a manufacturing
+digital-twin framework, including terms, definitions and framework
+requirements \citep{iso23247}. In this project, the digital-twin
 model combines a versioned representation of the simulated environment with
 clearly defined information flows, assumptions and boundaries. Visual
 similarity alone is insufficient for that purpose.
@@ -88,8 +93,8 @@ visual-state contract and final arrival checks.
 The Planning Domain Definition Language (PDDL) describes objects, predicates,
 actions, preconditions and effects \citep{pddl}. PlanSys2 integrates PDDL-based
 planning into ROS~2 and exposes domain, problem, planner and executor components
-\citep{plansys2}. The selected solver is POPF, a forward-chaining partial-order
-planner \citep{popf}.
+\citep{plansys2}. The selected solver is POPF. Its original paper describes it
+as a forward-chaining partial-order planner \citep{popf}.
 
 Symbolic planning is appropriate for Room~315 because the important decisions
 are discrete and relational: which shuttle is present, which slot is occupied,
@@ -98,9 +103,10 @@ be staged and whether the goal has been achieved. Continuous motion remains
 inside the controller and effect-verification layers.
 
 The planner provides the symbolic sequence, while continuous movement is handled
-by the controller. The current deployment combines the PlanSys2 planner service
-with project-specific translation, supervision and execution components. These
-component responsibilities are defined in \cref{chap:neurosymbolic}.
+by the controller. The simulated runtime combines the PlanSys2 planner
+service with project-specific translation, supervision and execution
+components. These component responsibilities are defined in
+\cref{chap:neurosymbolic}.
 
 \section{Architectural alternatives and final design}
 
@@ -108,11 +114,12 @@ The term vision--language--action covers architectures with materially different
 responsibility splits. RT-2 maps images and language to tokenised robot actions
 inside one learned policy, while TinyVLA studies a smaller policy in the same
 end-to-end family \citep{rt2,tinyvla}. Hybrid systems separate more of the
-decision process: SayCan combines language-model scores with learned affordances
-over a predefined skill set \citep{saycan}. OWL-TAMP uses a vision--language
-model to propose a partial plan skeleton and discrete and continuous
-constraints, after which a task-and-motion planner produces a complete plan
-that satisfies them \citep{owltamp}. A recent structured long-horizon manipulation study also
+decision process: SayCan combines language-model scores with value functions
+associated with a predefined set of skills; those value functions ground skill
+feasibility in the physical environment \citep{saycan}. OWL-TAMP uses a vision--language
+model to generate discrete action-ordering and continuous constraints, after
+which a task-and-motion planner produces a plan that satisfies them
+\citep{owltamp}. A recent structured long-horizon manipulation study also
 compares VLA policies with neuro-symbolic sequencing; its result is specific to
 that task setting rather than a universal ranking of the two families
 \citep{pricenotright}. \Cref{tab:architecture-comparison} summarises the
@@ -170,10 +177,22 @@ a neuro-symbolic language-and-vision interface.
 
 \section{Visual-state model}
 
-The perception baseline uses ResNet-18 as a compact backbone \citep{resnet}.
+The perception system uses ResNet-18 as its backbone. The original paper
+defines the residual architecture and evaluates its 18-layer variant
+\citep{resnet}. The paired-view estimator applies one shared set of low-level
+weights through ResNet \code{layer3} independently to each image. Each view then
+has its own \code{layer4} and identity-query prediction head, with no
+cross-camera feature path. This arrangement reuses generic edges, textures and
+shuttle appearance while allowing rail-specific late features to represent the
+non-symmetric geometries. Side is derived deterministically from the configured
+identity---L1--L4 denote the left rail and R1--R4 the right rail---so the learned
+outputs concentrate on segment, loaded state, bounding box and normalised
+position.
+
 The fixed-camera, fixed-fleet formulation produces the compact state required by
-the Room~315 demonstrator and is specific to this room and fleet. Its inputs,
-outputs, presence handling and training process are specified in
-\cref{chap:ai-development}. The simulated command and state checks performed by
-the software supervisor are defined in \cref{chap:interfaces}; their engineering
-limits are discussed in \cref{chap:perspectives}.
+the Room~315 demonstrator and remains specific to this room and fleet. Its
+inputs, outputs, presence handling and training process
+are specified in \cref{chap:ai-development}. The simulated command and state
+checks performed by the software supervisor are defined in
+\cref{chap:interfaces}; their engineering limits are discussed in
+\cref{chap:perspectives}.

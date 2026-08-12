@@ -1,0 +1,32 @@
+{
+  "automatic_runtime_switch": false,
+  "control_isolation": {
+    "actuation_command_count": 0,
+    "comparator_owns_command_publisher": false,
+    "dry_run_state_fusion": true,
+    "evidence_scope": "canonical_shadow_launch_contract_and_runtime_node_ownership",
+    "plansys2_mutation_count": 0,
+    "plansys2_update_enabled": false
+  },
+  "errors": [],
+  "expected_checkpoint_sha256": {
+    "v3": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "v4": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+  },
+  "interpretation": "Agreement is a migration diagnostic only; V3 is not ground truth. Scenario-grounded runtime acceptance is evaluated separately.",
+  "loaded_agreement_rate": 0.875,
+  "maximum_absolute_s_ratio_difference": 0.22559869289398193,
+  "minimum_paired_frames": 20,
+  "paired_frame_count": 55,
+  "present_slot_comparison_count": 416,
+  "quality_ground_truth_available": false,
+  "role": "observation_only_same_frame_shadow",
+  "schema_version": "room315.visual_shadow_comparison.v4.v1",
+  "segment_agreement_rate": 0.125,
+  "status": "passed",
+  "unpaired_frame_count": 82,
+  "v3_accepted_frame_count": 52,
+  "v4_acceptance_coverage": 0.9454545454545454,
+  "v4_accepted_frame_count": 52,
+  "wrong_v4_side_identities": []
+}

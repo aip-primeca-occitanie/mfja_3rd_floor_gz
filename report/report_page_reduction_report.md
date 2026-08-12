@@ -1,5 +1,10 @@
 # Report Synthesis and Page-Reduction Report
 
+> Historical synthesis note: the counts below describe an earlier 84-page
+> intermediate build. The current 82-page submission is governed by
+> `report_revision_log.md`, `evidence/ACTIVE_EVIDENCE.md` and the named delivery
+> PDF; this file is retained only to document the earlier reduction work.
+
 ## Result
 
 The measured PDF was reduced from 93 to 84 A4 pages, a reduction of 9 pages

@@ -1,0 +1,112 @@
+{
+  "actuation_enabled": false,
+  "artifacts": {
+    "attempt_started.json": {
+      "bytes": 655,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/attempt_started.json",
+      "sha256": "03321c6c33715eeee9aa17a4330483754d0de3cd8b5f52cde4f981355df8a36c"
+    },
+    "dataset_config.json": {
+      "bytes": 10093,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/dataset_config.json",
+      "sha256": "cc58aae72e516928d3f9d9b0ed1655c14c3e7c77bb95bf25e32d763504e24da5"
+    },
+    "evaluation_contract.json": {
+      "bytes": 9243,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/evaluation_contract.json",
+      "sha256": "e04a227c589046ee5ebc561de51002a01f3b989effcd7f3d81ba9673ef3d8608"
+    },
+    "evaluation_protocol_lock.json": {
+      "bytes": 17956,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/evaluation_protocol_lock.json",
+      "sha256": "03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182"
+    },
+    "final_report.json": {
+      "bytes": 208037,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_report.json",
+      "sha256": "f789bde50f49fa61412c8d407b95129f0e0e9bde13ad810d9999f91a7a87daea"
+    },
+    "final_test_acceptance.json": {
+      "bytes": 38593,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_acceptance.json",
+      "sha256": "09248b27625f76c423df75b3469db5a4cd8a8e6041403d586bc75eada04321e8"
+    },
+    "final_test_camera_counterfactuals.json": {
+      "bytes": 1032,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_camera_counterfactuals.json",
+      "sha256": "e9cbc50872eaabe632767c7ba155d4cd1991daa6662231273a21f1b013768a6d"
+    },
+    "final_test_coverage_audit.json": {
+      "bytes": 8111,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_coverage_audit.json",
+      "sha256": "67c99ba7ed40271e8c213bc33b8482c7e1e297f13ccf40a8bd3608e801ca7dde"
+    },
+    "final_test_disjoint_audit.json": {
+      "bytes": 2976,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_disjoint_audit.json",
+      "sha256": "9c320497f93fec2dc86d4ffae5c6075596a2b6995143ee36747bf3f05c00623b"
+    },
+    "final_test_finalization.json": {
+      "bytes": 619464,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_finalization.json",
+      "sha256": "d329bf35d3f027257fe49490f568cbb07fd3aabab83b9c8045204d7a00c4a060"
+    },
+    "final_test_image_pair_manifest.json": {
+      "bytes": 379,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_image_pair_manifest.json",
+      "sha256": "ee66e9944174d92a6a72a44b196a005731cd7ee2b6979636647ac4ada686432a"
+    },
+    "final_test_input_fingerprint.json": {
+      "bytes": 1058,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_input_fingerprint.json",
+      "sha256": "1f56000d03daf1fd1f3b5de1dd745eb9562b84c23da3678c4d2a34f6be427cae"
+    },
+    "final_test_metrics.json": {
+      "bytes": 142020,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_metrics.json",
+      "sha256": "1e46e864a56c2364f21fb9a2292b45486b65bcc764644297c92503bea6d5ca18"
+    },
+    "final_test_runtime_thresholds.json": {
+      "bytes": 2275,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_runtime_thresholds.json",
+      "sha256": "cbbcba0c23210954c1922d7370908985fb40375f38b750c8124fee635f86fc1f"
+    },
+    "final_test_segment_calibration.json": {
+      "bytes": 5708,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/final_test_segment_calibration.json",
+      "sha256": "c08b001eeafb4a297fa967505bf24818fe9b159c37d424fe568c7670592c735e"
+    },
+    "plan_lock.json": {
+      "bytes": 1233,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/plan_lock.json",
+      "sha256": "911e90f2e540ee973f5decc92b69e89a54bc40f1d611a72776510684f20c8c5c"
+    },
+    "preregistration.json": {
+      "bytes": 15531,
+      "path": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1/preregistration.json",
+      "sha256": "6c582ed3e108ec5a1a71c5795eee32953f53f4356977e3a1a11f31c6b6b7eba5"
+    }
+  },
+  "attempt_key": "2e18d6124b24438243a93d207d0c245fc1b87e25d2c08d1edca4040637e90aad",
+  "automatic_runtime_switch": false,
+  "calibration_refit_performed": false,
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "completed_at_utc": "2026-08-11T19:48:15.593419+00:00",
+  "contract_sha256": "e04a227c589046ee5ebc561de51002a01f3b989effcd7f3d81ba9673ef3d8608",
+  "dataset_fingerprint_sha256": "226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef",
+  "evaluation_protocol_lock_sha256": "03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182",
+  "failure": {},
+  "implementation_aggregate_sha256": "e94e0c86435a4fcdbdaab81995761b68a6b1edae0ecd4e0d07302c70608c448d",
+  "output": "/home/tiago/room315_visual_v4_final_test_outputs/final_test_v4_2e18d6124b244382_attempt1",
+  "plansys_updates_enabled": false,
+  "protocol_frozen_sha256": "0ebb390fd6196aef77c2496203b373d9b8307dce07b760320072e005656ec0d1",
+  "reservation": {
+    "path": "/home/tiago/room315_visual_v4_final_test_attempt_ledger_v1/2e18d6124b24438243a93d207d0c245fc1b87e25d2c08d1edca4040637e90aad.reserved.json",
+    "sha256": "9aa5cdd84ed6d29fc8850cf27be63636f939a75357461f52ebde57119ff6ff1d"
+  },
+  "schema_version": "room315.visual_v4.final_test_attempt.v1",
+  "state": "completed_immutable",
+  "test_used_for_checkpoint_selection": false,
+  "test_used_for_training": false,
+  "threshold_selection_performed": false
+}

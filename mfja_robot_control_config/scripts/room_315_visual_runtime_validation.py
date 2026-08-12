@@ -209,6 +209,17 @@ def validate_prediction(
             topology_consistent = False
         if shuttle.loaded_state not in {'loaded', 'empty'}:
             reasons.append(f'invalid_loaded_state:{prefix}:{shuttle.loaded_state}')
+        for confidence_name, confidence_value in (
+            ('segment_confidence', shuttle.segment_confidence),
+            ('loaded_confidence', shuttle.loaded_confidence),
+        ):
+            try:
+                confidence = float(confidence_value)
+            except (TypeError, ValueError):
+                reasons.append(f'invalid_{confidence_name}:{prefix}')
+                continue
+            if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
+                reasons.append(f'invalid_{confidence_name}:{prefix}')
 
         bbox = tuple(float(value) for value in shuttle.bbox_xywh)
         if len(bbox) != 4 or not all(math.isfinite(value) for value in bbox):
@@ -384,6 +395,8 @@ class DeterministicTemporalStabilizer:
                 s_ratio=numeric[2],
                 segment_length_m=numeric[3],
                 loaded_state=loaded,
+                segment_confidence=shuttle.segment_confidence,
+                loaded_confidence=shuttle.loaded_confidence,
             ))
         return replace(
             result,

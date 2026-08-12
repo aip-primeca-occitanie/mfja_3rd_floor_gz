@@ -1,0 +1,280 @@
+{
+  "capture_started": false,
+  "configuration": {
+    "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4_coverage_extension.json",
+    "sha256": "42fd32c7ee1fa7cbb02dd28fd38a3411d4a8602cda903364754fcdc9e8fb29ec"
+  },
+  "coverage_contract": {
+    "added_pre_inference_stress_scenarios": 16,
+    "added_relation_family_counts": {
+      "blocker_intermediate_segment": 2,
+      "no_relation_observation": 2,
+      "nonblocker_adjacent_branch": 6,
+      "nonblocker_behind_same_segment": 6
+    },
+    "aggregate_relation_family_counts": {
+      "blocker_ahead_same_segment": 4,
+      "blocker_intermediate_segment": 4,
+      "multi_blocker": 4,
+      "no_relation_observation": 1012,
+      "nonblocker_adjacent_branch": 8,
+      "nonblocker_behind_same_segment": 8
+    },
+    "lattice_definition": "side(2) x public_segment(14) x position_bin(9) x loaded_state(2) x replicate(2)",
+    "lattice_scenarios": 1008,
+    "micro_offsets_from_position_bin_center": [
+      -0.0037,
+      0.0037
+    ],
+    "minimum_aggregate_identity_zone_support": 8,
+    "occlusion_contract": {
+      "claim_scope": "static calibrated-projection risk estimate; not a measured pixel-occlusion percentage",
+      "required_estimated_classes": [
+        "clear",
+        "partial_risk"
+      ]
+    },
+    "planned_identity_zone_deltas": {
+      "adjacent_branch": 6,
+      "behind_region": 6,
+      "intermediate_route": 2
+    },
+    "presence_cardinality_counts": {
+      "1": 130,
+      "2": 130,
+      "3": 130,
+      "4": 130,
+      "5": 130,
+      "6": 130,
+      "7": 130,
+      "8": 130
+    },
+    "required_identity_zones": [
+      "boundary",
+      "switch",
+      "slot",
+      "merge_conflict",
+      "buffer",
+      "ordinary",
+      "ahead_region",
+      "behind_region",
+      "adjacent_branch",
+      "intermediate_route",
+      "relation_neutral"
+    ],
+    "required_relation_families": [
+      "no_relation_observation",
+      "blocker_ahead_same_segment",
+      "nonblocker_behind_same_segment",
+      "blocker_intermediate_segment",
+      "nonblocker_adjacent_branch",
+      "multi_blocker"
+    ],
+    "required_target_zones": [
+      "boundary",
+      "switch",
+      "slot",
+      "merge_conflict",
+      "buffer",
+      "ordinary"
+    ],
+    "stress_scenarios": 32,
+    "v1_byte_identical_prefix_scenarios": 1024,
+    "v1_original_stress_scenarios": 16
+  },
+  "dataset_role": "sealed_final_test_only",
+  "frozen_model": {
+    "checkpoint": "/home/tiago/room315_visual_v4_outputs/pilot_v4_seed31520260811_attempt1/checkpoints/epoch_011.pt",
+    "frozen_at_utc": "2026-08-11T11:27:43Z",
+    "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+  },
+  "inference_count": 0,
+  "inference_status": "not_run",
+  "model_frozen_before_preregistration": true,
+  "occlusion_claim_scope": "static calibrated-projection risk estimate; not a measured pixel-occlusion percentage",
+  "preregistered_at_utc": "2026-08-11T19:13:09Z",
+  "prohibitions": {
+    "automatic_runtime_promotion": true,
+    "calibration_or_threshold_selection": true,
+    "checkpoint_selection": true,
+    "decision_from_images_labels_predictions_or_metrics": true,
+    "extension_after_inference": true,
+    "historical_test_access": true,
+    "more_than_one_final_inference": true,
+    "training_use": true
+  },
+  "purpose": "One-shot V4 final evaluation extended before any inference. The byte-identical 1024-scene V1 prefix was captured and sealed but never inferred; 16 scenes are added solely because a static preregistered-manifest support audit found aggregate identity-zone counts below eight. Never use this data for training, checkpoint selection, calibration, threshold selection, debugging, or runtime promotion.",
+  "reference_inputs": [
+    {
+      "labels": "/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train_visual_labels.jsonl",
+      "labels_sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583",
+      "name": "old_replay_train",
+      "role": "train",
+      "rows": "/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train.jsonl",
+      "rows_sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095"
+    },
+    {
+      "image_hash_manifest": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/train_finalization.json",
+      "image_hash_manifest_sha256": "a24aaf396ab8dc1b8688b1ee6344ce343035964ef7aafab8e8deb3e74f3ae5b1",
+      "labels": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/train_visual_labels.jsonl",
+      "labels_sha256": "ec98fd5a94ed9d29fbb0b33dbed33877d571d263ea4a497be99d088673b71921",
+      "name": "v3r1_train",
+      "role": "train",
+      "rows": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/train.jsonl",
+      "rows_sha256": "396e3b83822dcd2ed541025fc033802592a609e288dbb28be555c6d9f586361c"
+    },
+    {
+      "image_hash_manifest": "/home/tiago/room315_hard_case_visual_v3r1_capture_seed31520260730/finalized/validation_finalization.json",
+      "image_hash_manifest_sha256": "521446d530b92a0544c99b4b7fe8d7195c46276e518307029781c5b057ed939c",
+      "labels": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/validation_visual_labels.jsonl",
+      "labels_sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab",
+      "name": "v3r1_validation",
+      "role": "validation",
+      "rows": "/home/tiago/room315_hard_case_visual_v3r1_splits_seed31520260730/validation.jsonl",
+      "rows_sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7"
+    },
+    {
+      "image_hash_manifest": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_finalization.json",
+      "image_hash_manifest_sha256": "9a8a640062c220a00e6bef426f88823592dc24466267e7355d56f75720064e20",
+      "labels": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_visual_labels.jsonl",
+      "labels_sha256": "42d1d6ccab49d4a6bfdb2c2b79d77e404e5f9cb23066a816c1a3851d552b02db",
+      "name": "v3r1_canary",
+      "role": "canary",
+      "rows": "/home/tiago/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary.jsonl",
+      "rows_sha256": "28568e8ebf793e0a0a18ad9327f36639b2fd9c27021b9bccc4b318dd48192541"
+    }
+  ],
+  "repository_state": {
+    "commit": "616fed0db905fda92cdb15824582856b082b5edc",
+    "dirty": true,
+    "status": [
+      " M .gitignore",
+      " M mfja_rail_interfaces/msg/VisualShuttleState.msg",
+      " M mfja_robot_control_config/CMakeLists.txt",
+      " M mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml",
+      " M mfja_robot_control_config/launch/room_315_runtime_acceptance.launch.py",
+      " M mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py",
+      " M mfja_robot_control_config/scripts/room_315_runtime_acceptance_readiness.py",
+      " M mfja_robot_control_config/scripts/room_315_runtime_acceptance_recorder.py",
+      " M mfja_robot_control_config/scripts/room_315_runtime_acceptance_report.py",
+      " M mfja_robot_control_config/scripts/room_315_task_execution.py",
+      " M mfja_robot_control_config/scripts/room_315_task_execution_config.py",
+      " M mfja_robot_control_config/scripts/room_315_task_execution_node.py",
+      " M mfja_robot_control_config/scripts/room_315_visual_runtime.py",
+      " M mfja_robot_control_config/scripts/room_315_visual_runtime_fusion.py",
+      " M mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py",
+      " M mfja_robot_control_config/scripts/room_315_visual_scenario_runner.py",
+      " M mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py",
+      " M mfja_robot_control_config/test/test_room315_runtime_acceptance.py",
+      " M mfja_robot_control_config/test/test_room315_task_execution.py",
+      " M mfja_robot_control_config/test/test_room315_visual_runtime_ros_integration.py",
+      " M mfja_robot_control_config/test/test_room315_visual_scenario_runner.py",
+      " M report/Ali_IBRAHIM_MFJA_Internship_Report_2025-2026.pdf",
+      " M report/chapters/02_host_organisation.tex",
+      " M report/chapters/03_mission_and_project_management.tex",
+      " M report/chapters/04_background_and_design_choices.tex",
+      " M report/chapters/07_room315_transport.tex",
+      " M report/chapters/08_interfaces_and_safety.tex",
+      " M report/chapters/09_vla_evolution.tex",
+      " M report/chapters/10_neurosymbolic_runtime.tex",
+      " M report/chapters/12_verification_and_results.tex",
+      " M report/chapters/14_limitations_and_perspectives.tex",
+      " M report/chapters/15_conclusion.tex",
+      " M report/chapters/a_reproducibility.tex",
+      " M report/chapters/b_interfaces.tex",
+      " M report/evidence/ACTIVE_EVIDENCE.md",
+      " M report/figures/f03_project_timeline_v2.tex",
+      " M report/figures/f10_runtime_vertical.tex",
+      " M report/figures/f11_dataset_pipeline_vertical.tex",
+      " M report/figures/f12_visual_model_contract_v2.tex",
+      " M report/figures/f19_evidence_ladder.tex",
+      " M report/frontmatter.tex",
+      " M report/metadata.tex",
+      " M report/references.bib",
+      " M report/report_revision_log.md",
+      " M report/report_unverified_items.md",
+      "?? mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4.json",
+      "?? mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4_coverage_extension.json",
+      "?? mfja_robot_control_config/config/room_315_vla/visual_state_training_v4.json",
+      "?? mfja_robot_control_config/launch/room_315_visual_state_v4_shadow.launch.py",
+      "?? mfja_robot_control_config/launch/room_315_visual_state_v4_shadow_scenario.launch.py",
+      "?? mfja_robot_control_config/scripts/room_315_build_runtime_candidate_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_promote_runtime_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_runtime_acceptance_campaign_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_acceptance_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_calibration_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_contract_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_final_test_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_model_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_runtime_v4_fault_and_rollback.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_shadow_compare.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_training_v4.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_v4_final_test.py",
+      "?? mfja_robot_control_config/scripts/room_315_visual_v4_final_test_coverage_extension.py",
+      "?? mfja_robot_control_config/scripts/room_315_vla_train_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_promote_runtime_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_runtime_acceptance_campaign_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_runtime_candidate_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_acceptance_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_calibration_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_contract_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_final_test_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_model_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_runtime_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_runtime_v4_fault_and_rollback.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_shadow_compare.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_state_v4_shadow_scenario.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_training_v4.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_v4_final_test.py",
+      "?? mfja_robot_control_config/test/test_room315_visual_v4_final_test_coverage_extension.py",
+      "?? mfja_robot_control_config/test/test_room315_vla_train_v4.py",
+      "?? report/evidence/final_report_build_2026-08-11.log",
+      "?? report/evidence/final_report_sha256_2026-08-11.txt",
+      "?? report/evidence/room315_visual_runtime_v4_2026-08-11/",
+      "?? report/evidence/room315_visual_v4_submission_2026-08-11/"
+    ]
+  },
+  "scenario_manifest": {
+    "path": "/home/tiago/room315_visual_v4_final_test_coverage_v2_seed3152026081101/scenario_manifest.jsonl",
+    "scenario_count": 1040,
+    "sha256": "590dd942f60cdeadb40238b2db95e54f8eb2022005985fed13ca4f76b28f1d7f"
+  },
+  "schema_version": "room315.visual_v4.final_test_coverage_extension_preregistration.v2",
+  "seed": 3152026081101,
+  "static_reference_disjoint_audit": {
+    "candidate_counts": {
+      "capture_configuration_fingerprints": 1040,
+      "configuration_core_family_digests": 1040,
+      "configuration_family_digests": 1040,
+      "geometry_fingerprints": 1040,
+      "scenario_family_digests": 1040,
+      "scenario_ids": 1040,
+      "semantic_fingerprints": 1040,
+      "trajectory_fingerprints": 1040
+    },
+    "overlap_counts": {
+      "capture_configuration_fingerprints": 0,
+      "configuration_core_family_digests": 0,
+      "configuration_family_digests": 0,
+      "geometry_fingerprints": 0,
+      "scenario_family_digests": 0,
+      "scenario_ids": 0,
+      "semantic_fingerprints": 0,
+      "trajectory_fingerprints": 0
+    },
+    "overlap_examples": {},
+    "passed": true,
+    "reference_counts": {
+      "capture_configuration_fingerprints": 4768,
+      "configuration_core_family_digests": 4660,
+      "configuration_family_digests": 4671,
+      "geometry_fingerprints": 4065,
+      "scenario_family_digests": 4768,
+      "scenario_ids": 6296,
+      "semantic_fingerprints": 6252,
+      "trajectory_fingerprints": 5593
+    }
+  },
+  "support_summary_sha256": "00687729a970838acb9049335d60e0a0e8781dbc2af812990111b4afc1e0e56a"
+}

@@ -1,0 +1,83 @@
+{
+  "acceptance_report": "aggregate/acceptance_report.json",
+  "acceptance_report_sha256": "6805bc46c9550a4200701812a6cc50d4759f55649d6a09351a4f5119eec723a0",
+  "acceptance_scenarios_sha256": "bde80f173e846dd0a4ea1b73b442721c2a257f2b1d968b441c6ca2389555c6ba",
+  "acceptance_status": "complete_pending_human_decision",
+  "automatic_deployment_approval": false,
+  "campaign_complete": true,
+  "candidate_id": "room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow",
+  "candidate_state_sha256": "3a8e90668ef6bf14f5b52169bcb6986f25587b919625df3e163dcf9d230f8f27",
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "complete_event_count": 7,
+  "execution_enabled": false,
+  "gui": false,
+  "observation_only": true,
+  "scenario_count": 7,
+  "scenario_results": [
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 25.099798570852727,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_l4_loaded",
+      "scenario_output": "scenario_outputs/01_accept_l4_loaded",
+      "timed_out": false
+    },
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 23.293521641055122,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_r4_loaded",
+      "scenario_output": "scenario_outputs/02_accept_r4_loaded",
+      "timed_out": false
+    },
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 23.748999499948695,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_exact_l2_l4_r4",
+      "scenario_output": "scenario_outputs/03_accept_exact_l2_l4_r4",
+      "timed_out": false
+    },
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 23.360917107900605,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_right_slot3_plus_005",
+      "scenario_output": "scenario_outputs/04_accept_right_slot3_plus_005",
+      "timed_out": false
+    },
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 23.983644597930834,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_sparse",
+      "scenario_output": "scenario_outputs/05_accept_sparse",
+      "timed_out": false
+    },
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 25.776373367058113,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_dense",
+      "scenario_output": "scenario_outputs/06_accept_dense",
+      "timed_out": false
+    },
+    {
+      "complete_event_aggregated": true,
+      "elapsed_s": 25.189032637979835,
+      "launch_returncode": 0,
+      "rejection_reason": null,
+      "scenario_id": "accept_multi_blocker",
+      "scenario_output": "scenario_outputs/07_accept_multi_blocker",
+      "timed_out": false
+    }
+  ],
+  "schema_version": "room315.runtime_acceptance_campaign.v4.v1",
+  "task_execution_enabled": false
+}

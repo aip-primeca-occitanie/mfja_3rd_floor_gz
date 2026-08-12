@@ -169,6 +169,28 @@ def fuse_validated_visual_state(
             },
         }
         for predicate, value in values.items():
+            if predicate == 'rail_side':
+                confidence = 1.0
+                confidence_available = True
+                confidence_semantics = 'derived_from_fixed_identity'
+            elif predicate in {'location_block', 'rail_position'}:
+                confidence = float(shuttle.segment_confidence)
+                confidence_available = confidence > 0.0
+                confidence_semantics = (
+                    'validation_temperature_calibrated_segment_probability'
+                    if confidence_available
+                    else 'unsupported_by_v3_model'
+                )
+            else:
+                # V4 loaded scores are deliberately not claimed as calibrated;
+                # bbox has no uncertainty head. Both remain explicit metadata.
+                confidence = 0.0
+                confidence_available = False
+                confidence_semantics = (
+                    'uncalibrated_loaded_decision_score'
+                    if predicate == 'loaded'
+                    else 'regression_uncertainty_unavailable'
+                )
             visual_facts.append(ObservedFact(
                 fact_id=f'visual-{shuttle.identity}-{predicate}',
                 subject=subject,
@@ -176,17 +198,16 @@ def fuse_validated_visual_state(
                 value=value,
                 source='visual_model',
                 timestamp=prediction.timestamp_s,
-                # The model has no calibrated confidence output.  Zero is the
-                # explicit contract sentinel; deterministic validation status
-                # is carried in metadata instead.
-                confidence=0.0,
+                confidence=confidence,
                 status='known',
                 metadata={
                     **common_metadata,
                     'field_owner': 'visual_model',
                     'identity': shuttle.identity,
-                    'confidence_available': False,
-                    'confidence_semantics': 'unsupported_by_approved_model',
+                    'confidence_available': confidence_available,
+                    'confidence_semantics': confidence_semantics,
+                    'segment_confidence': shuttle.segment_confidence,
+                    'loaded_decision_score': shuttle.loaded_confidence,
                 },
             ))
             field_sources[f'{shuttle.identity}.{predicate}'] = 'visual_model'

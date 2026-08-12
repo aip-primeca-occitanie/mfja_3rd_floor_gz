@@ -1,0 +1,332 @@
+{
+  "dataset_role": "sealed_final_test_only",
+  "generator_version": "room315.visual_v4.final_test_generator.v1",
+  "inference_count": 0,
+  "inference_status": "not_run",
+  "planned_image_count": 2048,
+  "reference_source_counts": {
+    "old_replay_train": {
+      "individual_image_hashes": 3056,
+      "labels": 1528,
+      "rows": 1528
+    },
+    "v3r1_canary": {
+      "individual_image_hashes": 512,
+      "labels": 256,
+      "rows": 256
+    },
+    "v3r1_train": {
+      "individual_image_hashes": 8000,
+      "labels": 4000,
+      "rows": 4000
+    },
+    "v3r1_validation": {
+      "individual_image_hashes": 1024,
+      "labels": 512,
+      "rows": 512
+    }
+  },
+  "scenario_count": 1024,
+  "schema_version": "room315.visual_v4.final_test_plan_summary.v1",
+  "seed": 3152026081101,
+  "static_reference_disjoint_audit": {
+    "candidate_counts": {
+      "capture_configuration_fingerprints": 1024,
+      "configuration_core_family_digests": 1024,
+      "configuration_family_digests": 1024,
+      "geometry_fingerprints": 1024,
+      "scenario_family_digests": 1024,
+      "scenario_ids": 1024,
+      "semantic_fingerprints": 1024,
+      "trajectory_fingerprints": 1024
+    },
+    "overlap_counts": {
+      "capture_configuration_fingerprints": 0,
+      "configuration_core_family_digests": 0,
+      "configuration_family_digests": 0,
+      "geometry_fingerprints": 0,
+      "scenario_family_digests": 0,
+      "scenario_ids": 0,
+      "semantic_fingerprints": 0,
+      "trajectory_fingerprints": 0
+    },
+    "overlap_examples": {},
+    "passed": true,
+    "reference_counts": {
+      "capture_configuration_fingerprints": 4768,
+      "configuration_core_family_digests": 4660,
+      "configuration_family_digests": 4671,
+      "geometry_fingerprints": 4065,
+      "scenario_family_digests": 4768,
+      "scenario_ids": 6296,
+      "semantic_fingerprints": 6252,
+      "trajectory_fingerprints": 5593
+    }
+  },
+  "support": {
+    "lattice_scenario_count": 1008,
+    "occlusion_claim_scope": "static calibrated-projection risk estimate; not a measured pixel-occlusion percentage",
+    "presence_cardinality_counts": {
+      "1": 128,
+      "2": 128,
+      "3": 128,
+      "4": 128,
+      "5": 128,
+      "6": 128,
+      "7": 128,
+      "8": 128
+    },
+    "records_by_estimated_occlusion_class": {
+      "clear": 957,
+      "partial_risk": 67
+    },
+    "records_by_relation_family": {
+      "blocker_ahead_same_segment": 4,
+      "blocker_intermediate_segment": 2,
+      "multi_blocker": 4,
+      "no_relation_observation": 1010,
+      "nonblocker_adjacent_branch": 2,
+      "nonblocker_behind_same_segment": 2
+    },
+    "scenario_count": 1024,
+    "stress_scenario_count": 16,
+    "target_by_identity": {
+      "L1": 127,
+      "L2": 129,
+      "L3": 129,
+      "L4": 127,
+      "R1": 127,
+      "R2": 129,
+      "R3": 129,
+      "R4": 127
+    },
+    "target_by_loaded_state": {
+      "empty": 512,
+      "loaded": 512
+    },
+    "target_by_position_bin": {
+      "p05": 114,
+      "p15": 112,
+      "p25": 113,
+      "p40": 114,
+      "p50": 116,
+      "p60": 115,
+      "p75": 114,
+      "p85": 113,
+      "p95": 113
+    },
+    "target_by_side_x_segment": {
+      "left": {
+        "A12E": 37,
+        "A12I": 38,
+        "A14": 37,
+        "A1E": 36,
+        "A1I": 37,
+        "A23": 37,
+        "A2E": 36,
+        "A2I": 36,
+        "A34E": 38,
+        "A34I": 36,
+        "A3E": 36,
+        "A3I": 36,
+        "A4E": 36,
+        "A4I": 36
+      },
+      "right": {
+        "A12E": 38,
+        "A12I": 37,
+        "A14": 38,
+        "A1E": 36,
+        "A1I": 36,
+        "A23": 36,
+        "A2E": 36,
+        "A2I": 36,
+        "A34E": 37,
+        "A34I": 38,
+        "A3E": 36,
+        "A3I": 36,
+        "A4E": 36,
+        "A4I": 36
+      }
+    },
+    "target_by_zone": {
+      "boundary": 227,
+      "buffer": 82,
+      "merge_conflict": 51,
+      "ordinary": 482,
+      "slot": 51,
+      "switch": 131
+    },
+    "visible_by_identity": {
+      "L1": 552,
+      "L2": 580,
+      "L3": 602,
+      "L4": 587,
+      "R1": 574,
+      "R2": 549,
+      "R3": 581,
+      "R4": 583
+    },
+    "visible_by_identity_zone": {
+      "L1": {
+        "ahead_region": 1,
+        "boundary": 27,
+        "buffer": 12,
+        "merge_conflict": 5,
+        "ordinary": 60,
+        "relation_neutral": 424,
+        "slot": 7,
+        "switch": 16
+      },
+      "L2": {
+        "behind_region": 1,
+        "boundary": 30,
+        "buffer": 10,
+        "merge_conflict": 6,
+        "ordinary": 62,
+        "relation_neutral": 450,
+        "slot": 4,
+        "switch": 17
+      },
+      "L3": {
+        "ahead_region": 1,
+        "boundary": 30,
+        "buffer": 9,
+        "merge_conflict": 7,
+        "ordinary": 60,
+        "relation_neutral": 472,
+        "slot": 7,
+        "switch": 16
+      },
+      "L4": {
+        "behind_region": 1,
+        "boundary": 26,
+        "buffer": 10,
+        "intermediate_route": 2,
+        "merge_conflict": 8,
+        "ordinary": 59,
+        "relation_neutral": 457,
+        "slot": 8,
+        "switch": 16
+      },
+      "R1": {
+        "ahead_region": 2,
+        "boundary": 27,
+        "buffer": 13,
+        "intermediate_route": 2,
+        "merge_conflict": 5,
+        "ordinary": 60,
+        "relation_neutral": 443,
+        "slot": 6,
+        "switch": 16
+      },
+      "R2": {
+        "adjacent_branch": 2,
+        "boundary": 30,
+        "buffer": 10,
+        "merge_conflict": 5,
+        "ordinary": 63,
+        "relation_neutral": 418,
+        "slot": 4,
+        "switch": 17
+      },
+      "R3": {
+        "ahead_region": 2,
+        "boundary": 31,
+        "buffer": 8,
+        "intermediate_route": 2,
+        "merge_conflict": 7,
+        "ordinary": 60,
+        "relation_neutral": 448,
+        "slot": 7,
+        "switch": 16
+      },
+      "R4": {
+        "ahead_region": 2,
+        "boundary": 26,
+        "buffer": 10,
+        "merge_conflict": 8,
+        "ordinary": 58,
+        "relation_neutral": 454,
+        "slot": 8,
+        "switch": 17
+      }
+    },
+    "visible_by_side_x_segment": {
+      "left": {
+        "A12E": 183,
+        "A12I": 198,
+        "A14": 55,
+        "A1E": 113,
+        "A1I": 165,
+        "A23": 78,
+        "A2E": 196,
+        "A2I": 244,
+        "A34E": 214,
+        "A34I": 247,
+        "A3E": 120,
+        "A3I": 136,
+        "A4E": 185,
+        "A4I": 187
+      },
+      "right": {
+        "A12E": 182,
+        "A12I": 195,
+        "A14": 128,
+        "A1E": 132,
+        "A1I": 148,
+        "A23": 109,
+        "A2E": 146,
+        "A2I": 179,
+        "A34E": 238,
+        "A34I": 239,
+        "A3E": 127,
+        "A3I": 114,
+        "A4E": 160,
+        "A4I": 190
+      }
+    }
+  },
+  "uniqueness": {
+    "capture_configuration_fingerprint": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "configuration_core_family_id": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "configuration_family_id": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "geometry_fingerprint": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "scenario_family": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "scenario_id": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "semantic_fingerprint": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    },
+    "trajectory_fingerprint": {
+      "count": 1024,
+      "unique": true,
+      "unique_count": 1024
+    }
+  }
+}

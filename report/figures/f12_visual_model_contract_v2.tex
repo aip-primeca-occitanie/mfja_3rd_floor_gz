@@ -2,130 +2,151 @@
   font=\sffamily\footnotesize,
   execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000},
   input/.style={draw=black!42,rounded corners=2pt,fill=black!3,
-    align=center,text width=66mm,minimum height=13mm,inner sep=1.4mm},
-  encoder/.style={draw=mfjablue,very thick,rounded corners=2pt,
-    fill=mfjalight,align=center,text width=66mm,minimum height=24mm,
-    inner sep=1.5mm},
+    align=center,text width=58mm,minimum height=13mm,inner sep=1.2mm},
+  stem/.style={draw=mfjablue,very thick,rounded corners=2pt,
+    fill=mfjalight,align=center,text width=58mm,minimum height=20mm,
+    inner sep=1.3mm},
+  railbranch/.style={draw=mfjaorange!85!black,very thick,rounded corners=2pt,
+    fill=mfjaorange!8,align=center,text width=58mm,minimum height=22mm,
+    inner sep=1.3mm},
   learned/.style={draw=mfjablue,very thick,rounded corners=2pt,
-    fill=mfjablue!5,align=center,text width=152mm,minimum height=14mm,
-    inner sep=1.5mm},
-  contract/.style={draw=black!55,very thick,rounded corners=2pt,
-    fill=white,align=center,text width=152mm,minimum height=30mm,
-    inner sep=1.6mm},
+    fill=mfjablue!5,align=center,text width=146mm,minimum height=23mm,
+    inner sep=1.4mm},
   runtimeinput/.style={draw=black!48,rounded corners=2pt,fill=black!3,
-    align=center,text width=68mm,minimum height=13mm,inner sep=1.3mm},
+    align=center,text width=47mm,minimum height=16mm,inner sep=1.2mm},
+  derive/.style={draw=mfjaorange!85!black,very thick,rounded corners=2pt,
+    fill=mfjaorange!8,align=center,text width=146mm,minimum height=20mm,
+    inner sep=1.4mm},
   gate/.style={draw=mfjagreen,very thick,rounded corners=2pt,
-    fill=mfjagreen!7,align=center,text width=152mm,minimum height=19mm,
-    inner sep=1.6mm},
-  presentcase/.style={draw=mfjagreen,very thick,rounded corners=2pt,
-    fill=mfjagreen!7,align=center,text width=47mm,minimum height=23mm,
-    inner sep=1.4mm},
-  absentcase/.style={draw=black!58,very thick,rounded corners=2pt,
-    fill=black!3,align=center,text width=47mm,minimum height=23mm,
-    inner sep=1.4mm},
-  rejectcase/.style={draw=mfjared,very thick,rounded corners=2pt,
-    fill=mfjared!6,align=center,text width=47mm,minimum height=23mm,
+    fill=mfjagreen!7,align=center,text width=146mm,minimum height=23mm,
     inner sep=1.4mm},
   accepted/.style={draw=mfjagreen,very thick,rounded corners=2pt,
-    fill=mfjagreen!10,align=center,text width=152mm,minimum height=23mm,
-    inner sep=1.6mm},
+    fill=mfjagreen!10,align=center,text width=146mm,minimum height=21mm,
+    inner sep=1.4mm},
+  isolationnote/.style={align=center,text width=28mm,inner sep=0.7mm,
+    fill=white,font=\sffamily\footnotesize\bfseries},
   paneltitle/.style={anchor=west,font=\sffamily\small\bfseries,
     text=mfjablue},
   flow/.style={-{Latex[length=2.1mm]},very thick,draw=mfjablue},
+  branchflow/.style={-{Latex[length=2.1mm]},very thick,
+    draw=mfjaorange!85!black},
   gateflow/.style={-{Latex[length=2.1mm]},very thick,
-    draw=mfjagreen!80!black},
-  caseflow/.style={-{Latex[length=1.9mm]},very thick,draw=black!75}
+    draw=mfjagreen!80!black}
 ]
-  % Panel A: the actual paired-view architecture used in training and runtime.
+  % Panel A: the learned architecture.  The stem parameters are shared, but
+  % the activation streams never mix and all late computation is rail-local.
   \node[paneltitle] at (-79mm,11mm)
-    {A \enspace LEARNED PAIRED-VIEW STATE ESTIMATOR};
+    {A \enspace RAIL-ISOLATED LEARNED ESTIMATOR};
   \draw[mfjablue!28,line width=0.55pt] (-79mm,7mm) -- (79mm,7mm);
 
-  \node[input] (left) at (-42mm,0) {
+  \node[input] (left) at (-48mm,0) {
     \textbf{Left RGB image}\\
-    resize to \(224\!\times\!224\); ImageNet normalisation};
-  \node[input] (right) at (42mm,0) {
+    fixed first view; \(320\!\times\!240\); ImageNet normalisation};
+  \node[input] (right) at (48mm,0) {
     \textbf{Right RGB image}\\
-    resize to \(224\!\times\!224\); ImageNet normalisation};
+    fixed second view; \(320\!\times\!240\); ImageNet normalisation};
 
-  \node[encoder] (leftencoder) at (-42mm,-25mm) {
-    \textbf{Shared-weight ResNet-18}\\[-0.2ex]
-    left view processed as three-channel RGB\\
-    ImageNet-pretrained; early stages frozen\\
-    \texttt{layer4} fine-tuned $\rightarrow$ 512-D feature \(f_L\)};
-  \node[encoder] (rightencoder) at (42mm,-25mm) {
-    \textbf{Shared-weight ResNet-18}\\[-0.2ex]
-    right view processed as three-channel RGB\\
-    ImageNet-pretrained; early stages frozen\\
-    \texttt{layer4} fine-tuned $\rightarrow$ 512-D feature \(f_R\)};
+  \node[stem,anchor=north] (leftstem)
+    at ([yshift=-3mm]left.south) {
+    \textbf{Shared-weight ResNet-18 stem}\\[-0.2ex]
+    left activation stream only\\
+    \texttt{conv1} through \texttt{layer3}};
+  \node[stem,anchor=north] (rightstem)
+    at ([yshift=-3mm]right.south) {
+    \textbf{Shared-weight ResNet-18 stem}\\[-0.2ex]
+    right activation stream only\\
+    \texttt{conv1} through \texttt{layer3}};
+  \node[isolationnote,text=mfjablue]
+    at ($(leftstem.center)!0.5!(rightstem.center)$)
+    {one shared\\parameter set};
 
-  \node[learned] (concat) at (0,-51mm) {
-    \textbf{Feature fusion}\qquad
-    \([f_L;f_R]\): \(512+512\rightarrow1024\) values};
-  \node[learned,minimum height=17mm] (head) at (0,-69mm) {
-    \textbf{Post-fusion prediction head}\\[-0.2ex]
-    LayerNorm(1024) $\rightarrow$ Linear(128) $\rightarrow$ SiLU
-    $\rightarrow$ Dropout(0.05) $\rightarrow$ Linear(200)};
+  \node[railbranch,anchor=north] (leftbranch)
+    at ([yshift=-3mm]leftstem.south) {
+    \textbf{Independent left branch}\\[-0.2ex]
+    left \texttt{layer4} \(\rightarrow\) spatial tokens\\
+    four identity queries: L1--L4\\
+    left prediction projections};
+  \node[railbranch,anchor=north] (rightbranch)
+    at ([yshift=-3mm]rightstem.south) {
+    \textbf{Independent right branch}\\[-0.2ex]
+    right \texttt{layer4} \(\rightarrow\) spatial tokens\\
+    four identity queries: R1--R4\\
+    right prediction projections};
+  \node[isolationnote,text=mfjared]
+    at ($(leftbranch.center)!0.5!(rightbranch.center)$)
+    {no late\\cross-camera path};
 
-  \node[contract] (contract) at (0,-95mm) {
-    \textbf{Fixed named state proposal: 200 normalised outputs}\\[0.6mm]
-    Decoder identities: \texttt{L1 L2 L3 L4 R1 R2 R3 R4}\\[0.4mm]
-    Per-identity semantics: \textcolor{mfjablue}{18 categorical scores}
-    (side 2, block 14, payload 2)\\[-0.1ex]
-    + \textcolor{mfjaorange}{7 numeric targets}
-    (bounding box 4, \(s_m\), \(s_{ratio}\), auxiliary \(L_{segment}\))\\[0.3mm]
-    \textbf{\(8\times(18+7)=200\)} };
+  \node[fit=(leftbranch)(rightbranch),inner sep=0pt] (branchbottom) {};
+  \node[learned,anchor=north] (contract)
+    at ([yshift=-3mm]$(0,0 |- branchbottom.south)$) {
+    \textbf{Fixed learned proposal: 168 values}\\[0.5mm]
+    Per identity: \textcolor{mfjablue}{14 segment logits}
+    + \textcolor{mfjablue}{2 loaded-state logits}
+    + \textcolor{mfjaorange}{4 normalised bounding-box values}
+    + \textcolor{mfjaorange}{1 normalised position \(s_{ratio}\)}\\[0.4mm]
+    \textbf{\(8\times(14+2+4+1)=168\)}};
 
-  \draw[flow] (left) -- (leftencoder);
-  \draw[flow] (right) -- (rightencoder);
-  \draw[flow] (leftencoder.south) -- ([xshift=-42mm]concat.north);
-  \draw[flow] (rightencoder.south) -- ([xshift=42mm]concat.north);
-  \draw[flow] (concat) -- (head);
-  \draw[flow] (head) -- (contract);
+  \draw[flow] (left) -- (leftstem);
+  \draw[flow] (right) -- (rightstem);
+  \draw[branchflow] (leftstem) -- (leftbranch);
+  \draw[branchflow] (rightstem) -- (rightbranch);
+  \draw[branchflow] (leftbranch.south) -- ([xshift=-48mm]contract.north);
+  \draw[branchflow] (rightbranch.south) -- ([xshift=48mm]contract.north);
 
-  % Panel B: the configured registry decides which identity values may be
-  % decoded; the neural network itself never decides presence.
-  \node[paneltitle,anchor=center] at (0,-117mm)
-    {B \enspace RUNTIME DECODING AND CHECKS};
-  \draw[mfjablue!28,line width=0.55pt] (-79mm,-121mm) -- (79mm,-121mm);
+  % Panel B: deterministic values and fail-closed runtime acceptance.
+  \node[paneltitle,anchor=center] at (0,-90mm)
+    {B \enspace DETERMINISTIC DERIVATION AND RUNTIME GATE};
+  \draw[mfjablue!28,line width=0.55pt] (-79mm,-94mm) -- (79mm,-94mm);
 
-  \node[runtimeinput] (proposal) at (-40mm,-133mm) {
-    \textbf{Model proposal + selected artefacts}\\
-    denormalise with training statistics};
-  \node[runtimeinput] (presence) at (40mm,-133mm) {
-    \textbf{Current identity registry}\\
-    \texttt{ShuttleState} names and timestamps only};
+  \node[runtimeinput,anchor=north] (identity) at (-54mm,-99mm) {
+    \textbf{Learned proposal}\\
+    168 values in fixed L1--L4, R1--R4 order};
+  \node[runtimeinput,anchor=north] (topology) at (0,-99mm) {
+    \textbf{Public topology}\\
+    fingerprinted side-specific segment lengths};
+  \node[runtimeinput,anchor=north] (presence) at (54mm,-99mm) {
+    \textbf{External registry}\\
+    presence and timestamps};
 
-  \node[gate] (decode) at (0,-153mm) {
-    \textbf{Identity-aware presence gate}\\[-0.2ex]
-    pair each fixed decoder identity with its independent
-    \texttt{present}, \texttt{absent} or \texttt{unknown} state};
+  \node[fit=(identity)(topology)(presence),inner sep=0pt] (runtimebottom) {};
+  \node[derive,anchor=north] (derived)
+    at ([yshift=-3mm]$(0,0 |- runtimebottom.south)$) {
+    \textbf{Values that are not learned}\\[-0.2ex]
+    side from identity prefix;\quad
+    \(L_{segment}\) from side + decoded segment;\\
+    \(s_m=s_{ratio}L_{segment}\)};
 
-  \node[presentcase] (present) at (-53mm,-177mm) {
-    \textbf{present}\\[-0.2ex]
-    decode this identity's learned state values};
-  \node[absentcase] (absent) at (0,-177mm) {
-    \textbf{absent}\\[-0.2ex]
-    ignore its learned values; retain configured absence};
-  \node[rejectcase] (reject) at (53mm,-177mm) {
-    \textbf{unknown / conflict}\\[-0.2ex]
-    reject this observation; publish no visual update};
+  % Seven millimetres leave a dedicated routing channel for the external
+  % registry.  Its arrow travels outside the derivation box before entering
+  % the validation gate, so it cannot cross any box or label.
+  \node[gate,anchor=north] (validation)
+    at ([yshift=-7mm]derived.south) {
+    \textbf{Whole-observation fail-closed validation}\\[-0.2ex]
+    exact artefact and camera order; fresh paired images and presence;\\
+    calibrated segment confidence; loaded confidence; finite geometry;\\
+    every present identity must pass, while absent identities stay absent};
 
-  \node[accepted] (accepted) at (0,-203mm) {
-    \textbf{After all identities are consistent: build the visual observation}\\[-0.2ex]
-    check artefacts, freshness, vocabulary and numeric consistency\\
-    $\rightarrow$ publish \texttt{VisualStateObservation}};
+  \node[accepted,anchor=north] (accepted)
+    at ([yshift=-3mm]validation.south) {
+    \textbf{Accepted \texttt{room315.visual\_state.v4} observation}\\[-0.2ex]
+    exact schema + checkpoint hash required by the consumer\\
+    diagnostic adapters are excluded from the control input};
 
-  % Keep every connector vertical by using aligned ports on the wide nodes.
-  % This preserves the two independent inputs without diagonal crossings.
-  \draw[flow] ([xshift=-40mm]contract.south) -- (proposal.north);
-  \draw[gateflow] (proposal.south) -- ([xshift=-40mm]decode.north);
-  \draw[gateflow] (presence.south) -- ([xshift=40mm]decode.north);
-  \draw[caseflow] ([xshift=-53mm]decode.south) -- (present.north);
-  \draw[caseflow] (decode.south) -- (absent.north);
-  \draw[caseflow] ([xshift=53mm]decode.south) -- (reject.north);
-  \draw[gateflow] (present.south) -- ([xshift=-53mm]accepted.north);
-  \draw[gateflow] (absent.south) -- (accepted.north);
+  \draw[flow] ([xshift=-54mm]contract.south) -- (identity.north);
+  \draw[branchflow] (identity.south) -- ([xshift=-54mm]derived.north);
+  \draw[branchflow] (topology.south) -- (derived.north);
+  \coordinate (registryDrop) at ([yshift=-1.5mm]presence.south);
+  \coordinate (registryLane) at (78.5mm,0);
+  \coordinate (registryLaneTop) at (registryDrop -| registryLane);
+  \coordinate (validationApproach)
+    at ([xshift=68mm,yshift=3mm]validation.north);
+  \coordinate (registryLaneBottom)
+    at (validationApproach -| registryLane);
+  \draw[gateflow] (presence.south) -- (registryDrop) -- (registryLaneTop)
+    -- (registryLaneBottom) -- (validationApproach)
+    -- ([xshift=68mm]validation.north);
+  \draw[branchflow] (derived) -- (validation);
+  \draw[gateflow] (validation) -- (accepted);
 
-  \path[use as bounding box] (-82mm,14mm) rectangle (82mm,-216mm);
+  \path[use as bounding box] (-82mm,14mm) rectangle (82mm,-201mm);
 \end{tikzpicture}

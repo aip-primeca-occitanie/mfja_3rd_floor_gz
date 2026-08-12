@@ -45,6 +45,9 @@ from room_315_task_execution import build_runtime_payload_grounding
 from room_315_task_execution import ground_transport_task_goal_stably
 from room_315_task_execution import LatestVisualObservedStateProvider
 from room_315_task_execution import ground_transport_task_goal
+from room_315_task_execution_config import (
+    DEFAULT_ALLOWED_VISUAL_CHECKPOINT_SHA256,
+)
 from room_315_task_goal_cli import _print_turn_result
 from room_315_task_goal_dialogue import DialogueTurnResult
 from room_315_task_goal_dialogue import TaskGoalDialogueState
@@ -102,8 +105,8 @@ def _observation(
     return {
         'timestamp_s': 10.0,
         'state_id': 'accepted-visual-10',
-        'schema_version': 'room315.visual_state.v3',
-        'checkpoint_sha256': 'a' * 64,
+        'schema_version': 'room315.visual_state.v4',
+        'checkpoint_sha256': DEFAULT_ALLOWED_VISUAL_CHECKPOINT_SHA256,
         'stage': 'fused_observed_state',
         'accepted': True,
         'stabilized': False,
@@ -544,6 +547,121 @@ def test_unknown_presence_fails_closed():
             _snapshot(observation=_observation(unknown='R4')),
             now_s=100.1,
         )
+
+
+@pytest.mark.parametrize(
+    ('field', 'value', 'reason'),
+    (
+        (
+            'schema_version',
+            'room315.visual_state.v3',
+            'visual_observation_schema_not_allowed',
+        ),
+        (
+            'checkpoint_sha256',
+            'b' * 64,
+            'visual_observation_checkpoint_not_allowed',
+        ),
+        (
+            'checkpoint_sha256',
+            '',
+            'visual_observation_checkpoint_not_allowed',
+        ),
+    ),
+)
+def test_planner_boundary_rejects_non_allowlisted_visual_publisher(
+    field,
+    value,
+    reason,
+):
+    observation = _observation()
+    observation[field] = value
+
+    with pytest.raises(TaskExecutionStateError, match=reason):
+        VisualObservedStateBuilder().build(
+            _snapshot(observation=observation),
+            now_s=100.1,
+        )
+
+
+def test_visual_allowlist_schema_and_checkpoint_switch_atomically():
+    rollback_checkpoint = 'b' * 64
+    builder = VisualObservedStateBuilder(LiveStateConfig(
+        allowed_visual_schema_version='room315.visual_state.v3',
+        allowed_visual_checkpoint_sha256=rollback_checkpoint,
+    ))
+    old = _observation()
+    mixed = _observation()
+    mixed['schema_version'] = 'room315.visual_state.v3'
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='visual_observation_schema_not_allowed',
+    ):
+        builder.build(_snapshot(observation=old), now_s=100.1)
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='visual_observation_checkpoint_not_allowed',
+    ):
+        builder.build(_snapshot(observation=mixed), now_s=100.1)
+
+    promoted = _observation()
+    promoted['schema_version'] = 'room315.visual_state.v3'
+    promoted['checkpoint_sha256'] = rollback_checkpoint
+    assert builder.build(
+        _snapshot(observation=promoted),
+        now_s=100.1,
+    ).state_id == 'accepted-visual-10'
+
+
+def test_provider_does_not_store_wrong_visual_checkpoint():
+    provider = LatestVisualObservedStateProvider(VisualObservedStateBuilder())
+    provider.update_observation(_observation(), receive_s=100.0)
+    wrong_checkpoint = _observation()
+    wrong_checkpoint['state_id'] = 'wrong-publisher-state'
+    wrong_checkpoint['checkpoint_sha256'] = 'b' * 64
+
+    with pytest.raises(
+        TaskExecutionStateError,
+        match='visual_observation_checkpoint_not_allowed',
+    ):
+        provider.update_observation(wrong_checkpoint, receive_s=100.1)
+
+    assert provider.snapshot().observation['state_id'] == 'accepted-visual-10'
+
+
+@pytest.mark.parametrize(
+    ('field', 'value', 'reason'),
+    (
+        (
+            'allowed_visual_schema_version',
+            '',
+            'must match room315.visual_state',
+        ),
+        (
+            'allowed_visual_schema_version',
+            'room315.visual_state.latest',
+            'must match room315.visual_state',
+        ),
+        (
+            'allowed_visual_checkpoint_sha256',
+            '',
+            'must be a lowercase SHA-256',
+        ),
+        (
+            'allowed_visual_checkpoint_sha256',
+            'A' * 64,
+            'must be a lowercase SHA-256',
+        ),
+    ),
+)
+def test_live_state_config_rejects_invalid_visual_allowlist(
+    field,
+    value,
+    reason,
+):
+    with pytest.raises(ValueError, match=reason):
+        LiveStateConfig(**{field: value})
 
 
 def test_stale_visual_or_supervisor_state_fails_closed():

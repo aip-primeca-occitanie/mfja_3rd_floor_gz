@@ -24,6 +24,13 @@ def _launch_inference(context):
     if sidecars:
         overrides['sidecar_directory'] = sidecars
     for argument, parameter in (
+        ('runtime_generation', 'runtime_generation'),
+        ('runtime_mode', 'runtime_mode'),
+        ('v4_promotion_manifest', 'v4_promotion_manifest_path'),
+        (
+            'v4_promotion_manifest_sha256',
+            'expected_v4_promotion_manifest_sha256',
+        ),
         ('checkpoint_sha256', 'expected_checkpoint_sha256'),
         ('target_stats_sha256', 'expected_target_stats_sha256'),
         ('vectorizer_sha256', 'expected_vectorizer_sha256'),
@@ -40,7 +47,7 @@ def _launch_inference(context):
     return [Node(
         package='mfja_robot_control_config',
         executable='room_315_visual_state_inference_node.py',
-        name='room_315_visual_state_inference_node',
+        name=LaunchConfiguration('node_name'),
         output='screen',
         parameters=[LaunchConfiguration('runtime_config'), overrides],
     )]
@@ -79,6 +86,30 @@ def generate_launch_description():
                 'visual_state_runtime.yaml',
             ]),
             description='Installed or source-tree visual runtime YAML path.',
+        ),
+        DeclareLaunchArgument(
+            'node_name',
+            default_value='room_315_visual_state_inference_node',
+        ),
+        DeclareLaunchArgument(
+            'runtime_generation',
+            default_value='',
+            description='Optional v3/v4 backend override; empty keeps YAML.',
+        ),
+        DeclareLaunchArgument(
+            'runtime_mode',
+            default_value='',
+            description='Optional active/shadow override; empty keeps YAML.',
+        ),
+        DeclareLaunchArgument(
+            'v4_promotion_manifest',
+            default_value='',
+            description='Optional immutable V4 promotion-manifest path.',
+        ),
+        DeclareLaunchArgument(
+            'v4_promotion_manifest_sha256',
+            default_value='',
+            description='Expected SHA-256 of the V4 promotion manifest.',
         ),
         DeclareLaunchArgument(
             'checkpoint_path',

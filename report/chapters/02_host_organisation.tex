@@ -3,9 +3,11 @@
 
 \section{Université de Toulouse}
 
-The internship was formally hosted by Université de Toulouse and carried out at
-the MFJA site, 1 rue Tarfaya, Toulouse. As a public university, the institution
-combines higher education, research and knowledge transfer. Its official
+The internship was formally hosted by Université de Toulouse, whose legal
+address is 118 route de Narbonne, 31062 Toulouse Cedex~9. The work itself was
+carried out at the MFJA site, 1 rue Tarfaya, 31400 Toulouse. As a public
+university, the institution combines higher education, research and knowledge
+transfer. Its official
 Nomenclature d'activités française/Activité principale exercée (NAF/APE) code
 is 85.42Z \citep{univtoulousesirene}, which INSEE classifies as \emph{higher
 education}, including first-, second- and third-cycle university programmes
@@ -36,13 +38,14 @@ presented in Chapters~5--6.
 
 \section{The Room 315 robotics environment}
 
-Room~315 contains two mirrored flexible transport cells, each with four work
-positions associated with industrial robots. In the configuration used for
-this project, the right rail serves Yaskawa HC10DT positions~1--2 and Stäubli
-TX2 positions~3--4, while the left rail serves Yaskawa HC10 positions~1--2 and
-KUKA KR6 positions~3--4. Each circuit contains outer and inner branches, four
-switching zones, indexing detectors and stoppers. A shuttle may be empty or
-carry a payload.
+Room~315 contains two flexible transport cells with a common public topology
+but distinct calibrated geometries, each with four work positions associated
+with industrial robots. In the configuration used for this project, the right
+rail serves Yaskawa HC10DT positions~1--2 and Stäubli TX2-60L positions~3--4,
+while the left rail serves Yaskawa HC10 positions~1--2 and KUKA KR6 R900 sixx
+positions~3--4. Each circuit contains outer and inner branches, four switching
+zones, indexing detectors and stoppers. A shuttle may be empty or carry a
+payload.
 
 This arrangement brings together several engineering disciplines:
 
@@ -66,8 +69,8 @@ the rail topology, device semantics and supervisory constraints.
   \includegraphics[width=0.96\textwidth]{f04_room315_gazebo_overview.png}
   \caption[Gazebo overview of Room~315 and its four robot workstations.]
   {Gazebo view of Room~315. Four industrial-robot workstations surround two
-  mirrored rail-transport cells containing eight stopped shuttles. The measured
-  rail geometry and device locations are presented in \cref{chap:transport}.}
+  rail-transport cells containing eight stopped shuttles. The measured rail
+  geometries and device locations are presented in \cref{chap:transport}.}
   \label{fig:room315-orientation}
 \end{figure}
 
@@ -80,30 +83,46 @@ associated with the internship.
 \centering
 \resizebox{0.94\textwidth}{!}{%
 \begin{tikzpicture}[
-  node distance=9mm and 16mm,
-  box/.style={draw,rounded corners,align=center,minimum height=10mm,text width=42mm,fill=mfjalight},
+  node distance=7mm and 8mm,
+  box/.style={draw,rounded corners,align=center,minimum height=10mm,text width=43mm,fill=mfjalight},
   role/.style={draw,rounded corners,align=left,minimum height=13mm,text width=58mm,fill=white},
-  arr/.style={-{Latex[length=2.2mm]},thick,mfjablue}
+  institutional/.style={-{Latex[length=2.2mm]},thick,mfjablue},
+  supervision/.style={-{Latex[length=2.2mm]},thick,mfjagreen},
+  association/.style={-{Latex[length=2.2mm]},thick,black!55,dashed}
 ]
-  \node[box] (host) {Université de Toulouse\\MFJA};
-  \node[box,below=of host] (tutor) {Host supervisors\\Joint scientific supervision};
-  \node[box,below=of tutor] (student) {Ali Ibrahim\\M2 intern};
-  \node[role,below left=of student] (ops) {Operational knowledge\\Platform access\\Review of platform constraints};
-  \node[role,below right=of student] (dev) {Architecture and implementation\\Testing and experiments\\Documentation and handover};
-  \draw[arr] (host) -- (tutor);
-  \draw[arr] (tutor) -- (student);
-  \draw[arr] (student) -- (ops);
-  \draw[arr] (student) -- (dev);
+  \node[box] (host) {Université de Toulouse};
+  \node[box,below=of host] (mfja) {Maison de la Formation\\Jacqueline Auriol};
+  \node[box,below=of mfja] (unit) {Room~315 robotics platforms};
+  \node[role,below=of unit] (ops) {\textbf{MFJA platform support}\\Operational knowledge\\Platform access\\Practical organisation};
+
+  \node[box,right=26mm of host] (tutor) {Diane Bury\\Official host tutor};
+  \node[box,right=of tutor] (cosupervisor) {Olivier Stasse\\Scientific co-supervisor};
+  \coordinate (supervisionmid) at ($(tutor)!0.5!(cosupervisor)$);
+  \node[box,below=24mm of supervisionmid] (student) {Ali Ibrahim\\M2 intern};
+  \node[role,below=of student] (dev) {\textbf{Ali Ibrahim's internship work}\\Architecture and implementation\\Testing and evaluation\\Documentation and handover};
+
+  \draw[institutional] (host) -- (mfja);
+  \draw[institutional] (mfja) -- (unit);
+  \draw[supervision] (tutor) -- (student);
+  \draw[supervision] (cosupervisor) -- (student);
+  \draw[association] (unit) -- (ops);
+  \draw[association] (unit.east) -- (student.west);
+  \draw[association] (student) -- (dev);
 \end{tikzpicture}
 }
-\caption{Organisation of the internship and distribution of responsibilities.}
+\caption{Host-unit placement, parallel supervision and distribution of internship responsibilities.}
 \label{fig:organisation}
 \end{figure}
 
-The host supervisors provided joint scientific direction and reviewed choices
-related to the platform. MFJA personnel supported access, scheduling and
-practical organisation. I was responsible for the architecture, implementation,
-evaluation, documentation and handover described in \cref{chap:mission}.
+Diane Bury was the official host tutor named for the placement, and Olivier
+Stasse acted as scientific co-supervisor. Together they provided scientific
+direction and reviewed choices related to the platform. MFJA personnel
+supported access, scheduling and practical organisation. I was responsible for
+the architecture, implementation, evaluation, documentation and handover
+described in \cref{chap:mission}.
+
+Within the MFJA, the host unit for this work was the Room~315 robotics-platform
+activity, connecting shared teaching infrastructure with research prototyping.
 
 \section{Position of the mission within the host}
 
@@ -119,7 +138,13 @@ interfaces and documented operating procedures.
 
 \section{Economic and strategic value}
 
-Because MFJA is a public teaching and research platform, the mission's value is
+Because the host is a public university rather than a commercial company,
+turnover and export revenue are not meaningful indicators of this mission's
+value. No commercial proxy or unsupported financial figure is introduced here.
+For institutional scale only, the university's 2026--2029 strategic document
+reports a 2024 global budget of nearly EUR~474 million and EUR~114 million in
+purchases; these university-wide figures are not presented as project revenue
+or return on investment \citep{univtoulousefigures}. The mission is instead
 assessed through practical reuse, training capacity and reduced integration
 effort. The main benefits are:
 

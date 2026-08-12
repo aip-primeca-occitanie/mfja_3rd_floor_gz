@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "preregistration.json": "6c582ed3e108ec5a1a71c5795eee32953f53f4356977e3a1a11f31c6b6b7eba5",
+    "scenario_manifest.jsonl": "590dd942f60cdeadb40238b2db95e54f8eb2022005985fed13ca4f76b28f1d7f",
+    "scenario_summary.json": "bbb1e3bdb4d7cf2dd2fc48cbcda22fffc8b8aafe7238380f3d62ffc4497c4b87"
+  },
+  "capture_started": false,
+  "configuration": {
+    "frozen_before_manifest_and_capture": true,
+    "path": "/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4_coverage_compat_v1.json",
+    "sha256": "035e73b0796628432b6c1caf0e15c8b26f63703b2e217200fc76b0c9a7b1ac00"
+  },
+  "dataset_role": "sealed_final_test_only",
+  "frozen_model": {
+    "checkpoint": "/home/tiago/room315_visual_v4_outputs/pilot_v4_seed31520260811_attempt1/checkpoints/epoch_011.pt",
+    "frozen_at_utc": "2026-08-11T11:27:43Z",
+    "sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d"
+  },
+  "inference_count": 0,
+  "inference_status": "not_run",
+  "locked_at_utc": "2026-08-11T19:38:49Z",
+  "model_frozen_before_lock": true,
+  "scenario_count": 1040,
+  "schema_version": "room315.visual_v4.final_test_plan_lock.v1",
+  "seed": 3152026081101
+}

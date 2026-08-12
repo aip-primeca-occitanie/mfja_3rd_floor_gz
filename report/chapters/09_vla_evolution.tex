@@ -35,8 +35,8 @@ English requests become confirmed \code{TaskGoal} objects\\
 3 & Generate paired-camera Room~315 data and separate the inputs from labels &
 A structured corpus represents shuttle presence, location and payload state\\
 \tablerowrule
-4 & Partially fine-tune a paired-view ResNet-18 and select a checkpoint &
-Two RGB views produce a fixed-order visual-state proposal\\
+4 & Train and select the rail-isolated visual-state estimator &
+Two fixed-order RGB views produce a side-consistent visual-state proposal\\
 \tablerowrule
 5 & Connect both branches to the runtime checks & A confirmed \code{TaskGoal}
 and a current \code{VisualStateObservation} form the
@@ -68,8 +68,9 @@ prompt, strict JSON schema, explicit-fact extraction, field fusion,
 clarification, validation and confirmation dialogue\\
 \tablerowrule
 Visual state & ImageNet-pretrained TorchVision ResNet-18 & Gazebo corpus,
-paired-view architecture, 200-value target, masked multi-head loss, partial
-fine-tuning, grouped evaluation and integration of the selected checkpoint\\
+rail-isolated paired-view architecture, 168 learned values, masked multi-head
+loss, calibrated segment confidence, grouped evaluation and hash-bound runtime
+integration\\
 \tablerowrule
 Planning & PlanSys2 and its POPF solver & Room~315 PDDL model, fresh-problem
 generation and closed-loop integration (\cref{chap:neurosymbolic})\\
@@ -82,10 +83,13 @@ generation and closed-loop integration (\cref{chap:neurosymbolic})\\
 \subsection{Local model selection and configuration}
 
 The selected semantic model is
-\code{Qwen2.5-1.5B-Instruct-GGUF} from the Qwen2.5 family
-\citep{qwen25}, using the
-\code{qwen2.5-1.5b-instruct-q4\_k\_m.gguf} quantisation. It runs locally on the
-CPU through \code{llama.cpp} \citep{llamacpp}; the configured artefact hash is
+\code{Qwen2.5-1.5B-Instruct-GGUF}. The Qwen2.5 technical report describes the
+model family and its instruction-tuned, quantised offerings \citep{qwen25}.
+The official model card documents the GGUF distribution and
+the Q4\_K\_M quantisation option \citep{qwen25gguf}; this project uses the
+\code{qwen2.5-1.5b-instruct-q4\_k\_m.gguf} file. The project runs it locally on
+the CPU through \code{llama.cpp}. That software provides local LLM inference
+in C/C++ \citep{llamacpp}; the configured artefact hash is
 listed in \cref{app:reproducibility}. The runtime is offline and uses a 4096-token
 context, temperature~0, at most 192 generated tokens and seed~315. These
 settings record and control the inference conditions and keep each response
@@ -130,15 +134,15 @@ cancellation forms; its evaluation is reported in
 
 \section{Generating the Room~315 visual corpus}
 
-\subsection{Systematic simulated scenes}
+\subsection{Paired-camera corpus and partitioning}
 
-For identities declared present by the configured registry, the visual
-branch estimates the location and loaded state required by the planner. The
-dataset generator first enumerated every non-empty subset of the eight
-canonical identities L1--L4 and R1--R4, giving $2^8-1=255$ presence
-configurations. Eight geometrically different scenes were generated for each
-configuration by varying valid rail positions, payload states and switch
-arrangements, producing 2040 scenarios.
+For identities declared present by the configured registry, the visual branch
+estimates the location and loaded state required by the planner. The
+dataset generator enumerated every non-empty subset of the eight canonical
+identities L1--L4 and R1--R4, giving $2^8-1=255$ presence configurations. Eight
+geometrically different scenes were generated for each configuration by
+varying valid rail positions, payload states and switch arrangements, producing
+2040 scenarios.
 
 For every scenario, the orchestration layer configured the Gazebo scene,
 allowed it to settle and captured one synchronised image from each overhead
@@ -162,127 +166,273 @@ RGB image files. \Cref{fig:paired-camera-training} shows one such model input.
   \label{fig:paired-camera-training}
 \end{figure}
 
-\subsection{Inputs, labels and grouped partitions}
-
 Gazebo supplies the known identity, calibrated rail coordinate, payload state
 and projected image bounding box used to create supervision. Those values are
 stored separately from the image references. The model features are the paired
 RGB overhead images; depth, controller position, point clouds and row-level
-oracle metadata remain label-generation data. This separation
-prevents simulator truth from leaking into inference.
+oracle metadata remain label-generation data. This separation prevents
+simulator truth from leaking into inference.
 
-All eight variants of one presence configuration remain in the same data
-partition. The resulting grouped split contains 191 configurations and 1528
-scenarios for training, 32 configurations and 256 scenarios for validation,
-and 32 configurations and 256 scenarios for the locked Test partition. Image
-hashes and configuration-family membership are audited across the partitions.
-Checkpoint selection uses the validation partition alone; the Test partition
-is used once for the final evaluation in \cref{chap:results}.
+All eight variants of one presence configuration remained in the same data
+partition. The grouped split contained 191 configurations and 1528 scenarios
+for training, 32 configurations and 256 scenarios for validation, and 32
+configurations and 256 scenarios in a locked partition. The locked partition
+was not loaded or reevaluated during development; the principal Test evidence
+instead comes from the independently generated one-shot dataset described
+below.
+
+\subsection{Training, validation and Canary roles}
+
+The training pool combines the 1528 grouped training scenes with 4000
+training-only hard cases. Its deterministic epoch sampler drew 4000 weighted
+examples from each source, with replacement, so each epoch contained 8000
+records while preserving equal source contribution. Sampling weights increased
+representation of rare side--segment cells, boundaries, switch zones and
+multi-blocker scenes.
+
+Checkpoint selection used a separate hard-case validation set of 512 scenes,
+containing 2254 present-shuttle targets. Only after training and selection had
+finished was the 256-scene Canary, containing 1085 present-shuttle targets,
+evaluated as a development regression check. That Canary was not used for
+checkpoint selection and is not presented as Test evidence. During training
+and selection, the configuration made Test access an explicit error; the sealed
+evaluation used a separate, one-shot-only contract.
 
 \section{Designing and training the visual-state estimator}
 
-\subsection{Fixed 200-value supervision contract}
+The selected perception contract comprises this rail-isolated visual model and
+its typed observation schema. The remainder of the report refers to it as the
+visual model or the runtime, according to context.
 
-Each image pair is resized to $224\times224$ per view and normalised using the
-ImageNet channel statistics. The same ResNet-18 backbone \citep{resnet} is
-applied to the left and right images. Their two 512-value feature vectors are
-concatenated, passed through a 128-unit structured head and mapped to exactly
-200 output values. The fixed identity order is L1--L4 followed by R1--R4, with
-25 values assigned to each identity:
+\paragraph{Why the visual contract changed.}
+The V3 prototype resized both camera images to $224\times224$, encoded them
+with the same ResNet-18 backbone, concatenated the two global feature vectors
+and used one shared head to predict a 200-value state vector. That formulation
+discarded the cameras' native $4{:}3$ aspect ratio and allowed either camera to
+influence every shuttle prediction. It also learned rail side, metric position
+$s_m$ and segment length even though those quantities are fixed or derivable
+from identity and topology. The final V4 contract instead preserves the
+$4{:}3$ input at $320\times240$, shares the encoder only through
+\code{layer3}, and uses independent \code{layer4} modules and spatial-query
+heads for the two rails. It learns 168 values---segment and loaded-state
+logits, bounding box and $s_{ratio}$ for each fixed identity---then derives
+side, segment length and $s_m=s_{ratio}L_{segment}$ deterministically. This
+makes rail isolation explicit and removes redundant learned targets. The Test
+evidence for the resulting contract is reported separately in
+\cref{sec:visual-v4-results}; the earlier profile is retained only for
+recovery, not as an active perception path.
+
+\subsection{Rail-isolated 168-value learned contract}
+
+Each camera image is resized with its $4{:}3$ aspect ratio preserved to
+$320\times240$ and normalised using the ImageNet channel statistics. A
+shared-weight ResNet-18 stem, from \code{conv1} through \code{layer3}, processes
+each image separately. The two computation paths then diverge: the left and
+right cameras have independent \code{layer4} modules and independent spatial
+identity-query heads. Four fixed queries on each rail attend to that rail's
+spatial feature map. No feature from one camera enters the other rail's late
+branch or prediction head.
+
+The fixed identity order remains L1--L4 followed by R1--R4. Each identity has
+21 learned values:
 
 \begin{equation*}
-  25 =
-  \underbrace{2}_{\text{rail-side scores}} +
-  \underbrace{14}_{\text{block scores}} +
-  \underbrace{2}_{\text{payload scores}} +
+  21 =
+  \underbrace{14}_{\text{segment logits}} +
+  \underbrace{2}_{\text{loaded-state logits}} +
   \underbrace{4}_{\text{bounding box }(x,y,w,h)} +
-  \underbrace{3}_{s_m,\;s_{ratio},\;L_{segment}} .
+  \underbrace{1}_{s_{ratio}},
+  \qquad 8\times21=168 .
 \end{equation*}
 
-The fixed output index supplies shuttle identity, while a configured registry
-specifies which identities exist in the launched scene. At runtime, the model
-estimates location and payload values for identities marked present by that
-registry.
+Rail side is not a learned value. It is derived from identity: L1--L4 map to
+the left rail and R1--R4 map to the right rail. After segment decoding, the
+runtime obtains the side-specific segment length from the fingerprinted public
+topology contract and computes $s_m=s_{ratio}L_{segment}$. This removes side,
+segment length and $s_m$ from neural prediction while preserving them in the
+typed observation. A 200-value diagnostic vector can also be assembled, but it
+is excluded from the control input contract.
 
 \begin{figure}[p]
   \centering
   \input{figures/f12_visual_model_contract_v2.tex}
-  \caption[Paired-view visual model and fixed-order state decoding.]
-  {The two RGB views are encoded independently with the same ResNet-18 weights.
-  Their 512-value features are concatenated and mapped to a fixed 200-value
-  state proposal. A separate configured identity registry controls which
-  named values may be decoded; whole-observation validation decides whether a
-  \code{VisualStateObservation} is published.}
+  \caption[Rail-isolated visual model and deterministic state derivation.]
+  {The model shares low-level ResNet-18 weights through \code{layer3}, then keeps
+  \code{layer4} and the four-query prediction head independent for each rail.
+  The model produces 168 learned values; side, segment length and $s_m$ are
+  derived deterministically before whole-observation validation.}
   \label{fig:visual-model-contract}
 \end{figure}
 
-The separate 200-element \code{target\_mask} is used only to compute the loss.
-When an identity is absent or lacks valid visual supervision, its 25 target
-coordinates receive zero weight; valid present identities contribute normally.
-The mask is not used for image segmentation or as a runtime ROS message, and it
-remains outside the command path.
+Presence remains an independent runtime input rather than a neural output. The
+training mask gives absent or visually invalid identities zero loss weight. At
+runtime, absent identities are retained as absent, while every present identity
+must pass artefact, camera order, freshness, vocabulary, numeric and confidence
+checks. An unknown identity, side conflict or low-confidence present identity
+rejects the whole observation instead of publishing a partial planning state.
 
-\subsection{Training procedure}
+\subsection{Training and checkpoint selection}
 
-Training started from the official
-\code{ResNet18\_Weights.IMAGENET1K\_V1} checkpoint. The earlier backbone stages
-were frozen, while ResNet \code{layer4} and the custom prediction head were
-fine-tuned. This left 8,552,776 of 11,335,560 parameters trainable. Targets were
-normalised using statistics computed from valid training coordinates only.
+The shared feature extractor was initialised from a verified checkpoint, but no
+joint prediction head was transferred. Compatible weights through
+\code{layer3} were loaded into the shared stem; \code{layer4} was copied
+independently into the two rail branches, whose parameters and BatchNorm buffers
+were then optimised separately. The spatial-query heads were initialised
+independently.
 
-The loss is the equally weighted mean of five masked Smooth-L1 heads:
-segment location, loaded state, bounding box, $s_m$ and $s_{ratio}$. Equal
-head weighting prevents larger coordinate groups from dominating by element
-count, while masking removes absent identities from the loss. The exact
-training configuration is summarised in \cref{tab:visual-training-config}.
+Training used a staged schedule: heads only in epoch~1, independent
+\code{layer4} branches from epoch~2, and shared \code{layer3} from epoch~4 at a
+lower learning rate. The multi-head objective weighted side-aware segment
+cross-entropy by 4, normalised-position Smooth-L1 by 2, loaded-state
+cross-entropy by 1, bounding-box L1 plus generalised IoU by 1, and an expected
+topological-distance term by 0.25. Appearance perturbations were permitted, but
+horizontal flips and camera swaps were forbidden because they would violate the
+fixed side contract. \Cref{tab:visual-training-config} records the selected run.
 
 \begin{table}[htbp]
 \centering
 \small
 \caption{Configuration of the selected visual training run.}
 \label{tab:visual-training-config}
-\begin{tabularx}{\textwidth}{@{}p{0.31\textwidth}X@{}}
+\begin{tabularx}{\textwidth}{@{}p{0.29\textwidth}X@{}}
 \toprule
 \textbf{Item} & \textbf{Configured value}\\
 \midrule
-Input & Two RGB views, each resized bilinearly to $224\times224$ and
-ImageNet-normalised; no data augmentation\\
+Input & Fixed left--right RGB order; aspect-preserving bilinear resize to
+$320\times240$; ImageNet normalisation\\
 \tablerowrule
-Initial weights and adaptation & ImageNet-pretrained ResNet-18; partial
-fine-tuning of \code{layer4} plus the structured head\\
+Architecture & Shared ResNet-18 through \code{layer3}; independent
+\code{layer4} and four-query spatial head per rail; no cross-camera feature path\\
 \tablerowrule
-Optimiser & AdamW, learning rate $10^{-3}$, weight decay $10^{-4}$\\
+Optimiser & AdamW; head, \code{layer4} and shared-\code{layer3} learning rates
+$3\times10^{-4}$, $10^{-4}$ and $2\times10^{-5}$; weight decay $10^{-4}$\\
 \tablerowrule
-Batch and schedule & Batch size 32; maximum 15 epochs; validation-loss patience
-3\\
+Batch and schedule & Batch size 24; 12 epochs; mixed precision; staged
+unfreezing; early-stopping patience 4\\
 \tablerowrule
-Loss & Masked per-sample Smooth-L1, equal weight for five output heads\\
+Loss & Segment 4; $s_{ratio}$ 2; loaded state 1; bounding box 1; topology 0.25;
+presence-aware masks\\
 \tablerowrule
-Reproducibility & CUDA training, seed 31520260730; Test partition excluded from
-training and model selection\\
+Selection & Lexicographic validation planning score, worst side--segment
+recall, then correct-segment $s_m$ 95th percentile (p95)\\
+\tablerowrule
+Reproducibility & CUDA training, seed 31520260811; Final Test unavailable and
+forbidden during training, selection, calibration and threshold selection;
+Canary excluded from training and selection\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-All 15 epochs completed. Epoch~14 had the minimum total weighted validation
-loss and was therefore saved as \code{best.pt}. Its checkpoint, vectoriser,
-target statistics, preprocessing description and training configuration were
-stored together. At startup, the runtime checks their expected hashes and schema
-before the model can publish a proposal. The final locked-Test measurements are
-presented in \cref{chap:results}.
+All 12 configured epochs completed. Epoch~11 was selected and its checkpoint
+was then frozen with SHA-256
+\path{869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d}.
+Segment logits were temperature-calibrated on validation only before the
+runtime acceptance threshold was fixed. The runtime binds the complete
+checkpoint hash, model topology, preprocessing contract, camera order and
+public segment-length fingerprint before inference can become ready.
+
+\subsection{Preregistered one-shot Final Test}
+
+The frozen checkpoint was evaluated on an independent Gazebo Final Test that was
+disjoint from training, Validation and the exposed development Canary. Its
+scenario plan, evaluator, coverage rules, acceptance thresholds and one-shot
+policy were fixed before inference. A static metadata audit of the 1024-scene
+base plan found three identity--zone supports below the preregistered minimum
+of eight. The declared plan therefore included 16 stress scenes, producing
+1040 scenes, 2080 individual camera images and 4680 visible-shuttle targets.
+This decision used only control metadata: no evaluation attempt had been
+reserved, and no prediction, metric, image, row or label had been inspected.
+The final control envelopes use the evaluator's canonical schemas, and the
+captured data remained byte-identical before reservation.
+
+The compatible dataset passed the frozen coverage and disjointness checks, so
+the global one-shot reservation was created and the checkpoint was evaluated
+exactly once. The evaluator performed no training, checkpoint selection,
+calibration refit or threshold selection. The completed immutable result passed
+76/76 base acceptance gates and 4/4 preregistered runtime-threshold gates.
+Detailed metrics and the limits of this synthetic-camera evidence are reported
+in \cref{sec:visual-v4-results}; the sealed result is the principal visual
+model evidence in the report.
+
+\subsection{Development evidence}
+
+\Cref{tab:v4-visual-evidence} separates the selection evidence from the
+exposed development Canary. The joint metric requires both the exact
+segment and \(\lvert\Delta s_{ratio}\rvert\leq0.05\); the metric $s_m$ is
+reported only when the segment is correct.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Development evidence preceding the sealed Final Test.}
+\label{tab:v4-visual-evidence}
+\begin{tabularx}{\textwidth}{@{}p{0.16\textwidth}p{0.16\textwidth}
+>{\centering\arraybackslash}p{0.13\textwidth}
+>{\centering\arraybackslash}p{0.13\textwidth}
+>{\centering\arraybackslash}p{0.14\textwidth}X@{}}
+\toprule
+\textbf{Role} & \textbf{Scenes / present} & \textbf{Segment top-1} &
+\textbf{Loaded} & \textbf{Joint at 0.05} & \textbf{Correct-segment $s_m$ MAE}\\
+\midrule
+Validation (selection) & 512 / 2254 & 99.9113\% & 99.8669\% & 94.9867\% &
+0.0187\,m\\
+\tablerowrule
+Canary (development only) & 256 / 1085 & 100\% & 100\% & 94.5622\% &
+0.0201\,m\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+On validation, segment macro-F1 was 99.8799\%, bounding-box mean IoU was
+0.8343, correct-segment $s_m$ p95 was 0.0648\,m and the worst supported
+side--segment recall was 97.6190\%. On the Canary, segment macro-F1 and worst
+supported side--segment recall were both 100\%, bounding-box mean IoU was
+0.8347 and correct-segment $s_m$ p95 was 0.0700\,m. These figures describe the
+simulated datasets and do not establish physical-camera performance.
 
 \begin{figure}[p]
   \centering
   \resizebox{0.98\textwidth}{!}{\input{figures/f11_dataset_pipeline_vertical.tex}}
-  \caption[Visual-data, training and checkpoint-promotion sequence.]
-  {The visual-data workflow from scene generation to the model used at runtime.
-  Paired images are kept separate from their training labels, and all variants
-  of one identity configuration remain in the same partition.}
+  \caption[Training and one-shot Final Test sequence.]
+  {The model used the declared training pool, was selected and calibrated on
+  Validation, and froze epoch~11 before creating the independent Final Test.
+  A pre-inference metadata audit fixed the declared coverage at 1040 scenes;
+  the captured data then remained byte-identical before the single reserved
+  evaluation.}
   \label{fig:dataset-pipeline}
 \end{figure}
 
-\section{Integration outputs}
+\section{Integration outputs and runtime qualification}
 
-The resulting integration contracts are a confirmed \code{TaskGoal} and a
-current \code{VisualStateObservation}. \Cref{chap:neurosymbolic} follows how
-the gateway uses them for planning and shuttle motion.
+The learned integration contracts remain a confirmed \code{TaskGoal} and a
+current \code{VisualStateObservation}. Calibrated segment confidence
+and loaded-state confidence accompany the structured state, while the task
+gateway requires the exact schema and checkpoint hash. \Cref{chap:neurosymbolic}
+follows how an accepted observation is converted into planning facts.
+
+Observation-only qualification used a same-frame shadow
+check processed 55 paired observations; the selected model accepted 52, giving
+94.5455\% coverage, and produced no wrong-side identity. The seven declared
+Gazebo acceptance scenarios completed 7/7 with 53 ground-truth-matching
+reobservations. Each accepted reobservation matched every present identity's
+derived side, segment and loaded state, and met the planning tolerance
+\(\lvert\Delta s_{ratio}\rvert\leq0.12\).
+
+The visual-input fault suite rejected every declared integrity, camera-order,
+freshness, presence and identity fault, and the explicit rollback-profile smoke
+check passed. The observation-only qualification bundle has scope
+\path{gazebo_runtime_dry_run_only} and publishes no actuation command.
+
+The command-producing qualification completed all 12/12 positive Gazebo cases
+with 1784 observations under the selected schema. A separate five-scenario
+closed-loop fault campaign passed 5/5 cases with 424 observations, produced no
+false success and left every controller disabled. Neither campaign recorded an
+observation from the alternate profile. Those two read-only reports were bound
+into the manually approved state
+\code{active\_closed\_loop\_runtime} with scope
+\path{gazebo_v4_closed_loop_runtime_only}. In this final profile, the inference
+node keeps \code{dry\_run\_state\_fusion=true} and
+\code{plansys2\_update\_enabled=false} so that it cannot mutate ProblemExpert
+predicates; the separately authorised task gateway still constructs each PDDL
+problem and owns the Gazebo actuation path. Automatic switching and physical
+deployment remain forbidden.

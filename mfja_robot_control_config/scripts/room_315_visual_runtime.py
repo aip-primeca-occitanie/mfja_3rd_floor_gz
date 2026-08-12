@@ -104,6 +104,8 @@ class DecodedShuttlePrediction:
     s_ratio: float
     segment_length_m: float
     loaded_state: str
+    segment_confidence: float = 0.0
+    loaded_confidence: float = 0.0
 
 
 @dataclass(frozen=True)

@@ -4,29 +4,31 @@
 
 \section{Mission and work packages}
 
-The internship mission focused on unified ROS~2 access to industrial and mobile
-robots in simulation \citep{internshipagreement}. The first practical
-assignment was more specific:
+The signed internship agreement defined the broad official mission,
+\emph{\ReportMissionTitle}: unified ROS~2 access to industrial and mobile robots
+across simulated and real platforms \citep{internshipagreement}. The implemented
+and evaluated scope reported here was limited to simulation; no deployment on
+the physical platforms is claimed. The first practical assignment was more
+specific:
 model Room~315 in Gazebo and establish a usable simulation environment for its
-robotic and transport equipment. This objective was completed earlier than
-expected, and the supervisors proposed an additional research direction
-combining overhead-camera perception with natural-language task interaction.
-The internship dates were unchanged.
+robotic and transport equipment. Completing this objective ahead of schedule
+left time for a research work package combining overhead-camera perception with
+natural-language task interaction. The internship dates were unchanged.
 
 The implemented work is organised into two phases:
 
 \begin{description}
-  \item[Phase 1---initial practical work package] Room~315 Gazebo modelling and a
+  \item[Phase 1---simulation foundation] Room~315 Gazebo modelling and a
   reusable, selectively launched multi-robot and rail simulation foundation.
-  \item[Phase 2---additional research direction] Paired cameras, visual-state
+  \item[Phase 2---neuro-symbolic research] Paired cameras, visual-state
   estimation, validated language goals, PDDL/PlanSys2 and safety-gated
   neuro-symbolic control.
 \end{description}
 
 The phases describe the project chronology, whereas objectives O1--O4 in
 \cref{chap:introduction} define the units used to assess the completed work.
-The initial phase established the simulation, multi-robot and transport
-foundations. The additional research phase extended the typed interfaces and
+The simulation phase established the multi-robot and transport foundations.
+The neuro-symbolic phase extended the typed interfaces and
 connected visual and language inputs to planning, supervised execution and
 effect verification.
 
@@ -40,10 +42,11 @@ and correction continued after each main decision gate.
   \centering
   \resizebox{\textwidth}{!}{\input{figures/f03_project_timeline_v2.tex}}
   \caption[Engineering, reporting and defence-preparation chronology.]
-  {Internship chronology. Engineering, integration and final verification run
-  through 7 August in panel~(a), overlapping the report-focused period that
-  began on 4 August. Documentation continues to 18 August; the final period,
-  18--28 August, is reserved for defence-presentation preparation.}
+  {Internship chronology as of 11 August 2026. Engineering, integration,
+  visual-model validation and sealed final-Test preparation extend through 11 August in
+  panel~(a), overlapping the report-focused period that began on 4 August.
+  Documentation continues to 18 August; the final period, 18--28 August, is
+  reserved for defence-presentation preparation.}
   \label{fig:timeline}
 \end{figure}
 
@@ -76,7 +79,7 @@ specify what each component must accept, reject or preserve. Artefact manifests
 and hashes give datasets and models reproducible identities. The main
 requirements across these levels were robot isolation, stable shuttle identity,
 partial device updates without unintended changes, current state before planning,
-fixed translation rules and a new observation after each
+fixed translation rules and a post-command observation after each
 executed plan step.
 
 Each property was checked where it was implemented: geometry and coordinate
@@ -111,6 +114,9 @@ access, simulation and training time, dataset and checkpoint storage, and the
 testing workload. I kept compute-intensive perception and language nodes
 optional, prioritised reusable configuration and regression tests, and prepared
 build and run instructions so that the host could continue using the work.
+No purchasing budget was assigned to me; GPU time, storage capacity, simulation
+time and access to the shared platform were therefore managed as the constrained
+project resources.
 
 \section{Autonomy and reflective engineering examples}
 
@@ -142,11 +148,10 @@ capacity as engineering constraints.
 
 \subsection{Choosing PDDL/PlanSys2 over end-to-end VLA control}
 
-The initial plan for the second phase was to train an end-to-end
-vision--language--action model that would infer actions directly, without PDDL.
-After discussing this option with my supervisors, they sent me several papers
-on VLA and hybrid planning architectures. From this comparison, I proposed a
-different division of responsibilities: the visual model estimates the scene
+For the second phase, I compared an end-to-end vision--language--action model
+that would infer actions directly with VLA and hybrid planning architectures
+discussed with my supervisors. This comparison supported a clear division of
+responsibilities: the visual model estimates the scene
 state from the paired camera images, while PDDL/PlanSys2 determines the action
 sequence, which is then executed through the supervisor and controllers. This
 approach was better suited to Room~315 because its rail topology and device
@@ -190,9 +195,8 @@ reviews, diagrams, runbooks, result tables and explicit scope\\
 \end{tabularx}
 \end{table}
 
-These two decisions changed how I assessed technical alternatives. I initially
-associated a more detailed dynamic model or a more end-to-end learned policy
-with a more advanced solution. The comparisons showed me that each choice had
+These two decisions changed how I assessed technical alternatives. The
+comparisons showed me that each choice had
 to be justified by the available data, the behaviour required in Room~315 and
 the way the result could be tested. That lesson guided the later integration
 work.

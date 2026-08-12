@@ -52,6 +52,11 @@ from room_315_runtime_contracts import create_visual_payload_confirmation
 from room_315_runtime_contracts import normalize_runtime_clearance_certificate
 from room_315_runtime_contracts import supervisor_decision_accepted
 from room_315_runtime_contracts import supervisor_decision_is_terminal
+from room_315_task_execution_config import (
+    DEFAULT_ALLOWED_VISUAL_CHECKPOINT_SHA256,
+)
+from room_315_task_execution_config import DEFAULT_ALLOWED_VISUAL_SCHEMA_VERSION
+from room_315_task_execution_config import validate_visual_publisher_allowlist
 
 
 class TaskExecutionStateError(RuntimeError):
@@ -68,8 +73,18 @@ class LiveStateConfig:
     position_consistency_tolerance_m: float = 0.08
     observation_wait_s: float = 2.0
     external_obstacles_disabled: bool = True
+    allowed_visual_schema_version: str = (
+        DEFAULT_ALLOWED_VISUAL_SCHEMA_VERSION
+    )
+    allowed_visual_checkpoint_sha256: str = (
+        DEFAULT_ALLOWED_VISUAL_CHECKPOINT_SHA256
+    )
 
     def __post_init__(self) -> None:
+        validate_visual_publisher_allowlist(
+            schema_version=self.allowed_visual_schema_version,
+            checkpoint_sha256=self.allowed_visual_checkpoint_sha256,
+        )
         for name in (
             'observation_timeout_s',
             'supervisor_status_timeout_s',
@@ -491,6 +506,8 @@ class VisualObservedStateBuilder:
                 'checkpoint_sha256': observation.get('checkpoint_sha256', ''),
                 'schema_version': observation.get('schema_version', ''),
             }
+            segment_confidence = float(item.get('segment_confidence', 0.0))
+            loaded_decision_score = float(item.get('loaded_confidence', 0.0))
             visual_values = {
                 'loaded': str(item['loaded_state']).lower() == 'loaded',
                 'location_block': block_id,
@@ -517,16 +534,35 @@ class VisualObservedStateBuilder:
             if slot and sensor_anchor is None:
                 visual_values['location_slot'] = f'{spec.side}:slot:{slot}'
             for predicate, value in visual_values.items():
+                if predicate in {'location_block', 'rail_position', 'location_slot'}:
+                    confidence = segment_confidence
+                    confidence_available = confidence > 0.0
+                    confidence_semantics = (
+                        'validation_temperature_calibrated_segment_probability'
+                        if confidence_available
+                        else 'unsupported_by_v3_model'
+                    )
+                else:
+                    confidence = 0.0
+                    confidence_available = False
+                    confidence_semantics = (
+                        'uncalibrated_loaded_decision_score'
+                        if predicate == 'loaded'
+                        else 'regression_uncertainty_unavailable'
+                    )
                 visual_facts.append(_fact(
                     source='visual_model',
                     subject=spec.gazebo_entity_name,
                     predicate=predicate,
                     value=value,
                     timestamp_s=timestamp_s,
-                    confidence=0.0,
+                    confidence=confidence,
                     metadata={
                         **common,
-                        'confidence_available': False,
+                        'confidence_available': confidence_available,
+                        'confidence_semantics': confidence_semantics,
+                        'segment_confidence': segment_confidence,
+                        'loaded_decision_score': loaded_decision_score,
                     },
                 ))
 
@@ -797,7 +833,9 @@ class VisualObservedStateBuilder:
         side: str,
         target_slot: str,
     ) -> bool:
-        if not bool(observation.get('accepted', False)):
+        try:
+            self._validate_observation_envelope(observation)
+        except TaskExecutionStateError:
             return False
         spec = normalize_shuttle_ref(shuttle, side=side)
         if spec is None:
@@ -841,8 +879,22 @@ class VisualObservedStateBuilder:
                 f'supervisor_status_stale:age_s={supervisor_age:.3f}'
             )
 
-    @staticmethod
-    def _validate_observation_envelope(observation: dict[str, Any]) -> None:
+    def _validate_observation_envelope(
+        self,
+        observation: dict[str, Any],
+    ) -> None:
+        schema_version = observation.get('schema_version')
+        if schema_version != self.config.allowed_visual_schema_version:
+            raise TaskExecutionStateError(
+                'visual_observation_schema_not_allowed:'
+                f'{schema_version!r}'
+            )
+        checkpoint_sha256 = observation.get('checkpoint_sha256')
+        if checkpoint_sha256 != self.config.allowed_visual_checkpoint_sha256:
+            raise TaskExecutionStateError(
+                'visual_observation_checkpoint_not_allowed:'
+                f'{checkpoint_sha256!r}'
+            )
         required_true = (
             'accepted',
             'model_ready',
@@ -933,6 +985,8 @@ class VisualObservedStateBuilder:
             s_m = float(item.get('s_m'))
             ratio = float(item.get('s_ratio'))
             length = float(item.get('segment_length_m'))
+            segment_confidence = float(item.get('segment_confidence', 0.0))
+            loaded_confidence = float(item.get('loaded_confidence', 0.0))
         except (TypeError, ValueError) as exc:
             raise TaskExecutionStateError(
                 f'invalid_visual_position:{identity}'
@@ -955,6 +1009,17 @@ class VisualObservedStateBuilder:
             or not 0.0 <= ratio <= 1.0
         ):
             raise TaskExecutionStateError(f'invalid_visual_position:{identity}')
+        if (
+            not all(math.isfinite(value) for value in (
+                segment_confidence,
+                loaded_confidence,
+            ))
+            or not 0.0 <= segment_confidence <= 1.0
+            or not 0.0 <= loaded_confidence <= 1.0
+        ):
+            raise TaskExecutionStateError(
+                f'invalid_visual_confidence:{identity}'
+            )
         if (
             abs(s_m - ratio * length)
             > float(consistency_tolerance_m)
@@ -1089,8 +1154,14 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
         *,
         receive_s: float | None = None,
     ) -> None:
+        accepted_observation = copy.deepcopy(observation)
+        # This is the shared ingestion point used by the ROS gateway before it
+        # forwards the frame to the execution transport.  Rejecting provenance
+        # here prevents a different visual publisher or checkpoint from
+        # replacing the last planner-eligible state.
+        self.builder._validate_observation_envelope(accepted_observation)
         with self._condition:
-            self._observation = copy.deepcopy(observation)
+            self._observation = accepted_observation
             self._observation_receive_s = (
                 self.monotonic() if receive_s is None else float(receive_s)
             )
@@ -1098,7 +1169,7 @@ class LatestVisualObservedStateProvider(ObservedStateProvider):
                 str(item.get('identity') or '').strip().upper(): str(
                     item.get('presence_state') or ''
                 ).strip().lower()
-                for item in observation.get('shuttles', [])
+                for item in accepted_observation.get('shuttles', [])
                 if isinstance(item, dict)
             }
             for identity in list(self._verified_slot_arrival_certificates):

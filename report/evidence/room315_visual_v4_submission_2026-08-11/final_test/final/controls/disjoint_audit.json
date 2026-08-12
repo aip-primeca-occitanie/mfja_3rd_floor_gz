@@ -1,0 +1,157 @@
+{
+  "candidate_counts": {
+    "capture_configuration_fingerprints": 1040,
+    "configuration_core_family_digests": 1040,
+    "configuration_family_digests": 1040,
+    "episode_ids": 1040,
+    "geometry_fingerprints": 1040,
+    "individual_image_sha256": 2080,
+    "pair_content_sha256": 1040,
+    "sample_ids": 1040,
+    "scenario_family_digests": 1040,
+    "scenario_ids": 1040,
+    "semantic_fingerprints": 1040,
+    "trajectory_fingerprints": 1040
+  },
+  "dataset_role": "sealed_final_test_only",
+  "definitions": {
+    "pair_content_sha256": "sha256(canonical_json({'left_sha256': left, 'right_sha256': right}))",
+    "semantic_fingerprint": "trajectory tuple plus exact loaded/empty state",
+    "trajectory_fingerprint": "sha256(canonical sorted tuples of identity, public segment, and exact nine-decimal s_ratio)"
+  },
+  "historical_test_accessed": false,
+  "internal_uniqueness": {
+    "capture_configuration_fingerprints": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "configuration_core_family_digests": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "configuration_family_digests": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "episode_ids": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "geometry_fingerprints": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "individual_image_sha256": {
+      "count": 2080,
+      "unique_count": 2080
+    },
+    "pair_content_sha256": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "sample_ids": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "scenario_family_digests": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "scenario_ids": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "semantic_fingerprints": {
+      "count": 1040,
+      "unique_count": 1040
+    },
+    "trajectory_fingerprints": {
+      "count": 1040,
+      "unique_count": 1040
+    }
+  },
+  "overlap_counts": {
+    "capture_configuration_fingerprints": 0,
+    "configuration_core_family_digests": 0,
+    "configuration_family_digests": 0,
+    "episode_ids": 0,
+    "geometry_fingerprints": 0,
+    "individual_image_sha256": 0,
+    "pair_content_sha256": 0,
+    "sample_ids": 0,
+    "scenario_family_digests": 0,
+    "scenario_ids": 0,
+    "semantic_fingerprints": 0,
+    "trajectory_fingerprints": 0
+  },
+  "overlap_examples": {},
+  "passed": true,
+  "reference_counts": {
+    "capture_configuration_fingerprints": 4768,
+    "configuration_core_family_digests": 4660,
+    "configuration_family_digests": 4671,
+    "episode_ids": 6296,
+    "geometry_fingerprints": 4065,
+    "individual_image_sha256": 11886,
+    "pair_content_sha256": 6296,
+    "sample_ids": 6296,
+    "scenario_family_digests": 4768,
+    "scenario_ids": 6296,
+    "semantic_fingerprints": 6252,
+    "trajectory_fingerprints": 5593
+  },
+  "reference_scope": [
+    "old_replay_train",
+    "v3r1_train",
+    "v3r1_validation",
+    "v3r1_canary"
+  ],
+  "required_internal_uniqueness": {
+    "capture_configuration_fingerprints": true,
+    "configuration_core_family_digests": true,
+    "configuration_family_digests": true,
+    "episode_ids": true,
+    "geometry_fingerprints": true,
+    "pair_content_sha256": true,
+    "sample_ids": true,
+    "scenario_family_digests": true,
+    "scenario_ids": true,
+    "semantic_fingerprints": true,
+    "trajectory_fingerprints": true
+  },
+  "schema_version": "room315.visual_v4.final_test_disjoint_audit.v1",
+  "static_plan_audit": {
+    "candidate_counts": {
+      "capture_configuration_fingerprints": 1040,
+      "configuration_core_family_digests": 1040,
+      "configuration_family_digests": 1040,
+      "geometry_fingerprints": 1040,
+      "scenario_family_digests": 1040,
+      "scenario_ids": 1040,
+      "semantic_fingerprints": 1040,
+      "trajectory_fingerprints": 1040
+    },
+    "overlap_counts": {
+      "capture_configuration_fingerprints": 0,
+      "configuration_core_family_digests": 0,
+      "configuration_family_digests": 0,
+      "geometry_fingerprints": 0,
+      "scenario_family_digests": 0,
+      "scenario_ids": 0,
+      "semantic_fingerprints": 0,
+      "trajectory_fingerprints": 0
+    },
+    "overlap_examples": {},
+    "passed": true,
+    "reference_counts": {
+      "capture_configuration_fingerprints": 4768,
+      "configuration_core_family_digests": 4660,
+      "configuration_family_digests": 4671,
+      "geometry_fingerprints": 4065,
+      "scenario_family_digests": 4768,
+      "scenario_ids": 6296,
+      "semantic_fingerprints": 6252,
+      "trajectory_fingerprints": 5593
+    }
+  }
+}

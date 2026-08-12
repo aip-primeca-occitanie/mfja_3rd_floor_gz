@@ -1,9 +1,9 @@
 schema_version: 2
-campaign_id: room315_integrated_campaign_v2
+campaign_id: room315_integrated_campaign_v4
 description: >
-  Predeclared cold-start simulation campaign for the complete English request,
-  visual observation, PlanSys2 planning, deterministic supervision, shuttle
-  motion and final-effect verification path.
+  Predeclared independent cold-start Gazebo campaign for the complete English request,
+  V4 visual observation, PlanSys2 planning, deterministic supervision,
+  shuttle motion and final-effect verification path.
 protocol:
   scope_statement: >
     This campaign contains positive integrated demonstrations only. Fault and
@@ -26,29 +26,33 @@ protocol:
   shuttle_speed_mps: 0.2
 runtime_artifact_contract:
   hash_algorithm: sha256
-  exact_artifact_count: 15
+  exact_artifact_count: 14
   verify_before_first_case: true
   artifacts:
     - role: visual_checkpoint
-      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt
-      size_bytes: 113868535
-      sha256: 8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d
-    - role: visual_target_statistics
-      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/target_stats.json
-      size_bytes: 8705
-      sha256: 2d48078641842aa2db7a59b9285fc5bbedaaa3a0039fc39986ca230db983b18c
-    - role: visual_label_vectorizer
-      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/visual_label_vectorizer.json
-      size_bytes: 17458
-      sha256: 637c854556f3331c4e187db4aa7fc70457f01df8877947b9a0e988a543f7113e
-    - role: visual_training_configuration
-      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/training_config.json
-      size_bytes: 15630
-      sha256: 5c45544af7766afff397dafa7c14c0b3b05083f07a93122308ef50c2e8f452eb
-    - role: visual_run_metadata
-      path: /home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/run_metadata.json
-      size_bytes: 5560
-      sha256: d86c0ebfda3f5b174fc3c06f4ce8a3e083d2048db7b44d20efe951aaa7e5428d
+      path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/checkpoint_epoch_011.pt
+      size_bytes: 85876329
+      sha256: 869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d
+    - role: visual_promotion_manifest
+      path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/runtime_promotion_manifest.json
+      size_bytes: 9338
+      sha256: 506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da
+    - role: visual_manual_decision
+      path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/manual_decision_record.json
+      size_bytes: 1907
+      sha256: df16e885051000117ca914715ace76a58b7f39ffbb6a7ccd6787f7885d18ffdc
+    - role: visual_runtime_configuration
+      path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/runtime_ros_parameters.yaml
+      size_bytes: 821
+      sha256: 22f12a9f96b3d54e0ab3d0bc05c202024ac6912cb50dd6e29ceb4a0a564d24f8
+    - role: task_execution_runtime_configuration
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml
+      size_bytes: 3848
+      sha256: 08eaedd7d6feed3dd1268ef18bfa2545348f203f1ff0dad3c2e9fb1a9f25b6ca
+    - role: task_execution_authorization
+      path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1/candidate_state.json
+      size_bytes: 785
+      sha256: 14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1
     - role: intent_language_model
       path: /home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf
       size_bytes: 1117320736
@@ -57,14 +61,6 @@ runtime_artifact_contract:
       path: /home/tiago/models/room315_intent/task_goal_understanding.local.yaml
       size_bytes: 617
       sha256: 6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea
-    - role: visual_state_runtime_configuration
-      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml
-      size_bytes: 2735
-      sha256: e96b4eb4c36e6b3f45a45a3fff3b8e3bf53ddd50fe3e603ddb1d402ee39e7c19
-    - role: task_execution_runtime_configuration
-      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml
-      size_bytes: 3068
-      sha256: 15d3eaee91e4090f874efeaa7cc2f1df37c78b0fd091466c06b4754e041e57a9
     - role: plansys2_runtime_domain
       path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl
       size_bytes: 24629

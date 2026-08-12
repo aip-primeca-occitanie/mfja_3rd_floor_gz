@@ -11,7 +11,7 @@ broader than constructing a visually accurate Gazebo scene: the simulated
 equipment also had to behave consistently enough to support routing, planning
 and experimentation.
 
-The project then examined whether camera observations and English requests
+The project also examined whether camera observations and English requests
 could describe a task without sending motor commands directly. The language and
 vision paths supply information about the request and the scene. PlanSys2
 produces the symbolic sequence, and the supervisor checks each requested step
@@ -49,8 +49,13 @@ before evaluating the complete workflow. The software, dataset and model
 versions used for the reported evaluations are listed in
 \cref{app:reproducibility}.
 
-The complete workflow and the visual model were evaluated separately. Their
-results and the limits of each evaluation are presented in
+The complete workflow and the visual model were evaluated separately. The
+frozen visual estimator passed all 80 gates on a one-shot Final Test of 1040 scenes
+and 4680 present-shuttle instances: segment top-1 accuracy was 99.9359\%,
+loaded-state accuracy was 99.9145\%, and joint segment/position accuracy at
+$|\Delta s_{ratio}|\leq0.05$ was 90.8974\%. Independently, all 12 isolated
+English-to-motion runs reached their declared terminal state. These numbers,
+their evidence chain and their simulation-only limits are presented in
 \cref{chap:results}.
 
 \paragraph{Report structure.}

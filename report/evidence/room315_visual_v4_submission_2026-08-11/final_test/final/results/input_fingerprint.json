@@ -1,0 +1,23 @@
+{
+  "dataset_fingerprint_sha256": "226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef",
+  "dataset_role": "sealed_final_test_only",
+  "finalization": {
+    "bytes": 618818,
+    "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test_finalization.json",
+    "sha256": "1a51589587ae954f614b0da44e7c5c4f7a0ceb8c2ad43314fac63d9e03ce5eee"
+  },
+  "image_count": 2080,
+  "labels": {
+    "bytes": 7936948,
+    "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test_visual_labels.jsonl",
+    "sha256": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4"
+  },
+  "opened_only_after_global_reservation": true,
+  "rows": {
+    "bytes": 2491165,
+    "path": "/home/tiago/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test.jsonl",
+    "sha256": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9"
+  },
+  "sample_count": 1040,
+  "schema_version": "room315.visual_v4.final_test_input_fingerprint.v1"
+}
