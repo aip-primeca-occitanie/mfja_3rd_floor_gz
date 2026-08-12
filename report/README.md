@@ -27,9 +27,9 @@ written in English and describes the final retained implementation. Active
 experimental records and their claim boundaries are indexed in
 `evidence/ACTIVE_EVIDENCE.md`. A reproducible handover must archive or commit
 the exact source and configuration identity used for its test results.
-The final 12 August build is 87 A4 pages; `main.pdf` and the submission copy are
+The final 12 August build is 88 A4 pages; `main.pdf` and the submission copy are
 byte-identical at SHA-256
-`0181723704cc77675768e946ccfd325c37b4c882f98a2d351c8cdb62e3698f00`.
+`31f107aa8bf9ff9e666dc7537f0fb84c23caac90f0f0e2a200a1872d148f55bd`.
 The retained log and complete fingerprint record are
 `evidence/final_report_build_2026-08-12.log` and
 `evidence/final_report_sha256_2026-08-12.txt`.

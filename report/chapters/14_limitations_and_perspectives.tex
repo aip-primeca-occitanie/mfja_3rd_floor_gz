@@ -3,14 +3,24 @@
 
 \section{Limitations}
 
-The integrated campaign and the language and perception studies concern the
-Room~315 Gazebo workflow. The separate all-robot check covers the full-floor
-Gazebo launch profile. The shuttle backend is kinematic, which supports
+The project is not limited to the camera-based Room~315 workflow. Its first
+phase modelled and integrated the industrial and mobile robots, exposed
+namespaced joint or base commands and feedback, and enabled their motion in
+Gazebo. The retained all-robot check has a narrower evidential scope: it
+confirms one full-floor cold start, the presence of all six configured models,
+their isolated command and feedback interfaces, and fresh state samples; it
+does not measure simultaneous-motion accuracy or repeatability. What remains
+outside the implemented and evaluated scope is autonomous manipulation rather
+than arm motion itself: collision-aware arm-trajectory generation and a
+complete pick, grasp, handover or place workflow with object and contact
+verification were not developed.
+
+The integrated language, perception and task-execution campaigns concern the
+Room~315 Gazebo workflow. The shuttle backend is kinematic, which supports
 controlled studies of topology, coordination and closed-loop task execution.
-It omits torque, slip, braking, mechanical play and payload inertia. Arm
-manipulation, handover and grasp verification are also beyond the implemented
-task domain. The supervisor provides software checks for this simulated
-workflow; it is not a certified machinery-safety function.
+It omits torque, slip, braking, mechanical play and payload inertia. The
+supervisor provides software checks for this simulated workflow; it is not a
+certified machinery-safety function.
 
 The perception study uses the known shuttle fleet, fixed simulated cameras and
 generated scene families. The rail-isolated checkpoint was selected and

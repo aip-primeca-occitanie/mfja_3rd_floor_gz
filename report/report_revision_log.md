@@ -242,11 +242,11 @@ generative-AI declaration is preserved verbatim.
   freezes as explicitly historical evidence rather than deleting or relabelling
   them as current V4 results.
 
-The final `make check` produced an 87-page A4 PDF (3,541,336 bytes) with no
+The final `make check` produced an 88-page A4 PDF (3,542,433 bytes) with no
 undefined references or citations and no overfull boxes. `main.pdf` and the
 named delivery PDF are byte-identical, with SHA-256
-`0181723704cc77675768e946ccfd325c37b4c882f98a2d351c8cdb62e3698f00`.
+`31f107aa8bf9ff9e666dc7537f0fb84c23caac90f0f0e2a200a1872d148f55bd`.
 The retained build log has SHA-256
-`3a8b8f594da3020f6fdbbfe4f343b267f839dcaf8f3d6a3b8e96efc86e99421d`;
+`8f3efe415f8f899478e45ec1d13cc26226ce75c8d983ead649870191e69e2dad`;
 the three identities are recorded in
 `evidence/final_report_sha256_2026-08-12.txt`.

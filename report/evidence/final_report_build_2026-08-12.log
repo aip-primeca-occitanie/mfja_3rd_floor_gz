@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.3.5)  12 AUG 2026 07:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.3.5)  12 AUG 2026 07:30
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1640,18 +1640,18 @@ Underfull \hbox (badness 3838) in paragraph at lines 351--351
 Chapter 12.
 [72
 
-]) (./chapters/15_conclusion.tex [73]
+]) (./chapters/15_conclusion.tex [73] [74]
 Chapter 13.
-[74
+[75
 
-]) [75] (./main.bbl [76
+]) [76] (./main.bbl [77
 
 
-]) (./chapters/a_reproducibility.tex [77]
+]) (./chapters/a_reproducibility.tex [78]
 Appendix A.
-[78
+[79
 
-] [79] [80] [81] [82] [83]) (./chapters/b_interfaces.tex [84]
+] [80] [81] [82] [83] [84]) (./chapters/b_interfaces.tex [85]
 Appendix B.
 
 Underfull \hbox (badness 1571) in paragraph at lines 26--28
@@ -1713,9 +1713,9 @@ Underfull \hbox (badness 10000) in paragraph at lines 61--61
 []|\T1/qpl/m/n/10 (+20) Geometry main-te-
  []
 
-[85
+[86
 
-] [86]) [87
+] [87]) [88
 
 ] (./main.aux)
  ***********
@@ -1729,8 +1729,8 @@ LaTeX Font Warning: Size substitutions with differences
 
  ) 
 Here is how much of TeX's memory you used:
- 51226 strings out of 476182
- 1146985 string characters out of 5795596
+ 51227 strings out of 476182
+ 1146992 string characters out of 5795596
  2031975 words of memory out of 5000000
  71614 multiletter control sequences out of 15000+600000
  715631 words of font info for 343 fonts, out of 8000000 for 9000
@@ -1757,10 +1757,10 @@ public/tex-gyre/qcrb.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qcrr.pfb
 hvri.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qplb.pfb></usr/share/tex
 mf/fonts/type1/public/tex-gyre/qplr.pfb></usr/share/texmf/fonts/type1/public/te
 x-gyre/qplri.pfb>
-Output written on main.pdf (87 pages, 3541336 bytes).
+Output written on main.pdf (88 pages, 3542433 bytes).
 PDF statistics:
- 1510 PDF objects out of 1728 (max. 8388607)
- 1311 compressed objects within 14 object streams
- 341 named destinations out of 1000 (max. 500000)
+ 1514 PDF objects out of 1728 (max. 8388607)
+ 1314 compressed objects within 14 object streams
+ 342 named destinations out of 1000 (max. 500000)
  96255 words of extra memory for PDF output out of 106986 (max. 10000000)
 

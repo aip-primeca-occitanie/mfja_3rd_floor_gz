@@ -107,11 +107,11 @@ from those claims.
   `final_report_sha256_2026-08-08.txt`, `final_report_build_2026-08-11.log` and
   `final_report_sha256_2026-08-11.txt`: preserved report freezes.
 - `final_report_build_2026-08-12.log` and
-  `final_report_sha256_2026-08-12.txt`: final 87-page A4 English-report build
+  `final_report_sha256_2026-08-12.txt`: final 88-page A4 English-report build
   and fingerprint. The retained log has SHA-256
-  `3a8b8f594da3020f6fdbbfe4f343b267f839dcaf8f3d6a3b8e96efc86e99421d`;
+  `8f3efe415f8f899478e45ec1d13cc26226ce75c8d983ead649870191e69e2dad`;
   `main.pdf` and the named delivery PDF are byte-identical at SHA-256
-  `0181723704cc77675768e946ccfd325c37b4c882f98a2d351c8cdb62e3698f00`.
+  `31f107aa8bf9ff9e666dc7537f0fb84c23caac90f0f0e2a200a1872d148f55bd`.
 
 The three recorded pytest suites overlap and their pass counts must not be
 summed. The positive campaign is a bounded acceptance matrix rather than a
