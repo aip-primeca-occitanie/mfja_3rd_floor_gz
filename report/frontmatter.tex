@@ -122,64 +122,41 @@ Report language & English (international programme language)\\
 
 \cleardoublepage
 \chapter*{Abstract}
-The internship developed a common simulation environment for the industrial
-and mobile robots used at the Maison de la Formation Jacqueline Auriol (MFJA).
-The initial assignment was to model Room~315 in Gazebo and provide consistent
-Robot Operating System~2 (ROS~2) access to its robots and transport system.
-Completing this stage ahead of schedule opened an investigation inspired by
-vision--language--action (VLA) research, based on overhead-camera perception
-and natural-language interaction. The implemented architecture is a
-schema-constrained neuro-symbolic
-language-and-vision interface rather than an end-to-end VLA policy.
+The internship developed a common Gazebo environment for the industrial and
+mobile robots used at the Maison de la Formation Jacqueline Auriol (MFJA). The
+mission centred on a digital twin of Room~315, an industrial robotics practice
+site comprising two rail-transport cells and four industrial-robot workstations,
+together with unified Robot Operating System~2 (ROS~2) access, calibrated
+multi-shuttle transport and an investigation of overhead-camera perception with
+English task requests. The implemented solution is a schema-constrained
+neuro-symbolic interface rather than an end-to-end vision--language--action
+policy.
 
-The resulting system combines configuration-driven robot launch, calibrated
-rail geometry, continuous multi-shuttle motion and typed ROS~2 command and
-state interfaces. A locally deployed Qwen2.5-1.5B-Instruct model converts an
-English request into a structured task proposal. The paired-view ResNet-18
-estimator---identified as V4 in the versioned artefacts---shares generic visual
-processing through \code{layer3},
-but uses independent \code{layer4} modules and prediction heads for the
-non-symmetric left and right rails. Rail side is derived from the fixed shuttle
-identity rather than predicted. Schema and domain checks are applied before
-a Planning Domain Definition Language (PDDL) problem is solved through
-PlanSys2 in a separately evaluated closed-loop integration profile; the
-resulting motion is supervised and confirmed from the observed system state.
+Configuration-driven launch and typed ROS~2 interfaces connect the simulated
+robots, rail topology and safety supervisor. A local Qwen2.5-1.5B-Instruct
+model proposes structured task fields. The paired-view ResNet-18 estimator,
+identified as V4 in the versioned artefacts, uses shared low-level processing
+and rail-specific late branches. After whole-observation and domain validation,
+PlanSys2/POPF produces a symbolic plan; the supervisor authorises one translated
+step at a time and the executive checks its observed effect.
 
-The principal perception result comes from a preregistered, one-shot Final Test
-kept disjoint from training, Validation and the exposed Development Canary.
-Across 1040 scenes and 4680 present-shuttle
-instances, the frozen epoch-11 checkpoint achieved 99.9359\% public-segment
-top-1 accuracy, 99.9117\% segment macro F1, 99.9145\% loaded-state accuracy
-and 90.8974\% joint segment-and-position accuracy at
-\(\lvert\Delta\rho\rvert\leq0.05\). Correct-segment metric-position error was
-\SI{0.01573}{m} MAE and \SI{0.05850}{m} at the 95th percentile; mean bounding-box
-IoU was 0.8340. All 80/80 frozen gates passed: 76 base gates and four
-preregistered Final Test runtime-threshold gates. The least-recalled supported
-rail--segment cell still reached 94.6429\%. The fixed rail-specific architecture
-also produced exactly zero cross-rail output change when the opposite view was
-blanked or shuffled, while deliberately swapping camera order reduced segment
-top-1 accuracy by 92.1368 percentage points. Camera order is therefore a
-safety-relevant input contract.
+The frozen epoch-11 checkpoint was then evaluated once on a preregistered Final
+Test that was separate from training, Validation and the Development Canary.
+Across 1,040 scenes and 4,680 present-shuttle instances, 90.8974\% met the
+combined criterion of the correct public rail segment and a normalised position
+error no greater than 0.05; all 80 predefined gates passed.
 
-The complementary closed-loop Gazebo campaign completed 12/12 isolated
-cold-start runs: six on each rail, covering all eight shuttle identities and
-five predeclared case families. All 24 recorded step postconditions and all 48
-supervisor decisions passed. The executive made 24 planning attempts, including
-four occupancy-triggered replans; every final effect was verified, every
-controller stopped, and the twelve bags contained 1784 observations, all under
-the active schema. A separate ten-case language evaluation matched every
-declared outcome, including clarification, rejection and cancellation.
-
-The runtime-acceptance review also passed its same-frame comparison,
-seven-scene acceptance and visual-input fault checks. A five-scenario
-closed-loop fault campaign exercised corrupt authorisation, an incorrect
-runtime manifest, planner unavailability, an emergency stop during
-motion and right-sensor feedback loss. All 5/5 scenarios completed without a
-false success, left every controller disabled and recorded 424 observations,
-all under the active schema. The positive and fault-campaign reports are
-hash-bound into a manually approved runtime restricted to Gazebo closed-loop
-execution. Automatic runtime authorisation and physical deployment remain
-forbidden.
+The closed-loop Gazebo evaluation completed all 12 isolated runs, with all 24
+step postconditions and 48 supervisor decisions accepted and every controller
+stopped. A separate ten-case language evaluation matched every declared
+outcome. The five-scenario fault campaign passed 5/5 without a false success
+and left all controllers disabled. The reported results apply only to the
+approved Gazebo profile. Command execution starts disabled and requires explicit
+operator activation; once enabled and given a confirmed task, closed-loop
+planning and execution proceed automatically in Gazebo. The evidence therefore
+supports only this simulated profile; physical transfer would require additional
+validation, as discussed with the wider limitations and future work in
+Chapter~\ref{chap:perspectives}.
 
 \textbf{Keywords:} ROS~2; Gazebo Harmonic; industrial robotics; digital twin;
 multi-robot systems; flexible manufacturing; PDDL; PlanSys2; computer vision;
