@@ -1,0 +1,3868 @@
+{
+  "audit_classification": "post_hoc_supplemental_provenance",
+  "definitions": {
+    "exact_json": "SHA-256 of canonical JSON with sorted keys and compact separators",
+    "full_label_row_sha256": "canonical hash of the complete label JSON object including provenance wrapper fields",
+    "full_visual_state_label_sha256": "canonical hash of the complete visual_state_labels target payload, excluding provenance wrapper fields; equality can mean target/state support recurrence across otherwise different samples and images",
+    "generated_variant_sha256": "canonical hash of available v2 plan/spec/configuration family/variant/generation/source identifiers",
+    "image_pair_sha256": "canonical hash of the camera-name to image-content-SHA-256 mapping",
+    "presence_configuration": "presence_NNN bitmask derived only from the eight label presence booleans in L1..L4,R1..R4 order"
+  },
+  "experimental_effect": {
+    "acceptance_gate": false,
+    "checkpoint_selection": false,
+    "confidence_threshold_selection": false,
+    "early_stopping": false,
+    "final_evidence": false,
+    "hyperparameter_tuning": false,
+    "model_training": false,
+    "temperature_calibration": false
+  },
+  "generator": {
+    "repository_path": "mfja_robot_control_config/scripts/room_315_dataset_partition_overlap_post_hoc.py",
+    "script_sha256": "f1c71b9123b16d2d4dcc82d220924632caabec7008ec589f7e6cf19e4873fec3"
+  },
+  "input_partitions": {
+    "development_canary": {
+      "dataset_root": "~/room315_hard_case_visual_v3r1_canary_seed31520260730/dataset",
+      "labels": {
+        "count": 256,
+        "path": "~/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary_visual_labels.jsonl",
+        "sha256": "42d1d6ccab49d4a6bfdb2c2b79d77e404e5f9cb23066a816c1a3851d552b02db"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 256,
+        "configuration_core_family_ids": 256,
+        "configuration_family_ids": 256,
+        "episode_ids": 256,
+        "full_label_row_sha256": 256,
+        "full_visual_state_label_sha256": 256,
+        "generated_variant_sha256": 256,
+        "geometry_fingerprints": 256,
+        "image_pair_sha256": 256,
+        "individual_image_sha256": 512,
+        "sample_ids": 256,
+        "scenario_families": 256,
+        "scenario_ids": 256,
+        "semantic_state_sha256": 256,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 256
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 256,
+        "configuration_core_family_ids": 245,
+        "configuration_family_ids": 256,
+        "episode_ids": 256,
+        "full_label_row_sha256": 256,
+        "full_visual_state_label_sha256": 249,
+        "generated_variant_sha256": 256,
+        "geometry_fingerprints": 189,
+        "image_pair_sha256": 256,
+        "individual_image_sha256": 458,
+        "sample_ids": 256,
+        "scenario_families": 256,
+        "scenario_ids": 256,
+        "semantic_state_sha256": 249,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 189
+      },
+      "presence_configuration_count": 41,
+      "present_target_count": 1085,
+      "protocol": "v3r1_v4_current_development",
+      "role": "post_selection_regression_and_manual_promotion",
+      "rows": {
+        "count": 256,
+        "path": "~/room315_hard_case_visual_v3r1_canary_seed31520260730/finalized/canary.jsonl",
+        "sha256": "28568e8ebf793e0a0a18ad9327f36639b2fd9c27021b9bccc4b318dd48192541"
+      },
+      "seeds": [
+        31520260730
+      ]
+    },
+    "hard_case_train": {
+      "dataset_root": "~/room315_hard_case_visual_v3r1_capture_seed31520260730/dataset",
+      "labels": {
+        "count": 4000,
+        "path": "~/room315_hard_case_visual_v3r1_splits_seed31520260730/train_visual_labels.jsonl",
+        "sha256": "ec98fd5a94ed9d29fbb0b33dbed33877d571d263ea4a497be99d088673b71921"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 4000,
+        "configuration_core_family_ids": 4000,
+        "configuration_family_ids": 4000,
+        "episode_ids": 4000,
+        "full_label_row_sha256": 4000,
+        "full_visual_state_label_sha256": 4000,
+        "generated_variant_sha256": 4000,
+        "geometry_fingerprints": 4000,
+        "image_pair_sha256": 4000,
+        "individual_image_sha256": 8000,
+        "sample_ids": 4000,
+        "scenario_families": 4000,
+        "scenario_ids": 4000,
+        "semantic_state_sha256": 4000,
+        "source_scenario_ids": 1356,
+        "trajectory_sha256": 4000
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 4000,
+        "configuration_core_family_ids": 3910,
+        "configuration_family_ids": 3910,
+        "episode_ids": 4000,
+        "full_label_row_sha256": 4000,
+        "full_visual_state_label_sha256": 4000,
+        "generated_variant_sha256": 4000,
+        "geometry_fingerprints": 3530,
+        "image_pair_sha256": 4000,
+        "individual_image_sha256": 7730,
+        "sample_ids": 4000,
+        "scenario_families": 4000,
+        "scenario_ids": 4000,
+        "semantic_state_sha256": 4000,
+        "source_scenario_ids": 1356,
+        "trajectory_sha256": 3530
+      },
+      "presence_configuration_count": 243,
+      "present_target_count": 17620,
+      "protocol": "v3r1_current_development",
+      "role": "current_training",
+      "rows": {
+        "count": 4000,
+        "path": "~/room315_hard_case_visual_v3r1_splits_seed31520260730/train.jsonl",
+        "sha256": "396e3b83822dcd2ed541025fc033802592a609e288dbb28be555c6d9f586361c"
+      },
+      "seeds": [
+        31520260730
+      ]
+    },
+    "hard_case_validation": {
+      "dataset_root": "~/room315_hard_case_visual_v3r1_capture_seed31520260730/dataset",
+      "labels": {
+        "count": 512,
+        "path": "~/room315_hard_case_visual_v3r1_splits_seed31520260730/validation_visual_labels.jsonl",
+        "sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 512,
+        "configuration_core_family_ids": 512,
+        "configuration_family_ids": 512,
+        "episode_ids": 512,
+        "full_label_row_sha256": 512,
+        "full_visual_state_label_sha256": 512,
+        "generated_variant_sha256": 512,
+        "geometry_fingerprints": 512,
+        "image_pair_sha256": 512,
+        "individual_image_sha256": 1024,
+        "sample_ids": 512,
+        "scenario_families": 512,
+        "scenario_ids": 512,
+        "semantic_state_sha256": 512,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 512
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 512,
+        "configuration_core_family_ids": 505,
+        "configuration_family_ids": 505,
+        "episode_ids": 512,
+        "full_label_row_sha256": 512,
+        "full_visual_state_label_sha256": 512,
+        "generated_variant_sha256": 512,
+        "geometry_fingerprints": 368,
+        "image_pair_sha256": 512,
+        "individual_image_sha256": 889,
+        "sample_ids": 512,
+        "scenario_families": 512,
+        "scenario_ids": 512,
+        "semantic_state_sha256": 512,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 368
+      },
+      "presence_configuration_count": 125,
+      "present_target_count": 2254,
+      "protocol": "v3r1_v4_current_development",
+      "role": "current_checkpoint_selection_calibration_thresholds",
+      "rows": {
+        "count": 512,
+        "path": "~/room315_hard_case_visual_v3r1_splits_seed31520260730/validation.jsonl",
+        "sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7"
+      },
+      "seeds": [
+        31520260730
+      ]
+    },
+    "legacy_consumed_test": {
+      "dataset_root": "~/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/dataset",
+      "labels": {
+        "count": 256,
+        "path": "~/room315_arbitrary_subset_visual_splits_v1_seed31520260730/test_visual_labels.jsonl",
+        "sha256": "1dc97b0836f40c53810306e9a09874967fa7e1067cd5de315cba0e00570277e3"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 256,
+        "full_label_row_sha256": 256,
+        "full_visual_state_label_sha256": 256,
+        "generated_variant_sha256": 256,
+        "geometry_fingerprints": 256,
+        "image_pair_sha256": 256,
+        "individual_image_sha256": 512,
+        "sample_ids": 256,
+        "scenario_families": 256,
+        "scenario_ids": 256,
+        "semantic_state_sha256": 256,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 256
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 256,
+        "full_label_row_sha256": 256,
+        "full_visual_state_label_sha256": 256,
+        "generated_variant_sha256": 256,
+        "geometry_fingerprints": 256,
+        "image_pair_sha256": 256,
+        "individual_image_sha256": 512,
+        "sample_ids": 256,
+        "scenario_families": 256,
+        "scenario_ids": 256,
+        "semantic_state_sha256": 256,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 256
+      },
+      "presence_configuration_count": 32,
+      "present_target_count": 1072,
+      "protocol": "legacy_grouped_v1",
+      "role": "historical_test_consumed_once",
+      "rows": {
+        "count": 256,
+        "path": "~/room315_arbitrary_subset_visual_splits_v1_seed31520260730/test.jsonl",
+        "sha256": "2fcf78c0034fe290c39b2816e12076300decf5f7818538357fae072231b9b502"
+      },
+      "seeds": [
+        31520260729,
+        31520260730
+      ]
+    },
+    "legacy_grouped_validation": {
+      "dataset_root": "~/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/dataset",
+      "labels": {
+        "count": 256,
+        "path": "~/room315_arbitrary_subset_visual_splits_v1_seed31520260730/validation_visual_labels.jsonl",
+        "sha256": "218039e54ac0abf3de940f8abf92aff8c91a75333d991eb213a73101939fab71"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 256,
+        "full_label_row_sha256": 256,
+        "full_visual_state_label_sha256": 256,
+        "generated_variant_sha256": 256,
+        "geometry_fingerprints": 256,
+        "image_pair_sha256": 256,
+        "individual_image_sha256": 512,
+        "sample_ids": 256,
+        "scenario_families": 256,
+        "scenario_ids": 256,
+        "semantic_state_sha256": 256,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 256
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 256,
+        "full_label_row_sha256": 256,
+        "full_visual_state_label_sha256": 256,
+        "generated_variant_sha256": 256,
+        "geometry_fingerprints": 256,
+        "image_pair_sha256": 256,
+        "individual_image_sha256": 512,
+        "sample_ids": 256,
+        "scenario_families": 256,
+        "scenario_ids": 256,
+        "semantic_state_sha256": 256,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 256
+      },
+      "presence_configuration_count": 32,
+      "present_target_count": 1088,
+      "protocol": "legacy_grouped_v1",
+      "role": "historical_predecessor_checkpoint_selection",
+      "rows": {
+        "count": 256,
+        "path": "~/room315_arbitrary_subset_visual_splits_v1_seed31520260730/validation.jsonl",
+        "sha256": "5119937c489fc100c73ca6637697044ee7a3b5e37e8ce76c4c542ed80475858a"
+      },
+      "seeds": [
+        31520260729,
+        31520260730
+      ]
+    },
+    "legacy_train": {
+      "dataset_root": "~/room315_arbitrary_subset_visual_2040_capture_v2_seed31520260729/dataset",
+      "labels": {
+        "count": 1528,
+        "path": "~/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train_visual_labels.jsonl",
+        "sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 1528,
+        "full_label_row_sha256": 1528,
+        "full_visual_state_label_sha256": 1528,
+        "generated_variant_sha256": 1528,
+        "geometry_fingerprints": 1528,
+        "image_pair_sha256": 1528,
+        "individual_image_sha256": 3056,
+        "sample_ids": 1528,
+        "scenario_families": 1528,
+        "scenario_ids": 1528,
+        "semantic_state_sha256": 1528,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 1528
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 1528,
+        "full_label_row_sha256": 1528,
+        "full_visual_state_label_sha256": 1528,
+        "generated_variant_sha256": 1528,
+        "geometry_fingerprints": 1528,
+        "image_pair_sha256": 1528,
+        "individual_image_sha256": 2809,
+        "sample_ids": 1528,
+        "scenario_families": 1528,
+        "scenario_ids": 1528,
+        "semantic_state_sha256": 1528,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 1528
+      },
+      "presence_configuration_count": 191,
+      "present_target_count": 6032,
+      "protocol": "legacy_grouped_v1",
+      "role": "historical_training_replay",
+      "rows": {
+        "count": 1528,
+        "path": "~/room315_arbitrary_subset_visual_splits_v1_seed31520260730/train.jsonl",
+        "sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095"
+      },
+      "seeds": [
+        31520260729,
+        31520260730
+      ]
+    },
+    "preregistered_final_test": {
+      "dataset_root": "~/room315_visual_v4_final_test_seed3152026081101_coveragecompat/dataset",
+      "labels": {
+        "count": 1040,
+        "path": "~/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test_visual_labels.jsonl",
+        "sha256": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4"
+      },
+      "metric_observation_counts": {
+        "capture_configuration_fingerprints": 1040,
+        "configuration_core_family_ids": 1040,
+        "configuration_family_ids": 1040,
+        "episode_ids": 1040,
+        "full_label_row_sha256": 1040,
+        "full_visual_state_label_sha256": 1040,
+        "generated_variant_sha256": 1040,
+        "geometry_fingerprints": 1040,
+        "image_pair_sha256": 1040,
+        "individual_image_sha256": 2080,
+        "sample_ids": 1040,
+        "scenario_families": 1040,
+        "scenario_ids": 1040,
+        "semantic_state_sha256": 1040,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 1040
+      },
+      "metric_unique_counts": {
+        "capture_configuration_fingerprints": 1040,
+        "configuration_core_family_ids": 1040,
+        "configuration_family_ids": 1040,
+        "episode_ids": 1040,
+        "full_label_row_sha256": 1040,
+        "full_visual_state_label_sha256": 1040,
+        "generated_variant_sha256": 1040,
+        "geometry_fingerprints": 1040,
+        "image_pair_sha256": 1040,
+        "individual_image_sha256": 2080,
+        "sample_ids": 1040,
+        "scenario_families": 1040,
+        "scenario_ids": 1040,
+        "semantic_state_sha256": 1040,
+        "source_scenario_ids": 0,
+        "trajectory_sha256": 1040
+      },
+      "presence_configuration_count": 239,
+      "present_target_count": 4680,
+      "protocol": "v4_final_evidence",
+      "role": "one_shot_final_acceptance_evidence",
+      "rows": {
+        "count": 1040,
+        "path": "~/room315_visual_v4_final_test_seed3152026081101_coveragecompat/finalized/final_test.jsonl",
+        "sha256": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9"
+      },
+      "seeds": [
+        3152026081101
+      ]
+    }
+  },
+  "pairwise_comparisons": [
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 191,
+        "overlap_count": 0,
+        "right_unique_count": 32
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 3056,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 2,
+        "values": [
+          31520260729,
+          31520260730
+        ]
+      },
+      "right": "legacy_grouped_validation"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 191,
+        "overlap_count": 0,
+        "right_unique_count": 32
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 3056,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 2,
+        "values": [
+          31520260729,
+          31520260730
+        ]
+      },
+      "right": "legacy_consumed_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_001",
+          "presence_002",
+          "presence_003",
+          "presence_004",
+          "presence_005",
+          "presence_006",
+          "presence_007",
+          "presence_008"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 191,
+        "overlap_count": 185,
+        "right_unique_count": 243
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 3056,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 8000,
+          "right_row_count": 4000
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1356,
+          "right_row_count": 4000
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_train"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_001",
+          "presence_002",
+          "presence_003",
+          "presence_004",
+          "presence_005",
+          "presence_006",
+          "presence_007",
+          "presence_008"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 191,
+        "overlap_count": 99,
+        "right_unique_count": 125
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 3056,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1024,
+          "right_row_count": 512
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 512
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_validation"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_003",
+          "presence_007",
+          "presence_008",
+          "presence_009",
+          "presence_011",
+          "presence_034",
+          "presence_063",
+          "presence_095"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 191,
+        "overlap_count": 35,
+        "right_unique_count": 41
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 3056,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "development_canary"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_001",
+          "presence_002",
+          "presence_003",
+          "presence_004",
+          "presence_005",
+          "presence_006",
+          "presence_007",
+          "presence_008"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 191,
+        "overlap_count": 178,
+        "right_unique_count": 239
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 3056,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 2080,
+          "right_row_count": 1040
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 0,
+          "right_row_count": 1040
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1528,
+          "left_row_count": 1528,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 0,
+        "values": []
+      },
+      "right": "preregistered_final_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 0,
+        "right_unique_count": 32
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_grouped_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 2,
+        "values": [
+          31520260729,
+          31520260730
+        ]
+      },
+      "right": "legacy_consumed_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_018",
+          "presence_020",
+          "presence_026",
+          "presence_027",
+          "presence_049",
+          "presence_059",
+          "presence_082",
+          "presence_084"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 31,
+        "right_unique_count": 243
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 8000,
+          "right_row_count": 4000
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1356,
+          "right_row_count": 4000
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_grouped_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_train"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_020",
+          "presence_084",
+          "presence_104",
+          "presence_119",
+          "presence_133",
+          "presence_156",
+          "presence_167",
+          "presence_174"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 16,
+        "right_unique_count": 125
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1024,
+          "right_row_count": 512
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 512
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_grouped_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_validation"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_223",
+          "presence_247",
+          "presence_253"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 3,
+        "right_unique_count": 41
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_grouped_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "development_canary"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_020",
+          "presence_026",
+          "presence_027",
+          "presence_049",
+          "presence_059",
+          "presence_060",
+          "presence_082",
+          "presence_084"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 30,
+        "right_unique_count": 239
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 2080,
+          "right_row_count": 1040
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 1040
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_grouped_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 0,
+        "values": []
+      },
+      "right": "preregistered_final_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_030",
+          "presence_035",
+          "presence_041",
+          "presence_050",
+          "presence_058",
+          "presence_061",
+          "presence_068",
+          "presence_074"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 27,
+        "right_unique_count": 243
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 8000,
+          "right_row_count": 4000
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1356,
+          "right_row_count": 4000
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 4000,
+          "right_row_count": 4000
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_consumed_test",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_train"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_102",
+          "presence_106",
+          "presence_141",
+          "presence_149",
+          "presence_157",
+          "presence_179",
+          "presence_191",
+          "presence_222"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 10,
+        "right_unique_count": 125
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1024,
+          "right_row_count": 512
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 512
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_consumed_test",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_validation"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_041",
+          "presence_050",
+          "presence_191"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 3,
+        "right_unique_count": 41
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_consumed_test",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "development_canary"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_030",
+          "presence_035",
+          "presence_041",
+          "presence_043",
+          "presence_050",
+          "presence_058",
+          "presence_061",
+          "presence_068"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 32,
+        "overlap_count": 31,
+        "right_unique_count": 239
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_family_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 2080,
+          "right_row_count": 1040
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 1040
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": null,
+        "configuration_core_family_ids": null,
+        "configuration_family_ids": null,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "legacy_consumed_test",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 0,
+        "values": []
+      },
+      "right": "preregistered_final_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_001",
+          "presence_002",
+          "presence_003",
+          "presence_004",
+          "presence_005",
+          "presence_006",
+          "presence_007",
+          "presence_008"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 243,
+        "overlap_count": 121,
+        "right_unique_count": 125
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "configuration_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 8000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1024,
+          "right_row_count": 512
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 1356,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 0,
+          "right_row_count": 512
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 512
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 23,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 14,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 23,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 14
+      },
+      "exact_overlap_examples": {
+        "full_visual_state_label_sha256": [
+          "026ffedfbbcb8273453584916c8a2b7901c1ec23cd6fa98c271cca1b1b2e324b",
+          "02de22c79d66e8c46e13e0975c3bb876a352c76419f9ad5fe6bf8abf60de3a5b",
+          "07f74e0378ee2c491b702b584de46adf7ac51276fc5fd33a4072a95245e8bf98",
+          "0f48f100f693eaa5ec16d73ed0beba9547f834f8352a0cc2f6220042972ffe78",
+          "1b48c6b5fbf720ed64f347f6c602338a6136558ef432e089a53e28343c4ccfa0",
+          "1df3e9ac75d1cf42b55a07286a14a30963eda3ad85057b86ead3aa48b907eb09",
+          "3d404eec3069aa3a9af8246d9a1e10cb3ab6e97189cebd4e5f29be11b95d7cc0",
+          "40a3aeb8b8d21deb85439976a64e205d5116f430b03b52a3cfe476ffd36e2168"
+        ],
+        "geometry_fingerprints": [
+          "01389847f550f1690bb665e6e91757513398eeb971ae4df427ddb9cf25109c22",
+          "1e4c509f2aa2a8e9802de57f50595e06f4a3ee6d283682d7ac8226be26e70f65",
+          "28ade69a4c5f188777f6d8e9b5257369e50a57433d765df8819a22582fc223ce",
+          "2d18219f070cd3a8aef42e1213bddb4bd735ec82c1037b8fc3d0511055414974",
+          "305f58c6b92d31c8ad0cb1324bc92e1a0a2a05b89184eb8eb1bff60f11ac125e",
+          "469bcaba781bea878c0313a56061d20271cfd3ca1fe45e81cfd5cbc317e5a5ea",
+          "55e57bd39647ab176b2d8b16c1780eb430b650356022f1f543e15e61c4babfde",
+          "6fa40dcd7a213bec46d2d6b749f0bf207b6fd43c7c818f7d1712bf31c927b95d"
+        ],
+        "semantic_state_sha256": [
+          "029de1c2959ff29405e4086eb0d0a98f32126bd8db9b55a6b49a492c797133ba",
+          "0b8202548921ff23383fc47fadef0e4b2642f725dabd9fdcf07faf4e9aa34405",
+          "0fb3b873db4aae1c80d66d4e81551e250d4390f5987504364c9cf80e8acb2c6f",
+          "1de2b0f41e06594fc4a3a492df4e9e99aa1e74e324bb30502731fbf7ab5ef75e",
+          "2ffe5b86a3b9a754c3fd39102227b35f01dc1bc8fa2d5794c189080fda9dfa54",
+          "3c8b0851853a4f23b0adc05fee13227b5b5182ee6c96fa1ae96332134d2ff21d",
+          "422d5746ab2ffc19996dd9004ec702e0878ae59a4566320d87b5fd7e247a6ed3",
+          "64c3f8f3e4eb525fbb186c6df8e7cde9909ebfebed55886207a1282a80d3431a"
+        ],
+        "trajectory_sha256": [
+          "22687fb0010a5b08bdba92114926788f8a4bdd35bbb5e6d06e0899b0645add6f",
+          "31e7091f704d8c2b1ee733cb8d86d16171980f1bd169071055ea5d033721307a",
+          "3b36843f4a985cceca56df1866c5ec642f49088ca856ca080d0be5545a42f515",
+          "3c0210ef65ecf8841d1a14d738cb857e1481059623102e850a9f9bdfecd72d52",
+          "6aef906d8f40b0fcdb0d205767fe45f3d21bbd7c69d10c1eb58a4c273aa2e820",
+          "754d25f7c8dc148473128a3132b601926c4d3d935eea53e3dc1e55b569de158f",
+          "7603b87d4f197d2238ec19f5e95d5defe2a22a97647864902782edc5636aebbb",
+          "bac2607b0ba0d1c30caa3849e2480b5ffe46aeeadbf9435b2d13507ae0251f63"
+        ]
+      },
+      "left": "hard_case_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "hard_case_validation"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_003",
+          "presence_007",
+          "presence_008",
+          "presence_009",
+          "presence_011",
+          "presence_034",
+          "presence_041",
+          "presence_050"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 243,
+        "overlap_count": 41,
+        "right_unique_count": 41
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 8000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 1356,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 14,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 8,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 14,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 8
+      },
+      "exact_overlap_examples": {
+        "full_visual_state_label_sha256": [
+          "2126ffa4acf7df7a7dcc3818e855fc32593ba0cd73a3268efacb3fd533389baa",
+          "2bd937cb78ed1d9c62daf319eff99bb9de73ea9785c16005eb52ac42f82d3c9f",
+          "3c2b508a432086873827aa73def78318e1460e7c113d28d789bc54934bcfa138",
+          "4ca3f6f3cb9fda58b2f52c4370eff6057bce352751f1fdf02b7de2c2b9e5f207",
+          "545ae581059450710422c7213a2dca7ce86abfa90f0e9e036e845a0513f43620",
+          "87ab19c60a03cff5c789329181cb21b665bbec7dd12540d38dcece30d6f47ca9",
+          "87cd3cc3c9c553ed34e0b175c31c7182f991786f5eab6e80ffb70f664dfc36a5",
+          "aa59e8c69384123d3f070ee309e13037632fd1fc845c4624a9f825bb6b56295c"
+        ],
+        "geometry_fingerprints": [
+          "00b9c03b243ccf7d707a5041d79c9d4876a6aa9d2b73c17df3a313faea375b52",
+          "0ccc3420e594089421b2badc17abd038b7c8190790b03e080ed4dd18f2f3d523",
+          "16f7d588a3b14accf34b8a56d628ecb87b5e4441085aac7e5fb44661f94cb4ba",
+          "3d3f726baf619dbb4c4a42b42d9aa48679b71e967182cb9ac1931951c2673919",
+          "87c68c6d8fd17bc61fffd0be00898db0a3af28771359f95dd384aee332cf6f7c",
+          "92ff4a217764877f6568ae531eaad1d73baa7454aea3dac8690e21b08f7fb24c",
+          "b5138fe40c5e463aa000056cb555342000cd445e22cce8a2aa66f6311b544511",
+          "de04bc407c7de4ce3c893415fb9f02dfc1d47ee0619f2c11d47e37245a8e47ba"
+        ],
+        "semantic_state_sha256": [
+          "2758c37f64db8c36df77a24ef464a2270b66f679982e6167281232aa4e9621c0",
+          "301eaf22f6b8df510cd0abbe179d6d417fc594552a351c36b480bcc83f5fb8ec",
+          "332f4132b99b8902b317c088b6221d3ff6d9aa3542d39ca13d2555e668629da6",
+          "3ce4c531557949b70f752246a47dd7dd4f6f20ea6096be961efcce771f2e505f",
+          "4529b0374faff7db60da45cef6799a8e2ac4d75899124b75b9666452f897db5d",
+          "52b12b1d2b9c393b836d24aac8fb2c4f9d414836812b27d77fb88aca46723d71",
+          "5a136425f776c389f0b71a7c744d3b1fac090480bf55ab07c325df6dbfac78fe",
+          "6d8814d0cef07376b67931849f2015276a6ad148091b383590250588d5660687"
+        ],
+        "trajectory_sha256": [
+          "3b5e27703ab115cc27d7f433c7cb1851e7f4cb42c2393d5e364bffa55234ce21",
+          "4287e61670e64154d6adaaa9b76615c97c845b4c9cf0c2c25983aab6902258f6",
+          "8a48e82eebb90c626f9b6c117973330a9af951666133432802a0c18083d2b288",
+          "b2bae11d87e786ba2a36792b696bb5c2e660108391afb26fe4b7ec519e0f1639",
+          "c6b35052328fe5b2c3781178e2bfa882c65dae879b64d20cf9c9a9805b52c393",
+          "d270bb0ed3619d31acfc9df207063e0d5a7e7b8cfa65cb9eb191825480142194",
+          "edcc63a6090f70e7a1b27ebcb701570e9d29164a4e37b728c2fc2663e4de72c9",
+          "f09f8e708ebec23f39201730927c5d4b8ac6eeaed29f0d3503f949b44fa285d9"
+        ]
+      },
+      "left": "hard_case_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "development_canary"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_001",
+          "presence_002",
+          "presence_003",
+          "presence_004",
+          "presence_005",
+          "presence_006",
+          "presence_007",
+          "presence_008"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 243,
+        "overlap_count": 229,
+        "right_unique_count": 239
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 8000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 2080,
+          "right_row_count": 1040
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 1356,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 0,
+          "right_row_count": 1040
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 4000,
+          "left_row_count": 4000,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "hard_case_train",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 0,
+        "values": []
+      },
+      "right": "preregistered_final_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_003",
+          "presence_007",
+          "presence_008",
+          "presence_009",
+          "presence_063",
+          "presence_095",
+          "presence_096",
+          "presence_111"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 125,
+        "overlap_count": 28,
+        "right_unique_count": 41
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "configuration_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1024,
+          "left_row_count": 512,
+          "right_extracted_value_count": 512,
+          "right_row_count": 256
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 512,
+          "right_extracted_value_count": 0,
+          "right_row_count": 256
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 256,
+          "right_row_count": 256
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "hard_case_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 1,
+        "values": [
+          31520260730
+        ]
+      },
+      "right": "development_canary"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_001",
+          "presence_002",
+          "presence_003",
+          "presence_004",
+          "presence_005",
+          "presence_006",
+          "presence_007",
+          "presence_008"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 125,
+        "overlap_count": 117,
+        "right_unique_count": 239
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 1024,
+          "left_row_count": 512,
+          "right_extracted_value_count": 2080,
+          "right_row_count": 1040
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 512,
+          "right_extracted_value_count": 0,
+          "right_row_count": 1040
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 512,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "hard_case_validation",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 0,
+        "values": []
+      },
+      "right": "preregistered_final_test"
+    },
+    {
+      "abstract_presence_configuration_overlap": {
+        "examples": [
+          "presence_003",
+          "presence_007",
+          "presence_008",
+          "presence_009",
+          "presence_011",
+          "presence_034",
+          "presence_041",
+          "presence_050"
+        ],
+        "interpretation": "factor-level support overlap; it is not sample leakage by itself",
+        "left_unique_count": 41,
+        "overlap_count": 41,
+        "right_unique_count": 239
+      },
+      "exact_metric_coverage": {
+        "capture_configuration_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_core_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "configuration_family_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "episode_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_label_row_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "full_visual_state_label_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "generated_variant_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "geometry_fingerprints": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "image_pair_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "individual_image_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 512,
+          "left_row_count": 256,
+          "right_extracted_value_count": 2080,
+          "right_row_count": 1040
+        },
+        "sample_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_families": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "scenario_ids": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "semantic_state_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        },
+        "source_scenario_ids": {
+          "comparison_status": "not_comparable_missing_field",
+          "left_extracted_value_count": 0,
+          "left_row_count": 256,
+          "right_extracted_value_count": 0,
+          "right_row_count": 1040
+        },
+        "trajectory_sha256": {
+          "comparison_status": "comparable",
+          "left_extracted_value_count": 256,
+          "left_row_count": 256,
+          "right_extracted_value_count": 1040,
+          "right_row_count": 1040
+        }
+      },
+      "exact_overlap_counts": {
+        "capture_configuration_fingerprints": 0,
+        "configuration_core_family_ids": 0,
+        "configuration_family_ids": 0,
+        "episode_ids": 0,
+        "full_label_row_sha256": 0,
+        "full_visual_state_label_sha256": 0,
+        "generated_variant_sha256": 0,
+        "geometry_fingerprints": 0,
+        "image_pair_sha256": 0,
+        "individual_image_sha256": 0,
+        "sample_ids": 0,
+        "scenario_families": 0,
+        "scenario_ids": 0,
+        "semantic_state_sha256": 0,
+        "source_scenario_ids": null,
+        "trajectory_sha256": 0
+      },
+      "exact_overlap_examples": {},
+      "left": "development_canary",
+      "numeric_seed_overlap": {
+        "interpretation": "numeric seed reuse only; generator namespaces and exact artefacts are audited separately",
+        "overlap_count": 0,
+        "values": []
+      },
+      "right": "preregistered_final_test"
+    }
+  ],
+  "schema_version": "room315.dataset_partition_overlap.post_hoc.v1",
+  "sealed_evidence_policy": {
+    "modifies_preregistered_or_historical_evidence": false,
+    "relationship": "supplemental comparison performed after all listed partitions had already been materialized and the current Final Test had been evaluated"
+  },
+  "summary": {
+    "interpretation": "Exact artefact/identifier/variant overlap, abstract presence-factor overlap, and numeric seed reuse are separate claims and must not be conflated.",
+    "pairs_not_comparable_by_metric": {
+      "capture_configuration_fingerprints": 15,
+      "configuration_core_family_ids": 15,
+      "configuration_family_ids": 15,
+      "episode_ids": 0,
+      "full_label_row_sha256": 0,
+      "full_visual_state_label_sha256": 0,
+      "generated_variant_sha256": 0,
+      "geometry_fingerprints": 0,
+      "image_pair_sha256": 0,
+      "individual_image_sha256": 0,
+      "sample_ids": 0,
+      "scenario_families": 0,
+      "scenario_ids": 0,
+      "semantic_state_sha256": 0,
+      "source_scenario_ids": 21,
+      "trajectory_sha256": 0
+    },
+    "pairs_with_abstract_presence_configuration_overlap": 18,
+    "pairs_with_numeric_seed_overlap": 15,
+    "pairs_with_overlap_by_exact_metric": {
+      "capture_configuration_fingerprints": 0,
+      "configuration_core_family_ids": 0,
+      "configuration_family_ids": 0,
+      "episode_ids": 0,
+      "full_label_row_sha256": 0,
+      "full_visual_state_label_sha256": 2,
+      "generated_variant_sha256": 0,
+      "geometry_fingerprints": 2,
+      "image_pair_sha256": 0,
+      "individual_image_sha256": 0,
+      "sample_ids": 0,
+      "scenario_families": 0,
+      "scenario_ids": 0,
+      "semantic_state_sha256": 2,
+      "source_scenario_ids": 0,
+      "trajectory_sha256": 2
+    },
+    "pairwise_comparison_count": 21,
+    "partition_count": 7
+  }
+}

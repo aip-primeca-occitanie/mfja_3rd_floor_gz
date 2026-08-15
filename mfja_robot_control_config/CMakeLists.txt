@@ -134,6 +134,7 @@ install(
     scripts/room_315_arbitrary_subset_visual_v2.py
     scripts/room_315_arbitrary_subset_capture_v2.py
     scripts/room_315_grouped_visual_splits.py
+    scripts/room_315_dataset_partition_overlap_post_hoc.py
     scripts/room_315_experiment_a_v3r1_package.py
     scripts/room_315_experiment_a_v3r1_corrected_package.py
     scripts/room_315_kairos_visual_training_package.py
@@ -212,6 +213,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(
     test_room315_visual_v3r1_dataset
     test/test_room315_visual_v3r1_dataset.py
+  )
+  ament_add_pytest_test(
+    test_room315_dataset_partition_overlap_post_hoc
+    test/test_room315_dataset_partition_overlap_post_hoc.py
   )
   ament_add_pytest_test(
     test_room315_visual_v3_dataset
