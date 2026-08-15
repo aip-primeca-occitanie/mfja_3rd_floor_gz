@@ -206,6 +206,50 @@ def test_no_test_basename_lock_applies_to_configured_artifacts(tmp_path):
         trainer.load_v4_config(config_path)
 
 
+def test_superseded_legacy_partitions_are_rejected_but_train_and_init_remain_allowed(
+    tmp_path,
+):
+    legacy_root = Path(
+        '/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730'
+    )
+    cases = (
+        ('rows', legacy_root / 'validation.jsonl', 'Grouped Validation'),
+        (
+            'labels',
+            legacy_root / 'validation_visual_labels.jsonl',
+            'Grouped Validation',
+        ),
+        ('rows', legacy_root / 'test.jsonl', 'legacy Test'),
+        ('labels', legacy_root / 'test_visual_labels.jsonl', 'legacy Test'),
+    )
+    for field, forbidden, message in cases:
+        raw = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
+        raw['data']['validation'][field] = str(forbidden)
+        config_path = tmp_path / f'config_{field}_{forbidden.name}.json'
+        config_path.write_text(json.dumps(raw), encoding='utf-8')
+        with pytest.raises(trainer.V4TrainerError, match=message):
+            trainer.load_v4_config(config_path)
+
+    assert trainer.assert_current_v4_dataset_input(
+        legacy_root / 'train.jsonl', check_hash=False
+    ) == legacy_root / 'train.jsonl'
+    initialization = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))[
+        'initialization'
+    ]['checkpoint']
+    assert trainer.assert_not_test_path(initialization) == Path(initialization)
+
+
+def test_v4_preflight_guard_rejects_renamed_legacy_partition_content(tmp_path):
+    candidate = tmp_path / 'renamed_validation_rows.jsonl'
+    candidate.write_text('{}\n', encoding='utf-8')
+    forbidden_hash = next(iter(trainer.FORBIDDEN_GROUPED_VALIDATION_HASHES))
+    with pytest.raises(trainer.V4TrainerError, match='Grouped Validation'):
+        trainer.assert_current_v4_dataset_input(
+            candidate,
+            hasher=lambda _path: forbidden_hash,
+        )
+
+
 def test_structured_target_extraction_uses_fixed_order_actual_sizes_and_masks():
     label = _label(
         'sample-1',

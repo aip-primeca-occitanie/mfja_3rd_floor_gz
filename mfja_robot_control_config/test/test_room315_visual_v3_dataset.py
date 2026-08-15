@@ -44,6 +44,35 @@ def test_forbidden_test_hash_is_rejected_for_an_explicit_non_test_path(tmp_path)
         common.assert_allowed_input(candidate, hasher=lambda _path: forbidden_hash)
 
 
+def test_legacy_grouped_validation_path_is_rejected_without_hashing():
+    called = False
+
+    def hasher(_path):
+        nonlocal called
+        called = True
+        raise AssertionError('must not hash a pinned forbidden path')
+
+    forbidden = next(iter(common.FORBIDDEN_GROUPED_VALIDATION_PATHS))
+    with pytest.raises(common.VisualV3Error, match='historical predecessor'):
+        common.assert_allowed_input(forbidden, hasher=hasher)
+    assert called is False
+
+
+def test_renamed_legacy_grouped_validation_content_is_rejected(tmp_path):
+    candidate = tmp_path / 'renamed_rows.jsonl'
+    candidate.write_text('{}\n', encoding='utf-8')
+    forbidden_hash = next(iter(common.FORBIDDEN_GROUPED_VALIDATION_HASHES))
+    with pytest.raises(common.VisualV3Error, match='Grouped Validation'):
+        common.assert_allowed_input(candidate, hasher=lambda _path: forbidden_hash)
+
+
+def test_legacy_training_remains_an_allowed_current_input():
+    assert common.assert_allowed_input(
+        common.DEFAULT_OLD_TRAIN,
+        check_hash=False,
+    ) == common.DEFAULT_OLD_TRAIN
+
+
 def test_quota_plan_is_deterministic_feasible_and_exact():
     first = planner.quota_plan()
     second = planner.quota_plan()

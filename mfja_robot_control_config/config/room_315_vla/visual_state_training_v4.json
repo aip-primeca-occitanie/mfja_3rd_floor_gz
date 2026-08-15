@@ -60,6 +60,8 @@
   "data_roles": {
     "checkpoint_selection": "validation_only",
     "canary": "post-training development regression only",
+    "legacy_grouped_validation": "historical predecessor partition; forbidden as a direct V4 input",
+    "legacy_grouped_test": "consumed historical Test; forbidden as a direct V4 input",
     "test": "forbidden during V4 development and absent from this configuration"
   },
   "initialization": {

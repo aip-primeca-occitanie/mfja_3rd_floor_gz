@@ -71,6 +71,20 @@ FORBIDDEN_TEST_PATHS = {
         'test_visual_labels.jsonl'
     ).resolve(),
 }
+FORBIDDEN_GROUPED_VALIDATION_HASHES = {
+    '5119937c489fc100c73ca6637697044ee7a3b5e37e8ce76c4c542ed80475858a',
+    '218039e54ac0abf3de940f8abf92aff8c91a75333d991eb213a73101939fab71',
+}
+FORBIDDEN_GROUPED_VALIDATION_PATHS = {
+    Path(
+        '/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/'
+        'validation.jsonl'
+    ).resolve(),
+    Path(
+        '/home/tiago/room315_arbitrary_subset_visual_splits_v1_seed31520260730/'
+        'validation_visual_labels.jsonl'
+    ).resolve(),
+}
 
 DEFAULT_CAPTURE_ROOT = Path(
     '/home/tiago/room315_hard_case_visual_v3_capture_seed31520260730'
@@ -125,20 +139,33 @@ def assert_allowed_input(
     hasher: Callable[[Path], str] = sha256_file,
     check_hash: bool = True,
 ) -> Path:
-    """Reject the consumed legacy Test before opening it.
+    """Reject superseded legacy validation/Test inputs before opening them.
 
     Basename and resolved-path checks intentionally precede the optional hash
     check, ensuring the known forbidden files are never opened by this tool.
+    Generic validation basenames remain allowed because the active hard-case
+    validation set legitimately uses them; only the pinned legacy Grouped
+    Validation paths or their exact contents are prohibited.
     """
     path = Path(raw_path).expanduser()
     resolved = path.resolve(strict=False)
     if path.name.lower() in FORBIDDEN_TEST_NAMES or resolved in FORBIDDEN_TEST_PATHS:
         raise VisualV3Error(f'legacy Test input is prohibited: {resolved}')
+    if resolved in FORBIDDEN_GROUPED_VALIDATION_PATHS:
+        raise VisualV3Error(
+            'legacy Grouped Validation is a historical predecessor partition '
+            f'and is not an active development input: {resolved}'
+        )
     if check_hash and path.is_file():
         fingerprint = hasher(path)
         if fingerprint.lower() in FORBIDDEN_TEST_HASHES:
             raise VisualV3Error(
                 f'input content matches a prohibited legacy Test artifact: {resolved}'
+            )
+        if fingerprint.lower() in FORBIDDEN_GROUPED_VALIDATION_HASHES:
+            raise VisualV3Error(
+                'input content matches the historical legacy Grouped Validation '
+                f'partition: {resolved}'
             )
     return path
 

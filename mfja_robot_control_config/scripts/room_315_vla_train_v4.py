@@ -27,7 +27,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
@@ -54,6 +54,11 @@ from room_315_visual_model_v4 import (  # noqa: E402
 from room_315_visual_state_dataset import (  # noqa: E402
     normalize_visual_state_labels,
     validate_visual_model_input,
+)
+from room_315_visual_v3_common import (  # noqa: E402
+    FORBIDDEN_GROUPED_VALIDATION_HASHES,
+    VisualV3Error,
+    assert_allowed_input as assert_allowed_current_visual_input,
 )
 
 
@@ -163,6 +168,36 @@ def assert_not_test_path(path: Path | str, *, context: str = 'path') -> Path:
     return candidate
 
 
+def assert_current_v4_dataset_input(
+    path: Path | str,
+    *,
+    context: str = 'dataset input',
+    hasher: Callable[[Path], str] | None = None,
+    check_hash: bool = True,
+) -> Path:
+    """Reject superseded legacy partitions while allowing active V4 inputs.
+
+    The legacy Training rows remain a valid V4 replay source.  The predecessor
+    Grouped Validation and consumed legacy Test do not.  Exact resolved paths
+    are rejected before opening; optional content hashes also reject renamed
+    or copied versions during preflight.
+    """
+
+    keyword_arguments: dict[str, Any] = {'check_hash': check_hash}
+    if hasher is not None:
+        keyword_arguments['hasher'] = hasher
+    try:
+        candidate = assert_allowed_current_visual_input(
+            path,
+            **keyword_arguments,
+        )
+    except VisualV3Error as exc:
+        raise V4TrainerError(
+            f'{context} is not an active V4 dataset input: {exc}'
+        ) from exc
+    return assert_not_test_path(candidate, context=context)
+
+
 def _read_json_object(path: Path) -> dict[str, Any]:
     assert_not_test_path(path, context='JSON configuration')
     try:
@@ -217,10 +252,18 @@ def _resolve_config_paths(config: dict[str, Any]) -> dict[str, Any]:
                 raise V4TrainerError(
                     f'configured path {".".join(trail)} must be a non-empty string'
                 )
-            candidate = assert_not_test_path(
-                Path(value).expanduser(),
-                context='configured path',
-            ).resolve()
+            raw_path = Path(value).expanduser()
+            if trail[-1] in {'rows', 'labels'}:
+                candidate = assert_current_v4_dataset_input(
+                    raw_path,
+                    context='configured dataset path',
+                    check_hash=False,
+                ).resolve()
+            else:
+                candidate = assert_not_test_path(
+                    raw_path,
+                    context='configured path',
+                ).resolve()
             return str(candidate)
         return value
 
@@ -286,8 +329,15 @@ def _validate_source_spec(spec: Any, context: str) -> None:
         if name not in spec:
             raise V4TrainerError(f'{context} is missing {name}')
     _positive_int(spec['expected_rows'], f'{context}.expected_rows')
-    for name in ('dataset_root', 'rows', 'labels'):
-        assert_not_test_path(spec[name], context=f'{context}.{name}')
+    assert_not_test_path(
+        spec['dataset_root'], context=f'{context}.dataset_root'
+    )
+    for name in ('rows', 'labels'):
+        assert_current_v4_dataset_input(
+            spec[name],
+            context=f'{context}.{name}',
+            check_hash=False,
+        )
 
 
 def _validate_config(config: dict[str, Any]) -> None:
@@ -541,7 +591,7 @@ def _validate_config(config: dict[str, Any]) -> None:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    assert_not_test_path(path, context='JSONL artifact')
+    assert_current_v4_dataset_input(path, context='JSONL artifact')
     if not path.is_file():
         raise V4TrainerError(f'JSONL artifact does not exist: {path}')
     rows: list[dict[str, Any]] = []
@@ -621,8 +671,12 @@ def load_paired_source(
     dataset_root = assert_not_test_path(
         spec['dataset_root'], context=f'{source}.dataset_root'
     ).resolve()
-    rows_path = assert_not_test_path(spec['rows'], context=f'{source}.rows').resolve()
-    labels_path = assert_not_test_path(spec['labels'], context=f'{source}.labels').resolve()
+    rows_path = assert_current_v4_dataset_input(
+        spec['rows'], context=f'{source}.rows', check_hash=False
+    ).resolve()
+    labels_path = assert_current_v4_dataset_input(
+        spec['labels'], context=f'{source}.labels', check_hash=False
+    ).resolve()
     if not dataset_root.is_dir():
         raise V4TrainerError(f'dataset_root is not a directory: {dataset_root}')
     rows = _read_jsonl(rows_path)
