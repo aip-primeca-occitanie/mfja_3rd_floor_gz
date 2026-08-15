@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1] / 'scripts'
 if str(SCRIPT_DIR) not in sys.path:
@@ -33,12 +35,41 @@ OLD_REPLAY_AUDIT = Path(
 )
 
 
+@pytest.fixture(scope='module', autouse=True)
+def isolated_prior_inference_artifacts(
+    tmp_path_factory: pytest.TempPathFactory,
+):
+    """Keep compatibility contracts independent of production ledgers."""
+    isolated = tmp_path_factory.mktemp('coverage-compat-inference-state')
+    patch = pytest.MonkeyPatch()
+    patch.setattr(
+        coverage_v2,
+        'FORBIDDEN_PRIOR_INFERENCE_ARTIFACTS',
+        (isolated / 'attempt_ledger', isolated / 'outputs'),
+    )
+    yield
+    patch.undo()
+
+
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
         encoding='utf-8',
     )
+
+
+def test_prior_inference_guard_remains_fail_closed(tmp_path, monkeypatch) -> None:
+    consumed = tmp_path / 'attempt_ledger'
+    consumed.mkdir()
+    monkeypatch.setattr(
+        coverage_v2,
+        'FORBIDDEN_PRIOR_INFERENCE_ARTIFACTS',
+        (consumed,),
+    )
+    config = json.loads(CONFIG.read_text(encoding='utf-8'))
+    with pytest.raises(canonical.FinalTestError, match='inference attempt'):
+        compatibility._validate_v2_source(config)
 
 
 def test_config_and_cli_are_evaluator_canonical_without_evaluate() -> None:
@@ -103,7 +134,27 @@ def test_compatibility_manifest_is_exact_v2_with_exact_v1_prefix() -> None:
 
 def test_evaluator_contract_materializer_accepts_control_only_fixture(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    environment = {
+        'python_executable': '/test/python',
+        'python_prefix': '/test',
+        'python_base_prefix': '/test',
+        'python_implementation': 'CPython',
+        'python_version': '3.test',
+        'platform_system': 'Linux',
+        'platform_release': 'test',
+        'platform_machine': 'x86_64',
+        'byteorder': 'little',
+        'torch_version': 'test',
+        'torch_cuda_build': 'test',
+        'cudnn_version': 1,
+        'cuda_available': True,
+        'cuda_device_count': 1,
+        'cuda_devices': [{'index': 0, 'name': 'test'}],
+        'package_versions': {},
+    }
+    monkeypatch.setattr(evaluator, '_environment_snapshot', lambda: environment)
     root = tmp_path / (
         'room315_visual_v4_final_test_seed3152026081101_compatfixture'
     )

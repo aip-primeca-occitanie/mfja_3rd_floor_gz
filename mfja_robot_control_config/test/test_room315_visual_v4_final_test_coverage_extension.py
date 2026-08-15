@@ -28,12 +28,43 @@ CONFIG = (
 )
 
 
+@pytest.fixture(scope='module', autouse=True)
+def isolated_prior_inference_artifacts(
+    tmp_path_factory: pytest.TempPathFactory,
+):
+    """Keep pre-inference unit contracts independent of production ledgers."""
+    isolated = tmp_path_factory.mktemp('coverage-extension-inference-state')
+    patch = pytest.MonkeyPatch()
+    patch.setattr(
+        extension,
+        'FORBIDDEN_PRIOR_INFERENCE_ARTIFACTS',
+        (isolated / 'attempt_ledger', isolated / 'outputs'),
+    )
+    yield
+    patch.undo()
+
+
 @pytest.fixture(scope='module')
-def materialized() -> tuple[dict, dict, list[dict]]:
+def materialized(
+    isolated_prior_inference_artifacts: None,
+) -> tuple[dict, dict, list[dict]]:
     config = extension.load_config(CONFIG)
     references = v1._reference_index(config)
     rows = extension.materialize_plan(config, references)
     return config, references, rows
+
+
+def test_prior_inference_guard_remains_fail_closed(tmp_path, monkeypatch) -> None:
+    consumed = tmp_path / 'attempt_ledger'
+    consumed.mkdir()
+    monkeypatch.setattr(
+        extension,
+        'FORBIDDEN_PRIOR_INFERENCE_ARTIFACTS',
+        (consumed,),
+    )
+    config = json.loads(CONFIG.read_text(encoding='utf-8'))
+    with pytest.raises(v1.FinalTestError, match='inference attempt'):
+        extension._validate_v1_control_evidence(config)
 
 
 def test_configuration_records_pre_inference_reason_and_exact_counts() -> None:
