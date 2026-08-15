@@ -1,77 +1,47 @@
 \chapter{Conclusion}
 \label{chap:conclusion}
 
-The four objectives were completed in simulation.
-Objectives O1 and O2 produced a maintainable ROS~2 Jazzy and Gazebo Harmonic
-environment with selective robot launch, calibrated rail cells, identifiable
-shuttles and switch-dependent routes. One all-robot cold start confirmed access
-to the six configured models, and all 96 transport checks passed across the
-geometry, topology, coordination, device and identity functions.
+The four internship objectives were completed in simulation. The project
+delivers a maintainable ROS~2 Jazzy and Gazebo Harmonic environment with
+selective launch, namespaced command and feedback interfaces, and verified
+motion of the industrial and mobile robots. For Room~315 it adds geometrically
+calibrated rail paths, switch-dependent routes, typed contracts, planning and
+supervision, English task grounding and rail-isolated paired-camera perception.
+\Cref{tab:objective-results} maps each objective to its evaluation evidence.
 
-Objectives O3 and O4 extended this foundation with typed command and state
-interfaces, task planning, language interpretation and paired-camera
-perception. The command-producing integration campaigns and the independent
-perception evaluation have distinct scopes. The active schema separates the
-two rail branches, derives side from the fixed identity contract, adds confidence-bearing typed
-state and enforces exact schema/checkpoint allowlists with fail-closed input
-validation.
+The language interface produced the intended outcome in all ten declared cases,
+including clarification, rejection and cancellation. The complete
+request-to-motion path succeeded in all 12 isolated cold-start runs; every final
+effect was verified and every controller stopped. The postcondition,
+supervision, planning, replanning and observation records are reported in
+\cref{sec:v4-closed-loop-campaign}.
 
-The language interface also produced the intended outcome in all ten evaluation
-cases, including clarification, rejection and cancellation.
+The independent one-shot Final Test evaluated 4,680 visible shuttle instances
+across 1,040 Gazebo scenes. Public-segment
+top-1 accuracy reached 99.9359\%, while joint
+segment and longitudinal accuracy at
+\(\lvert\Delta s_{ratio}\rvert\leq0.05\) reached 90.8974\%; all 80 predefined gates passed.
+\Cref{tab:visual-v4-final-test-results} reports the remaining per-rail,
+loaded-state, localisation and bounding-box metrics. The camera
+counterfactuals support the intended rail isolation and enforced camera order.
 
-The complete path from an English request to shuttle motion was exercised in
-12 isolated cold-start runs. Every run reached its intended terminal state; all
-24 recorded step postconditions and all 48 supervisor decisions passed. The
-executive made 24 planning attempts with four occupancy-triggered replans. The
-twelve bags contained 1784 schema-compliant observations, every final
-effect was verified and every controller stopped. This integration result is
-separate from the visual-model Final Test rather than a measurement of it.
+The observation-only checks ran in dry-run mode without issuing control actions.
+The separate closed-loop fault campaign passed 5/5 declared scenarios with
+no false success and stopped controllers. The approved runtime profile is
+limited to \path{gazebo_v4_closed_loop_runtime_only}. Command execution starts
+disabled and requires explicit operator activation; once enabled and given a
+confirmed task, closed-loop planning and execution proceed automatically in
+Gazebo. Physical deployment is not approved. The task gateway, rather than the
+inference node, owns planning-state construction and Gazebo actuation.
 
-Epoch~11 was selected and calibrated on Validation only, then frozen.
-Its one-shot Final Test comprised 1040 independent scenes and 4680 present-shuttle
-instances, with no overlap against training, Validation or Canary in the
-predeclared audit dimensions. Segment top-one accuracy was 99.9359\%, segment
-macro F1 was 99.9117\%, loaded-state accuracy was 99.9145\%, and joint
-segment/longitudinal accuracy was 90.8974\% at
-$|\Delta s_{ratio}|\leq0.05$ (99.0385\% at $0.12$). Correct-segment
-metric-position MAE was \SI{0.01573}{m}, its 95th percentile was
-\SI{0.05850}{m}, and mean bounding-box IoU was 0.8340. The worst supported
-rail--segment-cell recall was 94.6429\%. All 80/80 frozen gates passed: 76
-general acceptance gates and four Test-specific runtime-threshold gates.
-Opposite-camera
-blanking and shuffling caused exactly zero cross-rail output change, directly
-confirming the intended rail isolation; swapping camera order reduced segment
-top-one accuracy by 92.1368 percentage points and confirmed that order must be
-enforced.
+For MFJA, the result is a reusable platform for practical teaching, software
+integration, synthetic-data generation, and planning or perception studies.
+For me, the central lesson was how to divide a broad integration request into
+small, testable components and connect them through explicit contracts. I also
+prepared configuration, regression tests and run instructions so that the host
+team can continue and extend the work.
 
-Observation-only qualification accepted 52 of 55 paired shadow frames without
-processing errors or wrong-side identities; all seven acceptance scenes
-completed with 53/53 exact planning-tolerance reobservations; all eight injected
-faults were rejected fail closed; and the separately allowlisted rollback
-smoke passed. These records were dry-run only. The closed-loop fault campaign
-passed 5/5 scenarios with 424 schema-compliant observations,
-no false success and every controller disabled. The positive and fault reports
-are bound into a manually approved
-\code{active\_closed\_loop\_runtime} profile with scope
-\path{gazebo_v4_closed_loop_runtime_only}. The inference node's dry-run fusion
-guard prevents direct ProblemExpert mutation, while the separately authorised
-task gateway owns the Gazebo planning and actuation path. Automatic activation
-and physical deployment remain forbidden.
-A B01 partial runtime smoke also passed with 88 schema-compliant observations,
-one verified actuating step and a stopped final controller; this
-single selected case confirms the authorised bundle but does not replace the 12/12
-campaign.
-
-For MFJA, the project provides a reusable platform for practical teaching,
-software integration, synthetic-data generation and further planning or
-perception experiments. For me, the most important lesson was learning how to
-divide an initially broad integration request into smaller parts that I could
-implement and test one at a time. I also prepared the configuration, regression
-tests and run instructions so that the host team can continue using and
-extending the work.
-
-The next steps are to test camera and appearance domain shift, repeat the
-positive and fault campaigns across controlled seeds, exercise timed restart
-and long-duration recovery, and develop a physical-deployment approval
-process. The reported command authority remains restricted to Gazebo; no
-physical deployment is claimed.
+The evaluation priorities are listed in \Cref{tab:remaining-plan}. Within the
+present scope, command authority remains limited to Gazebo; any future transfer
+to the physical MFJA platforms should preserve the same explicit validation,
+supervision and effect-verification boundaries.

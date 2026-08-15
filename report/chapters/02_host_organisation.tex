@@ -9,9 +9,9 @@ carried out at the MFJA site, 1 rue Tarfaya, 31400 Toulouse. As a public
 university, the institution combines higher education, research and knowledge
 transfer. Its official
 Nomenclature d'activités française/Activité principale exercée (NAF/APE) code
-is 85.42Z \citep{univtoulousesirene}, which INSEE classifies as \emph{higher
-education}, including first-, second- and third-cycle university programmes
-\citep{insee8542z}.
+is 85.42Z \citep{univtoulousesirene}, which the French national statistics
+institute (INSEE) classifies as \emph{higher education}, including first-,
+second- and third-cycle university programmes \citep{insee8542z}.
 
 Université de Toulouse has operated as an experimental public institution since
 January 2025. Official figures published for 2026 indicate approximately 39,000
@@ -26,7 +26,7 @@ innovation campus. Its activities cover research and innovation, knowledge and
 skills transfer, and initial and continuing education. According to its official
 presentation, the site brings together more than 1,500 students from 15
 mechanical-engineering programmes associated with Université de Toulouse, INSA
-and ISAE. It supports work in mechanical engineering, manufacturing,
+Toulouse and ISAE-SUPAERO. It supports work in mechanical engineering, manufacturing,
 aeronautics, automation and robotics in collaboration with industrial partners
 and research laboratories \citep{mfjaofficial}.
 
@@ -38,13 +38,20 @@ presented in Chapters~5--6.
 
 \section{The Room 315 robotics environment}
 
-Room~315 contains two flexible transport cells with a common public topology
-but distinct calibrated geometries, each with four work positions associated
-with industrial robots. In the configuration used for this project, the right
-rail serves Yaskawa HC10DT positions~1--2 and Stäubli TX2-60L positions~3--4,
-while the left rail serves Yaskawa HC10 positions~1--2 and KUKA KR6 R900 sixx
-positions~3--4. Each circuit contains outer and inner branches, four switching
-zones, indexing detectors and stoppers. A shuttle may be empty or carry a
+Room~315 contains two flexible transport cells: closed-loop rail systems whose
+independently controlled pallet carriers are termed \emph{shuttles}. The cells
+share one public topology---the canonical segment names and connectivity exposed
+to ROS~2 and planning---but have distinct calibrated geometries, meaning that
+each rail follows its own measured spatial path. Each cell has four numbered
+shuttle slots.
+Four industrial-robot workstations surround the two cells. In the configuration
+used for this project, right-rail slots~1--2 are served by the Yaskawa HC10DT
+workstation and slots~3--4 by the Stäubli TX2-60L workstation; left-rail
+slots~1--2 are served by the Yaskawa HC10 workstation and slots~3--4 by the
+KUKA KR6 R900 sixx workstation. Each circuit contains outer and inner branches,
+four switching zones, indexing detectors and stoppers. A switching zone diverts
+a shuttle between branches, an indexing detector reports its alignment or
+presence, and a stopper holds or releases it. A shuttle may be empty or carry a
 payload.
 
 This arrangement brings together several engineering disciplines:
@@ -53,8 +60,10 @@ This arrangement brings together several engineering disciplines:
   \item mechanical layout, computer-aided design (CAD), kinematics and
   collision geometry;
   \item industrial automation, sensors, stoppers and route switching;
-  \item robot middleware, namespacing, timing and distributed interfaces;
-  \item planning, scheduling and multi-agent resource conflicts;
+  \item robot middleware, namespace prefixes that isolate robot interfaces,
+  timing and distributed communication;
+  \item planning, scheduling and resource conflicts among shuttles sharing rail
+  sections;
   \item computer vision, data collection and model evaluation;
   \item human--robot interaction through task-level language.
 \end{itemize}
@@ -69,8 +78,9 @@ the rail topology, device semantics and supervisory constraints.
   \includegraphics[width=0.96\textwidth]{f04_room315_gazebo_overview.png}
   \caption[Gazebo overview of Room~315 and its four robot workstations.]
   {Gazebo view of Room~315. Four industrial-robot workstations surround two
-  rail-transport cells containing eight stopped shuttles. The measured rail
-  geometries and device locations are presented in \cref{chap:transport}.}
+  rail-transport cells containing eight stopped shuttles. The image identifies
+  Slots~1--4 on the left and right rails. The measured rail geometries and device
+  locations are presented in \cref{chap:transport}.}
   \label{fig:room315-orientation}
 \end{figure}
 
@@ -95,10 +105,10 @@ associated with the internship.
   \node[box,below=of mfja] (unit) {Room~315 robotics platforms};
   \node[role,below=of unit] (ops) {\textbf{MFJA platform support}\\Operational knowledge\\Platform access\\Practical organisation};
 
-  \node[box,right=26mm of host] (tutor) {Diane Bury\\Official host tutor};
-  \node[box,right=of tutor] (cosupervisor) {Olivier Stasse\\Scientific co-supervisor};
+  \node[box,right=26mm of host] (tutor) {Diane Bury\\Internship supervisor\\MFJA};
+  \node[box,right=of tutor] (cosupervisor) {Olivier Stasse\\Internship supervisor\\LAAS-CNRS};
   \coordinate (supervisionmid) at ($(tutor)!0.5!(cosupervisor)$);
-  \node[box,below=24mm of supervisionmid] (student) {Ali Ibrahim\\M2 intern};
+  \node[box,below=24mm of supervisionmid] (student) {Ali Ibrahim\\Second-year Master's intern (M2)};
   \node[role,below=of student] (dev) {\textbf{Ali Ibrahim's internship work}\\Architecture and implementation\\Testing and evaluation\\Documentation and handover};
 
   \draw[institutional] (host) -- (mfja);
@@ -114,9 +124,10 @@ associated with the internship.
 \label{fig:organisation}
 \end{figure}
 
-Diane Bury was the official host tutor named for the placement, and Olivier
-Stasse acted as scientific co-supervisor. Together they provided scientific
-direction and reviewed choices related to the platform. MFJA personnel
+Diane Bury and Olivier Stasse were the two internship supervisors, with equal
+supervisory roles. Diane Bury was based at MFJA and Olivier Stasse at
+LAAS-CNRS. Together they provided scientific direction and reviewed choices
+related to the platform. MFJA personnel
 supported access, scheduling and practical organisation. I was responsible for
 the architecture, implementation, evaluation, documentation and handover
 described in \cref{chap:mission}.
@@ -140,13 +151,12 @@ interfaces and documented operating procedures.
 
 Because the host is a public university rather than a commercial company,
 turnover and export revenue are not meaningful indicators of this mission's
-value. No commercial proxy or unsupported financial figure is introduced here.
-For institutional scale only, the university's 2026--2029 strategic document
-reports a 2024 global budget of nearly EUR~474 million and EUR~114 million in
-purchases; these university-wide figures are not presented as project revenue
-or return on investment \citep{univtoulousefigures}. The mission is instead
-assessed through practical reuse, training capacity and reduced integration
-effort. The main benefits are:
+value. To indicate the scale of the institution, the university's 2026--2029
+strategic document reports a 2024 global budget of nearly EUR~474 million and EUR~114 million in
+purchases \citep{univtoulousefigures}. These university-wide figures provide
+context, not a financial return for this project. The value of the mission lies
+instead in practical reuse, training capacity and reduced integration effort.
+The main benefits are:
 
 \begin{itemize}
   \item \textbf{reuse}: one model and launch framework avoids recreating an

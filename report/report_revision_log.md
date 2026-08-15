@@ -64,8 +64,9 @@ remain identified by their source manifests and hashes.
   headline and synthetic/Gazebo-only scope.
 - Split the glossary page into clearly labelled acronym and project-specific
   term sections so that each list has an explicit organising principle.
-- Preserved the generative-AI declaration verbatim; this revision does not
-  alter its wording.
+- Preserved the content of the generative-AI declaration; a later terminology
+  pass changed only `organization`/`optimization` to their British spellings at
+  the author's explicit request.
 - Added one direct future-work sentence to the Conclusion, linking the project
   outcome to the controlled-seed and live-graph fault-injection priorities in
   Chapter 12 while keeping the proposed extension within simulation.
@@ -111,8 +112,8 @@ are byte-identical and share SHA-256
 ## V4 visual-state, Final Test and Gazebo dry-run revision---11 August 2026
 
 This revision updates only the English report. The Arabic report and its
-figures were left unchanged, and the V3 locked-Test bundle remains a preserved
-historical record rather than being rewritten as V4 evidence.
+figures were left unchanged, and the consumed V3 historical-Test bundle remains
+a preserved record rather than being rewritten as V4 evidence.
 
 - Replaced the obsolete joint-head visual-model description with the V4
   split-rail contract: one shared stem through ResNet-18 layer~3, independent
@@ -175,8 +176,9 @@ The retained build log has SHA-256
 
 This revision publishes the English report together with the evaluated visual
 runtime source, active and recovery configurations, tests and lightweight
-evidence package. The Arabic report remains byte-identical, and the
-generative-AI declaration is preserved verbatim.
+evidence package. The Arabic report remains byte-identical. The generative-AI
+declaration retains its content; only two spellings were later standardised to
+British English at the author's explicit request.
 
 - Replaced the predecessor command-path narrative with the completed V4
   positive campaign: 12/12 cold-start cases, 1,784 V4 observations and no V3
@@ -235,18 +237,89 @@ generative-AI declaration is preserved verbatim.
   `33b3a44f2e5e12b34721abcd1b47af609db3b55557c94c6871fa9c6eeb602a3e`.
   The manifest records 67/67 byte-exact payload comparisons and 87 claim
   pointers; the package checksum list contains 69 entries.
-- Updated the Abstract, Résumé, V4 evolution, results, limitations, conclusion,
-  evidence ladder and training-pipeline figure to distinguish staged
-  pre-promotion evidence from the final active Gazebo runtime.
+- Synthesised the Abstract, Résumé, visual-model development, runtime,
+  results, limitations and conclusion around one canonical location for each
+  detailed result. Removed duplicate summary tables and the redundant compiled
+  interface appendix while retaining the reproducibility appendix and the
+  external runbook/interface documentation.
 - Preserved the predecessor campaign, source snapshot, model records and report
   freezes as explicitly historical evidence rather than deleting or relabelling
   them as current V4 results.
+- Clarified the dataset lineage without changing the experimental record: the
+  256-scenario Grouped Validation selected predecessor epoch 14 and therefore
+  indirectly affected V4 backbone initialisation; the separate 256-scenario
+  predecessor Test was opened once on 30 July 2026 and is now a consumed,
+  denylisted historical partition. The active roles belong to hard-case
+  Validation, the post-selection Development Canary and the preregistered Final
+  Test; Final-Test independence does not imply presence-configuration
+  disjointness.
 
-The final `make check` produced an 88-page A4 PDF (3,542,433 bytes) with no
+The final `make check` produced a 73-page A4 PDF (3,486,164 bytes) with no
 undefined references or citations and no overfull boxes. `main.pdf` and the
 named delivery PDF are byte-identical, with SHA-256
-`31f107aa8bf9ff9e666dc7537f0fb84c23caac90f0f0e2a200a1872d148f55bd`.
+`c1fdaeff971765e48e7adfa983c3b2539b36ab8fdd60e86a7f6241096d16df82`.
+The retained build log had SHA-256
+`0318604a6d97e7136543724cacce2850e25ce870591c1dd6718aade143396971`;
+the then-current fingerprint record captured the three identities.
+
+## Dataset-role provenance clarification---12 August 2026, post-freeze
+
+After the delivery PDF above had been fingerprinted, the source report was
+clarified without changing any experiment, dataset, checkpoint or sealed
+evidence. The clarification records that the historical 256-scenario Grouped
+Validation selected predecessor epoch~14, while the separate 256-scenario Test
+was consumed once and is no longer an unseen locked partition. It also narrows
+Final-Test independence to its procedural and audited exact-artifact scope;
+abstract presence configurations recur across generated partitions.
+
+A separate post-hoc seven-partition overlap supplement and dataset-role
+registry were added for provenance. Current V4 preflight now rejects the two
+legacy 256-scenario row/label partitions by pinned path or content hash while
+continuing to allow legacy Training and the predecessor backbone checkpoint.
+These changes do not retroactively form part of checkpoint selection,
+calibration, promotion or Final-Test acceptance.
+
+The source-only clarification passed `make check`: 73 A4 pages, no undefined
+references or citations, and no overfull boxes. The resulting local
+`main.pdf` has 3,488,249 bytes and SHA-256
+`320560938fef7a73e230b1677b72d5b4fb5fed2d3afcffcc9ae7318778654036`.
+The previously fingerprinted named delivery PDF and retained build records were
+deliberately not overwritten by this post-freeze clarification.
+
+## Reader-context and terminology revision---14 August 2026
+
+This revision incorporates the source-side clarification into the delivery PDF
+without changing any experiment, checkpoint, metric, gate or acceptance result.
+It defines Room 315 at its first Abstract mention as an industrial robotics
+practice site with two rail-transport cells and four industrial-robot
+workstations, simplifies the Abstract's visual result to the joint 90.8974%
+metric, and links the Gazebo-only ending naturally to Chapter 12.
+
+Ambiguous project vocabulary is now defined in the glossary or at first use,
+including dataset counting units and roles, model/runtime layers, calibration
+and threshold types, metric denominators, planning/runtime state, command
+authority, dry-run scope, evidence controls and reproducibility terms. Section
+2.3 and Figure 2.1 use the numbered Slot 1--Slot 4 terminology on both rails.
+The historical Grouped Validation and consumed predecessor Test remain
+distinguished from current hard-case Validation, Canary and Final Test. The
+limitations also disclose the post-hoc target/state support overlap while
+separating it from sample or image reuse.
+
+Repeated explanations were consolidated rather than reducing type size or
+margins. The final `make check` produced a 71-page A4 PDF (4,688,365 bytes),
+with no undefined references/citations or overfull boxes. `main.pdf` and the
+named delivery PDF are byte-identical at SHA-256
+`9e4abfc7860b12506377a9dc7f772ccb821691fb3742ca9aa26ca8dcde15fa74`.
 The retained build log has SHA-256
-`8f3efe415f8f899478e45ec1d13cc26226ce75c8d983ead649870191e69e2dad`;
-the three identities are recorded in
-`evidence/final_report_sha256_2026-08-12.txt`.
+`cf63df35dce81b86c4b4489c67977c9989030a4e62adb6b685a8f654d5f6f538`.
+
+## Final publication synchronisation---15 August 2026
+
+The final `make check` produced a 71-page A4 PDF (4,687,897 bytes), with no
+undefined references or citations and no overfull boxes. `main.pdf` and the
+named delivery PDF are byte-identical at SHA-256
+`32b4d41cd0587c7217096b728ce4133091ec43123cf8997d12e382ea32b38d06`.
+The retained build log has SHA-256
+`94d58bce09dbf080aeebec777a52e2a3722c732a5fd5b3076528d0338c836510`;
+the identities are recorded in
+`evidence/final_report_sha256_2026-08-15.txt`.

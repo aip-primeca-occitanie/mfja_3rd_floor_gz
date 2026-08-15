@@ -30,7 +30,7 @@
     {\color{mfjablue}\bfseries 1. World and robots}\par\smallskip
     {\color{mfjaorange}\bfseries Engineering need:} unify heterogeneous assets, names and topics.\quad
     {\color{mfjablue}\bfseries Implementation:} correct the CAD scene, separate package ownership
-    and launch from a namespaced registry.\quad
+    and launch from a configuration registry that assigns each robot a unique namespace.\quad
     {\color{mfjagreen}\bfseries Result:} select any supported simulated-robot subset.};
 
   \node[stage,below=4mm of s1] (s2) {%
@@ -58,21 +58,21 @@
     {\color{mfjablue}\bfseries 4. Visual and task interfaces}\par\smallskip
     {\color{mfjaorange}\bfseries Engineering need:} interpret English tasks and the current camera scene.\quad
     {\color{mfjablue}\bfseries Implementation:} pair overhead RGB views, keep labels separate from
-    model input, and convert semantic proposals into confirmed task goals.\quad
+    model input, and convert fixed-schema task-field proposals into confirmed task goals.\quad
     {\color{mfjagreen}\bfseries Result:} structured language and visual inputs for planning.};
 
   \node[stage,below=4mm of s4] (s5) {%
-    {\color{mfjablue}\bfseries 5. Planning and supervised execution}\par\smallskip
-    {\color{mfjaorange}\bfseries Engineering need:} convert the current task and state into supervised motion.\quad
-    {\color{mfjablue}\bfseries Implementation:} build a fresh PDDL problem, select one symbolic step,
-    translate it, pass it through the supervisor and check the resulting state.\quad
+    {\color{mfjablue}\bfseries 5. Planning and software-supervised execution}\par\smallskip
+    {\color{mfjaorange}\bfseries Engineering need:} convert the current task and state into software-supervised motion.\quad
+    {\color{mfjablue}\bfseries Implementation:} rebuild the PDDL problem from the latest accepted state, select one symbolic step,
+    translate it, pass it through the software execution supervisor and check the resulting state.\quad
     {\color{mfjagreen}\bfseries Result:} one-step planning and execution that repeats until completion.};
 
   \node[stage,below=4mm of s5] (s6) {%
     {\color{mfjablue}\bfseries 6. Experiments and results}\par\smallskip
     {\color{mfjaorange}\bfseries Engineering need:} measure perception and confirm complete task behaviour.\quad
-    {\color{mfjablue}\bfseries Implementation:} use grouped visual splits, model metrics, software
-    tests and a 12-run cold-start operator-interface campaign.\quad
+    {\color{mfjablue}\bfseries Implementation:} use declared visual partitions, model metrics, software
+    tests and a 12-run clean-launch operator-interface campaign.\quad
     {\color{mfjagreen}\bfseries Result:} model measurements and complete positive runs across both
     rails, all eight identities and five case families.};
 

@@ -1,73 +1,65 @@
-# Report Synthesis and Page-Reduction Report
-
-> Historical synthesis note: the counts below describe an earlier 84-page
-> intermediate build. The current 82-page submission is governed by
-> `report_revision_log.md`, `evidence/ACTIVE_EVIDENCE.md` and the named delivery
-> PDF; this file is retained only to document the earlier reduction work.
+# Final Report Synthesis and Page-Reduction Record
 
 ## Result
 
-The measured PDF was reduced from 93 to 84 A4 pages, a reduction of 9 pages
-(9.7%). This is within the requested 8--12-page range and retains all fifteen
-technical chapters, the bibliography and the three compiled appendices.
+The final synthesis and terminology pass reduced the English report from 88 to
+71 A4 pages, a reduction of 17 pages (19.3%). The university guidance requires at least 40
+pages of significant documentation and warns that excessive volume may indicate
+insufficient synthesis; the final technical narrative remains comfortably above
+that minimum.
 
-| Region | Before | After | Reduction |
-|---|---:|---:|---:|
-| Front matter and generated lists | 15 | 13 | 2 |
-| Chapter 1 | 5 | 2 | 3 |
-| Chapter 3 | 9 | 6 | 3 |
-| Chapter 7 | 7 | 6 | 1 |
-| Other chapters, bibliography and appendices | 57 | 57 | 0 |
-| **Total** | **93** | **84** | **9** |
+No font, margin or figure scaling was used to obtain the reduction. The change
+came from removing repeated explanations and secondary digest inventories,
+consolidating each numerical result at one canonical location, defining opaque
+terms concisely at first use, and directing implementation details to the
+retained runbook and evidence index.
 
 ## Synthesis changes
 
-- Chapter 1 now contains only context/problem, objectives and principal
-  contribution, general method and headline results, and a short report map.
-  Repository and test counts remain in Chapter 12; the six evidence-source
-  groups are consolidated in Appendix A; detailed technical boundaries remain
-  in Chapter 14.
-- The former Figure 1.1 moved to Chapter 5 and was combined with the focused
-  Room 315 view as one two-panel building/cell figure.
-- Chapter 3's obstacle--resolution table is now the sole stage-by-stage
-  synthesis. The six narrative restatements, a duplicate chronology table and
-  repeated final-status material were removed; technical details are reached
-  through chapter cross-references.
-- Figure 7.1 was reduced, given a shorter caption and fixed in the surrounding
-  discussion so it no longer occupies a sparse figure-only page.
-- The Abstract is 292 words and the French Résumé is 316 words. They retain
-  the problem, method, three contributions, two strongest measured outcomes,
-  the simulation-only boundary, the evaluated research-candidate status and
-  institutional value without dataset or test inventories. Candidate
-  classification does not activate the checkpoint or change the default
-  configuration and establishes no physical-actuation or machine-safety authority.
-- The Conclusion remains 422 words after adding the follow-up manual outcome;
-  it is still 18.1\% shorter than the original 515-word version.
-  Detailed dataset, test and checkpoint-governance inventories are referenced to Chapter
-  12 rather than repeated.
-- The final supplementary manual result is a follow-up campaign covering four
-  distinct goal families and five successful runs out of five. The two
-  quantitative-result graphics were combined to absorb this evidence without
-  creating a sparse figure page.
-- Bibliography now appears directly after the Conclusion, followed by
-  Appendices A--C.
+- The Abstract and French Résumé were reduced to one page each while retaining
+  the problem, method, headline measured results and Gazebo-only boundary. The
+  generative-AI declaration retained its content; only two spellings were
+  standardised to British English at the author's request.
+- The visual-model chapter retains the corpus, historical/current partition roles, training, the
+  V3-to-V4 design rationale, the final architecture and the one-shot protocol;
+  detailed measured results remain canonical in Chapter 11.
+- The runtime chapter retains the end-to-end request-to-motion explanation and
+  the B03 walkthrough without repeating interface and safety material already
+  established in Chapters 7--9.
+- Chapter 11 retains the complete campaign matrix, defined metric denominators,
+  principal metric tables,
+  fault/runtime boundaries and objective assessment. A duplicate campaign
+  summary figure and repeated prose were removed.
+- Limitations and perspectives retain all scope boundaries and future-work
+  priorities. The Conclusion now synthesises the contribution instead of
+  repeating the Results chapter.
+- Appendix A remains as a two-page reproducibility index. Detailed per-file
+  hashes stay in `evidence/ACTIVE_EVIDENCE.md` and the checksum-bound evidence
+  package. The former interface appendix is retained as source documentation
+  but is no longer compiled because it duplicated the runbook and Chapters
+  6--10.
 
 ## Final page map
 
 | Region | Final pages |
 |---|---:|
-| Front matter | 1--13 |
-| Chapter 1 | 14--15 |
-| Chapters 2--15 | 16--75 |
-| Bibliography | 76--77 |
-| Appendix A | 78--80 |
-| Appendix B | 81--82 |
-| Appendix C | 83--84 |
+| Front matter and generated lists | 1--13 |
+| Chapter 1 | 14 |
+| Chapters 2--8 | 15--46 |
+| Chapter 9 | 47--52 |
+| Chapter 10 | 53--57 |
+| Chapter 11 | 58--64 |
+| Chapters 12--13 | 65--67 |
+| Bibliography | 68--69 |
+| Appendix A | 70--71 |
 
 ## Validation
 
-The final `make` build succeeds. The PDF is A4 and has resolved citations and
-references, correctly ordered table-of-contents entries, no duplicate
-destinations, no overfull boxes and no LaTeX errors. A page-density scan found
-no remaining low-text narrative or isolated-figure page between the
-Introduction and Conclusion.
+The final `make check` build succeeds as a 71-page A4 PDF with 25 resolved
+bibliography entries, no undefined citations or references and no overfull
+boxes. A page-density scan and visual inspection confirmed that the Abstract,
+Résumé, glossary, Figure 2.1, metric tables, limitations and reproducibility
+index remain readable at A4 print size and that no sparse glossary page remains.
+The named delivery PDF is byte-identical to `main.pdf`; both files are
+4,687,897 bytes with SHA-256
+`32b4d41cd0587c7217096b728ce4133091ec43123cf8997d12e382ea32b38d06`.

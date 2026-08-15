@@ -17,11 +17,11 @@
     at (-7.62,-3.20) {increasing system integration};
 
   \node[complete] (runtime) at (-3.80,0.00)
-    {Active Gazebo runtime\\manual, hash-bound closed-loop authority};
+    {Active Gazebo runtime\\manually approved, hash-identified profile};
   \node[complete] (campaign) at (-3.80,-1.55)
     {Closed-loop qualification\\12/12 positive + 5/5 fault scenarios};
   \node[complete] (finaltest) at (-3.80,-3.10)
-    {Sealed Final Test\\one-shot; 1040 Gazebo scenes};
+    {Final Test\\one-shot; 1,040 Gazebo scenes};
   \node[layer] (offline) at (-3.80,-4.65)
     {Offline development evidence\\language cases; Validation and exposed Canary};
   \node[layer] (integration) at (-3.80,-6.20)
@@ -30,14 +30,14 @@
     {Unit and configuration checks\\geometry, contracts and translation};
 
   \node[purpose] (p1) at (3.45,0.00)
-    {Binds the passed positive and fault reports; automatic activation and
-      physical deployment remain forbidden.};
+    {Requires explicit operator activation; planning and execution then proceed
+      automatically in Gazebo. Physical deployment is not approved.};
   \node[purpose] (p2) at (3.45,-1.55)
     {Shows the request-to-motion path in selected valid scenes and
       fail-closed behaviour under five closed-loop faults.};
   \node[purpose] (p3) at (3.45,-3.10)
-    {Measures the frozen visual model once on 4680 visible targets; Gazebo only,
-      with no control or physical-deployment claim.};
+    {Measures the frozen visual model once on 4,680 visible targets in Gazebo;
+      it does not evaluate control or physical deployment.};
   \node[purpose] (p4) at (3.45,-4.65)
     {Measures the language interface and visual-model development behaviour;
       the exposed Canary is not Test evidence.};

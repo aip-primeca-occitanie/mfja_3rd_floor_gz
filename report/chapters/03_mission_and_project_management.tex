@@ -4,16 +4,15 @@
 
 \section{Mission and work packages}
 
-The signed internship agreement defined the broad official mission,
-\emph{\ReportMissionTitle}: unified ROS~2 access to industrial and mobile robots
-across simulated and real platforms \citep{internshipagreement}. The implemented
-and evaluated scope reported here was limited to simulation; no deployment on
-the physical platforms is claimed. The first practical assignment was more
-specific:
-model Room~315 in Gazebo and establish a usable simulation environment for its
-robotic and transport equipment. Completing this objective ahead of schedule
-left time for a research work package combining overhead-camera perception with
-natural-language task interaction. The internship dates were unchanged.
+The internship title used in this report is
+\emph{\ReportMissionTitle}. The signed agreement identifies the placement,
+host, dates and entrusted activities \citep{internshipagreement}. The work
+reported here concerns simulation; no deployment on physical platforms is
+claimed. The first practical assignment was to model Room~315 in Gazebo and
+establish a usable simulation environment for its robotic and transport
+equipment. Completing this objective ahead of schedule left time for a research
+work package combining overhead-camera perception with natural-language task
+interaction. The internship dates were unchanged.
 
 The implemented work is organised into two phases:
 
@@ -22,28 +21,29 @@ The implemented work is organised into two phases:
   reusable, selectively launched multi-robot and rail simulation foundation.
   \item[Phase 2---neuro-symbolic research] Paired cameras, visual-state
   estimation, validated language goals, PDDL/PlanSys2 and safety-gated
-  neuro-symbolic control.
+  neuro-symbolic control, in which learned proposals are checked before
+  symbolic planning and software-supervised execution.
 \end{description}
 
 The phases describe the project chronology, whereas objectives O1--O4 in
 \cref{chap:introduction} define the units used to assess the completed work.
 The simulation phase established the multi-robot and transport foundations.
 The neuro-symbolic phase extended the typed interfaces and
-connected visual and language inputs to planning, supervised execution and
+connected visual and language inputs to planning, software-supervised execution and
 effect verification.
 
-\section{Chronology and decision gates}
+\section{Chronology and decision milestones}
 
 The internship schedule was fixed from the outset. As shown in
 \cref{fig:timeline}, the technical phases overlap because integration, testing
-and correction continued after each main decision gate.
+and correction continued after each main decision milestone.
 
 \begin{figure}[htbp]
   \centering
   \resizebox{\textwidth}{!}{\input{figures/f03_project_timeline_v2.tex}}
   \caption[Engineering, reporting and defence-preparation chronology.]
   {Internship chronology as of 11 August 2026. Engineering, integration,
-  visual-model validation and sealed final-Test preparation extend through 11 August in
+  visual-model validation and the preregistered Final Test extend through 11 August in
   panel~(a), overlapping the report-focused period that began on 4 August.
   Documentation continues to 18 August; the final period, 18--28 August, is
   reserved for defence-presentation preparation.}
@@ -77,10 +77,11 @@ Requirements were expressed at three levels. Launch arguments, topics and
 runbooks define how operators use the system. Executable contracts and tests
 specify what each component must accept, reject or preserve. Artefact manifests
 and hashes give datasets and models reproducible identities. The main
-requirements across these levels were robot isolation, stable shuttle identity,
+requirements across these levels were robot isolation without unintended
+cross-namespace communication, stable shuttle identity across interfaces,
 partial device updates without unintended changes, current state before planning,
-fixed translation rules and a post-command observation after each
-executed plan step.
+deterministic translation from each symbolic plan step to a typed command and a
+post-command observation after each executed plan step.
 
 Each property was checked where it was implemented: geometry and coordinate
 frames, interface semantics, shared-rail coordination and learned-model output.
@@ -98,35 +99,32 @@ is reported in \cref{tab:objective-results}.
 Within the shared repository, I was responsible for the third-floor and
 Room~315 models; the selective multi-robot launch architecture; calibrated rail
 transport, device logic and typed interfaces; task contracts, PDDL/PlanSys2
-integration and supervised one-step execution; the paired-camera dataset and
+integration and software-supervised one-step execution; the paired-camera dataset and
 visual training pipeline; and the tests, manifests, runbooks and handover
 documentation.
 
 The supervisors provided scientific direction, technical review and knowledge
-of the platform. I used the weekly discussions to present alternatives and the
-information available for decisions that affected shared interfaces, software
-safeguards or experimental claims. Once a decision had been agreed, I was
-responsible for implementing it consistently in the relevant configuration,
-code, tests and documentation.
+of the platform. During the weekly discussions, I presented the alternatives,
+the available data and the consequences for shared interfaces, software
+safeguards and experimental claims. After we agreed on a decision, I implemented it in
+the relevant configuration, code, tests and documentation.
 
 In practice, resource management concerned the fixed schedule, shared platform
 access, simulation and training time, dataset and checkpoint storage, and the
 testing workload. I kept compute-intensive perception and language nodes
 optional, prioritised reusable configuration and regression tests, and prepared
 build and run instructions so that the host could continue using the work.
-No purchasing budget was assigned to me; GPU time, storage capacity, simulation
-time and access to the shared platform were therefore managed as the constrained
-project resources.
+No purchasing budget was assigned to me. The resources I had to manage were GPU
+time, storage capacity, simulation time and access to the shared platform.
 
 \section{Autonomy and reflective engineering examples}
 
 I divided the broad integration objective into testable increments and kept
-early implementation choices reversible. I retained a design only after its
-interfaces and implementation were consistent and the corresponding regression
-tests passed. I brought
-decisions affecting shared interfaces, experimental claims or software
-safeguards to the supervisors for review before finalising them. The following
-two examples show how this process worked in practice.
+early implementation choices reversible. Before keeping a design, I checked
+that its interfaces and implementation were consistent and that the corresponding
+regression tests passed. I discussed decisions affecting shared interfaces,
+experimental claims or software safeguards with the supervisors before
+finalising them. The following two examples show how this worked in practice.
 
 \subsection{Selecting a defensible level of rail fidelity}
 
@@ -142,9 +140,10 @@ repeatable behaviour at the level required by those questions. Mechanical
 effects that could not be supported by the available data were left outside
 the model. I then implemented
 the model, checked the configured geometry and tested routing, sensor feedback
-and slot-arrival behaviour. This decision taught me to match model fidelity to
-the question being studied and to treat missing data, schedule and computing
-capacity as engineering constraints.
+and slot-arrival behaviour. This experience showed me that model fidelity had
+to follow the question being studied. In this case, the missing mechanical data,
+the schedule and the available computing capacity were practical design
+constraints.
 
 \subsection{Choosing PDDL/PlanSys2 over end-to-end VLA control}
 
@@ -153,7 +152,8 @@ that would infer actions directly with VLA and hybrid planning architectures
 discussed with my supervisors. This comparison supported a clear division of
 responsibilities: the visual model estimates the scene
 state from the paired camera images, while PDDL/PlanSys2 determines the action
-sequence, which is then executed through the supervisor and controllers. This
+sequence, whose actions are then authorised by the software execution supervisor
+and applied by the controllers. This
 approach was better suited to Room~315 because its rail topology and device
 rules are explicit, whereas the available dataset contains scene-state labels
 rather than action demonstrations. It also made the plans easier to inspect and
@@ -175,7 +175,7 @@ internship to concrete examples from the project.
 \textbf{Competency} & \textbf{Project example}\\
 \midrule
 Systems analysis & Separation of geometry, perception, planning, supervision
-and actuation-provider ownership\\
+and exclusive command-publication authority\\
 \tablerowrule
 Robotics integration & ROS~2/Gazebo assets, controllers, launch composition,
 namespaces and device feedback\\
@@ -184,7 +184,7 @@ Algorithm design & Arc-length graph, topology-aware routing, reservations,
 clearance and effect checks\\
 \tablerowrule
 AI/ML method & Local language-model integration, leakage-controlled
-paired-image data, grouped splitting and multi-head visual training\\
+paired-image data, declared partitions and separate visual-output heads\\
 \tablerowrule
 Software quality & Typed contracts, focused regression tests, configuration
 manifests and reproducible result records\\
@@ -195,8 +195,6 @@ reviews, diagrams, runbooks, result tables and explicit scope\\
 \end{tabularx}
 \end{table}
 
-These two decisions changed how I assessed technical alternatives. The
-comparisons showed me that each choice had
-to be justified by the available data, the behaviour required in Room~315 and
-the way the result could be tested. That lesson guided the later integration
-work.
+These two decisions changed how I compared technical alternatives. I used three
+questions throughout the later integration work: what data were available, what
+behaviour Room~315 required, and how the result could be tested.

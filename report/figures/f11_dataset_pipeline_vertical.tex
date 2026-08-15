@@ -16,44 +16,44 @@
   \node[number] (n1) at (-7.45,0) {1};
   \node[title,teal] at (-4.90,0) {Build the rail-isolated\\training pool};
   \node[detail,teal] at (2.25,0)
-    {5528 training scenes: 1528 replay scenes + 4000 hard cases;\\
+    {5,528 training scenes: 1,528 legacy grouped scenes + 4,000 hard cases;\\
      pretrained weights initialise training; only the rail-isolated model enters runtime};
 
   \node[number] (n2) at (-7.45,-2.00) {2};
-  \node[title,blue] at (-4.90,-2.00) {Select and calibrate\\on Validation};
+  \node[title,blue] at (-4.90,-2.00) {Select and calibrate\\on hard-case Validation};
   \node[detail,blue] at (2.25,-2.00)
-    {512 scenes / 2254 present shuttles; select epoch 11 and fit\\
-     calibration and runtime thresholds without Final Test access};
+    {512 scenes / 2,254 present shuttles; select epoch 11 and fit\\
+     segment temperature and score floor without Final Test access};
 
   \node[number] (n3) at (-7.45,-4.00) {3};
   \node[title,green] at (-4.90,-4.00) {Freeze checkpoint and\\Final Test protocol};
   \node[detail,green] at (2.25,-4.00)
     {Freeze epoch-11 checkpoint, evaluator, coverage and acceptance rules;\\
-     preregister one-shot execution before opening Final Test data};
+     lock the one-shot protocol before opening Final Test data};
 
   \node[number] (n4) at (-7.45,-6.00) {4};
   \node[title,red] at (-4.90,-6.00) {Fix coverage before\\inference};
   \node[detail,red] at (2.25,-6.00)
-    {Audit the 1024-scene base plan using control metadata only;\\
+    {Check the 1,024-scene base plan using IDs and factor counts only;\\
      no attempt reserved and no prediction or metric inspected};
 
   \node[number] (n5) at (-7.45,-8.00) {5};
   \node[title,orange] at (-4.90,-8.00) {Complete the declared\\coverage};
   \node[detail,orange] at (2.25,-8.00)
-    {Add 16 preregistered stress scenes: 1040 scenes / 2080 images;\\
+    {Add 16 preregistered stress scenes: 1,040 scenes / 2,080 images;\\
      canonical control schemas and byte-identical captured data};
 
   \node[number] (n6) at (-7.45,-10.00) {6};
-  \node[title,blue] at (-4.90,-10.00) {Reserve and run\\exactly once};
+  \node[title,blue] at (-4.90,-10.00) {Lock one attempt and\\run exactly once};
   \node[detail,blue] at (2.25,-10.00)
-    {Evaluate 4680 visible shuttles; no training, checkpoint selection,\\
+    {Evaluate 4,680 visible shuttles; no training, checkpoint selection,\\
      calibration refit or threshold selection on Final Test};
 
   \node[number] (n7) at (-7.45,-12.00) {7};
-  \node[title,green] at (-4.90,-12.00) {Seal the primary\\result};
+  \node[title,green] at (-4.90,-12.00) {Record the final\\result};
   \node[detail,green] at (2.25,-12.00)
-    {Pass 76/76 base gates + 4/4 preregistered runtime-threshold gates;\\
-     immutable result requires human review and grants no actuation authority};
+    {Pass 76/76 base checks + 4/4 frozen-threshold checks;\\
+     the immutable result requires human review and does not enable actuation};
 
   \draw[flow] (n1) -- (n2);
   \draw[flow] (n2) -- (n3);

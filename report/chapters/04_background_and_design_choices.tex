@@ -8,7 +8,10 @@ communication. Topics suit continuous streams, services suit short
 request--response operations and actions suit long-running tasks with feedback
 \citep{ros2jazzyinterfaces}. These distinctions guided the choice of typed
 streams, explicit request--response operations and isolated namespaces for the
-project. The resulting interfaces are presented in
+project. Here, a typed interface has a fixed message schema, discovery allows
+ROS~2 processes to find one another, and a namespace is a name prefix that
+prevents one robot's nodes and topics from colliding with another's. The
+resulting interfaces are presented in
 \cref{chap:multi-robot,chap:interfaces}.
 
 ROS~2 Quality of Service (QoS) policies configure delivery properties such as
@@ -28,8 +31,8 @@ encapsulates models, scene, physics and plugins. SDF also defines sensor
 elements on links or joints, including their type and properties
 \citep{sdfspec}. The Unified Robot Description Format (URDF) remains useful for
 robot kinematic trees and \code{robot\_state\_publisher}. The
-\code{ros\_gz\_bridge} translates selected Gazebo Transport messages to or
-from ROS~2 \citep{gazeborosintegration}.
+\code{ros\_gz\_bridge} translates selected messages between ROS~2 and Gazebo
+Transport, Gazebo's native messaging layer \citep{gazeborosintegration}.
 
 Simulation serves four complementary purposes in this project:
 
@@ -45,8 +48,10 @@ These purposes impose different fidelity requirements. High-resolution visual
 meshes support camera-based observation, while simplified collision geometry
 keeps contact handling efficient and predictable. The shuttle study requires
 continuous, repeatable transport rather than detailed wheel--rail contact
-dynamics; it therefore uses kinematic pose control. The corresponding transport
-assumptions are detailed in \cref{chap:transport}.
+dynamics; it therefore uses kinematic pose control, in which the controller
+prescribes a shuttle pose along the calibrated path instead of simulating
+wheel--rail forces. The corresponding transport assumptions are detailed in
+\cref{chap:transport}.
 
 ISO~23247-1 provides an overview and general principles for a manufacturing
 digital-twin framework, including terms, definitions and framework
@@ -66,7 +71,8 @@ coordinate
 \end{equation}
 Using \cref{eq:sratio}, the controller evaluates position and tangent from
 \(s\), then constructs the shuttle pose and heading. Cubic Hermite
-interpolation provides continuous tangents between calibrated source points. A
+interpolation provides continuous tangents between the ordered CAD/CSV
+centre-line samples after their configured mapping into Gazebo. A
 separate topology graph defines which segments connect for each switch
 assignment. Geometry therefore determines \emph{where the rail is}, while
 topology determines \emph{which route is open}. This relationship is shown in
@@ -99,7 +105,9 @@ as a forward-chaining partial-order planner \citep{popf}.
 Symbolic planning is appropriate for Room~315 because the important decisions
 are discrete and relational: which shuttle is present, which slot is occupied,
 which branch is selected, whether a stopper is open, whether a blocker must
-be staged and whether the goal has been achieved. Continuous motion remains
+be staged and whether the goal has been achieved. Here, a blocker is another
+shuttle occupying the requested route, and staging moves it temporarily to a
+designated interior holding segment. Continuous motion remains
 inside the controller and effect-verification layers.
 
 The planner provides the symbolic sequence, while continuous movement is handled
@@ -157,13 +165,15 @@ open-world constraint generation was unnecessary for the fixed topology.\\
 Neuro-symbolic planning with learned control & Symbolic abstractions and
 low-level continuous-control policies learned from demonstrations & A PDDL
 planner determines the high-level sequence & Learned controller executes each
-planned operator & Closest architectural family; adapted because Room~315 learns
+planned PDDL action & Closest architectural family; adapted because Room~315 learns
 task and scene inputs but retains an explicit controller.\\
 \tablerowrule
-Implemented Room~315 system & Schema-constrained task fields and paired-camera
-state proposal; neither contains a plan or action & PlanSys2/POPF for normal
-planning; the stepwise executive handles one route-normalisation prerequisite &
-Supervisor publishes a typed command; the rail controller applies it &
+Implemented Room~315 system & Fixed-schema task fields and a paired-camera
+structured state candidate that must pass validation; neither contains a plan
+or action & PlanSys2/POPF for normal planning; the stepwise execution component
+may add one explicit preparatory action that returns a shuttle to the canonical
+exterior route & Software execution supervisor publishes a typed command; the
+rail controller applies it &
 Implemented: matches the state-labelled corpus, fixed topology and simulation
 objectives.\\
 \bottomrule
@@ -177,22 +187,25 @@ a neuro-symbolic language-and-vision interface.
 
 \section{Visual-state model}
 
-The perception system uses ResNet-18 as its backbone. The original paper
+The perception system uses ResNet-18 as its visual feature extractor, commonly
+called a backbone. The original paper
 defines the residual architecture and evaluates its 18-layer variant
 \citep{resnet}. The paired-view estimator applies one shared set of low-level
 weights through ResNet \code{layer3} independently to each image. Each view then
-has its own \code{layer4} and identity-query prediction head, with no
-cross-camera feature path. This arrangement reuses generic edges, textures and
+has its own higher-level \code{layer4} and final prediction module (head). Its
+four fixed identity queries are each assigned to one known shuttle on that rail;
+there is no cross-camera feature path. This arrangement reuses generic edges, textures and
 shuttle appearance while allowing rail-specific late features to represent the
 non-symmetric geometries. Side is derived deterministically from the configured
 identity---L1--L4 denote the left rail and R1--R4 the right rail---so the learned
 outputs concentrate on segment, loaded state, bounding box and normalised
 position.
 
-The fixed-camera, fixed-fleet formulation produces the compact state required by
+Here, loaded state means whether the shuttle carries a payload. The fixed-camera,
+fixed-eight-shuttle formulation produces the compact state required by
 the Room~315 demonstrator and remains specific to this room and fleet. Its
 inputs, outputs, presence handling and training process
 are specified in \cref{chap:ai-development}. The simulated command and state
-checks performed by the software supervisor are defined in
+checks performed by the software execution supervisor are defined in
 \cref{chap:interfaces}; their engineering limits are discussed in
 \cref{chap:perspectives}.

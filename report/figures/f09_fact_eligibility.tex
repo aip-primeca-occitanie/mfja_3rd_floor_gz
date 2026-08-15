@@ -31,7 +31,7 @@
   \node[response,right=7mm of unknown] (unknownaction)
     {Recorded; the missing value\\remains explicit};
   \node[consequence,bad,right=7mm of unknownaction] (unknownstop)
-    {Planner input\\withheld};
+    {Not passed\\to the planner};
   \draw[reject] (unknown) -- (unknownaction);
   \draw[reject] (unknownaction) -- (unknownstop);
 
@@ -40,7 +40,7 @@
   \node[response,right=7mm of stale] (staleaction)
     {Recorded; a newer\\observation is required};
   \node[consequence,bad,right=7mm of staleaction] (stalestop)
-    {Planner input\\withheld};
+    {Not passed\\to the planner};
   \draw[reject] (stale) -- (staleaction);
   \draw[reject] (staleaction) -- (stalestop);
 
@@ -49,7 +49,7 @@
   \node[response,right=7mm of conflict] (conflictaction)
     {Recorded with the\\source disagreement};
   \node[consequence,bad,right=7mm of conflictaction] (conflictstop)
-    {Planner input\\withheld};
+    {Not passed\\to the planner};
   \draw[reject] (conflict) -- (conflictaction);
   \draw[reject] (conflictaction) -- (conflictstop);
 

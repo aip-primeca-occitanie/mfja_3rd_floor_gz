@@ -6,16 +6,17 @@
 The MFJA robotics platforms bring together industrial manipulators, a mobile
 robot, transport cells, cameras and programmable devices. Integrating this
 equipment in simulation requires compatible models, coordinate frames,
-namespaces, commands and state descriptions. The challenge was therefore
-broader than constructing a visually accurate Gazebo scene: the simulated
+namespaces, commands and state descriptions. The work went beyond constructing
+a visually accurate Gazebo scene: the simulated
 equipment also had to behave consistently enough to support routing, planning
 and experimentation.
 
 The project also examined whether camera observations and English requests
 could describe a task without sending motor commands directly. The language and
 vision paths supply information about the request and the scene. PlanSys2
-produces the symbolic sequence, and the supervisor checks each requested step
-before execution. Neither learned model produces a plan or an action vector.
+produces the symbolic sequence, and the software execution supervisor checks
+each requested step before execution. Neither learned model produces a plan or
+an action vector.
 
 \paragraph{Objectives and principal contribution.}
 
@@ -32,7 +33,7 @@ The project pursued four engineering objectives within simulation:
   rules for checking commands and confirming their effects; and
   \item design and evaluate a neuro-symbolic workflow that combines
   natural-language goal interpretation and paired-camera state estimation with
-  PDDL/PlanSys2 planning and supervised execution.
+  PDDL/PlanSys2 planning and software-supervised execution.
 \end{enumerate}
 
 The four objectives form a progression from the simulated environment and its
@@ -49,14 +50,11 @@ before evaluating the complete workflow. The software, dataset and model
 versions used for the reported evaluations are listed in
 \cref{app:reproducibility}.
 
-The complete workflow and the visual model were evaluated separately. The
-frozen visual estimator passed all 80 gates on a one-shot Final Test of 1040 scenes
-and 4680 present-shuttle instances: segment top-1 accuracy was 99.9359\%,
-loaded-state accuracy was 99.9145\%, and joint segment/position accuracy at
-$|\Delta s_{ratio}|\leq0.05$ was 90.8974\%. Independently, all 12 isolated
-English-to-motion runs reached their declared terminal state. These numbers,
-their evidence chain and their simulation-only limits are presented in
-\cref{chap:results}.
+The frozen visual estimator passed all predeclared Final Test acceptance checks,
+while all 12 isolated English-to-motion runs reached their declared terminal
+state.
+\Cref{chap:results} reports the detailed metrics, evidence and simulation-only
+scope.
 
 \paragraph{Report structure.}
 The host environment, mission and principal design choices are introduced in
@@ -65,5 +63,5 @@ then developed in
 \cref{chap:digital-twin,chap:multi-robot,chap:transport,chap:interfaces}, followed
 by the language integration, paired-camera data generation and visual training
 process in \cref{chap:ai-development}. \Cref{chap:neurosymbolic} follows one
-English instruction through planning, supervised motion and result checking,
+English instruction through planning, software-supervised motion and result checking,
 and \cref{chap:results,chap:perspectives} present the results and future work.

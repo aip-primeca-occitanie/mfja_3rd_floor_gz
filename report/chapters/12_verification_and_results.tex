@@ -6,49 +6,32 @@
 
 \subsection{Campaign design and acceptance criteria}
 
-The active perception contract is the rail-isolated schema and its
-hash-identified epoch-11 checkpoint. The closed-loop campaign used a
-predeclared twelve-row test matrix. Each row
-fixed a case identifier, one unique English utterance, its
-predeclared case family and expected grounded goal, together with the rail, active
-identities, initial slot and payload arrangement. Slot requests fixed one
-terminal slot; station requests fixed the set of acceptable station slots. The
-eight B-series rows left their symbolic action sequence to the planner. Only
-the two P-series and two M-series route-clearance rows additionally fixed the
-exact four-step trace that execution had to reproduce. The saved environment
-record identifies the software, language configuration, visual-model
-checkpoint, qualification manifest, runtime configuration and PDDL domain used
-by the campaign. The runner rehashed this declared artifact set and checked
-source/install parity before and after the campaign. Before each case it
-rehashed the checkpoint, while the task gateway reverified the immutable
-qualification record and required its qualification-only Gazebo authorisation
-scope.
+The predefined twelve-row matrix fixed each ID, unique utterance, family,
+expected grounded goal, rail, identities, initial slots and payloads. Slot goals
+fixed one terminal; station goals an admissible set. B01--B08 left actions to
+the planner; P01--P02 and M01--M02 also required an exact four-step clearance
+trace. The environment record binds software, language setup, epoch-11 visual
+checkpoint, qualification/runtime manifests and PDDL domain. Before/after the
+campaign the runner rehashed this set and checked source/install parity
+(source equals built ROS overlay); each case rehashed the checkpoint, and the
+gateway verified the immutable qualification record. \emph{Immutable} means
+hash-bound: edits invalidate its declared Gazebo-only component scope, which
+does not authorise an active service or physical use.
 
-Every row used a cold start: a fresh Gazebo process and an isolated ROS domain,
-with no retained task, observation or controller state from another row. Before
-the utterance was entered, the runner waited for the world and scene, both rail
-controllers, both overhead camera streams, the authorised visual runtime,
-the PlanSys2 planner service, the supervisor and the task gateway.
-The matrix assigned six rows to each rail, exercised all eight configured
-identities and partitioned the cases into five mutually exclusive families.
-Four families describe the language or goal form: colour alias, explicit
-identity, station target and payload-qualified nearest. The fifth is a
-route-clearance scenario family whose explicit-identity requests require a
-blocking shuttle to be positioned first. \Cref{tab:campaign-case-results} lists
-every declared row alongside the recorded motion and terminal result.
+Every row used a fresh Gazebo process and case-specific ROS Domain ID, retaining
+no prior task, observation or controller state. The runner awaited the world,
+scene, controllers, cameras, authorised perception, planner, supervisor and
+gateway. Six rows per rail covered all eight identities and five exclusive
+families: colour alias, explicit identity, station, payload-qualified nearest
+and blocker-clearance (\cref{tab:campaign-case-results}).
 
-For each case, the runner entered the instruction, compared the displayed
-interpretation with the expected goal and then replied \code{yes} through the
-same interactive confirmation used in normal operation. The CLI's auto-confirm
-mode was not used. It independently audited every recorded visual observation:
-accepted observations had to carry the declared schema and checkpoint. The
-initial and final observations also had to
-match the declared side, public segment, loaded state and longitudinal
-coordinate within the predeclared tolerance. A row counted as successful only
-when the expected terminal state was reached, every step postcondition passed,
-the required commands passed the supervisor checks and the final DZI and
-stopped-controller readings agreed. The camera recording and ROS bag also had
-to close cleanly.
+The runner compared each displayed interpretation with its expected goal and
+entered interactive \code{yes} (never auto-confirm). Every observation required
+the configured schema/checkpoint; initial/final state also had to match side,
+segment, payload and \(\lvert\Delta s_{ratio}\rvert\leq0.12\). Success required
+the terminal state, all postconditions and supervisor checks, agreeing final
+DZI/stopped-controller readings, and clean camera/ROS-bag closure (a bag is a
+timestamped ROS-message recording).
 
 \begin{table}[htbp]
 \centering
@@ -102,26 +85,31 @@ scenes. The automated suites in \cref{sec:automated-evidence} separately
 exercise stale state, sensor loss, emergency stop and protected-switch
 rejection.
 
-\subsection{Recorded result and claim boundary}
+\subsection{Recorded result and scope}
 
-All 12 planned cases were completed: 12/12 runs succeeded, all 24 recorded
-step postconditions were satisfied (24/24), and all 48 recorded supervisor
-action decisions passed their checks (48/48). Across the twelve runs, the executive
+All 12 planned runs succeeded; all 24 recorded step postconditions were
+satisfied, and all 48 recorded supervisor action decisions passed their checks.
+Across the twelve runs, the executive
 made 24 plan attempts and recorded four occupancy-triggered replan events; it
 recorded no unknown-result retries and issued no safe aborts. All tasks ended
 with \code{status=succeeded} and reason \code{task\_goal\_satisfied}; all final
 effects were verified and every controller was stopped. The twelve bags contain
-1784 schema-compliant observations. Together, the runs trace the
+1,784 schema-compliant observations. Together, the runs trace the
 complete path from twelve distinct English instructions, through visual perception
 and fresh PDDL problem construction, to the expected shuttle movements in the
 selected Gazebo scenes.
 
-The sealed \path{summary.json} is identified by SHA-256
-\path{1504f25742d135c32ea879651336ff22a64cdfb2e09870be81ea7fb68b279479}.
-It records \code{physical\_deployment=false}. This is therefore positive-case
-Gazebo qualification evidence rather than a physical-robot result, a
-reliability estimate or fault-campaign evidence. It is one of the two immutable
-records bound to the runtime authority; no physical deployment is claimed.
+A plan attempt is one planner-service request; an occupancy-triggered replan is
+a new request after observed occupancy changed. An unknown-result retry repeats
+an operation whose effect could not be established, whereas a safe abort ends
+the task without claiming success. The 1,784 observations are counted ROS
+messages carrying the active schema and checkpoint identity, not 1,784
+independent scenes or additional accuracy trials.
+
+The campaign summary records that physical deployment is disabled. These runs
+therefore provide positive-case Gazebo qualification evidence; they do not
+evaluate physical robots, reliability over repeated runs or fault handling.
+The corresponding record is indexed in \cref{app:reproducibility}.
 
 \Cref{fig:b03-camera-evidence} compares the initial and final camera frames from
 case B03 and shows the corresponding change in the simulated scene.
@@ -137,56 +125,59 @@ case B03 and shows the corresponding change in the simulated scene.
   \label{fig:b03-camera-evidence}
 \end{figure}
 
-\Cref{fig:integrated-campaign-summary} gives a compact view of the campaign
-outcomes and coverage.
-
-\begin{figure}[htbp]
-  \centering
-  \resizebox{0.98\textwidth}{!}{\input{figures/f20_integrated_campaign_summary.tex}}
-  \caption[Outcomes and coverage of the twelve-run campaign.]
-  {Outcome counts, planning record and planned coverage of the completed
-  closed-loop campaign. The five case-family counts are mutually exclusive.}
-  \label{fig:integrated-campaign-summary}
-\end{figure}
 \FloatBarrier
 
-\section{Sealed Final Test and runtime qualification}
+\section{Final Test and runtime qualification}
 \label{sec:visual-v4-results}
 
-The rail-isolated output contract addresses the camera asymmetry directly. Its
-fixed slot order assigns L1--L4
-to the left image branch and R1--R4 to the right image branch; there is no
-learned rail-side output. For every fixed identity the learned outputs are the
-14 public-segment logits, two loaded-state logits, four bounding-box values and
-one normalised longitudinal coordinate. Thus the network emits 168 learned
-values, while side, segment length and metric position are derived from the
-identity and fingerprinted topology contract. The 200-value compatibility
-adapter is diagnostic only and is explicitly ineligible as a control input.
+The Final Test evaluates \cref{fig:visual-model-contract}. Its 168 learned
+values exclude topology-derived side, segment length and metric position; the
+diagnostic 200-value legacy adapter only reformats V4 and cannot enter control.
 
-\subsection{One-shot sealed Final Test}
+Dataset names retain the roles defined in \cref{chap:ai-development}:
+Validation is the current 512-scene hard-case set, while the 30 July 2026
+predecessor Test is consumed/denylisted and is not this Final Test.
 
-Epoch~11 was selected using Validation only. The checkpoint has SHA-256
-\path{869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d}.
-The declared Final Test combines 1024 base scenes with 16 stress scenes required
-by the frozen coverage criteria, giving 1040 scenes and 2080 images. Its control
-envelopes use the evaluator's canonical schemas; the captured data were fixed
-before inference, and no predictions were inspected while checking coverage.
+\subsection{One-shot Final Test}
 
-The global one-shot reservation was created before the evaluator loaded rows,
-labels or images for inference. The completed attempt then evaluated the unchanged checkpoint once on
-4680 visible-shuttle targets. It performed no training, checkpoint selection,
-threshold selection or calibration refit, and accessed neither the development
-Canary nor Test data outside the declared partition. The result passed all
-80/80 frozen gates: 76
-base gates and four preregistered Final Test runtime-threshold gates. The relative evidence
-package is
+Frozen epoch~11 ran once under the protocol in \cref{chap:ai-development}:
+1,024 base plus 16 stress scenes, totalling 1,040 scenes, 2,080 images and 4,680
+visible targets.
+Coverage used IDs/support counts without predictions, pixels or labels; no
+training, selection or calibration refit occurred. The run stayed within its
+partition and passed 76 base plus four runtime-threshold gates. Evidence is at
 \path{report/evidence/room315_visual_v4_submission_2026-08-11/final_test}.
+
+A gate is one predeclared Boolean acceptance check. The 76 base gates cover
+model quality and support across the global set, rails, segments, target zones,
+position bins and scene strata, plus the camera counterfactuals. The four
+runtime-threshold gates check minimum segment-confidence coverage, loaded-state
+coverage, joint-confidence coverage and selective segment accuracy. ``Base''
+therefore denotes the common V4 acceptance suite, not the 1,024-scene base plan;
+the 80 gates are checks on the same evaluation, not 80 independent trials.
+
+As defined in \cref{chap:ai-development}, audited disjointness covers scene IDs,
+canonical generation-payload SHA-256 fingerprints, image bytes and complete
+label rows, not recurring presence configurations.
+
+All classification metrics below use the 4,680 visible-shuttle targets defined
+in \cref{chap:ai-development}. Top-1/top-2 accuracy asks whether the labelled
+public segment is the highest-scoring/one of the two highest-scoring classes.
+Supported-segment macro F1 averages per-segment F1 only over classes represented
+in the labels. A rail--segment cell is one side-by-segment stratum. The joint
+metric requires both the correct segment and the stated absolute normalised-
+coordinate tolerance. Correct-segment $s_m$ errors are conditional on a correct
+segment; p95 is their 95th percentile. Bounding boxes use normalised top-left
+$x,y$, width and height, and IoU measures predicted/labelled overlap. Boundary
+and switch zones are the preregistered target strata near segment boundaries and
+controlled switch regions, respectively; their exact bounds remain in the
+evaluation controls.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3.5pt}
-\caption{Principal metrics from the one-shot sealed Final Test.}
+\caption{Principal metrics from the one-shot Final Test.}
 \label{tab:visual-v4-final-test-results}
 \begin{tabularx}{\textwidth}{@{}X>{\centering\arraybackslash}p{0.16\textwidth}
 >{\centering\arraybackslash}p{0.16\textwidth}
@@ -194,9 +185,9 @@ package is
 \toprule
 \textbf{Metric} & \textbf{Global} & \textbf{Left rail} & \textbf{Right rail}\\
 \midrule
-Public-segment top-one accuracy & 99.9359\% & 99.8726\% & 100.0000\%\\
+Public-segment top-1 accuracy & 99.9359\% & 99.8726\% & 100.0000\%\\
 \tablerowrule
-Public-segment top-two accuracy & 100.0000\% & 100.0000\% & 100.0000\%\\
+Public-segment top-2 accuracy & 100.0000\% & 100.0000\% & 100.0000\%\\
 \tablerowrule
 Supported-segment macro F1 & 99.9117\% & 99.7460\% & 100.0000\%\\
 \tablerowrule
@@ -225,35 +216,43 @@ targets. Boundary-zone segment accuracy was 99.1304\% on 230 targets and the
 switch-zone result was 100\% on 134 targets. These stratified results are more
 informative for planning than a global average alone.
 
-At the frozen segment-confidence threshold, 4678/4680 targets were retained:
+At the frozen segment-confidence threshold, 4,678/4,680 targets were retained:
 99.9573\% coverage and 99.9572\% selective segment accuracy, so two targets
-abstained. Loaded-state coverage was 4680/4680 with 99.9145\% selective
-accuracy; joint confidence coverage was 4678/4680. In the camera
+abstained. Loaded-state coverage was 4,680/4,680 with 99.9145\% selective
+accuracy; joint confidence coverage was 4,678/4,680. In the camera
 counterfactuals, blanking or shuffling the opposite camera changed the own-side
-outputs by at most zero at recorded precision. Swapping camera order reduced
-segment top-one accuracy from 99.9359\% to 7.7991\%, a 92.1368-point drop, and
-reduced the joint 0.05 result from 90.8974\% to 0.8120\%. This supports the
-fixed-camera-order and rail-isolation contracts rather than a claim of camera
-interchangeability.
+outputs by zero at the recorded precision. Swapping camera order reduced
+segment top-1 accuracy from 99.9359\% to 7.7991\%, a 92.1368-point drop, and
+reduced the joint 0.05 result from 90.8974\% to 0.8120\%. This confirms the
+enforced camera order and supports the rail-isolation contract.
 
-The sealed result is the principal visual-model result in this report. Its
-Final Test contains generated Gazebo scenes with
-fixed simulated cameras and the known Room~315 fleet. It is not physical-camera
-evidence, a control trial or authorisation for planner mutation or actuation.
+Here, coverage is the fraction whose score meets the frozen floor, selective
+accuracy is accuracy among retained targets, and abstention means not accepting
+a target estimate below that floor. Joint coverage requires both segment and
+loaded-state score checks. Because the runtime uses an all-present-targets
+policy, one required target's abstention rejects the complete paired
+observation. The counterfactuals deliberately blank or cross-scene shuffle the
+opposite camera, or swap the declared camera order, and compare the resulting
+outputs at the evaluator's stored numeric precision.
+
+The Final Test is the principal visual-model result in this report. It contains
+generated Gazebo scenes with fixed simulated cameras and the known Room~315
+fleet. Its scope is visual evaluation in simulation: it does not assess physical
+cameras or control, and it does not enable planner mutation or actuation.
 
 \subsection{Development evidence}
 
-The selected checkpoint passed 76/76 Validation gates and
-74/74 gates on the exposed development Canary. Validation supplied checkpoint
-selection and segment calibration; the Canary served only as a regression
-check. Neither is substituted for the sealed Final Test in the main claim.
-\Cref{tab:visual-v4-offline-results} preserves their development metrics.
+The checkpoint passed 76/76 Validation and 74/74 Canary gates. Validation drove
+selection, patience, calibration and the score floor; the Canary only checked a
+frozen candidate for degradation and could block manual Gazebo promotion, never
+alter the model/calibration. Neither is Final Test evidence
+(\cref{tab:visual-v4-offline-results}).
 
 \begin{table}[htbp]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
-\caption{Validation and regression metrics supporting the sealed Final Test.}
+\caption{Validation and regression metrics supporting the Final Test.}
 \label{tab:visual-v4-offline-results}
 \begin{tabularx}{\textwidth}{@{}X>{\centering\arraybackslash}p{0.20\textwidth}
 >{\centering\arraybackslash}p{0.22\textwidth}@{}}
@@ -261,7 +260,7 @@ check. Neither is substituted for the sealed Final Test in the main claim.
 \textbf{Metric} & \textbf{Validation} &
 \makecell{\textbf{Exposed development}\\\textbf{Canary}}\\
 \midrule
-Public-segment top-one accuracy & 99.9113\% & 100.0000\%\\
+Public-segment top-1 accuracy & 99.9113\% & 100.0000\%\\
 \tablerowrule
 Public-segment macro F1 & 99.8799\% & 100.0000\%\\
 \tablerowrule
@@ -286,49 +285,41 @@ Acceptance gates & 76/76 & 74/74\\
 The calibrated segment-confidence threshold was fitted on Validation only.
 Loaded confidence remains an uncalibrated softmax decision value, and the
 $s_{ratio}$ tolerance is an acceptance rule rather than a probability claim.
-The runtime therefore rejects a complete frame when any identity declared
+These are different kinds of threshold: 0.9139089813389109 is the online
+calibrated segment-score floor; 0.5 is the online binary loaded-score floor;
+0.12 is the offline planning/evaluation tolerance; and 0.05 is the stricter
+diagnostic tolerance. The two ground-truth coordinate-error tolerances require labels and
+cannot be enforced online. The runtime therefore rejects a complete frame when any identity declared
 present fails its required input, confidence or contract check; identities
 declared absent contribute no accepted visual facts.
 
 \subsection{Observation-only qualification and rollback evidence}
 
-The selected checkpoint was evaluated without being connected to the command
-path. In the same-frame dense-scene shadow run, 55 observations were processed
-and 52 were accepted, giving 94.5455\% coverage. The run recorded no processing
-errors and no identity on the wrong rail. It owned no
-command publisher, made no PlanSys2 mutation and recorded no actuation command.
+\Cref{tab:visual-v4-runtime-results} reports observation-only checks; 169
+identity checks exceed frame count because frames can contain several targets.
+All eight injected faults---wrong manifest/checkpoint/topology hashes, reversed
+cameras, stale left/right images, stale presence and unknown identity---were
+rejected. The separately allowlisted rollback also passed exact schema/hash
+loading and observation.
 
-Seven separately launched Gazebo scenes then supplied explicit ground truth
-that was excluded from model input. All seven records were quantitatively
-complete. Across them, all 53 accepted reobservations matched side, public
-segment and loaded state exactly and met the planning tolerance
-$|\Delta s_{ratio}|\leq0.12$. The tighter 0.05 threshold was diagnostic:
-150/169 identity checks passed it. The denominator is larger because each
-accepted frame can contain several present identities.
+The observation-only manifest kept fusion dry-run, PlanSys2 updates disabled and
+task execution/actuation absent; its records contain no control action or
+physical approval (\cref{app:reproducibility}).
 
-The fail-closed campaign rejected all eight injected faults: wrong manifest,
-checkpoint and topology hashes; reversed camera order; stale left image;
-stale right image; stale presence; and an unknown identity. The separately
-allowlisted rollback path also passed its ten-check smoke test, including strict checkpoint
-loading and an accepted dry-run observation under its exact schema and hash.
-
-The observation-only qualification manifest has SHA-256
-\path{8cb1674fe50bc8fbd372ade36fcb05d188f519ab36ea6d22dbb23ecfac3286c3}.
-Its authority is limited to a Gazebo runtime dry-run:
-state fusion remained dry-run, PlanSys2 updates remained disabled and no
-task-execution node or actuation publisher was authorised. A dense-scene smoke run produced
-10/10 accepted ground-truth-matching reobservations with zero PlanSys2
-mutations and zero actuation commands. These qualification records contain no
-control action and do not claim a physical deployment.
+A \emph{shadow} consumes the same frames on isolated, non-actuating topics; a
+\emph{smoke} is a small sanity check; a \emph{reobservation} repeats inference
+on the declared scene; rollback is a manually allowlisted older
+schema/checkpoint, never automatic. ``Matching'' means correct segment within
+the stated 0.12/0.05 $s_{ratio}$ tolerance.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\caption{Observation-only qualification evidence and authority boundary.}
+\caption{Observation-only qualification evidence and execution scope.}
 \label{tab:visual-v4-runtime-results}
 \begin{tabularx}{\textwidth}{@{}p{0.21\textwidth}Xp{0.25\textwidth}@{}}
 \toprule
-\textbf{Check} & \textbf{Recorded result} & \textbf{Control boundary}\\
+\textbf{Check} & \textbf{Recorded result} & \textbf{Control scope}\\
 \midrule
 Same-frame shadow & 55 paired frames; 52 accepted (94.5455\%); no errors or
 wrong-side identities & Isolated shadow topics; zero PlanSys2 mutations and
@@ -338,7 +329,7 @@ Seven-scene acceptance & 7/7 complete; 53/53 matching reobservations at the
 0.12 planning tolerance; 150/169 identity checks at 0.05 & Observation only;
 scenario ground truth excluded from model input\\
 \tablerowrule
-Visual-input fault injection & 8/8 specified faults rejected fail closed & No plan client,
+Visual-input fault injection & 8/8 specified faults rejected under the fail-closed policy & No plan client,
 PlanSys2 update or actuation command\\
 \tablerowrule
 Rollback smoke & 10/10 checks passed for the separately allowlisted schema and
@@ -351,51 +342,49 @@ disabled; zero actuation\\
 \end{tabularx}
 \end{table}
 
-\subsection{Closed-loop fault qualification and Gazebo runtime authority}
+\subsection{Closed-loop fault and runtime qualification}
 
-An independent immutable campaign exercised five faults in fresh Gazebo
+A separate campaign exercised five faults in fresh Gazebo
 processes and isolated ROS domains. F01 and F02 supplied a
 corrupt authorisation and an invalid runtime manifest, respectively; the task
 gateway refused both before motion. F03 removed the planner service. F04
 injected an emergency stop during a deliberate long move, and F05 removed the
 right-sensor feedback path during a long move without substituting an emergency
-stop. None of the five scenarios reported a false success, all final controller
-modes were \code{DISABLED}, and the bags contained 424 schema-compliant
-observations. The campaign therefore passed 5/5 declared scenarios and
-records \code{physical\_deployment=false}.
+stop. All 5/5 passed with no false success (a faulted run claiming completion),
+final controllers \code{DISABLED}, 424 schema-compliant bagged observations and
+\code{physical\_deployment=false}.
 
-The read-only fault \path{summary.json} has SHA-256
-\path{330a207603425ce46b72c689c78cbe92aa804570c2a9e35caab8e51d6a8d8fd7};
-its evidence manifest has SHA-256
-\path{71c6286f021d4dce993d40603df5714506f0732d0739a937f1ab0cfce7ee7d55},
-and the source \path{SHA256SUMS} has SHA-256
-\path{be40c331b30c7375886b42a576ec2ac97e21c0bcd940140a77a2c170d102ecd8}.
-Manual runtime authorisation binds the exact qualification manifest, the
-positive campaign summary and this complete fault bundle. The authority
-manifest has SHA-256
-\path{506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da};
-the runtime-state record has SHA-256
-\path{14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1},
-and the bundle \path{SHA256SUMS} has SHA-256
-\path{5fae4bc7430606bc474dbbc78c9f89de29b3747d1425054e806b6fae62783f55}.
-The resulting state is \code{active\_closed\_loop\_runtime}, with scope
-\path{gazebo_v4_closed_loop_runtime_only}, manual approval, automatic
-activation disabled and no physical-deployment approval. Its runtime guards explicitly record
-\code{actuation\_enabled=true} for the separately authorised task gateway.
+The read-only fault bundle and manually approved runtime are indexed in
+\cref{app:reproducibility}. The approval record binds the exact qualification
+manifest, positive-campaign summary and complete fault bundle; detailed
+per-record digests remain in the evidence checksum index.
+The configured state is \code{active\_closed\_loop\_runtime}, with scope
+\path{gazebo_v4_closed_loop_runtime_only}. Approval is recorded, but command
+execution starts disabled and requires explicit operator activation. Once
+enabled and given a confirmed task, closed-loop planning and execution proceed
+automatically in Gazebo. Physical deployment is not approved. The runtime guards
+explicitly record \code{actuation\_enabled=true} for the task gateway.
 
-The active profile deliberately keeps the inference node's
+These decisions occur at different boundaries. Manual approval places one
+hash-bound candidate on the Gazebo runtime allowlist; operator activation enables
+command execution for the session; task confirmation accepts one interpreted
+goal; and the supervisor authorises each individual command.
+\code{actuation\_enabled=true} means that this approved profile contains the
+gateway's Gazebo publisher, not that command execution is enabled at startup.
+
+The active profile keeps the inference node's
 \code{dry\_run\_state\_fusion} guard true and
 \code{plansys2\_update\_enabled} false. These node-local guards prevent a
 redundant ProblemExpert predicate mirror; they do not make the full runtime
-observation-only. The separately authorised task gateway constructs the PDDL
+observation-only. The task gateway constructs the PDDL
 problem from accepted observations and owns the Gazebo actuation path.
 A B01 partial runtime smoke reverified that exact manifest:
 1/1 selected case passed with one actuating step and postcondition, two accepted
 supervisor decisions and 88 schema-compliant observations; terminal state,
 final effect and controller stop all passed. Its single-case scope does not
-replace the preceding 12/12 campaign, and it records
-\code{physical\_deployment=false}; its summary has SHA-256
-\path{15d5f9cf9503f414c0baa3a4ff84932a717aab3add2f3334e88577b4fc70c576}.
+replace the preceding 12-run campaign, and it records
+\code{physical\_deployment=false}. Its record is indexed in
+\cref{app:reproducibility}.
 Across the positive, fault and runtime-smoke bags, every observation matched
 the active schema and checkpoint allowlist.
 \FloatBarrier
@@ -445,10 +434,16 @@ the implemented Room~315 English contract. The retained case records and
 configuration are described in
 \cref{app:reproducibility}.
 
+Here, the cancellation row is the deterministic control case; the other nine
+invoke the model. ``Without fallback'' means that no parser repair or substitute
+semantic result was used after those eight schema-valid model envelopes.
+
 \subsection{All-robot launch check}
 
 A separate cold-start check launched the full-floor profile with
-\code{robots:=all} in an isolated ROS domain and Gazebo partition. All six
+\code{robots:=all} in an isolated ROS domain and Gazebo partition. Here, Gazebo
+partition means a Gazebo Transport communication namespace, not a visual-data
+partition. All six
 configured robot models were present; each exposed its namespaced joint command
 and feedback topics and produced a fresh \code{JointState} sample, while both
 TIAGo variants exposed independent base-velocity topics. The active log before
@@ -456,23 +451,17 @@ planned shutdown was free of the declared error patterns. This check covers laun
 composition, namespace separation and feedback availability. Motion,
 simultaneous operation and repeatability require dedicated runs.
 
-\Cref{fig:evidence-ladder} places these results alongside the other evaluation
-layers. Software tests study local behaviour and protective cases, the offline
-evaluations measure the language and visual interfaces, and the campaign follows
-the complete normal workflow. Full evaluation records are indexed in
-\cref{app:reproducibility}; operator tools and runbooks are listed in
-\cref{app:interfaces}.
+\Cref{fig:evidence-ladder} orders the evaluation layers by system integration.
+Complete records are indexed in \cref{app:reproducibility}; operator tools and
+procedures are documented in \path{runbook.html} and
+\path{docs/QUICK_START_AND_FEATURE_GUIDE.md}.
 
 \begin{figure}[htbp]
   \centering
   \resizebox{0.96\textwidth}{!}{\input{figures/f19_evidence_ladder.tex}}
   \caption[Evaluation layers and the questions they address.]
-  {The sealed Final Test is the principal independent visual-model result.
-  Development checks, observation-only qualification, the positive and fault
-  campaigns, manual Gazebo runtime authority and software tests answer
-  different questions. The Final Test and dry-run records contain no control
-  action; the two closed-loop campaigns provide the bounded positive and
-  fail-closed evidence for command authority.}
+  {Layers are ordered by increasing system integration; each addresses a
+  distinct evaluation scope.}
   \label{fig:evidence-ladder}
 \end{figure}
 
@@ -513,11 +502,11 @@ focused checks and the integrated runs & Named software tests and simulated
 campaign records\\
 \tablerowrule
 O4---neuro-symbolic workflow & Rail-isolated checkpoint with a passed one-shot
-sealed Final Test; closed-loop qualification with 12/12 positive
-Gazebo runs and 1784 observations; 5/5 closed-loop fault cases with 424
+Final Test; closed-loop qualification with 12/12 positive
+Gazebo runs and 1,784 observations; 5/5 closed-loop fault cases with 424
 observations, no false success and disabled controllers; manually approved
-Gazebo runtime & Ten language cases, 1040 sealed Test
-scenes with 4680 visible targets, twelve positive campaign scenes, five fault
+Gazebo runtime & Ten language cases, 1,040 Final Test
+scenes with 4,680 visible targets, twelve positive campaign scenes, five fault
 scenes and observation-only qualification checks\\
 \bottomrule
 \end{tabularx}

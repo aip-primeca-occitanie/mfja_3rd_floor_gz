@@ -3,20 +3,17 @@
 
 \section{Reconstruction strategy}
 
-The work began by creating a minimal model of the MFJA third floor. The first
-objective was to establish a recognisable and geometrically coherent
-environment before adding behaviour. The third-floor mesh was
-imported and reoriented, the ground plane was enlarged, and the Room~315
-geometry was completed with doors and an interior window. Furniture,
-protective guards, robot tables and laboratory assets were then added.
+The work began with a minimal MFJA third-floor model, establishing a
+recognisable, geometrically coherent environment before adding behaviour. The
+third-floor mesh was imported and reoriented, the ground plane enlarged, and
+Room~315 completed with doors and an interior window. Furniture, protective
+guards, robot tables and laboratory assets followed.
 
-A usable digital twin requires each asset to have consistent units, origin,
-pose, visual material and collision representation. CAD sources frequently
-place the origin at a manufacturing datum that is inconvenient for simulation,
-while Stereolithography (STL) files contain no unit metadata. Explicit scale
-and orientation checks were therefore used to align the visual and collision
-geometry with the intended room coordinates. The integration process was
-incremental:
+Each asset required consistent units, origin, pose, visual material and
+collision representation. CAD origins are often inconvenient manufacturing
+datums, while Stereolithography (STL) files contain no unit metadata. Explicit
+scale and orientation checks therefore aligned visual and collision geometry
+with the intended room coordinates. Integration proceeded incrementally:
 
 \begin{enumerate}
   \item load one asset in an isolated scene;
@@ -27,7 +24,7 @@ incremental:
   \item add a static test for paths and SDF structure.
 \end{enumerate}
 
-The KUKA model followed the same process, with a targeted and documented
+The KUKA model followed this process, using a targeted, documented
 collision-mesh configuration that preserved the required collision behaviour.
 
 \section{World decomposition}
@@ -42,12 +39,11 @@ The final description package provides three principal world configurations:
   and geometry checks.
 \end{itemize}
 
-The internal Gazebo world name forms part of the interface because the
-pose-update, entity-creation and removal services include it in their service
-names. The bring-up package passes both the selected world and its internal name
-explicitly, keeping the shuttle-controller services aligned with the active
-world. The runbook also includes checks of the available services. The
-reconstruction progression is shown in \cref{fig:room315-twin}.
+Because pose-update, entity-creation and removal service names include the
+internal Gazebo world name, that name forms part of the interface. The bring-up
+package explicitly passes both the selected world and its internal name, keeping
+shuttle-controller services aligned with the active world; the runbook checks
+the available services. \Cref{fig:room315-twin} shows the reconstruction.
 
 \begin{figure}[p]
   \centering
@@ -55,7 +51,7 @@ reconstruction progression is shown in \cref{fig:room315-twin}.
   \begin{subfigure}[t]{0.96\textwidth}
     \centering
     \includegraphics[width=\linewidth]{early_full_floor.png}
-    \caption{Initial minimal floor model.}
+    \caption{Earliest documented reconstruction stage produced during the internship.}
     \label{fig:early-floor-context}
   \end{subfigure}
 
@@ -75,18 +71,16 @@ reconstruction progression is shown in \cref{fig:room315-twin}.
     \label{fig:room315-focus}
   \end{subfigure}
   \caption[Reconstruction progression from the floor model to Room~315.]
-  {Reconstruction from the initial minimal scene to the complete building
-  context and the detailed Room~315 model. The cell provides the common
-  workspace for transport, perception, planning and supervised execution
-  experiments.}
+  {The reconstruction progressed from the earliest retained intermediate stage
+  to the complete building context and the detailed Room~315 model.}
   \label{fig:room315-twin}
 \end{figure}
 
 \section{Repository refactoring}
 
-As the number of assets and launch components grew, the original flat layout
-was refactored into a meta-repository on 25 March. The root ceased to be a ROS
-package, and four packages were assigned separate responsibilities:
+As assets and launch components grew, the flat layout was refactored on 25
+March into one repository containing several ROS packages. Its root ceased to
+be a ROS package, and four packages received separate responsibilities:
 
 \begin{description}
   \item[\code{mfja\_3rd\_floor\_description}] SDF, URDF, worlds, models,
@@ -99,13 +93,12 @@ package, and four packages were assigned separate responsibilities:
   controllers, planning, perception, learning tools, launches and tests.
 \end{description}
 
-This organisation gives the dependencies a clear direction. Description assets
-remain separate from planning code, and the interface package is independent of
-the controller implementation. The bring-up package composes the system without
-containing its control algorithms, while the control/configuration package
-depends on the description and interface packages. This separation also
-supports selective \code{colcon} builds. The ownership and composition
-boundaries are shown in \cref{fig:packages}.
+This gives dependencies a clear direction: description assets remain separate
+from planning code; interfaces remain independent of controller implementation;
+bring-up composes the system without control algorithms; and control/configuration
+depends on description and interfaces. It also supports selective builds with
+\code{colcon}, the ROS~2 workspace build tool. \Cref{fig:packages} shows the
+ownership and composition boundaries.
 
 \begin{figure}[htbp]
   \centering
@@ -122,26 +115,24 @@ boundaries are shown in \cref{fig:packages}.
 
 \subsection{Industrial robots}
 
-The integrated fixed-base robots are a KUKA KR6 R900 sixx, a Stäubli TX2-60L,
-a Yaskawa HC10 and a Yaskawa HC10DT. Each model includes a visual and collision
-tree, support geometry and a controller-facing joint list. The integration
-preserves vendor-specific joint structure but exposes a common higher-level
-command tool.
+The fixed-base robots are a KUKA KR6 R900 sixx, Stäubli TX2-60L, Yaskawa HC10
+and Yaskawa HC10DT. Each model includes a link--joint kinematic tree, separate
+visual and collision geometry, mounting geometry and a controller-facing joint
+list. Integration preserves vendor-specific joint structure while exposing a
+common higher-level command tool.
 
 \subsection{TIAGo}
 
-TIAGo differs from the industrial arms because it has a mobile base, torso,
-arm and head; a base-only variant is also available for focused tests. The
-corresponding embodiment-specific command and feedback surfaces are described
-in \cref{chap:multi-robot}.
+TIAGo has a mobile base, torso, arm and head, unlike the industrial arms; a
+base-only variant supports focused tests. \Cref{chap:multi-robot} describes its
+embodiment-specific command and feedback surfaces.
 
 \subsection{Room and device assets}
 
-In addition to the room shell, Room~315 contains separate models for the static
-left and right cell frames, rail paths, switches, shuttles, carried payloads,
-cameras and visual markers. The markers support inspection and can be hidden
-for clean camera capture. The payload model distinguishes the two runtime
-states used by the task: a shuttle is either \emph{loaded} or \emph{empty}.
+Beyond the room shell, Room~315 has separate models for the static left and
+right cell frames, rail paths, switches, shuttles, carried payloads, cameras and
+visual markers. Markers aid inspection and can be hidden for clean camera
+capture. The task uses two payload states: \emph{loaded} and \emph{empty}.
 
 \section{Launch architecture}
 
@@ -152,14 +143,13 @@ declared once in \code{room\_315\_floor\_common.py}. This avoids configuration
 drift in which the full-floor and room-only launch files gradually develop
 different parameter names or defaults.
 
-Launch choices include graphical user interface (GUI) or headless mode, pause
-state, selected robots, kinematic shuttles, Room~315 overhead cameras, visual
-markers, active shuttle identities, starting slots and initial loaded-shuttle
-selection. The
-default configuration leaves the scene inactive or readily inspectable, while
-computationally expensive or research-specific nodes are enabled explicitly.
-The launch layer also starts the ROS--Gazebo bridges required for entity
-creation, removal and pose updates.
+Launch choices cover graphical user interface (GUI) or headless mode (no
+Gazebo graphical window), pause state, selected robots, kinematic shuttles,
+Room~315 overhead cameras, visual markers, active shuttle identities, starting
+slots and the initially loaded shuttle. Defaults leave the scene inactive or
+readily inspectable; computationally expensive or research-specific nodes
+require explicit activation. The launch layer also starts the ROS--Gazebo
+bridges for entity creation, removal and pose updates.
 
 \begin{lstlisting}[language=bash,caption={Focused Room~315 launch used as the basic transport test.},label={lst:room-launch}]
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
@@ -171,29 +161,31 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 
 \section{Operational profiles}
 
-The launch layer combines the same installed assets into several repeatable
-experimental profiles. An operator can isolate one integration boundary,
-control the computational load and then scale to the shared environment
-without changing package ownership or public namespaces. The available
-profiles are listed in \cref{app:interfaces}, and their verification status is
+The launch layer combines installed assets into repeatable operational
+profiles: documented launch choices for a particular experiment. Operators can
+isolate an integration boundary, control computational load and scale to the
+shared environment without changing package ownership or public namespaces.
+Profiles are documented in \path{runbook.html} and
+\path{docs/QUICK_START_AND_FEATURE_GUIDE.md}; their verification status is
 presented in \cref{chap:results}.
 
 \section{Build and environment reproducibility}
 
-The baseline consists of Ubuntu~24.04, ROS~2 Jazzy and Gazebo Harmonic in a
-standard \code{colcon} workspace. The package install rules cover the scripts,
-configuration files, launch files, models and interfaces required by the
-runtime. The recorded campaigns and the full-floor smoke were launched through
-the installed ROS~2 package surfaces. The environment and build procedure are
-specified in \cref{app:reproducibility}.
+The baseline is Ubuntu~24.04, ROS~2 Jazzy and Gazebo Harmonic in a standard
+\code{colcon} workspace. Install rules cover the runtime scripts,
+configuration, launch files, models and interfaces. Recorded campaigns and the
+full-floor smoke test used executables and launch files from the built install
+space. A smoke test is a narrow startup and interface check, not a performance
+or reliability experiment. \Cref{app:reproducibility} specifies the environment
+and build procedure.
 
 \section{Outcome and model fidelity}
 
-This phase produced usable simulation models of the full floor and Room~315, selectable
-robots and a package structure that supports the subsequent transport,
-perception, language interpretation and planning work. The recorded evaluations
-include one all-robot full-floor cold start and
-the Room~315 integrated campaign; later chapters report transport, perception
-and result checking separately. The transport model and its kinematic
-assumptions are detailed in \cref{chap:transport}; the next evaluation steps are
-discussed in \cref{chap:perspectives}.
+This phase produced usable full-floor and Room~315 simulation models,
+selectable robots and a package structure supporting transport, perception,
+language interpretation and planning. Recorded evaluations include one
+all-robot full-floor cold start---new ROS and Gazebo processes rather than a
+reused session---and the Room~315 integrated campaign. Later chapters report
+transport, perception and result checking separately; \cref{chap:transport}
+details the transport model and kinematic assumptions, and
+\cref{chap:perspectives} discusses the next evaluation steps.

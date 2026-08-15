@@ -3,134 +3,72 @@
 
 \section{Runtime architecture}
 
-\Cref{fig:neurosymbolic-architecture} follows the closed-loop runtime from
-interpretation to an observed Gazebo result. Qwen supplies candidate task
-fields and the split-rail visual model supplies scene estimates. Whole-observation
-validation admits a typed \code{VisualStateObservation} only after its calibrated
-confidence, freshness and contract checks pass. The task gateway combines that
-observation with the confirmed task and device evidence, builds a fresh PDDL
-problem, requests a PlanSys2/POPF plan and selects its first supported step. The
-deterministic supervisor publishes the corresponding typed ROS~2 command, the
-rail controller changes the Gazebo state, and the executive compares the
-post-command visual observation, controller state and identity-bearing DZI
-evidence with the expected effect. If the
-goal is not yet complete, the cycle begins again from a new observation. The
-interface and safety rules behind this sequence are defined in
-\cref{chap:interfaces}.
-
-The inference node's optional direct ProblemExpert predicate mirror remains
-disabled. This does not interrupt the active command path: the task gateway
-consumes the accepted visual observation, constructs the current PDDL problem
-and calls the PlanSys2 planner service directly.
-
-The colours distinguish roles: blue boxes show learned outputs, green boxes
-show project logic, orange denotes symbolic planning, red marks permission to
-publish an actuation command, and grey denotes the Gazebo rail controller.
+\Cref{fig:neurosymbolic-architecture} follows English and camera inputs through
+validated proposals, PlanSys2/POPF planning, supervised typed commands and
+verified Gazebo effects; an incomplete goal re-enters observation and planning.
+Interface rules are in \cref{chap:interfaces}.
 
 \begin{figure}[p]
   \centering
   \input{figures/f10_runtime_vertical.tex}
   \caption[Room~315 English-to-motion runtime architecture.]
   {End-to-end sequence from task and paired-camera inputs to a verified Gazebo
-  result. The optional direct ProblemExpert predicate mirror is disabled; the
-  dashed green path requests a post-command observation while the grounded goal
-  remains incomplete.}
+  result; the dashed green path denotes observation and replanning while the
+  grounded goal remains incomplete.}
   \label{fig:neurosymbolic-architecture}
 \end{figure}
 \FloatBarrier
 
 \section{Step 1---interpret and confirm the English task}
 
-The operator enters an English instruction through the interactive task-goal
-CLI. The parser pipeline runs the explicit-fact extractor and the local Qwen
-semantic model described in \cref{chap:ai-development}. Their outputs are fused
-into a \code{TaskGoalDraft} according to fixed precedence rules. The dialogue
-manager asks for missing information and presents the completed interpretation
-for confirmation. The resulting \code{TaskGoal} contains the task constraints;
-the planner determines the execution sequence later.
-
-Configured colour names act as identity aliases. For example, the request
-\emph{Move the green shuttle to slot 4 on the right rail.} resolves to
-\code{room315\_right\_shuttle\_3}, the right rail and
-slot~4 before publication. A request such as \emph{Move the nearest loaded right shuttle to
-slot 3} remains a selection policy until current state is available. It records
-the right rail, loaded-payload condition and nearest-selection rule without
-assigning an identity prematurely.
+The CLI applies \cref{chap:ai-development}, clarifies missing fields and requires
+confirmation before publishing \code{TaskGoal}. It resolves explicit identities
+and colour aliases; scene-dependent policies remain ungrounded. \emph{Grounding}
+selects one shuttle and, for station requests, an admissible slot; the planner,
+not the language model, chooses actions.
 
 \section{Step 2---read the current scene and ground the goal}
 
-The visual runtime first verifies the immutable runtime manifest, checkpoint,
-preprocessing contract, camera order, topology fingerprint and confidence
-policy. It synchronises the left and right RGB topics, requires their declared
-4:3 geometry, resizes each image to \(320\times240\), and preserves their fixed
-order. The shared low-level stem is followed by independent left and right
-branches: L1--L4 can depend only on the left image and R1--R4 only on the right
-image. The 168 learned values cover public-segment logits, loaded-state logits,
-normalised bounding boxes and normalised longitudinal position
-\(\rho=s/L\), serialised as \code{s\_ratio}. Rail side is derived from identity;
-segment length and \(s_m\) come from the fingerprinted public-topology contract.
+The visual runtime verifies its manifest---the hash-bound artefact, schema,
+configuration and Gazebo-scope record---plus checkpoint, preprocessing and
+camera order. Any missing, stale, conflicting or low-confidence requirement
+rejects the pair; an accepted \code{VisualStateObservation} carries schema and
+provenance. The inference node does not mutate ProblemExpert: the gateway fuses
+the observation with presence, device and identity-bearing sensor reports into
+\code{ObservedState} for planning.
 
-For every identity declared present by the independent presence provider, the
-runtime applies the validation-calibrated segment threshold and the loaded-state
-decision floor. A stale, missing or conflicting input rejects the complete
-frame, whereas absent identities emit no accepted visual facts. A typed
-\code{VisualStateObservation} additionally carries schema, checkpoint and
-confidence metadata.
+Symbolic shuttle locations come from the accepted visual observation, not
+controller coordinates, which serve only the supervisor's switch-proximity
+veto. Only shuttles are removable blockers in this Gazebo-only profile.
 
-The Gazebo control profile keeps the inference node's
-\code{dry\_run\_state\_fusion} guard true and
-\code{plansys2\_update\_enabled} false while separately authorising the task
-gateway's Gazebo actuation path. These flags prevent the inference node from
-mutating ProblemExpert predicates; they do not make the gateway observation-only.
-The gateway verifies the accepted schema and checkpoint, constructs the PDDL
-problem from that observation and invokes the planner service through its own
-authorised interface. Physical deployment remains outside this profile.
-
-The task gateway combines the current visual observation and configured
-presence registry with supervisor device state and identity-bearing rail sensor
-readings to create an \code{ObservedState}. Planner localisation excludes
-the controller's segment and longitudinal-position fields. Continuous
-controller position is reserved for the supervisor's switch-proximity veto.
-Because removable external obstacles are disabled in the current configuration,
-only another shuttle can occupy and block a rail route.
-
-The gateway validates and, when required, grounds the task against the current
-\code{ObservedState}. Explicit requests already identify a shuttle, whereas an
-\emph{any}, \emph{nearest} or station-slot policy is resolved from the current
-state and route occupancy. A loaded/empty payload condition requires five
-consecutive fresh visual frames by default before an identity is selected. The
-grounded task keeps the original goal identifier and remains fixed throughout
-its execution cycle.
+The gateway validates and grounds \emph{any}, \emph{nearest} and station-slot
+policies against current state/occupancy. Payload-based selection requires, by
+default, five distinct consecutive accepted observations within freshness
+limits. The grounded identity retains the goal ID and stays fixed for execution.
 
 \section{Step 3---build a fresh PDDL problem and plan}
 
 \subsection{From current state to decision predicates}
 
-For each decision cycle, the executive creates a complete Room~315 PDDL
-problem from the latest \code{ObservedState} and the grounded goal. The problem
-contains the present shuttles, their current symbolic locations,
-slot occupancy, payload facts, switch and stopper states, and the requested goal.
-The domain encodes only supported operations and rail-topology constraints.
-
-The PDDL layer receives neither raw images nor free text. Its versioned domain
-defines typed parameters, preconditions, symbolic effects and a relative cost
-for every action. The generated problem contains the current known facts, grounded
-target and goal for the current cycle. Unknown, stale or conflicting state
-prevents problem generation and is never interpreted as an empty slot or a
-clear route.
+Each cycle builds a fresh PDDL problem from the grounded goal and latest
+\code{ObservedState}: present shuttles, locations, occupancy, payload and device
+facts. PDDL receives no raw image/text; unknown, stale or conflicting state
+blocks generation rather than implying free space.
 
 \subsection{How the current facts constrain the next action}
 
-For a transport task, each applicable action family requires
-\code{validated\_state}, the matching \code{active\_goal\_side} and their own
-location, occupancy and route predicates. POPF searches for sequences whose
-preconditions can hold and whose effects establish the goal, while the generated
-problem requests \code{minimize (total-cost)}. These symbolic costs favour plans
-with fewer unnecessary setup actions or relocations among legal alternatives.
-Travel-time modelling and supervisor safety checks remain separate.
-\Cref{tab:pddl-decision-rules}
-summarises the principal cases, and the versioned domain contains the complete
-typed conditions.
+Transport actions require \code{validated\_state}, matching
+\code{active\_goal\_side}, and action-specific location, occupancy and route
+predicates. POPF minimises dimensionless symbolic cost (setup/relocation
+penalties, not travel time) among goal-reaching plans; supervisor checks remain
+separate. \Cref{tab:pddl-decision-rules} summarises the principal cases.
+
+In the table, \code{validated\_state} marks contract-valid facts. The field
+\code{active\_goal\_side} names the grounded rail. \emph{Normal route} is the
+exterior-loop switch arrangement; a \emph{topology block} is a segment-level,
+non-slot location; \emph{clearance mode} temporarily relocates blockers;
+\emph{capacity-safe} respects holding/separation limits; and a device group is
+one route's configured switches/stoppers.
 
 \begin{table}[H]
 \centering
@@ -180,56 +118,31 @@ inspection without an actuation command\\
 \end{tabularx}
 \end{table}
 
-PDDL effects describe the state expected after an action. The next planning
-cycle nevertheless uses the observed post-action state rather than assuming that the
-prediction occurred. The complete B03 run later in this chapter shows this
-difference between a symbolic effect and an observed controller result.
-
-In the normal planning path, the executive sends the domain and problem to the
-PlanSys2 planner service, configured with the POPF solver. Planning uses the
-service directly rather than the PlanSys2 Executor. The executive then
-translates and validates the symbolic plan and selects its first supported
-\code{PddlPlanStep}/\code{TranslatedPlanStep} pair. Each executed decision is
-therefore tied to the state used to plan it.
+PDDL effects are predictions; the next cycle always uses the observed
+post-action state. The executive calls the POPF-backed PlanSys2 planner service
+(not its Executor), validates the plan and selects its first supported
+\code{PddlPlanStep}/\code{TranslatedPlanStep}: an action the translator can map
+to a checked command tied to the planning state.
 
 \section{Step 4---translate, supervise and move}
 
-The PDDL translator converts supported actions into
-\code{TranslatedPlanStep} records, each containing a sparse, named command
-dictionary. A switch command names only the switches that must change; a stopper
-command names only its target devices; and a shuttle command includes the
-identity, side, direction, speed or target slot required by that action. The
-auxiliary \code{event\_action} field records the source action for dataset
-tooling, whereas the first step's \code{command} field supplies the live
-request.
-
-The translated request passes through the supervisor checks described in
-\cref{chap:interfaces}. If those checks pass, the supervisor publishes a typed
-\code{SwitchCommand}, \code{StopperCommand} or \code{ShuttleCommand}. The
-kinematic controller consumes that message and changes the shuttle state and
-Gazebo pose.
+The translator makes a sparse named \code{TranslatedPlanStep}; the supervisor
+applies \cref{chap:interfaces} before publishing a typed device/shuttle command,
+after which the kinematic controller updates shuttle state and Gazebo pose.
 
 \section{Step 5---check the result and decide what follows}
 
-After executing the selected step, the executive obtains newer state reports and
-checks its action-specific postcondition. A switch or stopper action must match
-the requested controller state, while a motion action must establish the
-expected location or route effect. If the grounded goal remains incomplete, the
-next cycle builds a new PDDL problem from the observed after-state. Any change
-in occupancy is included explicitly when replanning.
-
-Final-slot success is reported only when the DZI and controller conditions
-defined in \cref{chap:interfaces} are met. Otherwise, the executive obtains a
-newer observation and starts another planning cycle.
+The executive checks postconditions against newer state and, if incomplete,
+replans from it. Final-slot success requires the DZI/controller conditions in
+\cref{chap:interfaces}.
 
 \section{Case B03 from instruction to arrival}
 
-The recorded instruction was \emph{Move the green shuttle to slot 4 on the
-right rail.} \Cref{tab:green-shuttle-trace} follows the main stages of this
-successful cold-start execution. The campaign case defined the instruction,
-goal and launch state, then left the action sequence to the planner. In the
-recorded run, it selected one direct-motion step to R3's slot~4 destination,
-which maps to DZI4R.
+For \emph{Move the green shuttle to slot 4 on the right rail}, the campaign
+fixed request, goal and launch state but left planning open. From a cold start
+(fresh Gazebo process with no retained task, observation or controller state),
+the planner chose one direct step to R3's slot~4/DZI4R destination
+(\cref{tab:green-shuttle-trace}).
 
 \begin{table}[H]
 \centering
@@ -252,7 +165,7 @@ occupancy; a fresh PDDL problem is sent to POPF and the executive selects the
 first supported step\\
 \tablerowrule
 Execution step & The recorded initial state places R3 at slot~3 with
-slot~4 free. The motion portion therefore contains one
+slot~4 free. The motion portion contains one
 \code{move\_shuttle\_to\_slot} step; it requires neither blocker clearance nor
 a topology relocation\\
 \tablerowrule
@@ -269,8 +182,6 @@ Outcome & Every recorded postcondition is satisfied; the final status is
 \end{tabularx}
 \end{table}
 
-Selection policies such as \emph{nearest loaded shuttle} use the same sequence,
-with the identity chosen from the current scene before the PDDL problem is
-built. The recorded explicit-identity, colour-alias and payload-qualified cases
-on both rails followed this workflow. \Cref{chap:results} presents the campaign
-outcomes and visual-model measurements.
+Other identity, colour and payload policies use the same workflow, grounding
+from the current scene before PDDL construction. Results are in
+\cref{chap:results}.

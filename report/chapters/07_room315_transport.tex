@@ -15,78 +15,60 @@ considered:
   pose from the calibrated rail centre-line, and publish that pose to Gazebo.
 \end{description}
 
-The dynamic option would be appropriate for estimating traction, contact
-loads, wheel slip, derailment behaviour or mechanical wear. For the present
-objectives, however, it would add substantial cost without providing reliable
-additional information. Each shuttle would introduce several simultaneous
-wheel/guide--rail contact points, while the switch regions would continually
-change the active surfaces. Across the eight-shuttle fleet, the physics solver
-would therefore have to resolve many coupled contact and friction constraints
-at every simulation step. A credible model would also require validated
-collision geometry, masses and inertias, wheel and rail profiles, friction,
-compliance or damping, drive characteristics and switch mechanics. Smaller
-integration steps and additional solver iterations might then be needed to
-limit penetration, jitter or loss of contact, further increasing the
-computational load. Without measured mechanical parameters, this complexity
-would give an impression of accuracy unsupported by the available data.
+Dynamic simulation suits traction, contact-load, slip, derailment and wear
+studies, but here it would add cost without reliable information. Eight
+shuttles create many coupled wheel/guide--rail contact and friction constraints,
+especially at switches. A credible model would require validated collision
+geometry, masses, inertias, profiles, friction, compliance or damping, drives
+and switch mechanics, potentially with smaller steps and more solver iterations
+to limit penetration, jitter and contact loss.
+Without measured parameters, the apparent accuracy would be unsupported.
 
-The project instead had to test route selection, slot arrival, occupancy,
-switch and stopper logic, camera perception, planning and supervised
-execution. The kinematic option directly serves those questions. It provides
-repeatable trajectories and sensor crossings, predictable logical progression,
-lower computational cost for multi-shuttle scenarios and faster generation of
-consistent visual data. It also makes failures easier to localise: geometry
-determines the pose, topology determines the permitted successor, and the
-controller and supervisor determine whether motion is allowed.
+The required tests instead concern route selection, slot arrival, occupancy,
+switch/stopper logic, camera perception, planning and supervised execution.
+Kinematic motion gives repeatable trajectories, sensor crossings and logical
+progression at lower multi-shuttle cost, generating consistent visual data
+faster. It also isolates failures: geometry sets the pose, topology the
+successor, and control/supervision whether motion is allowed.
 
 \section{Kinematic transport backend}
 
-The backend advances an arc-length state on a calibrated rail graph
-and publishes the corresponding Gazebo pose through the world
-\code{set\_pose} service. This gives the initially static Room~315 rail
-assemblies predictable motion for repeatable scenario generation, while
-keeping the implementation focused on planning and supervised execution. The
-backend provides repeatable control of the route, commanded speed and sensor
-crossings within the stated kinematic fidelity boundary. The shuttle assets
-are declared kinematic, gravity is disabled and wheel--rail contact is not used
-to produce motion. The controller's logical rail state is therefore
-the state reported to the rest of the system; asynchronous \code{set\_pose}
-publication and rendering may lag
-behind that state without changing the logical progression.
+The backend advances arc length on a calibrated graph and publishes the Gazebo
+pose through the world \code{set\_pose} service, giving the static rail assets
+predictable routes, speed and sensor crossings for repeatable scenarios focused
+on planning/supervised execution. Shuttles are kinematic, gravity is disabled
+and wheel--rail contact does not produce motion. The controller's logical rail
+state is authoritative; asynchronous pose publication and rendering may lag
+without changing logical progression.
 
 \section{From SolidWorks points to a continuous rail graph}
 
-The current kinematic model uses ordered rail centre-line points extracted
-from the SolidWorks geometry. The source set stores
-276 points in 14 comma-separated-value (CSV) files; every row contains
-\code{index,x,y,z}. The conversion from CAD to runnable motion follows five
-explicit steps:
+Both rail configurations use the same 276 ordered SolidWorks centre-line points
+in 14 comma-separated-value (CSV) files, then apply side-specific name/topology
+mappings and calibration. Each row is \code{index,x,y,z}. Conversion proceeds
+as follows:
 
 \begin{enumerate}
-  \item split the exterior, interior and connector curves at meaningful
-  branch boundaries;
-  \item preserve point order inside one CSV per segment, so consecutive rows
-  form a measured polyline traversed from index~0 to the last row;
-  \item associate each public segment with its source CSV and declare its
-  start and end node in network YAML;
-  \item construct an arc-length parameterisation and a cubic Hermite
-  interpolant between consecutive points, using neighbouring points to
-  estimate tangents;
-  \item apply the calibrated rail-to-Gazebo transform before publishing the
-  shuttle pose.
+  \item split exterior, interior and connector curves at branch boundaries;
+  \item preserve point order in one CSV per segment, forming a polyline
+  traversed from index~0 to the last row;
+  \item map each public segment to its CSV and declare its endpoint nodes in
+  network YAML;
+  \item parameterise arc length and interpolate consecutive points cubically
+  with Hermite tangents estimated from neighbours;
+  \item apply the calibrated rail-to-Gazebo transform before pose publication.
 \end{enumerate}
 
-The CSV files describe \emph{geometry}, while connectivity is defined
-separately. Exact floating-point equality between endpoints proved too fragile,
-so twelve explicit anchor nodes document the segment ends intended to belong to
-the same physical junction. The configuration records a \SI{0.05}{m} tolerance
-for this CAD-to-topology correspondence. Runtime connectivity is taken from the
-explicit routing tables rather than inferred from coordinate proximity. The
-loader records the tolerance as configuration metadata rather than applying it
-during runtime routing.
+CSV files define \emph{geometry}; routing tables define connectivity. A
+\emph{source curve} is an ordered CSV polyline, an \emph{internal geometry
+segment} its side-specific runtime identifier, and a \emph{public segment} the
+canonical ROS/planning label. Twelve anchor nodes identify segment ends at the
+same physical junction because floating-point equality is fragile. The recorded
+\SI{0.05}{m} CAD-to-topology tolerance is metadata, not a runtime routing test.
 
-Each public block has a length and a mapping between public labels and source
-curve segments. A shuttle state contains its current segment and arc length.
+Each public segment maps to a source curve and has a length. Published shuttle
+state contains its public segment and arc length; \code{s\_ratio} is the
+normalised coordinate \(\rho=s/L\) from \cref{eq:sratio}, not another position.
 The pose evaluator computes
 \begin{equation}
   \mathbf{p}(s) =
@@ -94,52 +76,49 @@ The pose evaluator computes
   \qquad
   \psi(s)=\operatorname{atan2}\left(\frac{dy}{ds},\frac{dx}{ds}\right).
 \end{equation}
-The pose is then transformed into the Gazebo world frame.
-
-Cubic Hermite interpolation was chosen because it allows the position and
-tangent to be controlled at segment boundaries. Linear interpolation creates
-visible yaw discontinuities, while an unconstrained global spline may leave
-the physical rail. Retained tests load every normalised segment with both path
-backends and preserve the declared topology; separate route and device tests
-cover successor selection and slot/sensor mappings. In
-\cref{fig:rail-geometry-source}, the black points are the complete ordered CSV
-input and the coloured curves are dense samples from the same Hermite evaluator
-used at runtime.
+The result is transformed to the Gazebo frame. Cubic Hermite interpolation controls
+position and tangent at boundaries; linear interpolation creates yaw jumps,
+whereas an unconstrained global spline may leave the rail. Retained tests load
+every normalised segment with both backends: \code{polyline} samples the
+piecewise-linear CSV, while \code{cubic\_hermite} is the continuous runtime
+evaluator. Both preserve topology; route/device tests cover successors and
+slot/sensor mappings. \Cref{fig:rail-geometry-source} compares all CSV points
+with dense runtime-evaluator samples.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/f07_calibrated_rail_geometry_current.png}
   \caption[Ordered CSV source points and current Hermite rail geometry.]
-  {Current Room~315 centre-line reconstructed from the 276 ordered CAD/CSV
-  samples. Black dots are source samples and coloured curves are dense outputs
-  of the runtime Hermite evaluator. The drawing uses source/CAD orientation,
-  with the configured affine calibration mapping it into Gazebo. This figure
-  checks reconstruction from the configured samples; an independent geometric
-  accuracy study would require separate metrology.}
+  {Room~315 centre-line from 276 ordered CAD/CSV samples: black dots are source
+  points and coloured curves are dense Hermite outputs. The drawing shows the
+  right-rail source/CAD orientation; the left rail reuses the samples with its
+  own names and calibration. Affine calibration applies side-specific planar
+  scale, rotation and translation plus height/yaw offsets before Gazebo
+  publication. This checks configured reconstruction; geometric accuracy would
+  require independent metrology.}
   \label{fig:rail-geometry-source}
 \end{figure}
 
 \section{Topology and switch assignments}
 
-Active routing combines the rail geometry with switch state. Each rail has four
-switches, each with exterior or interior state, producing \(2^4=16\)
-assignments. The reference left and right network YAML files define nodes,
-segments, branch connections and public labels. The public segment vocabulary
-contains 14 blocks:
+Each rail has four exterior/interior switches, hence \(2^4=16\) assignments.
+The left/right network YAML files define nodes, segments, connections and this
+14-label public vocabulary:
 \[
 \{\text{A12E, A12I, A14, A1E, A1I, A23, A2E, A2I, A34E,
 A34I, A3E, A3I, A4E, A4I}\}.
 \]
 
-The controller selects successor segments according to switch state. The PDDL
-problem generator reads the same topology, avoiding separate manually written
-maps for planner and controller routes. A shared topology became especially
-important when blocker clearance expanded beyond the normal outer loop.
-Table~\ref{tab:rail-topology} uses only the public ROS naming domain. For the
-left rail, current and successor segments are converted from internal geometry
-identifiers to public labels, while switch identifiers already use the public
-physical labels. The resulting public successor contract is identical for the
-two rails at the public-topology level.
+A1--A4 name physical switch zones; suffixes \code{E}/\code{I} mean
+exterior/interior. Thus \code{A3E} is the exterior branch after A3 and
+\code{A34E} continues towards A4, while \code{A23}/\code{A14} are shared
+single-track segments. These are interface labels, not extra rails.
+
+The controller and PDDL generator read this same topology, including blocker
+clearance beyond the outer loop. \Cref{tab:rail-topology} uses only public ROS
+names. On the left rail, internal geometry identifiers are converted to public
+segment labels; switch identifiers are already public. Both rails therefore
+share the public successor contract.
 
 \begingroup
 \renewcommand{\arraystretch}{1.12}
@@ -180,28 +159,29 @@ two rails at the public-topology level.
 \end{longtable}
 \endgroup
 
-Between segments, the table---not point distance---selects the successor.
-``Any'' marks a fixed transition, while an incompatible converging-switch state
-has no successor and enters \code{FALLING}. In the forward public traversal,
-\code{A2} is the entry boundary of \code{A23} and \code{A3} selects its
-exterior or interior successor, as shown in \cref{fig:a23-transition-key}.
+The table, not point distance, selects successors; ``Any'' is a fixed
+transition. An incompatible converging switch has no successor and enters
+\code{FALLING}: a latched no-valid-successor fault that stops at the segment
+end, not a physical fall. In forward traversal A2 enters \code{A23}, then A3
+selects its exterior/interior successor (\cref{fig:a23-transition-key}).
 
 \begin{figure}[htbp]
   \centering
   \resizebox{0.88\textwidth}{!}{\input{figures/f08_a23_transition_key.tex}}
   \caption[Public A2--A23--A3 transition rule.]
-  {A2 is the fixed entry boundary into public segment A23. Once the shuttle is
-  on A23, switch A3 selects the exterior or interior successor. The same public
-  rule applies to both rails.}
+  {A2 enters public segment A23; A3 then selects its exterior/interior
+  successor. Both rails use this public rule.}
   \label{fig:a23-transition-key}
 \end{figure}
 
 \section{Devices and public naming}
 
-The physical documentation groups devices by switches, branches and indexing
-zones. The implementation assigns consistent public names and defines the
-devices in YAML. The resulting right-rail layout is shown in
-\cref{fig:right-rail-sensors}.
+YAML devices have public names grouped by switches, branches and indexing zones.
+A DZI name is \code{DZI} + slot + rail suffix \code{R}/\code{L}; for example,
+\code{DZI1R} detects right-rail slot~1. DA switch-approach names use switch
+number, optional branch \code{E}/\code{I}, then rail suffix; no branch suffix
+means the switch's single-track side. \Cref{fig:right-rail-sensors} shows the
+right rail.
 
 \begin{figure}[p]
   \centering
@@ -219,67 +199,53 @@ devices in YAML. The resulting right-rail layout is shown in
     clip
   ]{figures/f07_right_rail_devices_current.png}
   \caption[Current right-rail sensors, stopper identities and slot numbering.]
-  {Right-rail devices evaluated from the configured YAML definitions on the
-  controller's Hermite geometry. Panel~(a) shows slots and approach/branch
-  detectors; panel~(b) separates physical stopper points from their linked
-  binary sensors \SI{0.10}{m} upstream.}
+  {Configured right-rail devices on the controller's Hermite geometry:
+  panel~(a) shows slots and approach/branch detectors; panel~(b) separates
+  stoppers from linked binary sensors \SI{0.10}{m} upstream.}
   \label{fig:right-rail-sensors}
 \end{figure}
 
 \subsection{Switches}
 
-Switches A1--A4 select exterior or interior branches. Commands and feedback
-use separate topics. A switch update runs without globally pausing Gazebo, so
-other robot processes continue normally. The protected geometric neighbourhood
-extends \SI{0.35}{m} along the rail coordinate; \cref{chap:interfaces} defines
-how controller feedback authorises or vetoes a change.
+Switches A1--A4 select exterior/interior branches through separate command and
+feedback topics. Updates do not pause Gazebo globally. The protected region
+extends \SI{0.35}{m} along the rail; \cref{chap:interfaces} defines the
+feedback-based veto.
 
 \subsection{Stoppers}
 
-Stoppers hold or release a shuttle before a protected area or at a target.
-Their state comes directly from the rail controller. The workflow
-usually closes a target stopper, opens upstream stoppers, starts the shuttle
-and waits for the identity-bearing target sensor. A stopped shuttle can still
-report its configured speed setting, so the state machine uses the explicit
-controller mode rather than interpreting a nonzero speed field as motion.
+Stoppers hold/release a shuttle before protected areas or targets. Controller
+state \code{0} means open/released and \code{1} closed/stop. The workflow closes
+the target stopper, opens upstream ones, starts motion and awaits the
+identity-bearing target sensor. Because a stopped shuttle may retain a nonzero
+speed setting, motion is determined from controller mode.
 
 \subsection{Binary sensors}
 
-Sensors publish continuous binary occupancy readings, not continuous distance.
-Slot sensors such as DZI1R/DZI2R identify arrivals; approach and branch
-detectors locate a shuttle near a switch or on an inner/outer route. Continuous
-pose remains available inside the simulator controller for safety veto and
-evaluation, but it is not exposed as a learned model input.
+Sensors stream binary occupancy, not distance: \code{active=0/1}, with a
+separate \code{shuttle\_name} when active. DZI detectors identify slot arrivals;
+approach/branch detectors locate a shuttle near a switch or inner/outer route.
+In \cref{fig:right-rail-sensors}, \(\times2\) means one logical detector has two
+configured points. Continuous pose remains controller-only for safety/evaluation,
+not a learned-model input.
 
 \section{Multi-shuttle identity and lifecycle}
 
-The current fleet supports four identities on each rail. Stable short
-identities L1--L4 and R1--R4 map to Gazebo entity names such as
-\code{room315\_right\_shuttle\_4}. Identity is not inferred from array order.
-The operator-facing lifecycle supports:
+Each rail supports four stable identities: L1--L4 or R1--R4, mapped to Gazebo
+names such as \code{room315\_right\_shuttle\_4}, never inferred from array order.
+The typed add/spawn service accepts name, start slot, speed and initial enabled
+state. Per-entity commands are ON (enable/resume), OFF (disable), RESET (return
+to configured start slot) and REMOVE (delete from Gazebo); \code{ALL} applies
+ON/OFF/RESET rail-wide. Reports expose MOVING, WAITING, DISABLED and FALLING
+modes, payload state and debug identity. Emergency stop disables all motion;
+resumption requires an explicit operational decision.
 
-\begin{itemize}
-  \item add/spawn through a typed low-level service with a name, start slot,
-  speed and initial enabled state;
-  \item per-entity ON, OFF, RESET and REMOVE commands;
-  \item rail-wide \code{ALL} ON, OFF and RESET commands;
-  \item enabled, disabled, moving, waiting and fault-related state;
-  \item explicit payload state and debug visual identity.
-\end{itemize}
-
-Emergency stop disables all shuttle motion. Any subsequent execution requires
-an explicit operational decision.
-
-The add service manages simulator entities. Entities created through it are
-registered for supervised task execution only if they match the reconciled
-L1--L4 and R1--R4 identities used by the language interface. This keeps the
-planner's identity domain independent from ad hoc commissioning operations.
-
-The identity registry reconciles the maximum fleet, configured identities,
-world entities and default spawn information. Registration proceeds only when
-these sources agree, ensuring that visual labels and planner objects refer to
-the same shuttle. \Cref{fig:dense-eight-shuttle} shows the complete fleet in
-the two camera views used by the visual pipeline.
+The identity registry reconciles fleet limits, configuration, world entities
+and default spawns. Added entities enter supervised execution only when they
+match its L1--L4/R1--R4 language-interface identities, keeping ad hoc
+commissioning outside the planner domain and aligning visual/planner objects.
+\Cref{fig:dense-eight-shuttle} shows the full fleet in both visual-pipeline
+cameras.
 
 \begin{figure}[p]
   \centering
@@ -299,9 +265,8 @@ the two camera views used by the visual pipeline.
     payload blocks are visible on loaded R1 and R3.}
   \end{subfigure}
   \caption[Paired Gazebo camera views of the complete eight-shuttle fleet.]
-  {Synchronous overhead Gazebo views of the complete eight-shuttle
-  configuration. Identity colours remain visible while device markers are
-  hidden, making presence and payload appearance readable on both rails.}
+  {Synchronous overhead Gazebo views of all eight shuttles. With device markers
+  hidden, identity colours, presence and payload appearance remain visible.}
   \label{fig:dense-eight-shuttle}
 \end{figure}
 
@@ -312,71 +277,62 @@ At every update step, an enabled shuttle advances by
   s_{k+1}=s_k + v\,\Delta t ,
   \label{eq:kinematic-update}
 \end{equation}
-The update in \cref{eq:kinematic-update} is subject to the active route,
-target, stopper and headway constraints. When the shuttle crosses a segment
-end, the topology selects the next segment and the residual distance is
-preserved. The controller update loop and configured Gazebo
-\code{set\_pose} rate limit both default to \SI{30}{Hz}. Device logic is
-evaluated on the controller's kinematic update independently of render timing;
-asynchronous \code{set\_pose} requests may reduce the achieved visual update
-rate.
+where \(s_k\) is arc length at update \(k\), \(v\) configured forward speed and
+\(\Delta t\) the interval. Route, target, stopper and headway constrain the
+update; crossing an end preserves residual distance on the topology-selected
+successor. Controller and Gazebo \code{set\_pose} rate limits default to
+\SI{30}{Hz}. Device logic follows controller timing, while asynchronous pose
+requests may reduce visual update rate.
 
-Slots are calibrated ratios on exterior segments. Arrival requires more than
-proximity to the target coordinate: the low-level controller uses a target
-slot, the appropriate stopper, a slot detector and an explicit OFF effect. The
-planner maintains symbolic occupancy, while the executive verifies the
-observed identity at the target before declaring completion.
+Slots are calibrated exterior-segment \code{s\_ratio} values. Arrival combines
+target, stopper, slot detector and OFF command effect: OFF reports DISABLED,
+while \code{reached\_target\_slot} records low-level setpoint completion, not
+task success. The planner tracks symbolic occupancy; the executive still
+verifies target identity.
 
 \section{Operator-facing observation and maintenance}
 
-The runbook exposes the typed low-level controller API for commissioning and
-diagnosis. Direct publication can be used to isolate and test a device, while
-operational tasks continue to pass through the translation and supervision
-stages. The operator-facing interfaces are listed in
-\cref{app:interfaces}.
+The typed low-level API in \path{runbook.html} supports commissioning and
+device-isolation tests; operational tasks still pass through translation and
+supervision.
 
-The installed device-position tool supports maintenance of the device geometry
-defined in YAML. It projects a supplied Gazebo XYZ point onto
-the closest rail segment, reports the resulting arc length, \code{s\_ratio},
-projected point and residual distance, and defaults to a dry run. A guarded
-write can update slots, ordinary position sensors or stopper points; points
-that exceed the configured distance threshold are rejected unless explicitly
-overridden. Multi-point stoppers can be addressed by current segment or list
-index, while their linked detector positions remain derived from the stopper
-configuration. This tool operates offline: changes take effect only after a
-relaunch and must then be checked through markers and binary feedback. These
-maintenance and low-level interfaces remain separate from the closed-loop task
-interface; their commands and topics are specified in
-\cref{app:interfaces}.
+The installed device-position tool projects Gazebo XYZ onto the nearest segment
+of the YAML device geometry and reports arc length, \code{s\_ratio}, projected
+point and residual, defaulting to dry run. Guarded writes update slots,
+approach/branch detectors or stopper
+points; over-threshold residuals require explicit override. A logical
+multi-point stopper may protect corresponding points on two branches, addressed
+by segment or list index, while its linked detector remains derived. Changes
+are offline until relaunch and marker/binary-feedback checking. Commands remain
+separate from closed-loop tasks and are documented in \path{runbook.html} and
+\path{docs/QUICK_START_AND_FEATURE_GUIDE.md}.
 
 \section{Headway and collision constraints}
 
-Multiple shuttles introduce a resource-allocation requirement. The controller
-enforces separation on the same segment; higher-level reservation ownership
-and authorisation are defined in \cref{chap:interfaces}.
+The low-level controller enforces configurable geometric separation, default
+minimum centre distance \SI{0.33}{m}. Higher-level \emph{block headway} is the
+required number of clear route blocks ahead; \cref{chap:interfaces} defines
+reservation ownership and authorisation.
 
-Within the runtime, a \emph{blocker} is another shuttle occupying the requested
-route, destination slot or required holding capacity. Independent objects
-placed on the rail are outside the current planning and execution model.
+A runtime \emph{blocker} is another shuttle occupying the requested route,
+destination slot or holding capacity. Other rail objects are outside the
+planning/execution model.
 
 \section{Interior staging and dense blocker cases}
 
-Both public interior branches, \code{A12I} and \code{A34I}, can serve as
-capacity-limited holding areas. The planner enumerates admissible holding centres from
-the calibrated branch length, preserves a \SI{0.35}{m} end margin and the
-configured centre-to-centre separation, and prefers the farthest reachable
-free centre. With the current geometry, each branch admits at most two safely
-separated shuttles; the positions are calculated rather than fixed. A later
-\code{ON} command invalidates the corresponding stop certificate.
-
-These calculated centres impose geometric and capacity constraints on later
-relocation. The closed-loop selection, re-observation and recovery policy is
-described in \cref{chap:neurosymbolic}.
+Public interior branches \code{A12I}/\code{A34I} are capacity-limited holding
+areas. From calibrated length, the planner computes rather than fixes centres,
+keeps a \SI{0.35}{m} end margin and configured separation, and prefers the
+farthest reachable free centre. Each branch currently admits at most two safe
+shuttles. Successful supervised staging persists a \emph{runtime clearance
+certificate} binding identity, interior target, entry sensor, bounded motion,
+controller stop and post-stop observation. It supports safe route normalisation,
+not visual localisation, and a later \code{ON} invalidates it. These centres
+constrain relocation; \cref{chap:neurosymbolic} covers selection,
+re-observation and recovery.
 
 \section{Validation of the transport model}
 
-Static and behavioural checks cover calibrated geometry, topology, devices,
-identity reconciliation, separation and interior capacity. The corresponding
-results are presented in \cref{chap:results}. The geometric and capacity
-constraints are enforced through the typed commands and supervisory mechanisms
-described in \cref{chap:interfaces}.
+Static/behavioural checks cover geometry, topology, devices, identity,
+separation and interior capacity (\cref{chap:results}); typed commands and
+supervision enforce these constraints (\cref{chap:interfaces}).

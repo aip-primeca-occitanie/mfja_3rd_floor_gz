@@ -27,12 +27,17 @@ written in English and describes the final retained implementation. Active
 experimental records and their claim boundaries are indexed in
 `evidence/ACTIVE_EVIDENCE.md`. A reproducible handover must archive or commit
 the exact source and configuration identity used for its test results.
-The final 12 August build is 88 A4 pages; `main.pdf` and the submission copy are
-byte-identical at SHA-256
-`31f107aa8bf9ff9e666dc7537f0fb84c23caac90f0f0e2a200a1872d148f55bd`.
-The retained log and complete fingerprint record are
-`evidence/final_report_build_2026-08-12.log` and
-`evidence/final_report_sha256_2026-08-12.txt`.
+Historical and current visual-dataset terminology is normalized in
+`../docs/room315_dataset_role_registry.md`; that registry does not rename the
+hash-identified materialized files.
+The current build is 71 A4 pages (4,687,897 bytes). `main.pdf` and the
+submission copy are byte-identical at SHA-256
+`32b4d41cd0587c7217096b728ce4133091ec43123cf8997d12e382ea32b38d06`.
+The retained log and fingerprint record are
+`evidence/final_report_build_2026-08-15.log` and
+`evidence/final_report_sha256_2026-08-15.txt`. This rebuilt delivery incorporates
+the dataset-role and terminology clarifications without changing any experiment,
+checkpoint, metric or acceptance result.
 The repository revision carrying this report commits the evaluated source,
 active and recovery configurations, tests, submission PDF and lightweight
 evidence together. A clean checkout of that revision reconstructs the

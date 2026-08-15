@@ -69,8 +69,8 @@
     \textbf{Split-rail visual model}\\[-0.2ex]
     shared low-level stem + rail-isolated left/right branches};
   \node[accepted] (visual) at (42mm,-45mm) {
-    \textbf{Calibrate and validate the complete frame}\\[-0.2ex]
-    segment and loaded-state gates + freshness/contract checks\\
+    \textbf{Apply frozen scores and validate the complete frame}\\[-0.2ex]
+    segment/loaded score floors + freshness/contract checks\\
     $\rightarrow$ accepted \texttt{VisualStateObservation} (declared schema)};
 
   \node[gateway] (ground) at (0,-70mm) {
@@ -86,7 +86,9 @@
   \draw[flow] (visualinputs) -- (vfour);
   \draw[flow] (vfour) -- (visual);
   \draw[flow] (task.south) -- ([xshift=-43mm]ground.north);
-  \draw[flow] (visual.south) -- ([xshift=43mm]ground.north);
+  % Keep the final segment vertical so the arrowhead points unambiguously from
+  % the accepted visual frame into the task gateway.
+  \draw[flow] (visual.south) -- ([xshift=42mm]ground.north);
 
   % Panel B: one-step receding-horizon planning and result checking.
   \node[paneltitle] at (-79mm,-85mm)
@@ -114,9 +116,10 @@
   \node[replan] (replan) at (35mm,-186mm)
     {not complete $\rightarrow$ re-observe and replan};
 
-  % Enter Panel B at the right margin so the arrow does not cross its title.
+  % Enter Panel B at the right margin so the arrow does not cross its title;
+  % finish vertically into the planner so the direction remains unambiguous.
   \draw[flow] ([xshift=72mm]ground.south) -- (72mm,-90mm)
-    -- ([xshift=50mm]plan.north);
+    -- (50mm,-90mm) -- ([xshift=50mm]plan.north);
   \draw[flow] (plan) -- (translate);
   \draw[flow] (translate) -- (supervise);
   \draw[flow] (supervise) -- (controller);
@@ -125,7 +128,16 @@
   \draw[feedback] (verify.south) -- (replan.north);
 
   % Only an incomplete task returns to a post-command accepted observation.
-  \draw[feedback] (replan.east) -- (80mm,-186mm) |- (visual.east);
+  % Keep a dedicated right-hand lane and a final segment longer than the arrow
+  % head; the previous near-zero segment made the arrowhead fold at the corner.
+  \coordinate (replanLaneBottom) at (81.2mm,-186mm);
+  \coordinate (replanLaneTop) at (81.2mm,-45mm);
+  \draw[
+    feedback,
+    -{Latex[length=1.4mm,width=1.15mm]},
+    line join=round
+  ] (replan.east) -- (replanLaneBottom)
+    -- (replanLaneTop) -- (visual.east);
 
   % Explicit extent avoids global scaling, preserving the footnotesize text.
   \path[use as bounding box] (-82mm,14mm) rectangle (82mm,-196mm);

@@ -3,61 +3,52 @@
 
 \section{Limitations}
 
-The project is not limited to the camera-based Room~315 workflow. Its first
-phase modelled and integrated the industrial and mobile robots, exposed
-namespaced joint or base commands and feedback, and enabled their motion in
-Gazebo. The retained all-robot check has a narrower evidential scope: it
-confirms one full-floor cold start, the presence of all six configured models,
-their isolated command and feedback interfaces, and fresh state samples; it
-does not measure simultaneous-motion accuracy or repeatability. What remains
-outside the implemented and evaluated scope is autonomous manipulation rather
-than arm motion itself: collision-aware arm-trajectory generation and a
-complete pick, grasp, handover or place workflow with object and contact
-verification were not developed.
+The first phase integrated all six configured robots, namespaced commands and
+feedback, but its one full-floor cold start does not establish simultaneous-
+motion accuracy or repeatability. Individual motion exists; collision-aware,
+contact-verified autonomous manipulation does not.
 
-The integrated language, perception and task-execution campaigns concern the
-Room~315 Gazebo workflow. The shuttle backend is kinematic, which supports
-controlled studies of topology, coordination and closed-loop task execution.
-It omits torque, slip, braking, mechanical play and payload inertia. The
-supervisor provides software checks for this simulated workflow; it is not a
-certified machinery-safety function.
+The integrated campaigns are Gazebo-only. Their kinematic shuttle backend
+supports topology and task-execution studies but omits torque, slip, braking,
+play and payload inertia; its software supervisor is not a certified safety
+function.
 
 The perception study uses the known shuttle fleet, fixed simulated cameras and
-generated scene families. The rail-isolated checkpoint was selected and
-calibrated on Validation; the exposed Canary remained a development-regression
-set. The principal result uses an independently generated, preregistered and one-shot Final Test,
-disjoint from the training, Validation and Canary sources. This strengthens
-the evidence for unseen generated Room~315 scenes, but the measurements still
-characterise the present camera geometry and synthetic distribution rather
-than unseen hardware, lighting or installation conditions. Identity presence
-comes from an independent registry and rail side is fixed by the L/R identity
-contract; these are system assumptions, not learned achievements. Segment
-confidence is Validation-calibrated, while the loaded-state softmax value is
-not a calibrated probability.
+generated scene families. Its one-shot Final Test is procedurally separate and
+disjoint from the current training, hard-case Validation and Canary inputs at
+the audited exact scene-ID, canonical generation-parameter fingerprint,
+image-byte and complete-label-row levels. This does not imply
+presence-configuration or perception-distribution independence:
+presence configurations intentionally recur, and the Test still characterises
+the same camera geometry and synthetic distribution rather than unseen
+hardware, lighting or installation conditions. Identity presence comes from an
+external registry and rail side from the L/R identity contract; these are
+assumptions, not learned achievements. Segment confidence is
+Validation-calibrated, while the loaded-state softmax value is not a calibrated
+probability. The 0.05 and 0.12 coordinate-error criteria use ground-truth labels
+offline and are not confidence gates that the live runtime can evaluate.
 
-The twelve English-to-motion rows are command-producing results for selected
-valid Gazebo scenes; the Final Test is the separate independent perception
-result. One dense same-frame shadow run, seven observation-only scenes and one
-dense dry-run smoke provide qualification evidence without control action. The
-manual authorisation binds the positive and fault campaigns to the closed-loop
-Gazebo runtime. This authority does not extend to a physical deployment.
+A post-hoc registry audit found support overlap below the sample level. Hard
+Training and Hard-case Validation share 23 complete visual-target payloads,
+plus 14 trajectory and 14 geometry fingerprints; Hard Training and Canary share
+14 target payloads, plus eight trajectory and eight geometry fingerprints. This
+is target/state support overlap, not sample or image reuse: scene IDs, images,
+complete label rows, scene families and generated variants remain disjoint.
 
-Each positive row, closed-loop fault scenario and all-robot launch check was
-executed once. The visual-input suite rejected 8/8 faults, the
-closed-loop campaign passed 5/5 faults without false success, and the separately
-allowlisted rollback smoke passed. These checks do not measure recovery during long
-live-graph outages or repeated switching between profiles. Repeating all
-runtime scenes across controlled seeds is still needed to quantify variation.
-The shuttle-arrival path uses command-linked observations. Applying the
-same correlation to switch and stopper reports is a remaining interface
-improvement. The implemented deadlock rule handles crossed reservations; longer
-wait-for cycles and temporal non-progress require further detection.
+The twelve command-producing rows cover selected valid scenes; the Final Test
+is perception-only, and manual approval remains Gazebo-only.
 
-The documented CLI validates a task against the Room~315 domain and obtains
-operator confirmation at the configured risk levels. The execution subscriber
-assumes a trusted ROS graph and the official CLI producer. A multi-user
-simulation service would therefore need authenticated task sources or graph
-isolation, together with sender identity in each task.
+Each positive row, fault and all-robot check ran once, so controlled-seed
+repetition (the same protocol under declared pseudorandom seeds), long-outage
+recovery and profile switching remain unmeasured. Shuttle arrival uses
+command-linked observations; device-report correlation, longer circular
+wait-for cycles and temporal non-progress remain open.
+
+The CLI confirmation heuristic labels transport high, otherwise shuttle/
+selection/rail targets medium, and all else low; these prompt labels are not a
+certified risk assessment. The subscriber trusts the ROS graph and official CLI,
+so multi-user service requires authenticated sources or graph isolation and
+sender identity.
 
 The language study covers ten selected English requests, including
 clarification, rejection and cancellation. Open-vocabulary and multilingual
@@ -79,7 +70,7 @@ question each one would answer.
 \toprule
 \textbf{Priority} & \textbf{Engineering task} & \textbf{Purpose}\\
 \midrule
-P0 & Generate a domain-shifted evaluation partition & Measure transfer to
+P0 & Generate a separate visual-shift evaluation set & Measure transfer to
 varied camera poses, lighting, textures and sensor noise without tuning on the
 completed one-shot Final Test\\
 \tablerowrule
@@ -100,42 +91,30 @@ device result with a matching state update newer than the command\\
 \tablerowrule
 P1 & Publish a reproducible evaluation release & Preserve the lightweight
 evidence index, source identity and hash-identified checkpoint/dataset objects
-needed to audit the one-shot Test and Gazebo reviews\\
+needed to reproduce the one-shot Test and inspect the Gazebo reviews\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{Continued use at MFJA}
 
-The package can support practical teaching sessions in which students
-launch a chosen robot set, inspect namespaces and typed interfaces, modify a
-rail scenario, generate a PDDL problem and follow one supervised task step to
-its observed result. Configuration-driven launch and cold-start campaign rows
-allow every session to begin from a declared state, while the runbooks provide
-the operational sequence and diagnostic checks.
+For teaching, students can launch selected robots, inspect interfaces, alter a
+rail scene, generate PDDL and trace a supervised step from a configured cold
+start using the runbooks.
 
-The same assets provide a reference benchmark setup. An alternative planner,
-perception checkpoint or task-grounding method can be compared on the existing
-case matrix without changing controller behaviour or the arrival checks. The
-completed twelve-case campaign supplies the normal-workflow scenario set,
-while the seven acceptance scenes provide an observation-only
-perception matrix.
-Repeated model selection must use Validation; the exposed Canary should remain
-a regression record rather than become an optimisation target.
-
-Further synthetic-data work can add camera perturbations, partial occlusion,
-station clutter and payload variation while preserving configuration-family
-grouping. These additions should form a separate domain-shift study; the
-completed Final Test must remain a frozen one-shot record and must not become
-an optimisation target.
+The same assets provide a reference benchmark. Alternative planners,
+perception checkpoints or task-grounding methods can use the fixed case matrix
+without changing controller behaviour or arrival checks. Model selection must
+use Validation; the Canary remains a regression check and the Final Test remains
+the fixed one-shot evaluation. Added camera, occlusion, clutter or payload
+perturbations belong in a separate domain-shift partition.
+Here, domain shift means a change in the visual data distribution, not a change
+to the PDDL action domain or ROS Domain ID.
 
 \section{Focused research extensions}
 
-Planner development should keep the PDDL domain aligned with the canonical rail
-graph and require an executable translation and visible effect check for every
-action. Any revision of the runtime or expansion of command authority must
-remain bound to its exact schema and checkpoint allowlist, presence-aware
-abstention, calibrated segment confidence and immutable operator authorisation.
-Independently tested atomic tasks can then be extended to controlled
-concurrency, with reservations and deadlock handling evaluated before any
-increase in parallelism.
+Planner/runtime changes must retain canonical rail alignment, executable
+translation/effect checks, schema/checkpoint allowlists, presence-aware
+abstention, calibrated confidence and operator approval. Only independently
+tested atomic (non-overlapping) tasks should progress to concurrency, after
+reservation and deadlock evaluation.

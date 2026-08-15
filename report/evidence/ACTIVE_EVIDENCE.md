@@ -98,20 +98,29 @@ from those claims.
   closed-loop claims.
 - `room315_campaign_figures_2026-08-07/`: alternate B03 derivation retained for
   reconstruction; the report uses the derivation listed above.
-- `visual_model_evaluation_2026-07-30/`: rollback-model training sidecars,
-  grouped split/leakage audit and locked-Test review.
+- `visual_model_evaluation_2026-07-30/`: historical predecessor-model records.
+  Its 256-scene grouped Validation selected the predecessor checkpoint; its
+  separate 256-scene Test was subsequently opened once and is consumed. These
+  partitions support audit and rollback reconstruction only and are not inputs
+  to the current V4 selection, calibration, Canary or Final Test claims.
+- `room315_dataset_partition_overlap_post_hoc_2026-08-12/`: supplemental
+  seven-partition overlap audit created after the experiments. It distinguishes
+  exact samples, images, targets and generated variants from abstract presence
+  support and seed reuse. It is provenance documentation, not preregistered
+  evidence or an experimental acceptance gate.
 - `current_source_identity_2026-08-07.txt` and
   `current_source_supplement_2026-08-07/`: archived source identity and its
   two untracked test files.
 - `final_report_build_2026-08-08.log`,
   `final_report_sha256_2026-08-08.txt`, `final_report_build_2026-08-11.log` and
-  `final_report_sha256_2026-08-11.txt`: preserved report freezes.
-- `final_report_build_2026-08-12.log` and
-  `final_report_sha256_2026-08-12.txt`: final 88-page A4 English-report build
-  and fingerprint. The retained log has SHA-256
-  `8f3efe415f8f899478e45ec1d13cc26226ce75c8d983ead649870191e69e2dad`;
+  `final_report_sha256_2026-08-11.txt`, `final_report_build_2026-08-12.log` and
+  `final_report_sha256_2026-08-12.txt`: preserved earlier report freezes.
+- `final_report_build_2026-08-15.log` and
+  `final_report_sha256_2026-08-15.txt`: current final 71-page A4 English-report
+  build and fingerprint. The retained log has SHA-256
+  `94d58bce09dbf080aeebec777a52e2a3722c732a5fd5b3076528d0338c836510`;
   `main.pdf` and the named delivery PDF are byte-identical at SHA-256
-  `31f107aa8bf9ff9e666dc7537f0fb84c23caac90f0f0e2a200a1872d148f55bd`.
+  `32b4d41cd0587c7217096b728ce4133091ec43123cf8997d12e382ea32b38d06`.
 
 The three recorded pytest suites overlap and their pass counts must not be
 summed. The positive campaign is a bounded acceptance matrix rather than a
