@@ -13,6 +13,7 @@ install(
 install(
   FILES
     config/gazebo_params.yaml
+    config/gripper_command_defaults.yaml
     config/mfja_default.gui.config
     config/robots.yaml
     config/robots_room_315_only.yaml
@@ -38,10 +39,33 @@ install(
 install(
   PROGRAMS
     scripts/conveyor_loop_mode_controller.py
+    scripts/robot_gripper_command.py
+    scripts/robot_joint_command.py
     scripts/room_315_device_position_tool.py
     scripts/room_315_kinematic_shuttle.py
     scripts/room_315_kinematic_shuttle_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+
+  ament_add_pytest_test(
+    test_robot_gripper_bridge
+    test/test_robot_gripper_bridge.py
+  )
+  ament_add_pytest_test(
+    test_robot_gripper_command
+    test/test_robot_gripper_command.py
+  )
+  ament_add_pytest_test(
+    test_gripper_range_launch
+    test/test_gripper_range_launch.py
+  )
+  ament_add_pytest_test(
+    test_robot_joint_command
+    test/test_robot_joint_command.py
+  )
+endif()
 
 ament_package()

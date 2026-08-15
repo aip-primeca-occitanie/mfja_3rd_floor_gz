@@ -178,17 +178,135 @@
           <iyz>0</iyz>
         </inertia>
       </inertial>
-      <visual name="zimmer_lwr50l_visual">
-        <pose>0 0 0.0186 -1.57079632679 0 0</pose>
+      <!-- The source CAD is a monolithic assembly containing fixed fingers.
+           A local primitive body avoids rendering those fingers underneath
+           the actuated jaw links. -->
+      <visual name="zimmer_lwr50l_mount_visual">
+        <pose>0 0 0.004 0 0 0</pose>
         <geometry>
-          <mesh>
-            <uri>model://yaskawa_hc10dt/meshes/gripper/lwr50l_03_00001_a_000.stl</uri>
-            <scale>0.001 0.001 0.001</scale>
-          </mesh>
+          <cylinder>
+            <radius>0.043</radius>
+            <length>0.008</length>
+          </cylinder>
         </geometry>
         <material>
           <ambient>0.22 0.23 0.23 1</ambient>
           <diffuse>0.22 0.23 0.23 1</diffuse>
+        </material>
+      </visual>
+      <visual name="zimmer_lwr50l_upper_body_visual">
+        <pose>0 0 0.026 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0375</radius>
+            <length>0.044</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.22 0.23 0.23 1</ambient>
+          <diffuse>0.22 0.23 0.23 1</diffuse>
+        </material>
+      </visual>
+      <visual name="zimmer_lwr50l_lower_body_visual">
+        <pose>0 0 0.071 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.060 0.072 0.060</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.22 0.23 0.23 1</ambient>
+          <diffuse>0.22 0.23 0.23 1</diffuse>
+        </material>
+      </visual>
+      <visual name="zimmer_lwr50l_jaw_guide_visual">
+        <pose>0 0 0.1005 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.040 0.070 0.012</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.22 0.23 0.23 1</ambient>
+          <diffuse>0.22 0.23 0.23 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <link name="gripper_left_jaw">
+      <pose relative_to="gripper_left_jaw_joint">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0.0225 0 0 0</pose>
+        <mass>0.08</mass>
+        <inertia>
+          <ixx>0.00002</ixx>
+          <iyy>0.00002</iyy>
+          <izz>0.00001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="left_jaw_finger_visual">
+        <pose>0 0 0.0225 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.016 0.018 0.045</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.62 0.64 0.64 1</ambient>
+          <diffuse>0.62 0.64 0.64 1</diffuse>
+        </material>
+      </visual>
+      <visual name="left_jaw_pad_visual">
+        <pose>0 0.010 0.024 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.014 0.003 0.030</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.03 0.03 0.03 1</ambient>
+          <diffuse>0.03 0.03 0.03 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <link name="gripper_right_jaw">
+      <pose relative_to="gripper_right_jaw_joint">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0.0225 0 0 0</pose>
+        <mass>0.08</mass>
+        <inertia>
+          <ixx>0.00002</ixx>
+          <iyy>0.00002</iyy>
+          <izz>0.00001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="right_jaw_finger_visual">
+        <pose>0 0 0.0225 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.016 0.018 0.045</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.62 0.64 0.64 1</ambient>
+          <diffuse>0.62 0.64 0.64 1</diffuse>
+        </material>
+      </visual>
+      <visual name="right_jaw_pad_visual">
+        <pose>0 -0.010 0.024 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.014 0.003 0.030</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.03 0.03 0.03 1</ambient>
+          <diffuse>0.03 0.03 0.03 1</diffuse>
         </material>
       </visual>
     </link>
@@ -327,6 +445,45 @@
       <pose relative_to="tool0">0 0 0 0 0 0</pose>
     </joint>
 
+    <!-- q = 0 is closed; one positive command opens both jaws. -->
+    <joint name="gripper_left_jaw_joint" type="prismatic">
+      <parent>gripper</parent>
+      <child>gripper_left_jaw</child>
+      <pose relative_to="gripper">0 -0.025 0.1065 0 0 0</pose>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>0.0</lower>
+          <upper>0.010</upper>
+          <effort>80.0</effort>
+          <velocity>0.08</velocity>
+        </limit>
+        <dynamics>
+          <damping>2.0</damping>
+          <friction>0.0</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="gripper_right_jaw_joint" type="prismatic">
+      <parent>gripper</parent>
+      <child>gripper_right_jaw</child>
+      <pose relative_to="gripper">0 0.025 0.1065 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>0.0</lower>
+          <upper>0.010</upper>
+          <effort>80.0</effort>
+          <velocity>0.08</velocity>
+        </limit>
+        <dynamics>
+          <damping>2.0</damping>
+          <friction>0.0</friction>
+        </dynamics>
+      </axis>
+    </joint>
+
     <joint name="gripper_tcp_joint" type="fixed">
       <parent>gripper</parent>
       <child>gripper_tcp</child>
@@ -348,6 +505,8 @@
       <joint_name>joint_4_r</joint_name>
       <joint_name>joint_5_b</joint_name>
       <joint_name>joint_6_t</joint_name>
+      <joint_name>gripper_left_jaw_joint</joint_name>
+      <joint_name>gripper_right_jaw_joint</joint_name>
     </plugin>
 
     <plugin
@@ -412,6 +571,18 @@
       <position_i_max>0.0</position_i_max>
       <position_cmd_min>-60.0</position_cmd_min>
       <position_cmd_max>60.0</position_cmd_max>
+    </plugin>
+
+    <plugin
+      filename="mfja-symmetric-gripper-controller-system"
+      name="mfja::sim::systems::SymmetricGripperController">
+      <left_joint_name>gripper_left_jaw_joint</left_joint_name>
+      <right_joint_name>gripper_right_jaw_joint</right_joint_name>
+      <sub_topic>gripper/position_command</sub_topic>
+      <min_position>0.0</min_position>
+      <max_position>0.010</max_position>
+      <max_velocity>0.08</max_velocity>
+      <initial_position>0.0</initial_position>
     </plugin>
   </model>
 </sdf>

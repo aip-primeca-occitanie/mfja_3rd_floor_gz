@@ -353,7 +353,7 @@
       <p class="subtitle">
         This page keeps only the important practical scenarios: running Room 315, controlling shuttles,
         testing switches and stoppers, reading sensor feedback, running the full third floor, and testing
-        robot motion and runtime checks.
+        robot motion, industrial grippers, and runtime checks.
       </p>
     </div>
   </header>
@@ -375,6 +375,7 @@
       <a href="#scenario-all-robots">Full floor with all robots</a>
       <a href="#scenario-tiago-variants">TIAGo variants from YAML</a>
       <a href="#scenario-robot-control">Robot control topics</a>
+      <a href="#gripper-control">Industrial gripper control</a>
       <a href="#scenario-move-one-robot">Move one robot</a>
       <a href="#validation">Quick checks</a>
     </nav>
@@ -407,6 +408,41 @@ source install/setup.bash</code></pre>
             </div>
           </div>
         </div>
+
+        <div class="callout">
+          To make Gazebo lighter, add <code>gui_config:=config/mfja_light.gui.config</code>
+          to launch commands that open the GUI. The Room 315 and full-floor world
+          files already disable scene shadows with <code>&lt;shadows&gt;false&lt;/shadows&gt;</code>.
+          The light GUI is meant for recording/performance and does not include the
+          full move/rotate toolbar. Use <code>gui_config:=config/mfja_default.gui.config</code>
+          when you need Gazebo tools such as <code>TransformControl</code>, entity
+          movement, and pose inspection.
+        </div>
+
+        <div class="callout">
+          Room 315 now starts without VLA removable obstacle markers by default.
+          Keep the default for normal shuttle and robot scenarios. Add
+          <code>enable_room315_vla_obstacles:=true</code> only when you want to
+          run obstacle-marker workflows such as VLA obstacle-stop scenarios.
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Light Gazebo GUI option</span><button class="copy-btn" data-copy="cmd-light-gazebo-gui">Copy</button></div>
+          <pre><code id="cmd-light-gazebo-gui"># Add this launch argument when running Gazebo with gui:=true:
+gui_config:=config/mfja_light.gui.config \</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Enable optional VLA obstacles</span><button class="copy-btn" data-copy="cmd-enable-vla-obstacles">Copy</button></div>
+          <pre><code id="cmd-enable-vla-obstacles"># Optional. The default is false, so Room 315 launches without obstacles:
+enable_room315_vla_obstacles:=true \</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Full Gazebo GUI tools</span><button class="copy-btn" data-copy="cmd-full-gazebo-gui">Copy</button></div>
+          <pre><code id="cmd-full-gazebo-gui"># Use this when you need to move entities or inspect exact poses in Gazebo:
+gui_config:=config/mfja_default.gui.config \</code></pre>
+        </div>
       </section>
 
       <section id="topic-map">
@@ -426,6 +462,7 @@ source install/setup.bash</code></pre>
             <tr><td>Stopper state</td><td><code>/room_315/rails/right/stoppers/state</code></td><td><code>mfja_rail_interfaces/msg/StopperState</code></td></tr>
             <tr><td>All rail sensor feedback</td><td><code>/room_315/rails/right/sensors/feedback</code></td><td><code>mfja_rail_interfaces/msg/SensorFeedback</code></td></tr>
             <tr><td>Robot joint command</td><td><code>/kuka1/joint_trajectory</code></td><td><code>trajectory_msgs/msg/JointTrajectory</code></td></tr>
+            <tr><td>Industrial gripper command</td><td><code>/kuka1/gripper/position_command</code></td><td><code>std_msgs/msg/Float64</code></td></tr>
             <tr><td>Robot joint state</td><td><code>/kuka1/joint_states</code></td><td><code>sensor_msgs/msg/JointState</code></td></tr>
             <tr><td>TIAGo with arm mobile command</td><td><code>/tiago1/cmd_vel</code></td><td><code>geometry_msgs/msg/Twist</code></td></tr>
             <tr><td>TIAGo without arm/head mobile command</td><td><code>/tiago_base1/cmd_vel</code></td><td><code>geometry_msgs/msg/Twist</code></td></tr>
@@ -510,6 +547,26 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_shuttle_speed:=0.2 \
   room315_show_device_markers:=true</code></pre>
         </div>
+
+        <details>
+          <summary>Optional: add KUKA and test its gripper in Room 315</summary>
+          <div class="details-body">
+            <p>
+              In Terminal 1, change <code>robots:=none</code> to
+              <code>robots:=kuka</code> before launching. After KUKA appears, use a
+              separate sourced terminal for the gripper commands below.
+            </p>
+            <div class="command">
+              <div class="command-bar"><span>Additional terminal: Room 315 KUKA gripper</span><button class="copy-btn" data-copy="cmd-room315-kuka-gripper">Copy</button></div>
+              <pre><code id="cmd-room315-kuka-gripper">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open 100
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka close 100</code></pre>
+            </div>
+          </div>
+        </details>
 
         <div class="grid">
           <div class="command">
@@ -951,7 +1008,7 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
         </div>
 
         <div class="command">
-          <div class="command-bar"><span>Single robot with table</span><button class="copy-btn" data-copy="cmd-single-robot">Copy</button></div>
+          <div class="command-bar"><span>Terminal 1: single robot with table</span><button class="copy-btn" data-copy="cmd-single-robot">Copy</button></div>
           <pre><code id="cmd-single-robot">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -961,6 +1018,25 @@ ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
   start_paused:=false \
   gui:=true</code></pre>
         </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 2: test the selected gripper</span><button class="copy-btn" data-copy="cmd-single-robot-gripper">Copy</button></div>
+          <pre><code id="cmd-single-robot-gripper">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+# Keep this selector equal to robot:= in Terminal 1.
+ROBOT=kuka
+
+ros2 run mfja_robot_control_config robot_gripper_command.py "$ROBOT" open 100
+ros2 run mfja_robot_control_config robot_gripper_command.py "$ROBOT" close 100</code></pre>
+        </div>
+
+        <p class="note">
+          Valid gripper selectors are <code>kuka</code>, <code>staubli</code>,
+          <code>hc10</code>, and <code>hc10dt</code>. The simulation must be running
+          and unpaused before the helper sends the command.
+        </p>
       </section>
 
       <section id="scenario-all-robots">
@@ -968,7 +1044,7 @@ ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
         <p>This is the heaviest scenario, but it is useful for full integration testing: complete world, every enabled robot entry from <code>robots.yaml</code>, both rails, one right shuttle, and one left shuttle. Room 315 shuttles use the same simulation clock as the robots, so all motion stays synchronized.</p>
 
         <div class="command">
-          <div class="command-bar"><span>Full floor with all robots and shuttles</span><button class="copy-btn" data-copy="cmd-all-robots">Copy</button></div>
+          <div class="command-bar"><span>Terminal 1: full floor with all robots and shuttles</span><button class="copy-btn" data-copy="cmd-all-robots">Copy</button></div>
           <pre><code id="cmd-all-robots">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -982,6 +1058,21 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   room315_left_shuttle_count:=1 \
   room315_shuttles_start_enabled:=false \
   room315_show_device_markers:=true</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 2: open and close all four industrial grippers</span><button class="copy-btn" data-copy="cmd-all-grippers-smoke">Copy</button></div>
+          <pre><code id="cmd-all-grippers-smoke">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+for robot in kuka staubli hc10 hc10dt; do
+  ros2 run mfja_robot_control_config robot_gripper_command.py "$robot" open 100
+done
+
+for robot in kuka staubli hc10 hc10dt; do
+  ros2 run mfja_robot_control_config robot_gripper_command.py "$robot" close 100
+done</code></pre>
         </div>
       </section>
 
@@ -1075,6 +1166,9 @@ ros2 topic list | grep -E '^/(tiago1|tiago_base1)/'</code></pre>
           TIAGo variants also have <code>/&lt;robot_name&gt;/cmd_vel</code> for mobile-base motion.
           For <code>tiago_base</code>, <code>/joint_trajectory</code> is only for the
           existing torso joint; there is no arm or head to command.
+          The helper <code>robot_joint_command.py</code> accepts <code>--unit rad</code>
+          or <code>--unit deg</code>. Degree inputs are converted to radians for
+          angular joints; linear joints such as <code>torso_lift_joint</code> stay in meters.
         </p>
 
         <table>
@@ -1097,22 +1191,235 @@ ros2 topic list | grep -E '^/(tiago1|tiago_base1)/'</code></pre>
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic list | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1|tiago_base1)/'
-ros2 topic info /kuka1/joint_trajectory
+ros2 run mfja_robot_control_config robot_joint_command.py --list
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+ros2 topic list --no-daemon | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1|tiago_base1)/'
+ros2 topic info /kuka1/joint_trajectory -v
+ros2 topic info /kuka1/gripper/position_command -v
+ros2 topic echo --once /kuka1/joint_states
 ros2 interface show trajectory_msgs/msg/JointTrajectory
+ros2 interface show std_msgs/msg/Float64
 ros2 interface show geometry_msgs/msg/Twist</code></pre>
         </div>
       </section>
 
+      <section id="gripper-control">
+        <h2>Industrial Gripper Control</h2>
+        <p>
+          The four industrial robots have an independent symmetric gripper command.
+          Use <code>robot_gripper_command.py</code> instead of adding jaw positions to
+          the six arm joints. The helper resolves the robot namespace, reads its
+          configured percentage range, waits for a live Gazebo bridge and jaw state,
+          then publishes the bounded position command.
+        </p>
+
+        <div class="grid three">
+          <div class="tile">
+            <h3>Supported selectors</h3>
+            <div class="tag-row">
+              <span class="tag">kuka</span>
+              <span class="tag">staubli</span>
+              <span class="tag">hc10</span>
+              <span class="tag">hc10dt</span>
+            </div>
+          </div>
+          <div class="tile">
+            <h3>Configuration file</h3>
+            <p><code>mfja_robot_control_config/config/gripper_command_defaults.yaml</code></p>
+          </div>
+          <div class="tile">
+            <h3>Reload rule</h3>
+            <p>Restart the simulation after changing 0% or 100%, because launch applies those values to the active SDF, URDF, and controller limits.</p>
+          </div>
+        </div>
+
+        <h3>Robot names and command topics</h3>
+        <table>
+          <thead>
+            <tr><th>Selector</th><th>Robot instance</th><th>Gripper command topic</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>kuka</code></td><td><code>kuka1</code></td><td><code>/kuka1/gripper/position_command</code></td></tr>
+            <tr><td><code>staubli</code></td><td><code>staubli1</code></td><td><code>/staubli1/gripper/position_command</code></td></tr>
+            <tr><td><code>hc10</code></td><td><code>yaskawa_hc10_1</code></td><td><code>/yaskawa_hc10_1/gripper/position_command</code></td></tr>
+            <tr><td><code>hc10dt</code></td><td><code>yaskawa_hc10dt_1</code></td><td><code>/yaskawa_hc10dt_1/gripper/position_command</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Basic commands</h3>
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>List ranges and preview a command</span><button class="copy-btn" data-copy="cmd-gripper-list-preview">Copy</button></div>
+            <pre><code id="cmd-gripper-list-preview">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+# Show the configured 0%, 100%, and bare-command defaults.
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+
+# Resolve the target without publishing it.
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open 75 --dry-run</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Open, close, percentage, and exact position</span><button class="copy-btn" data-copy="cmd-gripper-command-examples">Copy</button></div>
+            <pre><code id="cmd-gripper-command-examples">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+# Bare actions use the YAML default percentages.
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka close
+
+# Explicit action percentages.
+ros2 run mfja_robot_control_config robot_gripper_command.py staubli open 100
+ros2 run mfja_robot_control_config robot_gripper_command.py staubli close 100
+
+# The same percentage commands work for HC10.
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 open 50
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 close 100
+
+# Exact per-jaw position in meters, inside the configured range.
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10dt --position 0.005</code></pre>
+          </div>
+        </div>
+
+        <h3>How the percentages map to position</h3>
+        <table>
+          <thead>
+            <tr><th>Command</th><th>Target</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>open 100</code></td><td><code>q100</code></td><td>Configured fully-open position</td></tr>
+            <tr><td><code>close 100</code></td><td><code>q0</code></td><td>Configured fully-closed position</td></tr>
+            <tr><td><code>open 50</code></td><td><code>q0 + 0.5 * (q100 - q0)</code></td><td>Midpoint</td></tr>
+            <tr><td><code>close 50</code></td><td><code>q100 - 0.5 * (q100 - q0)</code></td><td>The same midpoint</td></tr>
+            <tr><td><code>open 0</code></td><td><code>q0</code></td><td>0% of the opening action</td></tr>
+            <tr><td><code>close 0</code></td><td><code>q100</code></td><td>0% of the closing action</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          With no percentage, <code>open</code> uses
+          <code>default_open_percentage</code> and <code>close</code> uses
+          <code>default_close_percentage</code> from the YAML file. Both shipped
+          defaults are 100%, but they can be changed independently for each robot.
+          The percentage is the amount of the named action, so
+          <code>close 25</code> closes one quarter of the travel and leaves the
+          gripper at 75% of its open range.
+        </div>
+
+        <h3>Configure what 0% and 100% mean</h3>
+        <p>
+          Edit the existing robot entry in the YAML; keep the other robot entries.
+          Positions are per-jaw prismatic positions in meters. Therefore the total
+          change in jaw-to-jaw opening is twice
+          <code>position_at_100_percent_m - position_at_0_percent_m</code>.
+          The 0% value must be zero or greater, and 100% must be greater than 0%.
+        </p>
+
+        <div class="command">
+          <div class="command-bar"><span>Example Staeubli range and bare-action defaults</span><button class="copy-btn" data-copy="cmd-gripper-yaml-example">Copy</button></div>
+          <pre><code id="cmd-gripper-yaml-example"># File: mfja_robot_control_config/config/gripper_command_defaults.yaml
+# Edit this entry inside the existing grippers: mapping.
+# This is a partial snippet; do not replace the complete file with it.
+  staubli1:
+    position_at_0_percent_m: 0.0
+    position_at_100_percent_m: 0.010
+    default_open_percentage: 75.0
+    default_close_percentage: 100.0</code></pre>
+        </div>
+
+        <p>
+          In this example, <code>open</code> without a number targets 75% of the
+          configured range, <code>open 100</code> targets 10 mm per jaw, and
+          <code>close</code> returns to 0 mm. Restart Gazebo after saving the file.
+          A workspace built with <code>--symlink-install</code> does not need another
+          build for this YAML-only edit; a copied installation does.
+        </p>
+
+        <h3>Use a separate YAML file</h3>
+        <p>
+          Start by copying the complete shipped
+          <code>gripper_command_defaults.yaml</code>, keep all robot entries, and edit
+          the values you need. Pass that same absolute file to launch and to the
+          helper. This prevents the simulation limits and the percentage calculation
+          from using different values.
+        </p>
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>Terminal 1: launch with a custom YAML</span><button class="copy-btn" data-copy="cmd-gripper-custom-yaml-launch">Copy</button></div>
+            <pre><code id="cmd-gripper-custom-yaml-launch">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+GRIPPER_YAML=/absolute/path/to/gripper_command_defaults.yaml
+
+ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
+  robot:=staubli \
+  gripper_config:="$GRIPPER_YAML" \
+  start_paused:=false \
+  gui:=true</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>Terminal 2: command with the same YAML</span><button class="copy-btn" data-copy="cmd-gripper-custom-yaml-command">Copy</button></div>
+            <pre><code id="cmd-gripper-custom-yaml-command">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+GRIPPER_YAML=/absolute/path/to/gripper_command_defaults.yaml
+
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  staubli open 100 --defaults-file "$GRIPPER_YAML"</code></pre>
+          </div>
+        </div>
+
+        <h3>Verify the bridge and jaw feedback</h3>
+        <div class="command">
+          <div class="command-bar"><span>KUKA gripper runtime check</span><button class="copy-btn" data-copy="cmd-gripper-runtime-check">Copy</button></div>
+          <pre><code id="cmd-gripper-runtime-check">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic info /kuka1/gripper/position_command -v
+ros2 topic echo --once /kuka1/joint_states
+
+# The JointState message should contain both names:
+# gripper_left_jaw_joint
+# gripper_right_jaw_joint</code></pre>
+        </div>
+
+        <div class="callout warning">
+          Current gripper support is motion-only. The jaws open and close with
+          position feedback, but the models do not yet provide physical grasping,
+          collision pads, or payload attachment. Very large configured ranges can
+          also make the visual geometry unrealistic.
+        </div>
+      </section>
+
       <section id="scenario-move-one-robot">
-        <h2>Scenario 11: Move Any One Robot</h2>
+        <h2>Scenario 11: Move Any One Robot and Test Its Gripper</h2>
         <p>
           Use this scenario when you want to command one robot manually. First launch the full floor with only the robot you want.
           Change <code>robots:=kuka</code> to <code>staubli</code>, <code>hc10</code>, <code>hc10dt</code>, <code>tiago1</code>, or <code>tiago_base1</code>.
         </p>
+        <p>
+          Keep only one robot launch running at a time. If motion commands do not move the robot, stop old Gazebo and bridge processes, reset ROS discovery, then launch again before publishing a trajectory.
+          Gripper commands in this scenario apply only to the four industrial
+          robots; the TIAGo variants below retain their existing arm, torso, and
+          mobile-base commands and are not supported by the industrial gripper helper.
+        </p>
 
         <div class="command">
-          <div class="command-bar"><span>Launch full floor with one robot</span><button class="copy-btn" data-copy="cmd-full-floor-one-robot">Copy</button></div>
+          <div class="command-bar"><span>Clean stale simulation processes</span><button class="copy-btn" data-copy="cmd-clean-stale-sim">Copy</button></div>
+          <pre><code id="cmd-clean-stale-sim">pkill -f "ros2 launch mfja_3rd_floor_bringup" || true
+pkill -f "gz sim" || true
+pkill -f "parameter_bridge" || true
+ros2 daemon stop
+ros2 daemon start</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: launch full floor with one robot</span><button class="copy-btn" data-copy="cmd-full-floor-one-robot">Copy</button></div>
           <pre><code id="cmd-full-floor-one-robot">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -1124,17 +1431,33 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   enable_room315_kinematic_shuttles:=false</code></pre>
         </div>
 
+        <div class="command">
+          <div class="command-bar"><span>Wait for robot command bridge</span><button class="copy-btn" data-copy="cmd-wait-kuka-bridge">Copy</button></div>
+          <pre><code id="cmd-wait-kuka-bridge">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic info /kuka1/joint_trajectory -v</code></pre>
+        </div>
+
         <details open>
           <summary>Move KUKA KR6 R900 Sixx</summary>
           <div class="details-body">
             <div class="command">
-              <div class="command-bar"><span>Move kuka1</span><button class="copy-btn" data-copy="cmd-move-kuka">Copy</button></div>
+              <div class="command-bar"><span>Terminal 2: move kuka1 and test its gripper</span><button class="copy-btn" data-copy="cmd-move-kuka">Copy</button></div>
               <pre><code id="cmd-move-kuka">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_a1','joint_a2','joint_a3','joint_a4','joint_a5','joint_a6'], points: [{positions: [0.6,-1.0,1.1,0.0,0.6,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit rad \
+  --positions 0.6 -1.0 1.1 0.0 0.6 0.0
+
+ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit deg \
+  --positions 34.38 -57.30 63.03 0.0 34.38 0.0
+
+# The gripper is controlled separately from the six arm joints.
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open 100
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka close 100</code></pre>
             </div>
           </div>
         </details>
@@ -1143,13 +1466,20 @@ ros2 topic pub --once /kuka1/joint_trajectory trajectory_msgs/msg/JointTrajector
           <summary>Move Staeubli TX2-60L</summary>
           <div class="details-body">
             <div class="command">
-              <div class="command-bar"><span>Move staubli1</span><button class="copy-btn" data-copy="cmd-move-staubli">Copy</button></div>
+              <div class="command-bar"><span>Terminal 2: move staubli1 and test its gripper</span><button class="copy-btn" data-copy="cmd-move-staubli">Copy</button></div>
               <pre><code id="cmd-move-staubli">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6'], points: [{positions: [0.1,0.4,-0.6,0.0,0.5,0.0], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py staubli --unit rad \
+  --positions 0.1 0.4 -0.6 0.0 0.5 0.0
+
+ros2 run mfja_robot_control_config robot_joint_command.py staubli --unit deg \
+  --positions 5.73 22.92 -34.38 0.0 28.65 0.0
+
+# Open halfway, then close completely within the YAML range.
+ros2 run mfja_robot_control_config robot_gripper_command.py staubli open 50
+ros2 run mfja_robot_control_config robot_gripper_command.py staubli close 100</code></pre>
             </div>
           </div>
         </details>
@@ -1158,13 +1488,20 @@ ros2 topic pub --once /staubli1/joint_trajectory trajectory_msgs/msg/JointTrajec
           <summary>Move Yaskawa HC10</summary>
           <div class="details-body">
             <div class="command">
-              <div class="command-bar"><span>Move yaskawa_hc10_1</span><button class="copy-btn" data-copy="cmd-move-hc10">Copy</button></div>
+              <div class="command-bar"><span>Terminal 2: move yaskawa_hc10_1 and test its gripper</span><button class="copy-btn" data-copy="cmd-move-hc10">Copy</button></div>
               <pre><code id="cmd-move-hc10">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [0.2,-0.7,0.9,0.0,0.4,0.2], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py hc10 --unit rad \
+  --positions 0.2 -0.7 0.9 0.0 0.4 0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py hc10 --unit deg \
+  --positions 11.46 -40.11 51.57 0.0 22.92 11.46
+
+# Open halfway, then close completely within the YAML range.
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 open 50
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10 close 100</code></pre>
             </div>
           </div>
         </details>
@@ -1173,13 +1510,20 @@ ros2 topic pub --once /yaskawa_hc10_1/joint_trajectory trajectory_msgs/msg/Joint
           <summary>Move Yaskawa HC10DT</summary>
           <div class="details-body">
             <div class="command">
-              <div class="command-bar"><span>Move yaskawa_hc10dt_1</span><button class="copy-btn" data-copy="cmd-move-hc10dt">Copy</button></div>
+              <div class="command-bar"><span>Terminal 2: move yaskawa_hc10dt_1 and test its gripper</span><button class="copy-btn" data-copy="cmd-move-hc10dt">Copy</button></div>
               <pre><code id="cmd-move-hc10dt">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['joint_1_s','joint_2_l','joint_3_u','joint_4_r','joint_5_b','joint_6_t'], points: [{positions: [-0.2,-0.5,0.8,0.0,0.5,-0.2], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py hc10dt --unit rad \
+  --positions -0.2 -0.5 0.8 0.0 0.5 -0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py hc10dt --unit deg \
+  --positions -11.46 -28.65 45.84 0.0 28.65 -11.46
+
+# Exact per-jaw position, then a full closing action.
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10dt --position 0.005
+ros2 run mfja_robot_control_config robot_gripper_command.py hc10dt close 100</code></pre>
             </div>
           </div>
         </details>
@@ -1194,8 +1538,11 @@ ros2 topic pub --once /yaskawa_hc10dt_1/joint_trajectory trajectory_msgs/msg/Joi
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /tiago1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['torso_lift_joint','arm_1_joint','arm_2_joint','arm_3_joint','arm_4_joint','arm_5_joint','arm_6_joint','arm_7_joint','head_1_joint','head_2_joint'], points: [{positions: [0.10,0.3,-0.5,-0.4,1.0,0.2,-0.2,0.1,0.2,-0.2], time_from_start: {sec: 4, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 --unit rad \
+  --positions 0.10 0.3 -0.5 -0.4 1.0 0.2 -0.2 0.1 0.2 -0.2
+
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 --unit deg \
+  --positions 0.10 17.19 -28.65 -22.92 57.30 11.46 -11.46 5.73 11.46 -11.46</code></pre>
               </div>
               <div class="command">
                 <div class="command-bar"><span>Move and stop tiago1 base</span><button class="copy-btn" data-copy="cmd-move-tiago-base">Copy</button></div>
@@ -1223,8 +1570,8 @@ ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 topic pub --once /tiago_base1/joint_trajectory trajectory_msgs/msg/JointTrajectory \
-  "{joint_names: ['torso_lift_joint'], points: [{positions: [0.10], time_from_start: {sec: 3, nanosec: 0}}]}"</code></pre>
+ros2 run mfja_robot_control_config robot_joint_command.py tiago_base1 --unit rad \
+  --positions 0.10</code></pre>
               </div>
               <div class="command">
                 <div class="command-bar"><span>Move and stop tiago_base1</span><button class="copy-btn" data-copy="cmd-move-tiago-base1-mobile">Copy</button></div>
@@ -1257,12 +1604,17 @@ source install/setup.bash
 ros2 topic list | grep /room_315/rails
 ros2 service list | grep /room_315/rails
 ros2 topic list | grep -E '^/(kuka1|staubli1|yaskawa_hc10_1|yaskawa_hc10dt_1|tiago1|tiago_base1)/'
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open 100 --dry-run
+ros2 topic info /kuka1/gripper/position_command -v
+ros2 topic echo --once /kuka1/joint_states
 ros2 interface show mfja_rail_interfaces/srv/AddShuttle
 ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
 ros2 interface show mfja_rail_interfaces/msg/SwitchCommand
 ros2 interface show mfja_rail_interfaces/msg/StopperCommand
 ros2 interface show mfja_rail_interfaces/msg/SensorFeedback
 ros2 interface show trajectory_msgs/msg/JointTrajectory
+ros2 interface show std_msgs/msg/Float64
 ros2 interface show geometry_msgs/msg/Twist</code></pre>
             </div>
           </div>
@@ -1272,6 +1624,9 @@ ros2 interface show geometry_msgs/msg/Twist</code></pre>
           If a new shuttle does not appear, the slot may already be occupied or the name may be duplicated.
           If a switch moves visually but the shuttle does not change route, watch <code>/switches/state</code>
           and confirm the command went to the correct rail: <code>right</code> or <code>left</code>.
+          If a gripper command reports no subscriber or no live jaw state, confirm that
+          the selected industrial robot is spawned, Gazebo is unpaused, and the command
+          uses the same YAML endpoints as the launch.
         </div>
       </section>
     </main>

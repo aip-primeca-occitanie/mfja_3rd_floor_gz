@@ -80,9 +80,23 @@
   <link name="base"/>
   <link name="gripper">
     <visual>
-      <origin xyz="0 0 0.0003" rpy="-1.57079632679 0 0"/>
+      <origin xyz="0 0 0.024" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://mfja_3rd_floor_description/models/yaskawa_hc10/meshes/gripper/geh6040il_03_b01geh6000il.stl" scale="0.001 0.001 0.001"/>
+        <box size="0.090 0.078 0.048"/>
+      </geometry>
+      <material name="zimmer_dark"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.004" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.094 0.080 0.008"/>
+      </geometry>
+      <material name="zimmer_dark"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.047" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.072 0.042 0.004"/>
       </geometry>
       <material name="zimmer_dark"/>
     </visual>
@@ -92,6 +106,13 @@
       <origin xyz="0 0 0.005" rpy="0 0 0"/>
       <geometry>
         <box size="0.022 0.028 0.010"/>
+      </geometry>
+      <material name="jaw_metal"/>
+    </visual>
+    <visual>
+      <origin xyz="0.0125 0 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.025 0.012 0.006"/>
       </geometry>
       <material name="jaw_metal"/>
     </visual>
@@ -115,6 +136,13 @@
       <origin xyz="0 0 0.005" rpy="0 0 0"/>
       <geometry>
         <box size="0.022 0.028 0.010"/>
+      </geometry>
+      <material name="jaw_metal"/>
+    </visual>
+    <visual>
+      <origin xyz="-0.0125 0 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.025 0.012 0.006"/>
       </geometry>
       <material name="jaw_metal"/>
     </visual>
@@ -195,16 +223,23 @@
     <child link="gripper"/>
   </joint>
 
-  <joint name="gripper_left_jaw_joint" type="fixed">
+  <!-- A single non-negative command opens both jaws symmetrically. -->
+  <joint name="gripper_left_jaw_joint" type="prismatic">
     <origin xyz="-0.025 0 0.0482" rpy="0 0 0"/>
     <parent link="gripper"/>
     <child link="gripper_left_jaw"/>
+    <axis xyz="-1 0 0"/>
+    <limit lower="0.0" upper="0.040" effort="80.0" velocity="0.06"/>
+    <dynamics damping="2.0" friction="0.0"/>
   </joint>
 
-  <joint name="gripper_right_jaw_joint" type="fixed">
+  <joint name="gripper_right_jaw_joint" type="prismatic">
     <origin xyz="0.025 0 0.0482" rpy="0 0 0"/>
     <parent link="gripper"/>
     <child link="gripper_right_jaw"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.0" upper="0.040" effort="80.0" velocity="0.06"/>
+    <dynamics damping="2.0" friction="0.0"/>
   </joint>
 
   <joint name="gripper_tcp_joint" type="fixed">
