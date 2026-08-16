@@ -30,9 +30,9 @@ the exact source and configuration identity used for its test results.
 Historical and current visual-dataset terminology is normalized in
 `../docs/room315_dataset_role_registry.md`; that registry does not rename the
 hash-identified materialized files.
-The current build is 72 A4 pages (4,691,625 bytes). `main.pdf` and the
+The current build is 73 A4 pages (4,696,675 bytes). `main.pdf` and the
 submission copy are byte-identical at SHA-256
-`3e82de87fe89364664f679ad1b69d452fd15198e686798bf66ff7a7cb98dfd2b`.
+`db2130c34d37293647e3ad131449b08203fe974c89cdab1ee796d97bee21d8af`.
 The retained log and fingerprint record are
 `evidence/final_report_build_2026-08-16.log` and
 `evidence/final_report_sha256_2026-08-16.txt`. This rebuilt delivery incorporates
@@ -72,9 +72,9 @@ It includes the selected checkpoint, sealed 1,040-scene Test, 2,080 images and
 
 The complementary, publicly accessible
 [Room 315 Visual V4 data-and-reproduction release](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
-is published from this source project itself. Tag
-`v4-seed31520260811-dataset-v1`
-contains all labelled inputs used by the reported V4 procedure: 5,528 Training,
+is published from this source project itself. The release associated with tag
+`v4-seed31520260811-dataset-v1` contains all labelled inputs used by the
+reported V4 procedure: 5,528 Training,
 512 Validation, 256 Development-Canary and 1,040 Final-Test scenes, together
 with the predecessor initialisation checkpoint, selected epoch-11 checkpoint,
 frozen source and stateless replay tooling. The six assets total 810,803,201

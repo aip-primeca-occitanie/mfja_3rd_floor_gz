@@ -154,9 +154,10 @@ and post-promotion-smoke bags are published in the full-evidence release indexed
 The
 \href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1}{project data-and-replay
 release} provides the complete labelled training and evaluation
-partitions, both required checkpoints, frozen source and portable replay. It
-re-evaluates the selected checkpoint without reopening the historical one-shot
-attempt; exact counts, hashes and claim limits are in \cref{app:reproducibility}.
+partitions, both required checkpoints, frozen source and portable replay. The
+supplied stateless replay re-evaluates the selected checkpoint without reopening
+the historical one-shot attempt; exact counts, hashes and claim limits are in
+\cref{app:reproducibility}.
 
 A gate is one predeclared Boolean acceptance check. The 76 base gates cover
 model quality and support across the global set, rails, segments, target zones,

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.3.5)  16 AUG 2026 19:53
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.3.5)  16 AUG 2026 21:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1593,7 +1593,7 @@ ng  used on input line 121.
 (pdftex.def)             Requested size: 464.77835pt x 239.36092pt.
  [59 <./images/b03_v4_closed_loop_right_camera_initial_final.png (PNG copy)>] [
 60]
-Underfull \hbox (badness 3838) in paragraph at lines 347--347
+Underfull \hbox (badness 3838) in paragraph at lines 348--348
 []|\T1/qpl/m/n/9 (+20) Observation only; sce-nario
  []
 
@@ -1613,7 +1613,7 @@ Chapter 13.
 Appendix A.
 [70
 
-] [71]) [72] (./main.aux)
+] [71] [72]) [73] (./main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
@@ -1625,13 +1625,13 @@ LaTeX Font Warning: Size substitutions with differences
 
  )
 Here is how much of TeX's memory you used:
- 51028 strings out of 476182
- 1143553 string characters out of 5795596
- 2007975 words of memory out of 5000000
- 71454 multiletter control sequences out of 15000+600000
+ 51074 strings out of 476182
+ 1144159 string characters out of 5795596
+ 2062975 words of memory out of 5000000
+ 71482 multiletter control sequences out of 15000+600000
  709188 words of font info for 338 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 89i,18n,99p,1193b,1360s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,18n,99p,1193b,2101s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texl
@@ -1652,9 +1652,9 @@ f/fonts/type1/public/tex-gyre/qhvr.pfb></usr/share/texmf/fonts/type1/public/tex
 -gyre/qhvri.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qplb.pfb></usr/sh
 are/texmf/fonts/type1/public/tex-gyre/qplr.pfb></usr/share/texmf/fonts/type1/pu
 blic/tex-gyre/qplri.pfb>
-Output written on main.pdf (72 pages, 4691625 bytes).
+Output written on main.pdf (73 pages, 4696675 bytes).
 PDF statistics:
- 1419 PDF objects out of 1440 (max. 8388607)
- 1238 compressed objects within 13 object streams
- 318 named destinations out of 1000 (max. 500000)
+ 1446 PDF objects out of 1728 (max. 8388607)
+ 1264 compressed objects within 13 object streams
+ 336 named destinations out of 1000 (max. 500000)
  92127 words of extra memory for PDF output out of 106986 (max. 10000000)

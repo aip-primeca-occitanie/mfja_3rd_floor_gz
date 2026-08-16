@@ -391,12 +391,19 @@ project.
   evaluation and the immutable Final-Test attempt. Later availability therefore
   changes no partition role, metric, gate, acceptance result or one-shot
   provenance.
+- A post-publication audit confirmed `published_at=2026-08-16T18:40:57Z` and
+  tag target `a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30`; all six live asset
+  names, sizes and SHA-256 digests matched the repository manifest. The tag is
+  retained at that target rather than retargeted by this later documentation.
+- Disambiguated the earlier full-evidence download from the data release, added
+  an anonymous tag-clone/`curl`/checksum flow and attributed re-evaluation to
+  the supplied stateless replay.
 
-The final `make check` produced a 72-page A4 PDF (4,691,625 bytes), with no
+The final `make check` produced a 73-page A4 PDF (4,696,675 bytes), with no
 undefined citations or references and no overfull boxes. `main.pdf` and the
 named delivery PDF are byte-identical at SHA-256
-`3e82de87fe89364664f679ad1b69d452fd15198e686798bf66ff7a7cb98dfd2b`.
+`db2130c34d37293647e3ad131449b08203fe974c89cdab1ee796d97bee21d8af`.
 The retained build log has SHA-256
-`a70c40801e8d3f404895ab2f471e54f3bc9caf7e86f4a7027777f51387929a90`;
+`2f58097090bc69d92744ada982b30bc53a32f510e10c19da32dda103c2bde939`;
 the identities are recorded in
 `evidence/final_report_sha256_2026-08-16.txt`.

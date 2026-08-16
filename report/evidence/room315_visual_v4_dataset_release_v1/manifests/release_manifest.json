@@ -51,10 +51,24 @@
   "publication_controls": {
     "canary_data_publish": true,
     "final_test_publish": true,
-    "license_note": "Public accessibility is requested for reproducibility; no separate reuse license is granted by this release metadata.",
+    "license_note": "Public accessibility is provided for reproducibility; no separate reuse license is granted by this release metadata.",
     "public_visibility_requested": true,
     "publication_is_post_experiment": true,
     "reuse_license_granted": false
+  },
+  "publication_receipt": {
+    "actual_visibility": "public",
+    "asset_count": 6,
+    "draft": false,
+    "github_asset_digests_verified_against_manifest": true,
+    "prerelease": false,
+    "published_at": "2026-08-16T18:40:57Z",
+    "release_id": 371403091,
+    "release_url": "https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1",
+    "repository": "aip-primeca-occitanie/mfja_3rd_floor_gz",
+    "tag": "v4-seed31520260811-dataset-v1",
+    "target_commit": "a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30",
+    "total_asset_bytes": 810803201
   },
   "release_tag": "v4-seed31520260811-dataset-v1",
   "report_evidence_commit": "503e13ee81afbb553d0a0150f52175451e0b96d1",

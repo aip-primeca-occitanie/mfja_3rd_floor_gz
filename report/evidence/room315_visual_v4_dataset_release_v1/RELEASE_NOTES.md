@@ -5,6 +5,15 @@ This is the first complete post-experiment reproduction release for the Room
 belong to the project repository
 [`aip-primeca-occitanie/mfja_3rd_floor_gz`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz).
 
+## Published release receipt
+
+GitHub release [`371403091`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+was published at `2026-08-16T18:40:57Z`. It targets commit
+[`a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/commit/a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30)
+and is public, with `draft = false` and `prerelease = false`. GitHub's SHA-256
+metadata for all 6 uploaded assets (810803201 bytes total) was verified against
+the control manifest; every name, size, and digest matched.
+
 ## Release inventory
 
 The six archives total `810803201` bytes. Dataset counts are 7,336
@@ -25,6 +34,34 @@ The selected V4 checkpoint SHA-256 is
 The frozen evaluation-protocol-lock SHA-256 is
 `03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182`.
 
+## Anonymous download and verification
+
+Provide `git`, `curl`, GNU `sha256sum`, GNU `tar` plus `zstd`, and Python 3.12.
+No GitHub CLI, GitHub account, or authentication token is required.
+
+```bash
+git clone --branch v4-seed31520260811-dataset-v1 --depth 1 https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+cd mfja_3rd_floor_gz
+test "$(git rev-parse HEAD)" = a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30
+cd report/evidence/room315_visual_v4_dataset_release_v1
+room315_tag=v4-seed31520260811-dataset-v1
+room315_base="https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/download/$room315_tag"
+mkdir -p release-assets
+while read -r _digest room315_asset; do
+  curl --fail --location --retry 5 \
+    --output "release-assets/$room315_asset" \
+    "$room315_base/$room315_asset"
+done < SHA256SUMS
+(cd release-assets && sha256sum --strict -c ../SHA256SUMS)
+python3 scripts/verify_release.py release-assets
+```
+
+This block deliberately does not call the publication-time tag's legacy
+`download_release.sh`, which used an authenticated GitHub CLI. The inline
+public-HTTPS flow works from the fixed tag without moving it and verifies every
+archive against the tag's `SHA256SUMS` before use. A later branch correction
+also supplies a resumable, fail-closed `curl` downloader.
+
 ## Full replay verification
 
 After packaging, all six archive hashes were verified and the merged release
@@ -37,11 +74,15 @@ was replayed locally on CUDA. The replay completed with
 - acceptance gates; and
 - Final-Test dataset coverage and frozen runtime-threshold reports.
 
-The compact verification record is
-`provenance/local_cuda_full_replay.json`. It records CPython 3.12.3, PyTorch
-2.10.0+cu128, torchvision 0.25.0+cu128, CUDA 12.8, and cuDNN 91002. The
-stateless replay command is documented in `README.md`; it does not reopen or
-mutate the consumed one-shot ledgers.
+The compact verification record is the tag-qualified
+[`provenance/local_cuda_full_replay.json`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/blob/v4-seed31520260811-dataset-v1/report/evidence/room315_visual_v4_dataset_release_v1/provenance/local_cuda_full_replay.json).
+It records CPython 3.12.3, PyTorch 2.10.0+cu128, torchvision 0.25.0+cu128, CUDA
+12.8, and cuDNN 91002. The extraction and stateless replay commands are
+documented in the publication-time, tag-qualified
+[`README.md`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/blob/v4-seed31520260811-dataset-v1/report/evidence/room315_visual_v4_dataset_release_v1/README.md);
+use the anonymous download block above in place of that snapshot's legacy
+download script. Stateless replay does not reopen or mutate the consumed
+one-shot ledgers.
 
 ## Source and full evidence
 
@@ -49,6 +90,8 @@ mutate the consumed one-shot ledgers.
   [`aip-primeca-occitanie/mfja_3rd_floor_gz@0d19e160`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/tree/0d19e1601d57416b83c871c1a8d413ec0dd523a6)
 - Complete organization-side report/evidence snapshot:
   [`room315_visual_v4_submission_2026-08-11@503e13ee`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/tree/503e13ee81afbb553d0a0150f52175451e0b96d1/report/evidence/room315_visual_v4_submission_2026-08-11)
+- Companion full-evidence release:
+  [`room315-visual-v4-evidence-2026-08-11`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11)
 - Project dataset release:
   [`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
 
@@ -57,10 +100,11 @@ remain anchored to the same project repository and their recorded commits.
 
 ## Legal and deployment status
 
-Public visibility is requested so readers can verify and reproduce the
-reported experiment. It is not a standalone open-data or model-weight reuse
-license. No permission to redistribute, modify, or reuse the images, labels,
-or weights is granted by this metadata release; see `LICENSE_STATUS.md`.
+Public visibility is provided so readers can verify and reproduce the reported
+experiment. It is not a standalone open-data or model-weight reuse license. No
+permission to redistribute, modify, or reuse the images, labels, or weights is
+granted by this metadata release; see the tag-qualified
+[`LICENSE_STATUS.md`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/blob/v4-seed31520260811-dataset-v1/report/evidence/room315_visual_v4_dataset_release_v1/LICENSE_STATUS.md).
 
 Canary and Final Test are published only after the historical experiment and
 do not change their original experimental roles. The evidence is synthetic

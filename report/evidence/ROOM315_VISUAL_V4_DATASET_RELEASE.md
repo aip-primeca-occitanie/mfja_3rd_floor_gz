@@ -10,9 +10,30 @@ bind the distribution to the evaluated implementation and report evidence.
 - Release tag: `v4-seed31520260811-dataset-v1`
 - Release page: <https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1>
 - Repository control package: `room315_visual_v4_dataset_release_v1/`
+- Release target/control commit: `a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30`
 - Evaluated source commit: `0d19e1601d57416b83c871c1a8d413ec0dd523a6`
-- Report/evidence commit: `503e13ee81afbb553d0a0150f52175451e0b96d1`
+- Frozen report/evidence snapshot: `503e13ee81afbb553d0a0150f52175451e0b96d1`
 - Companion full-evidence release: <https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11>
+
+## Publication receipt
+
+The following values were read back from the GitHub Releases API after
+publication. They describe the public object, not only the local release plan.
+
+| Field | Published value |
+|---|---|
+| Repository visibility | `PUBLIC` |
+| Release ID | `371403091` |
+| Release state | published; `draft=false`; `prerelease=false` |
+| Target commit | `a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30` |
+| Published at | `2026-08-16T18:40:57Z` |
+| Assets | 6 uploaded archives; 810,803,201 bytes total |
+
+GitHub reported an asset state of `uploaded` for all six archives. Each
+GitHub-generated `sha256:` digest and byte size matched the corresponding row
+below and the repository control manifest. The release page and tag-pinned
+control files were also reachable without GitHub authentication after
+publication.
 
 The six release assets are:
 
@@ -39,11 +60,39 @@ separately for historical hash audit.
 
 ## Download, verify and replay
 
+Integrity verification and extraction require `git`, `curl`, `sha256sum`,
+Python 3 and GNU `tar` with Zstandard support. Python 3.12, the packages in
+`requirements-replay.txt`, and the CUDA-compatible environment described in
+`ENVIRONMENT.md` are required for the closest full metric replay. A GPU is not
+required merely to download, hash or inspect the extracted files. Reserve
+enough disk space for both the 773.24 MiB download and the extracted tree.
+
+The following public workflow uses no GitHub account, token or `gh` client:
+
 ```bash
 git clone --branch v4-seed31520260811-dataset-v1 --depth 1 \
   https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
-cd mfja_3rd_floor_gz/report/evidence/room315_visual_v4_dataset_release_v1
-bash scripts/download_release.sh release-assets
+cd mfja_3rd_floor_gz
+test "$(git rev-parse HEAD)" = a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30
+cd report/evidence/room315_visual_v4_dataset_release_v1
+
+room315_tag=v4-seed31520260811-dataset-v1
+room315_base="https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/download/$room315_tag"
+room315_assets=(
+  room315_visual_v4_train_5528_seed31520260811_v1.tar.zst
+  room315_visual_v4_validation_512_v3r1_v1.tar.zst
+  room315_visual_v4_canary_256_v3r1_v1.tar.zst
+  room315_visual_v4_final_test_1040_coverage_v2_v1.tar.zst
+  room315_visual_v4_models_init8a2d-and-epoch011_869d_v1.tar.zst
+  room315_visual_v4_frozen_source_0d19e160_v1.tar.zst
+)
+mkdir -p release-assets
+for room315_asset in "${room315_assets[@]}"; do
+  curl --fail --location --retry 3 \
+    --output "release-assets/$room315_asset" \
+    "$room315_base/$room315_asset"
+done
+(cd release-assets && sha256sum --strict -c ../SHA256SUMS)
 python3 scripts/verify_release.py release-assets
 mkdir -p extracted
 for room315_archive in release-assets/*.tar.zst; do
@@ -66,9 +115,34 @@ coverage and runtime thresholds. The machine-readable verification summary is
 The control package's `README.md` and `ENVIRONMENT.md` give the portable
 retraining and environment instructions.
 
+## Relationship to the full-evidence release
+
+This six-asset release supplies the complete labelled Training, Validation,
+Development-Canary and Final-Test inputs, both required checkpoints, the
+frozen source and the stateless metric-replay tooling. The earlier
+[`room315-visual-v4-evidence-2026-08-11`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11)
+release instead preserves the accepted runtime bundle, Final-Test evidence and
+18 raw positive, fail-closed and post-promotion-smoke MCAP recordings. The two
+releases are complementary: use this release to repeat training and offline
+evaluation, and the full-evidence release to audit the recorded runtime
+campaigns.
+
+## Tag-pinned documentation visibility
+
+At publication time, the original landing record and control package were
+present in the recorded release target/tag and in branch
+`ali/neuro-symbolic-closed-loop`, but not in the repository's default `main`
+branch. The tag remains fixed at its recorded target; its publication-time
+`download_release.sh` uses the GitHub CLI. This post-publication branch
+correction does not retarget the tag. For an anonymous tag checkout, use the
+self-contained `curl` and `SHA256SUMS` flow above, which deliberately does not
+invoke that legacy script. This branch-only documentation constraint does not
+affect the public visibility, byte identity or anonymous downloadability of the
+six release assets.
+
 ## Experimental and legal scope
 
-Publication occurs after checkpoint selection, Canary and the immutable
+Publication occurred after checkpoint selection, Canary and the immutable
 Final-Test attempt had all completed. Later disclosure changes availability,
 not the experimental role of any partition or the reported result. The
 historical one-shot ledgers are checksum-verified but are not reopened by the

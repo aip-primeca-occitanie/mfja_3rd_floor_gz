@@ -13,8 +13,27 @@ to Git history.
   [`aip-primeca-occitanie/mfja_3rd_floor_gz`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz)
 - Dataset release:
   [`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+- Publication-time control package:
+  [fixed tag-qualified repository tree](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/tree/v4-seed31520260811-dataset-v1/report/evidence/room315_visual_v4_dataset_release_v1)
 - Complete project-side V4 evidence:
   [frozen evidence snapshot](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/tree/503e13ee81afbb553d0a0150f52175451e0b96d1/report/evidence/room315_visual_v4_submission_2026-08-11)
+
+## Publication receipt
+
+GitHub release `371403091` was published at `2026-08-16T18:40:57Z` from commit
+[`a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/commit/a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30).
+Its actual status is public, `draft = false`, and `prerelease = false`.
+GitHub's SHA-256 metadata for all 6 uploaded assets (810803201 bytes total) was
+checked against `manifests/release_manifest.json` and matched every recorded
+digest.
+
+The release tag remains fixed at that publication commit and is not retargeted
+by later documentation. Its publication-time `download_release.sh` used the
+GitHub CLI. This branch revision records the publication receipt and supplies
+the corrected anonymous `curl` downloader below. Readers working directly from
+the fixed tag should use the self-contained anonymous block in the live release
+notes or `ROOM315_VISUAL_V4_DATASET_RELEASE.md`, rather than the tag's legacy
+download script.
 
 ## Contents
 
@@ -31,10 +50,21 @@ In total: 7,336 paired-camera scenes and 14,672 JPEG files. Canary and
 Final Test are public only now, after the historical experiment and its
 immutable attempt had completed.
 
+## System prerequisites
+
+Download, verification, and extraction require `curl`, `sha256sum` (GNU
+coreutils), `git`, GNU `tar` with Zstandard support, the `zstd` executable, and
+Python 3.12. The downloader uses public HTTPS release URLs; it does not require
+GitHub CLI, a GitHub account, or authentication. See `ENVIRONMENT.md` and
+`requirements-replay.txt` for the replay environment.
+
 ## Download and verify
 
+The following command applies to this corrected branch revision of the control
+package:
+
 ```bash
-./scripts/download_release.sh
+bash scripts/download_release.sh release-assets
 python3 scripts/verify_release.py release-assets
 mkdir -p extracted
 for archive in release-assets/*.tar.zst; do
@@ -43,6 +73,10 @@ done
 python3 scripts/verify_extracted_dataset.py \
   extracted/room315_visual_v4_dataset_v1
 ```
+
+Interrupted transfers remain as `*.part` and resume on the next identical
+command. To fetch only selected assets, append their exact basenames after the
+destination directory; omitting basenames downloads all six assets.
 
 ## Re-evaluate the published checkpoint
 

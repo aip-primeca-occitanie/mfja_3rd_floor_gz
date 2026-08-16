@@ -1,5 +1,14 @@
 # Recorded execution environment
 
+## System prerequisites
+
+Before creating the Python environment, provide `git`, `curl`, GNU
+`sha256sum`, GNU `tar` with Zstandard support, the `zstd` executable, and
+Python 3.12. Release downloads use anonymous public HTTPS and do not require
+GitHub CLI, a GitHub account, or an authentication token.
+
+## Replay environment
+
 The immutable Final-Test protocol recorded CPython 3.12.3 on Linux x86_64,
 NumPy 1.26.4, Pillow 10.2.0, PyYAML 6.0.1, PyTorch 2.10.0+cu128,
 torchvision 0.25.0+cu128, CUDA build 12.8, and cuDNN 91002. The historical
