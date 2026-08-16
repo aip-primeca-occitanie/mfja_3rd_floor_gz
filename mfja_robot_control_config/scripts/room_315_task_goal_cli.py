@@ -27,6 +27,8 @@ from room_315_task_goal_validation import Room315DomainValidator
 
 
 EXIT_WORDS = {'quit', 'exit'}
+INSPECTION_REPORT_CONTRACT = 'room315.inspection_report.v1'
+INSPECTION_REPORT_SCHEMA_VERSION = 1
 
 
 def main() -> int:
@@ -195,6 +197,11 @@ def _print_turn_result(
         if on_task_goal is not None:
             publication = on_task_goal(result.task_goal)
             if publication is not None:
+                inspection_lines = _inspection_summary_lines(publication)
+                if inspection_lines:
+                    print('Inspection result:', file=output_stream)
+                    for line in inspection_lines:
+                        print(f'  {line}', file=output_stream)
                 print('Task execution response:', file=output_stream)
                 print(
                     json.dumps(publication, indent=2, sort_keys=True),
@@ -207,6 +214,54 @@ def _print_turn_result(
         return
     payload = result.to_dict()
     print(json.dumps(payload, indent=2, sort_keys=True), file=output_stream)
+
+
+def _inspection_summary_lines(publication: Any) -> tuple[str, ...]:
+    """Return trusted single-line inspection text from a terminal response.
+
+    The executive owns both the structured findings and their wording because
+    it can bind them to the exact fresh observation that proved completion.
+    The CLI deliberately does not subscribe to the latest visual-state topic:
+    doing so could display a different frame after the inspection succeeded.
+    Unknown or malformed report versions fall back to the unchanged raw JSON.
+    """
+
+    if not isinstance(publication, dict):
+        return ()
+    if str(publication.get('status') or '').strip().casefold() != 'succeeded':
+        return ()
+    result = publication.get('result')
+    if not isinstance(result, dict):
+        return ()
+    report = result.get('inspection_report')
+    if not isinstance(report, dict):
+        return ()
+    if report.get('contract') != INSPECTION_REPORT_CONTRACT:
+        return ()
+    if report.get('schema_version') != INSPECTION_REPORT_SCHEMA_VERSION:
+        return ()
+    raw_lines = report.get('summary_lines')
+    if not isinstance(raw_lines, list) or not raw_lines or len(raw_lines) > 64:
+        return ()
+
+    lines: list[str] = []
+    for raw_line in raw_lines:
+        if not isinstance(raw_line, str):
+            return ()
+        line = raw_line.strip()
+        if (
+            not line
+            or len(line) > 2_000
+            or any(
+                ord(character) < 32
+                or ord(character) == 127
+                or 128 <= ord(character) <= 159
+                for character in line
+            )
+        ):
+            return ()
+        lines.append(line)
+    return tuple(lines)
 
 
 class RosTaskGoalClient:

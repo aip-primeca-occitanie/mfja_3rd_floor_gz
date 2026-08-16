@@ -9,6 +9,7 @@ atomic symbolic step from each validated plan and then replans from fresh state.
 
 from __future__ import annotations
 
+import copy
 import math
 import re
 import sys
@@ -27,6 +28,7 @@ from room_315_contracts import ObservedFact
 from room_315_contracts import ObservedState
 from room_315_contracts import TaskGoal
 from room_315_multi_shuttle import DEVICE_NAMES
+from room_315_multi_shuttle import all_shuttle_specs
 from room_315_multi_shuttle import normalize_shuttle_ref
 from room_315_observed_state_provider import ObservedStateProvider
 from room_315_pddl_plan_translator import PddlPlanStep
@@ -57,6 +59,8 @@ from room_315_task_execution_config import TASK_EXECUTION_ACTIVE_PARAMETER_DEFAU
 
 
 TERMINAL_SUCCESS_STEPS = {'finish_task', 'finish_candidate_task', 'inspect_state'}
+INSPECTION_REPORT_CONTRACT = 'room315.inspection_report.v1'
+INSPECTION_REPORT_SCHEMA_VERSION = 1
 RECOVERABLE_STATE_STATUSES = {'unknown', 'stale', 'conflicting'}
 STOPPED_MOTION_VALUES = frozenset({'STOPPED', 'OFF', 'IDLE', 'HALTED'})
 CLEARANCE_BEGIN_ACTIONS = frozenset({
@@ -661,13 +665,14 @@ class ClosedLoopExecutiveResult:
     safe_abort_sent: bool
     final_state_id: str = ''
     replan_reasons: tuple[str, ...] = ()
+    inspection_report: dict[str, Any] | None = None
 
     @property
     def succeeded(self) -> bool:
         return self.status == 'succeeded'
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             'status': self.status,
             'reason': self.reason,
             'executed_steps': [step.to_dict() for step in self.executed_steps],
@@ -679,6 +684,14 @@ class ClosedLoopExecutiveResult:
             'final_state_id': self.final_state_id,
             'replan_reasons': list(self.replan_reasons),
         }
+        # Inspection findings are a terminal-success artifact.  Omitting the
+        # key for transport and abort results prevents callers from confusing
+        # a stale report retained by a reused executive with current output.
+        if self.status == 'succeeded' and self.inspection_report is not None:
+            payload['inspection_report'] = copy.deepcopy(
+                self.inspection_report
+            )
+        return payload
 
 
 class ClosedLoopExecutive:
@@ -707,6 +720,7 @@ class ClosedLoopExecutive:
         self._replan_reasons: list[str] = []
         self._runtime_clearance_certificates: dict[str, dict[str, Any]] = {}
         self._last_supervisor_decision_reason = ''
+        self._inspection_report: dict[str, Any] | None = None
         # Symbolic effects are otherwise lost when the problem is rebuilt
         # after each atomic action. Keep an executor-owned safety latch as a
         # second guard around the physically observed clearance mode.
@@ -717,6 +731,10 @@ class ClosedLoopExecutive:
 
         if not isinstance(task_goal, TaskGoal):
             raise TypeError('task_goal must be a TaskGoal contract')
+
+        # One executive can serve more than one goal.  Reports must never leak
+        # from a previous successful inspection into a later transport/abort.
+        self._inspection_report = None
 
         unknown_retries = 0
         replans = 0
@@ -3399,6 +3417,15 @@ class ClosedLoopExecutive:
                         'supervisor_command_published': False,
                     },
                 )
+            # Bind the human/structured finding to this exact fresh frame.
+            # The CLI must not subscribe to a later "latest" observation,
+            # which could race this terminal postcondition and report a
+            # different model prediction than the one that proved success.
+            self._inspection_report = _build_inspection_report(
+                before_state=before_state,
+                observed_state=observed_state,
+                task_goal=task_goal,
+            )
             return PostconditionCheck(
                 status='satisfied',
                 reason='fresh_validated_observation_inspected',
@@ -3606,6 +3633,11 @@ class ClosedLoopExecutive:
             safe_abort_sent=self._safe_abort_sent,
             final_state_id=final_state_id,
             replan_reasons=tuple(self._replan_reasons),
+            inspection_report=(
+                copy.deepcopy(self._inspection_report)
+                if status == 'succeeded'
+                else None
+            ),
         )
 
 
@@ -3915,6 +3947,534 @@ def _occupancy_snapshot(observed_state: ObservedState) -> dict[str, tuple[str, s
         occupant = _occupancy_shuttle(fact.value, side=side) if fact.status == 'known' else ''
         snapshot[fact.subject] = (fact.status, occupant)
     return snapshot
+
+
+def _build_inspection_report(
+    *,
+    before_state: ObservedState,
+    observed_state: ObservedState,
+    task_goal: TaskGoal,
+) -> dict[str, Any]:
+    """Describe exactly what the accepted terminal inspection frame contains.
+
+    Learned location/payload values are read exclusively from
+    ``visual_model_inputs``.  Controller-derived presence and fused slot
+    occupancy are kept in separate, explicitly labelled fields so the report
+    cannot accidentally present either one as a model prediction.
+    """
+
+    visual_index = {
+        (fact.subject, fact.predicate): fact
+        for fact in observed_state.visual_model_inputs
+        if fact.source == 'visual_model'
+    }
+    subject, shuttle_specs, slot_ids = _inspection_report_scope(
+        task_goal=task_goal,
+        observed_state=observed_state,
+        visual_index=visual_index,
+    )
+    shuttle_findings = [
+        _inspection_shuttle_finding(
+            observed_state=observed_state,
+            visual_index=visual_index,
+            spec=spec,
+        )
+        for spec in shuttle_specs
+    ]
+    slot_findings = [
+        _inspection_slot_finding(observed_state, slot_id)
+        for slot_id in slot_ids
+    ]
+    summary_lines = [
+        (
+            f'Observation state {observed_state.state_id} inspected at '
+            f'{float(observed_state.timestamp):.6f} s.'
+        ),
+        *[
+            _inspection_shuttle_summary(finding)
+            for finding in shuttle_findings
+        ],
+    ]
+    if subject['kind'] in {'slot', 'station'}:
+        slot_lines = [
+            _inspection_slot_summary(finding)
+            for finding in slot_findings
+        ]
+        summary_lines = [summary_lines[0], *slot_lines, *summary_lines[1:]]
+
+    return {
+        'contract': INSPECTION_REPORT_CONTRACT,
+        'schema_version': INSPECTION_REPORT_SCHEMA_VERSION,
+        'observation': {
+            'state_id': observed_state.state_id,
+            'timestamp_s': float(observed_state.timestamp),
+            'fresh_after_state_id': before_state.state_id,
+            'fresh_after_timestamp_s': float(before_state.timestamp),
+        },
+        'subject': subject,
+        'scope': {
+            'shuttles': shuttle_findings,
+            'slots': slot_findings,
+        },
+        'provenance': {
+            'frame_binding': (
+                'same_fresh_observation_that_satisfied_'
+                'inspection_postcondition'
+            ),
+            'additional_observation_performed_for_report': False,
+            'presence_source': (
+                'controller_ShuttleState_name_and_timestamps_only'
+            ),
+            'presence_fields': (
+                'fused_planner_state.present; controller-derived in live mode'
+            ),
+            'localization_and_payload_source': (
+                'accepted_visual_model_inputs'
+            ),
+            'visual_fields': 'visual_model_inputs only',
+            'slot_occupancy_fields': 'fused_planner_state.occupancy',
+            'controller_position_fields_used_for_localization': False,
+            'supervisor_command_published': False,
+        },
+        'summary_lines': summary_lines,
+    }
+
+
+def _inspection_report_scope(
+    *,
+    task_goal: TaskGoal,
+    observed_state: ObservedState,
+    visual_index: dict[tuple[str, str], ObservedFact],
+) -> tuple[dict[str, Any], list[Any], list[str]]:
+    constraints = dict(task_goal.constraints or {})
+    raw_subject = str(
+        constraints.get('inspection_subject') or 'room315_system'
+    ).strip()
+    target_kind = str(
+        constraints.get('target_kind') or ''
+    ).strip().casefold()
+    supplied_side = str(constraints.get('side') or '').strip().casefold()
+    specs = all_shuttle_specs()
+
+    if raw_subject.casefold() == 'room315_system' or target_kind == 'system':
+        subject = {
+            'kind': 'system',
+            'canonical_id': 'room315_system',
+            'side': '',
+            'identity': '',
+        }
+        return subject, specs, _inspection_all_slot_ids()
+
+    shuttle_spec = normalize_shuttle_ref(raw_subject)
+    if shuttle_spec is None:
+        shuttle_spec = normalize_shuttle_ref(
+            constraints.get('target_shuttle'),
+            side=supplied_side or None,
+        )
+    if shuttle_spec is not None and target_kind not in {
+        'rail',
+        'slot',
+        'station',
+    }:
+        slot_ids = _inspection_slots_for_shuttle(
+            observed_state=observed_state,
+            visual_index=visual_index,
+            spec=shuttle_spec,
+        )
+        subject = {
+            'kind': 'shuttle',
+            'canonical_id': shuttle_spec.gazebo_entity_name,
+            'side': shuttle_spec.side,
+            'identity': shuttle_spec.short_id,
+        }
+        return subject, [shuttle_spec], slot_ids
+
+    if ':slot:' in raw_subject.casefold() or target_kind == 'slot':
+        slot_id = _contract_slot_id(
+            supplied_side or _side_from_subject(raw_subject),
+            constraints.get('target_slot') or raw_subject,
+        )
+        side, _slot = _split_slot_id(
+            slot_id,
+            default_side=supplied_side or 'right',
+        )
+        scoped_specs = _inspection_shuttles_for_slots(
+            observed_state=observed_state,
+            visual_index=visual_index,
+            slot_ids=[slot_id],
+        )
+        subject = {
+            'kind': 'slot',
+            'canonical_id': slot_id,
+            'side': side,
+            'identity': '',
+        }
+        return subject, scoped_specs, [slot_id]
+
+    if ':station:' in raw_subject.casefold() or target_kind == 'station':
+        side = supplied_side or _side_from_subject(raw_subject)
+        station = str(
+            constraints.get('target_station')
+            or raw_subject.casefold().split(':station:', 1)[-1]
+        ).strip().casefold()
+        slot_ids = [
+            f'{side}:slot:{slot}'
+            for (slot_side, slot), slot_station in (
+                SLOT_STATION_BY_SIDE_AND_SLOT.items()
+            )
+            if slot_side == side and slot_station == station
+        ]
+        scoped_specs = _inspection_shuttles_for_slots(
+            observed_state=observed_state,
+            visual_index=visual_index,
+            slot_ids=slot_ids,
+        )
+        subject = {
+            'kind': 'station',
+            'canonical_id': f'{side}:station:{station}',
+            'side': side,
+            'identity': '',
+        }
+        return subject, scoped_specs, slot_ids
+
+    if ':rail' in raw_subject.casefold() or target_kind == 'rail':
+        side = supplied_side or _side_from_subject(raw_subject)
+        subject = {
+            'kind': 'rail',
+            'canonical_id': f'{side}:rail',
+            'side': side,
+            'identity': '',
+        }
+        return (
+            subject,
+            [spec for spec in specs if spec.side == side],
+            [f'{side}:slot:{slot}' for slot in ('1', '2', '3', '4')],
+        )
+
+    # A validated TaskGoal should never reach this branch.  Retain the exact
+    # supplied subject and provide a system snapshot rather than silently
+    # inventing a narrower target.
+    subject = {
+        'kind': target_kind or 'system',
+        'canonical_id': raw_subject,
+        'side': supplied_side,
+        'identity': '',
+    }
+    return subject, specs, _inspection_all_slot_ids()
+
+
+def _inspection_all_slot_ids() -> list[str]:
+    return [
+        f'{side}:slot:{slot}'
+        for side in ('right', 'left')
+        for slot in ('1', '2', '3', '4')
+    ]
+
+
+def _inspection_slots_for_shuttle(
+    *,
+    observed_state: ObservedState,
+    visual_index: dict[tuple[str, str], ObservedFact],
+    spec: Any,
+) -> list[str]:
+    slots: list[str] = []
+    visual_slot = visual_index.get(
+        (spec.gazebo_entity_name, 'location_slot')
+    )
+    if visual_slot is not None and visual_slot.status == 'known':
+        slot_id = _contract_slot_id(spec.side, visual_slot.value)
+        if ':slot:' in slot_id:
+            slots.append(slot_id)
+    for slot_id in _inspection_all_slot_ids():
+        fact = _fact(observed_state, slot_id, 'occupancy')
+        if fact is None or fact.status != 'known':
+            continue
+        if _occupancy_shuttle(
+            fact.value,
+            side=_side_from_subject(slot_id),
+        ) == spec.shuttle_id:
+            slots.append(slot_id)
+    return list(dict.fromkeys(slots))
+
+
+def _inspection_shuttles_for_slots(
+    *,
+    observed_state: ObservedState,
+    visual_index: dict[tuple[str, str], ObservedFact],
+    slot_ids: list[str],
+) -> list[Any]:
+    wanted = set(slot_ids)
+    selected: set[str] = set()
+    for slot_id in slot_ids:
+        fact = _fact(observed_state, slot_id, 'occupancy')
+        if fact is None or fact.status != 'known':
+            continue
+        shuttle = _occupancy_shuttle(
+            fact.value,
+            side=_side_from_subject(slot_id),
+        )
+        if shuttle:
+            selected.add(shuttle)
+    for spec in all_shuttle_specs():
+        fact = visual_index.get((spec.gazebo_entity_name, 'location_slot'))
+        if fact is None or fact.status != 'known':
+            continue
+        if _contract_slot_id(spec.side, fact.value) in wanted:
+            selected.add(spec.shuttle_id)
+    return [
+        spec for spec in all_shuttle_specs()
+        if spec.shuttle_id in selected
+    ]
+
+
+def _inspection_shuttle_finding(
+    *,
+    observed_state: ObservedState,
+    visual_index: dict[tuple[str, str], ObservedFact],
+    spec: Any,
+) -> dict[str, Any]:
+    presence_fact = _fact(
+        observed_state,
+        spec.gazebo_entity_name,
+        'present',
+    )
+    if presence_fact is None or presence_fact.status != 'known':
+        presence_state = 'unknown'
+        presence_source = ''
+        presence_owner = ''
+    else:
+        presence_state = 'present' if bool(presence_fact.value) else 'absent'
+        presence_source = str(
+            presence_fact.metadata.get('selected_source')
+            or presence_fact.source
+        )
+        presence_owner = str(
+            presence_fact.metadata.get('field_owner') or ''
+        )
+        if presence_source == 'trusted_device':
+            presence_owner = 'deterministic_controller_presence'
+
+    direct = {
+        predicate: visual_index.get((spec.gazebo_entity_name, predicate))
+        for predicate in (
+            'loaded',
+            'location_block',
+            'location_slot',
+            'rail_position',
+            'visual_bbox',
+        )
+    }
+    known = {
+        predicate: fact
+        for predicate, fact in direct.items()
+        if fact is not None and fact.status == 'known'
+    }
+    loaded_fact = known.get('loaded')
+    block_fact = known.get('location_block')
+    slot_fact = known.get('location_slot')
+    position_fact = known.get('rail_position')
+    bbox_fact = known.get('visual_bbox')
+    confidence_fact = block_fact or position_fact or slot_fact
+
+    segment_confidence = _optional_float(
+        (confidence_fact.metadata if confidence_fact else {}).get(
+            'segment_confidence'
+        )
+    )
+    if segment_confidence is None and confidence_fact is not None:
+        segment_confidence = _optional_float(confidence_fact.confidence)
+    loaded_decision_score = _optional_float(
+        (loaded_fact.metadata if loaded_fact else {}).get(
+            'loaded_decision_score'
+        )
+    )
+    model_metadata_fact = (
+        block_fact or position_fact or loaded_fact or bbox_fact or slot_fact
+    )
+    model_metadata = (
+        model_metadata_fact.metadata if model_metadata_fact else {}
+    )
+    required_visual_predicates = {
+        'loaded',
+        'location_block',
+        'rail_position',
+        'visual_bbox',
+    }
+    if required_visual_predicates.issubset(known):
+        visual_status = 'available'
+    elif known:
+        visual_status = 'partial'
+    else:
+        visual_status = 'unavailable'
+
+    return {
+        'identity': spec.short_id,
+        'canonical_id': spec.gazebo_entity_name,
+        'side': spec.side,
+        'presence': {
+            'state': presence_state,
+            'source': presence_source,
+            'field_owner': presence_owner,
+            'derived_from_visual_model': False,
+        },
+        'visual': {
+            'status': visual_status,
+            'source': 'visual_model' if known else '',
+            'available_predicates': sorted(known),
+            'block': (
+                copy.deepcopy(block_fact.value) if block_fact else None
+            ),
+            'location_slot': (
+                copy.deepcopy(slot_fact.value) if slot_fact else None
+            ),
+            'rail_position': (
+                copy.deepcopy(position_fact.value)
+                if position_fact is not None
+                else None
+            ),
+            'bbox': (
+                copy.deepcopy(bbox_fact.value)
+                if bbox_fact is not None
+                else None
+            ),
+            'payload_state': (
+                ('loaded' if bool(loaded_fact.value) else 'empty')
+                if loaded_fact is not None
+                else 'unknown'
+            ),
+            'segment_confidence': segment_confidence,
+            'segment_confidence_semantics': (
+                str(confidence_fact.metadata.get('confidence_semantics') or '')
+                if confidence_fact is not None
+                else ''
+            ),
+            'loaded_decision_score': loaded_decision_score,
+            'loaded_decision_score_semantics': (
+                'uncalibrated_loaded_decision_score'
+                if loaded_decision_score is not None
+                else ''
+            ),
+            'checkpoint_sha256': str(
+                model_metadata.get('checkpoint_sha256') or ''
+            ),
+            'model_schema_version': model_metadata.get('schema_version'),
+        },
+    }
+
+
+def _inspection_slot_finding(
+    observed_state: ObservedState,
+    slot_id: str,
+) -> dict[str, Any]:
+    side, slot = _split_slot_id(
+        slot_id,
+        default_side=_side_from_subject(slot_id),
+    )
+    fact = _fact(observed_state, slot_id, 'occupancy')
+    occupant = ''
+    if fact is None or fact.status != 'known':
+        occupancy_state = 'unknown'
+        source = ''
+    else:
+        occupant = _occupancy_shuttle(fact.value, side=side)
+        occupied = (
+            bool(fact.value.get('occupied'))
+            if isinstance(fact.value, dict)
+            else bool(fact.value)
+        )
+        occupancy_state = 'occupied' if occupied else 'empty'
+        source = str(fact.metadata.get('selected_source') or fact.source)
+    occupant_spec = normalize_shuttle_ref(occupant, side=side) if occupant else None
+    return {
+        'slot_id': slot_id,
+        'side': side,
+        'slot': slot,
+        'station': SLOT_STATION_BY_SIDE_AND_SLOT.get((side, slot), ''),
+        'occupancy': {
+            'state': occupancy_state,
+            'shuttle_identity': (
+                occupant_spec.short_id if occupant_spec is not None else ''
+            ),
+            'shuttle_canonical_id': (
+                occupant_spec.gazebo_entity_name
+                if occupant_spec is not None
+                else ''
+            ),
+            'source': source,
+            'derived_from_visual_model_directly': False,
+        },
+    }
+
+
+def _inspection_shuttle_summary(finding: dict[str, Any]) -> str:
+    identity = str(finding['identity'])
+    side = str(finding['side'])
+    presence = dict(finding['presence'])
+    visual = dict(finding['visual'])
+    owner = str(presence.get('field_owner') or '')
+    source = str(presence.get('source') or '')
+    presence_label = (
+        'controller'
+        if owner == 'deterministic_controller_presence'
+        or source == 'trusted_device'
+        else (source or 'presence source unknown')
+    )
+    parts = [f'{identity}: {presence["state"]} [{presence_label}]']
+    if visual.get('status') == 'unavailable':
+        return f'{parts[0]}; no visual-model facts.'
+
+    block = visual.get('block')
+    if block is not None and str(block).strip():
+        parts.append(f'{side}/{_inspection_block_label(block)}')
+    position = visual.get('rail_position')
+    if isinstance(position, dict):
+        s_m = _optional_float(position.get('s_m'))
+        length_m = _optional_float(position.get('segment_length_m'))
+        ratio = _optional_float(position.get('s_ratio'))
+        if s_m is not None:
+            text = f'position {s_m:.3f}'
+            if length_m is not None:
+                text += f'/{length_m:.3f}'
+            text += ' m'
+            if ratio is not None:
+                text += f' ({ratio * 100.0:.2f}%)'
+            parts.append(text)
+    payload_state = str(visual.get('payload_state') or 'unknown')
+    if payload_state != 'unknown':
+        parts.append(f'payload {payload_state} [visual model]')
+    segment_confidence = _optional_float(visual.get('segment_confidence'))
+    if segment_confidence is not None:
+        parts.append(f'segment probability {segment_confidence * 100.0:.3f}%')
+    loaded_score = _optional_float(visual.get('loaded_decision_score'))
+    if loaded_score is not None:
+        parts.append(
+            f'payload decision score {loaded_score * 100.0:.3f}% '
+            '[uncalibrated]'
+        )
+    return '; '.join(parts) + '.'
+
+
+def _inspection_slot_summary(finding: dict[str, Any]) -> str:
+    occupancy = dict(finding['occupancy'])
+    occupant = str(occupancy.get('shuttle_identity') or '')
+    suffix = f' by {occupant}' if occupant else ''
+    return (
+        f'{finding["slot_id"]}: {occupancy["state"]}{suffix} '
+        '[fused occupancy].'
+    )
+
+
+def _inspection_block_label(value: Any) -> str:
+    text = str(value or '').strip()
+    return text.rsplit(':', 1)[-1].upper() if text else 'unknown'
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
 
 
 def _fact(observed_state: ObservedState, subject: str, predicate: str) -> ObservedFact | None:

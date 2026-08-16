@@ -20,6 +20,7 @@ from room_315_closed_loop_executive import _canonical_stopper_effect_state
 from room_315_closed_loop_executive import _canonical_switch_effect_state
 from room_315_closed_loop_executive import _verify_device_state
 from room_315_closed_loop_executive import _verify_shuttle_stopped
+from room_315_contracts import ObservedFact
 from room_315_contracts import ObservedState
 from room_315_contracts import TaskGoal
 from room_315_observed_state_provider import ObservedStateProvider
@@ -301,10 +302,133 @@ def _inspection_goal() -> TaskGoal:
         confidence=1.0,
         constraints={
             'goal_type': 'inspection',
-            'side': 'right',
+            'target_kind': 'system',
             'inspection_subject': 'room315_system',
         },
     )
+
+
+def _r2_inspection_goal() -> TaskGoal:
+    return TaskGoal(
+        goal_id='inspect-r2',
+        description='Inspect shuttle R2',
+        source='human',
+        timestamp=0.0,
+        confidence=1.0,
+        constraints={
+            'goal_type': 'inspection',
+            'target_kind': 'shuttle',
+            'side': 'right',
+            'target_shuttle': 'room315_right_shuttle_2',
+            'inspection_subject': 'room315_right_shuttle_2',
+            'payload_filter': 'any',
+            'selection_strategy': 'explicit',
+        },
+    )
+
+
+def _visual_fact(
+    *,
+    identity: str,
+    predicate: str,
+    value,
+    timestamp: float,
+    confidence: float = 0.0,
+    confidence_semantics: str,
+    segment_confidence: float,
+    loaded_decision_score: float,
+) -> ObservedFact:
+    return ObservedFact(
+        fact_id=f'visual-{identity}-{predicate}',
+        subject=f'room315_right_shuttle_{identity[1]}',
+        predicate=predicate,
+        value=value,
+        source='visual_model',
+        timestamp=timestamp,
+        confidence=confidence,
+        status='known',
+        metadata={
+            'field_owner': 'visual_model',
+            'identity': identity,
+            'side': 'right',
+            'checkpoint_sha256': 'inspection-test-checkpoint',
+            'schema_version': 4,
+            'confidence_semantics': confidence_semantics,
+            'segment_confidence': segment_confidence,
+            'loaded_decision_score': loaded_decision_score,
+        },
+    )
+
+
+def _r2_visual_facts(timestamp: float) -> list[ObservedFact]:
+    segment_confidence = 0.999831
+    loaded_decision_score = 0.996079
+    segment_semantics = (
+        'validation_temperature_calibrated_segment_probability'
+    )
+    return [
+        _visual_fact(
+            identity='R2',
+            predicate='loaded',
+            value=False,
+            timestamp=timestamp,
+            confidence_semantics='uncalibrated_loaded_decision_score',
+            segment_confidence=segment_confidence,
+            loaded_decision_score=loaded_decision_score,
+        ),
+        _visual_fact(
+            identity='R2',
+            predicate='location_block',
+            value='A34E',
+            timestamp=timestamp,
+            confidence=segment_confidence,
+            confidence_semantics=segment_semantics,
+            segment_confidence=segment_confidence,
+            loaded_decision_score=loaded_decision_score,
+        ),
+        _visual_fact(
+            identity='R2',
+            predicate='rail_position',
+            value={
+                'available': True,
+                'side': 'right',
+                'segment': 'A34E',
+                's_m': 0.96836,
+                's_ratio': 0.434807,
+                'segment_length_m': 2.22709,
+                'position_uncertainty_m': 0.0,
+            },
+            timestamp=timestamp,
+            confidence=segment_confidence,
+            confidence_semantics=segment_semantics,
+            segment_confidence=segment_confidence,
+            loaded_decision_score=loaded_decision_score,
+        ),
+        _visual_fact(
+            identity='R2',
+            predicate='visual_bbox',
+            value={
+                'bbox_xywh': [428.69, 273.02, 49.64, 71.01],
+                'camera': 'right_rail_rgb',
+            },
+            timestamp=timestamp,
+            confidence_semantics='regression_uncertainty_unavailable',
+            segment_confidence=segment_confidence,
+            loaded_decision_score=loaded_decision_score,
+        ),
+        # Distractor evidence verifies that a shuttle-scoped inspection never
+        # widens itself merely because the same frame contains other shuttles.
+        _visual_fact(
+            identity='R1',
+            predicate='location_block',
+            value='A12E',
+            timestamp=timestamp,
+            confidence=0.901,
+            confidence_semantics=segment_semantics,
+            segment_confidence=0.901,
+            loaded_decision_score=0.6,
+        ),
+    ]
 
 
 def _transport_goal() -> TaskGoal:
@@ -723,6 +847,111 @@ def test_executes_only_first_atomic_step_from_validated_plan():
     assert result.executed_steps[0].postcondition.reason == (
         'fresh_validated_observation_inspected'
     )
+    report = result.to_dict()['inspection_report']
+    assert report['contract'] == 'room315.inspection_report.v1'
+    assert report['schema_version'] == 1
+    assert report['observation'] == {
+        'state_id': fresh_state.state_id,
+        'timestamp_s': fresh_state.timestamp,
+        'fresh_after_state_id': state.state_id,
+        'fresh_after_timestamp_s': state.timestamp,
+    }
+    assert report['subject'] == {
+        'kind': 'system',
+        'canonical_id': 'room315_system',
+        'side': '',
+        'identity': '',
+    }
+    assert [
+        finding['identity'] for finding in report['scope']['shuttles']
+    ] == ['R1', 'R2', 'R3', 'R4', 'L1', 'L2', 'L3', 'L4']
+    assert len(report['scope']['slots']) == 8
+    assert report['provenance'][
+        'additional_observation_performed_for_report'
+    ] is False
+    assert provider.calls == 2
+
+
+def test_shuttle_inspection_reports_only_r2_from_the_exact_fresh_visual_frame():
+    state = _with_fact(
+        _base_state('inspect-r2-before'),
+        'room315_right_shuttle_2',
+        'present',
+        value=True,
+        source='state_fuser',
+        metadata={'selected_source': 'trusted_device'},
+    )
+    # Deliberately leave the fused R2 loaded/block facts inconsistent with the
+    # direct learned output.  The report must use visual_model_inputs only.
+    state = _with_fact(
+        state,
+        'room315_right_shuttle_2',
+        'loaded',
+        value=True,
+    )
+    state = _with_r2_interior(
+        state,
+        'inspect-r2-before',
+        visual_s_m=0.5,
+        visual_segment='A34I',
+    )
+    fresh_state = replace(
+        state,
+        state_id='inspect-r2-after',
+        timestamp=state.timestamp + 0.1,
+        visual_model_inputs=_r2_visual_facts(state.timestamp + 0.1),
+    )
+    provider = SequenceObservedStateProvider([state, fresh_state])
+    planner = SequencePlanner([[
+        'inspect_state room315_right_shuttle_2',
+    ]])
+    transport = RecordingTransport()
+
+    result = ClosedLoopExecutive(
+        observed_state_provider=provider,
+        planner=planner,
+        transport=transport,
+        config=ClosedLoopExecutiveConfig(max_steps=2),
+    ).run(_r2_inspection_goal())
+
+    assert result.succeeded
+    assert provider.calls == 2
+    assert transport.commands == []
+    report = result.to_dict()['inspection_report']
+    assert report['observation']['state_id'] == fresh_state.state_id
+    assert report['observation']['fresh_after_state_id'] == state.state_id
+    assert report['subject'] == {
+        'kind': 'shuttle',
+        'canonical_id': 'room315_right_shuttle_2',
+        'side': 'right',
+        'identity': 'R2',
+    }
+    assert report['scope']['slots'] == []
+    assert len(report['scope']['shuttles']) == 1
+    finding = report['scope']['shuttles'][0]
+    assert finding['identity'] == 'R2'
+    assert finding['presence'] == {
+        'state': 'present',
+        'source': 'trusted_device',
+        'field_owner': 'deterministic_controller_presence',
+        'derived_from_visual_model': False,
+    }
+    assert finding['visual']['block'] == 'A34E'
+    assert finding['visual']['payload_state'] == 'empty'
+    assert finding['visual']['rail_position']['s_m'] == pytest.approx(0.96836)
+    assert finding['visual']['bbox']['camera'] == 'right_rail_rgb'
+    assert finding['visual']['segment_confidence'] == pytest.approx(0.999831)
+    assert finding['visual']['loaded_decision_score'] == pytest.approx(0.996079)
+    assert finding['visual']['loaded_decision_score_semantics'] == (
+        'uncalibrated_loaded_decision_score'
+    )
+    assert report['summary_lines'] == [
+        'Observation state inspect-r2-after inspected at 0.100000 s.',
+        'R2: present [controller]; right/A34E; position '
+        '0.968/2.227 m (43.48%); payload empty [visual model]; '
+        'segment probability 99.983%; payload decision score 99.608% '
+        '[uncalibrated].'
+    ]
 
 
 def test_inspection_rejects_replayed_observation_as_not_fresh():
@@ -739,6 +968,7 @@ def test_inspection_rejects_replayed_observation_as_not_fresh():
     ).run(_inspection_goal())
 
     assert result.status == 'aborted'
+    assert 'inspection_report' not in result.to_dict()
     assert result.reason == (
         'postcondition_unknown:inspection_requires_fresh_observation'
     )
@@ -759,6 +989,18 @@ def test_inspection_rejects_replayed_observation_as_not_fresh():
             },
         }
     ]
+
+
+def test_successful_transport_result_does_not_expose_an_inspection_report():
+    state = _state_with_r1_at_slot3('transport-already-complete')
+    result = ClosedLoopExecutive(
+        observed_state_provider=SequenceObservedStateProvider([state]),
+        planner=SequencePlanner([[]]),
+        transport=RecordingTransport(),
+    ).run(_transport_goal())
+
+    assert result.succeeded
+    assert 'inspection_report' not in result.to_dict()
 
 
 def test_rejects_wrong_shuttle_plan_before_any_motion_command():

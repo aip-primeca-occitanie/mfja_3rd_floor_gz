@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import itertools
+import json
 import shutil
 import subprocess
 import sys
@@ -9037,3 +9038,129 @@ def test_confirmed_cli_goal_invokes_execution_handler():
     assert 'Final validated TaskGoal:' in output.getvalue()
     assert 'Task execution response:' in output.getvalue()
     assert '"status": "published"' in output.getvalue()
+
+
+def _render_cli_publication(publication: dict) -> str:
+    result = DialogueTurnResult(
+        status='ok',
+        state=TaskGoalDialogueState(),
+        task_goal=_transport_goal(),
+    )
+    output = io.StringIO()
+    _print_turn_result(
+        result,
+        output,
+        on_task_goal=lambda _goal: publication,
+    )
+    return output.getvalue()
+
+
+def _inspection_publication(*summary_lines: str) -> dict:
+    return {
+        'status': 'succeeded',
+        'reason': 'task_goal_satisfied',
+        'result': {
+            'inspection_report': {
+                'contract': 'room315.inspection_report.v1',
+                'schema_version': 1,
+                'summary_lines': list(summary_lines),
+            },
+        },
+    }
+
+
+def test_cli_renders_system_inspection_summary_before_unchanged_json():
+    publication = _inspection_publication(
+        'Observation state room315-live-visual-20 inspected.',
+        'R1: present [controller]; right/A12E; payload empty [visual model].',
+        'R2: present [controller]; right/A34E; payload loaded [visual model].',
+        'L1: absent [controller]; no visual-model facts.',
+    )
+
+    rendered = _render_cli_publication(publication)
+
+    human, raw = rendered.split('Task execution response:\n', 1)
+    assert 'Inspection result:\n' in human
+    expected_order = [
+        'Observation state room315-live-visual-20 inspected.',
+        'R1: present [controller]; right/A12E; payload empty [visual model].',
+        'R2: present [controller]; right/A34E; payload loaded [visual model].',
+        'L1: absent [controller]; no visual-model facts.',
+    ]
+    offsets = [human.index(f'  {line}') for line in expected_order]
+    assert offsets == sorted(offsets)
+    assert json.loads(raw) == publication
+
+
+def test_cli_renders_only_the_scoped_r2_inspection_finding():
+    r2_line = (
+        'R2: present [controller]; right/A34E; position '
+        '0.968/2.227 m (43.48%); payload empty [visual model]; '
+        'segment probability 99.983%; payload decision score 99.608% '
+        '[uncalibrated].'
+    )
+    publication = _inspection_publication(r2_line)
+
+    rendered = _render_cli_publication(publication)
+
+    human, raw = rendered.split('Task execution response:\n', 1)
+    assert f'Inspection result:\n  {r2_line}\n' in human
+    for other in ('R1:', 'R3:', 'R4:', 'L1:', 'L2:', 'L3:', 'L4:'):
+        assert other not in human
+    assert json.loads(raw) == publication
+
+
+@pytest.mark.parametrize(
+    ('status', 'report'),
+    [
+        ('succeeded', None),
+        ('succeeded', []),
+        ('succeeded', {
+            'contract': 'room315.inspection_report.v2',
+            'schema_version': 2,
+            'summary_lines': ['unsupported'],
+        }),
+        ('succeeded', {
+            'contract': 'room315.inspection_report.v1',
+            'schema_version': 1,
+            'summary_lines': [],
+        }),
+        ('succeeded', {
+            'contract': 'room315.inspection_report.v1',
+            'schema_version': 1,
+            'summary_lines': ['valid', 3],
+        }),
+        ('succeeded', {
+            'contract': 'room315.inspection_report.v1',
+            'schema_version': 1,
+            'summary_lines': ['forged\nsecond line'],
+        }),
+        ('succeeded', {
+            'contract': 'room315.inspection_report.v1',
+            'schema_version': 1,
+            'summary_lines': ['forged\x1b[31m terminal colour'],
+        }),
+        ('aborted', {
+            'contract': 'room315.inspection_report.v1',
+            'schema_version': 1,
+            'summary_lines': ['must not render'],
+        }),
+    ],
+)
+def test_cli_falls_back_to_raw_json_for_missing_or_invalid_inspection_report(
+    status,
+    report,
+):
+    publication = {
+        'status': status,
+        'reason': 'test',
+        'result': {},
+    }
+    if report is not None:
+        publication['result']['inspection_report'] = report
+
+    rendered = _render_cli_publication(publication)
+
+    assert 'Inspection result:' not in rendered
+    _human, raw = rendered.split('Task execution response:\n', 1)
+    assert json.loads(raw) == publication

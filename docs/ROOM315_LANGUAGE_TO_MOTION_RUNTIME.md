@@ -36,7 +36,17 @@ slot, and station inspections; they are never silently ignored.
 Inspection is non-actuating and completes only after a newer accepted visual
 observation is received. Replaying the same state ID or timestamp is treated as
 unknown freshness and fails closed; it is never reported as a successful fresh
-inspection.
+inspection. A successful inspection includes an `inspection_report` built from
+that exact accepted observation, rather than from a later read of the visual
+state topic. The report carries the observation state ID so the displayed facts
+can be tied to the frame that satisfied the inspection.
+
+The report is filtered to the requested scope. `Inspect the Room 315 system.`
+shows the in-scope observation for every canonical shuttle, including explicit
+absent or unknown states. `Inspect shuttle R2.` shows only R2. Rail, slot, and
+station inspections are filtered in the same way. Missing or invalid visual
+facts are shown as unknown; the runtime does not fill them from controller pose
+or from a newer frame.
 
 An explicit identity determines its authoritative rail, so commands such as
 `Move L4 to slot 2` do not require the operator to repeat `left`. Colour aliases
@@ -95,6 +105,12 @@ planner.
   time.
 - Block/segment, bounding box, `s_m`, `s_ratio`, segment length, and loaded
   state come from the visual model.
+- Inspection output preserves that distinction: presence is controller-derived,
+  while block, along-rail position, bounding box, and payload classification are
+  visual-model facts from the report's accepted frame.
+- The displayed payload score is an uncalibrated loaded/empty decision score.
+  It is labelled `payload decision score`, not payload confidence or a
+  calibrated probability.
 - `ShuttleState.current_segment`, `s`, `x`, `y`, `z`, `yaw`, and `speed` are
   never used for visual localization.
 - A fresh controller `DISABLED` mode is used only to confirm that a supervised
@@ -264,6 +280,17 @@ Inspect the Room 315 system.
 
 Reply `yes` after checking the confirmation summary.
 
+For a successful `Inspect ...` command, the CLI prints both the complete
+published result as JSON for audit and automation, including
+`result.inspection_report`, and a human-readable summary of that same report.
+Each in-scope shuttle row identifies its presence state and source, the
+available visual block and along-rail position, payload classification, and
+model scores. The enclosing report records the exact observation state ID.
+Thus a system inspection lists the Room 315 shuttle observations, while an R2
+inspection displays only what the accepted frame says about R2. The human
+summary is a rendering of the JSON report; it does not perform a second topic
+read.
+
 ## Optional Terminal 5: status monitor
 
 ```bash
@@ -275,4 +302,5 @@ ros2 topic echo /room_315/task_goal/status std_msgs/msg/String
 ```
 
 Terminal results are `succeeded`, `aborted`, `rejected`, or `failed`, with a
-fail-closed reason.
+fail-closed reason. Successful inspection results additionally contain the
+same-frame machine-readable inspection report described above.
