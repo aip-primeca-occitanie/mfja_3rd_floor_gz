@@ -5,6 +5,13 @@ human-readable logs and per-case verification records. The complete original
 campaign directory, including the twelve MCAP recordings, is published as a
 GitHub release asset.
 
+Naming note: the `v2` suffix in `room315-evidence-v2` and
+`room315_integrated_campaign_v2` identifies revision 2 of the integrated
+campaign/evidence package; it is not a visual-model version. This archived
+campaign used the `room315.visual_state.v3` visual contract. The legacy
+identifiers are retained to preserve release links and checksum-bound
+provenance.
+
 - Release tag: `room315-evidence-v2`
 - Release page: <https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-evidence-v2>
 - Asset: `room315_integrated_campaign_v2_full_2026-08-07.tar.zst`

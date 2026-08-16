@@ -5,11 +5,13 @@
 
 The project repository is identified by \citep{mfjarepository}. The reference
 environment is Ubuntu~24.04, ROS~2 Jazzy, Gazebo Harmonic and Python~3.12. The
-revision carrying this report stores the implementation, active and recovery
+revision carrying this report stores the implementation, active runtime
 configurations, tests, lightweight evidence and submission PDF together. A
 clean checkout of that revision therefore reconstructs the source handover.
 The model checkpoint, sealed dataset and raw ROS bags are external
-objects identified by the fingerprints below rather than files stored in Git.
+objects identified by the fingerprints below rather than files stored in Git;
+their byte-exact current-V4 copies are published in the full-evidence release
+identified below.
 Here, a checkpoint is a saved network-weight state, a sealed dataset is a
 frozen hash-identified dataset (not an encrypted or still-unseen one), and a ROS
 bag is a timestamped recording of ROS messages. An external object is retained
@@ -51,6 +53,20 @@ per-file hashes and JSON Pointers remain
 in that package and in \path{report/evidence/ACTIVE_EVIDENCE.md}; they are not
 repeated in this appendix.
 
+The corresponding full payload is published at the
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11}{Room 315 Visual Model V4 full-evidence release}.
+Its tag \path{room315-visual-v4-evidence-2026-08-11} targets
+revision \path{0d19e1601d57416b83c871c1a8d413ec0dd523a6}, which introduced
+the V4 runtime and the compact package; that package is byte-identical at the
+revision carrying this report. The archive is \path{247825706} bytes with
+SHA-256
+\path{35b583baca4f45eed6aad659c253180d00f1a5830ce389266ba714a4445a8ecc}.
+Its 6,492 files include the selected checkpoint, the sealed 1,040-scene Test
+with 2,080 images, the final active runtime bundle and 18 MCAP recordings from
+the positive, fail-closed and post-promotion-smoke runs. The release tag's
+V4 identifies the visual-model generation; it is unrelated to the historical
+repository tag \path{version-4}.
+
 \emph{Lightweight} means that the package retains manifests, controls, results
 and checksums but not the large checkpoint, images or raw bags. Binding means
 that any content change produces a different SHA-256 and fails verification; it
@@ -66,6 +82,27 @@ visual evaluation; each is the SHA-256 identifier recorded by its governing
 protocol. Some copied machine-generated records preserve absolute
 archival paths from the evaluation host. They are retained for provenance but
 are not submission locations; the authored evidence index uses relative paths.
+
+The release assets can be downloaded and verified without adding their payload
+to Git:
+
+\begin{lstlisting}[language=bash]
+TAG=room315-visual-v4-evidence-2026-08-11
+gh release download "$TAG" \
+  --repo aip-primeca-occitanie/mfja_3rd_floor_gz
+sha256sum -c \
+  room315_visual_v4_full_evidence_2026-08-11.tar.zst.sha256
+tar --zstd -xf \
+  room315_visual_v4_full_evidence_2026-08-11.tar.zst
+cd room315_visual_v4_full_evidence_2026-08-11
+sha256sum --strict -c SHA256SUMS
+\end{lstlisting}
+
+The repository landing record
+\path{report/evidence/ROOM315_VISUAL_V4_RELEASE.md} repeats the asset identity,
+scope and extraction instructions. Raw records preserve archival host paths
+and reviewer/name provenance byte-for-byte. They remain Gazebo-only evidence
+and confer no physical-deployment authority.
 
 \section{Result-to-record index}
 
@@ -119,12 +156,9 @@ Experimental camera figure & The exact B03 frames, extraction program,
 provenance and checksums for \cref{fig:b03-camera-evidence} are under
 \path{report/evidence/room315_v4_closed_loop_campaign_figures_2026-08-12}.\\
 \tablerowrule
-Runtime and recovery configuration & The active files are
+Active runtime configuration & The active files are
 \path{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}
-and \path{task_execution_runtime.yaml}. Explicit recovery profiles are
-\path{visual_state_runtime_v3_rollback.yaml} and
-\path{task_execution_runtime_v3_rollback.yaml}. The task configuration defaults
-to \code{execution\_enabled=false}. These recovery profiles are explicit manual
-fallback configurations, not automatically selected alternatives.\\
+and \path{task_execution_runtime.yaml}. The task configuration defaults to
+\code{execution\_enabled=false}.\\
 \bottomrule
 \end{longtable}

@@ -151,15 +151,20 @@ The \emph{visual model} is the learned network; the \emph{visual-inference
 runtime} adds preprocessing and observation validation; the \emph{closed-loop
 runtime} further adds the task gateway, planner, supervisor and controllers.
 
-\paragraph{Why the visual contract changed.}
-V3 resized both cameras to $224\times224$, concatenated shared ResNet-18 global
-features and predicted 200 values through one head. It distorted the native
-$4{:}3$ images, allowed cross-rail influence and learned side, $s_m$ and segment
-length although topology determines them. V4 instead uses $320\times240$
-inputs, shares only through \code{layer3}, and gives each rail an independent
-\code{layer4}/spatial-query branch. It predicts 168 values and derives the
-topological quantities; V3 remains only a recovery profile. Results are in
-\cref{sec:visual-v4-results}.
+\paragraph{Evolution of the visual pipeline.}
+The early versions primarily evolved the data contract: V1 established
+paired-camera inputs while keeping simulator-derived labels outside the model
+input, and V2 added continuous along-rail localisation. V3 fixed the
+representation to the eight known shuttle identities, resized both cameras to
+$224\times224$, concatenated global features from a shared ImageNet-pretrained
+ResNet-18 and predicted 200 values through one head. This design distorted the
+native $4{:}3$ images, allowed cross-rail influence and learned side, $s_m$ and
+segment length even though identity and topology determine them. V4 addresses
+these limitations with $320\times240$ inputs, weights shared only through
+\code{layer3}, independent \code{layer4}/spatial-query branches for each rail
+and 168 learned values, while deriving topology-known quantities
+deterministically. V4 is the active visual model used by the evaluated runtime.
+Results are in \cref{sec:visual-v4-results}.
 
 \subsection{Rail-isolated 168-value learned contract}
 
@@ -281,12 +286,9 @@ distinguishes these online floors from labelled offline tolerances.
 \subsection{Preregistered Final Test}
 
 Before evaluation, the checkpoint, scenario plan, evaluator, coverage,
-thresholds and single-run policy were frozen. A metadata-only check found three
-identity--zone strata (labelled-target counts per identity and declared zone)
-below the minimum support of eight in the 1,024-scene plan, so 16 stress scenes
-were added: 1,040 scenes, 2,080 images and 4,680 visible targets. This decision
-used only IDs and declared factor/support counts---no attempt, prediction,
-metric, pixel or label was inspected. \emph{Preregistered} here means the
+thresholds and single-run policy were frozen. The frozen Final Test comprised
+1,040 scenes, 2,080 images and 4,680 visible targets, and was executed once
+after model selection. \emph{Preregistered} here means the
 repository controls were frozen before any Test prediction, not registered
 externally. One normalised control schema and hashes then established
 byte-identical captured data before the attempt lock.

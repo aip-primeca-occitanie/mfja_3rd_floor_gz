@@ -76,8 +76,7 @@
   \node[gateway] (ground) at (0,-70mm) {
     \textbf{Task gateway: ground the goal and build a fresh PDDL problem}\\[-0.2ex]
     confirmed \texttt{TaskGoal} + accepted visual observation + presence/device/DZI state
-    $\rightarrow$ validated \texttt{ObservedState} and current symbolic facts\\[-0.2ex]
-    \textit{Optional direct ProblemExpert predicate mirror: disabled}};
+    $\rightarrow$ validated \texttt{ObservedState} and current symbolic facts};
 
   \draw[flow] ([xshift=-19mm]english.south) -- (qwen.north);
   \draw[flow] ([xshift=19mm]english.south) -- (facts.north);

@@ -6,11 +6,10 @@
 
 \subsection{Campaign design and acceptance criteria}
 
-The predefined twelve-row matrix fixed each ID, unique utterance, family,
-expected grounded goal, rail, identities, initial slots and payloads. Slot goals
-fixed one terminal; station goals an admissible set. B01--B08 left actions to
-the planner; P01--P02 and M01--M02 also required an exact four-step clearance
-trace. The environment record binds software, language setup, epoch-11 visual
+The predefined twelve-case matrix fixed each case ID, instruction, expected
+grounded goal and initial shuttle configuration. Slot goals named a specific
+destination, whereas station goals allowed any admissible slot. The environment
+record binds software, language setup, epoch-11 visual
 checkpoint, qualification/runtime manifests and PDDL domain. Before/after the
 campaign the runner rehashed this set and checked source/install parity
 (source equals built ROS overlay); each case rehashed the checkpoint, and the
@@ -27,9 +26,11 @@ and blocker-clearance (\cref{tab:campaign-case-results}).
 
 The runner compared each displayed interpretation with its expected goal and
 entered interactive \code{yes} (never auto-confirm). Every observation required
-the configured schema/checkpoint; initial/final state also had to match side,
-segment, payload and \(\lvert\Delta s_{ratio}\rvert\leq0.12\). Success required
-the terminal state, all postconditions and supervisor checks, agreeing final
+the configured schema and checkpoint. During campaign validation, each present
+shuttle in the initial and final observations also had to match its expected
+side, segment and payload state, with an absolute normalized along-segment
+position error no greater than 0.12. Success required the terminal state, all
+postconditions and supervisor checks, agreeing final
 DZI/stopped-controller readings, and clean camera/ROS-bag closure (a bag is a
 timestamped ROS-message recording).
 
@@ -87,8 +88,9 @@ rejection.
 
 \subsection{Recorded result and scope}
 
-All 12 planned runs succeeded; all 24 recorded step postconditions were
-satisfied, and all 48 recorded supervisor action decisions passed their checks.
+All 12 planned runs succeeded, and all 24 recorded step postconditions were
+satisfied. These 24 symbolic steps produced 48 low-level action proposals; the
+supervisor accepted all 48 and rejected none.
 Across the twelve runs, the executive
 made 24 plan attempts and recorded four occupancy-triggered replan events; it
 recorded no unknown-result retries and issued no safe aborts. All tasks ended
@@ -140,13 +142,15 @@ predecessor Test is consumed/denylisted and is not this Final Test.
 
 \subsection{One-shot Final Test}
 
-Frozen epoch~11 ran once under the protocol in \cref{chap:ai-development}:
-1,024 base plus 16 stress scenes, totalling 1,040 scenes, 2,080 images and 4,680
-visible targets.
+Frozen epoch~11 ran once under the protocol in \cref{chap:ai-development} on
+the frozen Final Test of 1,040 scenes, 2,080 images and 4,680 visible targets.
 Coverage used IDs/support counts without predictions, pixels or labels; no
 training, selection or calibration refit occurred. The run stayed within its
 partition and passed 76 base plus four runtime-threshold gates. Evidence is at
 \path{report/evidence/room315_visual_v4_submission_2026-08-11/final_test}.
+The selected checkpoint, sealed images/labels and raw positive, fail-closed
+and post-promotion-smoke bags are published in the full-evidence release indexed in
+\cref{app:reproducibility}; they are not stored as Git blobs.
 
 A gate is one predeclared Boolean acceptance check. The 76 base gates cover
 model quality and support across the global set, rails, segments, target zones,
@@ -166,12 +170,15 @@ public segment is the highest-scoring/one of the two highest-scoring classes.
 Supported-segment macro F1 averages per-segment F1 only over classes represented
 in the labels. A rail--segment cell is one side-by-segment stratum. The joint
 metric requires both the correct segment and the stated absolute normalised-
-coordinate tolerance. Correct-segment $s_m$ errors are conditional on a correct
-segment; p95 is their 95th percentile. Bounding boxes use normalised top-left
-$x,y$, width and height, and IoU measures predicted/labelled overlap. Boundary
-and switch zones are the preregistered target strata near segment boundaries and
-controlled switch regions, respectively; their exact bounds remain in the
-evaluation controls.
+coordinate tolerance. Along-segment error is evaluated offline against labelled
+ground truth and expressed as a fraction of segment length. The 0.12 threshold
+is used for planning-level evaluation, while 0.05 is a stricter diagnostic of
+localisation accuracy. Neither is an online runtime decision threshold.
+Correct-segment $s_m$ errors are conditional on a correct segment; p95 is their
+95th percentile. Bounding boxes use normalised top-left $x,y$, width and height,
+and IoU measures predicted/labelled overlap. Boundary and switch zones are the
+preregistered target strata near segment boundaries and controlled switch
+regions, respectively; their exact bounds remain in the evaluation controls.
 
 \begin{table}[htbp]
 \centering
@@ -284,23 +291,19 @@ Acceptance gates & 76/76 & 74/74\\
 
 The calibrated segment-confidence threshold was fitted on Validation only.
 Loaded confidence remains an uncalibrated softmax decision value, and the
-$s_{ratio}$ tolerance is an acceptance rule rather than a probability claim.
-These are different kinds of threshold: 0.9139089813389109 is the online
-calibrated segment-score floor; 0.5 is the online binary loaded-score floor;
-0.12 is the offline planning/evaluation tolerance; and 0.05 is the stricter
-diagnostic tolerance. The two ground-truth coordinate-error tolerances require labels and
-cannot be enforced online. The runtime therefore rejects a complete frame when any identity declared
-present fails its required input, confidence or contract check; identities
-declared absent contribute no accepted visual facts.
+online calibrated segment-score floor is 0.9139089813389109, while the online
+binary loaded-score floor is 0.5. These score floors are distinct from the
+offline coordinate-error criteria defined above. The runtime rejects a complete
+frame when any identity declared present fails its required input, confidence or
+contract check; identities declared absent contribute no accepted visual facts.
 
-\subsection{Observation-only qualification and rollback evidence}
+\subsection{Observation-only qualification evidence}
 
 \Cref{tab:visual-v4-runtime-results} reports observation-only checks; 169
 identity checks exceed frame count because frames can contain several targets.
 All eight injected faults---wrong manifest/checkpoint/topology hashes, reversed
 cameras, stale left/right images, stale presence and unknown identity---were
-rejected. The separately allowlisted rollback also passed exact schema/hash
-loading and observation.
+rejected.
 
 The observation-only manifest kept fusion dry-run, PlanSys2 updates disabled and
 task execution/actuation absent; its records contain no control action or
@@ -308,9 +311,7 @@ physical approval (\cref{app:reproducibility}).
 
 A \emph{shadow} consumes the same frames on isolated, non-actuating topics; a
 \emph{smoke} is a small sanity check; a \emph{reobservation} repeats inference
-on the declared scene; rollback is a manually allowlisted older
-schema/checkpoint, never automatic. ``Matching'' means correct segment within
-the stated 0.12/0.05 $s_{ratio}$ tolerance.
+on the declared scene.
 
 \begin{table}[htbp]
 \centering
@@ -325,15 +326,13 @@ Same-frame shadow & 55 paired frames; 52 accepted (94.5455\%); no errors or
 wrong-side identities & Isolated shadow topics; zero PlanSys2 mutations and
 zero actuation commands\\
 \tablerowrule
-Seven-scene acceptance & 7/7 complete; 53/53 matching reobservations at the
-0.12 planning tolerance; 150/169 identity checks at 0.05 & Observation only;
-scenario ground truth excluded from model input\\
+Seven-scene acceptance & 7/7 complete; 53/53 reobservations met the planning
+criterion (correct segment and $|\Delta s_{ratio}|\leq0.12$); 150/169 identity
+checks met the stricter $|\Delta s_{ratio}|\leq0.05$ diagnostic criterion &
+Observation only; scenario ground truth excluded from model input\\
 \tablerowrule
 Visual-input fault injection & 8/8 specified faults rejected under the fail-closed policy & No plan client,
 PlanSys2 update or actuation command\\
-\tablerowrule
-Rollback smoke & 10/10 checks passed for the separately allowlisted schema and
-checkpoint & Dry-run observation only\\
 \tablerowrule
 Dense-scene dry-run & Immutable manifest review passed; 10/10 matching
 reobservations & Gazebo dry-run only; PlanSys2 and task execution
@@ -341,52 +340,33 @@ disabled; zero actuation\\
 \bottomrule
 \end{tabularx}
 \end{table}
+\FloatBarrier
 
 \subsection{Closed-loop fault and runtime qualification}
 
-A separate campaign exercised five faults in fresh Gazebo
-processes and isolated ROS domains. F01 and F02 supplied a
-corrupt authorisation and an invalid runtime manifest, respectively; the task
-gateway refused both before motion. F03 removed the planner service. F04
-injected an emergency stop during a deliberate long move, and F05 removed the
-right-sensor feedback path during a long move without substituting an emergency
-stop. All 5/5 passed with no false success (a faulted run claiming completion),
-final controllers \code{DISABLED}, 424 schema-compliant bagged observations and
-\code{physical\_deployment=false}.
+A separate campaign injected five faults in fresh Gazebo processes and isolated
+ROS domains. F01 and F02 tested corrupt authorisation and an invalid runtime
+manifest; both were rejected before motion. F03 removed the planner service,
+F04 triggered an emergency stop during a deliberate long move, and F05 removed
+right-sensor feedback during a long move. All five met their safety criteria: no
+faulted run falsely reported completion, controllers ended \code{DISABLED}, and
+all 424 recorded observations complied with the active schema. None of these
+results authorises physical deployment.
 
-The read-only fault bundle and manually approved runtime are indexed in
-\cref{app:reproducibility}. The approval record binds the exact qualification
-manifest, positive-campaign summary and complete fault bundle; detailed
-per-record digests remain in the evidence checksum index.
-The configured state is \code{active\_closed\_loop\_runtime}, with scope
-\path{gazebo_v4_closed_loop_runtime_only}. Approval is recorded, but command
-execution starts disabled and requires explicit operator activation. Once
-enabled and given a confirmed task, closed-loop planning and execution proceed
-automatically in Gazebo. Physical deployment is not approved. The runtime guards
-explicitly record \code{actuation\_enabled=true} for the task gateway.
+The approved V4 runtime is restricted to Gazebo and starts with command
+execution disabled. Manual approval selects the hash-bound runtime; the operator
+then enables execution for the session and confirms the interpreted task.
+Planning and execution may then proceed automatically, while every low-level
+command remains subject to supervisor authorisation.
 
-These decisions occur at different boundaries. Manual approval places one
-hash-bound candidate on the Gazebo runtime allowlist; operator activation enables
-command execution for the session; task confirmation accepts one interpreted
-goal; and the supervisor authorises each individual command.
-\code{actuation\_enabled=true} means that this approved profile contains the
-gateway's Gazebo publisher, not that command execution is enabled at startup.
-
-The active profile keeps the inference node's
-\code{dry\_run\_state\_fusion} guard true and
-\code{plansys2\_update\_enabled} false. These node-local guards prevent a
-redundant ProblemExpert predicate mirror; they do not make the full runtime
-observation-only. The task gateway constructs the PDDL
-problem from accepted observations and owns the Gazebo actuation path.
-A B01 partial runtime smoke reverified that exact manifest:
-1/1 selected case passed with one actuating step and postcondition, two accepted
-supervisor decisions and 88 schema-compliant observations; terminal state,
-final effect and controller stop all passed. Its single-case scope does not
-replace the preceding 12-run campaign, and it records
-\code{physical\_deployment=false}. Its record is indexed in
+A targeted B01 smoke test revalidated the approved manifest in a controlled
+Gazebo run. The case completed its actuating step and postcondition, reached the
+expected terminal state, and stopped the controller correctly; all 88
+observations matched the active schema and checkpoint. This single-case check
+complements the preceding 12-run campaign. The approval record binds the
+qualification manifest, positive-campaign summary and fault bundle. These
+records and the B01 evidence are indexed with their checksums in
 \cref{app:reproducibility}.
-Across the positive, fault and runtime-smoke bags, every observation matched
-the active schema and checkpoint allowlist.
 \FloatBarrier
 
 \section{Automated software checks}

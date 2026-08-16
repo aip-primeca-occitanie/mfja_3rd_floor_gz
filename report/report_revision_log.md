@@ -18,9 +18,9 @@
 | Pinned language-contract evaluation | 10/10 declared final outcomes, 9/9 non-control backend invocations, 8/9 strict envelopes without fallback, one expected strict-schema rejection, cancellation without inference and zero unsafe automatic resolutions | Bounded language-interface evidence |
 | Recorded 7 August pytest suites | 190/190 focused checks, 96/96 transport checks and 42/42 operator-capability checks; overlapping suites are reported separately | Component and controlled-integration evidence for their recorded source scope |
 | Full-floor all-robot smoke | Six configured models, six command topics, six feedback topics and fresh state samples in one isolated cold start; no motion command | O1 launch/interface evidence |
-| V4 visual-model evidence | Validation-only selection records, sealed 1,040-scene dataset controls, frozen one-shot contract, immutable completion ledger and Final Test result | Primary visual Test provenance; V3 retained only for history and rollback |
+| V4 visual-model evidence | Validation-only selection records, sealed 1,040-scene dataset controls, frozen one-shot contract, immutable completion ledger and Final Test result | Primary visual Test provenance; V3 retained only as a historical predecessor |
 | V4 B03 camera figure | Initial/final V4-bound frames extracted from the preserved MCAP with timestamp and checksum provenance | Direct experimental illustration |
-| Active and rollback defaults | V4 is selected by both checked-in defaults; task execution remains fail closed until explicit launch opt-in; named V3 rollback files are preserved | Current selection and recoverable predecessor path |
+| Active defaults | V4 is selected by both checked-in defaults; task execution remains fail closed until explicit launch opt-in | Current selected runtime |
 
 Every active result is indexed in `evidence/ACTIVE_EVIDENCE.md`. Each evidence
 bundle keeps its protocol or command, source/configuration identity and
@@ -135,8 +135,8 @@ a preserved record rather than being rewritten as V4 evidence.
   physical-position MAE and 0.8340 mean bounding-box IoU on 4,680 visible slots.
 - Added the immutable evidence identities for the selected epoch-11 checkpoint,
   Validation and Canary acceptance, same-frame shadow comparison, the seven
-  scenario-grounded observation campaign, eight fail-closed fault cases, V3
-  rollback smoke, manual decision and active-profile dry-run smoke.
+  scenario-grounded observation campaign, eight fail-closed fault cases, manual
+  decision and active-profile dry-run smoke.
 - Recorded the exact authority boundary: the manual decision covers only
   `gazebo_runtime_dry_run_only`; PlanSys2 updates, actuation, automatic runtime
   switching and physical deployment remain disabled.
@@ -175,7 +175,7 @@ The retained build log has SHA-256
 ## V4 closed-loop runtime and active-default revision---12 August 2026
 
 This revision publishes the English report together with the evaluated visual
-runtime source, active and recovery configurations, tests and lightweight
+runtime source, active runtime configurations, tests and lightweight
 evidence package. The Arabic report remains byte-identical. The generative-AI
 declaration retains its content; only two spellings were later standardised to
 British English at the author's explicit request.
@@ -224,10 +224,6 @@ British English at the author's explicit request.
   `22f12a9f96b3d54e0ab3d0bc05c202024ac6912cb50dd6e29ceb4a0a564d24f8`
   and
   `08eaedd7d6feed3dd1268ef18bfa2545348f203f1ff0dad3c2e9fb1a9f25b6ca`.
-  The named visual/task rollback files have SHA-256 values
-  `a61b72dacbb928b3170d2439c744ff0f2e2ccb227a83e70aab84e4cbdac26cd4`
-  and
-  `8c57c69448cb2c649ff972ef4ec327d7af32458c0c777048f6a25f3e0ad955d7`.
 - Extended `evidence/room315_visual_v4_submission_2026-08-11/` with byte-exact
   positive, fault, final-runtime and post-promotion smoke records. Its final
   evidence manifest, package checksum list and README have SHA-256 values
@@ -323,3 +319,53 @@ The retained build log has SHA-256
 `94d58bce09dbf080aeebec777a52e2a3722c732a5fd5b3076528d0338c836510`;
 the identities are recorded in
 `evidence/final_report_sha256_2026-08-15.txt`.
+
+## V4 full-evidence release publication---15 August 2026
+
+The selected checkpoint, sealed Final Test and raw positive, fail-closed and
+post-promotion-smoke Gazebo recordings were published outside Git under release tag
+`room315-visual-v4-evidence-2026-08-11`. The checksum-bound
+`room315_visual_v4_full_evidence_2026-08-11.tar.zst` asset is 247,825,706 bytes
+with SHA-256
+`35b583baca4f45eed6aad659c253180d00f1a5830ce389266ba714a4445a8ecc`.
+It contains 6,492 regular files, including the selected checkpoint, the sealed
+1,040-scene/2,080-image Final Test, the final active runtime bundle and 18 MCAP
+recordings from the positive, fault and post-promotion-smoke runs. The public
+asset was downloaded after publication and reproduced the declared digest.
+
+The report now links this external payload from Appendix A and the active
+evidence index. Publication changes artifact availability only: it does not
+alter any experiment, dataset, checkpoint, metric, gate, runtime authority or
+physical-deployment limitation. The future-work item was correspondingly
+changed from publishing a release to maintaining, mirroring and restore-testing
+the release. The Final Test narrative now states the frozen 1,040-scene total
+directly; the historical 1,024-plus-16 planning breakdown remains available in
+the evidence records but is no longer expanded in the report body. This is a
+wording simplification and does not change the protocol or result.
+
+The refreshed `make check` produced a 72-page A4 PDF (4,691,448 bytes), with no
+undefined references or citations and no overfull boxes. `main.pdf` and the
+named delivery PDF are byte-identical at SHA-256
+`bf2cac8fcf0fb1b5bf8b45b826bec97cbfb6390d6c588e64ce78887cdd2eaa2d`.
+The retained build log has SHA-256
+`c7955a468df31adeee7309f93f5c4368c5d10d17bc2dc065d79b837d49db64fc`;
+the identities are recorded in
+`evidence/final_report_sha256_2026-08-15.txt`.
+
+## V4-only runtime and final-report synchronisation---16 August 2026
+
+The report source and handover wording were aligned with the deployable
+V4-only visual runtime. V3 remains documented as a historical predecessor, not
+as a selectable recovery profile, and the runtime diagrams and reproducibility
+instructions no longer imply a packaged V3 execution path. These changes do
+not alter any experiment, dataset, checkpoint, metric, acceptance result or
+Gazebo-only authority boundary.
+
+The final `make check` produced a 72-page A4 PDF (4,689,565 bytes), with no
+undefined references or citations and no overfull boxes. `main.pdf` and the
+named delivery PDF are byte-identical at SHA-256
+`6a5bd09db4d30bc48f1a5134b8eea47e924f38894c9043453e093ae126154d3a`.
+The retained build log has SHA-256
+`f602880a4f50d3c71a0d68d0abc8571816bf2713a89bcdd047d04560c08ce804`;
+the identities are recorded in
+`evidence/final_report_sha256_2026-08-16.txt`.

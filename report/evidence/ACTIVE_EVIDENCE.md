@@ -19,7 +19,18 @@ from those claims.
     `33b3a44f2e5e12b34721abcd1b47af609db3b55557c94c6871fa9c6eeb602a3e`.
   The package records 67/67 byte-exact payload comparisons, 69 checksum
   entries and 87 verified claim-to-JSON-Pointer mappings. Checkpoint, Final
-  Test payloads and runtime bags remain external hash-identified objects.
+  Test payloads and runtime bags are not tracked as Git blobs; their
+  byte-exact copies are published in the full-evidence release below.
+- `ROOM315_VISUAL_V4_RELEASE.md`: landing record for the public
+  `room315-visual-v4-evidence-2026-08-11` release. Its
+  `room315_visual_v4_full_evidence_2026-08-11.tar.zst` asset is
+  `247,825,706` bytes with SHA-256
+  `35b583baca4f45eed6aad659c253180d00f1a5830ce389266ba714a4445a8ecc`.
+  It publishes the selected checkpoint, sealed 1,040-scene/2,080-image Final
+  Test, final active runtime bundle and 18 positive, fail-closed and
+  post-promotion-smoke MCAP recordings
+  outside Git. This release is the external payload counterpart of the primary
+  repository-relative package; it does not broaden any reported claim.
 - `runtime/closed_loop/positive/` within that package: the positive campaign
   passed 12/12 cases, recorded 1,784 selected-schema observations and none from
   the alternate schema, verified 24/24 postconditions and 48 supervisor
@@ -80,11 +91,6 @@ from those claims.
     `08eaedd7d6feed3dd1268ef18bfa2545348f203f1ff0dad3c2e9fb1a9f25b6ca`.
   The task default is fail closed with `execution_enabled: false`; a guarded
   launch must explicitly opt in after reverifying the runtime authorisation.
-- Explicit rollback defaults:
-  - `visual_state_runtime_v3_rollback.yaml`, SHA-256
-    `a61b72dacbb928b3170d2439c744ff0f2e2ccb227a83e70aab84e4cbdac26cd4`;
-  - `task_execution_runtime_v3_rollback.yaml`, SHA-256
-    `8c57c69448cb2c649ff972ef4ec327d7af32458c0c777048f6a25f3e0ad955d7`.
 - Recorded 7 August component evidence remains applicable to its stated test
   scope: `pytest_current_source_focused_2026-08-07.log` (190/190),
   `pytest_current_source_transport_2026-08-07.log` (96/96), and
@@ -93,16 +99,18 @@ from those claims.
 ## Archived records retained
 
 - `room315_integrated_campaign_v2/` and
-  `ROOM315_INTEGRATED_CAMPAIGN_ARCHIVE.md`: archived campaign records, release
-  identity and extraction instructions. They do not support the current
-  closed-loop claims.
+  `ROOM315_INTEGRATED_CAMPAIGN_ARCHIVE.md`: archived revision-2 integrated-
+  campaign records, release identity and extraction instructions. The `v2`
+  suffix identifies the campaign/evidence revision, not the visual-model
+  generation; this campaign used `room315.visual_state.v3`. They do not support
+  the current closed-loop claims.
 - `room315_campaign_figures_2026-08-07/`: alternate B03 derivation retained for
   reconstruction; the report uses the derivation listed above.
 - `visual_model_evaluation_2026-07-30/`: historical predecessor-model records.
   Its 256-scene grouped Validation selected the predecessor checkpoint; its
   separate 256-scene Test was subsequently opened once and is consumed. These
-  partitions support audit and rollback reconstruction only and are not inputs
-  to the current V4 selection, calibration, Canary or Final Test claims.
+  partitions support historical reconstruction and audit only and are not
+  inputs to the current V4 selection, calibration, Canary or Final Test claims.
 - `room315_dataset_partition_overlap_post_hoc_2026-08-12/`: supplemental
   seven-partition overlap audit created after the experiments. It distinguishes
   exact samples, images, targets and generated variants from abstract presence
@@ -114,13 +122,14 @@ from those claims.
 - `final_report_build_2026-08-08.log`,
   `final_report_sha256_2026-08-08.txt`, `final_report_build_2026-08-11.log` and
   `final_report_sha256_2026-08-11.txt`, `final_report_build_2026-08-12.log` and
-  `final_report_sha256_2026-08-12.txt`: preserved earlier report freezes.
-- `final_report_build_2026-08-15.log` and
-  `final_report_sha256_2026-08-15.txt`: current final 71-page A4 English-report
+  `final_report_sha256_2026-08-12.txt`, `final_report_build_2026-08-15.log` and
+  `final_report_sha256_2026-08-15.txt`: preserved earlier report freezes.
+- `final_report_build_2026-08-16.log` and
+  `final_report_sha256_2026-08-16.txt`: current final 72-page A4 English-report
   build and fingerprint. The retained log has SHA-256
-  `94d58bce09dbf080aeebec777a52e2a3722c732a5fd5b3076528d0338c836510`;
+  `f602880a4f50d3c71a0d68d0abc8571816bf2713a89bcdd047d04560c08ce804`;
   `main.pdf` and the named delivery PDF are byte-identical at SHA-256
-  `32b4d41cd0587c7217096b728ce4133091ec43123cf8997d12e382ea32b38d06`.
+  `6a5bd09db4d30bc48f1a5134b8eea47e924f38894c9043453e093ae126154d3a`.
 
 The three recorded pytest suites overlap and their pass counts must not be
 summed. The positive campaign is a bounded acceptance matrix rather than a
@@ -130,7 +139,8 @@ acceptance set rather than a general language benchmark. All current runtime
 evidence is limited to Gazebo simulation and establishes neither physical-camera
 generalisation, certified machinery safety nor physical-deployment permission.
 The repository revision carrying this index commits the evaluated
-implementation, active and recovery configurations, tests, submission PDF and
+implementation, active runtime configurations, tests, submission PDF and
 lightweight evidence together. A clean checkout of that revision reconstructs
-the source-side handover. The checkpoint, sealed dataset and raw ROS bags remain
-external hash-identified objects and are intentionally not tracked here.
+the source-side handover. The checkpoint, sealed dataset and raw ROS bags are
+intentionally not tracked here; their byte-exact current-V4 copies are published
+in the full-evidence release identified above.

@@ -30,19 +30,21 @@ the exact source and configuration identity used for its test results.
 Historical and current visual-dataset terminology is normalized in
 `../docs/room315_dataset_role_registry.md`; that registry does not rename the
 hash-identified materialized files.
-The current build is 71 A4 pages (4,687,897 bytes). `main.pdf` and the
+The current build is 72 A4 pages (4,689,565 bytes). `main.pdf` and the
 submission copy are byte-identical at SHA-256
-`32b4d41cd0587c7217096b728ce4133091ec43123cf8997d12e382ea32b38d06`.
+`6a5bd09db4d30bc48f1a5134b8eea47e924f38894c9043453e093ae126154d3a`.
 The retained log and fingerprint record are
-`evidence/final_report_build_2026-08-15.log` and
-`evidence/final_report_sha256_2026-08-15.txt`. This rebuilt delivery incorporates
-the dataset-role and terminology clarifications without changing any experiment,
+`evidence/final_report_build_2026-08-16.log` and
+`evidence/final_report_sha256_2026-08-16.txt`. This rebuilt delivery incorporates
+the dataset-role and terminology clarifications, the published V4 full-evidence
+identity and the V4-only runtime alignment without changing any experiment,
 checkpoint, metric or acceptance result.
 The repository revision carrying this report commits the evaluated source,
-active and recovery configurations, tests, submission PDF and lightweight
+active runtime configurations, tests, submission PDF and lightweight
 evidence together. A clean checkout of that revision reconstructs the
-source-side handover; the checkpoint, sealed dataset and raw ROS bags remain
-external hash-identified objects.
+source-side handover. The checkpoint, sealed dataset and raw ROS bags are not
+stored in Git; their byte-exact V4 copies are published in the full-evidence
+release indexed by `evidence/ROOM315_VISUAL_V4_RELEASE.md`.
 The configured checkpoint and Gazebo runtime remain bound to their manifests
 and content hashes. The task default is fail closed with
 `execution_enabled: false`; an operator must explicitly opt in after
@@ -60,10 +62,20 @@ exact claim pointers used by the English report. Its `evidence_manifest.json`,
 and
 `33b3a44f2e5e12b34721abcd1b47af609db3b55557c94c6871fa9c6eeb602a3e`.
 The checkpoint, large Test payloads and runtime bags are external
-hash-identified objects; all reported runtime authority is Gazebo-only.
+hash-identified objects rather than Git blobs. Their published copies are in
+the [Room 315 Visual Model V4 full-evidence release](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11):
+the `247,825,706`-byte archive has SHA-256
+`35b583baca4f45eed6aad659c253180d00f1a5830ce389266ba714a4445a8ecc`.
+It includes the selected checkpoint, sealed 1,040-scene Test, 2,080 images and
+18 MCAP recordings. All reported runtime authority remains Gazebo-only.
 
 Large datasets, checkpoints and raw campaign bags are not tracked in this
-directory. Their identifiers, hashes and metrics are documented in the report,
-the relative evidence manifests, repository runbooks and
-`evidence/ACTIVE_EVIDENCE.md`. The `room315-evidence-v2` release is retained for
-archival reconstruction and does not support the current closed-loop claims.
+directory. Their identifiers, hashes, release location and metrics are
+documented in the report, the relative evidence manifests, repository runbooks,
+`evidence/ACTIVE_EVIDENCE.md` and
+`evidence/ROOM315_VISUAL_V4_RELEASE.md`. In the retained
+`room315-evidence-v2` release,
+`v2` identifies revision 2 of the integrated campaign/evidence package, not the
+visual-model generation; that archived campaign used
+`room315.visual_state.v3`. The release supports archival reconstruction and
+does not support the current closed-loop claims.

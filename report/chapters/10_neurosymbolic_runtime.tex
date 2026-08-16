@@ -37,9 +37,8 @@ provenance. The inference node does not mutate ProblemExpert: the gateway fuses
 the observation with presence, device and identity-bearing sensor reports into
 \code{ObservedState} for planning.
 
-Symbolic shuttle locations come from the accepted visual observation, not
-controller coordinates, which serve only the supervisor's switch-proximity
-veto. Only shuttles are removable blockers in this Gazebo-only profile.
+Symbolic shuttle locations are derived directly from the accepted visual
+observation rather than from controller coordinates.
 
 The gateway validates and grounds \emph{any}, \emph{nearest} and station-slot
 policies against current state/occupancy. Payload-based selection requires, by

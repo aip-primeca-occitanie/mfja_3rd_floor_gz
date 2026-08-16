@@ -388,7 +388,7 @@ Chapter 1.
 ) (./chapters/02_host_organisation.tex [14]
 Chapter 2.
 (/usr/share/texmf/tex/latex/tex-gyre/ts1qpl.fd) [15{/usr/share/texmf/fonts/enc/
-dvips/tex-gyre/q-ts1.enc}] [16 <./figures/f04_room315_gazebo_overview.png (PNG 
+dvips/tex-gyre/q-ts1.enc}] [16 <./figures/f04_room315_gazebo_overview.png (PNG
 copy)>]) (./chapters/03_mission_and_project_management.tex [17]
 Chapter 3.
 (./figures/f03_project_timeline_v2.tex) (./figures/f05_project_progression.tex)
@@ -397,7 +397,7 @@ Chapter 4.
 [23] (./figures/f06_geometry_vs_topology.tex) [24] [25])
 (./chapters/05_digital_twin.tex [26]
 Chapter 5.
-[27] [28 <./figures/early_full_floor.png> <./figures/f01a_full_mfja_floor.png> 
+[27] [28 <./figures/early_full_floor.png> <./figures/f01a_full_mfja_floor.png>
 <./figures/f01b_room315_focus.png>] [29 <./figures/f09_ros2_package_architectur
 e.png (PNG copy)>]
 (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty)
@@ -427,21 +427,21 @@ Underfull \hbox (badness 10000) in paragraph at lines 44--44
 Underfull \hbox (badness 10000) in paragraph at lines 44--44
 []|\T1/qpl/m/n/10 (+20) ImageNet-pretrained
 [47] [48 <./figures/f13_left_raw.png (PNG copy)> <./figures/f13_right_raw.png (
-PNG copy)>] (./figures/f12_visual_model_contract_v2.tex) [49] [50])
-(./chapters/10_neurosymbolic_runtime.tex [51] [52]
+PNG copy)>] (./figures/f12_visual_model_contract_v2.tex) [49] [50] [51])
+(./chapters/10_neurosymbolic_runtime.tex [52]
 Chapter 10.
 (./figures/f10_runtime_vertical.tex) [53] [54] [55] [56])
 (./chapters/12_verification_and_results.tex [57]
 Chapter 11.
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
 []|\T1/qpl/m/n/9 (+20) Payload-qualified
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
 []|\T1/qpl/m/n/9 (+20) Payload-qualified
 [58] [59 <./images/b03_v4_closed_loop_right_camera_initial_final.png (PNG copy)
 >] [60]
-Underfull \hbox (badness 3838) in paragraph at lines 344--344
+Underfull \hbox (badness 3838) in paragraph at lines 341--341
 []|\T1/qpl/m/n/9 (+20) Observation only; sce-nario
 [61] [62] (./figures/f19_evidence_ladder.tex) [63])
 (./chapters/14_limitations_and_perspectives.tex [64]
@@ -476,7 +476,7 @@ ts/type1/public/tex-gyre/qhvb.pfb></usr/share/texmf/fonts/type1/public/tex-gyre
 /qhvr.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qhvri.pfb></usr/share/t
 exmf/fonts/type1/public/tex-gyre/qplb.pfb></usr/share/texmf/fonts/type1/public/
 tex-gyre/qplr.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qplri.pfb>
-Output written on main.pdf (72 pages, 4691448 bytes).
+Output written on main.pdf (72 pages, 4689565 bytes).
 Transcript written on main.log.
 bibtex main
 This is BibTeX, Version 0.99d (TeX Live 2023/Debian)
@@ -873,7 +873,7 @@ Chapter 1.
 ) (./chapters/02_host_organisation.tex [14]
 Chapter 2.
 (/usr/share/texmf/tex/latex/tex-gyre/ts1qpl.fd) [15{/usr/share/texmf/fonts/enc/
-dvips/tex-gyre/q-ts1.enc}] [16 <./figures/f04_room315_gazebo_overview.png (PNG 
+dvips/tex-gyre/q-ts1.enc}] [16 <./figures/f04_room315_gazebo_overview.png (PNG
 copy)>]) (./chapters/03_mission_and_project_management.tex [17]
 Chapter 3.
 (./figures/f03_project_timeline_v2.tex) (./figures/f05_project_progression.tex)
@@ -882,7 +882,7 @@ Chapter 4.
 [23] (./figures/f06_geometry_vs_topology.tex) [24] [25])
 (./chapters/05_digital_twin.tex [26]
 Chapter 5.
-[27] [28 <./figures/early_full_floor.png> <./figures/f01a_full_mfja_floor.png> 
+[27] [28 <./figures/early_full_floor.png> <./figures/f01a_full_mfja_floor.png>
 <./figures/f01b_room315_focus.png>] [29 <./figures/f09_ros2_package_architectur
 e.png (PNG copy)>]
 (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty)
@@ -912,21 +912,21 @@ Underfull \hbox (badness 10000) in paragraph at lines 44--44
 Underfull \hbox (badness 10000) in paragraph at lines 44--44
 []|\T1/qpl/m/n/10 (+20) ImageNet-pretrained
 [47] [48 <./figures/f13_left_raw.png (PNG copy)> <./figures/f13_right_raw.png (
-PNG copy)>] (./figures/f12_visual_model_contract_v2.tex) [49] [50])
-(./chapters/10_neurosymbolic_runtime.tex [51] [52]
+PNG copy)>] (./figures/f12_visual_model_contract_v2.tex) [49] [50] [51])
+(./chapters/10_neurosymbolic_runtime.tex [52]
 Chapter 10.
 (./figures/f10_runtime_vertical.tex) [53] [54] [55] [56])
 (./chapters/12_verification_and_results.tex [57]
 Chapter 11.
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
 []|\T1/qpl/m/n/9 (+20) Payload-qualified
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
 []|\T1/qpl/m/n/9 (+20) Payload-qualified
 [58] [59 <./images/b03_v4_closed_loop_right_camera_initial_final.png (PNG copy)
 >] [60]
-Underfull \hbox (badness 3838) in paragraph at lines 344--344
+Underfull \hbox (badness 3838) in paragraph at lines 341--341
 []|\T1/qpl/m/n/9 (+20) Observation only; sce-nario
 [61] [62] (./figures/f19_evidence_ladder.tex) [63])
 (./chapters/14_limitations_and_perspectives.tex [64]
@@ -961,7 +961,7 @@ ts/type1/public/tex-gyre/qhvb.pfb></usr/share/texmf/fonts/type1/public/tex-gyre
 /qhvr.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qhvri.pfb></usr/share/t
 exmf/fonts/type1/public/tex-gyre/qplb.pfb></usr/share/texmf/fonts/type1/public/
 tex-gyre/qplr.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qplri.pfb>
-Output written on main.pdf (72 pages, 4691448 bytes).
+Output written on main.pdf (72 pages, 4689565 bytes).
 Transcript written on main.log.
 pdflatex -interaction=nonstopmode -halt-on-error main.tex
 This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex)
@@ -1353,7 +1353,7 @@ Chapter 1.
 ) (./chapters/02_host_organisation.tex [14]
 Chapter 2.
 (/usr/share/texmf/tex/latex/tex-gyre/ts1qpl.fd) [15{/usr/share/texmf/fonts/enc/
-dvips/tex-gyre/q-ts1.enc}] [16 <./figures/f04_room315_gazebo_overview.png (PNG 
+dvips/tex-gyre/q-ts1.enc}] [16 <./figures/f04_room315_gazebo_overview.png (PNG
 copy)>]) (./chapters/03_mission_and_project_management.tex [17]
 Chapter 3.
 (./figures/f03_project_timeline_v2.tex) (./figures/f05_project_progression.tex)
@@ -1362,7 +1362,7 @@ Chapter 4.
 [23] (./figures/f06_geometry_vs_topology.tex) [24] [25])
 (./chapters/05_digital_twin.tex [26]
 Chapter 5.
-[27] [28 <./figures/early_full_floor.png> <./figures/f01a_full_mfja_floor.png> 
+[27] [28 <./figures/early_full_floor.png> <./figures/f01a_full_mfja_floor.png>
 <./figures/f01b_room315_focus.png>] [29 <./figures/f09_ros2_package_architectur
 e.png (PNG copy)>]
 (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty)
@@ -1392,21 +1392,21 @@ Underfull \hbox (badness 10000) in paragraph at lines 44--44
 Underfull \hbox (badness 10000) in paragraph at lines 44--44
 []|\T1/qpl/m/n/10 (+20) ImageNet-pretrained
 [47] [48 <./figures/f13_left_raw.png (PNG copy)> <./figures/f13_right_raw.png (
-PNG copy)>] (./figures/f12_visual_model_contract_v2.tex) [49] [50])
-(./chapters/10_neurosymbolic_runtime.tex [51] [52]
+PNG copy)>] (./figures/f12_visual_model_contract_v2.tex) [49] [50] [51])
+(./chapters/10_neurosymbolic_runtime.tex [52]
 Chapter 10.
 (./figures/f10_runtime_vertical.tex) [53] [54] [55] [56])
 (./chapters/12_verification_and_results.tex [57]
 Chapter 11.
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
 []|\T1/qpl/m/n/9 (+20) Payload-qualified
 
-Underfull \hbox (badness 10000) in paragraph at lines 80--80
+Underfull \hbox (badness 10000) in paragraph at lines 81--81
 []|\T1/qpl/m/n/9 (+20) Payload-qualified
 [58] [59 <./images/b03_v4_closed_loop_right_camera_initial_final.png (PNG copy)
 >] [60]
-Underfull \hbox (badness 3838) in paragraph at lines 344--344
+Underfull \hbox (badness 3838) in paragraph at lines 341--341
 []|\T1/qpl/m/n/9 (+20) Observation only; sce-nario
 [61] [62] (./figures/f19_evidence_ladder.tex) [63])
 (./chapters/14_limitations_and_perspectives.tex [64]
@@ -1441,11 +1441,12 @@ ts/type1/public/tex-gyre/qhvb.pfb></usr/share/texmf/fonts/type1/public/tex-gyre
 /qhvr.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qhvri.pfb></usr/share/t
 exmf/fonts/type1/public/tex-gyre/qplb.pfb></usr/share/texmf/fonts/type1/public/
 tex-gyre/qplr.pfb></usr/share/texmf/fonts/type1/public/tex-gyre/qplri.pfb>
-Output written on main.pdf (72 pages, 4691448 bytes).
+Output written on main.pdf (72 pages, 4689565 bytes).
 Transcript written on main.log.
+cp main.pdf Ali_IBRAHIM_MFJA_Internship_Report_2025-2026.pdf
 pdfinfo main.pdf | grep -E '^(Pages|Page size|File size)'
 Pages:           72
 Page size:       595.276 x 841.89 pts (A4)
-File size:       4691448 bytes
+File size:       4689565 bytes
 ! grep -E 'undefined citations|undefined references|There were undefined' main.log
 ! grep -E 'Overfull \\hbox|Overfull \\vbox' main.log
