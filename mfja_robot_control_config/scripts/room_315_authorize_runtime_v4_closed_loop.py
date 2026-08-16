@@ -559,7 +559,6 @@ def _decision_record(
             'plansys2_problem_built_from_v4_observed_state': True,
             'optional_problem_expert_predicate_mirror_disabled': True,
             'supervisor_and_dzi_safety_gates_required': True,
-            'rollback_preserved': True,
         },
     }
 

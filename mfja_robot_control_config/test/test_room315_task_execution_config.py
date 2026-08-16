@@ -29,9 +29,6 @@ CONFIG_PATH = (
     / 'room_315_vla'
     / 'task_execution_runtime.yaml'
 )
-ROLLBACK_CONFIG_PATH = CONFIG_PATH.with_name(
-    'task_execution_runtime_v3_rollback.yaml'
-)
 ACTIVE_RUNTIME_BUNDLE = Path(
     '/home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_'
     'epoch11_869d6404_closed_loop_runtime_attempt1'
@@ -45,9 +42,6 @@ ACTIVE_RUNTIME_STATE_SHA256 = (
 V4_CHECKPOINT_SHA256 = (
     '869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d'
 )
-V3_ROLLBACK_CHECKPOINT_SHA256 = (
-    '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
-)
 
 
 def test_runtime_parameter_defaults_are_valid_and_domain_exists():
@@ -57,7 +51,7 @@ def test_runtime_parameter_defaults_are_valid_and_domain_exists():
     assert RUNTIME_PDDL_DOMAIN_PATH.is_file()
 
 
-def test_runtime_yaml_and_node_fallback_defaults_cannot_drift():
+def test_runtime_yaml_and_node_defaults_cannot_drift():
     loaded = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8'))
     configured = loaded['room_315_task_execution_node']['ros__parameters']
     defaults = dict(TASK_EXECUTION_PARAMETER_DEFAULTS)
@@ -111,20 +105,28 @@ def test_active_runtime_yaml_is_v4_pinned_disabled_and_authorized():
     )
 
 
-def test_explicit_rollback_yaml_is_v3_and_execution_disabled():
-    loaded = yaml.safe_load(ROLLBACK_CONFIG_PATH.read_text(encoding='utf-8'))
-    configured = loaded['room_315_task_execution_node']['ros__parameters']
+def test_v3_visual_allowlist_is_rejected_even_when_execution_is_disabled():
+    configured = dict(TASK_EXECUTION_PARAMETER_DEFAULTS)
+    configured['allowed_visual_schema_version'] = 'room315.visual_state.v3'
 
-    assert configured['execution_enabled'] is False
-    assert configured['allowed_visual_schema_version'] == (
-        'room315.visual_state.v3'
+    with pytest.raises(
+        ValueError,
+        match='allowed_visual_schema_version must be room315.visual_state.v4',
+    ):
+        validate_task_execution_parameters(configured)
+
+
+def test_non_authorized_visual_hash_is_rejected_when_execution_is_disabled():
+    configured = dict(TASK_EXECUTION_PARAMETER_DEFAULTS)
+    configured['allowed_visual_checkpoint_sha256'] = (
+        '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
     )
-    assert configured['allowed_visual_checkpoint_sha256'] == (
-        V3_ROLLBACK_CHECKPOINT_SHA256
-    )
-    assert not (
-        set(configured) & set(TASK_EXECUTION_AUTHORIZATION_PARAMETER_DEFAULTS)
-    )
+
+    with pytest.raises(
+        ValueError,
+        match='must be the exact authorized V4 checkpoint',
+    ):
+        validate_task_execution_parameters(configured)
 
 
 def test_executive_defaults_match_authoritative_runtime_defaults():

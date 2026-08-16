@@ -36,12 +36,10 @@ install(
     config/room_315_vla/payload_scenarios.yaml
     config/room_315_vla/shuttle_identity.yaml
     config/room_315_vla/task_execution_runtime.yaml
-    config/room_315_vla/task_execution_runtime_v3_rollback.yaml
     config/room_315_vla/task_execution_runtime_v4.yaml
     config/room_315_vla/task_goal_english_benchmark.yaml
     config/room_315_vla/task_goal_understanding.yaml
     config/room_315_vla/visual_state_runtime.yaml
-    config/room_315_vla/visual_state_runtime_v3_rollback.yaml
     config/room_315_vla/visual_state_final_test_v4.json
     config/room_315_vla/visual_state_training_v4.json
     config/room_315_vla/visual_observed_state_calibration.yaml
@@ -154,7 +152,7 @@ install(
     scripts/room_315_visual_training_v4.py
     scripts/room_315_visual_runtime.py
     scripts/room_315_visual_runtime_v4.py
-    scripts/room_315_visual_runtime_v4_fault_and_rollback.py
+    scripts/room_315_visual_runtime_v4_fault_injection.py
     scripts/room_315_visual_runtime_cpu_smoke.py
     scripts/room_315_visual_runtime_fusion.py
     scripts/room_315_visual_runtime_validation.py
@@ -515,10 +513,6 @@ if(BUILD_TESTING)
     test/test_room315_promote_runtime_v4.py
   )
   ament_add_pytest_test(
-    test_room315_visual_state_v4_shadow_scenario
-    test/test_room315_visual_state_v4_shadow_scenario.py
-  )
-  ament_add_pytest_test(
     test_room315_visual_shadow_compare
     test/test_room315_visual_shadow_compare.py
   )
@@ -540,8 +534,8 @@ if(BUILD_TESTING)
       test/test_room315_visual_calibration_v4.py
     )
     ament_add_pytest_test(
-      test_room315_visual_runtime_v4_fault_and_rollback
-      test/test_room315_visual_runtime_v4_fault_and_rollback.py
+      test_room315_visual_runtime_v4_fault_injection
+      test/test_room315_visual_runtime_v4_fault_injection.py
       TIMEOUT 180
     )
   endif()

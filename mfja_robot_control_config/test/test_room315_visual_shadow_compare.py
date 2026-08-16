@@ -92,7 +92,7 @@ def test_accumulator_fails_closed_on_hash_rejection_or_wrong_side():
 def test_actual_report_contract_is_consumed_by_manual_promotion_verifier():
     """Keep the report producer and its only promotion consumer in lockstep."""
 
-    promoter_v3_sha = promotion.V3_CHECKPOINT_SHA256
+    promoter_v3_sha = promotion.SHADOW_REFERENCE_CHECKPOINT_SHA256
     accumulator = ShadowComparisonAccumulator(
         promoter_v3_sha,
         V4_SHA,

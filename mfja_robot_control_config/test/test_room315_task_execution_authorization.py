@@ -423,7 +423,6 @@ def _build_runtime_bundle(
             'plansys2_problem_built_from_v4_observed_state': True,
             'optional_problem_expert_predicate_mirror_disabled': True,
             'supervisor_and_dzi_safety_gates_required': True,
-            'rollback_preserved': True,
         },
     }
     manual.update(manual_overrides or {})
@@ -593,12 +592,12 @@ def test_enabled_requires_authorization_and_promotion_paths(
         (
             'allowed_visual_schema_version',
             'room315.visual_state.v3',
-            'requires allowed_visual_schema_version',
+            'allowed_visual_schema_version must be room315.visual_state.v4',
         ),
         (
             'allowed_visual_checkpoint_sha256',
             '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d',
-            'requires the exact authorized V4 checkpoint',
+            'allowed_visual_checkpoint_sha256 must be the exact authorized V4 checkpoint',
         ),
     ),
 )

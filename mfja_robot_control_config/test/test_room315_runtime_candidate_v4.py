@@ -150,6 +150,7 @@ def test_promotion_manifest_matches_v4_core_contract(validated_sources):
     )
     assert manifest['evidence_policy']['test_loaded'] is False
     assert manifest['evidence_policy']['datasets_bundled'] is False
+    assert 'rollback_contract' not in manifest
 
 
 def test_existing_seven_acceptance_scenarios_are_rebound_to_v4_candidate():
@@ -209,6 +210,9 @@ def test_builder_atomically_publishes_complete_read_only_shadow_bundle(
     manifest = json.loads(
         (output / candidate_v4.PROMOTION_MANIFEST_NAME).read_text()
     )
+    assert 'rollback_contract' not in manifest
+    assert not (output / 'rollback_option.json').exists()
+    assert all('rollback' not in path.name for path in output.iterdir())
     for entry in manifest['artifacts'].values():
         artifact_path = output / entry['path']
         assert artifact_path.is_file()

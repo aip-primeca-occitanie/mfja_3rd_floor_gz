@@ -23,6 +23,7 @@ from room_315_visual_runtime import VisualRuntimeError
 from room_315_visual_runtime import _verify_runtime_configuration
 from room_315_visual_runtime import sha256_file
 from room_315_visual_runtime import verify_artifacts
+import room_315_build_runtime_candidate as historical_candidate
 
 
 CANDIDATE = Path(
@@ -31,9 +32,6 @@ CANDIDATE = Path(
 )
 CHECKPOINT_SHA256 = (
     '4cb9cd88b0199bf38bcfb08741e22bcadca54aeb0036d757784531a38cdd6a70'
-)
-ROLLBACK_SHA256 = (
-    '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
 )
 V4_CHECKPOINT_SHA256 = (
     '869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d'
@@ -157,53 +155,129 @@ def test_acceptance_scenarios_cover_required_cases_and_report_never_approves():
     )
 
 
-def test_v4_is_active_default_and_v3_is_explicit_rollback_only():
+def test_v4_is_the_only_packaged_deployable_visual_runtime():
     visual_default = (
         ROOT / 'config/room_315_vla/visual_state_runtime.yaml'
     ).read_text()
     task_default = (
         ROOT / 'config/room_315_vla/task_execution_runtime.yaml'
     ).read_text()
-    visual_rollback = (
+    visual_v3_config = (
         ROOT / 'config/room_315_vla/visual_state_runtime_v3_rollback.yaml'
-    ).read_text()
+    )
+    task_v3_config = (
+        ROOT / 'config/room_315_vla/task_execution_runtime_v3_rollback.yaml'
+    )
 
     assert 'runtime_generation: v4' in visual_default
     assert 'runtime_mode: active' in visual_default
     assert V4_RUNTIME_MANIFEST_SHA256 in visual_default
-    assert ROLLBACK_SHA256 not in visual_default
     assert CHECKPOINT_SHA256 not in visual_default
     assert 'room315.visual_state.v4' in task_default
     assert V4_CHECKPOINT_SHA256 in task_default
     assert 'execution_enabled: false' in task_default
-    assert 'runtime_generation: v3' in visual_rollback
-    assert ROLLBACK_SHA256 in visual_rollback
+    assert not visual_v3_config.exists()
+    assert not task_v3_config.exists()
 
-    if CANDIDATE.is_dir():
-        environment = (CANDIDATE / 'activate_candidate.env').read_text()
-        assert 'ROOM315_VISUAL_MODEL_PATH' in environment
-        assert CHECKPOINT_SHA256 in environment
     node_source = (SCRIPTS / 'room_315_visual_state_inference_node.py').read_text()
-    assert 'ROOM315_VISUAL_MODEL_PATH' in node_source
+    assert "{'v4'}" in node_source
+    assert 'ROOM315_VISUAL_MODEL_PATH' not in node_source
     assert 'raw_model_prediction_topic' in node_source
 
 
-def test_previous_and_new_checkpoints_match_required_hashes():
-    candidate = _candidate_or_skip()
-    rollback = Path(
-        '/home/tiago/room315_full_training_approved_archive_seed31520260730/'
-        'results/run/best.pt'
+def test_historical_v3_builder_publishes_no_runtime_entrypoints(
+    tmp_path,
+    monkeypatch,
+):
+    source = tmp_path / 'source'
+    sidecars = tmp_path / 'sidecars'
+    source.mkdir()
+    sidecars.mkdir()
+
+    checkpoint_path = source / 'best.pt'
+    checkpoint_path.write_bytes(b'historical-v3-checkpoint')
+    (source / 'run_metadata.json').write_text('{}\n', encoding='utf-8')
+    (source / 'final_report.json').write_text('{}\n', encoding='utf-8')
+
+    vectorizer = {
+        'dim': 200,
+        'fixed_identity_order': list(historical_candidate.IDENTITIES),
+    }
+    target_stats = {'fixture': True}
+    (sidecars / 'visual_label_vectorizer.json').write_text(
+        json.dumps(vectorizer), encoding='utf-8'
     )
-    assert sha256_file(rollback) == ROLLBACK_SHA256
-    assert sha256_file(candidate / 'best.pt') == CHECKPOINT_SHA256
+    (sidecars / 'target_stats.json').write_text(
+        json.dumps(target_stats), encoding='utf-8'
+    )
+    initialization_checkpoint = sidecars / 'best.pt'
+    initialization_checkpoint.write_bytes(b'historical-v3-initialization')
 
+    checkpoint = {
+        'epoch': 24,
+        'continuation_epoch': 10,
+        'label_vectorizer': vectorizer,
+        'target_stats': target_stats,
+    }
+    monkeypatch.setattr(historical_candidate, 'CHECKPOINT', checkpoint_path)
+    monkeypatch.setattr(historical_candidate, 'SOURCE_OUTPUT', source)
+    monkeypatch.setattr(historical_candidate, 'AUTHORITATIVE_SIDECARS', sidecars)
+    monkeypatch.setattr(
+        historical_candidate,
+        'INITIALIZATION_CHECKPOINT',
+        initialization_checkpoint,
+    )
+    monkeypatch.setattr(
+        historical_candidate,
+        'INITIALIZATION_CHECKPOINT_SHA256',
+        historical_candidate.sha256_file(initialization_checkpoint),
+    )
+    monkeypatch.setattr(
+        historical_candidate,
+        'CHECKPOINT_SHA256',
+        historical_candidate.sha256_file(checkpoint_path),
+    )
+    monkeypatch.setattr(
+        historical_candidate,
+        'validate_and_load_checkpoint',
+        lambda: checkpoint,
+    )
 
-def test_acceptance_launch_is_observation_only_by_default():
-    candidate = _candidate_or_skip()
-    wrapper = (candidate / 'run_gazebo_runtime_acceptance.sh').read_text()
-    launch = (ROOT / 'launch/room_315_runtime_acceptance.launch.py').read_text()
-    assert 'enable_task_execution:=false execution_enabled:=false' in wrapper
-    assert "default_value='false'" in launch
-    assert "'automatic_deployment_approval': False" in (
-        SCRIPTS / 'room_315_runtime_acceptance_report.py'
-    ).read_text()
+    output = tmp_path / 'historical-v3-archive'
+    try:
+        historical_candidate.build(output)
+
+        forbidden_runtime_entrypoints = {
+            'activate_candidate.env',
+            'runtime_ros_parameters.yaml',
+            'room_315_runtime_acceptance_report.py',
+            'run_gazebo_runtime_acceptance.sh',
+            'generate_acceptance_report.sh',
+        }
+        assert forbidden_runtime_entrypoints.isdisjoint(
+            path.name for path in output.iterdir()
+        )
+        assert not any(path.suffix in {'.py', '.sh'} for path in output.iterdir())
+
+        runtime_configuration = json.loads(
+            (output / 'runtime_configuration.json').read_text(encoding='utf-8')
+        )
+        assert runtime_configuration['deployment_state'] == (
+            historical_candidate.ARCHIVE_DEPLOYMENT_STATE
+        )
+        assert runtime_configuration['archive_policy'] == {
+            'runtime_execution_supported': False,
+            'required_runtime_generation': 'v4',
+        }
+        assert 'selection' not in runtime_configuration
+
+        readme = (output / 'README.md').read_text(encoding='utf-8')
+        assert 'historical V3 archive' in readme
+        assert 'not runnable' in readme
+        assert 'ros2 launch' not in readme
+        assert 'run_gazebo_runtime_acceptance.sh' not in readme
+    finally:
+        if output.exists():
+            output.chmod(0o755)
+            for path in output.iterdir():
+                path.chmod(0o644)

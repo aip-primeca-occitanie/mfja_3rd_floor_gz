@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Tests for the deterministic V4 fault-injection verifier."""
 
 from __future__ import annotations
 
@@ -17,41 +18,13 @@ SCRIPTS = ROOT / 'scripts'
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import room_315_visual_runtime_v4_fault_and_rollback as verifier  # noqa: E402
+import room_315_visual_runtime_v4_fault_injection as verifier  # noqa: E402
 import room_315_promote_runtime_v4 as promotion  # noqa: E402
 
 
 def test_exact_report_schemas_and_fault_order_are_stable():
     assert verifier.FAULT_REPORT_SCHEMA == (
         'room315.visual_runtime_v4.fault_injection.v1'
-    )
-
-
-def test_default_config_path_supports_source_and_installed_layouts(tmp_path):
-    source_scripts = tmp_path / 'source_package' / 'scripts'
-    source_config = (
-        tmp_path / 'source_package' / 'config' / 'room_315_vla' / 'runtime.yaml'
-    )
-    source_scripts.mkdir(parents=True)
-    source_config.parent.mkdir(parents=True)
-    source_config.write_text('source\n', encoding='utf-8')
-    assert verifier.default_package_config_path(
-        'room_315_vla/runtime.yaml', script_directory=source_scripts
-    ) == source_config
-
-    installed_scripts = tmp_path / 'install' / 'pkg' / 'lib' / 'pkg'
-    installed_config = (
-        tmp_path / 'install' / 'pkg' / 'share' / 'mfja_robot_control_config'
-        / 'config' / 'room_315_vla' / 'runtime.yaml'
-    )
-    installed_scripts.mkdir(parents=True)
-    installed_config.parent.mkdir(parents=True)
-    installed_config.write_text('installed\n', encoding='utf-8')
-    assert verifier.default_package_config_path(
-        'room_315_vla/runtime.yaml', script_directory=installed_scripts
-    ) == installed_config
-    assert verifier.ROLLBACK_REPORT_SCHEMA == (
-        'room315.visual_runtime_v4.rollback_smoke.v1'
     )
     assert verifier.EXPECTED_FAULT_NAMES == (
         'manifest_hash_mismatch',
@@ -62,12 +35,6 @@ def test_default_config_path_supports_source_and_installed_layouts(tmp_path):
         'stale_right_image',
         'stale_presence',
         'unknown_identity',
-    )
-    assert verifier.DEFAULT_V3_RUNTIME_CONFIG.name == (
-        'visual_state_runtime_v3_rollback.yaml'
-    )
-    assert verifier.DEFAULT_TASK_RUNTIME_CONFIG.name == (
-        'task_execution_runtime_v3_rollback.yaml'
     )
 
 
@@ -89,7 +56,7 @@ def test_immutable_report_is_integrity_bound_read_only_and_no_clobber(tmp_path):
     assert integrity['sha256'] == verifier.canonical_sha256(loaded)
     assert file_digest == hashlib.sha256(output.read_bytes()).hexdigest()
     assert stat.S_IMODE(output.stat().st_mode) == 0o444
-    with pytest.raises(verifier.FaultRollbackVerificationError, match='replace'):
+    with pytest.raises(verifier.FaultInjectionVerificationError, match='replace'):
         verifier.write_immutable_report(output, report)
 
 
@@ -166,43 +133,6 @@ def test_fault_report_exactly_satisfies_promotion_contract():
     assert all(row['rejected'] for row in report['cases'])
 
 
-def test_rollback_report_exactly_satisfies_promotion_contract():
-    check_names = (
-        'v3_selected_and_v4_not_selected',
-        'v3_checkpoint_strict_model_load',
-        'v3_raw_observation_possible',
-        'v3_accepted_observation_possible',
-        'task_visual_allowlist_v3_exact',
-    )
-    report = {
-        'schema_version': verifier.ROLLBACK_REPORT_SCHEMA,
-        'status': 'passed',
-        'checks': [
-            {'name': name, 'passed': True}
-            for name in check_names
-        ],
-        'runtime': {
-            'schema_version': verifier.V3_MODEL_SCHEMA,
-            'checkpoint_sha256': promotion.V3_CHECKPOINT_SHA256,
-            'model_ready': True,
-        },
-        'safety': {
-            'plansys2_update_enabled': False,
-            'plansys2_predicates_added': 0,
-            'plansys2_predicates_removed': 0,
-            'actuation_command_count': 0,
-        },
-    }
-    verifier._apply_rollback_promotion_contract(report)
-
-    promotion._verify_rollback_report(report)
-    assert report['checkpoint_sha256'] == promotion.V3_CHECKPOINT_SHA256
-    assert report['raw_prediction_received']
-    assert report['accepted_observation_received']
-    assert report['plansys2_mutation_count'] == 0
-    assert not report['v4_selected']
-
-
 def test_presence_faults_are_real_provider_failures():
     stale = verifier.ShuttleStatePresenceProvider(timeout_s=1.0, warmup_s=0.0)
     for side in ('left', 'right'):
@@ -237,16 +167,10 @@ def test_presence_faults_are_real_provider_failures():
     assert any('unknown_presence_entity' in value for value in unknown_snapshot.reasons)
 
 
-def test_synthetic_inputs_are_deterministic_and_contract_shaped():
-    first_left, first_right = verifier._synthetic_paired_rgb()
-    second_left, second_right = verifier._synthetic_paired_rgb()
+def test_synthetic_fault_fixtures_are_contract_shaped():
     output = verifier._accepted_synthetic_v4_output()
     presence = verifier._presence_snapshot(('L1', 'R1'), timestamp_s=10.0)
 
-    assert first_left.shape == first_right.shape == (480, 640, 3)
-    assert first_left.dtype == first_right.dtype
-    assert (first_left == second_left).all()
-    assert (first_right == second_right).all()
     assert output.segment_logits.shape == (8, 14)
     assert output.loaded_logits.shape == (8, 2)
     assert output.bbox.shape == (8, 4)

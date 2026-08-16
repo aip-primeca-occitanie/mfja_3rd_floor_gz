@@ -52,10 +52,6 @@ CANARY_FINAL_REPORT = CANARY_RUN / 'final_report.json'
 CANARY_COMPLETION_LEDGER = (
     CANARY_LEDGER_ROOT / f'{CANARY_ATTEMPT_KEY}.completed.json'
 )
-ROLLBACK_CHECKPOINT = Path(
-    '/home/tiago/room315_full_training_approved_archive_seed31520260730/'
-    'results/run/best.pt'
-)
 
 CHECKPOINT_SHA256 = (
     '869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d'
@@ -83,9 +79,6 @@ CANARY_FINAL_REPORT_SHA256 = (
 )
 CANARY_COMPLETION_LEDGER_SHA256 = (
     'db43722df617a1a05b884fa3ebd6b35e9d6d87258c2d3cb9f871e70844c2b251'
-)
-ROLLBACK_CHECKPOINT_SHA256 = (
-    '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
 )
 TOPOLOGY_FINGERPRINT_SHA256 = (
     '02ddcd78b1e1f410e7565ab018a9b4f25297ccf2d74c41232e981ebfc9eed344'
@@ -234,16 +227,6 @@ def _verify_pinned_files() -> None:
             f'{name} SHA-256 mismatch: expected '
             f'{artifact.expected_sha256}, got {actual}',
         )
-    _require(
-        ROLLBACK_CHECKPOINT.is_file(),
-        f'missing rollback checkpoint: {ROLLBACK_CHECKPOINT}',
-    )
-    rollback_actual = sha256_file(ROLLBACK_CHECKPOINT)
-    _require(
-        rollback_actual == ROLLBACK_CHECKPOINT_SHA256,
-        'rollback V3 checkpoint SHA-256 mismatch: expected '
-        f'{ROLLBACK_CHECKPOINT_SHA256}, got {rollback_actual}',
-    )
 
 
 def _strict_load_checkpoint(
@@ -621,12 +604,6 @@ def promotion_manifest(validated: ValidatedSources) -> dict[str, Any]:
             'data_role': 'validation',
         },
         'acceptance_thresholds': policy,
-        'rollback_contract': {
-            'backend': 'v3',
-            'checkpoint_path': str(ROLLBACK_CHECKPOINT),
-            'checkpoint_sha256': ROLLBACK_CHECKPOINT_SHA256,
-            'preserved_unchanged': True,
-        },
         'evidence_policy': {
             'checkpoint_selection': 'validation_only',
             'canary_role': 'post_selection_development_regression',
@@ -665,7 +642,7 @@ def _readme(output: Path, manifest_sha256: str) -> str:
 Candidate ID: `{CANDIDATE_ID}`
 
 This host bundle is authorized for **shadow loading and evaluation only**. It
-does not replace the V3 planner input, permits no automatic promotion, and an
+does not select an active runtime, permits no automatic promotion, and an
 active transition requires a new immutable manifest after runtime review.
 
 The selected V4 epoch-11 checkpoint is strictly loaded during candidate build.
@@ -687,9 +664,9 @@ Seven existing Gazebo acceptance configurations are preserved in
 `acceptance_scenarios.json`, with this candidate ID. They are not automatic
 approval and should initially be observed without actuation.
 
-Rollback remains the approved V3 checkpoint recorded in `rollback_option.json`.
-`SHA256SUMS` binds every payload file except itself. The directory is published
-atomically and permission-hardened read-only.
+The bundle contains only the V4 candidate and its review inputs. `SHA256SUMS`
+binds every payload file except itself. The directory is published atomically
+and permission-hardened read-only.
 """
 
 
@@ -738,17 +715,6 @@ def build(output: Path) -> dict[str, Any]:
                 ),
             },
         })
-        write_json(staging / 'rollback_option.json', {
-            'schema_version': 'room315.runtime_rollback.v4.v1',
-            'candidate_id': CANDIDATE_ID,
-            'backend': 'v3',
-            'checkpoint_path': str(ROLLBACK_CHECKPOINT),
-            'checkpoint_sha256': ROLLBACK_CHECKPOINT_SHA256,
-            'verified_before_staging': True,
-            'preserved_unchanged': True,
-            'restore_action': 'select the approved V3 runtime configuration',
-        })
-
         write_json(staging / PROMOTION_MANIFEST_NAME, manifest)
         manifest_sha256 = sha256_file(staging / PROMOTION_MANIFEST_NAME)
         (staging / 'runtime_ros_parameters.yaml').write_text(

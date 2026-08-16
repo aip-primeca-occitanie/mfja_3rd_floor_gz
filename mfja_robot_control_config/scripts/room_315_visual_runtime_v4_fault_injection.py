@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Deterministic V4 fault injection and V3 rollback verification.
+"""Deterministic V4 fault-injection verification.
 
 This utility deliberately never opens a training, validation, Canary, or Test
-dataset.  ``faults`` verifies a real immutable V4 shadow candidate and then
-injects eight metadata/input/presence faults into temporary data only.  Every
-fault must be rejected before a PlanSys2 predicate or actuation command can be
-emitted.  ``rollback-smoke`` strictly loads the preserved V3 checkpoint and
-sidecars, performs a synthetic paired-camera inference, decodes a fresh
-presence snapshot, and proves that a raw and accepted V3 observation remain
-possible while execution stays disabled.
+dataset. ``faults`` verifies a real immutable V4 shadow candidate and then
+injects eight metadata, input, and presence faults into temporary data only.
+Every fault must be rejected before a PlanSys2 predicate or actuation command
+can be emitted.
 
-Reports are atomically published with mode 0444.  Their embedded integrity
+Reports are atomically published with mode 0444. Their embedded integrity
 digest covers canonical JSON with the ``integrity`` field omitted.
 """
 
@@ -44,17 +41,6 @@ from room_315_presence_provider import (  # noqa: E402
     PresenceSnapshot,
     ShuttleStatePresenceProvider,
 )
-from room_315_task_execution_config import (  # noqa: E402
-    validate_visual_publisher_allowlist,
-)
-from room_315_visual_runtime import (  # noqa: E402
-    MODEL_SCHEMA as V3_MODEL_SCHEMA,
-    ArtifactHashes,
-    ArtifactPaths,
-    Room315VisualModelRuntime,
-    decode_active_slots,
-    verify_artifacts,
-)
 from room_315_visual_runtime_fusion import (  # noqa: E402
     DeterministicPlanSys2FactGate,
     fuse_validated_visual_state,
@@ -73,7 +59,6 @@ from room_315_visual_model_v4 import V4_SLOT_ORDER  # noqa: E402
 
 
 FAULT_REPORT_SCHEMA = 'room315.visual_runtime_v4.fault_injection.v1'
-ROLLBACK_REPORT_SCHEMA = 'room315.visual_runtime_v4.rollback_smoke.v1'
 V4_MODEL_SCHEMA = 'room315.visual_state.v4'
 EXPECTED_FAULT_NAMES = (
     'manifest_hash_mismatch',
@@ -93,37 +78,7 @@ DEFAULT_CANDIDATE_DIRECTORY = Path(
 )
 
 
-def default_package_config_path(
-    relative_path: str,
-    *,
-    script_directory: Path = SCRIPT_DIR,
-) -> Path:
-    """Resolve a config from either the source tree or an installed package."""
-
-    source_path = script_directory.parent / 'config' / relative_path
-    installed_path = (
-        script_directory.parents[1]
-        / 'share'
-        / 'mfja_robot_control_config'
-        / 'config'
-        / relative_path
-    )
-    for candidate in (source_path, installed_path):
-        if candidate.is_file():
-            return candidate
-    # Preserve a deterministic fail-closed path for an incomplete installation.
-    return source_path
-
-
-DEFAULT_V3_RUNTIME_CONFIG = default_package_config_path(
-    'room_315_vla/visual_state_runtime_v3_rollback.yaml'
-)
-DEFAULT_TASK_RUNTIME_CONFIG = default_package_config_path(
-    'room_315_vla/task_execution_runtime_v3_rollback.yaml'
-)
-
-
-class FaultRollbackVerificationError(RuntimeError):
+class FaultInjectionVerificationError(RuntimeError):
     """Raised when a requested verification cannot be completed safely."""
 
 
@@ -135,7 +90,7 @@ def sha256_file(path: Path | str) -> str:
             for chunk in iter(lambda: stream.read(1024 * 1024), b''):
                 digest.update(chunk)
     except OSError as exc:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'cannot read file for SHA-256: {candidate}'
         ) from exc
     return digest.hexdigest()
@@ -156,7 +111,7 @@ def write_immutable_report(path: Path | str, report: Mapping[str, Any]) -> str:
 
     destination = Path(path).expanduser().resolve()
     if destination.exists():
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'refusing to replace existing immutable report: {destination}'
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +145,7 @@ def write_immutable_report(path: Path | str, report: Mapping[str, Any]) -> str:
         temporary_path.unlink()
         temporary_path = None
     except FileExistsError as exc:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'refusing to replace existing immutable report: {destination}'
         ) from exc
     finally:
@@ -240,16 +195,16 @@ def run_fault_verification(
 
     try:
         if not candidate.is_dir():
-            raise FaultRollbackVerificationError(
+            raise FaultInjectionVerificationError(
                 f'V4 candidate directory is missing: {candidate}'
             )
         if not manifest_path.is_file():
-            raise FaultRollbackVerificationError(
+            raise FaultInjectionVerificationError(
                 f'V4 promotion manifest is missing: {manifest_path}'
             )
         promotion = verify_v4_runtime_promotion(manifest_path, expected_sha)
         if promotion.deployment_mode != 'shadow':
-            raise FaultRollbackVerificationError(
+            raise FaultInjectionVerificationError(
                 'fault injection is permitted only for a shadow promotion'
             )
         safety = _verify_shadow_safety(candidate, expected_sha)
@@ -322,12 +277,12 @@ def _run_manifest_faults(
     absolute_baseline = copy.deepcopy(baseline)
     artifact_entries = absolute_baseline.get('artifacts')
     if not isinstance(artifact_entries, dict):
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             'promotion manifest artifacts must be an object'
         )
     for value in artifact_entries.values():
         if not isinstance(value, dict):
-            raise FaultRollbackVerificationError(
+            raise FaultInjectionVerificationError(
                 'promotion artifact entry must be an object'
             )
         raw_path = Path(str(value.get('path') or '')).expanduser()
@@ -436,7 +391,7 @@ def _run_input_and_presence_faults(promotion: Any) -> list[dict[str, Any]]:
         config=validator,
     )
     if not baseline_validation.accepted:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             'synthetic V4 validation baseline was rejected: '
             + ','.join(baseline_validation.reasons)
         )
@@ -827,7 +782,7 @@ def _inspect_visual_node_shadow_contract() -> dict[str, Any]:
         None,
     )
     if node_class is None:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             'visual inference node class is unavailable for safety inspection'
         )
     initializer = next(
@@ -846,7 +801,7 @@ def _inspect_visual_node_shadow_contract() -> dict[str, Any]:
         None,
     )
     if initializer is None or updater is None:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             'visual inference node safety methods are incomplete'
         )
 
@@ -942,489 +897,6 @@ def _call_name(value: Any) -> str:
     return ''
 
 
-def run_rollback_smoke(
-    *,
-    runtime_config_path: Path | str = DEFAULT_V3_RUNTIME_CONFIG,
-    task_config_path: Path | str = DEFAULT_TASK_RUNTIME_CONFIG,
-    device: str = 'cpu',
-) -> dict[str, Any]:
-    """Strictly load and exercise the preserved V3 rollback path."""
-
-    runtime_path = Path(runtime_config_path).expanduser().resolve()
-    task_path = Path(task_config_path).expanduser().resolve()
-    requested_device = str(device or 'cpu').strip().lower()
-    report: dict[str, Any] = {
-        'schema_version': ROLLBACK_REPORT_SCHEMA,
-        'immutable': True,
-        'command': 'rollback-smoke',
-        'created_at_utc': _utc_now(),
-        'requested_device': requested_device,
-        'data_access': {
-            'datasets_opened': False,
-            'training_split_opened': False,
-            'validation_split_opened': False,
-            'canary_split_opened': False,
-            'test_split_opened': False,
-            'note': 'only the signed V3 checkpoint/sidecars and runtime configuration were read',
-        },
-        'checks': [],
-    }
-
-    try:
-        runtime_parameters = _ros_parameters(
-            runtime_path,
-            'room_315_visual_state_inference_node',
-        )
-        task_parameters = _ros_parameters(
-            task_path,
-            'room_315_task_execution_node',
-        )
-        selected_generation = str(
-            runtime_parameters.get('runtime_generation', 'v3')
-        ).strip().lower()
-        selected_mode = str(
-            runtime_parameters.get('runtime_mode', 'active')
-        ).strip().lower()
-        checkpoint = Path(
-            str(runtime_parameters.get('checkpoint_path') or '')
-        ).expanduser().resolve()
-        sidecars = Path(
-            str(runtime_parameters.get('sidecar_directory') or '')
-        ).expanduser().resolve()
-        expected_hashes = ArtifactHashes(
-            checkpoint=_required_sha256(
-                runtime_parameters.get('expected_checkpoint_sha256'),
-                'V3 checkpoint SHA-256',
-            ),
-            target_stats=_required_sha256(
-                runtime_parameters.get('expected_target_stats_sha256'),
-                'V3 target statistics SHA-256',
-            ),
-            vectorizer=_required_sha256(
-                runtime_parameters.get('expected_vectorizer_sha256'),
-                'V3 vectorizer SHA-256',
-            ),
-            training_config=_required_sha256(
-                runtime_parameters.get('expected_training_config_sha256'),
-                'V3 training configuration SHA-256',
-            ),
-            run_metadata=_required_sha256(
-                runtime_parameters.get('expected_run_metadata_sha256'),
-                'V3 run metadata SHA-256',
-            ),
-            runtime_configuration=str(
-                runtime_parameters.get(
-                    'expected_runtime_configuration_sha256',
-                    '',
-                )
-                or ''
-            ).strip(),
-        )
-        _append_boolean_check(
-            report,
-            'v3_selected_and_v4_not_selected',
-            selected_generation == 'v3'
-            and not runtime_parameters.get('v4_promotion_manifest_path')
-            and not runtime_parameters.get(
-                'expected_v4_promotion_manifest_sha256'
-            ),
-            {
-                'runtime_generation': selected_generation,
-                'runtime_mode': selected_mode,
-                'v4_promotion_manifest_path': runtime_parameters.get(
-                    'v4_promotion_manifest_path',
-                    '',
-                ),
-            },
-        )
-        artifacts = verify_artifacts(
-            ArtifactPaths(
-                checkpoint=checkpoint,
-                sidecar_directory=sidecars,
-            ),
-            expected_hashes,
-        )
-        _append_boolean_check(
-            report,
-            'v3_artifact_hashes_verified',
-            artifacts.hashes.get('best.pt') == expected_hashes.checkpoint,
-            {'artifact_sha256': dict(artifacts.hashes)},
-        )
-
-        runtime = Room315VisualModelRuntime(
-            artifacts,
-            device=requested_device,
-        )
-        runtime.load()
-        _append_boolean_check(
-            report,
-            'v3_checkpoint_strict_model_load',
-            bool(runtime.ready and runtime.model is not None),
-            {
-                'ready': runtime.ready,
-                'selected_device': runtime.device,
-                'model_load_duration_ms': runtime.model_load_duration_ms,
-                'checkpoint_loading': 'strict',
-            },
-        )
-
-        left_rgb, right_rgb = _synthetic_paired_rgb()
-        raw_output, timings = runtime.infer(left_rgb, right_rgb)
-        _append_boolean_check(
-            report,
-            'synthetic_paired_inference',
-            raw_output.shape == (200,) and bool(np.isfinite(raw_output).all()),
-            {
-                'left_shape': list(left_rgb.shape),
-                'right_shape': list(right_rgb.shape),
-                'output_dimension': int(raw_output.size),
-                'timings_ms': {
-                    'preprocessing': timings.preprocessing_ms,
-                    'inference': timings.inference_ms,
-                    'decode': timings.decode_ms,
-                    'complete_cycle': timings.complete_cycle_ms,
-                },
-            },
-        )
-
-        presence = _v3_smoke_presence()
-        _append_boolean_check(
-            report,
-            'synthetic_presence_ready',
-            presence.ready
-            and tuple(
-                entry.identity for entry in presence.entries
-                if entry.state == PRESENCE_PRESENT
-            ) == ('L1', 'R1'),
-            {
-                'ready': presence.ready,
-                'reasons': list(presence.reasons),
-                'present_identities': [
-                    entry.identity for entry in presence.entries
-                    if entry.state == PRESENCE_PRESENT
-                ],
-            },
-        )
-        prediction = decode_active_slots(
-            raw_output,
-            vectorizer=artifacts.vectorizer,
-            presence=presence,
-            timestamp_s=10.0,
-            left_image_stamp_s=10.0,
-            right_image_stamp_s=10.0,
-            left_image_size=(640, 480),
-            right_image_size=(640, 480),
-        )
-        raw_observation_possible = bool(
-            prediction.active_identities == ('L1', 'R1')
-            and len(prediction.shuttles) == 2
-        )
-        _append_boolean_check(
-            report,
-            'v3_raw_observation_possible',
-            raw_observation_possible,
-            {
-                'schema_version': V3_MODEL_SCHEMA,
-                'checkpoint_sha256': expected_hashes.checkpoint,
-                'active_identities': list(prediction.active_identities),
-                'predicted_side_and_segment': [
-                    {
-                        'identity': value.identity,
-                        'side': value.side,
-                        'segment': value.block,
-                    }
-                    for value in prediction.shuttles
-                ],
-            },
-        )
-
-        validation = validate_prediction(
-            prediction,
-            presence,
-            now_s=10.0,
-            config=_validation_config_from_runtime(runtime_parameters),
-            artifact_healthy=runtime.ready,
-            input_healthy=True,
-        )
-        fusion = fuse_validated_visual_state(
-            validation,
-            presence,
-            checkpoint_sha256=expected_hashes.checkpoint,
-            schema_version=V3_MODEL_SCHEMA,
-            stale_after_s=1.0,
-            state_id='rollback-smoke',
-        )
-        accepted_observation_possible = bool(
-            validation.accepted
-            and validation.prediction is not None
-            and fusion.ready
-            and fusion.observed_state is not None
-        )
-        _append_boolean_check(
-            report,
-            'v3_accepted_observation_possible',
-            accepted_observation_possible,
-            {
-                'validation_accepted': validation.accepted,
-                'validation_reasons': list(validation.reasons),
-                'clamped_fields': list(validation.clamped_fields),
-                'state_fusion_ready': fusion.ready,
-                'state_fusion_reasons': list(fusion.reasons),
-            },
-        )
-
-        allowlist_schema = task_parameters.get('allowed_visual_schema_version')
-        allowlist_checkpoint = task_parameters.get(
-            'allowed_visual_checkpoint_sha256'
-        )
-        validate_visual_publisher_allowlist(
-            schema_version=allowlist_schema,
-            checkpoint_sha256=allowlist_checkpoint,
-        )
-        allowlist_exact = bool(
-            allowlist_schema == V3_MODEL_SCHEMA
-            and allowlist_checkpoint == expected_hashes.checkpoint
-        )
-        _append_boolean_check(
-            report,
-            'task_visual_allowlist_v3_exact',
-            allowlist_exact,
-            {
-                'schema_version': allowlist_schema,
-                'checkpoint_sha256': allowlist_checkpoint,
-            },
-        )
-
-        plansys_disabled = runtime_parameters.get(
-            'plansys2_update_enabled'
-        ) is False
-        dry_run = runtime_parameters.get('dry_run_state_fusion') is True
-        gate_update = DeterministicPlanSys2FactGate().build_update(
-            fusion,
-            model_ready=runtime.ready,
-            input_ready=True,
-            safety_ready=False,
-            enabled=False,
-        )
-        zero_plansys = bool(
-            not gate_update.accepted
-            and not gate_update.add_predicates
-            and not gate_update.remove_predicates
-            and 'plansys2_updates_disabled' in gate_update.reasons
-        )
-        _append_boolean_check(
-            report,
-            'plansys2_disabled_and_zero_updates',
-            plansys_disabled and dry_run and zero_plansys,
-            {
-                'dry_run_state_fusion': dry_run,
-                'plansys2_update_enabled': plansys_disabled is False,
-                'gate_update_accepted': gate_update.accepted,
-                'gate_reasons': list(gate_update.reasons),
-                'add_predicates': list(gate_update.add_predicates),
-                'remove_predicates': list(gate_update.remove_predicates),
-                'update_attempt_count': 0,
-            },
-        )
-        execution_disabled = task_parameters.get('execution_enabled') is False
-        _append_boolean_check(
-            report,
-            'task_execution_disabled_and_zero_actuation',
-            execution_disabled,
-            {
-                'execution_enabled': task_parameters.get('execution_enabled'),
-                'task_execution_node_started': False,
-                'planner_requests_sent': 0,
-                'supervisor_commands_published': 0,
-                'actuation_command_count': 0,
-            },
-        )
-
-        report['runtime'] = {
-            'runtime_config_path': str(runtime_path),
-            'runtime_config_sha256': sha256_file(runtime_path),
-            'task_config_path': str(task_path),
-            'task_config_sha256': sha256_file(task_path),
-            'generation': selected_generation,
-            'mode': selected_mode,
-            'schema_version': V3_MODEL_SCHEMA,
-            'checkpoint_path': str(checkpoint),
-            'checkpoint_sha256': expected_hashes.checkpoint,
-            'model_ready': runtime.ready,
-            'device': runtime.device,
-        }
-        report['safety'] = {
-            'plansys2_update_enabled': False,
-            'plansys2_update_attempt_count': 0,
-            'plansys2_predicates_added': 0,
-            'plansys2_predicates_removed': 0,
-            'task_execution_enabled': False,
-            'planner_requests_sent': 0,
-            'actuation_command_count': 0,
-            'v4_selected': False,
-        }
-    except Exception as exc:  # noqa: BLE001 - preserve failure evidence
-        report['fatal_error'] = {
-            'type': type(exc).__name__,
-            'message': str(exc),
-        }
-
-    checks = report['checks']
-    overall = bool(checks and all(bool(item.get('passed')) for item in checks))
-    report['summary'] = {
-        'check_count': len(checks),
-        'passed_check_count': sum(bool(item.get('passed')) for item in checks),
-        'failed_check_count': sum(not bool(item.get('passed')) for item in checks),
-        'raw_observation_possible': _named_check_passed(
-            checks,
-            'v3_raw_observation_possible',
-        ),
-        'accepted_observation_possible': _named_check_passed(
-            checks,
-            'v3_accepted_observation_possible',
-        ),
-        'plansys2_update_attempt_count': 0,
-        'actuation_command_count': 0,
-    }
-    report['overall_passed'] = overall and 'fatal_error' not in report
-    report['status'] = 'passed' if report['overall_passed'] else 'failed'
-    _apply_rollback_promotion_contract(report)
-    report['completed_at_utc'] = _utc_now()
-    return report
-
-
-def _apply_rollback_promotion_contract(report: dict[str, Any]) -> None:
-    """Expose canonical promotion fields plus explicit compatibility aliases."""
-
-    checks = report.get('checks')
-    if not isinstance(checks, list):
-        checks = []
-    runtime = report.get('runtime')
-    if not isinstance(runtime, Mapping):
-        runtime = {}
-    safety = report.get('safety')
-    if not isinstance(safety, Mapping):
-        safety = {}
-    model_ready = bool(
-        runtime.get('model_ready') is True
-        and _named_check_passed(checks, 'v3_checkpoint_strict_model_load')
-    )
-    raw_observed = _named_check_passed(
-        checks,
-        'v3_raw_observation_possible',
-    )
-    accepted_observed = _named_check_passed(
-        checks,
-        'v3_accepted_observation_possible',
-    )
-    allowlist_matched = _named_check_passed(
-        checks,
-        'task_visual_allowlist_v3_exact',
-    )
-    v4_selected = not _named_check_passed(
-        checks,
-        'v3_selected_and_v4_not_selected',
-    )
-    checkpoint_sha256 = str(runtime.get('checkpoint_sha256') or '')
-
-    # Exact contract currently consumed by room_315_promote_runtime_v4.py.
-    report['v3_schema_version'] = str(
-        runtime.get('schema_version') or V3_MODEL_SCHEMA
-    )
-    report['v3_checkpoint_sha256'] = checkpoint_sha256
-    report['model_ready'] = model_ready
-    report['raw_prediction_observed'] = raw_observed
-    report['accepted_observation_observed'] = accepted_observed
-    report['task_allowlist_matched'] = allowlist_matched
-    report['plansys2_update_enabled'] = bool(
-        safety.get('plansys2_update_enabled', False)
-    )
-    report['actuation_command_count'] = int(
-        safety.get('actuation_command_count', 0)
-    )
-    report['v4_runtime_selected'] = v4_selected
-
-    # Descriptive aliases retained for downstream evidence readers.
-    report['checkpoint_sha256'] = checkpoint_sha256
-    report['raw_prediction_received'] = raw_observed
-    report['accepted_observation_received'] = accepted_observed
-    report['plansys2_mutation_count'] = int(
-        safety.get('plansys2_predicates_added', 0)
-    ) + int(safety.get('plansys2_predicates_removed', 0))
-    report['v4_selected'] = v4_selected
-
-
-def _append_boolean_check(
-    report: dict[str, Any],
-    name: str,
-    passed: bool,
-    evidence: Mapping[str, Any],
-) -> None:
-    report['checks'].append({
-        'name': name,
-        'status': 'passed' if passed else 'failed',
-        'passed': bool(passed),
-        'evidence': dict(evidence),
-    })
-    if not passed:
-        raise FaultRollbackVerificationError(f'rollback check failed: {name}')
-
-
-def _validation_config_from_runtime(
-    parameters: Mapping[str, Any],
-) -> ValidationConfig:
-    return ValidationConfig(
-        stale_image_timeout_s=float(parameters['stale_image_timeout_s']),
-        maximum_timestamp_difference_s=float(
-            parameters['maximum_timestamp_difference_s']
-        ),
-        s_ratio_tolerance=float(parameters['s_ratio_tolerance']),
-        s_m_tolerance_m=float(parameters['s_m_tolerance_m']),
-        position_consistency_tolerance_m=float(
-            parameters['position_consistency_tolerance_m']
-        ),
-        reconcile_position_consistency=bool(
-            parameters['reconcile_position_consistency']
-        ),
-        max_position_reconciliation_error_m=float(
-            parameters['max_position_reconciliation_error_m']
-        ),
-        position_reconciliation_policy=str(
-            parameters['position_reconciliation_policy']
-        ),
-    )
-
-
-def _v3_smoke_presence() -> PresenceSnapshot:
-    provider = ShuttleStatePresenceProvider(timeout_s=5.0, warmup_s=0.0)
-    provider.observe(
-        topic_side='left',
-        entity_name='room315_left_shuttle_1',
-        source_stamp_s=10.0,
-        receive_time_s=10.0,
-    )
-    provider.observe(
-        topic_side='right',
-        entity_name='room315_right_shuttle_1',
-        source_stamp_s=10.0,
-        receive_time_s=10.0,
-    )
-    return provider.snapshot(now_s=10.0)
-
-
-def _synthetic_paired_rgb() -> tuple[np.ndarray, np.ndarray]:
-    y, x = np.indices((480, 640), dtype=np.int32)
-    left = np.stack(
-        (x % 256, y % 256, (x + y) % 256),
-        axis=-1,
-    ).astype(np.uint8)
-    right = np.stack(
-        (255 - (x % 256), 255 - (y % 256), (3 * x + 5 * y) % 256),
-        axis=-1,
-    ).astype(np.uint8)
-    return left, right
-
-
 def _accepted_synthetic_v4_output() -> StructuredVisualOutputV4:
     segment_logits = np.full((8, 14), -20.0, dtype=np.float32)
     segment_logits[:, 0] = 20.0
@@ -1476,21 +948,21 @@ def _ros_parameters(path: Path, node_name: str) -> dict[str, Any]:
     try:
         parsed = yaml.safe_load(path.read_text(encoding='utf-8'))
     except (OSError, UnicodeError, yaml.YAMLError) as exc:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'cannot load ROS parameter file {path}: {exc}'
         ) from exc
     if not isinstance(parsed, dict):
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'ROS parameter file root is not an object: {path}'
         )
     node = parsed.get(node_name)
     if not isinstance(node, dict):
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'ROS parameter file lacks node {node_name!r}: {path}'
         )
     parameters = node.get('ros__parameters')
     if not isinstance(parameters, dict):
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'ROS node lacks ros__parameters: {path}'
         )
     return parameters
@@ -1500,11 +972,11 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding='utf-8'))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'cannot load JSON object {path}: {exc}'
         ) from exc
     if not isinstance(value, dict):
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'JSON root is not an object: {path}'
         )
     return value
@@ -1513,7 +985,7 @@ def _load_json_object(path: Path) -> dict[str, Any]:
 def _required_sha256(value: Any, context: str) -> str:
     digest = str(value or '').strip().lower()
     if SHA256_PATTERN.fullmatch(digest) is None:
-        raise FaultRollbackVerificationError(
+        raise FaultInjectionVerificationError(
             f'{context} must be a lowercase SHA-256'
         )
     return digest
@@ -1525,13 +997,6 @@ def _different_sha256(value: str) -> str:
     return replacement + digest[1:]
 
 
-def _named_check_passed(checks: Sequence[Mapping[str, Any]], name: str) -> bool:
-    return any(
-        item.get('name') == name and item.get('passed') is True
-        for item in checks
-    )
-
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec='seconds').replace(
         '+00:00',
@@ -1541,10 +1006,7 @@ def _utc_now() -> str:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=(
-            'Verify Room 315 V4 fail-closed faults or the preserved V3 '
-            'rollback path without opening datasets.'
-        )
+        description='Verify Room 315 V4 fail-closed fault handling.',
     )
     subparsers = parser.add_subparsers(dest='command', required=True)
 
@@ -1564,44 +1026,15 @@ def _parser() -> argparse.ArgumentParser:
         required=True,
     )
     faults.add_argument('--output', '--report', type=Path, required=True)
-
-    rollback = subparsers.add_parser(
-        'rollback-smoke',
-        help='strictly load and exercise the preserved V3 rollback runtime',
-    )
-    rollback.add_argument(
-        '--runtime-config',
-        '--v3-runtime-config',
-        type=Path,
-        default=DEFAULT_V3_RUNTIME_CONFIG,
-    )
-    rollback.add_argument(
-        '--task-config',
-        type=Path,
-        default=DEFAULT_TASK_RUNTIME_CONFIG,
-    )
-    rollback.add_argument(
-        '--device',
-        choices=('cpu', 'cuda', 'auto'),
-        default='cpu',
-    )
-    rollback.add_argument('--output', '--report', type=Path, required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
-    if arguments.command == 'faults':
-        report = run_fault_verification(
-            candidate_directory=arguments.candidate_dir,
-            expected_manifest_sha256=arguments.expected_manifest_sha256,
-        )
-    else:
-        report = run_rollback_smoke(
-            runtime_config_path=arguments.runtime_config,
-            task_config_path=arguments.task_config,
-            device=arguments.device,
-        )
+    report = run_fault_verification(
+        candidate_directory=arguments.candidate_dir,
+        expected_manifest_sha256=arguments.expected_manifest_sha256,
+    )
     report['report_path'] = str(arguments.output.expanduser().resolve())
     report_file_sha256 = write_immutable_report(arguments.output, report)
     print(json.dumps({

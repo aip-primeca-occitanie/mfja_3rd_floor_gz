@@ -39,17 +39,10 @@ from std_msgs.msg import String
 
 from room_315_presence_provider import PresenceSnapshot
 from room_315_presence_provider import ShuttleStatePresenceProvider
-from room_315_visual_runtime import ArtifactHashes
-from room_315_visual_runtime import ArtifactPaths
 from room_315_visual_runtime import DecodedVisualPrediction
 from room_315_visual_runtime import FIXED_IDENTITY_ORDER
 from room_315_visual_runtime import InferenceTimings
-from room_315_visual_runtime import MODEL_KIND as V3_MODEL_KIND
-from room_315_visual_runtime import MODEL_SCHEMA
-from room_315_visual_runtime import Room315VisualModelRuntime
 from room_315_visual_runtime import VisualRuntimeError
-from room_315_visual_runtime import decode_active_slots
-from room_315_visual_runtime import verify_artifacts
 from room_315_visual_runtime_fusion import DeterministicPlanSys2FactGate
 from room_315_visual_runtime_fusion import PlanSysPredicateUpdate
 from room_315_visual_runtime_fusion import StateFusionResult
@@ -174,15 +167,13 @@ class Room315VisualStateInferenceNode(Node):
         self._declare_parameters()
         self.runtime_generation = self._choice(
             'runtime_generation',
-            {'v3', 'v4'},
+            {'v4'},
         )
         self.runtime_mode = self._choice(
             'runtime_mode',
             {'active', 'shadow'},
         )
-        self.model_schema = (
-            V4_MODEL_SCHEMA if self.runtime_generation == 'v4' else MODEL_SCHEMA
-        )
+        self.model_schema = V4_MODEL_SCHEMA
         self.model_kind = ''
         self.promotion_manifest_sha256 = ''
         self.v4_promotion: Any | None = None
@@ -297,14 +288,9 @@ class Room315VisualStateInferenceNode(Node):
         )
         self.synchronizer.registerCallback(self._on_image_pair)
 
-        self.model_runtime: Room315VisualModelRuntime | None = None
-        self.artifacts = None
+        self.model_runtime: Any | None = None
         self.artifact_error = ''
-        self.checkpoint_sha256 = (
-            ''
-            if self.runtime_generation == 'v4'
-            else self._artifact_string('expected_checkpoint_sha256')
-        )
+        self.checkpoint_sha256 = ''
         self.last_inference_stamp_s: float | None = None
         self.last_accepted_stamp_s: float | None = None
         self.last_pair_receive_s: float | None = None
@@ -337,14 +323,6 @@ class Room315VisualStateInferenceNode(Node):
             'right_presence_topic': '/room_315/rails/right/shuttles/state',
             'v4_promotion_manifest_path': '',
             'expected_v4_promotion_manifest_sha256': '',
-            'checkpoint_path': '',
-            'sidecar_directory': '',
-            'expected_checkpoint_sha256': '',
-            'expected_target_stats_sha256': '',
-            'expected_vectorizer_sha256': '',
-            'expected_training_config_sha256': '',
-            'expected_run_metadata_sha256': '',
-            'expected_runtime_configuration_sha256': '',
             'device': 'auto',
             'synchronization_queue_size': 10,
             'maximum_timestamp_difference_s': 0.1,
@@ -379,63 +357,7 @@ class Room315VisualStateInferenceNode(Node):
             self.declare_parameter(name, default)
 
     def _load_artifacts_and_model(self) -> None:
-        if self.runtime_generation == 'v4':
-            self._load_v4_promotion_and_model()
-            return
-        self.model_kind = V3_MODEL_KIND
-        try:
-            checkpoint_value = self._artifact_string('checkpoint_path')
-            sidecar_value = self._artifact_string('sidecar_directory')
-            checkpoint = Path(checkpoint_value).expanduser()
-            sidecars = Path(sidecar_value).expanduser()
-            if not checkpoint_value:
-                raise VisualRuntimeError('checkpoint_path parameter is empty')
-            if not sidecar_value:
-                raise VisualRuntimeError('sidecar_directory parameter is empty')
-            self.artifacts = verify_artifacts(
-                ArtifactPaths(
-                    checkpoint=checkpoint.resolve(),
-                    sidecar_directory=sidecars.resolve(),
-                ),
-                ArtifactHashes(
-                    checkpoint=self._artifact_string(
-                        'expected_checkpoint_sha256'
-                    ),
-                    target_stats=self._artifact_string(
-                        'expected_target_stats_sha256'
-                    ),
-                    vectorizer=self._artifact_string(
-                        'expected_vectorizer_sha256'
-                    ),
-                    training_config=self._artifact_string(
-                        'expected_training_config_sha256'
-                    ),
-                    run_metadata=self._artifact_string(
-                        'expected_run_metadata_sha256'
-                    ),
-                    runtime_configuration=self._artifact_string(
-                        'expected_runtime_configuration_sha256'
-                    ),
-                ),
-            )
-            self.checkpoint_sha256 = self.artifacts.hashes['best.pt']
-            runtime = Room315VisualModelRuntime(
-                self.artifacts,
-                device=self._string('device'),
-            )
-            runtime.load()
-            self.model_runtime = runtime
-            self.artifact_error = ''
-            self.get_logger().info(
-                f'Approved visual checkpoint loaded strictly on {runtime.device}; '
-                f'load_ms={runtime.model_load_duration_ms:.3f}'
-            )
-        except Exception as exc:  # noqa: BLE001 - startup must remain diagnosable
-            self.model_runtime = None
-            self.artifact_error = str(exc)
-            self.get_logger().error(
-                f'Visual runtime not ready; artifact/model load failed: {exc}'
-            )
+        self._load_v4_promotion_and_model()
 
     def _load_v4_promotion_and_model(self) -> None:
         """Load only a fully verified V4 promotion manifest and checkpoint."""
@@ -584,76 +506,48 @@ class Room315VisualStateInferenceNode(Node):
             right_rgb = image_message_to_rgb8(right_message)
             if self.model_runtime is None:
                 raise VisualRuntimeError('model runtime is not ready')
-            if self.runtime_generation == 'v4':
-                if self.v4_promotion is None or self.v4_api is None:
-                    raise VisualRuntimeError('V4 promotion runtime is not ready')
-                structured, timings = self.model_runtime.infer(
-                    left_rgb,
-                    right_rgb,
+            if self.v4_promotion is None or self.v4_api is None:
+                raise VisualRuntimeError('V4 promotion runtime is not ready')
+            structured, timings = self.model_runtime.infer(
+                left_rgb,
+                right_rgb,
+            )
+            self.last_timings = timings
+            diagnostic = self.v4_api['diagnostic'](
+                structured,
+                promotion=self.v4_promotion,
+                presence=presence,
+                left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
+                right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
+            )
+            if diagnostic.control_input_permitted is not False:
+                raise VisualRuntimeError(
+                    'V4 diagnostic legacy output attempted to permit control'
                 )
-                self.last_timings = timings
-                diagnostic = self.v4_api['diagnostic'](
-                    structured,
-                    promotion=self.v4_promotion,
-                    presence=presence,
-                    left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
-                    right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
-                )
-                if diagnostic.control_input_permitted is not False:
-                    raise VisualRuntimeError(
-                        'V4 diagnostic legacy output attempted to permit control'
-                    )
-                raw_payload = _v4_raw_prediction_payload(
-                    diagnostic,
-                    checkpoint_sha256=self.checkpoint_sha256,
-                    promotion_manifest_sha256=(
-                        self.promotion_manifest_sha256
-                    ),
-                    runtime_mode=self.runtime_mode,
-                    timestamp_s=now_s,
-                    left_image_stamp_s=left_stamp,
-                    right_image_stamp_s=right_stamp,
-                )
-                raw_message = String()
-                raw_message.data = json.dumps(raw_payload, sort_keys=True)
-                self.raw_model_prediction_pub.publish(raw_message)
-                prediction = self.v4_api['decode'](
-                    structured,
-                    promotion=self.v4_promotion,
-                    presence=presence,
-                    timestamp_s=now_s,
-                    left_image_stamp_s=left_stamp,
-                    right_image_stamp_s=right_stamp,
-                    left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
-                    right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
-                )
-            else:
-                if self.artifacts is None:
-                    raise VisualRuntimeError('V3 artifacts are not ready')
-                raw, timings = self.model_runtime.infer(left_rgb, right_rgb)
-                self.last_timings = timings
-                raw_message = String()
-                raw_message.data = json.dumps({
-                    'schema_version': 'room315.raw_model_prediction.v1',
-                    'checkpoint_sha256': self.checkpoint_sha256,
-                    'timestamp_s': now_s,
-                    'left_image_stamp_s': left_stamp,
-                    'right_image_stamp_s': right_stamp,
-                    'output_dimension': int(raw.shape[0]),
-                    'denormalized_output': [float(value) for value in raw],
-                    'control_input': False,
-                }, sort_keys=True)
-                self.raw_model_prediction_pub.publish(raw_message)
-                prediction = decode_active_slots(
-                    raw,
-                    vectorizer=self.artifacts.vectorizer,
-                    presence=presence,
-                    timestamp_s=now_s,
-                    left_image_stamp_s=left_stamp,
-                    right_image_stamp_s=right_stamp,
-                    left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
-                    right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
-                )
+            raw_payload = _v4_raw_prediction_payload(
+                diagnostic,
+                checkpoint_sha256=self.checkpoint_sha256,
+                promotion_manifest_sha256=(
+                    self.promotion_manifest_sha256
+                ),
+                runtime_mode=self.runtime_mode,
+                timestamp_s=now_s,
+                left_image_stamp_s=left_stamp,
+                right_image_stamp_s=right_stamp,
+            )
+            raw_message = String()
+            raw_message.data = json.dumps(raw_payload, sort_keys=True)
+            self.raw_model_prediction_pub.publish(raw_message)
+            prediction = self.v4_api['decode'](
+                structured,
+                promotion=self.v4_promotion,
+                presence=presence,
+                timestamp_s=now_s,
+                left_image_stamp_s=left_stamp,
+                right_image_stamp_s=right_stamp,
+                left_image_size=(left_rgb.shape[1], left_rgb.shape[0]),
+                right_image_size=(right_rgb.shape[1], right_rgb.shape[0]),
+            )
             self.raw_pub.publish(self._observation_message(
                 stage='raw',
                 prediction=prediction,
@@ -980,30 +874,6 @@ class Room315VisualStateInferenceNode(Node):
 
     def _string(self, name: str) -> str:
         return str(self.get_parameter(name).value)
-
-    def _artifact_string(self, name: str) -> str:
-        environment_names = {
-            'checkpoint_path': 'ROOM315_VISUAL_MODEL_PATH',
-            'sidecar_directory': 'ROOM315_VISUAL_SIDECAR_DIRECTORY',
-            'expected_checkpoint_sha256':
-                'ROOM315_VISUAL_EXPECTED_CHECKPOINT_SHA256',
-            'expected_target_stats_sha256':
-                'ROOM315_VISUAL_EXPECTED_TARGET_STATS_SHA256',
-            'expected_vectorizer_sha256':
-                'ROOM315_VISUAL_EXPECTED_VECTORIZER_SHA256',
-            'expected_training_config_sha256':
-                'ROOM315_VISUAL_EXPECTED_TRAINING_CONFIG_SHA256',
-            'expected_run_metadata_sha256':
-                'ROOM315_VISUAL_EXPECTED_RUN_METADATA_SHA256',
-            'expected_runtime_configuration_sha256':
-                'ROOM315_VISUAL_EXPECTED_RUNTIME_CONFIGURATION_SHA256',
-        }
-        environment_name = environment_names.get(name)
-        if environment_name:
-            override = os.environ.get(environment_name, '').strip()
-            if override:
-                return override
-        return self._string(name).strip()
 
     def _v4_artifact_string(self, name: str) -> str:
         environment_names = {

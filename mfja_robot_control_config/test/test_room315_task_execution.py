@@ -584,34 +584,15 @@ def test_planner_boundary_rejects_non_allowlisted_visual_publisher(
         )
 
 
-def test_visual_allowlist_schema_and_checkpoint_switch_atomically():
-    rollback_checkpoint = 'b' * 64
-    builder = VisualObservedStateBuilder(LiveStateConfig(
-        allowed_visual_schema_version='room315.visual_state.v3',
-        allowed_visual_checkpoint_sha256=rollback_checkpoint,
-    ))
-    old = _observation()
-    mixed = _observation()
-    mixed['schema_version'] = 'room315.visual_state.v3'
-
+def test_visual_allowlist_rejects_v3_schema_configuration():
     with pytest.raises(
-        TaskExecutionStateError,
-        match='visual_observation_schema_not_allowed',
+        ValueError,
+        match='allowed_visual_schema_version must be room315.visual_state.v4',
     ):
-        builder.build(_snapshot(observation=old), now_s=100.1)
-    with pytest.raises(
-        TaskExecutionStateError,
-        match='visual_observation_checkpoint_not_allowed',
-    ):
-        builder.build(_snapshot(observation=mixed), now_s=100.1)
-
-    promoted = _observation()
-    promoted['schema_version'] = 'room315.visual_state.v3'
-    promoted['checkpoint_sha256'] = rollback_checkpoint
-    assert builder.build(
-        _snapshot(observation=promoted),
-        now_s=100.1,
-    ).state_id == 'accepted-visual-10'
+        LiveStateConfig(
+            allowed_visual_schema_version='room315.visual_state.v3',
+            allowed_visual_checkpoint_sha256='b' * 64,
+        )
 
 
 def test_provider_does_not_store_wrong_visual_checkpoint():
@@ -636,22 +617,27 @@ def test_provider_does_not_store_wrong_visual_checkpoint():
         (
             'allowed_visual_schema_version',
             '',
-            'must match room315.visual_state',
+            'must be room315.visual_state.v4',
         ),
         (
             'allowed_visual_schema_version',
             'room315.visual_state.latest',
-            'must match room315.visual_state',
+            'must be room315.visual_state.v4',
         ),
         (
             'allowed_visual_checkpoint_sha256',
             '',
-            'must be a lowercase SHA-256',
+            'must be the exact authorized V4 checkpoint',
         ),
         (
             'allowed_visual_checkpoint_sha256',
             'A' * 64,
-            'must be a lowercase SHA-256',
+            'must be the exact authorized V4 checkpoint',
+        ),
+        (
+            'allowed_visual_checkpoint_sha256',
+            '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d',
+            'must be the exact authorized V4 checkpoint',
         ),
     ),
 )

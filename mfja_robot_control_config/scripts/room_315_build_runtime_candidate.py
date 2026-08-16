@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the immutable corrected Experiment-A Full runtime candidate."""
+"""Build the immutable corrected Experiment-A Full historical V3 archive."""
 
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ SOURCE_OUTPUT = CHECKPOINT.parent
 AUTHORITATIVE_SIDECARS = Path(
     '/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run'
 )
-ROLLBACK_CHECKPOINT = AUTHORITATIVE_SIDECARS / 'best.pt'
-ROLLBACK_SHA256 = (
+INITIALIZATION_CHECKPOINT = AUTHORITATIVE_SIDECARS / 'best.pt'
+INITIALIZATION_CHECKPOINT_SHA256 = (
     '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
 )
 CANDIDATE_ID = (
@@ -38,6 +38,7 @@ IDENTITIES = ['L1', 'L2', 'L3', 'L4', 'R1', 'R2', 'R3', 'R4']
 SCHEMA = 'room315.visual_state.v3'
 MODEL_KIND = 'structured_visual_state_torchvision_resnet18_fixed8_v3'
 RIGHT_SLOT3_RATIO = 0.447469343
+ARCHIVE_DEPLOYMENT_STATE = 'historical_v3_archive'
 
 
 class CandidateBuildError(RuntimeError):
@@ -67,8 +68,8 @@ def validate_and_load_checkpoint() -> dict[str, Any]:
         raise CandidateBuildError(
             f'checkpoint SHA-256 mismatch: expected {CHECKPOINT_SHA256}, got {actual}'
         )
-    if sha256_file(ROLLBACK_CHECKPOINT) != ROLLBACK_SHA256:
-        raise CandidateBuildError('rollback checkpoint SHA-256 mismatch')
+    if sha256_file(INITIALIZATION_CHECKPOINT) != INITIALIZATION_CHECKPOINT_SHA256:
+        raise CandidateBuildError('initialization checkpoint SHA-256 mismatch')
     try:
         import torch
         import torchvision
@@ -325,7 +326,7 @@ def build(output: Path) -> None:
         runtime_configuration = {
             'schema_version': 'room315.visual_runtime_candidate.v1',
             'candidate_id': CANDIDATE_ID,
-            'deployment_state': 'candidate',
+            'deployment_state': ARCHIVE_DEPLOYMENT_STATE,
             'checkpoint': {
                 'filename': 'best.pt',
                 'epoch': 24,
@@ -345,21 +346,20 @@ def build(output: Path) -> None:
                 'normalization_std_per_rgb_view': [0.229, 0.224, 0.225],
             },
             'artifact_sha256': artifact_hashes,
-            'selection': {
-                'ros_parameter': 'checkpoint_path',
-                'environment_variable': 'ROOM315_VISUAL_MODEL_PATH',
+            'archive_policy': {
+                'runtime_execution_supported': False,
+                'required_runtime_generation': 'v4',
             },
             'automatic_deployment_approval': False,
         }
         write_json(staging / 'runtime_configuration.json', runtime_configuration)
-        runtime_hash = sha256_file(staging / 'runtime_configuration.json')
 
         write_json(staging / 'acceptance_scenarios.json', acceptance_scenarios())
         candidate_state = {
             'schema_version': 'room315.deployment_candidate_state.v1',
             'candidate_id': CANDIDATE_ID,
             'checkpoint_sha256': CHECKPOINT_SHA256,
-            'state': 'candidate',
+            'state': ARCHIVE_DEPLOYMENT_STATE,
             'approved': False,
             'automatic_approval_allowed': False,
             'acceptance_execution_status': 'not_run',
@@ -379,8 +379,8 @@ def build(output: Path) -> None:
                 'continuation_epoch': 10,
             },
             'initialization_checkpoint': {
-                'path': str(ROLLBACK_CHECKPOINT),
-                'sha256': ROLLBACK_SHA256,
+                'path': str(INITIALIZATION_CHECKPOINT),
+                'sha256': INITIALIZATION_CHECKPOINT_SHA256,
                 'epoch': 14,
             },
             'canary_lineage': {
@@ -400,140 +400,31 @@ def build(output: Path) -> None:
             },
         }
         write_json(staging / 'provenance.json', provenance)
-        write_json(staging / 'rollback_option.json', {
-            'schema_version': 'room315.runtime_rollback.v1',
-            'checkpoint_path': str(ROLLBACK_CHECKPOINT),
-            'checkpoint_sha256': ROLLBACK_SHA256,
-            'preserved_unchanged': True,
-            'default_runtime_yaml_still_selects_rollback': True,
-        })
         write_json(staging / 'acceptance_report_not_run.json', {
             'schema_version': 'room315.runtime_acceptance_report.v1',
             'candidate_id': CANDIDATE_ID,
             'checkpoint_sha256': CHECKPOINT_SHA256,
-            'deployment_state': 'candidate',
+            'deployment_state': ARCHIVE_DEPLOYMENT_STATE,
             'acceptance_status': 'not_run',
             'automatic_deployment_approval': False,
             'approval': {'approved': False},
         })
 
-        yaml = f"""room_315_visual_state_inference_node:
-  ros__parameters:
-    use_sim_time: true
-    checkpoint_path: {staging / 'best.pt'}
-    sidecar_directory: {staging}
-    expected_checkpoint_sha256: {artifact_hashes['best.pt']}
-    expected_target_stats_sha256: {artifact_hashes['target_stats.json']}
-    expected_vectorizer_sha256: {artifact_hashes['visual_label_vectorizer.json']}
-    expected_training_config_sha256: {artifact_hashes['training_config.json']}
-    expected_run_metadata_sha256: {artifact_hashes['run_metadata.json']}
-    expected_runtime_configuration_sha256: {runtime_hash}
-    device: auto
-    presence_state_timeout_s: 1.0
-    presence_warmup_s: 0.5
-    reconcile_position_consistency: true
-    position_reconciliation_policy: canonical_s_m
-    max_position_reconciliation_error_m: 0.40
-    dry_run_state_fusion: true
-    plansys2_update_enabled: false
-    raw_model_prediction_topic: /room_315/visual_state/raw_model_prediction
-"""
-        # Replace the staging prefix before atomically publishing the directory.
-        yaml = yaml.replace(str(staging), str(output))
-        (staging / 'runtime_ros_parameters.yaml').write_text(yaml, encoding='utf-8')
-        env = f"""export ROOM315_VISUAL_MODEL_PATH='{output / 'best.pt'}'
-export ROOM315_VISUAL_SIDECAR_DIRECTORY='{output}'
-export ROOM315_VISUAL_EXPECTED_CHECKPOINT_SHA256='{artifact_hashes['best.pt']}'
-export ROOM315_VISUAL_EXPECTED_TARGET_STATS_SHA256='{artifact_hashes['target_stats.json']}'
-export ROOM315_VISUAL_EXPECTED_VECTORIZER_SHA256='{artifact_hashes['visual_label_vectorizer.json']}'
-export ROOM315_VISUAL_EXPECTED_TRAINING_CONFIG_SHA256='{artifact_hashes['training_config.json']}'
-export ROOM315_VISUAL_EXPECTED_RUN_METADATA_SHA256='{artifact_hashes['run_metadata.json']}'
-export ROOM315_VISUAL_EXPECTED_RUNTIME_CONFIGURATION_SHA256='{runtime_hash}'
-"""
-        (staging / 'activate_candidate.env').write_text(env, encoding='utf-8')
-
-        source_report = Path(__file__).with_name(
-            'room_315_runtime_acceptance_report.py'
-        )
-        shutil.copyfile(source_report, staging / source_report.name)
-        run_script = f"""#!/usr/bin/env bash
-set -euo pipefail
-CANDIDATE='{output}'
-if [[ $# -lt 2 || $# -gt 3 ]]; then
-  echo 'usage: run_gazebo_runtime_acceptance.sh SCENARIO_ID NEW_OUTPUT_ROOT [--execute]' >&2
-  exit 2
-fi
-SCENARIO_ID="$1"
-OUTPUT_ROOT="$2"
-if [[ -e "$OUTPUT_ROOT" ]]; then
-  echo "refusing to overwrite acceptance output: $OUTPUT_ROOT" >&2
-  exit 3
-fi
-EXECUTION_ARGS=(enable_task_execution:=false execution_enabled:=false)
-if [[ "${{3:-}}" == '--execute' ]]; then
-  EXECUTION_ARGS=(enable_task_execution:=true execution_enabled:=true)
-elif [[ $# -eq 3 ]]; then
-  echo 'third argument must be --execute' >&2
-  exit 2
-fi
-ros2 launch mfja_robot_control_config room_315_runtime_acceptance.launch.py \\
-  candidate_directory:="$CANDIDATE" \\
-  scenario_id:="$SCENARIO_ID" \\
-  output_root:="$OUTPUT_ROOT" \\
-  "${{EXECUTION_ARGS[@]}}"
-"""
-        (staging / 'run_gazebo_runtime_acceptance.sh').write_text(
-            run_script, encoding='utf-8'
-        )
-        report_script = f"""#!/usr/bin/env bash
-set -euo pipefail
-CANDIDATE='{output}'
-if [[ $# -ne 1 ]]; then
-  echo 'usage: generate_acceptance_report.sh EXISTING_OUTPUT_ROOT' >&2
-  exit 2
-fi
-python3 "$CANDIDATE/room_315_runtime_acceptance_report.py" \\
-  --candidate-directory "$CANDIDATE" \\
-  --event-directory "$1/events" \\
-  --output "$1/acceptance_report.json"
-"""
-        (staging / 'generate_acceptance_report.sh').write_text(
-            report_script, encoding='utf-8'
-        )
-        readme = f"""# Room 315 corrected Experiment-A Full runtime candidate
+        readme = f"""# Room 315 corrected Experiment-A Full historical V3 archive
 
 Candidate ID: `{CANDIDATE_ID}`
 
-State: **candidate**. This package is not deployment approval. It contains no
-dataset and its acceptance tooling cannot approve deployment automatically.
+State: **historical V3 archive**. This package is not deployment approval and
+contains no dataset. The current deployment and acceptance runtime requires the
+exact V4 candidate-state schema, so this predecessor checkpoint is not runnable.
 
-The default repository runtime YAML still points to the epoch-14 rollback
-checkpoint. Select this candidate explicitly with:
-
-```bash
-source {output / 'activate_candidate.env'}
-ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py
-```
-
-Run one observation-only Gazebo acceptance scenario into a new output path:
-
-```bash
-{output / 'run_gazebo_runtime_acceptance.sh'} accept_l4_loaded \\
-  /home/tiago/room315_runtime_acceptance_outputs/accept_l4_loaded_attempt1
-```
-
-Passing `--execute` is a separate explicit actuation opt-in. Submit the
-scenario's `suggested_natural_language_goal` only after inspecting its setup.
-
-After all seven scenario event files have been collected under one output
-root, generate the non-approving report:
-
-```bash
-{output / 'generate_acceptance_report.sh'} NEW_OUTPUT_ROOT
-```
+The V3 checkpoint, sidecars, provenance, and acceptance-scenario declarations
+are retained as historical evidence only. Runtime ROS parameters, activation
+environment files, and acceptance execution/report helpers are intentionally
+not packaged. Use an immutable V4 candidate for supported runtime validation.
 
 `SHA256SUMS` covers every package payload except itself. The package directory
-and files are permission-hardened after atomic publication.
+and files are read-only after atomic publication.
 """
         (staging / 'README.md').write_text(readme, encoding='utf-8')
 
@@ -544,8 +435,8 @@ and files are permission-hardened after atomic publication.
         manifest = {
             'schema_version': 'room315.immutable_deployment_manifest.v1',
             'candidate_id': CANDIDATE_ID,
-            'deployment_state': 'candidate',
-            'immutable_policy': 'atomic creation; refuse overwrite; read/execute-only permissions',
+            'deployment_state': ARCHIVE_DEPLOYMENT_STATE,
+            'immutable_policy': 'atomic creation; refuse overwrite; read-only permissions',
             'files': [
                 {
                     'path': path.name,
@@ -575,10 +466,10 @@ and files are permission-hardened after atomic publication.
         raise
 
     print(json.dumps({
-        'status': 'CANDIDATE_CREATED',
+        'status': 'HISTORICAL_ARCHIVE_CREATED',
         'candidate': str(output),
         'checkpoint_sha256': CHECKPOINT_SHA256,
-        'deployment_state': 'candidate',
+        'deployment_state': ARCHIVE_DEPLOYMENT_STATE,
     }, sort_keys=True))
 
 

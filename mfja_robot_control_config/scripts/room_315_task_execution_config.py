@@ -84,9 +84,6 @@ V4_TASK_EXECUTION_FAULT_SCENARIOS = (
 MAX_TASK_EXECUTION_AUTHORIZATION_BYTES = 64 * 1024
 MAX_TASK_EXECUTION_EVIDENCE_BYTES = 4 * 1024 * 1024
 
-_VISUAL_SCHEMA_VERSION_PATTERN = re.compile(
-    r'room315\.visual_state\.v[1-9][0-9]*'
-)
 _SHA256_PATTERN = re.compile(r'[0-9a-f]{64}')
 
 # ``arrival_confirmation_frames`` is accepted only so an older launch override
@@ -264,20 +261,15 @@ def validate_visual_publisher_allowlist(
 ) -> None:
     """Validate the exact visual publisher provenance admitted to planning."""
 
-    if (
-        not isinstance(schema_version, str)
-        or _VISUAL_SCHEMA_VERSION_PATTERN.fullmatch(schema_version) is None
-    ):
+    if schema_version != V4_TASK_EXECUTION_VISUAL_SCHEMA_VERSION:
         raise ValueError(
-            'allowed_visual_schema_version must match '
-            'room315.visual_state.v<N>'
+            'allowed_visual_schema_version must be '
+            f'{V4_TASK_EXECUTION_VISUAL_SCHEMA_VERSION}'
         )
-    if (
-        not isinstance(checkpoint_sha256, str)
-        or _SHA256_PATTERN.fullmatch(checkpoint_sha256) is None
-    ):
+    if checkpoint_sha256 != V4_TASK_EXECUTION_CHECKPOINT_SHA256:
         raise ValueError(
-            'allowed_visual_checkpoint_sha256 must be a lowercase SHA-256'
+            'allowed_visual_checkpoint_sha256 must be the exact authorized '
+            f'V4 checkpoint {V4_TASK_EXECUTION_CHECKPOINT_SHA256}'
         )
 
 
@@ -1134,7 +1126,6 @@ def _verify_runtime_manifest_manual_decision(
             'plansys2_problem_built_from_v4_observed_state': True,
             'optional_problem_expert_predicate_mirror_disabled': True,
             'supervisor_and_dzi_safety_gates_required': True,
-            'rollback_preserved': True,
         },
         label='V4 closed-loop runtime manual review assertions',
     )

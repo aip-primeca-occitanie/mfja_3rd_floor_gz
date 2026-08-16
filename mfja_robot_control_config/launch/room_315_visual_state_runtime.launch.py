@@ -12,33 +12,18 @@ def _launch_inference(context):
     overrides = {
         'use_sim_time': LaunchConfiguration('use_sim_time'),
         'device': LaunchConfiguration('device'),
+        'runtime_generation': LaunchConfiguration('runtime_generation'),
         'dry_run_state_fusion': LaunchConfiguration('dry_run_state_fusion'),
         'plansys2_update_enabled': LaunchConfiguration(
             'plansys2_update_enabled'
         ),
     }
-    checkpoint = LaunchConfiguration('checkpoint_path').perform(context).strip()
-    sidecars = LaunchConfiguration('sidecar_directory').perform(context).strip()
-    if checkpoint:
-        overrides['checkpoint_path'] = checkpoint
-    if sidecars:
-        overrides['sidecar_directory'] = sidecars
     for argument, parameter in (
-        ('runtime_generation', 'runtime_generation'),
         ('runtime_mode', 'runtime_mode'),
         ('v4_promotion_manifest', 'v4_promotion_manifest_path'),
         (
             'v4_promotion_manifest_sha256',
             'expected_v4_promotion_manifest_sha256',
-        ),
-        ('checkpoint_sha256', 'expected_checkpoint_sha256'),
-        ('target_stats_sha256', 'expected_target_stats_sha256'),
-        ('vectorizer_sha256', 'expected_vectorizer_sha256'),
-        ('training_config_sha256', 'expected_training_config_sha256'),
-        ('run_metadata_sha256', 'expected_run_metadata_sha256'),
-        (
-            'runtime_configuration_sha256',
-            'expected_runtime_configuration_sha256',
         ),
     ):
         value = LaunchConfiguration(argument).perform(context).strip()
@@ -93,8 +78,9 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'runtime_generation',
-            default_value='',
-            description='Optional v3/v4 backend override; empty keeps YAML.',
+            default_value='v4',
+            choices=['v4'],
+            description='The deployable visual runtime is V4 only.',
         ),
         DeclareLaunchArgument(
             'runtime_mode',
@@ -110,25 +96,6 @@ def generate_launch_description():
             'v4_promotion_manifest_sha256',
             default_value='',
             description='Expected SHA-256 of the V4 promotion manifest.',
-        ),
-        DeclareLaunchArgument(
-            'checkpoint_path',
-            default_value='',
-            description='Optional override; empty keeps the YAML value.',
-        ),
-        DeclareLaunchArgument(
-            'sidecar_directory',
-            default_value='',
-            description='Optional override; empty keeps the YAML value.',
-        ),
-        DeclareLaunchArgument('checkpoint_sha256', default_value=''),
-        DeclareLaunchArgument('target_stats_sha256', default_value=''),
-        DeclareLaunchArgument('vectorizer_sha256', default_value=''),
-        DeclareLaunchArgument('training_config_sha256', default_value=''),
-        DeclareLaunchArgument('run_metadata_sha256', default_value=''),
-        DeclareLaunchArgument(
-            'runtime_configuration_sha256',
-            default_value='',
         ),
         DeclareLaunchArgument(
             'device',

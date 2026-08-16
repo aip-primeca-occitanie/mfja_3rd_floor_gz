@@ -31,16 +31,15 @@ PROMOTION_SCHEMA = 'room315.visual_runtime_promotion.v4.v1'
 SHADOW_REPORT_SCHEMA = 'room315.visual_shadow_comparison.v4.v1'
 ACCEPTANCE_REPORT_SCHEMA = 'room315.runtime_acceptance_report.v1'
 FAULT_REPORT_SCHEMA = 'room315.visual_runtime_v4.fault_injection.v1'
-ROLLBACK_REPORT_SCHEMA = 'room315.visual_runtime_v4.rollback_smoke.v1'
 MANUAL_DECISION_SCHEMA = 'room315.visual_runtime_v4.manual_decision.v1'
 ACTIVE_STATE_SCHEMA = 'room315.deployment_candidate_state.v4.v1'
-ROLLBACK_METADATA_SCHEMA = 'room315.runtime_rollback.v4.active.v1'
 
 PROMOTION_MANIFEST_NAME = 'runtime_promotion_manifest.json'
 EXPECTED_SCENARIO_COUNT = 7
-V3_SCHEMA_VERSION = 'room315.visual_state.v3'
 V4_SCHEMA_VERSION = 'room315.visual_state.v4'
-V3_CHECKPOINT_SHA256 = (
+# Historical same-frame comparison reference. It is evidence only and is never
+# packaged as a selectable runtime.
+SHADOW_REFERENCE_CHECKPOINT_SHA256 = (
     '8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d'
 )
 APPROVED_DECISION = 'approved'
@@ -104,8 +103,6 @@ class PromotionInputs:
     expected_acceptance_report_sha256: str
     fault_injection_report: Path
     expected_fault_injection_report_sha256: str
-    rollback_smoke_report: Path
-    expected_rollback_smoke_report_sha256: str
     reviewer: str
     decision: str
     scope: str
@@ -123,7 +120,6 @@ class VerifiedCandidate:
     manifest_sha256: str
     scenario_ids: tuple[str, ...]
     artifact_paths: Mapping[str, Path]
-    rollback_checkpoint_path: str
 
 
 @dataclass(frozen=True)
@@ -131,7 +127,6 @@ class VerifiedEvidence:
     shadow: Mapping[str, Any]
     acceptance: Mapping[str, Any]
     faults: Mapping[str, Any]
-    rollback: Mapping[str, Any]
     inputs: tuple[EvidenceInput, ...]
 
 
@@ -271,9 +266,10 @@ def verify_candidate(
     manifest = load_json_object(manifest_path, 'candidate promotion manifest')
     state = load_json_object(candidate / 'candidate_state.json', 'candidate state')
     scenarios = load_json_object(candidate / 'acceptance_scenarios.json', 'candidate acceptance scenarios')
-    rollback = load_json_object(candidate / 'rollback_option.json', 'candidate rollback option')
 
     _require(manifest.get('schema_version') == PROMOTION_SCHEMA, 'candidate promotion schema mismatch')
+    _require('rollback_contract' not in manifest, 'candidate manifest contains a rollback contract')
+    _require(not (candidate / 'rollback_option.json').exists(), 'candidate contains a rollback option')
     _require(manifest.get('immutable') is True, 'candidate manifest is not immutable')
     _require(manifest.get('deployment_mode') == 'shadow', 'candidate is not in shadow deployment mode')
     _require(manifest.get('manual_review_approved') is False, 'candidate was already marked manually approved')
@@ -337,11 +333,6 @@ def verify_candidate(
         _require(scenario_id not in scenario_ids, 'candidate acceptance scenario IDs are duplicated')
         scenario_ids.append(scenario_id)
 
-    _require(rollback.get('backend') == 'v3', 'candidate rollback backend is not V3')
-    _require(rollback.get('checkpoint_sha256') == V3_CHECKPOINT_SHA256, 'candidate rollback checkpoint SHA-256 mismatch')
-    _require(rollback.get('preserved_unchanged') is True, 'candidate rollback was not preserved unchanged')
-    rollback_checkpoint_path = _required_text(rollback.get('checkpoint_path'), 'rollback checkpoint path', maximum=1024)
-
     verified = _verify_core_manifest(manifest_path, expected)
     _require(getattr(verified, 'deployment_mode', None) == 'shadow', 'runtime core did not verify a shadow candidate')
     _require(getattr(verified, 'checkpoint_sha256', None) == checkpoint_sha, 'runtime-core/candidate checkpoint mismatch')
@@ -355,7 +346,6 @@ def verify_candidate(
         manifest_sha256=expected,
         scenario_ids=tuple(scenario_ids),
         artifact_paths=artifact_paths,
-        rollback_checkpoint_path=rollback_checkpoint_path,
     )
 
 
@@ -376,7 +366,10 @@ def _verify_shadow_report(report: Mapping[str, Any], candidate: VerifiedCandidat
     checkpoints = report.get('expected_checkpoint_sha256')
     _require(isinstance(checkpoints, Mapping), 'shadow report lacks checkpoint bindings')
     _require(checkpoints.get('v4') == candidate.checkpoint_sha256, 'shadow report V4 checkpoint mismatch')
-    _require(checkpoints.get('v3') == V3_CHECKPOINT_SHA256, 'shadow report V3 checkpoint mismatch')
+    _require(
+        checkpoints.get('v3') == SHADOW_REFERENCE_CHECKPOINT_SHA256,
+        'shadow report reference checkpoint mismatch',
+    )
     if 'candidate_id' in report:
         _require(report.get('candidate_id') == candidate.candidate_id, 'shadow report candidate ID mismatch')
     _require(report.get('wrong_v4_side_identities') == [], 'shadow report contains wrong-side V4 identities')
@@ -469,42 +462,22 @@ def _verify_fault_report(report: Mapping[str, Any], candidate: VerifiedCandidate
         _require(row.get('passed') is True and row.get('rejected') is True, f'fault case was not rejected: {case_id}')
 
 
-def _verify_rollback_report(report: Mapping[str, Any]) -> None:
-    _require(report.get('schema_version') == ROLLBACK_REPORT_SCHEMA, 'rollback-smoke report schema mismatch')
-    _require(report.get('status') == 'passed', 'rollback smoke did not pass')
-    _require(report.get('v3_schema_version') == V3_SCHEMA_VERSION, 'rollback smoke V3 schema mismatch')
-    _require(report.get('v3_checkpoint_sha256') == V3_CHECKPOINT_SHA256, 'rollback smoke V3 checkpoint SHA-256 mismatch')
-    for field in (
-        'model_ready',
-        'raw_prediction_observed',
-        'accepted_observation_observed',
-        'task_allowlist_matched',
-    ):
-        _require(report.get(field) is True, f'rollback smoke failed: {field}')
-    _require(report.get('plansys2_update_enabled') is False, 'rollback smoke enabled PlanSys2 updates')
-    _require(report.get('actuation_command_count') == 0, 'rollback smoke emitted actuation commands')
-    _require(report.get('v4_runtime_selected') is False, 'rollback smoke still selected V4')
-
-
 def verify_evidence(inputs: PromotionInputs, candidate: VerifiedCandidate) -> VerifiedEvidence:
     evidence_inputs = (
         EvidenceInput(inputs.shadow_report, inputs.expected_shadow_report_sha256, 'shadow_comparison_report.json', 'shadow comparison report'),
         EvidenceInput(inputs.acceptance_report, inputs.expected_acceptance_report_sha256, 'runtime_acceptance_report.json', 'runtime acceptance report'),
         EvidenceInput(inputs.fault_injection_report, inputs.expected_fault_injection_report_sha256, 'fault_injection_report.json', 'fault-injection report'),
-        EvidenceInput(inputs.rollback_smoke_report, inputs.expected_rollback_smoke_report_sha256, 'rollback_smoke_report.json', 'rollback-smoke report'),
     )
-    shadow, acceptance, faults, rollback = (
+    shadow, acceptance, faults = (
         _load_hashed_evidence(item) for item in evidence_inputs
     )
     _verify_shadow_report(shadow, candidate)
     _verify_acceptance_report(acceptance, candidate)
     _verify_fault_report(faults, candidate)
-    _verify_rollback_report(rollback)
     return VerifiedEvidence(
         shadow=shadow,
         acceptance=acceptance,
         faults=faults,
-        rollback=rollback,
         inputs=evidence_inputs,
     )
 
@@ -536,7 +509,7 @@ def _manual_decision_record(
     scope: str,
     reviewed_at_utc: str,
 ) -> dict[str, Any]:
-    payloads = (evidence.shadow, evidence.acceptance, evidence.faults, evidence.rollback)
+    payloads = (evidence.shadow, evidence.acceptance, evidence.faults)
     return {
         'schema_version': MANUAL_DECISION_SCHEMA,
         'candidate_id': candidate.candidate_id,
@@ -569,7 +542,6 @@ def _manual_decision_record(
             'all_faults_rejected': True,
             'plansys2_mutation_count': 0,
             'actuation_command_count': 0,
-            'v3_rollback_smoke_passed': True,
         },
     }
 
@@ -607,22 +579,8 @@ def _active_manifest(
             'shadow_comparison': _evidence_reference(evidence.inputs[0], evidence.shadow),
             'seven_scenario_quantitative_acceptance': _evidence_reference(evidence.inputs[1], evidence.acceptance),
             'fault_injection': _evidence_reference(evidence.inputs[2], evidence.faults),
-            'v3_rollback_smoke': _evidence_reference(evidence.inputs[3], evidence.rollback),
         },
     })
-    rollback_contract = manifest.get('rollback_contract')
-    _require(isinstance(rollback_contract, Mapping), 'candidate manifest lacks rollback contract')
-    manifest['rollback_contract'] = {
-        **dict(rollback_contract),
-        'checkpoint_sha256': V3_CHECKPOINT_SHA256,
-        'rollback_smoke_report_path': evidence.inputs[3].bundle_name,
-        'rollback_smoke_report_sha256': _required_sha256(
-            evidence.inputs[3].expected_sha256,
-            'rollback-smoke report SHA-256',
-        ),
-        'rollback_smoke_status': 'passed',
-        'automatic_rollback_allowed': False,
-    }
     return manifest
 
 
@@ -684,34 +642,7 @@ def _active_candidate_state(
             'shadow_comparison': evidence.inputs[0].expected_sha256,
             'seven_scenario_quantitative_acceptance': evidence.inputs[1].expected_sha256,
             'fault_injection': evidence.inputs[2].expected_sha256,
-            'v3_rollback_smoke': evidence.inputs[3].expected_sha256,
         },
-        'rollback_metadata_filename': 'rollback_option.json',
-    }
-
-
-def _rollback_metadata(
-    candidate: VerifiedCandidate,
-    evidence: VerifiedEvidence,
-    active_manifest_sha256: str,
-) -> dict[str, Any]:
-    return {
-        'schema_version': ROLLBACK_METADATA_SCHEMA,
-        'candidate_id': candidate.candidate_id,
-        'active_backend': 'v4',
-        'active_checkpoint_sha256': candidate.checkpoint_sha256,
-        'active_promotion_manifest_sha256': active_manifest_sha256,
-        'rollback_backend': 'v3',
-        'rollback_schema_version': V3_SCHEMA_VERSION,
-        'rollback_checkpoint_path': candidate.rollback_checkpoint_path,
-        'rollback_checkpoint_sha256': V3_CHECKPOINT_SHA256,
-        'rollback_smoke_report': {
-            'path': evidence.inputs[3].bundle_name,
-            'sha256': evidence.inputs[3].expected_sha256,
-            'status': 'passed',
-        },
-        'automatic_rollback_allowed': False,
-        'restore_action': 'explicitly select the preserved approved V3 runtime configuration',
     }
 
 
@@ -728,8 +659,9 @@ state fusion in dry-run mode, keep PlanSys2 updates disabled, and authorize no
 actuation.  Creating this bundle does not edit or select any checked-in
 configuration.  Physical deployment is not approved.
 
-`rollback_option.json` binds the separately smoke-tested V3 rollback checkpoint.
-Every payload is bound by `SHA256SUMS`; the directory and files are read-only.
+The same-frame V3/V4 comparison is retained only as observation evidence; the
+bundle emits V4 runtime parameters only. Every payload is bound by
+`SHA256SUMS`; the directory and files are read-only.
 """
 
 
@@ -827,10 +759,6 @@ def promote(inputs: PromotionInputs) -> dict[str, Any]:
                 evidence,
             ),
         )
-        write_json(
-            staging / 'rollback_option.json',
-            _rollback_metadata(candidate, evidence, active_manifest_sha),
-        )
         (staging / 'runtime_ros_parameters.yaml').write_text(
             _runtime_yaml(output, active_manifest_sha),
             encoding='utf-8',
@@ -907,8 +835,6 @@ def parse_args(argv: list[str] | None = None) -> PromotionInputs:
     parser.add_argument('--expected-acceptance-report-sha256', required=True)
     parser.add_argument('--fault-injection-report', type=Path, required=True)
     parser.add_argument('--expected-fault-injection-report-sha256', required=True)
-    parser.add_argument('--rollback-smoke-report', type=Path, required=True)
-    parser.add_argument('--expected-rollback-smoke-report-sha256', required=True)
     parser.add_argument('--reviewer', required=True)
     parser.add_argument('--decision', required=True)
     parser.add_argument('--scope', required=True)

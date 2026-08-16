@@ -111,12 +111,6 @@ def candidate(tmp_path):
         'topology_contract': {'fixture': True},
         'calibration_contract': {'fixture': True},
         'acceptance_thresholds': {'fixture': True},
-        'rollback_contract': {
-            'backend': 'v3',
-            'checkpoint_path': '/fixture/v3/best.pt',
-            'checkpoint_sha256': promotion.V3_CHECKPOINT_SHA256,
-            'preserved_unchanged': True,
-        },
     }
     _write_json(root / promotion.PROMOTION_MANIFEST_NAME, manifest)
     _write_json(root / 'candidate_state.json', {
@@ -144,14 +138,6 @@ def candidate(tmp_path):
         },
         'scenarios': [{'scenario_id': value} for value in SCENARIO_IDS],
     })
-    _write_json(root / 'rollback_option.json', {
-        'schema_version': 'room315.runtime_rollback.v4.v1',
-        'candidate_id': candidate_id,
-        'backend': 'v3',
-        'checkpoint_path': '/fixture/v3/best.pt',
-        'checkpoint_sha256': promotion.V3_CHECKPOINT_SHA256,
-        'preserved_unchanged': True,
-    })
     (root / 'runtime_ros_parameters.yaml').write_text('runtime_mode: shadow\n')
     (root / 'README.md').write_text('fixture\n')
     _seal_candidate(root)
@@ -167,7 +153,7 @@ def _shadow(checkpoint_sha):
         'role': 'observation_only_same_frame_shadow',
         'automatic_runtime_switch': False,
         'expected_checkpoint_sha256': {
-            'v3': promotion.V3_CHECKPOINT_SHA256,
+            'v3': promotion.SHADOW_REFERENCE_CHECKPOINT_SHA256,
             'v4': checkpoint_sha,
         },
         'minimum_paired_frames': 20,
@@ -242,22 +228,6 @@ def _faults(checkpoint_sha):
     }
 
 
-def _rollback():
-    return {
-        'schema_version': promotion.ROLLBACK_REPORT_SCHEMA,
-        'status': 'passed',
-        'v3_schema_version': promotion.V3_SCHEMA_VERSION,
-        'v3_checkpoint_sha256': promotion.V3_CHECKPOINT_SHA256,
-        'model_ready': True,
-        'raw_prediction_observed': True,
-        'accepted_observation_observed': True,
-        'task_allowlist_matched': True,
-        'plansys2_update_enabled': False,
-        'actuation_command_count': 0,
-        'v4_runtime_selected': False,
-    }
-
-
 @pytest.fixture
 def environment(candidate, tmp_path):
     manifest_sha = _hash(candidate / promotion.PROMOTION_MANIFEST_NAME)
@@ -266,13 +236,11 @@ def environment(candidate, tmp_path):
         'shadow': tmp_path / 'shadow.json',
         'acceptance': tmp_path / 'acceptance.json',
         'fault': tmp_path / 'fault.json',
-        'rollback': tmp_path / 'rollback.json',
     }
     payloads = {
         'shadow': _shadow(state['checkpoint_sha256']),
         'acceptance': _acceptance(state['checkpoint_sha256']),
         'fault': _faults(state['checkpoint_sha256']),
-        'rollback': _rollback(),
     }
     for name, path in reports.items():
         _write_json(path, payloads[name])
@@ -285,8 +253,6 @@ def environment(candidate, tmp_path):
         expected_acceptance_report_sha256=_hash(reports['acceptance']),
         fault_injection_report=reports['fault'],
         expected_fault_injection_report_sha256=_hash(reports['fault']),
-        rollback_smoke_report=reports['rollback'],
-        expected_rollback_smoke_report_sha256=_hash(reports['rollback']),
         reviewer='integration-reviewer',
         decision=promotion.APPROVED_DECISION,
         scope=promotion.APPROVED_SCOPE,
@@ -304,7 +270,6 @@ def _rewrite_report(inputs, reports, name, mutate):
         'shadow': 'expected_shadow_report_sha256',
         'acceptance': 'expected_acceptance_report_sha256',
         'fault': 'expected_fault_injection_report_sha256',
-        'rollback': 'expected_rollback_smoke_report_sha256',
     }[name]
     return replace(inputs, **{field: _hash(path)})
 
@@ -329,6 +294,7 @@ def test_pass_creates_atomic_read_only_active_bundle(environment):
     assert manifest['manual_review_approved'] is True
     assert manifest['manual_runtime_review_status'] == 'approved'
     assert manifest['automatic_promotion_allowed'] is False
+    assert 'rollback_contract' not in manifest
     assert manifest['manual_decision_record']['sha256'] == _hash(
         output / 'manual_decision_record.json'
     )
@@ -336,6 +302,8 @@ def test_pass_creates_atomic_read_only_active_bundle(environment):
     assert decision['decision'] == 'approved'
     assert decision['scope'] == promotion.APPROVED_SCOPE
     assert decision['physical_deployment_approved'] is False
+    assert all('rollback' not in key for key in decision['evidence'])
+    assert all('rollback' not in key for key in decision['review_assertions'])
 
     state = json.loads((output / 'candidate_state.json').read_text())
     assert state['state'] == 'active_selected_manual_review_approved'
@@ -345,6 +313,9 @@ def test_pass_creates_atomic_read_only_active_bundle(environment):
         'model_schema_version': promotion.V4_SCHEMA_VERSION,
         'checkpoint_sha256': result['checkpoint_sha256'],
     }
+    assert all('rollback' not in key for key in state)
+    assert not (output / 'rollback_option.json').exists()
+    assert all('rollback' not in path.name for path in output.iterdir())
     runtime_yaml = (output / 'runtime_ros_parameters.yaml').read_text()
     assert 'runtime_mode: active' in runtime_yaml
     assert 'dry_run_state_fusion: true' in runtime_yaml
@@ -367,7 +338,6 @@ def test_pass_creates_atomic_read_only_active_bundle(environment):
         'shadow_report',
         'acceptance_report',
         'fault_injection_report',
-        'rollback_smoke_report',
     ),
 )
 def test_every_required_input_missing_fails_before_output(environment, field):
@@ -385,7 +355,6 @@ def test_every_required_input_missing_fails_before_output(environment, field):
         'expected_shadow_report_sha256',
         'expected_acceptance_report_sha256',
         'expected_fault_injection_report_sha256',
-        'expected_rollback_smoke_report_sha256',
     ),
 )
 def test_every_external_hash_mismatch_fails_before_output(environment, field):
@@ -410,10 +379,6 @@ SEMANTIC_FAILURES = (
     ('fault', lambda value: value.update(all_faults_rejected=False), 'not all injected'),
     ('fault', lambda value: value['cases'].pop(), 'case set is incomplete'),
     ('fault', lambda value: value.update(plansys2_mutation_count=1), 'mutated PlanSys2'),
-    ('rollback', lambda value: value.update(v3_checkpoint_sha256='0' * 64), 'checkpoint SHA-256 mismatch'),
-    ('rollback', lambda value: value.update(model_ready=False), 'model_ready'),
-    ('rollback', lambda value: value.update(plansys2_update_enabled=True), 'enabled PlanSys2'),
-    ('rollback', lambda value: value.update(v4_runtime_selected=True), 'still selected V4'),
 )
 
 
