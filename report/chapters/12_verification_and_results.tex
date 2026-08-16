@@ -151,6 +151,12 @@ partition and passed 76 base plus four runtime-threshold gates. Evidence is at
 The selected checkpoint, sealed images/labels and raw positive, fail-closed
 and post-promotion-smoke bags are published in the full-evidence release indexed in
 \cref{app:reproducibility}; they are not stored as Git blobs.
+The
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1}{project data-and-replay
+release} provides the complete labelled training and evaluation
+partitions, both required checkpoints, frozen source and portable replay. It
+re-evaluates the selected checkpoint without reopening the historical one-shot
+attempt; exact counts, hashes and claim limits are in \cref{app:reproducibility}.
 
 A gate is one predeclared Boolean acceptance check. The 76 base gates cover
 model quality and support across the global set, rails, segments, target zones,

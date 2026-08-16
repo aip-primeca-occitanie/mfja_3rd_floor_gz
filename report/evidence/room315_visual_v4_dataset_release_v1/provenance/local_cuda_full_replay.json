@@ -1,0 +1,58 @@
+{
+  "all_requested_comparisons_passed": true,
+  "asset_archives_verified_before_replay": true,
+  "checkpoint_sha256": "869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d",
+  "completed_at_utc": "2026-08-16T17:14:41Z",
+  "environment": {
+    "cudnn": 91002,
+    "cuda_runtime": "12.8",
+    "device": "cuda",
+    "numpy": "2.2.6",
+    "pillow": "12.2.0",
+    "python": "3.12.3",
+    "pyyaml": "6.0.3",
+    "torch": "2.10.0+cu128",
+    "torchvision": "0.25.0+cu128"
+  },
+  "full_local_report": {
+    "bytes": 712928,
+    "published": false,
+    "reason": "the portable runner deterministically regenerates this machine-specific report",
+    "sha256": "bdd5786696a323becc74e8e56d6a532eaee1a5134de7bd7373099c877bafee93"
+  },
+  "recomputed_result_families": [
+    "primary_metrics",
+    "camera_counterfactuals",
+    "segment_calibration",
+    "acceptance_gates",
+    "final_test_dataset_coverage",
+    "final_test_runtime_thresholds"
+  ],
+  "source_protocol_lock_sha256": "03104b8e3585710b96571dfc723120f45b1acbd26351d2fcc5a17655906eb182",
+  "splits": {
+    "canary": {
+      "acceptance": true,
+      "calibration": true,
+      "counterfactuals": true,
+      "metrics": true,
+      "records": 256
+    },
+    "final_test": {
+      "acceptance": true,
+      "calibration": true,
+      "counterfactuals": true,
+      "coverage_audit": true,
+      "metrics": true,
+      "records": 1040,
+      "runtime_thresholds": true
+    },
+    "validation": {
+      "acceptance": true,
+      "calibration": true,
+      "counterfactuals": true,
+      "metrics": true,
+      "records": 512
+    }
+  },
+  "status": "passed"
+}

@@ -188,6 +188,28 @@ disjoint. This is **target/state support overlap**, not reuse of the same sample
 or image. It must not be summarized as either “all labels are disjoint” or
 “samples leaked.”
 
+## Published V4 reproduction companion
+
+The complete post-experiment distribution for the reported V4 procedure is
+published from this project's
+[`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+GitHub Release. Its repository-side control package is retained at
+[`report/evidence/room315_visual_v4_dataset_release_v1/`](../report/evidence/room315_visual_v4_dataset_release_v1/README.md).
+The release contains the active V4 inputs listed above: 1,528 Legacy Training
+plus 4,000 Hard-case Training scenes, 512 Hard-case Validation scenes, 256
+Development-Canary scenes and 1,040 Preregistered Final-Test scenes. It also
+provides both required checkpoints, the frozen source and stateless evaluation
+tooling. The historical grouped predecessor Validation and consumed Test
+partitions are not V4 inputs and are not included.
+
+Canary and Final-Test disclosure occurred only after the historical experiment
+and its immutable attempts completed; later publication changes availability,
+not the roles recorded in this registry. The repository and release assets are
+publicly accessible for inspection and reproducibility, but that accessibility
+does not make them an open dataset or grant a data or model-weight
+reuse licence. Asset counts and SHA-256 values are indexed in
+[`ROOM315_VISUAL_V4_DATASET_RELEASE.md`](../report/evidence/ROOM315_VISUAL_V4_DATASET_RELEASE.md).
+
 ## Reproduction
 
 From the repository root, with the seven materialized datasets available at the

@@ -369,3 +369,34 @@ The retained build log has SHA-256
 `f602880a4f50d3c71a0d68d0abc8571816bf2713a89bcdd047d04560c08ce804`;
 the identities are recorded in
 `evidence/final_report_sha256_2026-08-16.txt`.
+
+## V4 data-release and portable-replay publication---16 August 2026
+
+The report now links the project data release
+`https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1`,
+under tag `v4-seed31520260811-dataset-v1` in the organisation-owned source
+project.
+
+- Recorded the complete labelled procedure inventory: 5,528 Training, 512
+  Validation, 256 Development-Canary and 1,040 Final-Test scenes, totalling
+  7,336 paired-camera scenes and 14,672 images.
+- Recorded that the release contains the predecessor V3 initialisation
+  checkpoint, the selected V4 epoch-11 checkpoint, frozen evaluation source and
+  the portable stateless replay.
+- Limited the reproducibility statement to repeating the documented procedure
+  and re-evaluating the selected checkpoint. It does not claim bit-identical
+  retraining across arbitrary environments or describe the release as an open
+  dataset or a standalone reuse licence.
+- Clarified that publication followed training, checkpoint selection, Canary
+  evaluation and the immutable Final-Test attempt. Later availability therefore
+  changes no partition role, metric, gate, acceptance result or one-shot
+  provenance.
+
+The final `make check` produced a 72-page A4 PDF (4,691,625 bytes), with no
+undefined citations or references and no overfull boxes. `main.pdf` and the
+named delivery PDF are byte-identical at SHA-256
+`3e82de87fe89364664f679ad1b69d452fd15198e686798bf66ff7a7cb98dfd2b`.
+The retained build log has SHA-256
+`a70c40801e8d3f404895ab2f471e54f3bc9caf7e86f4a7027777f51387929a90`;
+the identities are recorded in
+`evidence/final_report_sha256_2026-08-16.txt`.

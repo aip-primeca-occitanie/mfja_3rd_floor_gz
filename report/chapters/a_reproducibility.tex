@@ -39,7 +39,7 @@ procedures and launch arguments are documented in \path{runbook.html},
 \path{docs/INSTALLATION.md}, \path{docs/QUICK_START_AND_FEATURE_GUIDE.md} and
 \path{docs/ROOM315_LANGUAGE_TO_MOTION_RUNTIME.md}.
 
-\section{Primary evidence identity}
+\section{Data and artefact availability}
 
 The repository-relative evidence package is
 \path{report/evidence/room315_visual_v4_submission_2026-08-11}. Its
@@ -83,6 +83,31 @@ protocol. Some copied machine-generated records preserve absolute
 archival paths from the evaluation host. They are retained for provenance but
 are not submission locations; the authored evidence index uses relative paths.
 
+\paragraph{Data and replay release.}
+The organisation-owned
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz}{source project}
+publishes the
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1}{data and replay release
+\code{v4-seed31520260811-dataset-v1}}. It contains the four labelled roles used by
+the reported procedure: 5,528 Training, 512 Validation, 256 Development-Canary
+and 1,040 Final-Test scenes. Thus
+\(5{,}528+512+256+1{,}040=7{,}336\) paired-camera scenes account for 14,672
+images. The release also retains the predecessor V3 initialisation checkpoint
+(SHA-256
+\path{8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d}),
+the selected V4 epoch-11 checkpoint identified above, the frozen evaluation
+source and a portable stateless replay program.
+
+These materials support repeating the documented procedure and re-evaluating
+the selected checkpoint on Validation, Canary and Final Test. They do not claim
+bit-identical retraining across arbitrary hardware/software environments.
+Public accessibility is a reproduction-delivery property, not an ``open
+dataset'' designation or a standalone reuse licence. Publication occurred only
+after training, checkpoint selection, Canary evaluation and the immutable
+Final-Test attempt had completed; it therefore changes availability, not any
+partition's experimental role, and the stateless replay does not reopen the
+historical one-shot attempt.
+
 The release assets can be downloaded and verified without adding their payload
 to Git:
 
@@ -103,6 +128,8 @@ The repository landing record
 scope and extraction instructions. Raw records preserve archival host paths
 and reviewer/name provenance byte-for-byte. They remain Gazebo-only evidence
 and confer no physical-deployment authority.
+The data-release inventory, verification and replay instructions are recorded in
+\path{report/evidence/ROOM315_VISUAL_V4_DATASET_RELEASE.md}.
 
 \section{Result-to-record index}
 

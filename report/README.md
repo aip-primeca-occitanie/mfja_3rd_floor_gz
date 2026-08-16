@@ -30,15 +30,16 @@ the exact source and configuration identity used for its test results.
 Historical and current visual-dataset terminology is normalized in
 `../docs/room315_dataset_role_registry.md`; that registry does not rename the
 hash-identified materialized files.
-The current build is 72 A4 pages (4,689,565 bytes). `main.pdf` and the
+The current build is 72 A4 pages (4,691,625 bytes). `main.pdf` and the
 submission copy are byte-identical at SHA-256
-`6a5bd09db4d30bc48f1a5134b8eea47e924f38894c9043453e093ae126154d3a`.
+`3e82de87fe89364664f679ad1b69d452fd15198e686798bf66ff7a7cb98dfd2b`.
 The retained log and fingerprint record are
 `evidence/final_report_build_2026-08-16.log` and
 `evidence/final_report_sha256_2026-08-16.txt`. This rebuilt delivery incorporates
 the dataset-role and terminology clarifications, the published V4 full-evidence
-identity and the V4-only runtime alignment without changing any experiment,
-checkpoint, metric or acceptance result.
+identity, the V4-only runtime alignment and the public project
+data-and-reproduction release without changing any experiment, checkpoint,
+metric or acceptance result.
 The repository revision carrying this report commits the evaluated source,
 active runtime configurations, tests, submission PDF and lightweight
 evidence together. A clean checkout of that revision reconstructs the
@@ -69,11 +70,28 @@ the `247,825,706`-byte archive has SHA-256
 It includes the selected checkpoint, sealed 1,040-scene Test, 2,080 images and
 18 MCAP recordings. All reported runtime authority remains Gazebo-only.
 
+The complementary, publicly accessible
+[Room 315 Visual V4 data-and-reproduction release](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+is published from this source project itself. Tag
+`v4-seed31520260811-dataset-v1`
+contains all labelled inputs used by the reported V4 procedure: 5,528 Training,
+512 Validation, 256 Development-Canary and 1,040 Final-Test scenes, together
+with the predecessor initialisation checkpoint, selected epoch-11 checkpoint,
+frozen source and stateless replay tooling. The six assets total 810,803,201
+bytes. Their control package is retained at
+`evidence/room315_visual_v4_dataset_release_v1/` and their landing record is
+`evidence/ROOM315_VISUAL_V4_DATASET_RELEASE.md`. They were published only after
+the historical experiment completed, so availability changes no experimental
+role or result. Public accessibility enables inspection and reproduction; it
+does not make the material an open dataset or grant a data or model-weight
+reuse licence.
+
 Large datasets, checkpoints and raw campaign bags are not tracked in this
 directory. Their identifiers, hashes, release location and metrics are
 documented in the report, the relative evidence manifests, repository runbooks,
 `evidence/ACTIVE_EVIDENCE.md` and
-`evidence/ROOM315_VISUAL_V4_RELEASE.md`. In the retained
+`evidence/ROOM315_VISUAL_V4_RELEASE.md`; the complete reproduction distribution
+is indexed by `evidence/ROOM315_VISUAL_V4_DATASET_RELEASE.md`. In the retained
 `room315-evidence-v2` release,
 `v2` identifies revision 2 of the integrated campaign/evidence package, not the
 visual-model generation; that archived campaign used

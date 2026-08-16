@@ -31,6 +31,19 @@ from those claims.
   post-promotion-smoke MCAP recordings
   outside Git. This release is the external payload counterpart of the primary
   repository-relative package; it does not broaden any reported claim.
+- `ROOM315_VISUAL_V4_DATASET_RELEASE.md`: landing record for this project's
+  publicly accessible
+  [`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+  data-and-reproduction release. Its repository-side control package is
+  `room315_visual_v4_dataset_release_v1/`. The six checksum-bound release
+  assets total `810,803,201` bytes and publish 5,528 Training, 512 Validation,
+  256 Development-Canary and 1,040 Final-Test scenes: 7,336 paired-camera
+  scenes and 14,672 JPEG images. They also include the predecessor V3
+  initialisation checkpoint, selected V4 epoch-11 checkpoint, frozen source
+  and stateless replay tooling. Publication occurred after the historical
+  experiment and changes neither partition roles nor reported results. Public
+  accessibility supports inspection and reproduction; it is not an open-data
+  or model-weight reuse licence.
 - `runtime/closed_loop/positive/` within that package: the positive campaign
   passed 12/12 cases, recorded 1,784 selected-schema observations and none from
   the alternate schema, verified 24/24 postconditions and 48 supervisor
@@ -143,4 +156,7 @@ implementation, active runtime configurations, tests, submission PDF and
 lightweight evidence together. A clean checkout of that revision reconstructs
 the source-side handover. The checkpoint, sealed dataset and raw ROS bags are
 intentionally not tracked here; their byte-exact current-V4 copies are published
-in the full-evidence release identified above.
+in the full-evidence release identified above. The complete labelled Training,
+Validation, Canary and Final-Test inputs, both required checkpoints and
+stateless replay tooling are published in the project-hosted
+data-and-reproduction release identified above.

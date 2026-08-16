@@ -147,6 +147,21 @@ families, metrics, and roadmap, go to
 
 ## VLA Dataset and Evaluation Basics
 
+The complete post-experiment V4 data-and-reproduction companion is distributed
+from this project's
+[`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+GitHub Release. It contains all Training, Validation, Development-Canary and
+Final-Test inputs used by the reported V4 procedure, both required checkpoints,
+the frozen source and replay tooling. The small download, verification and
+replay control package is retained at
+[`report/evidence/room315_visual_v4_dataset_release_v1/`](report/evidence/room315_visual_v4_dataset_release_v1/README.md),
+while counts, hashes and the relationship to the runtime-evidence archive are
+recorded in
+[the project landing record](report/evidence/ROOM315_VISUAL_V4_DATASET_RELEASE.md).
+The release is publicly accessible for inspection and reproducibility; this
+does not by itself make it an open dataset or grant data or model-weight reuse
+rights.
+
 The dataset recorder writes two streams per episode:
 
 ```text

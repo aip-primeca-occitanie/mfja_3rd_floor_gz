@@ -36,6 +36,22 @@ The archive contains:
 - the final 5/5 fail-closed campaign with five MCAP bags; and
 - the passed post-promotion B01 smoke with one MCAP bag.
 
+## Complete data-and-reproduction companion
+
+This full-evidence archive preserves the accepted runtime and Final-Test
+evidence, but it is not the complete V4 training distribution. The complete
+post-experiment distribution is published from this same project in its
+[`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
+release. It adds every labelled Training, Validation and Development-Canary input,
+the Final Test, the V3 initialisation checkpoint, selected V4 checkpoint,
+frozen source and stateless replay tooling. Its small control package is
+retained at `room315_visual_v4_dataset_release_v1/`. See
+[`ROOM315_VISUAL_V4_DATASET_RELEASE.md`](ROOM315_VISUAL_V4_DATASET_RELEASE.md)
+for its six asset hashes and reproduction instructions. The two releases are
+complementary releases of this project; neither broadens the reported
+experimental or physical-deployment claims. Public accessibility of the data
+release is not an open-data or model-weight reuse licence.
+
 Verify and extract it with:
 
 ```bash

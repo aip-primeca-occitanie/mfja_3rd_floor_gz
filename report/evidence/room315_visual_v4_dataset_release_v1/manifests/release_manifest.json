@@ -1,0 +1,331 @@
+{
+  "assets": [
+    {
+      "bytes": 441324291,
+      "name": "room315_visual_v4_train_5528_seed31520260811_v1.tar.zst",
+      "sha256": "054d00d06f5fc88a199a712cdcbfed4c1b34c70196d19362a9727563d9a1cf16"
+    },
+    {
+      "bytes": 51996651,
+      "name": "room315_visual_v4_validation_512_v3r1_v1.tar.zst",
+      "sha256": "72773a44e594d9029126b6e6d921abe01ea00c44ac738fcb4d9d0ea324ea69ad"
+    },
+    {
+      "bytes": 21345446,
+      "name": "room315_visual_v4_canary_256_v3r1_v1.tar.zst",
+      "sha256": "54b9f4a7e30f2286ea6b7512ffb6f5d7035c2afaa8b45931124f03e647bad143"
+    },
+    {
+      "bytes": 109616317,
+      "name": "room315_visual_v4_final_test_1040_coverage_v2_v1.tar.zst",
+      "sha256": "46ba09d8ee6fee39e453a0cd06e80f17d2ca2339289817cc7b0f0f502ac1044f"
+    },
+    {
+      "bytes": 185354488,
+      "name": "room315_visual_v4_models_init8a2d-and-epoch011_869d_v1.tar.zst",
+      "sha256": "82dbd47357c07f14d68c8d492fad575d62f3cc0f60c9e10852c66949a04e7f78"
+    },
+    {
+      "bytes": 1166008,
+      "name": "room315_visual_v4_frozen_source_0d19e160_v1.tar.zst",
+      "sha256": "287583d23cecfd3e2408b40ba5a4a3e725a788d55e58822afd8e774b889e293f"
+    }
+  ],
+  "canary": {
+    "experimental_role_unchanged_by_later_publication": true,
+    "images_and_labels_in_release": true,
+    "labels_sha256": "42d1d6ccab49d4a6bfdb2c2b79d77e404e5f9cb23066a816c1a3851d552b02db",
+    "publication_timing": "post_experiment_after_historical_attempt_completed",
+    "records": 256,
+    "result": {
+      "acceptance_status": "passed",
+      "automatic_runtime_switch": false,
+      "promotion_status": "eligible_for_manual_runtime_review"
+    },
+    "rows_sha256": "28568e8ebf793e0a0a18ad9327f36639b2fd9c27021b9bccc4b318dd48192541",
+    "sample_id_overlap_with_train_validation": 0
+  },
+  "canary_records": 256,
+  "dataset_root_name": "room315_visual_v4_dataset_v1",
+  "final_test_records": 1040,
+  "publication_controls": {
+    "canary_data_publish": true,
+    "final_test_publish": true,
+    "license_note": "Public accessibility is requested for reproducibility; no separate reuse license is granted by this release metadata.",
+    "public_visibility_requested": true,
+    "publication_is_post_experiment": true,
+    "reuse_license_granted": false
+  },
+  "release_tag": "v4-seed31520260811-dataset-v1",
+  "report_evidence_commit": "503e13ee81afbb553d0a0150f52175451e0b96d1",
+  "requested_visibility": "public",
+  "schema_version": "room315.visual_v4.github_release.v1",
+  "source_commit": "0d19e1601d57416b83c871c1a8d413ec0dd523a6",
+  "source_repository": "aip-primeca-occitanie/mfja_3rd_floor_gz",
+  "sources": [
+    {
+      "camera_order": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "dataset_root": "data/old_replay/dataset",
+      "image_bytes": 132399437,
+      "image_contract": {
+        "format": "JPEG",
+        "height": 480,
+        "width": 640
+      },
+      "image_count": 3056,
+      "image_index_sha256": "22bc7c3dfaae5a0b5f8c8f01aa6e15a9cd498a7ff1953bf44afd639a890e5f6c",
+      "labels": "data/old_replay/splits/train_visual_labels.jsonl",
+      "name": "old_replay",
+      "original_byte_exact_rows": {
+        "bytes": 3558755,
+        "operational_use": false,
+        "path": "provenance/original/old_replay/train.jsonl",
+        "reason": "retained for historical input-hash audit; contains obsolete absolute trace paths",
+        "sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095"
+      },
+      "original_files": {
+        "labels": {
+          "bytes": 8714600,
+          "sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583"
+        },
+        "rows": {
+          "bytes": 3558755,
+          "sha256": "beb6618c5c0bee80e7ec78fa7782e6a2b75c4aabf46e5745a97d6e3871a59095"
+        }
+      },
+      "original_trace_files": {
+        "bytes": 19776799,
+        "file_count": 3056,
+        "index_sha256": "41307c353cacc172dde7dc04454f4d3f051dac352665e5d6662d9f1f68ca6039",
+        "purpose": "complete the byte-exact historical row trace chain",
+        "root": "provenance/original/old_replay/dataset",
+        "training_reader_dereferenced_these_files": false
+      },
+      "packaged_files": {
+        "labels": {
+          "bytes": 8714600,
+          "sha256": "0cebc68d99db5e364d0637336244456be05b96edad5f8f176eb0176c7883e583"
+        },
+        "rows": {
+          "bytes": 2370455,
+          "sha256": "66f53350ac8e42c0acbdb0172bbf2e323708063659c40958bcd88200936a8b0c"
+        }
+      },
+      "records": 1528,
+      "role": "train",
+      "rows": "data/old_replay/splits/train.jsonl",
+      "sample_id_sha256": "99399e6644ab5fbfc79304150ac57cb5c7f62636ebc60ea7ecd53b87a2540599",
+      "sanitization": {
+        "changed": true,
+        "label_payload_changed": false,
+        "model_input_paths_changed": false,
+        "removed_absolute_trace_fields": 6112
+      }
+    },
+    {
+      "camera_order": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "dataset_root": "data/v3r1/dataset",
+      "image_bytes": 427768767,
+      "image_contract": {
+        "format": "JPEG",
+        "height": 480,
+        "width": 640
+      },
+      "image_count": 8000,
+      "image_index_sha256": "f98d14f20870e190f5c5df7e693722d4b6dcc4123b4e9d2bc841424246906b63",
+      "labels": "data/v3r1/splits/train_visual_labels.jsonl",
+      "name": "v3r1_hard_case",
+      "original_byte_exact_rows": null,
+      "original_files": {
+        "labels": {
+          "bytes": 30150369,
+          "sha256": "ec98fd5a94ed9d29fbb0b33dbed33877d571d263ea4a497be99d088673b71921"
+        },
+        "rows": {
+          "bytes": 9231106,
+          "sha256": "396e3b83822dcd2ed541025fc033802592a609e288dbb28be555c6d9f586361c"
+        }
+      },
+      "original_trace_files": null,
+      "packaged_files": {
+        "labels": {
+          "bytes": 30150369,
+          "sha256": "ec98fd5a94ed9d29fbb0b33dbed33877d571d263ea4a497be99d088673b71921"
+        },
+        "rows": {
+          "bytes": 9231106,
+          "sha256": "396e3b83822dcd2ed541025fc033802592a609e288dbb28be555c6d9f586361c"
+        }
+      },
+      "records": 4000,
+      "role": "train",
+      "rows": "data/v3r1/splits/train.jsonl",
+      "sample_id_sha256": "e721fd3133508fe0e8657e32febda9fdc4a6bf88f233b3e3b724efc41a575e61",
+      "sanitization": {
+        "changed": false,
+        "label_payload_changed": false,
+        "model_input_paths_changed": false,
+        "removed_absolute_trace_fields": 0
+      }
+    },
+    {
+      "camera_order": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "dataset_root": "data/v3r1/dataset",
+      "image_bytes": 54595816,
+      "image_contract": {
+        "format": "JPEG",
+        "height": 480,
+        "width": 640
+      },
+      "image_count": 1024,
+      "image_index_sha256": "7150afbc85ce7014479ec216b641c5947b90e8889277317862eba3cf40118324",
+      "labels": "data/v3r1/splits/validation_visual_labels.jsonl",
+      "name": "v3r1_validation",
+      "original_byte_exact_rows": null,
+      "original_files": {
+        "labels": {
+          "bytes": 3899374,
+          "sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab"
+        },
+        "rows": {
+          "bytes": 1226594,
+          "sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7"
+        }
+      },
+      "original_trace_files": null,
+      "packaged_files": {
+        "labels": {
+          "bytes": 3899374,
+          "sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab"
+        },
+        "rows": {
+          "bytes": 1226594,
+          "sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7"
+        }
+      },
+      "records": 512,
+      "role": "validation",
+      "rows": "data/v3r1/splits/validation.jsonl",
+      "sample_id_sha256": "075b6f2cfb217f64572ddadc8099b4261d6c8787f3557171ee99a0f063b142bd",
+      "sanitization": {
+        "changed": false,
+        "label_payload_changed": false,
+        "model_input_paths_changed": false,
+        "removed_absolute_trace_fields": 0
+      }
+    },
+    {
+      "camera_order": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "dataset_root": "data/canary/dataset",
+      "image_bytes": 27278338,
+      "image_contract": {
+        "format": "JPEG",
+        "height": 480,
+        "width": 640
+      },
+      "image_count": 512,
+      "image_index_sha256": "adf8719f1aed37e85d2acef146e14a9152baee8962968bdaf0de55c931272021",
+      "labels": "data/canary/finalized/canary_visual_labels.jsonl",
+      "name": "v3r1_canary",
+      "original_byte_exact_rows": null,
+      "original_files": {
+        "labels": {
+          "bytes": 1937526,
+          "sha256": "42d1d6ccab49d4a6bfdb2c2b79d77e404e5f9cb23066a816c1a3851d552b02db"
+        },
+        "rows": {
+          "bytes": 600531,
+          "sha256": "28568e8ebf793e0a0a18ad9327f36639b2fd9c27021b9bccc4b318dd48192541"
+        }
+      },
+      "original_trace_files": null,
+      "packaged_files": {
+        "labels": {
+          "bytes": 1937526,
+          "sha256": "42d1d6ccab49d4a6bfdb2c2b79d77e404e5f9cb23066a816c1a3851d552b02db"
+        },
+        "rows": {
+          "bytes": 600531,
+          "sha256": "28568e8ebf793e0a0a18ad9327f36639b2fd9c27021b9bccc4b318dd48192541"
+        }
+      },
+      "records": 256,
+      "role": "canary",
+      "rows": "data/canary/finalized/canary.jsonl",
+      "sample_id_sha256": "f093f9aabc399db7a9b95875942136bdd2a12934c6014f86750e92a9fea9847d",
+      "sanitization": {
+        "changed": false,
+        "label_payload_changed": false,
+        "model_input_paths_changed": false,
+        "removed_absolute_trace_fields": 0
+      }
+    },
+    {
+      "camera_order": [
+        "left_rail_rgb",
+        "right_rail_rgb"
+      ],
+      "dataset_root": "data/final_test/dataset",
+      "image_bytes": 111603972,
+      "image_contract": {
+        "format": "JPEG",
+        "height": 480,
+        "width": 640
+      },
+      "image_count": 2080,
+      "image_index_sha256": "e7c262b0786aa3b27cb41610ff46079c03600470201f83411153bf4b353575ff",
+      "labels": "data/final_test/finalized/final_test_visual_labels.jsonl",
+      "name": "v4_final_test",
+      "original_byte_exact_rows": null,
+      "original_files": {
+        "labels": {
+          "bytes": 7936948,
+          "sha256": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4"
+        },
+        "rows": {
+          "bytes": 2491165,
+          "sha256": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9"
+        }
+      },
+      "original_trace_files": null,
+      "packaged_files": {
+        "labels": {
+          "bytes": 7936948,
+          "sha256": "021fbccd001e7d6657a4c29546ba69140d3d61db2901cc726fb7f8595b5cdbf4"
+        },
+        "rows": {
+          "bytes": 2491165,
+          "sha256": "eee18e9823feb195a831952df90e11f0d05509314f9f020bb8d2e02de705e1a9"
+        }
+      },
+      "records": 1040,
+      "role": "final_test",
+      "rows": "data/final_test/finalized/final_test.jsonl",
+      "sample_id_sha256": "c905de34720a536ea91930d080a9716315c73b19a2f2b4b14ff9fff4515879e6",
+      "sanitization": {
+        "changed": false,
+        "label_payload_changed": false,
+        "model_input_paths_changed": false,
+        "removed_absolute_trace_fields": 0
+      }
+    }
+  ],
+  "target_repository": "aip-primeca-occitanie/mfja_3rd_floor_gz",
+  "total_image_files": 14672,
+  "total_paired_camera_scenes": 7336,
+  "training_records": 5528,
+  "training_run_seed": 31520260811,
+  "validation_records": 512
+}

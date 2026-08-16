@@ -1,0 +1,279 @@
+{
+  "approved_v3_validation_baseline": {
+    "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "data_role": "validation_only",
+    "loaded_accuracy": 0.6619343389529725,
+    "loaded_correct_count": 1492,
+    "preprocessing_contract": "v3_direct_bilinear_224_imagenet_normalization_target_stats_decode",
+    "sample_count": 512,
+    "segment_correct_count": 1164,
+    "segment_top1_accuracy": 0.5164152617568767,
+    "segment_top1_left": 0.4534562211981567,
+    "segment_top1_right": 0.5748502994011976,
+    "validation_labels_sha256": "d62310046e9a6737e69d7d0e702f05e1073ae7de8f12b2c64655d510b410e1ab",
+    "validation_rows_sha256": "a4c90ac7c1043450830f69ad90094e9aacac92ad57f24fcd4439b0b2a14c9fd7",
+    "visible_count": 2254
+  },
+  "data": {
+    "canary": {
+      "dataset_root": "${ROOM315_V3R1_CANARY_ROOT}/dataset",
+      "expected_rows": 256,
+      "labels": "${ROOM315_V3R1_CANARY_ROOT}/finalized/canary_visual_labels.jsonl",
+      "name": "v3r1_canary",
+      "rows": "${ROOM315_V3R1_CANARY_ROOT}/finalized/canary.jsonl"
+    },
+    "train_sources": [
+      {
+        "dataset_root": "${ROOM315_OLD_DATASET_ROOT}",
+        "enabled": true,
+        "epoch_fraction": 0.5,
+        "expected_rows": 1528,
+        "labels": "${ROOM315_OLD_SPLITS_ROOT}/train_visual_labels.jsonl",
+        "name": "old_replay",
+        "rows": "${ROOM315_OLD_SPLITS_ROOT}/train.jsonl"
+      },
+      {
+        "dataset_root": "${ROOM315_V3R1_DATASET_ROOT}",
+        "enabled": true,
+        "epoch_fraction": 0.5,
+        "expected_rows": 4000,
+        "labels": "${ROOM315_V3R1_SPLITS_ROOT}/train_visual_labels.jsonl",
+        "name": "v3r1_hard_case",
+        "rows": "${ROOM315_V3R1_SPLITS_ROOT}/train.jsonl"
+      },
+      {
+        "dataset_root": "${ROOM315_V4_BLOCKER_ROOT}",
+        "enabled": false,
+        "epoch_fraction": 0.0,
+        "expected_rows": 35,
+        "labels": "${ROOM315_V4_BLOCKER_ROOT}/splits/train_visual_labels.jsonl",
+        "name": "v4_blocker_pilot",
+        "reason_disabled": "enable only as a separately measured ablation; 35 rows are too small to mix silently",
+        "rows": "${ROOM315_V4_BLOCKER_ROOT}/splits/train.jsonl"
+      }
+    ],
+    "validation": {
+      "dataset_root": "${ROOM315_V3R1_DATASET_ROOT}",
+      "expected_rows": 512,
+      "labels": "${ROOM315_V3R1_SPLITS_ROOT}/validation_visual_labels.jsonl",
+      "name": "v3r1_validation",
+      "rows": "${ROOM315_V3R1_SPLITS_ROOT}/validation.jsonl"
+    }
+  },
+  "data_roles": {
+    "canary": "post-training development regression only",
+    "checkpoint_selection": "validation_only",
+    "test": "forbidden during V4 development and absent from this configuration"
+  },
+  "environment_defaults": {
+    "ROOM315_APPROVED_RUN_ROOT": "./room315_visual_v4_dataset_v1/model/initialization_v3",
+    "ROOM315_OLD_DATASET_ROOT": "./room315_visual_v4_dataset_v1/data/old_replay/dataset",
+    "ROOM315_OLD_SPLITS_ROOT": "./room315_visual_v4_dataset_v1/data/old_replay/splits",
+    "ROOM315_V3R1_CANARY_ROOT": "./room315_visual_v4_dataset_v1/data/canary",
+    "ROOM315_V3R1_DATASET_ROOT": "./room315_visual_v4_dataset_v1/data/v3r1/dataset",
+    "ROOM315_V3R1_SPLITS_ROOT": "./room315_visual_v4_dataset_v1/data/v3r1/splits",
+    "ROOM315_V4_BLOCKER_ROOT": "./room315_visual_v4_dataset_v1/external/optional_v4_blockers",
+    "ROOM315_V4_OUTPUT_ROOT": "./room315_visual_v4_outputs"
+  },
+  "evaluation": {
+    "calibrate_segment_temperature_on_validation": true,
+    "planning_score_weights": {
+      "boundary_zone_segment_top1": 0.075,
+      "joint_segment_and_ratio_005": 0.2,
+      "minimum_side_top1": 0.15,
+      "segment_macro_f1": 0.3,
+      "switch_zone_segment_top1": 0.075,
+      "worst_side_x_segment_recall": 0.2
+    },
+    "report_selective_accuracy_and_coverage": true,
+    "required_breakdowns": [
+      "side",
+      "identity",
+      "segment",
+      "side_x_segment",
+      "target_zone",
+      "position_bin",
+      "scene_occlusion_class",
+      "scene_presence_density"
+    ],
+    "required_counterfactuals": [
+      "blank_opposite_camera",
+      "shuffle_opposite_camera",
+      "camera_order_swap_canary"
+    ],
+    "segment_calibration": {
+      "coverage_targets": [
+        1.0,
+        0.95,
+        0.9,
+        0.8,
+        0.7
+      ],
+      "ece_bins": 15,
+      "grid_size": 129,
+      "maximum_temperature": 20.0,
+      "minimum_temperature": 0.05,
+      "refinement_steps": 4
+    }
+  },
+  "image_preprocessing": {
+    "height": 240,
+    "normalization_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resize": "aspect_preserving_bilinear_4_by_3",
+    "train_augmentations": {
+      "brightness": 0.15,
+      "camera_swap": false,
+      "contrast": 0.15,
+      "gamma_max": 1.1,
+      "gamma_min": 0.9,
+      "gaussian_blur_probability": 0.15,
+      "gaussian_noise_probability": 0.15,
+      "gaussian_noise_std": 0.01,
+      "horizontal_flip": false,
+      "saturation": 0.08
+    },
+    "width": 320
+  },
+  "initialization": {
+    "checkpoint": "${ROOM315_APPROVED_RUN_ROOT}/best.pt",
+    "checkpoint_sha256": "8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d",
+    "copy_layer4_to_both_rails": true,
+    "copy_shared_stem": true,
+    "copy_v3_joint_head": false,
+    "kind": "verified_v3_backbone_only"
+  },
+  "loss": {
+    "bbox": {
+      "giou_weight": 1.0,
+      "kind": "masked_normalized_l1_plus_giou",
+      "l1_weight": 1.0,
+      "weight": 1.0
+    },
+    "loaded_state": {
+      "kind": "masked_cross_entropy",
+      "label_smoothing": 0.01,
+      "weight": 1.0
+    },
+    "s_ratio": {
+      "beta": 0.05,
+      "kind": "masked_smooth_l1",
+      "weight": 2.0
+    },
+    "segment": {
+      "class_weight_max": 2.5,
+      "class_weight_min": 0.5,
+      "class_weighting": "inverse_sqrt_frequency_by_side_from_train_only",
+      "kind": "masked_side_weighted_cross_entropy",
+      "label_smoothing": 0.02,
+      "weight": 4.0
+    },
+    "topology": {
+      "kind": "expected_normalized_graph_distance",
+      "segment_name_domain": "public_ros_label",
+      "weight": 0.25
+    }
+  },
+  "model": {
+    "attention_heads": 8,
+    "cross_camera_feature_path": false,
+    "dropout": 0.1,
+    "head_type": "spatial_query",
+    "hidden_dim": 256,
+    "kind": "room315_visual_state_resnet18_split_rails_v4",
+    "slot_order": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ]
+  },
+  "output_root": "${ROOM315_V4_OUTPUT_ROOT}",
+  "pilot_acceptance_gates": {
+    "automatic_runtime_switch": false,
+    "cross_side_output_change_tolerance": 1e-06,
+    "maximum_correct_segment_s_m_mae_m": 0.12,
+    "maximum_correct_segment_s_m_mae_m_each_side": 0.12,
+    "maximum_loaded_accuracy_drop": 0.01,
+    "minimum_camera_order_swap_segment_top1_drop": 0.3,
+    "minimum_correct_segment_s_m_coverage_each_side": 0.75,
+    "minimum_identity_zone_boundary_segment_top1": 0.75,
+    "minimum_identity_zone_switch_segment_top1": 0.75,
+    "minimum_joint_segment_and_ratio_005_accuracy": 0.7,
+    "minimum_joint_segment_and_ratio_005_accuracy_each_side": 0.7,
+    "minimum_loaded_accuracy": 0.95,
+    "minimum_position_bin_joint_segment_and_ratio_005_accuracy": 0.6,
+    "minimum_position_bin_segment_top1": 0.7,
+    "minimum_scene_occlusion_joint_segment_and_ratio_005_accuracy": 0.6,
+    "minimum_scene_occlusion_segment_top1": 0.7,
+    "minimum_scene_presence_density_joint_segment_and_ratio_005_accuracy": 0.6,
+    "minimum_scene_presence_density_segment_top1": 0.7,
+    "minimum_segment_macro_recall_each_side": 0.75,
+    "minimum_segment_top1_each_side": 0.75,
+    "minimum_worst_side_x_segment_recall": 0.5,
+    "zero_supported_segment_classes_with_zero_recall": true,
+    "zero_supported_side_x_segment_cells_with_zero_recall": true
+  },
+  "portable_release_notes": {
+    "bitwise_checkpoint_reproduction_not_claimed": true,
+    "path_resolution": "run from the directory containing the merged dataset root",
+    "semantic_equivalence": "dataset/model payloads are preserved; local path strings differ from the historical workstation configuration"
+  },
+  "purpose": "isolated V4 segment-first visual-state training; never changes the approved V3 runtime or report",
+  "sampling": {
+    "boundary_multiplier": 1.5,
+    "multi_blocker_multiplier": 1.5,
+    "records_per_source_per_epoch": 4000,
+    "sample_weight_max": 3.0,
+    "sample_weight_min": 0.5,
+    "source_balance": "explicit_epoch_fraction",
+    "switch_multiplier": 2.0,
+    "within_source_balance": "inverse_sqrt_side_segment_frequency"
+  },
+  "schema_version": "room315.visual_training.v4.pilot_config.v1",
+  "topology_contract": {
+    "forbid_internal_rail_segment_lengths": true,
+    "length_loader": "room_315_rail_defaults.public_rail_segment_lengths",
+    "segment_name_domain": "public_ros_label",
+    "store_length_mapping_fingerprint_in_checkpoint": true,
+    "verify_length_mapping_fingerprint_at_runtime": true
+  },
+  "training": {
+    "amp_initial_scale": 8192.0,
+    "automatic_mixed_precision": true,
+    "batch_size": 24,
+    "checkpoint_selection": [
+      "highest_validation_planning_score",
+      "highest_validation_worst_side_x_segment_recall",
+      "lowest_validation_correct_segment_s_m_p95"
+    ],
+    "device": "cuda",
+    "early_stopping_patience": 4,
+    "epochs": 12,
+    "gradient_accumulation_steps": 1,
+    "gradient_clip_norm": 5.0,
+    "heads_learning_rate": 0.0003,
+    "heads_only_through_epoch": 1,
+    "layer4_learning_rate": 0.0001,
+    "num_workers": 4,
+    "persistent_workers": true,
+    "pin_memory": true,
+    "seed": 31520260811,
+    "shared_layer3_learning_rate": 2e-05,
+    "unfreeze_layer4_at_epoch": 2,
+    "unfreeze_shared_layer3_at_epoch": 4,
+    "weight_decay": 0.0001
+  }
+}
