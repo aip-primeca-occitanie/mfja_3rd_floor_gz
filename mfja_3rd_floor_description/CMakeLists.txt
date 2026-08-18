@@ -25,8 +25,29 @@ target_link_libraries(mfja-symmetric-gripper-controller-system PRIVATE
   gz-transport13::gz-transport13
 )
 
+add_library(mfja-smooth-joint-trajectory-controller-system SHARED
+  src/SmoothJointTrajectoryController.cc
+)
+target_compile_features(
+  mfja-smooth-joint-trajectory-controller-system PUBLIC cxx_std_17
+)
+target_compile_options(mfja-smooth-joint-trajectory-controller-system PRIVATE
+  -Wall
+  -Wextra
+  -Wpedantic
+)
+target_link_libraries(mfja-smooth-joint-trajectory-controller-system PRIVATE
+  gz-common5::gz-common5
+  gz-msgs10::gz-msgs10
+  gz-plugin2::gz-plugin2
+  gz-sim8::gz-sim8
+  gz-transport13::gz-transport13
+)
+
 install(
-  TARGETS mfja-symmetric-gripper-controller-system
+  TARGETS
+    mfja-symmetric-gripper-controller-system
+    mfja-smooth-joint-trajectory-controller-system
   LIBRARY DESTINATION lib
 )
 
@@ -65,11 +86,18 @@ if(BUILD_TESTING)
     test/test_kuka_initial_joint_positions.py
   )
   ament_add_pytest_test(
+    test_tiago_smooth_joint_control
+    test/test_tiago_smooth_joint_control.py
+  )
+  ament_add_pytest_test(
     test_room315_shuttle_collision_free
     test/test_room315_shuttle_collision_free.py
   )
 endif()
 
-ament_export_libraries(mfja-symmetric-gripper-controller-system)
+ament_export_libraries(
+  mfja-symmetric-gripper-controller-system
+  mfja-smooth-joint-trajectory-controller-system
+)
 
 ament_package()

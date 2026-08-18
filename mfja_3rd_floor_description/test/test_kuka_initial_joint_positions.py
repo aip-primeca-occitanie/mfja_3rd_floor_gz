@@ -22,10 +22,10 @@ EXPECTED_INITIAL_POSITIONS = (
 )
 
 
-def test_kuka_initial_joint_positions_match_debug_home_pose():
+def test_kuka_initial_joint_positions_match_configured_home_pose():
     root = ET.parse(KUKA_MODEL_PATH).getroot()
     controller = root.find(
-        ".//plugin[@name='gz::sim::systems::JointTrajectoryController']"
+        ".//plugin[@name='mfja::sim::systems::SmoothJointTrajectoryController']"
     )
 
     assert controller is not None

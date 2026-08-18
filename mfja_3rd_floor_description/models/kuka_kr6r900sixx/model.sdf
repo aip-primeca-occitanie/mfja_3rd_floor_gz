@@ -513,67 +513,28 @@
     </plugin>
 
     <plugin
-      filename="gz-sim-joint-trajectory-controller-system"
-      name="gz::sim::systems::JointTrajectoryController">
+      filename="mfja-smooth-joint-trajectory-controller-system"
+      name="mfja::sim::systems::SmoothJointTrajectoryController">
       <joint_name>joint_a1</joint_name>
       <initial_position>0.00000000000</initial_position>
-      <position_p_gain>220.0</position_p_gain>
-      <position_i_gain>0.0</position_i_gain>
-      <position_d_gain>70.0</position_d_gain>
-      <position_i_min>0.0</position_i_min>
-      <position_i_max>0.0</position_i_max>
-      <position_cmd_min>-280.0</position_cmd_min>
-      <position_cmd_max>280.0</position_cmd_max>
 
       <joint_name>joint_a2</joint_name>
       <initial_position>-1.57079632679</initial_position>
-      <position_p_gain>320.0</position_p_gain>
-      <position_i_gain>0.0</position_i_gain>
-      <position_d_gain>95.0</position_d_gain>
-      <position_i_min>0.0</position_i_min>
-      <position_i_max>0.0</position_i_max>
-      <position_cmd_min>-340.0</position_cmd_min>
-      <position_cmd_max>340.0</position_cmd_max>
 
       <joint_name>joint_a3</joint_name>
       <initial_position>1.91986217719</initial_position>
-      <position_p_gain>180.0</position_p_gain>
-      <position_i_gain>0.0</position_i_gain>
-      <position_d_gain>65.0</position_d_gain>
-      <position_i_min>0.0</position_i_min>
-      <position_i_max>0.0</position_i_max>
-      <position_cmd_min>-220.0</position_cmd_min>
-      <position_cmd_max>220.0</position_cmd_max>
 
       <joint_name>joint_a4</joint_name>
       <initial_position>0.00000000000</initial_position>
-      <position_p_gain>90.0</position_p_gain>
-      <position_i_gain>0.0</position_i_gain>
-      <position_d_gain>35.0</position_d_gain>
-      <position_i_min>0.0</position_i_min>
-      <position_i_max>0.0</position_i_max>
-      <position_cmd_min>-120.0</position_cmd_min>
-      <position_cmd_max>120.0</position_cmd_max>
 
       <joint_name>joint_a5</joint_name>
       <initial_position>-0.03490658504</initial_position>
-      <position_p_gain>80.0</position_p_gain>
-      <position_i_gain>0.0</position_i_gain>
-      <position_d_gain>30.0</position_d_gain>
-      <position_i_min>0.0</position_i_min>
-      <position_i_max>0.0</position_i_max>
-      <position_cmd_min>-100.0</position_cmd_min>
-      <position_cmd_max>100.0</position_cmd_max>
 
       <joint_name>joint_a6</joint_name>
       <initial_position>0.00000000000</initial_position>
-      <position_p_gain>60.0</position_p_gain>
-      <position_i_gain>0.0</position_i_gain>
-      <position_d_gain>22.0</position_d_gain>
-      <position_i_min>0.0</position_i_min>
-      <position_i_max>0.0</position_i_max>
-      <position_cmd_min>-80.0</position_cmd_min>
-      <position_cmd_max>80.0</position_cmd_max>
+
+      <default_duration_sec>4.0</default_duration_sec>
+      <max_velocity_scale>0.5</max_velocity_scale>
     </plugin>
   </model>
 </sdf>

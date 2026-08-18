@@ -264,6 +264,15 @@ ros2 run mfja_robot_control_config robot_joint_command.py kuka --unit deg --posi
 When `--unit deg` is used, angular joints are converted to radians before
 publishing. Linear joints, such as TIAGo's `torso_lift_joint`, stay in meters.
 
+The helper reads the live joint state, validates every target against the SDF
+joint limits, and publishes one densely sampled minimum-jerk trajectory. The
+model-side smooth controller enforces half of each joint's SDF velocity limit
+and holds the completed pose exactly, so gravity cannot introduce steady-state
+angle error. If a requested duration is too short for those velocity limits,
+the controller extends the motion instead of overspeeding the joint. A direct
+one-point `JointTrajectory` command is also accepted and is interpolated from
+the current pose rather than applied as an instantaneous position step.
+
 ### Industrial Gripper Motion
 
 Each industrial robot exposes a separate gripper position command:

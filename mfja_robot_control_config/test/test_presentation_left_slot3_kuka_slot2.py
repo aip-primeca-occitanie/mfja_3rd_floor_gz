@@ -71,6 +71,16 @@ def test_presentation_kuka_pose_matches_requested_degrees():
     )
 
 
+def test_presentation_uses_live_start_and_shared_smooth_trajectory_builder():
+    text = _script_text()
+
+    assert "'/kuka1/joint_states'" in text
+    assert 'positions_from_joint_state(' in text
+    assert 'build_trajectory_message(' in text
+    assert "self.declare_parameter('kuka_trajectory_rate_hz'" in text
+    assert 'message.points = [point]' not in text
+
+
 def test_video_scenario_08_uses_presentation_script_not_vla():
     text = VIDEO_PAGE_PATH.read_text(encoding='utf-8')
 

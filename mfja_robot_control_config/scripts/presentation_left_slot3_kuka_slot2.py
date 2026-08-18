@@ -3,10 +3,11 @@
 import time
 
 import rclpy
+from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
-from trajectory_msgs.msg import JointTrajectoryPoint
 
 from mfja_rail_interfaces.msg import NamedState
 from mfja_rail_interfaces.msg import SensorFeedback
@@ -14,20 +15,18 @@ from mfja_rail_interfaces.msg import ShuttleCommand
 from mfja_rail_interfaces.msg import StopperCommand
 from mfja_rail_interfaces.msg import SwitchCommand
 
+from robot_joint_command import DEFAULT_TRAJECTORY_RATE_HZ
+from robot_joint_command import JointCommandProfile
+from robot_joint_command import build_trajectory_message
+from robot_joint_command import positions_from_joint_state
+from robot_joint_command import resolve_profile
+
 
 LEFT_RAIL_PREFIX = '/room_315/rails/left'
 LEFT_SLOT_SENSORS = {
     '2': 'DZI2L',
     '3': 'DZI3L',
 }
-KUKA_JOINT_NAMES = (
-    'joint_a1',
-    'joint_a2',
-    'joint_a3',
-    'joint_a4',
-    'joint_a5',
-    'joint_a6',
-)
 KUKA_PRESENTATION_POSITIONS_RAD = (
     1.57079632679,
     -0.52359877560,
@@ -44,6 +43,7 @@ KUKA_INITIAL_POSITIONS_RAD = (
     -0.03490658504,
     0.0,
 )
+KUKA_PROFILE: JointCommandProfile = resolve_profile('kuka')
 
 
 class LeftSlot3KukaSlot2Presentation(Node):
@@ -54,10 +54,14 @@ class LeftSlot3KukaSlot2Presentation(Node):
         self.declare_parameter('slot_timeout_s', 90.0)
         self.declare_parameter('slot3_overshoot_m', 0.15)
         self.declare_parameter('kuka_duration_s', 4.0)
+        self.declare_parameter('kuka_trajectory_rate_hz', DEFAULT_TRAJECTORY_RATE_HZ)
         self.declare_parameter('startup_delay_s', 2.0)
 
         self.active_sensors: set[str] = set()
         self.sensor_feedback_seen = False
+        self.kuka_positions: list[float] | None = None
+        self.kuka_joint_state_received_at: float | None = None
+        self.kuka_joint_state_error: str | None = None
 
         self.switch_pub = self.create_publisher(
             SwitchCommand,
@@ -85,6 +89,12 @@ class LeftSlot3KukaSlot2Presentation(Node):
             self._on_sensor_feedback,
             10,
         )
+        self.create_subscription(
+            JointState,
+            '/kuka1/joint_states',
+            self._on_kuka_joint_state,
+            10,
+        )
 
     def _on_sensor_feedback(self, message: SensorFeedback) -> None:
         self.active_sensors = {
@@ -93,6 +103,27 @@ class LeftSlot3KukaSlot2Presentation(Node):
             if bool(reading.active)
         }
         self.sensor_feedback_seen = True
+
+    def _on_kuka_joint_state(self, message: JointState) -> None:
+        try:
+            self.kuka_positions = positions_from_joint_state(
+                KUKA_PROFILE,
+                message.name,
+                message.position,
+            )
+            self.kuka_joint_state_received_at = time.monotonic()
+            self.kuka_joint_state_error = None
+        except ValueError as exc:
+            self.kuka_positions = None
+            self.kuka_joint_state_received_at = None
+            self.kuka_joint_state_error = str(exc)
+
+    def _kuka_joint_state_is_fresh(self) -> bool:
+        return (
+            self.kuka_positions is not None
+            and self.kuka_joint_state_received_at is not None
+            and time.monotonic() - self.kuka_joint_state_received_at <= 0.5
+        )
 
     def _spin_for(self, seconds: float) -> None:
         deadline = time.monotonic() + max(float(seconds), 0.0)
@@ -184,18 +215,36 @@ class LeftSlot3KukaSlot2Presentation(Node):
         label: str,
     ) -> None:
         duration_s = float(self.get_parameter('kuka_duration_s').value)
-        point = JointTrajectoryPoint()
-        point.positions = list(positions)
-        point.time_from_start.sec = int(duration_s)
-        point.time_from_start.nanosec = int(
-            round((duration_s - int(duration_s)) * 1_000_000_000)
-        )
+        rate_hz = float(self.get_parameter('kuka_trajectory_rate_hz').value)
+        if not self._wait_until(
+            lambda: self.kuka_pub.get_subscription_count() > 0,
+            5.0,
+            'KUKA trajectory bridge',
+        ):
+            raise RuntimeError('cannot command KUKA without its trajectory bridge')
+        if not self._wait_until(
+            self._kuka_joint_state_is_fresh,
+            5.0,
+            'fresh complete KUKA joint state',
+        ):
+            detail = (
+                f': {self.kuka_joint_state_error}'
+                if self.kuka_joint_state_error
+                else ''
+            )
+            raise RuntimeError(f'cannot command KUKA without its live joint state{detail}')
 
-        message = JointTrajectory()
-        message.joint_names = list(KUKA_JOINT_NAMES)
-        message.points = [point]
+        message = build_trajectory_message(
+            KUKA_PROFILE,
+            tuple(self.kuka_positions),
+            positions,
+            duration_s,
+            rate_hz,
+        )
         self.get_logger().info(label)
         self.kuka_pub.publish(message)
+        if not self.kuka_pub.wait_for_all_acked(Duration(seconds=1.0)):
+            raise RuntimeError('KUKA trajectory bridge did not acknowledge the command')
         self._spin_for(duration_s + 0.5)
 
     def _command_kuka(self) -> None:
