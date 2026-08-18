@@ -1,5 +1,10 @@
 # Room 315 visual runtime integration audit
 
+> **Historical record:** this dated audit preserves an earlier integration
+> decision. Do not use it as a current launch runbook. Follow
+> [Visual-State Runtime Integration](room315_visual_runtime_integration.md) and
+> verify the installed launch arguments with `--show-args`.
+
 Date: 2026-07-30
 
 ## Scope and repository state

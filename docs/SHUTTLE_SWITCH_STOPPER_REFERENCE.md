@@ -216,20 +216,25 @@ derived from the matching stopper minus `before_stopper_m`. `active: 0` means
 the sensor is clear. The published `sensor_type` is
 always `sensor`. When active, `shuttle_name` identifies the detected shuttle.
 
-The intended manual workflow is:
+Closing one stopper is not sufficient preparation for changing a route: a
+shuttle can already be inside the next branch/guard segment. For a manual
+simulation test, use this safe sequence:
 
-1. Watch the binary sensor reading for a shuttle at the sensor.
-2. Close the matching stopper, for example `A1=1`.
-3. Move the switch, for example `A1=INTERIOR`.
-4. Open the stopper again, for example `A1=0`.
+1. Stop the current high-level launch.
+2. Restart it with both initial shuttle counts set to `0`.
+3. Change the coordinated `A1`/`A2` or `A3`/`A4` pair in one command.
+4. Wait for the switch-state topic to report the requested actual state.
+5. Use a validated, route-compatible scenario before adding motion.
 
-Example sequence:
+Normal numbered start slots are on exterior guard segments. Resetting a
+shuttle to one of those slots does not make it safe to select an interior
+route.
+
+Example after launching an empty rail:
 
 ```bash
-ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
-ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"
-ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
-ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '0'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
+ros2 topic echo /room_315/rails/right/switches/state mfja_rail_interfaces/msg/SwitchState
 ```
 
 Virtual position detector names are published on the same sensor feedback topic:
@@ -332,6 +337,11 @@ Switch selectors for normal operation:
 The rail-specific topic determines whether the command applies to the right or
 left rail, so prefer the public labels `A1`, `A2`, `A3`, and `A4`.
 
+The typed command topic is a low-level simulation interface and bypasses the
+VLA route-planning boundary. Treat `A1`/`A2` and `A3`/`A4` as coordinated
+pairs. Apply the empty-rail procedure above before any of the following manual
+commands; do not reroute moving shuttles on the basis of a fixed timer.
+
 Set all switches to the exterior branch:
 
 ```bash
@@ -346,20 +356,20 @@ ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interface
 ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
 ```
 
-Switch one station on either rail:
+Switch one coordinated pair on either rail:
 
 ```bash
-ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'EXTERIOR'}]}"
-ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
-ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'EXTERIOR'}]}"
-ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'EXTERIOR'}, {name: 'A2', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'EXTERIOR'}, {name: 'A2', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
 ```
 
 Send multiple updates in one command:
 
 ```bash
-ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'EXTERIOR'}, {name: 'A3', state: 'INTERIOR'}, {name: 'A4', state: 'EXTERIOR'}]}"
-ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'EXTERIOR'}, {name: 'A3', state: 'INTERIOR'}, {name: 'A4', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}, {name: 'A3', state: 'EXTERIOR'}, {name: 'A4', state: 'EXTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/left/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}, {name: 'A3', state: 'EXTERIOR'}, {name: 'A4', state: 'EXTERIOR'}]}"
 ```
 
 Use the rail-specific command topics `/room_315/rails/right/switches/command` or

@@ -166,12 +166,98 @@ matching sensor-derived stop certificate. A certificate is bound to the
 current accepted visual segment and is invalidated before any later `ON`
 command for that shuttle.
 
-## Terminal 1: Gazebo, cameras, supervisor, and deterministic presence
+## Prerequisites for Closed-Loop Execution
+
+This workflow is optional and artifact-dependent. A fresh clone can run the
+simulation and deterministic rails, but it cannot start the learned
+command-to-motion path by itself. Before continuing, obtain all of the
+following through the project's controlled release process:
+
+- a complete active V4 promotion bundle, including the checkpoint and every
+  required artifact resolved by `runtime_promotion_manifest.json`;
+- the independently published SHA-256 of that manifest;
+- the matching task-execution authorization file;
+- the independently published SHA-256 of the task authorization;
+- the local intent-model checkpoint if semantic English parsing is required;
+  and
+- the isolated visual Python environment described in
+  [Installation](INSTALLATION.md#visual-training-and-v4-inference).
+
+The active V4 authorization is Gazebo-only. It is not approval for physical
+hardware. Never replace the published digests with digests calculated from
+untrusted files merely to make validation pass.
+
+The task gateway is not generic across arbitrary V4 models. The current code
+admits only candidate
+`room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_shadow`,
+visual schema `room315.visual_state.v4`, and checkpoint SHA-256
+`869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d`.
+The active promotion and task authorization must be later, matching records
+for that exact candidate. A different valid V4 visual bundle may run inference
+but will be rejected by this task gateway.
+
+Set portable workspace and artifact variables:
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+export ROOM315_V4_BUNDLE="$HOME/room315_artifacts/visual_v4_active"
+export ROOM315_V4_MANIFEST="$ROOM315_V4_BUNDLE/runtime_promotion_manifest.json"
+export ROOM315_V4_MANIFEST_SHA256='<approved-64-character-sha256>'
+export ROOM315_TASK_AUTH="$ROOM315_V4_BUNDLE/candidate_state.json"
+export ROOM315_TASK_AUTH_SHA256='<approved-64-character-sha256>'
+export ROOM315_TASK_EXEC_CONFIG="$HOME/.config/mfja/task_execution_runtime.yaml"
+```
+
+Verify both top-level files before launch:
+
+```bash
+printf '%s  %s\n' \
+  "$ROOM315_V4_MANIFEST_SHA256" "$ROOM315_V4_MANIFEST" | sha256sum --check -
+printf '%s  %s\n' \
+  "$ROOM315_TASK_AUTH_SHA256" "$ROOM315_TASK_AUTH" | sha256sum --check -
+```
+
+Create a host-local task-execution configuration:
+
+```bash
+mkdir -p "$(dirname "$ROOM315_TASK_EXEC_CONFIG")"
+cp "$MFJA_REPO/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml" \
+  "$ROOM315_TASK_EXEC_CONFIG"
+${EDITOR:-nano} "$ROOM315_TASK_EXEC_CONFIG"
+```
+
+Replace these three values in the copied YAML with literal absolute paths and
+the published digest; ROS parameter YAML does not expand shell variables:
+
+```yaml
+task_execution_authorization_path: /absolute/path/to/candidate_state.json
+task_execution_authorization_sha256: <approved-64-character-sha256>
+task_execution_promotion_manifest_path: /absolute/path/to/runtime_promotion_manifest.json
+```
+
+Do not edit the source configuration to store a personal home-directory path.
+The authorization, manifest, checkpoint allowlist, and runtime mode must all
+describe the same approved V4 candidate.
+
+Shell variables are local to one terminal. The blocks below repeat the values
+needed by each foreground process; replace every placeholder consistently.
+
+## Terminal 1: Gazebo, Cameras, Supervisor, and Presence
+
+This high-level launch clears the disposable
+`~/.ros/room315_vla_obstacles.json` cache by default. That matches the disabled
+external-obstacle assumption used below. Add
+`room315_clear_vla_obstacle_pose_cache:=false` only when a reviewed workflow
+must preserve the cache, and never point the configurable cache path at an
+unrelated file.
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+source "$MFJA_WS/install/setup.bash"
 
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
@@ -195,26 +281,41 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_shuttles_start_enabled:=false
 ```
 
-## Terminal 2: visual-state inference
+Wait at least five seconds. Confirm `/clock`, both camera image topics, both
+rail shuttle-state topics, and `/room_315/vla/status` before continuing.
+
+## Terminal 2: Active V4 Visual-State Inference
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+export MFJA_WS="$HOME/mfja_ws"
+export ROOM315_V4_BUNDLE="$HOME/room315_artifacts/visual_v4_active"
+export ROOM315_V4_MANIFEST="$ROOM315_V4_BUNDLE/runtime_promotion_manifest.json"
+export ROOM315_V4_MANIFEST_SHA256='<approved-64-character-sha256>'
 
-export PYTHONPATH="/usr/lib/python3/dist-packages:/home/tiago/room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}"
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.venvs/mfja-visual/bin/activate"
+printf '%s  %s\n' \
+  "$ROOM315_V4_MANIFEST_SHA256" "$ROOM315_V4_MANIFEST" | sha256sum --check -
 
 ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
   use_sim_time:=true \
   enable_camera_bridge:=false \
-  device:=cuda \
-  checkpoint_path:=/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run/best.pt \
-  sidecar_directory:=/home/tiago/room315_full_training_approved_archive_seed31520260730/results/run \
+  runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_V4_MANIFEST" \
+  v4_promotion_manifest_sha256:="$ROOM315_V4_MANIFEST_SHA256" \
+  device:=auto \
   dry_run_state_fusion:=true \
   plansys2_update_enabled:=false
 ```
 
-Wait until diagnostics report at least one accepted frame:
+The launch accepts `runtime_config`, `runtime_mode`,
+`v4_promotion_manifest`, and `v4_promotion_manifest_sha256`; historical
+`checkpoint_path` and `sidecar_directory` launch arguments are not supported.
+The manifest itself binds the checkpoint and all supporting artifacts.
+
+Wait for an accepted frame:
 
 ```bash
 ros2 topic echo /room_315/visual_state/observed_state \
@@ -222,22 +323,36 @@ ros2 topic echo /room_315/visual_state/observed_state \
 ```
 
 The message must contain `accepted: true`, `presence_ready: true`, and
-`state_fusion_ready: true`.
+`state_fusion_ready: true`. If it does not appear, inspect
+`/room_315/visual_state/validation` and `/diagnostics`; do not proceed to
+execution.
 
-## Terminal 3: PlanSys2 and closed-loop execution gateway
+## Terminal 3: PlanSys2 and the Closed-Loop Gateway
+
+Enabling this launch opts into supervised Gazebo shuttle actuation. Keep it
+disabled until the previous readiness checks pass.
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+export MFJA_WS="$HOME/mfja_ws"
+export ROOM315_TASK_EXEC_CONFIG="$HOME/.config/mfja/task_execution_runtime.yaml"
+
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
 
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
   use_sim_time:=true \
+  runtime_config:="$ROOM315_TASK_EXEC_CONFIG" \
   execution_enabled:=true \
   enable_plansys2:=true \
   external_obstacles_disabled:=true
 ```
+
+The flags are intentionally inverse: Terminal 1 uses
+`enable_room315_vla_obstacles:=false`, so the gateway must use
+`external_obstacles_disabled:=true`. The gateway revalidates its immutable
+execution authorization for every goal and rejects the goal if any path,
+digest, schema, candidate, or runtime guard differs.
 
 Readiness checks:
 
@@ -246,17 +361,46 @@ ros2 lifecycle get /planner
 ros2 topic echo /diagnostics diagnostic_msgs/msg/DiagnosticArray
 ```
 
-The planner must be `active`.
+The planner must be `active`, and diagnostics must not report an authorization,
+observation, supervisor, or sensor fault.
 
-## Terminal 4: interactive English commands
+## Terminal 4: Interactive English Commands
+
+Install the optional local intent model once. This step requires network
+access and disk space for the GGUF checkpoint. Use a dedicated virtual
+environment so the setup does not modify the user/system Python package site;
+offline operation begins only after setup completes.
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz
-source /opt/ros/jazzy/setup.bash
-source /home/tiago/mfja_3rd_floor_ros2_ws/install/setup.bash
-source /home/tiago/models/room315_intent/room315_intent.env
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+export ROOM315_INTENT_DIR="$HOME/models/room315_intent"
 
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+cd "$MFJA_REPO"
+python3 -m venv --system-site-packages "$HOME/.venvs/room315-intent"
+source "$HOME/.venvs/room315-intent/bin/activate"
+python -m pip install --upgrade pip
+python -m pip install 'llama-cpp-python==0.3.16'
+
+python3 mfja_robot_control_config/scripts/setup_room315_intent_model.py \
+  --model-dir "$ROOM315_INTENT_DIR" \
+  --skip-dependency-install
+```
+
+Then start the CLI:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+export ROOM315_INTENT_DIR="$HOME/models/room315_intent"
+
+cd "$MFJA_REPO"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.venvs/room315-intent/bin/activate"
+source "$ROOM315_INTENT_DIR/room315_intent.env"
+
+export PYTHONPATH="$MFJA_REPO/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
 python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
   --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" \
@@ -291,12 +435,14 @@ inspection displays only what the accepted frame says about R2. The human
 summary is a rendering of the JSON report; it does not perform a second topic
 read.
 
-## Optional Terminal 5: status monitor
+## Optional Terminal 5: Status Monitor
 
 ```bash
-cd /home/tiago/mfja_3rd_floor_ros2_ws
+export MFJA_WS="$HOME/mfja_ws"
+
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+source "$MFJA_WS/install/setup.bash"
 
 ros2 topic echo /room_315/task_goal/status std_msgs/msg/String
 ```
@@ -304,3 +450,8 @@ ros2 topic echo /room_315/task_goal/status std_msgs/msg/String
 Terminal results are `succeeded`, `aborted`, `rejected`, or `failed`, with a
 fail-closed reason. Successful inspection results additionally contain the
 same-frame machine-readable inspection report described above.
+
+For visual-runtime details, see
+[`room315_visual_runtime_integration.md`](room315_visual_runtime_integration.md).
+For task-goal parser setup and security boundaries, see
+[`ROOM315_TASK_GOAL_UNDERSTANDING.md`](ROOM315_TASK_GOAL_UNDERSTANDING.md).

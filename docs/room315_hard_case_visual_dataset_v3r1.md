@@ -1,5 +1,9 @@
 # Room 315 hard-case visual dataset V3R1
 
+> **Historical workflow:** this file preserves a dated V3R1 experiment and its
+> qualification-host paths. It is not a current installation or V4 runtime
+> guide. Use the [Documentation Hub](README.md) for maintained procedures.
+
 V3R1 corrects the missing deliberate `R4` approach coverage for right slot 3
 without changing `room315.visual_state.v3`. The authoritative location is
 segment `A34E` at ratio `0.447469343`; the dedicated buckets are `-0.15`,

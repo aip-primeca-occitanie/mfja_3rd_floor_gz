@@ -1,5 +1,21 @@
 # Quick Start and Feature Guide
 
+This is the current hands-on operator guide for the base Gazebo, robot, and rail
+runtime. Complete [Installation](INSTALLATION.md) first. For file ownership and
+safe changes, use [Configuration and Customization](CONFIGURATION.md); for
+failures, use [Troubleshooting](TROUBLESHOOTING.md).
+
+Only one high-level Room 315 or full-floor launch may run on a host at a time.
+Robot actions start after about three seconds, rail nodes after four seconds,
+and optional VLA processes after five seconds. Stop the launch with `Ctrl-C`
+before starting another profile.
+
+Each high-level launch clears the disposable
+`~/.ros/room315_vla_obstacles.json` pose cache by default. Add
+`room315_clear_vla_obstacle_pose_cache:=false` to preserve it. If you override
+`room315_vla_obstacle_pose_file`, point it only at the intended cache because
+the default startup action unlinks the configured path.
+
 ## Tested Launch Commands
 
 GUI:
@@ -26,12 +42,14 @@ If you only edit README files, no rebuild is required. If you edit launch files,
 Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
 config files, rebuild and source again.
 
-## Multiple TIAGo Robots From YAML
+## TIAGo YAML Configuration and Current Single-Mobile Limit
 
 `mfja_robot_control_config/config/robots.yaml` and
 `mfja_robot_control_config/config/robots_room_315_only.yaml` are the robot spawn
-lists. Add or remove TIAGo robots by editing the `robots:` list. Each entry must
-have a unique `name`.
+lists. TIAGo variants may be stored as separate entries, and every entry must
+have a unique `name`. Launch at most one mobile entry on a ROS graph: the
+current mobile URDF and DiffDrive frames are unprefixed, so two TIAGos publish
+duplicate `odom`, `base_footprint`, and related TF frame IDs.
 
 Supported TIAGo variants:
 
@@ -58,11 +76,14 @@ robots:
     y_pose: -3.0
     z_pose: 0.0
     yaw: 1.57
-    enabled: true
+    enabled: false
 ```
 
 You can also keep `model: tiago` and switch the variant with `arm: true` or
-`arm: false`.
+`arm: false`. Enable or explicitly select only one mobile entry. In the
+checked-in full-floor YAML, both mobile variants are enabled; therefore use an
+exact selector such as `robots:=tiago1` or `robots:=tiago_base1` instead of an
+empty selector, `robots:=all`, or the ambiguous `robots:=tiago`.
 
 ## Step-by-Step Feature Guide
 
@@ -74,20 +95,25 @@ quickly without searching through the reference sections below.
 Use this terminal before any launch or topic command:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-source install/setup.bash
+colcon build --symlink-install --paths \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  "$MFJA_REPO/mfja_3rd_floor_bringup"
+source "$MFJA_WS/install/setup.bash"
 ```
 
 If the workspace is already built and you only opened a new terminal, use:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS="$HOME/mfja_ws"
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+source "$MFJA_WS/install/setup.bash"
 ```
 
 ### 2. Launch Room 315 Only
@@ -96,7 +122,7 @@ Terminal 1 - start Room 315 with rails, device YAML, markers, typed topics,
 and shuttle nodes enabled, but with no initial shuttles:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -113,7 +139,7 @@ Terminal 2 - check that the rail topics exist:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic list | grep /room_315/rails
 ```
@@ -130,7 +156,7 @@ Expected namespaces:
 Terminal 1:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -147,7 +173,7 @@ Terminal 2 - verify the full-floor Gazebo services:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 service list | grep /world/mfja_3rd_floor
 ```
@@ -169,7 +195,7 @@ fixtures, other robots, or TIAGo.
 Terminal 1 - choose exactly one robot:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -191,7 +217,7 @@ Terminal 2 - check the selected robot topics. Example for KUKA:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic list | grep kuka1
 ```
@@ -251,14 +277,17 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
 
 ### 6. Add a Stopped or Moving Shuttle During Runtime
 
-Terminal 1 - keep Room 315 running.
+Terminal 1 - keep the zero-initial-shuttle Room 315 profile from the first
+example in section 5 running. If another profile already created R1, use a
+different unused identity and unoccupied slot; duplicate active names are
+rejected.
 
 Terminal 2 - add a right-rail shuttle at slot 2, keep it stopped, then start it
 with an `ON` command:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 service call /room_315/rails/right/shuttles/add \
   mfja_rail_interfaces/srv/AddShuttle \
@@ -333,6 +362,15 @@ motion delay. Switch states accept `I`/`INTERIOR` and `E`/`EXTERIOR`.
 Stopper states accept `0`/`PASS`/`OPEN` and
 `1`/`STOP`/`CLOSED`.
 
+`A1`/`A2` and `A3`/`A4` are coordinated route pairs. The typed command topic is
+a low-level simulation interface and bypasses the VLA route-planning boundary.
+Use it to move a route only on an empty rail. The clearest manual procedure is
+to stop the current high-level launch and restart the zero-initial-shuttle
+profile from section 5 before changing a pair.
+Normal numbered start slots lie on exterior guard segments, so resetting a
+shuttle to its start slot is not safe preparation for selecting the interior
+route. Never switch a moving route after a fixed wall-time delay.
+
 Terminal 2 - watch actual switch state:
 
 ```bash
@@ -340,15 +378,16 @@ ros2 topic echo /room_315/rails/right/switches/state \
   mfja_rail_interfaces/msg/SwitchState
 ```
 
-Terminal 3 - command switch A1 to the interior branch:
+Terminal 3 - after making the right rail empty as described above, command the
+A1/A2 pair to the interior route:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic pub --once /room_315/rails/right/switches/command \
   mfja_rail_interfaces/msg/SwitchCommand \
-  "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+  "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
 ```
 
 Command all right-rail switches to exterior:
@@ -382,7 +421,7 @@ Terminal 3 - close stopper A1:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic pub --once /room_315/rails/right/stoppers/command \
   mfja_rail_interfaces/msg/StopperCommand \
@@ -476,8 +515,9 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command \
   "{name: 'room315_right_shuttle_1', command: 'REMOVE'}"
 ```
 
-To test all right-rail position sensors, run a slow sweep and watch
-`/room_315/rails/right/sensors/feedback`:
+For a moving sensor smoke test, use the exterior route only and watch
+`/room_315/rails/right/sensors/feedback`. The normal numbered start slots are on
+the exterior incoming guards, so this is the route-compatible startup:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
@@ -488,43 +528,52 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   enable_room315_right_rail:=true \
   enable_room315_left_rail:=false \
   room315_right_shuttle_count:=4 \
-  room315_shuttles_start_enabled:=true \
+  room315_shuttles_start_enabled:=false \
   room315_shuttle_speed:=0.08
 ```
+
+In another sourced terminal, confirm the exterior route, wait until the switch
+state topic reports the requested state, then start the shuttles:
 
 ```bash
 ros2 topic pub --once /room_315/rails/right/switches/command \
   mfja_rail_interfaces/msg/SwitchCommand \
   "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
 
-sleep 45
+ros2 topic echo /room_315/rails/right/switches/state \
+  mfja_rail_interfaces/msg/SwitchState
 
-ros2 topic pub --once /room_315/rails/right/switches/command \
-  mfja_rail_interfaces/msg/SwitchCommand \
-  "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'ALL', command: 'ON', speed: 0.08}"
 ```
 
+Keep a separate terminal on the feedback topic throughout the run:
+
 ```bash
-timeout 120s ros2 topic echo /room_315/rails/right/sensors/feedback \
+ros2 topic echo /room_315/rails/right/sensors/feedback \
   mfja_rail_interfaces/msg/SensorFeedback
 ```
 
-Expected right-rail position sensor families:
+Do not treat a fixed timeout as proof that every detector was exercised. This
+smoke verifies only the sensors reached by the exterior traversal. Confirm the
+observed names against shuttle state. Exercise interior routes only through a
+validated scenario/supervisor workflow or a dedicated test with an explicitly
+route-compatible start; do not flip an exterior-start shuttle to interior.
+
+Configured right-rail position sensor families (not all are reached by the
+exterior smoke):
 
 - `DZI1R`, `DZI2R`, `DZI3R`, `DZI4R`
 - `DA1R`, `DA2R`, `DA3R`, `DA4R`
 - `DA1ER`, `DA2ER`, `DA3ER`, `DA4ER`
 - `DA1IR`, `DA2IR`, `DA3IR`, `DA4IR`
 
-To test all right-rail before-stopper sensors, watch `/sensors/feedback` during the
-same route sweep. Expected names are `A1_STOPPER_SENSOR`, `A2_STOPPER_SENSOR`,
-`A3_STOPPER_SENSOR`, and `A4_STOPPER_SENSOR`:
+Before-stopper sensors use the same feedback stream. Their expected names are
+`A1_STOPPER_SENSOR`, `A2_STOPPER_SENSOR`, `A3_STOPPER_SENSOR`, and
+`A4_STOPPER_SENSOR`.
 
-```bash
-timeout 120s ros2 topic echo /room_315/rails/right/sensors/feedback \
-  mfja_rail_interfaces/msg/SensorFeedback
-```
-
-For the left rail, use the same commands with `/room_315/rails/left/...`,
+For a left-rail exterior smoke, use the same commands with
+`/room_315/rails/left/...`,
 `enable_room315_right_rail:=false`, `enable_room315_left_rail:=true`, and
 `room315_left_shuttle_count:=4`.

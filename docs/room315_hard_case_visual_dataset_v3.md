@@ -1,5 +1,9 @@
 # Room 315 hard-case visual dataset V3
 
+> **Historical workflow:** the commands and absolute paths below reproduce the
+> dated V3 experiment; they are not the current V4 runtime procedure. Use the
+> [Documentation Hub](README.md) to select the maintained workflow.
+
 This workflow creates a new, perception-only development dataset without
 reading or creating a Test split. It keeps `room315.visual_state.v3`, the
 fixed identity order `L1,L2,L3,L4,R1,R2,R3,R4`, the authoritative 14-block

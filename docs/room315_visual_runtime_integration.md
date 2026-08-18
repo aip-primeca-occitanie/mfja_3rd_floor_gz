@@ -1,244 +1,312 @@
-# Room 315 visual-state runtime integration
+# Room 315 Visual-State Runtime Integration
 
-Date: 2026-07-30
+This guide documents the current `room315.visual_state.v4` runtime. It is for
+operators who already have a qualified V4 runtime bundle and for maintainers
+who need to understand the boundary between learned perception and
+deterministic control.
 
-## Runtime boundary
+The basic Gazebo, robot, and rail simulation does not require this runtime. A
+fresh clone does not contain the large checkpoint or every authorization
+artifact referenced by the checked-in runtime configuration. Do not expect the
+advanced visual runtime to become ready until a complete, host-local promotion
+bundle has been supplied.
 
-`room_315_visual_state_inference_node.py` is the paired-camera inference and
-validation boundary for the approved Room 315 fixed-eight model. It:
+## Safety Boundary
 
-1. verifies the checkpoint and all four sidecars by exact SHA-256;
-2. strictly reconstructs the approved paired-view ResNet-18 architecture;
-3. synchronizes the left and right RGB images;
-4. gates fixed identity slots through a deterministic `PresenceProvider`;
-5. decodes model values only for present slots;
-6. validates topology, image timestamps, bounding boxes, categorical values,
-   and continuous rail-position consistency;
-7. optionally applies a deterministic temporal filter, disabled by default;
-8. converts accepted visual fields to the existing `ObservedFact` and
-   `ObservedState` contracts;
-9. publishes typed raw, validation, and accepted observation messages plus
-   standard ROS diagnostics;
-10. optionally updates existing PlanSys2 problem-expert predicates.
+`room_315_visual_state_inference_node.py`:
 
-The node does not plan, execute, publish rail commands, bypass the supervisor,
-or replace deterministic safety. Its PlanSys2 integration only changes
-problem-expert facts and is disabled by default.
+1. verifies an immutable V4 promotion manifest and every required contract
+   artifact referenced by it;
+2. checks that the manifest authorizes the requested `active` or `shadow`
+   mode;
+3. loads the exact checkpoint declared by the manifest;
+4. synchronizes the left and right RGB images;
+5. obtains shuttle presence from the deterministic rail-state inventory;
+6. performs V4 inference, acceptance checks, and deterministic validation;
+7. publishes raw, validation, accepted, and diagnostic outputs; and
+8. enforces the manifest's runtime guards. All currently supported V4 scopes
+   require dry-run state fusion and disable direct PlanSys2 mutation.
 
-## Approved model contract
+The node does not plan, publish rail commands, bypass the supervisor, or
+authorize task execution. Task execution is a separate, fail-closed gateway.
+The checked-in launch defaults keep state fusion dry-run and PlanSys2 mutation
+disabled.
 
-- schema: `room315.visual_state.v3`
-- architecture:
-  `structured_visual_state_torchvision_resnet18_fixed8_v3`
-- backbone: TorchVision ResNet-18, partial fine-tuning of `layer4`
-- input: synchronized left/right RGB, concatenated as `[1,6,224,224]`
-- resize: direct PIL bilinear
-- normalization per RGB view:
-  mean `(0.485, 0.456, 0.406)`, standard deviation
-  `(0.229, 0.224, 0.225)`
-- output dimension: 200
-- fixed identity order: `L1,L2,L3,L4,R1,R2,R3,R4`
-- decoded visual fields: side, block, bbox, `s_m`, `s_ratio`,
-  `segment_length_m`, and loaded/empty
+The supplied active authorization is for Gazebo only. It is not approval for a
+physical deployment.
 
-The training target mask is label-side metadata. It is never interpreted as a
-runtime prediction.
+## V4 Model Contract
 
-## Deterministic presence contract
+The deployable runtime accepts only:
 
-The Gazebo provider consumes:
+- schema `room315.visual_state.v4`;
+- model kind `room315_visual_state_resnet18_split_rails_v4`;
+- fixed identity order `L1,L2,L3,L4,R1,R2,R3,R4`;
+- the checkpoint, preprocessing, topology, thresholds, and calibration
+  declared by the promotion manifest; and
+- exact SHA-256 matches for all required artifacts.
 
-- `/room_315/rails/left/shuttles/state`
-- `/room_315/rails/right/shuttles/state`
-- message type `mfja_rail_interfaces/msg/ShuttleState`
+The current V4 output is segment-first. It predicts segment class, loaded
+state, bounding box, and normalized position for present shuttle identities.
+The runtime derives any compatibility representation only after V4 acceptance;
+it does not re-enable the historical V3 runtime.
 
-Only these values are read:
+## Promotion Bundle Requirement
 
-- `msg.name`
-- `msg.header.stamp`
-- ROS receive time
+A usable promotion bundle is a directory containing the promotion manifest
+and every required artifact that the runtime verifier resolves from it.
+Depending on the authorization, this includes the checkpoint, model/config
+evidence, topology contract, calibration records, and a manual decision record.
+Copying only
+`runtime_promotion_manifest.json` is insufficient.
 
-The provider deliberately never reads `mode`, `current_segment`, `s`, `x`,
-`y`, `z`, `yaw`, or `speed`. These deterministic controller fields cannot
-replace or improve the model's visual block, bbox, position, segment length,
-or loaded/empty predictions.
+Keep the bundle outside Git. Obtain it from the project's authorized artifact
+custodian or reconstruct it through the locked V4 qualification workflow. The
+release and evidence overview is in
+[`report/evidence/ROOM315_VISUAL_V4_RELEASE.md`](../report/evidence/ROOM315_VISUAL_V4_RELEASE.md).
 
-Identity resolution reuses the repository's authoritative shuttle registry:
-`all_shuttle_specs()` and `normalize_shuttle_ref()`. No second identity map is
-maintained. The fixed order remains:
+For any selected bundle, verify the manifest against its independently
+published digest in the same terminal that will start inference:
 
-`L1,L2,L3,L4,R1,R2,R3,R4`.
+```bash
+export ROOM315_SELECTED_V4_BUNDLE='/absolute/path/to/selected-v4-bundle'
+export ROOM315_SELECTED_V4_MANIFEST="$ROOM315_SELECTED_V4_BUNDLE/runtime_promotion_manifest.json"
+export ROOM315_SELECTED_V4_MANIFEST_SHA256='<approved-64-character-sha256>'
 
-`presence_state_timeout_s` defaults to 1.0 seconds.
-`presence_warmup_s` defaults to 0.5 seconds. Both side sources must initialize,
-complete warm-up, and remain fresh according to both source and receive
-timestamps.
+test -f "$ROOM315_SELECTED_V4_MANIFEST"
+printf '%s  %s\n' \
+  "$ROOM315_SELECTED_V4_MANIFEST_SHA256" \
+  "$ROOM315_SELECTED_V4_MANIFEST" | sha256sum --check -
+```
 
-The three presence states have distinct semantics:
+Do not compute a digest from an untrusted manifest and then use that same
+digest as authorization. Obtain the expected digest through the release or
+review channel that approved the bundle.
 
-| State | Meaning | Runtime action |
-|---|---|---|
-| `present` | a fresh mapped state message exists | decode, validate, and fuse its visual slot |
-| `absent` | the complete registry is fresh but that identity has no fresh report | ignore all bbox/location/payload model values for that slot |
-| `unknown` | source startup, staleness, identity, duplicate, or side validation failed | reject the complete observation |
+The manifest's `deployment_mode` must equal the launch `runtime_mode`. A
+shadow manifest cannot be converted to active operation by changing a launch
+argument. An active manifest also binds the permitted runtime guards.
 
-The runtime fails closed if either topic is not initialized, either source is
-stale, an entity cannot be mapped, duplicate aliases identify the same active
-slot, an identity appears on the wrong side, or any slot is unknown. In these
-cases no accepted observation is published and PlanSys2 is not updated.
-
-The current Gazebo `ShuttleState` topics are acceptable deterministic
-controller-state inventory sources for simulation. This does not prove that
-the physical installation has equivalent presence sensing. A real deployment
-must provide a deterministic PLC/controller shuttle inventory through another
-`PresenceProvider` implementation. The model runtime, validator, fusion, and
-PlanSys2 boundary do not need to change when that provider is replaced.
-
-## Validation and rejection behavior
-
-The validator rejects:
-
-- missing or unhealthy artifacts/model;
-- stale, future-dated, or excessively skewed image pairs;
-- unknown, duplicate, reordered, or side-conflicting identities;
-- blocks outside the authoritative 14-block vocabulary;
-- invalid loaded-state classes;
-- non-finite or non-positive boxes and boxes wholly outside their rail camera;
-- non-finite, negative, or out-of-range rail-position values;
-- `s_m` inconsistent with `s_ratio * segment_length_m`;
-- any presence registry that is not fully ready.
-
-Small configurable boundary excursions can be clamped and are listed in
-`clamped_fields`. Validation reasons and counters are published in both the
-typed validation message and `/diagnostics`.
-
-The optional temporal filter uses categorical majority and numeric EMA only
-after validation. It resets after any rejected observation and removes state
-for inactive identities, so it cannot create a shuttle.
-
-## Field ownership and confidence
-
-Presence facts are deterministic facts:
-
-- source: `trusted_device`
-- confidence: `1.0`
-- owner: deterministic presence provider
-
-Visual facts are:
-
-- source: `visual_model`
-- fields: side/block, bbox, rail position, segment length, loaded/empty
-- confidence: `0.0` sentinel
-- metadata: `confidence_available=false`
-
-The approved model has no calibrated confidence head. The runtime does not
-invent confidence from logits or regression magnitudes.
-
-Absent identities receive only `present=false`; they contribute no visual
-location, payload, bbox, or PlanSys2 predicates. Unknown presence blocks fusion
-and PlanSys2 updates. The PDDL problem builder likewise skips explicitly absent
-shuttles before requiring payload or location facts.
-
-## Topics
-
-Inputs:
-
-- `/room_315/vla/left_rail_rgbd/image`
-- `/room_315/vla/right_rail_rgbd/image`
-- `/room_315/rails/left/shuttles/state`
-- `/room_315/rails/right/shuttles/state`
-- `/room_315/vla/status` for independent supervisor readiness only
-
-Outputs:
-
-- `/room_315/visual_state/raw`
-- `/room_315/visual_state/validation`
-- `/room_315/visual_state/observed_state` for accepted fused observations only
-- `/diagnostics`
-
-The three visual topics use
-`mfja_rail_interfaces/msg/VisualStateObservation`. Each message includes the
-schema/checkpoint identity, both image stamps, readiness and acceptance flags,
-reasons, clamped fields, latency and frame counters, and all eight shuttle
-slots with explicit presence state.
-
-## Build
+## Build and Environment
 
 From the workspace root:
 
 ```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
+cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
-colcon build \
+source "$HOME/.venvs/mfja-visual/bin/activate"
+colcon build --symlink-install \
   --packages-select mfja_rail_interfaces mfja_robot_control_config \
-  --allow-overriding mfja_robot_control_config
+  --paths \
+    "$MFJA_REPO/mfja_rail_interfaces" \
+    "$MFJA_REPO/mfja_robot_control_config"
 source install/setup.bash
 ```
 
-Runtime Python requires Torch and TorchVision in the Python environment used
-by ROS 2, plus NumPy, Pillow, `cv_bridge`, `message_filters`, and the declared
-ROS message packages.
+The ROS Python environment must contain Torch, TorchVision, NumPy, Pillow,
+`cv_bridge`, and `message_filters`. Complete the base dependency step and the
+isolated visual environment in
+[`INSTALLATION.md`](INSTALLATION.md#visual-training-and-v4-inference) first.
+Every terminal that starts visual inference must activate that environment.
 
-## Launch
+## Start the Simulation Inputs
 
-The checked-in YAML contains the local approved artifact path. On another
-host, override the checkpoint and sidecar directory:
+The high-level launch below starts Gazebo, the paired RGB-D camera bridge, the
+deterministic rail nodes, and the supervisor. It intentionally does not start
+the visual inference process. It also clears the disposable
+`~/.ros/room315_vla_obstacles.json` cache by default. Add
+`room315_clear_vla_obstacle_pose_cache:=false` only if the cache must be
+preserved, and keep any configured cache path limited to that intended file.
 
 ```bash
+export MFJA_WS="$HOME/mfja_ws"
+
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  gui:=true \
+  start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_obstacles:=false \
+  room315_left_shuttle_count:=2 \
+  room315_right_shuttle_count:=2 \
+  room315_shuttles_start_enabled:=false
+```
+
+Wait at least five seconds, then verify that `/clock`, both camera image topics,
+both shuttle-state topics, and `/room_315/vla/status` are active.
+
+## Start a Shadow Runtime
+
+Use a promotion bundle whose manifest declares `deployment_mode: shadow`:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export ROOM315_SHADOW_V4_BUNDLE="$HOME/room315_artifacts/visual_v4_shadow"
+export ROOM315_SHADOW_V4_MANIFEST="$ROOM315_SHADOW_V4_BUNDLE/runtime_promotion_manifest.json"
+export ROOM315_SHADOW_V4_MANIFEST_SHA256='<approved-shadow-manifest-sha256>'
+
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.venvs/mfja-visual/bin/activate"
+printf '%s  %s\n' \
+  "$ROOM315_SHADOW_V4_MANIFEST_SHA256" \
+  "$ROOM315_SHADOW_V4_MANIFEST" | sha256sum --check -
+
 ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
-  checkpoint_path:=/absolute/path/to/best.pt \
-  sidecar_directory:=/absolute/path/to/run \
+  use_sim_time:=true \
+  enable_camera_bridge:=false \
+  runtime_mode:=shadow \
+  v4_promotion_manifest:="$ROOM315_SHADOW_V4_MANIFEST" \
+  v4_promotion_manifest_sha256:="$ROOM315_SHADOW_V4_MANIFEST_SHA256" \
   device:=auto \
   dry_run_state_fusion:=true \
   plansys2_update_enabled:=false
 ```
 
-Keep dry-run mode enabled while validating the live graph. PlanSys2 mutation
-requires all of:
+Because the high-level simulation launch already created the camera bridge,
+`enable_camera_bridge` is false here. Set it to true only when no other process
+bridges the two Gazebo image topics.
 
-- `dry_run_state_fusion:=false`
-- `plansys2_update_enabled:=true`
-- a healthy model and synchronized inputs
-- a complete fresh presence registry
-- an accepted deterministic validation result
-- a fresh supervisor status with emergency stop clear
-- available PlanSys2 problem-expert add/remove predicate services
-
-This still does not authorize planning or actuation from the inference node.
-
-## Validation-only CPU smoke
-
-The smoke command requires explicit validation files and rejects filenames
-that identify the locked Test split:
+Shadow mode publishes under `/room_315/visual_state/shadow_v4/*` and never
+updates PlanSys2. Inspect it with:
 
 ```bash
-python3 mfja_robot_control_config/scripts/room_315_visual_runtime_cpu_smoke.py \
-  --checkpoint /absolute/path/to/best.pt \
-  --sidecar-directory /absolute/path/to/run \
-  --checkpoint-sha256 8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d \
-  --target-stats-sha256 2d48078641842aa2db7a59b9285fc5bbedaaa3a0039fc39986ca230db983b18c \
-  --vectorizer-sha256 637c854556f3331c4e187db4aa7fc70457f01df8877947b9a0e988a543f7113e \
-  --training-config-sha256 5c45544af7766afff397dafa7c14c0b3b05083f07a93122308ef50c2e8f452eb \
-  --run-metadata-sha256 d86c0ebfda3f5b174fc3c06f4ce8a3e083d2048db7b44d20efe951aaa7e5428d \
-  --validation-split /absolute/path/to/validation.jsonl \
-  --validation-labels /absolute/path/to/validation_visual_labels.jsonl \
-  --dataset-root /absolute/path/to/dataset
-```
-
-This command performs inference only. It does not train, select a checkpoint,
-or evaluate the locked Test split.
-
-## Diagnostics
-
-Inspect readiness and rejection causes with:
-
-```bash
-ros2 topic echo /diagnostics \
+ros2 topic list | sort | rg '/room_315/visual_state/shadow_v4'
+ros2 topic echo /room_315/visual_state/shadow_v4/validation \
+  mfja_rail_interfaces/msg/VisualStateObservation --once
+ros2 topic echo /room_315/visual_state/shadow_v4/diagnostics \
   diagnostic_msgs/msg/DiagnosticArray
-ros2 topic echo /room_315/visual_state/validation \
-  mfja_rail_interfaces/msg/VisualStateObservation
 ```
 
-Key diagnostics include model, input, presence, fusion, and safety readiness;
-artifact error; device and checkpoint SHA-256; last inference and acceptance
-times; latencies; accepted/rejected/stale counters; presence reasons; and
-PlanSys2 update status.
+## Start an Active, Dry-Run Runtime
+
+Use only a promotion bundle whose manifest declares `deployment_mode: active`
+and whose manual decision authorizes the exact guard values below:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export ROOM315_ACTIVE_V4_BUNDLE="$HOME/room315_artifacts/visual_v4_active"
+export ROOM315_ACTIVE_V4_MANIFEST="$ROOM315_ACTIVE_V4_BUNDLE/runtime_promotion_manifest.json"
+export ROOM315_ACTIVE_V4_MANIFEST_SHA256='<approved-active-manifest-sha256>'
+
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.venvs/mfja-visual/bin/activate"
+printf '%s  %s\n' \
+  "$ROOM315_ACTIVE_V4_MANIFEST_SHA256" \
+  "$ROOM315_ACTIVE_V4_MANIFEST" | sha256sum --check -
+
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true \
+  enable_camera_bridge:=false \
+  runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_V4_MANIFEST" \
+  v4_promotion_manifest_sha256:="$ROOM315_ACTIVE_V4_MANIFEST_SHA256" \
+  device:=auto \
+  dry_run_state_fusion:=true \
+  plansys2_update_enabled:=false
+```
+
+If the requested mode or guards differ from the immutable authorization, the
+process stays alive but the model remains unready. It publishes an ERROR
+diagnostic and no accepted observations. Do not wait for a launch-process exit,
+weaken the checks, or edit the manifest in place.
+
+Active outputs are:
+
+| Topic | Type | Meaning |
+|---|---|---|
+| `/room_315/visual_state/raw` | `VisualStateObservation` | Pre-validation compatibility observation |
+| `/room_315/visual_state/raw_model_prediction` | `std_msgs/String` | V4 diagnostic model payload |
+| `/room_315/visual_state/validation` | `VisualStateObservation` | Acceptance or rejection result |
+| `/room_315/visual_state/observed_state` | `VisualStateObservation` | Accepted fused state only |
+| `/diagnostics` | `DiagnosticArray` | Artifact, input, presence, validation, and safety health |
+
+Verify one accepted observation:
+
+```bash
+ros2 topic echo /room_315/visual_state/observed_state \
+  mfja_rail_interfaces/msg/VisualStateObservation --once
+```
+
+An accepted message must report `accepted: true`, `presence_ready: true`, and
+`state_fusion_ready: true`. Absence of an accepted message is a fail-closed
+condition; inspect the validation topic and diagnostics instead of assuming
+that the model is working.
+
+## Deterministic Presence Contract
+
+The Gazebo presence provider subscribes to:
+
+- `/room_315/rails/left/shuttles/state`;
+- `/room_315/rails/right/shuttles/state`; and
+- `mfja_rail_interfaces/msg/ShuttleState` on both topics.
+
+It deliberately uses only the shuttle name, message timestamp, and ROS receive
+time. It does not use controller `mode`, segment, position, pose, yaw, or speed
+to improve model predictions.
+
+| Presence state | Meaning | Runtime behavior |
+|---|---|---|
+| `present` | A fresh, correctly mapped rail-state message exists | Decode and validate that identity |
+| `absent` | Both inventories are fresh and the identity has no current report | Mask all visual fields for that identity |
+| `unknown` | Startup, staleness, duplicate identity, wrong side, or mapping failure | Reject the complete observation |
+
+The simulation provider does not prove that a physical cell has equivalent
+presence sensing. Physical integration requires a trusted PLC/controller
+provider implementing the same boundary.
+
+## Validation and Failure Behavior
+
+The model remains unready when an artifact is missing, a digest is wrong, or
+the manifest mode/guards do not authorize the request. The node stays alive so
+diagnostics remain available.
+
+After a model is ready, it rejects a frame when any of these conditions occurs:
+
+- image pairs are stale, future-dated, or too far apart;
+- presence is incomplete, stale, duplicated, unmapped, or on the wrong side;
+- a segment or loaded-state class is invalid;
+- a bounding box or normalized position is non-finite or out of bounds;
+- the V4 confidence and frame-level acceptance rules fail; or
+- deterministic visual validation fails.
+
+Rejection means no accepted observation is published. Shadow mode and the
+checked-in dry-run guards also prevent PlanSys2 mutation.
+
+Supervisor status and emergency-stop readiness do not decide whether a visual
+frame is accepted. They gate downstream side effects and task execution. It is
+therefore possible to observe a valid visual message while actuation remains
+blocked; use supervisor and task-gateway diagnostics for the actuation state.
+
+## Configuration and Environment Overrides
+
+The source configuration is
+`mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml`.
+Its checked-in artifact path is host-specific evidence, not a portable
+default. Prefer launch overrides or a host-local copy rather than committing a
+personal path.
+
+The runtime also recognizes these artifact environment overrides:
+
+- `ROOM315_VISUAL_V4_PROMOTION_MANIFEST_PATH` or
+  `ROOM315_VISUAL_V4_MANIFEST_PATH`;
+- `ROOM315_VISUAL_EXPECTED_V4_PROMOTION_MANIFEST_SHA256` or
+  `ROOM315_VISUAL_V4_EXPECTED_PROMOTION_MANIFEST_SHA256`.
+
+Defining conflicting aliases is an error. The launch arguments are clearer for
+operator runbooks and are preferred in the examples above.
+
+See [`CONFIGURATION.md`](CONFIGURATION.md) for ownership rules and
+[`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) for symptom-based diagnosis.

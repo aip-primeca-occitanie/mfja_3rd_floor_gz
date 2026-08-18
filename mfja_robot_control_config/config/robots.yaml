@@ -27,7 +27,8 @@ robots:
     z_pose: 0.62
     yaw: 1.57
     enabled: true
-  # Add/remove any number of TIAGo entries here. Supported mobile variants:
+  # Multiple TIAGo variants may be listed, but launch at most one per ROS graph
+  # until mobile TF frames are instance-prefixed. Supported mobile variants:
   # - model: tiago_with_arm  # aliases: tiago, tiago_arm
   # - model: tiago_base      # TIAGo body without arm/head; aliases: tiago_no_arm, tiago_mobile_base
   # You can also use model: tiago with arm: true/false.

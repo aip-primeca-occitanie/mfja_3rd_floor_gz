@@ -15,10 +15,17 @@ That is why the shuttle node must use:
 -p gazebo_world_name:=mfja_3rd_floor
 ```
 
+> **Obstacle-cache warning:** Both high-level floor launches default to
+> `room315_clear_vla_obstacle_pose_cache:=true`. At startup, that setting
+> deletes `~/.ros/room315_vla_obstacles.json`. Add
+> `room315_clear_vla_obstacle_pose_cache:=false` to preserve the cache. If you
+> override `room315_vla_obstacle_pose_file`, point it only at a file that is
+> intentionally disposable; the same startup cleanup applies to the override.
+
 Terminal 1 - start the full floor with the Room 315 rail stack:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -46,7 +53,7 @@ Optional advanced mode - start one kinematic shuttle on the full floor after
 launching with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -71,7 +78,7 @@ The launch automatically starts ROS-Gazebo service bridges for:
 Check them with:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -99,19 +106,26 @@ using the wrong world name. Stop Gazebo, rebuild if needed, and restart the laun
 
 ## Robot Spawning and Control
 
-The same launch files can run the world with or without industrial robots. For
-shuttle-only testing, use `robots:=none`. For robot experiments, use `robots:=all`
-or select only the robots you need.
+The same launch files can run the world with or without configured robots. For
+shuttle-only testing, use `robots:=none`. For robot experiments, explicitly
+select only the robots you need.
 
-Full floor with all configured robots:
+Do **not** use `robots:=all` with the current full-floor configuration.
+`robots:=all` selects every YAML entry regardless of its `enabled` value, and
+the full-floor file currently contains both `tiago1` and `tiago_base1`. Those
+mobile variants publish duplicate, unprefixed TF frame names and therefore must
+not run in the same ROS graph. Select exactly one TIAGo variant until the mobile
+TF frames are instance-prefixed.
+
+Full floor with all four industrial robots and the arm-equipped TIAGo:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
-  robots:=all \
+  robots:=kuka1,staubli1,yaskawa_hc10_1,yaskawa_hc10dt_1,tiago1 \
   start_paused:=false \
   gui:=true
 ```
@@ -124,7 +138,7 @@ because the whole simulation is slower.
 Room 315 only with all configured robots:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -134,8 +148,15 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui:=true
 ```
 
-Robot selection supports full names, short aliases, numeric YAML order, `all`,
-and `none`.
+The room-only YAML currently has only one TIAGo entry, so its `robots:=all`
+selection does not create the two-mobile-robot TF conflict. Recheck that file
+before using `all` after adding another mobile robot.
+
+Robot selection supports exact names, short aliases, numeric YAML order,
+`all`, and `none`. Prefer exact names, especially in multi-robot commands;
+numeric selectors depend on YAML order, and a short alias is rejected when it
+matches more than one configured robot. In particular, `robots:=tiago` is
+ambiguous in the current full-floor configuration.
 
 Common selectors:
 
@@ -145,21 +166,22 @@ robots:=staubli1
 robots:=yaskawa_hc10_1
 robots:=yaskawa_hc10dt_1
 robots:=tiago1
-robots:=kuka,tiago
+robots:=tiago_base1
+robots:=kuka1,tiago1
 robots:=1,5
-robots:=all
 robots:=none
 ```
 
-Current shortcut mapping:
+Current numeric mapping in the full-floor YAML:
 
 | Selector | Robot |
 | --- | --- |
-| `1`, `kuka` | `kuka1` |
-| `2`, `staubli` | `staubli1` |
-| `3`, `hc10` | `yaskawa_hc10_1` |
-| `4`, `hc10dt` | `yaskawa_hc10dt_1` |
-| `5`, `tiago` | `tiago1` |
+| `1` | `kuka1` |
+| `2` | `staubli1` |
+| `3` | `yaskawa_hc10_1` |
+| `4` | `yaskawa_hc10dt_1` |
+| `5` | `tiago1` |
+| `6` | `tiago_base1` |
 
 The full-floor launch uses:
 
@@ -201,7 +223,7 @@ robot:=hc10dt
 After launching the simulation with robots enabled, open a new terminal:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```

@@ -1,5 +1,10 @@
 # Room 315 Rail Reference
 
+> **Launch side effect:** high-level Room 315/full-floor launches clear
+> `~/.ros/room315_vla_obstacles.json` by default. Add
+> `room315_clear_vla_obstacle_pose_cache:=false` to preserve that cache. If its
+> path is overridden, make sure it names only the intended disposable cache.
+
 ## Room 315 Continuous Path Backend
 
 The Room 315 rail geometry still starts from measured CSV segment files. The
@@ -35,7 +40,7 @@ arguments.
 Terminal 1 - start Room 315 with the rail stack:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -87,7 +92,7 @@ Optional advanced mode - start one right-rail kinematic shuttle directly after
 launching Gazebo with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -105,7 +110,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
 Optional advanced mode - start one left-rail kinematic shuttle directly:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -125,7 +130,7 @@ Optional advanced mode - start the ready-made dual launch separately:
 Right only:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -140,7 +145,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Left only:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -155,7 +160,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Both rails together:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -173,7 +178,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Open one extra terminal for commands:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
@@ -268,9 +273,15 @@ Messages:
 
 Typed examples:
 
+The typed switch topic is a low-level simulation interface. Change the
+coordinated `A1`/`A2` or `A3`/`A4` pair only on an empty rail. Normal numbered
+start slots are exterior guard segments, so a reset shuttle at one of those
+slots is not clear for an interior route. Use a validated, route-compatible
+scenario for motion after changing topology.
+
 ```bash
 ros2 interface show mfja_rail_interfaces/msg/SwitchCommand
-ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
+ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interfaces/msg/SwitchCommand "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
 ros2 topic echo /room_315/rails/right/switches/state mfja_rail_interfaces/msg/SwitchState
 
 ros2 topic pub --once /room_315/rails/right/stoppers/command mfja_rail_interfaces/msg/StopperCommand "{stoppers: [{name: 'A1', state: '1'}]}"

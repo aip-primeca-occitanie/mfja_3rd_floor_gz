@@ -165,22 +165,36 @@ The selected local checkpoint is:
 ```text
 repo: Qwen/Qwen2.5-1.5B-Instruct-GGUF
 file: qwen2.5-1.5b-instruct-q4_k_m.gguf
-path: /home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf
+recommended path: $HOME/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf
 sha256: 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
 ```
 
 Set up or verify the local model explicitly:
 
 ```bash
-python3 mfja_robot_control_config/scripts/setup_room315_intent_model.py
-source /home/tiago/models/room315_intent/room315_intent.env
+export MFJA_REPO="${MFJA_REPO:-$HOME/mfja_ws/src/mfja_3rd_floor_gz}"
+export ROOM315_INTENT_DIR="$HOME/models/room315_intent"
+cd "$MFJA_REPO"
+
+python3 -m venv --system-site-packages "$HOME/.venvs/room315-intent"
+source "$HOME/.venvs/room315-intent/bin/activate"
+python -m pip install --upgrade pip
+python -m pip install 'llama-cpp-python==0.3.16'
+
+python3 mfja_robot_control_config/scripts/setup_room315_intent_model.py \
+  --model-dir "$ROOM315_INTENT_DIR" \
+  --skip-dependency-install
+source "$ROOM315_INTENT_DIR/room315_intent.env"
 ```
 
-The setup script is idempotent. It installs `llama-cpp-python==0.3.16` if
-needed, downloads the GGUF only when the script is explicitly run and the file
-is missing, verifies SHA-256, and writes local config/env files under
-`/home/tiago/models/room315_intent/`. Do not commit checkpoints, pip caches,
-virtual environments, or generated local configs.
+The setup script is idempotent. This workflow installs
+`llama-cpp-python==0.3.16` inside the dedicated environment and passes
+`--skip-dependency-install`, avoiding the script's user-package and
+`--break-system-packages` fallback. The script downloads the GGUF only when it
+is explicitly run and the file is missing, verifies SHA-256, and writes local
+config/env files under the selected model directory. Reactivate the virtual
+environment for later semantic-model sessions. Do not commit checkpoints, pip
+caches, virtual environments, or generated local configs.
 
 If the model is unavailable, unhealthy, times out, or returns invalid JSON, the
 parser continues with deterministic extraction and targeted clarification. The
@@ -359,21 +373,39 @@ is rejected.
 
 ## CLI And Health Checks
 
+Run this setup once in every shell used for the commands in this section:
+
+```bash
+export MFJA_WS="${MFJA_WS:-$HOME/mfja_ws}"
+export MFJA_REPO="${MFJA_REPO:-$MFJA_WS/src/mfja_3rd_floor_gz}"
+export ROOM315_INTENT_DIR="${ROOM315_INTENT_DIR:-$HOME/models/room315_intent}"
+
+cd "$MFJA_REPO"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.venvs/room315-intent/bin/activate"
+source "$ROOM315_INTENT_DIR/room315_intent.env"
+```
+
+The generated environment defines both `ROOM315_INTENT_MODEL_PATH` and
+`ROOM315_TASK_GOAL_LOCAL_CONFIG`. Pass the latter explicitly; environment
+lookup is not a substitute for the command's `--config` option.
+
 Offline smoke test:
 
 ```bash
-source /home/tiago/models/room315_intent/room315_intent.env
 PYTHONPATH=mfja_robot_control_config/scripts \
 python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
+  --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" \
   --text "please move the nearest loaded right shuttle to slot 3"
 ```
 
 Require a real local model and prove semantic inference was used:
 
 ```bash
-source /home/tiago/models/room315_intent/room315_intent.env
 PYTHONPATH=mfja_robot_control_config/scripts \
 python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
+  --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" \
   --require-real-model \
   --expect-semantic \
   --expect-draft-field selection_strategy=nearest \
@@ -383,21 +415,37 @@ python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
   --text "Could you send whichever carrier is closest and holding a component to the third position on the right-hand line?"
 ```
 
-Prove fully offline execution after the checkpoint is present:
+Prove fully offline execution after the checkpoint is present. This optional
+check requires Bubblewrap (`sudo apt install bubblewrap`) and enabled
+unprivileged user namespaces. If those are unavailable, use an equivalently
+network-isolated container and record that the offline guarantee was not
+verified by this exact command.
 
 ```bash
 bwrap --unshare-net --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp \
-  --chdir /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz \
-  bash -lc 'ROOM315_INTENT_MODEL_PATH=/home/tiago/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONPATH=mfja_robot_control_config/scripts python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py --require-real-model --expect-semantic --expect-draft-field selection_strategy=nearest --expect-draft-field payload_filter=loaded --expect-draft-field side=right --expect-draft-field target_slot=3 --text "Could you send whichever carrier is closest and holding a component to the third position on the right-hand line?"'
+  --chdir "$MFJA_REPO" \
+  --setenv ROOM315_INTENT_MODEL_PATH "$ROOM315_INTENT_MODEL_PATH" \
+  --setenv HF_HUB_OFFLINE 1 \
+  --setenv TRANSFORMERS_OFFLINE 1 \
+  --setenv PYTHONPATH mfja_robot_control_config/scripts \
+  python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
+    --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" \
+    --require-real-model \
+    --expect-semantic \
+    --expect-draft-field selection_strategy=nearest \
+    --expect-draft-field payload_filter=loaded \
+    --expect-draft-field side=right \
+    --expect-draft-field target_slot=3 \
+    --text "Could you send whichever carrier is closest and holding a component to the third position on the right-hand line?"
 ```
 
 Interactive user-facing command entry uses the dialogue manager, not
 `build_task_goal()` directly:
 
 ```bash
-source /home/tiago/models/room315_intent/room315_intent.env
 PYTHONPATH=mfja_robot_control_config/scripts \
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
+  --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG"
 ```
 
 Transport goals are high risk. The CLI asks clarifying questions and shows the
@@ -409,6 +457,7 @@ result:
 
 ```bash
 ros2 run mfja_robot_control_config room_315_task_goal_semantic_smoke.py \
+  --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" \
   --shadow-mode \
   --text "move the nearest loaded right shuttle to slot 3"
 ```

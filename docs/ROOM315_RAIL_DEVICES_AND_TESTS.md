@@ -1,5 +1,10 @@
 # Room 315 Rail Devices and Tests
 
+> **Launch side effect:** the high-level floor launches used below clear
+> `~/.ros/room315_vla_obstacles.json` by default. Add
+> `room315_clear_vla_obstacle_pose_cache:=false` when the cache must survive,
+> and do not override its path with an unrelated file.
+
 ### 12. Edit Rail Device YAML and Move Markers
 
 Device YAML files:

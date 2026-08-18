@@ -1,5 +1,9 @@
 # VLA Progress Report - Week 1
 
+> **Historical progress record:** descriptions below reflect the dated period,
+> not necessarily the current runtime. Use the [Documentation Hub](README.md)
+> for maintained operational instructions.
+
 Period: June 18, 2026 - June 25, 2026
 
 ## Main Progress

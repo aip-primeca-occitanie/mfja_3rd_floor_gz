@@ -1,278 +1,432 @@
-# MFJA 3rd Floor Gazebo - Room 315 Kinematic Shuttle
+# MFJA Third-Floor ROS 2 and Gazebo Simulation
 
-This repository contains Gazebo Harmonic / ROS 2 Jazzy simulation assets for the
-MFJA 3rd floor. The current focus is Room 315: a flexible rail-cell simulation
-with kinematic shuttles, switches, stoppers, binary sensors, overhead cameras,
-and a rail-only Vision-Language-Action research layer.
+This repository provides the ROS 2 Jazzy and Gazebo Harmonic simulation of the
+MFJA third floor, with a detailed Room 315 rail cell, industrial and mobile
+robots, typed rail-control interfaces, and an optional neuro-symbolic
+Vision-Language-Action (VLA) research stack.
 
-The shuttle simulation is kinematic-first. Shuttles do not currently use wheel
-physics or contact dynamics for rail motion. Instead, each shuttle follows a
-calibrated arc-length rail graph generated from Room 315 CSV geometry, then the
-simulation publishes Gazebo model poses through `/world/<world_name>/set_pose`.
+The default Room 315 rail motion is kinematic. Shuttles follow calibrated,
+directed rail geometry and are moved through Gazebo pose services; wheel and
+rail contact dynamics are not used to propel them.
 
-For more background on the rail backend, go to
-[docs/ROOM315_RAIL_REFERENCE.md](docs/ROOM315_RAIL_REFERENCE.md).
+> **Important scope:** this is a simulation and research repository. It is not
+> a safety-certified controller for physical equipment. VLA task execution is
+> fail-closed, disabled by default, and requires separately supplied,
+> checksum-verified runtime artifacts.
 
-## Repository Layout
+## Start Here
 
-This repository is a meta-repository. The repository root is not a ROS 2
-package, so package-specific launch, model, config, and source files should stay
-inside their owning package.
+Choose the path that matches your goal:
 
-- `mfja_3rd_floor_description/`: Gazebo models, meshes, worlds, URDF, and SDF assets.
-- `mfja_rail_interfaces/`: typed ROS 2 messages for rail commands, states, switches, stoppers, shuttles, and sensors.
-- `mfja_robot_control_config/`: rail controllers, kinematic shuttle nodes, VLA supervisor, dataset recorder, benchmark runner, evaluator tools, launch files, and Room 315 config.
-- `mfja_3rd_floor_bringup/`: launch entry points for Room 315, the full floor, and isolated industrial robot runs.
-- `mfja_robot_control_config/config/room_315_kinematics/raw_segments/`: source rail segment CSV files.
-- `docs/`: split documentation for setup, VLA, rail operation, robot spawning, and troubleshooting.
+| Goal | Read this |
+| --- | --- |
+| Install the prerequisites and build a clean workspace | [Installation](docs/INSTALLATION.md) |
+| Start Room 315 and try the rail controls | [Quick Start and Feature Guide](docs/QUICK_START_AND_FEATURE_GUIDE.md) |
+| Understand the packages, runtime processes, and data flow | [System Architecture](docs/SYSTEM_ARCHITECTURE.md) |
+| Change robots, worlds, rail geometry, sensors, or VLA settings | [Configuration and Customization](docs/CONFIGURATION.md) |
+| Maintain, test, and extend the repository | [Maintenance Guide](docs/MAINTENANCE.md) |
+| Diagnose a build or runtime problem | [Troubleshooting](docs/TROUBLESHOOTING.md) |
+| Find every user, operator, research, and maintainer document | [Documentation Hub](docs/README.md) |
+| Look up project terminology | [Glossary](docs/GLOSSARY.md) |
 
-For the full documentation map, see [Documentation Map](#documentation-map).
+## What the Repository Contains
 
-## Install and Build
+- Room 315 and complete third-floor Gazebo worlds.
+- Kinematic right- and left-rail shuttle fleets with four public shuttle
+  identities per side.
+- Configurable switches, stoppers, indexing sensors, approach sensors, payload
+  visuals, collision spacing, and runtime shuttle creation/removal.
+- Typed ROS 2 messages and services under
+  `/room_315/rails/{right,left}/...`.
+- KUKA KR6, Staeubli TX2, Yaskawa HC10/HC10DT, and TIAGo simulation assets.
+- Joint and industrial-gripper command helpers.
+- Independent overhead RGB-D cameras for the Room 315 rail sides.
+- Dataset capture, validation, splitting, training, evaluation, benchmark, and
+  evidence tooling.
+- English task-goal parsing, visual-state inference, PlanSys2 planning, a
+  supervised primitive-action boundary, and closed-loop re-observation.
 
-Use Ubuntu 24.04 with ROS 2 Jazzy. Clone this repository inside a colcon
-workspace `src/` directory, install dependencies with `rosdep`, build from the
-workspace root, and source the overlay.
+The principal limitations are documented in
+[System Architecture: Scope and Boundaries](docs/SYSTEM_ARCHITECTURE.md#scope-and-boundaries).
+
+## Supported Platform
+
+The maintained platform is:
+
+- Ubuntu 24.04
+- ROS 2 Jazzy
+- Gazebo Harmonic through `ros_gz`
+- Python 3.12
+- CMake 3.28 or newer for the three packages that declare that minimum
+
+The optional Nix development shell supplies build tools only. ROS 2 and Gazebo
+still come from the host installation.
+
+## Quick Installation
+
+The commands below use a dedicated colcon workspace. Change `MFJA_WS` if you
+prefer another location.
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
 mkdir -p "$MFJA_WS/src"
-cd "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+  "$MFJA_REPO"
+
+source /opt/ros/jazzy/setup.bash
+rosdep install --from-paths \
+  "$MFJA_REPO/mfja_3rd_floor_bringup" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  --ignore-src --rosdistro jazzy -y \
+  --skip-keys "python3-torch python3-torchvision"
 
 cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-source install/setup.bash
+colcon build --symlink-install --paths \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  "$MFJA_REPO/mfja_3rd_floor_bringup"
+
+source "$MFJA_WS/install/setup.bash"
 ```
 
-Every new terminal must source ROS and the workspace again:
+Using the four explicit package paths prevents downloaded datasets or frozen
+source snapshots placed near the repository from being discovered as duplicate
+colcon packages.
+
+Every new terminal must source both ROS 2 and this workspace:
 
 ```bash
-cd "$MFJA_WS"
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+source "$MFJA_WS/install/setup.bash"
 ```
 
-For Nix shell usage, full dependency setup, and build variants, go to
-[docs/INSTALLATION.md](docs/INSTALLATION.md).
+See [Installation](docs/INSTALLATION.md) for host packages, `rosdep`, Nix,
+verification, updating, optional Torch setup, and common installation failures.
 
-## Run Room 315
+## First Run: Room 315
 
-The common Room 315 launch starts Gazebo, the Room 315 rail stack, and the
-kinematic shuttle simulation:
+By default, every high-level Room 315/full-floor launch removes the disposable
+obstacle-pose cache at `~/.ros/room315_vla_obstacles.json`. Preserve it with
+`room315_clear_vla_obstacle_pose_cache:=false`. If you override
+`room315_vla_obstacle_pose_file`, point it only at the intended cache file: the
+default clearing action unlinks that path before startup.
+
+Start Room 315 without the heavier robot models, with one stopped shuttle on
+each rail:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
-  start_paused:=false \
   gui:=true \
-  enable_room315_kinematic_shuttles:=true
+  start_paused:=false \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=1 \
+  room315_shuttles_start_enabled:=false
 ```
 
-For headless runs, set `gui:=false`. To launch the full floor with the same Room
-315 rail features, use `mfja_3rd_floor_bringup full_floor.launch.py`.
-
-For more launch variants, hidden/stopped/moving shuttle startup modes, switch
-commands, stopper commands, and sensor checks, go to
-[docs/QUICK_START_AND_FEATURE_GUIDE.md](docs/QUICK_START_AND_FEATURE_GUIDE.md).
-
-## Room 315 Rail Basics
-
-Each Room 315 rail side has one or more shuttles, switches `A1` to `A4`,
-stoppers `A1` to `A4`, slot sensors such as `DZI1R`/`DZI2R`, and approach or
-interior/exterior branch sensors such as `DA3IR` and `DA3IL`.
-
-The main rail control concepts are:
-
-- Shuttles are enabled, disabled, reset, added, or removed through typed ROS
-  topics.
-- Switches choose exterior/interior branches.
-- Stoppers hold or release the shuttle before switch areas.
-- Sensors are binary occupancy events, not continuous distance measurements.
-- The kinematic node publishes state and sensor feedback for the supervisor,
-  recorder, benchmark runner, and VLA agent.
-
-For device YAML, marker behavior, collision tests, message types, launch names,
-and detailed rail reference commands, go to
-[docs/ROOM315_RAIL_DEVICES_AND_TESTS.md](docs/ROOM315_RAIL_DEVICES_AND_TESTS.md)
-and [docs/ROOM315_RAIL_REFERENCE.md](docs/ROOM315_RAIL_REFERENCE.md).
-
-## Rail-only VLA Layer
-
-The Room 315 VLA layer treats the rail cell as a sparse-sensing research task:
-language plus overhead images plus the previous command predicts event-level
-symbolic actions. Binary rail state, exact Gazebo pose, true shuttle segment,
-distance-to-switch, and normalized rail position stay out of `model_input`;
-those values are kept only in `privileged_eval` for reset, auditing, and
-evaluation.
-
-The VLA stack includes:
-
-- Independent right-rail and left-rail overhead RGB-D cameras.
-- A high-level VLA supervisor on `/room_315/vla/command`.
-- Primitive debugging commands for switches, stoppers, shuttles, stop-all, and
-  emergency stop.
-- A safety decoder between planner primitive commands and rail execution.
-- Visual-state datasets for shuttle boxes, identity, rail location,
-  loaded/empty state, visible switch state, obstacles, confidence, and
-  calibration/schema versions.
-- Dataset recording plus the curated 160-case payload speed-sweep batch runner.
-
-Canonical station mapping:
-
-```text
-Right rail slots 1-2: Yaskawa HC10DT
-Right rail slots 3-4: Staubli TX2
-Left rail slots 1-2: Yaskawa HC10
-Left rail slots 3-4: KUKA KR6
-```
-
-The active training/evaluation surface is the curated payload case matrix:
-
-```text
-mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
-```
-
-Run one case with `room_315_pddl_scenario_generator.py --case-id ...`, or run
-the 160-case batch with `room_315_payload_case_batch_runner.py`.
-
-For supervisor operation, VLA topics, visual-state datasets, and manual
-primitive commands, go to
-[docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md).
-For the research formulation, model input, privileged evaluation, scenario
-families, metrics, and roadmap, go to
-[docs/ROOM315_VLA_RESEARCH.md](docs/ROOM315_VLA_RESEARCH.md).
-
-## VLA Dataset and Evaluation Basics
-
-The complete post-experiment V4 data-and-reproduction companion is distributed
-from this project's
-[`v4-seed31520260811-dataset-v1`](https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1)
-GitHub Release. It contains all Training, Validation, Development-Canary and
-Final-Test inputs used by the reported V4 procedure, both required checkpoints,
-the frozen source and replay tooling. The small download, verification and
-replay control package is retained at
-[`report/evidence/room315_visual_v4_dataset_release_v1/`](report/evidence/room315_visual_v4_dataset_release_v1/README.md),
-while counts, hashes and the relationship to the runtime-evidence archive are
-recorded in
-[the project landing record](report/evidence/ROOM315_VISUAL_V4_DATASET_RELEASE.md).
-The release is publicly accessible for inspection and reproducibility; this
-does not by itself make it an open dataset or grant data or model-weight reuse
-rights.
-
-The dataset recorder writes two streams per episode:
-
-```text
-events.jsonl   # event-level training labels
-data.jsonl     # raw framewise replay/debug only
-images/...     # overhead camera frames
-```
-
-Train on `events.jsonl`, not on repeated framewise `data.jsonl` labels. Each
-training event represents:
-
-```text
-observation_before_decision -> next_symbolic_event_action
-```
-
-To export a flat visual-state training file:
+The simulation starts the world immediately. Rail nodes are added after a short
+startup delay. In another sourced terminal, verify the API:
 
 ```bash
-ros2 run mfja_robot_control_config room_315_vla_event_extractor.py \
-  ~/.ros/room315_visual_state_datasets/demo \
-  --output meta/training_events.jsonl
+ros2 topic list | grep '^/room_315/rails/'
+ros2 service list | grep '^/world/room_315_only/'
+ros2 topic echo --once /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState
 ```
 
-For PDDL/PlanSys2 generated scenarios, the extractor is fail-closed: by default
-it includes only episodes with `episodes/<episode_id>/validation.json` marked
-`approved_for_training: true`. Use `--include-failed` or `--allow-unvalidated`
-only for explicit debug exports.
-
-Split the clean visual-state events by complete scenario family:
+Start the right shuttle:
 
 ```bash
-ros2 run mfja_robot_control_config room_315_vla_split_dataset.py \
-  ~/.ros/room315_visual_state_datasets/demo \
-  --output-dir /tmp/room315_visual_splits \
-  --dataset-mode visual_state \
-  --overwrite
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON', speed: 0.2}"
 ```
 
-Convert the split to LeRobot format or train the local visual-state predictor
-with `room_315_vla_to_lerobot.py` and `room_315_vla_train_local.py`. Learned
-outputs are visual facts only; rail commands are produced later by state fusion,
-PlanSys2, and the supervisor.
+Stop the launch with `Ctrl-C`. Do not start `room_315_only.launch.py` and
+`full_floor.launch.py` at the same time: the high-level launch owns an exclusive
+Room 315 runtime lock because the ROS topics and Gazebo world services are
+process-global.
 
-For recorder launch commands, benchmark runner usage, output file formats, and
-metric definitions, go to [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md)
-and [docs/ROOM315_VLA_RESEARCH.md](docs/ROOM315_VLA_RESEARCH.md).
+## Launch Profiles
 
-## Full Floor and Robots
+| Profile | Command | Default behavior |
+| --- | --- | --- |
+| Room 315 only | `ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py` | GUI on, simulation running, rails enabled, zero initial shuttles, robots selected from the Room 315 YAML unless `robots:=none` is passed |
+| Complete third floor | `ros2 launch mfja_3rd_floor_bringup full_floor.launch.py` | GUI on, simulation paused, rails enabled, zero initial shuttles, robots selected from the full-floor YAML |
+| One industrial robot | `ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py robot:=kuka` | Minimal world with one robot and its table; selectors are `kuka`, `staubli`, `hc10`, and `hc10dt` |
+| Headless Room 315 | Add `gui:=false start_paused:=false robots:=none` | Server-only simulation suitable for automated runs |
+| Room 315 with VLA bridge/supervisor | Add `enable_room315_vla:=true` | Camera bridge and primitive supervisor enabled; learned visual inference and task execution remain separate processes |
 
-Room 315 can be launched alone or as part of the full MFJA third-floor world.
-The repository also includes industrial robot spawn/config workflows for KUKA
-KR6, Staubli TX2, Yaskawa HC10, Yaskawa HC10DT, and TIAGo-related examples.
+Inspect the authoritative arguments and current defaults from the installed
+launch file:
 
-Robot lists are configured from YAML files such as:
+```bash
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
+```
+
+The current full-floor YAML enables both `tiago1` and `tiago_base1`, but mobile
+frames are not instance-prefixed. Launching both produces duplicate TF frame
+IDs such as `odom` and `base_footprint`. For TF-dependent work, select at most
+one mobile robot by exact name; the generic `tiago` selector is ambiguous when
+both entries exist. Avoid `robots:=all` until mobile-frame namespacing is added.
+
+## Rail Control Essentials
+
+Right-rail examples are shown below. Replace `right` with `left` for the other
+rail.
+
+### Shuttle Commands
+
+```bash
+# Stop, reset to the configured start position, or remove a shuttle.
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'OFF'}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'RESET'}"
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'REMOVE'}"
+```
+
+Add a shuttle at runtime:
+
+```bash
+ros2 service call /room_315/rails/right/shuttles/add \
+  mfja_rail_interfaces/srv/AddShuttle \
+  "{name: 'room315_right_shuttle_2', start_slot: '1', speed: 0.2, start_enabled: false}"
+```
+
+### Switches and Stoppers
+
+Switch state `E`/`EXTERIOR` selects the exterior branch;
+`I`/`INTERIOR` selects the interior branch. Stopper state `0` is open/pass and
+`1` is closed/stop.
+
+Switches form coordinated pairs: `A1`/`A2` and `A3`/`A4`. The typed command
+topic is a low-level simulation interface and bypasses the VLA route-planning
+boundary. Use it to move a route only on an empty rail. Normal numbered start
+slots lie on exterior guard segments, so resetting a shuttle there is not safe
+preparation for an interior route. For this switch-only example, stop the prior
+launch and restart it with both shuttle counts set to `0`. Never reroute a
+moving shuttle after a fixed timer.
+
+```bash
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
+
+ros2 topic pub --once /room_315/rails/right/stoppers/command \
+  mfja_rail_interfaces/msg/StopperCommand \
+  "{stoppers: [{name: 'A1', state: '1'}]}"
+```
+
+Commands are requests. The corresponding `.../state` topic reports the actual
+state after the configured motion delay.
+
+### Sensor Feedback
+
+```bash
+ros2 topic echo /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+```
+
+Sensors report binary occupancy. `active: 1` means a shuttle is inside the
+configured sensor radius; it is not a distance measurement. The message also
+carries privileged segment/arc-length fields for debugging and evaluation;
+those fields are not additional physical distance sensors and are excluded from
+the learned visual-model input.
+
+The complete operator procedure is in
+[Quick Start and Feature Guide](docs/QUICK_START_AND_FEATURE_GUIDE.md), and the
+full API is in [Room 315 Rail Reference](docs/ROOM315_RAIL_REFERENCE.md).
+
+## Robots
+
+Robot spawn lists live in:
+
+- `mfja_robot_control_config/config/robots.yaml` for the complete floor.
+- `mfja_robot_control_config/config/robots_room_315_only.yaml` for Room 315.
+
+The `robots` launch argument accepts `none`, `all`, an exact robot name, a
+supported unambiguous alias, a YAML list index, or a comma-separated
+combination. Prefer exact names for mobile robots. Examples:
+
+```bash
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=kuka1,tiago1 gui:=true start_paused:=false
+
+ros2 run mfja_robot_control_config robot_joint_command.py --list
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+```
+
+Grippers are animated symmetric mechanisms; they do not currently attach or
+physically grasp payloads. See
+[Full Floor and Robot Reference](docs/FULL_FLOOR_AND_ROBOTS.md).
+
+## VLA and Language-to-Motion Workflows
+
+The current control boundary is intentionally neuro-symbolic:
 
 ```text
-mfja_robot_control_config/config/robots.yaml
-mfja_robot_control_config/config/robots_room_315_only.yaml
+confirmed English TaskGoal
+  -> accepted visual facts and deterministic presence
+  -> PlanSys2 problem and plan
+  -> one validated primitive
+  -> rail supervisor
+  -> effect check, new observation, and replan
 ```
 
-For full-floor launch, Gazebo services, robot spawning, isolated robot runs, and
-robot topic checks, go to [docs/FULL_FLOOR_AND_ROBOTS.md](docs/FULL_FLOOR_AND_ROBOTS.md).
+Learned components may propose task-goal fields or produce visual facts. They
+do not publish rail commands directly. Exact simulator pose, true segment, and
+binary rail signals remain outside learned visual-model input and are used only
+in declared safety, presence, or evaluation boundaries.
 
-## Development and Tests
-
-If you edit Python scripts, launch files, package metadata, worlds, models,
-URDF/SDF, interfaces, or config files, rebuild and source the workspace. If you
-only edit Markdown docs, no rebuild is required.
-
-Useful checks:
+Basic VLA camera/supervisor launch:
 
 ```bash
-python3 -m pytest mfja_robot_control_config/test
-python3 -m pytest mfja_3rd_floor_description/test
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  gui:=true \
+  start_paused:=false \
+  enable_room315_vla:=true
+```
+
+Active visual inference and motion execution are not turnkey on a fresh clone.
+They require an external V4 promotion manifest, the artifacts referenced by
+that manifest, exact checksums, and a host-local task-execution authorization
+file. The checked-in runtime YAML records a qualified project environment and
+contains site-specific absolute paths; do not enable execution by merely
+changing `execution_enabled`.
+
+Read these in order for the advanced runtime:
+
+1. [VLA Operations](docs/ROOM315_VLA_OPERATIONS.md)
+2. [Visual Runtime Integration](docs/room315_visual_runtime_integration.md)
+3. [Task-Goal Understanding](docs/ROOM315_TASK_GOAL_UNDERSTANDING.md)
+4. [PDDL Planning](docs/ROOM315_PDDL_PLANNING.md)
+5. [Language-to-Motion Runtime](docs/ROOM315_LANGUAGE_TO_MOTION_RUNTIME.md)
+
+Dataset and checkpoint releases are described in the
+[Documentation Hub](docs/README.md#datasets-models-and-evidence). Large
+datasets, checkpoints, caches, and generated experiment output should remain
+outside the Git working tree.
+
+## Repository Layout
+
+This repository is a colcon meta-repository, not a ROS package itself.
+
+| Path | Responsibility |
+| --- | --- |
+| `mfja_3rd_floor_bringup/` | Stable high-level launch entry points |
+| `mfja_3rd_floor_description/` | Gazebo worlds, SDF models, meshes, URDF, and the symmetric-gripper C++ plugin |
+| `mfja_rail_interfaces/` | Typed Room 315 messages and the runtime shuttle-add service |
+| `mfja_robot_control_config/` | Robot spawning, rail runtime, VLA/planning nodes, tools, configuration, launch files, and most tests |
+| `config/room_315_vla/` | Top-level experiment configuration retained for specific dataset work |
+| `docs/` | User, operator, architecture, maintenance, research, and audit documentation |
+| `report/` | English report sources, figures, and checksum-bound evidence records |
+| `flake.nix` | Optional hybrid Nix development shell |
+
+See [System Architecture](docs/SYSTEM_ARCHITECTURE.md) for package dependencies,
+launch sequencing, ROS interfaces, data ownership, and runtime files.
+
+## Common Configuration Entry Points
+
+| Change | Source of truth |
+| --- | --- |
+| Enable, disable, rename, or reposition robots | `mfja_robot_control_config/config/robots*.yaml` |
+| Change industrial gripper travel/defaults | `mfja_robot_control_config/config/gripper_command_defaults.yaml` |
+| Change Room 315 slots, sensors, stoppers, or radii | `mfja_robot_control_config/config/room_315_kinematics/rail_devices_{right,left}.yaml` |
+| Change rail topology or segment-to-CSV mapping | `mfja_robot_control_config/config/room_315_kinematics/rail_network_{right,left}.yaml` |
+| Change measured rail geometry | `mfja_robot_control_config/config/room_315_kinematics/raw_segments/*.csv` |
+| Change a world or model | `mfja_3rd_floor_description/worlds/` or `models/` |
+| Change launch defaults and feature wiring | `mfja_3rd_floor_bringup/launch/room_315_floor_common.py` |
+| Change shuttle identity/color mapping | `mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml` |
+| Change supervisor defaults | `mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml` |
+| Change visual-runtime or execution policy | `mfja_robot_control_config/config/room_315_vla/*.yaml`, preserving the artifact and authorization contracts |
+
+Before editing any of these files, use
+[Configuration and Customization](docs/CONFIGURATION.md), which explains the
+required companion changes, validation, rebuild, and restart for each case.
+
+## Development and Verification
+
+Documentation-only changes do not require a ROS rebuild. Source, launch,
+interface, model, world, and installed configuration changes do.
+
+Typical checks from the repository root are:
+
+```bash
 git diff --check
-colcon build --symlink-install --packages-select mfja_robot_control_config
-colcon test --packages-select mfja_robot_control_config
+python3 -m pytest mfja_3rd_floor_description/test
+python3 -m pytest \
+  mfja_robot_control_config/test/test_room315_kinematic_shuttle_core.py
 ```
 
-For troubleshooting topics, runtime parameters, pose calibration, state/debug
-topics, switch control, stopper workflow, and shuttle control details, go to
-[docs/SHUTTLE_SWITCH_STOPPER_REFERENCE.md](docs/SHUTTLE_SWITCH_STOPPER_REFERENCE.md).
+The full direct control-package collection requires the optional Torch
+environment; without Torch, module-level dependency guards can make collection
+exit with "no tests collected." See the Maintenance Guide for the focused and
+full matrices.
 
-## Documentation Map
+After a colcon build:
 
-Use this README for the project overview and first commands. Detailed
-instructions are split by topic:
+```bash
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+colcon test --packages-select \
+  mfja_3rd_floor_description \
+  mfja_robot_control_config
+colcon test-result --verbose
+```
 
-- Installation, rosdep, Nix, build, source, and every-new-terminal setup:
-  [docs/INSTALLATION.md](docs/INSTALLATION.md)
-- Basic launch commands, Room 315 workflows, runtime shuttle commands,
-  switches, stoppers, and sensor checks:
-  [docs/QUICK_START_AND_FEATURE_GUIDE.md](docs/QUICK_START_AND_FEATURE_GUIDE.md)
-- VLA supervisor operation, task templates, dataset recorder usage,
-  visual-state labels, model input, benchmark runner, and VLA
-  topics: [docs/ROOM315_VLA_OPERATIONS.md](docs/ROOM315_VLA_OPERATIONS.md)
-- Rail-only VLA research formulation, `model_input` vs `privileged_eval`,
-  visual metrics, scenario families, and 4-robot roadmap:
-  [docs/ROOM315_VLA_RESEARCH.md](docs/ROOM315_VLA_RESEARCH.md)
-- Rail device YAML, marker behavior, collision tests, message types, and launch
-  names: [docs/ROOM315_RAIL_DEVICES_AND_TESTS.md](docs/ROOM315_RAIL_DEVICES_AND_TESTS.md)
-- Room 315 path backend, Room 315-only launch reference, right/left rail quick
-  commands, and typed interface details:
-  [docs/ROOM315_RAIL_REFERENCE.md](docs/ROOM315_RAIL_REFERENCE.md)
-- Full-floor launch, Gazebo service checks, robot spawning, and industrial
-  robot/TIAGo command references:
-  [docs/FULL_FLOOR_AND_ROBOTS.md](docs/FULL_FLOOR_AND_ROBOTS.md)
-- Shuttle start slots, multiple shuttles, ON/OFF/RESET/REMOVE, stopper
-  workflow, collision avoidance, switch control, pose calibration, debug topics,
-  parameters, and troubleshooting:
-  [docs/SHUTTLE_SWITCH_STOPPER_REFERENCE.md](docs/SHUTTLE_SWITCH_STOPPER_REFERENCE.md)
-- Detailed Room 315 kinematic artifact notes:
-  [mfja_robot_control_config/config/room_315_kinematics/README.md](mfja_robot_control_config/config/room_315_kinematics/README.md)
-- Focused HTML runbook: [runbook.html](runbook.html)
+The control package has a large research test suite, and optional Torch-backed
+tests are registered only when Torch is importable at CMake configure time.
+Start with a focused test for the component you changed, then run the package or
+full suite before merging. Direct `pytest` and `colcon test` cover different
+sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
+
+## Fast Troubleshooting
+
+- `Package ... not found`: build from the workspace root and source the same
+  workspace's `install/setup.bash` in the current terminal.
+- A new executable is missing: rebuild `mfja_robot_control_config`, source the
+  overlay again, and confirm that the script is listed in its `CMakeLists.txt`.
+- No shuttle is visible: integrated launches default to zero initial shuttles;
+  set a shuttle count or call the add service.
+- A shuttle is visible but stationary: initial shuttles default to disabled;
+  publish `ON`, or launch with `room315_shuttles_start_enabled:=true`.
+- A shuttle reports `WAITING`: inspect stopper state and shuttle spacing.
+- A shuttle reports `FALLING`: the selected switch configuration has no valid
+  successor; correct the route and issue `RESET`.
+- Gazebo pose/create/remove services are missing: verify the internal world
+  name and the `/world/<world_name>/...` service namespace.
+- A second Room 315 launch is rejected: stop the first high-level Room 315 or
+  full-floor launch. The lock file itself is harmless after its owner exits.
+- VLA inference cannot start on another computer: replace the site-specific
+  runtime paths with a valid local, checksum-matching promotion bundle.
+
+For diagnosis commands and a symptom-to-fix table, see
+[Troubleshooting](docs/TROUBLESHOOTING.md).
+
+## Documentation and Attribution
+
+The complete, categorized documentation index is
+[docs/README.md](docs/README.md). When code and prose disagree, the installed
+launch arguments (`--show-args`), interface definitions, and versioned
+configuration are authoritative; update the documentation in the same change.
+
+The ROS package manifests declare Apache License 2.0 for package code. Imported
+robot meshes and CAD assets retain their own upstream terms. Review
+[Third-Party Asset Attribution](mfja_3rd_floor_description/THIRD_PARTY.md)
+before redistributing or replacing assets.

@@ -1,5 +1,9 @@
 # Room 315 hard-case visual dataset V3: initial repository audit
 
+> **Historical record:** this audit documents the 2026 V3 qualification host
+> and immutable inputs. Its absolute paths and commands are provenance, not a
+> portable current setup. Start from the [Documentation Hub](README.md).
+
 Date: 2026-07-30
 Repository: `/home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz`
 Branch at audit time: `ali/neuro-symbolic-closed-loop`
