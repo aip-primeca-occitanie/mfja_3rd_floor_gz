@@ -200,7 +200,7 @@ def test_sdf_exposes_symmetric_commanded_jaws(model_name, open_position):
     )
 
     arm_controller = root.find(
-        ".//plugin[@name='gz::sim::systems::JointTrajectoryController']"
+        ".//plugin[@name='mfja::sim::systems::SmoothJointTrajectoryController']"
     )
     assert arm_controller is not None
     arm_joint_names = {

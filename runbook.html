@@ -1171,6 +1171,18 @@ ros2 topic list | grep -E '^/(tiago1|tiago_base1)/'</code></pre>
           angular joints; linear joints such as <code>torso_lift_joint</code> stay in meters.
         </p>
 
+        <div class="callout">
+          The joint helper reads the live state, rejects non-finite or out-of-range
+          targets, and publishes one densely sampled minimum-jerk trajectory instead
+          of an instantaneous position step. The model-side smooth controller limits
+          every joint to 50% of its SDF velocity limit and holds the completed pose
+          exactly under gravity. If <code>--duration</code> is too short for those
+          limits, motion takes longer rather than exceeding the allowed speed. Direct
+          one-point <code>JointTrajectory</code> commands are also interpolated smoothly.
+          Rebuild and restart Gazebo after controller or model changes because the
+          system plugin is loaded when the robot model is created.
+        </div>
+
         <table>
           <thead>
             <tr><th>Selector</th><th>Robot name</th><th>Model</th><th>Main command topic</th></tr>

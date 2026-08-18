@@ -14,6 +14,7 @@ class JointCommandProfile:
     model_name: str
     joint_names: tuple[str, ...]
     angular_joints: tuple[bool, ...]
+    joint_limits: tuple[tuple[float, float], ...]
     aliases: tuple[str, ...]
     default_duration_sec: float = 3.0
 
@@ -64,6 +65,46 @@ TIAGO_WITH_ARM_JOINTS = (
 )
 TIAGO_BASE_JOINTS = ('torso_lift_joint',)
 
+# These limits mirror the corresponding <axis><limit> values in the model SDFs.
+# Angular limits are radians and linear limits are metres.
+KUKA_JOINT_LIMITS = (
+    (-2.96706, 2.96706),
+    (-3.31613, 0.7854),
+    (-2.0944, 2.72271),
+    (-3.22886, 3.22886),
+    (-2.0944, 2.0944),
+    (-6.10865, 6.10865),
+)
+STAUBLI_JOINT_LIMITS = (
+    (-3.14159265359, 3.14159265359),
+    (-2.22529479629, 2.22529479629),
+    (-2.66162710929, 2.66162710929),
+    (-4.71238898038, 4.71238898038),
+    (-2.11184839491, 2.31256125889),
+    (-4.71238898038, 4.71238898038),
+)
+YASKAWA_JOINT_LIMITS = (
+    (-3.14159265359, 3.14159265359),
+    (-3.14159265359, 3.14159265359),
+    (-0.08726646260, 6.19591884458),
+    (-3.14159265359, 3.14159265359),
+    (-3.14159265359, 3.14159265359),
+    (-3.14159265359, 3.14159265359),
+)
+TIAGO_WITH_ARM_JOINT_LIMITS = (
+    (0.0, 0.35),
+    (0.0, 2.74889357189),
+    (-1.57079632679, 1.0908307825),
+    (-3.53429173529, 1.57079632679),
+    (-0.3926990817, 2.35619449019),
+    (-2.09439510239, 2.09439510239),
+    (-1.41371669412, 1.41371669412),
+    (-2.09439510239, 2.09439510239),
+    (-1.30899693899, 1.30899693899),
+    (-1.0471975512, 0.7853981634),
+)
+TIAGO_BASE_JOINT_LIMITS = ((0.0, 0.35),)
+
 
 PROFILES = (
     JointCommandProfile(
@@ -71,6 +112,7 @@ PROFILES = (
         model_name='kuka_kr6r900sixx',
         joint_names=INDUSTRIAL_JOINTS_A,
         angular_joints=(True,) * 6,
+        joint_limits=KUKA_JOINT_LIMITS,
         aliases=('1', 'kuka', 'kuka1', 'kuka_kr6r900sixx'),
         default_duration_sec=4.0,
     ),
@@ -79,6 +121,7 @@ PROFILES = (
         model_name='staubli_tx2_60l',
         joint_names=STAUBLI_JOINTS,
         angular_joints=(True,) * 6,
+        joint_limits=STAUBLI_JOINT_LIMITS,
         aliases=('2', 'staubli', 'staubli1', 'staubli_tx2_60l'),
     ),
     JointCommandProfile(
@@ -86,6 +129,7 @@ PROFILES = (
         model_name='yaskawa_hc10',
         joint_names=YASKAWA_JOINTS,
         angular_joints=(True,) * 6,
+        joint_limits=YASKAWA_JOINT_LIMITS,
         aliases=('3', 'hc10', 'yaskawa_hc10', 'yaskawa_hc10_1'),
     ),
     JointCommandProfile(
@@ -93,6 +137,7 @@ PROFILES = (
         model_name='yaskawa_hc10dt',
         joint_names=YASKAWA_JOINTS,
         angular_joints=(True,) * 6,
+        joint_limits=YASKAWA_JOINT_LIMITS,
         aliases=('4', 'hc10dt', 'yaskawa_hc10dt', 'yaskawa_hc10dt_1'),
     ),
     JointCommandProfile(
@@ -100,6 +145,7 @@ PROFILES = (
         model_name='tiago_with_arm',
         joint_names=TIAGO_WITH_ARM_JOINTS,
         angular_joints=(False, True, True, True, True, True, True, True, True, True),
+        joint_limits=TIAGO_WITH_ARM_JOINT_LIMITS,
         aliases=('5', 'tiago', 'tiago1', 'tiago_arm', 'tiago_with_arm'),
         default_duration_sec=4.0,
     ),
@@ -108,6 +154,7 @@ PROFILES = (
         model_name='tiago_base',
         joint_names=TIAGO_BASE_JOINTS,
         angular_joints=(False,),
+        joint_limits=TIAGO_BASE_JOINT_LIMITS,
         aliases=('6', 'tiago_base', 'tiago_base1', 'tiago_mobile_base', 'tiago_no_arm'),
     ),
 )
@@ -120,9 +167,20 @@ UNIT_ALIASES = {
     'degree': 'deg',
     'degrees': 'deg',
 }
-DEFAULT_PUBLISH_TIMES = 10
-DEFAULT_PUBLISH_RATE_HZ = 10.0
+DEFAULT_PUBLISH_TIMES = 1
+DEFAULT_TRAJECTORY_RATE_HZ = 100.0
+MIN_TRAJECTORY_RATE_HZ = 100.0
+MAX_TRAJECTORY_RATE_HZ = 200.0
+MIN_TRAJECTORY_DURATION_SEC = 1.0 / MAX_TRAJECTORY_RATE_HZ
 DEFAULT_READY_TIMEOUT_SEC = 2.0
+
+
+@dataclass(frozen=True)
+class TrajectorySample:
+    time_from_start_sec: float
+    positions: tuple[float, ...]
+    velocities: tuple[float, ...]
+    accelerations: tuple[float, ...]
 
 
 def _selector_map() -> dict[str, JointCommandProfile]:
@@ -190,27 +248,234 @@ def converted_positions(
             f'for joints {list(profile.joint_names)}, got {len(positions)}'
         )
 
-    if unit == 'rad':
-        return [float(position) for position in positions]
-    if unit != 'deg':
+    if unit not in ('rad', 'deg'):
         raise ValueError('unit must be "rad" or "deg"')
 
-    return [
-        math.radians(float(position)) if is_angular else float(position)
+    converted = [
+        math.radians(float(position)) if unit == 'deg' and is_angular else float(position)
         for position, is_angular in zip(positions, profile.angular_joints, strict=True)
     ]
+    return validate_positions(profile, converted, value_label='target')
+
+
+def validate_positions(
+    profile: JointCommandProfile,
+    positions: Sequence[float],
+    *,
+    value_label: str,
+    limit_tolerance: float = 0.0,
+) -> list[float]:
+    """Validate and normalize positions in controller units and profile order."""
+    expected = len(profile.joint_names)
+    if len(positions) != expected:
+        raise ValueError(
+            f'{value_label} for {profile.robot_name} must contain {expected} values, '
+            f'got {len(positions)}'
+        )
+    if len(profile.angular_joints) != expected or len(profile.joint_limits) != expected:
+        raise ValueError(f'invalid joint metadata for profile {profile.robot_name}')
+    if not math.isfinite(limit_tolerance) or limit_tolerance < 0.0:
+        raise ValueError('limit tolerance must be a finite non-negative number')
+
+    validated = []
+    for joint_name, position, is_angular, limits in zip(
+        profile.joint_names,
+        positions,
+        profile.angular_joints,
+        profile.joint_limits,
+        strict=True,
+    ):
+        value = float(position)
+        if not math.isfinite(value):
+            raise ValueError(
+                f'{value_label} for joint {joint_name} must be finite, got {value!r}'
+            )
+        lower, upper = limits
+        if value < lower - limit_tolerance or value > upper + limit_tolerance:
+            unit = 'rad' if is_angular else 'm'
+            raise ValueError(
+                f'{value_label} for joint {joint_name} is {value:.10g} {unit}; '
+                f'allowed range is [{lower:.10g}, {upper:.10g}] {unit}'
+            )
+        # Joint-state publishers can report tiny solver overshoots at a hard limit.
+        validated.append(min(max(value, lower), upper))
+    return validated
+
+
+def positions_from_joint_state(
+    profile: JointCommandProfile,
+    names: Sequence[str],
+    positions: Sequence[float],
+) -> list[float]:
+    """Return live positions in profile order, independent of JointState ordering."""
+    if len(names) != len(positions):
+        raise ValueError(
+            f'joint state has {len(names)} names but {len(positions)} positions'
+        )
+
+    by_name: dict[str, float] = {}
+    duplicate_names: set[str] = set()
+    for name, position in zip(names, positions, strict=True):
+        if name in by_name:
+            duplicate_names.add(name)
+        by_name[name] = float(position)
+    if duplicate_names:
+        raise ValueError(f'joint state contains duplicate names: {sorted(duplicate_names)}')
+
+    missing = [joint_name for joint_name in profile.joint_names if joint_name not in by_name]
+    if missing:
+        raise ValueError(
+            f'joint state on {profile.joint_state_topic} is missing joints: {missing}'
+        )
+    ordered = [by_name[joint_name] for joint_name in profile.joint_names]
+    return validate_positions(
+        profile,
+        ordered,
+        value_label='live position',
+        limit_tolerance=1e-6,
+    )
 
 
 def duration_to_sec_nanosec(duration_sec: float) -> tuple[int, int]:
-    if duration_sec <= 0.0:
-        raise ValueError('--duration must be greater than zero')
+    if not math.isfinite(duration_sec) or duration_sec <= 0.0:
+        raise ValueError('--duration must be a finite number greater than zero')
 
-    sec = int(math.floor(duration_sec))
-    nanosec = int(round((duration_sec - sec) * 1_000_000_000))
+    return nonnegative_seconds_to_sec_nanosec(duration_sec)
+
+
+def nonnegative_seconds_to_sec_nanosec(value_sec: float) -> tuple[int, int]:
+    if not math.isfinite(value_sec) or value_sec < 0.0:
+        raise ValueError('trajectory timestamp must be a finite non-negative number')
+
+    sec = int(math.floor(value_sec))
+    nanosec = int(round((value_sec - sec) * 1_000_000_000))
     if nanosec >= 1_000_000_000:
         sec += 1
         nanosec -= 1_000_000_000
     return sec, nanosec
+
+
+def validate_trajectory_rate(rate_hz: float) -> float:
+    rate = float(rate_hz)
+    if not math.isfinite(rate):
+        raise ValueError('--rate must be finite')
+    if rate < MIN_TRAJECTORY_RATE_HZ or rate > MAX_TRAJECTORY_RATE_HZ:
+        raise ValueError(
+            f'--rate must be between {MIN_TRAJECTORY_RATE_HZ:.10g} and '
+            f'{MAX_TRAJECTORY_RATE_HZ:.10g} Hz'
+        )
+    return rate
+
+
+def trajectory_interval_count(duration_sec: float, rate_hz: float) -> int:
+    duration_to_sec_nanosec(duration_sec)
+    rate = validate_trajectory_rate(rate_hz)
+    if duration_sec < MIN_TRAJECTORY_DURATION_SEC:
+        raise ValueError(
+            f'--duration must be at least {MIN_TRAJECTORY_DURATION_SEC:.10g} seconds '
+            'for a 100-200 Hz trajectory'
+        )
+
+    minimum_intervals = max(
+        1,
+        int(math.ceil(duration_sec * MIN_TRAJECTORY_RATE_HZ - 1e-12)),
+    )
+    maximum_intervals = max(
+        1,
+        int(math.floor(duration_sec * MAX_TRAJECTORY_RATE_HZ + 1e-12)),
+    )
+    desired_intervals = max(1, int(round(duration_sec * rate)))
+    return min(max(desired_intervals, minimum_intervals), maximum_intervals)
+
+
+def sampled_quintic_trajectory(
+    start_positions: Sequence[float],
+    target_positions: Sequence[float],
+    duration_sec: float,
+    rate_hz: float = DEFAULT_TRAJECTORY_RATE_HZ,
+) -> list[TrajectorySample]:
+    """Pre-sample a minimum-jerk quintic trajectory for Gazebo's controller."""
+    interval_count = trajectory_interval_count(duration_sec, rate_hz)
+    if len(start_positions) != len(target_positions):
+        raise ValueError('start and target positions must have the same length')
+    if not start_positions:
+        raise ValueError('trajectory must contain at least one joint')
+
+    start = tuple(float(value) for value in start_positions)
+    target = tuple(float(value) for value in target_positions)
+    if not all(math.isfinite(value) for value in start + target):
+        raise ValueError('start and target positions must be finite')
+
+    deltas = tuple(end - begin for begin, end in zip(start, target, strict=True))
+    samples = []
+    for index in range(interval_count + 1):
+        time_sec = duration_sec * index / interval_count
+        phase = index / interval_count
+        phase2 = phase * phase
+        phase3 = phase2 * phase
+        phase4 = phase3 * phase
+        phase5 = phase4 * phase
+        blend = 10.0 * phase3 - 15.0 * phase4 + 6.0 * phase5
+        blend_velocity = (
+            30.0 * phase2 - 60.0 * phase3 + 30.0 * phase4
+        ) / duration_sec
+        blend_acceleration = (
+            60.0 * phase - 180.0 * phase2 + 120.0 * phase3
+        ) / (duration_sec * duration_sec)
+
+        # Preserve exact boundary values instead of accumulating floating-point error.
+        positions_at_time = (
+            start
+            if index == 0
+            else target
+            if index == interval_count
+            else tuple(
+                begin + delta * blend
+                for begin, delta in zip(start, deltas, strict=True)
+            )
+        )
+        samples.append(
+            TrajectorySample(
+                time_from_start_sec=time_sec,
+                positions=positions_at_time,
+                velocities=tuple(delta * blend_velocity for delta in deltas),
+                accelerations=tuple(delta * blend_acceleration for delta in deltas),
+            )
+        )
+    return samples
+
+
+def build_trajectory_message(
+    profile: JointCommandProfile,
+    start_positions: Sequence[float],
+    target_positions: Sequence[float],
+    duration_sec: float,
+    rate_hz: float = DEFAULT_TRAJECTORY_RATE_HZ,
+):
+    """Build one dense ROS JointTrajectory message from a measured start state."""
+    from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
+    start = validate_positions(
+        profile,
+        start_positions,
+        value_label='live position',
+        limit_tolerance=1e-6,
+    )
+    target = validate_positions(profile, target_positions, value_label='target')
+    samples = sampled_quintic_trajectory(start, target, duration_sec, rate_hz)
+
+    message = JointTrajectory()
+    message.joint_names = list(profile.joint_names)
+    for sample in samples:
+        point = JointTrajectoryPoint()
+        point.positions = list(sample.positions)
+        point.velocities = list(sample.velocities)
+        point.accelerations = list(sample.accelerations)
+        sec, nanosec = nonnegative_seconds_to_sec_nanosec(sample.time_from_start_sec)
+        point.time_from_start.sec = sec
+        point.time_from_start.nanosec = nanosec
+        message.points.append(point)
+    return message
 
 
 def trajectory_preview(
@@ -218,21 +483,24 @@ def trajectory_preview(
     positions_rad_or_m: Sequence[float],
     duration_sec: float,
     *,
-    times: int | None = None,
-    rate_hz: float | None = None,
+    rate_hz: float = DEFAULT_TRAJECTORY_RATE_HZ,
 ) -> str:
     sec, nanosec = duration_to_sec_nanosec(duration_sec)
-    positions = ', '.join(f'{position:.10g}' for position in positions_rad_or_m)
+    rate = validate_trajectory_rate(rate_hz)
+    point_count = trajectory_interval_count(duration_sec, rate) + 1
+    target = validate_positions(profile, positions_rad_or_m, value_label='target')
+    positions = ', '.join(f'{position:.10g}' for position in target)
     joints = ', '.join(f"'{joint_name}'" for joint_name in profile.joint_names)
     lines = [
         f'Topic: {profile.topic}',
         f'Joint state topic: {profile.joint_state_topic}',
         f'Joint names: [{joints}]',
-        f'Published positions (rad for angular joints, m for linear joints): [{positions}]',
-        f'Time from start: sec={sec}, nanosec={nanosec}',
+        f'Target positions (rad for angular joints, m for linear joints): [{positions}]',
+        f'Duration: sec={sec}, nanosec={nanosec}',
+        f'Smooth trajectory: quintic, points={point_count}, rate_hz={rate:.10g}',
+        'Start positions: read live by joint name from joint_states',
+        'Publication count: 1',
     ]
-    if times is not None and rate_hz is not None:
-        lines.append(f'Publish burst: times={times}, rate_hz={rate_hz:.10g}')
     return '\n'.join(lines)
 
 
@@ -246,18 +514,23 @@ def publish_trajectory(
     wait_timeout_sec: float,
     ready_timeout_sec: float,
 ) -> None:
-    if times < 1:
-        raise ValueError('--times must be at least 1')
-    if rate_hz <= 0.0:
-        raise ValueError('--rate must be greater than zero')
-    if wait_timeout_sec < 0.0:
-        raise ValueError('--wait-timeout must be zero or greater')
-    if ready_timeout_sec < 0.0:
-        raise ValueError('--ready-timeout must be zero or greater')
+    if times != 1:
+        raise ValueError('--times must be 1; a smooth trajectory is published exactly once')
+    trajectory_interval_count(duration_sec, rate_hz)
+    if not math.isfinite(wait_timeout_sec) or wait_timeout_sec < 0.0:
+        raise ValueError('--wait-timeout must be a finite number zero or greater')
+    if not math.isfinite(ready_timeout_sec) or ready_timeout_sec <= 0.0:
+        raise ValueError('--ready-timeout must be a finite number greater than zero')
+    target_positions = validate_positions(
+        profile,
+        positions_rad_or_m,
+        value_label='target',
+    )
 
     import rclpy
+    from rclpy.duration import Duration
     from sensor_msgs.msg import JointState
-    from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+    from trajectory_msgs.msg import JointTrajectory
 
     rclpy.init(args=None)
     node = rclpy.create_node('mfja_robot_joint_command')
@@ -278,47 +551,53 @@ def publish_trajectory(
                 f'Launch the robot bridge/model first, or select robots:=all.'
             )
 
-        if ready_timeout_sec > 0.0:
-            joint_state_seen = False
+        current_positions: list[float] | None = None
+        joint_state_error: str | None = None
 
-            def _on_joint_state(_message: JointState) -> None:
-                nonlocal joint_state_seen
-                joint_state_seen = True
-
-            subscription = node.create_subscription(
-                JointState,
-                profile.joint_state_topic,
-                _on_joint_state,
-                10,
-            )
-            deadline = time.monotonic() + ready_timeout_sec
-            while rclpy.ok() and not joint_state_seen and time.monotonic() < deadline:
-                rclpy.spin_once(node, timeout_sec=0.1)
-            node.destroy_subscription(subscription)
-
-            if not joint_state_seen:
-                raise RuntimeError(
-                    f'no live joint states received on {profile.joint_state_topic}. '
-                    'Gazebo may be paused/stale, on a different GZ partition, '
-                    'or the robot model is not launched.'
+        def _on_joint_state(message: JointState) -> None:
+            nonlocal current_positions, joint_state_error
+            try:
+                current_positions = positions_from_joint_state(
+                    profile,
+                    message.name,
+                    message.position,
                 )
+                joint_state_error = None
+            except ValueError as exc:
+                joint_state_error = str(exc)
 
-        sec, nanosec = duration_to_sec_nanosec(duration_sec)
-        point = JointTrajectoryPoint()
-        point.positions = list(positions_rad_or_m)
-        point.time_from_start.sec = sec
-        point.time_from_start.nanosec = nanosec
+        subscription = node.create_subscription(
+            JointState,
+            profile.joint_state_topic,
+            _on_joint_state,
+            10,
+        )
+        deadline = time.monotonic() + ready_timeout_sec
+        while rclpy.ok() and current_positions is None and time.monotonic() < deadline:
+            rclpy.spin_once(node, timeout_sec=0.1)
+        node.destroy_subscription(subscription)
 
-        message = JointTrajectory()
-        message.joint_names = list(profile.joint_names)
-        message.points = [point]
+        if current_positions is None:
+            detail = f' Last invalid state: {joint_state_error}' if joint_state_error else ''
+            raise RuntimeError(
+                f'no complete live joint state received on {profile.joint_state_topic}. '
+                'Gazebo may be paused/stale, on a different GZ partition, '
+                f'or the robot model is not launched.{detail}'
+            )
 
-        delay = 1.0 / rate_hz
-        for index in range(times):
-            publisher.publish(message)
-            rclpy.spin_once(node, timeout_sec=0.0)
-            if index < times - 1:
-                time.sleep(delay)
+        message = build_trajectory_message(
+            profile,
+            current_positions,
+            target_positions,
+            duration_sec,
+            rate_hz,
+        )
+        publisher.publish(message)
+        if not publisher.wait_for_all_acked(Duration(seconds=1.0)):
+            raise RuntimeError(
+                f'timed out waiting for the bridge to acknowledge {profile.topic}'
+            )
+        rclpy.spin_once(node, timeout_sec=0.1)
     finally:
         node.destroy_node()
         rclpy.shutdown()
@@ -373,19 +652,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--times',
         type=int,
+        choices=(1,),
         default=DEFAULT_PUBLISH_TIMES,
         help=(
-            f'How many times to publish the trajectory message. Default: {DEFAULT_PUBLISH_TIMES}, '
-            'as a short burst so ros_gz/Gazebo controllers do not miss one-shot commands.'
+            'Compatibility option; must be 1. The complete smooth trajectory is published once.'
         ),
     )
     parser.add_argument(
         '--rate',
         type=float,
-        default=DEFAULT_PUBLISH_RATE_HZ,
+        default=DEFAULT_TRAJECTORY_RATE_HZ,
         help=(
-            'Publish rate in Hz when --times is greater than 1. '
-            f'Default: {DEFAULT_PUBLISH_RATE_HZ:.10g}.'
+            'Pre-sampling rate for the smooth trajectory in Hz; must be between '
+            f'{MIN_TRAJECTORY_RATE_HZ:.10g} and {MAX_TRAJECTORY_RATE_HZ:.10g}. '
+            f'Default: {DEFAULT_TRAJECTORY_RATE_HZ:.10g}.'
         ),
     )
     parser.add_argument(
@@ -399,8 +679,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=DEFAULT_READY_TIMEOUT_SEC,
         help=(
-            'Seconds to wait for live joint_states before publishing. '
-            f'Default: {DEFAULT_READY_TIMEOUT_SEC:.10g}. Use 0 to skip this check.'
+            'Seconds to wait for a complete live joint state before publishing; must be positive. '
+            f'Default: {DEFAULT_READY_TIMEOUT_SEC:.10g}.'
         ),
     )
     parser.add_argument(
@@ -441,7 +721,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                     profile,
                     positions,
                     duration_sec,
-                    times=args.times,
                     rate_hz=args.rate,
                 )
             )
@@ -461,7 +740,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 profile,
                 positions,
                 duration_sec,
-                times=args.times,
                 rate_hz=args.rate,
             )
         )
