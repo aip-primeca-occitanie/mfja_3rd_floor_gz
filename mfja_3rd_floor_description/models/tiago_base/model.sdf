@@ -26,8 +26,9 @@
           </cylinder>
         </geometry>
         <material>
-          <ambient>0.15 0.15 0.15 1</ambient>
-          <diffuse>0.15 0.15 0.15 1</diffuse>
+          <ambient>0.90 0.45 0.10 1</ambient>
+          <diffuse>0.90 0.45 0.10 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
         </material>
       </visual>
       <collision name="base_link_collision">
@@ -66,8 +67,9 @@
           </cylinder>
         </geometry>
         <material>
-          <ambient>0.12 0.12 0.12 1</ambient>
-          <diffuse>0.12 0.12 0.12 1</diffuse>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
         </material>
       </visual>
       <collision name="left_wheel_collision">
@@ -109,8 +111,9 @@
           </cylinder>
         </geometry>
         <material>
-          <ambient>0.12 0.12 0.12 1</ambient>
-          <diffuse>0.12 0.12 0.12 1</diffuse>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
         </material>
       </visual>
       <collision name="right_wheel_collision">
@@ -150,6 +153,11 @@
             <radius>0.03</radius>
           </sphere>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="caster_front_collision">
         <geometry>
@@ -187,6 +195,11 @@
             <radius>0.03</radius>
           </sphere>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="caster_rear_collision">
         <geometry>
@@ -225,6 +238,11 @@
             <uri>model://tiago/meshes/torso/torso_fix.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="torso_fixed_link_collision">
         <geometry>
@@ -255,6 +273,11 @@
             <uri>model://tiago/meshes/torso/torso_lift_with_arm.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="torso_lift_link_collision">
         <geometry>

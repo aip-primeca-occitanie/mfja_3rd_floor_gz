@@ -26,8 +26,9 @@
           </cylinder>
         </geometry>
         <material>
-          <ambient>0.15 0.15 0.15 1</ambient>
-          <diffuse>0.15 0.15 0.15 1</diffuse>
+          <ambient>0.90 0.45 0.10 1</ambient>
+          <diffuse>0.90 0.45 0.10 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
         </material>
       </visual>
       <collision name="base_link_collision">
@@ -66,8 +67,9 @@
           </cylinder>
         </geometry>
         <material>
-          <ambient>0.12 0.12 0.12 1</ambient>
-          <diffuse>0.12 0.12 0.12 1</diffuse>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
         </material>
       </visual>
       <collision name="left_wheel_collision">
@@ -109,8 +111,9 @@
           </cylinder>
         </geometry>
         <material>
-          <ambient>0.12 0.12 0.12 1</ambient>
-          <diffuse>0.12 0.12 0.12 1</diffuse>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
         </material>
       </visual>
       <collision name="right_wheel_collision">
@@ -150,6 +153,11 @@
             <radius>0.03</radius>
           </sphere>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="caster_front_collision">
         <geometry>
@@ -187,6 +195,11 @@
             <radius>0.03</radius>
           </sphere>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="caster_rear_collision">
         <geometry>
@@ -225,6 +238,11 @@
             <uri>model://tiago/meshes/torso/torso_fix.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="torso_fixed_link_collision">
         <geometry>
@@ -255,6 +273,11 @@
             <uri>model://tiago/meshes/torso/torso_lift_with_arm.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="torso_lift_link_collision">
         <geometry>
@@ -285,6 +308,11 @@
             <uri>model://tiago/meshes/arm/arm_1.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="arm_1_link_collision">
         <geometry>
@@ -315,6 +343,11 @@
             <uri>model://tiago/meshes/arm/arm_2.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="arm_2_link_collision">
         <geometry>
@@ -345,6 +378,11 @@
             <uri>model://tiago/meshes/arm/arm_3.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="arm_3_link_collision">
         <geometry>
@@ -375,6 +413,11 @@
             <uri>model://tiago/meshes/arm/arm_4.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="arm_4_link_collision">
         <geometry>
@@ -405,6 +448,11 @@
             <uri>model://tiago/meshes/arm/arm_5-wrist-2010.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="arm_5_link_collision">
         <geometry>
@@ -435,6 +483,11 @@
             <uri>model://tiago/meshes/arm/arm_6-wrist-2010.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="arm_6_link_collision">
         <geometry>
@@ -467,6 +520,11 @@
             <length>0.04</length>
           </cylinder>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="arm_7_link_collision">
         <pose>0 0 0.02 0 0 0</pose>
@@ -500,6 +558,11 @@
             <length>0.005</length>
           </cylinder>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="arm_tool_link_collision">
         <pose>0.001 0 0 0 1.57079632679 0</pose>
@@ -532,6 +595,11 @@
             <uri>model://tiago/meshes/head/head_1.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.12 0.13 0.14 1</ambient>
+          <diffuse>0.12 0.13 0.14 1</diffuse>
+          <specular>0.06 0.06 0.06 1</specular>
+        </material>
       </visual>
       <collision name="head_1_link_collision">
         <geometry>
@@ -562,6 +630,11 @@
             <uri>model://tiago/meshes/head/head_2.stl</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.86 0.87 0.88 1</ambient>
+          <diffuse>0.86 0.87 0.88 1</diffuse>
+          <specular>0.12 0.12 0.12 1</specular>
+        </material>
       </visual>
       <collision name="head_2_link_collision">
         <geometry>

@@ -29,6 +29,7 @@
 
     html {
       scroll-behavior: smooth;
+      scroll-padding-top: 16px;
     }
 
     body {
@@ -84,7 +85,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 270px minmax(0, 1fr);
+      grid-template-columns: 300px minmax(0, 1fr);
       gap: 24px;
       max-width: 1180px;
       margin: 0 auto;
@@ -95,6 +96,8 @@
       position: sticky;
       top: 16px;
       align-self: start;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -103,8 +106,8 @@
     }
 
     nav h2 {
-      margin: 0 0 10px;
-      font-size: 0.9rem;
+      margin: 0;
+      font-size: 1.05rem;
     }
 
     nav a {
@@ -115,9 +118,57 @@
       font-size: 0.92rem;
     }
 
-    nav a:hover {
+    nav a:hover,
+    nav a.active {
       background: var(--surface-soft);
       text-decoration: none;
+    }
+
+    nav a.active {
+      color: var(--accent-dark);
+      box-shadow: inset 3px 0 0 var(--accent);
+      font-weight: 800;
+    }
+
+    .nav-help {
+      margin: 4px 0 12px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .nav-group {
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .nav-category-link {
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .nav-category-link small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.73rem;
+      font-weight: 600;
+    }
+
+    .nav-group.active-group > .nav-category-link {
+      color: var(--accent-dark);
+      background: #f3f9f9;
+    }
+
+    .nav-subitems {
+      margin-top: 3px;
+      padding-inline-start: 10px;
+    }
+
+    .nav-subitems a {
+      padding-block: 5px;
+      color: #3d4b58;
+      font-size: 0.83rem;
     }
 
     main {
@@ -126,11 +177,61 @@
     }
 
     section {
+      --section-accent: var(--accent);
       background: var(--surface);
       border: 1px solid var(--line);
+      border-top: 4px solid var(--section-accent);
       border-radius: var(--radius);
       padding: 22px;
       box-shadow: var(--shadow);
+      scroll-margin-top: 16px;
+    }
+
+    section[data-category="Shuttles"] {
+      --section-accent: #1f73b7;
+    }
+
+    section[data-category="Switches"] {
+      --section-accent: #8c5eb8;
+    }
+
+    section[data-category="Stoppers"] {
+      --section-accent: #715a9c;
+    }
+
+    section[data-category="Sensors"] {
+      --section-accent: #b46a16;
+    }
+
+    section[data-category="Robots"] {
+      --section-accent: #2f7d49;
+    }
+
+    section[data-category="Grippers"] {
+      --section-accent: #a34866;
+    }
+
+    section[data-category="Worlds & Launches"] {
+      --section-accent: #52677a;
+    }
+
+    section[data-category="Troubleshooting"] {
+      --section-accent: #b33b32;
+    }
+
+    section[data-category]::before {
+      content: attr(data-category);
+      display: block;
+      margin-bottom: 5px;
+      color: var(--section-accent);
+      font-size: 0.75rem;
+      font-weight: 900;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    [id] {
+      scroll-margin-top: 16px;
     }
 
     h2 {
@@ -336,6 +437,7 @@
 
       nav {
         position: static;
+        max-height: none;
       }
 
       .grid,
@@ -349,39 +451,105 @@
   <header>
     <div class="header-inner">
       <p class="eyebrow">MFJA ROS 2 Jazzy / Gazebo Harmonic</p>
-      <h1>Focused Runbook for Room 315 and Third-Floor Tests</h1>
+      <h1>MFJA Control Runbook: Room 315 and the Third Floor</h1>
       <p class="subtitle">
-        This page keeps only the important practical scenarios: running Room 315, controlling shuttles,
-        testing switches and stoppers, reading sensor feedback, running the full third floor, and testing
-        robot motion, industrial grippers, and runtime checks.
+        Use the grouped menu to jump directly to shuttle, switch, stopper, sensor,
+        robot, gripper, world-launch, or troubleshooting instructions.
       </p>
     </div>
   </header>
 
   <div class="layout">
     <nav aria-label="Page navigation">
-      <h2>Sections</h2>
-      <a href="#setup">Terminal setup</a>
-      <a href="#topic-map">Topic map</a>
-      <a href="#sensor-names">Sensor names</a>
-      <a href="#scenario-room315">Room 315 with both rails</a>
-      <a href="#scenario-shuttle-life">Add, remove, reset</a>
-      <a href="#scenario-switches">Switches and stoppers</a>
-      <a href="#scenario-sensors">One shuttle and sensors</a>
-      <a href="#scenario-markers">Show or hide sensors</a>
-      <a href="#scenario-device-positions">Edit device positions</a>
-      <a href="#scenario-floor">Full third floor</a>
-      <a href="#scenario-single-robot">One robot with table</a>
-      <a href="#scenario-all-robots">Full floor with all robots</a>
-      <a href="#scenario-tiago-variants">TIAGo variants from YAML</a>
-      <a href="#scenario-robot-control">Robot control topics</a>
-      <a href="#gripper-control">Industrial gripper control</a>
-      <a href="#scenario-move-one-robot">Move one robot</a>
-      <a href="#validation">Quick checks</a>
+      <h2>Control Sections</h2>
+      <p class="nav-help">Choose a component to jump directly to its commands.</p>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#setup">
+          Start Here
+          <small>Terminal setup and ROS interface map</small>
+        </a>
+        <div class="nav-subitems">
+          <a href="#topic-map">ROS API map</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#shuttle-control">
+          Shuttles
+          <small>Move, stop, and set speed</small>
+        </a>
+        <div class="nav-subitems">
+          <a href="#scenario-shuttle-life">Add, reset, and remove</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#switch-control">
+          Switches
+          <small>Select exterior or interior routes</small>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#stopper-control">
+          Stoppers
+          <small>Block or allow shuttle passage</small>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#scenario-sensors">
+          Sensors
+          <small>Read live binary rail feedback</small>
+        </a>
+        <div class="nav-subitems">
+          <a href="#sensor-names">Sensor names</a>
+          <a href="#scenario-markers">Show or hide markers</a>
+          <a href="#scenario-device-positions">Edit device positions</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#scenario-move-one-robot">
+          Robots
+          <small>Launch and command robot motion</small>
+        </a>
+        <div class="nav-subitems">
+          <a href="#scenario-robot-control">Topics and robot names</a>
+          <a href="#scenario-single-robot">Launch one industrial robot</a>
+          <a href="#scenario-tiago-variants">TIAGo variants</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#gripper-control">
+          Grippers
+          <small>Open, close, configure, and verify</small>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#scenario-room315">
+          Worlds &amp; Launches
+          <small>Room 315, full-floor, and integration scenarios</small>
+        </a>
+        <div class="nav-subitems">
+          <a href="#scenario-floor">Full third floor without robots</a>
+          <a href="#scenario-all-robots">Full integration launch</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a class="nav-category-link" href="#validation">
+          Troubleshooting
+          <small>Topics, interfaces, and failure checks</small>
+        </a>
+      </div>
     </nav>
 
     <main>
-      <section id="setup">
+      <section id="setup" data-category="Start Here">
         <h2>Terminal Setup</h2>
         <p>Build once after changing code, messages, config, or launch files. The commands use <code>${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}</code>, so set <code>MFJA_WS</code> only if your workspace is somewhere else.</p>
 
@@ -445,7 +613,7 @@ gui_config:=config/mfja_default.gui.config \</code></pre>
         </div>
       </section>
 
-      <section id="topic-map">
+      <section id="topic-map" data-category="Reference">
         <h2>Quick ROS API Map</h2>
         <p class="note">Replace <code>right</code> with <code>left</code> to use the same commands on the left rail.</p>
         <table>
@@ -454,8 +622,8 @@ gui_config:=config/mfja_default.gui.config \</code></pre>
           </thead>
           <tbody>
             <tr><td>Add a shuttle</td><td><code>/room_315/rails/right/shuttles/add</code></td><td><code>mfja_rail_interfaces/srv/AddShuttle</code></td></tr>
-            <tr><td>ON / OFF / RESET / REMOVE</td><td><code>/room_315/rails/right/shuttles/command</code></td><td><code>mfja_rail_interfaces/msg/ShuttleCommand</code></td></tr>
-            <tr><td>Shuttle state</td><td><code>/room_315/rails/right/shuttles/state</code></td><td><code>mfja_rail_interfaces/msg/ShuttleState</code></td></tr>
+            <tr><td>Move / stop / reset / remove a shuttle</td><td><code>/room_315/rails/right/shuttles/command</code></td><td><code>mfja_rail_interfaces/msg/ShuttleCommand</code> with optional <code>speed</code></td></tr>
+            <tr><td>Shuttle mode, pose, and speed setting</td><td><code>/room_315/rails/right/shuttles/state</code></td><td><code>mfja_rail_interfaces/msg/ShuttleState</code></td></tr>
             <tr><td>Change switch position</td><td><code>/room_315/rails/right/switches/command</code></td><td><code>mfja_rail_interfaces/msg/SwitchCommand</code></td></tr>
             <tr><td>Switch state</td><td><code>/room_315/rails/right/switches/state</code></td><td><code>mfja_rail_interfaces/msg/SwitchState</code></td></tr>
             <tr><td>Open / close stopper</td><td><code>/room_315/rails/right/stoppers/command</code></td><td><code>mfja_rail_interfaces/msg/StopperCommand</code></td></tr>
@@ -470,8 +638,8 @@ gui_config:=config/mfja_default.gui.config \</code></pre>
         </table>
       </section>
 
-      <section id="sensor-names">
-        <h2>Sensor Names</h2>
+      <section id="sensor-names" data-category="Sensors">
+        <h2>Sensor Names and Meaning</h2>
         <p class="note">
           In code, every rail detector is the same binary <code>sensor</code> type.
           Use these names when reading the <code>/room_315/rails/right/sensors/feedback</code>
@@ -519,8 +687,8 @@ gui_config:=config/mfja_default.gui.config \</code></pre>
         </table>
       </section>
 
-      <section id="scenario-room315">
-        <h2>Scenario 1: Room 315 with Both Rails and One Shuttle Per Side</h2>
+      <section id="scenario-room315" data-category="Worlds &amp; Launches">
+        <h2>Room 315 Launch: Both Rails and One Shuttle Per Side</h2>
         <p>
           This is the main training scenario: Room 315 only, both right and left rails enabled,
           one visible shuttle on each rail, and both shuttles waiting until you send <code>ON</code>.
@@ -579,6 +747,7 @@ ros2 topic pub --once /room_315/rails/left/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_left_shuttle_1', command: 'ON'}"
 
+read -rp "Observe the left shuttle, then press Enter to send OFF..."
 ros2 topic pub --once /room_315/rails/left/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_left_shuttle_1', command: 'OFF'}"</code></pre>
@@ -593,6 +762,7 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_right_shuttle_1', command: 'ON'}"
 
+read -rp "Observe the right shuttle, then press Enter to send OFF..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_right_shuttle_1', command: 'OFF'}"</code></pre>
@@ -614,9 +784,111 @@ ros2 topic echo /room_315/rails/left/shuttles/state \
         </div>
       </section>
 
-      <section id="scenario-shuttle-life">
-        <h2>Scenario 2: Add, Remove, Reset, and Control Shuttles</h2>
-        <p>Use this scenario to test the full shuttle lifecycle. Adding a shuttle is a service call: <code>start_enabled: false</code> spawns it stopped, and <code>start_enabled: true</code> spawns it moving immediately.</p>
+      <section id="shuttle-control" data-category="Shuttles">
+        <h2>Shuttle Control: Move, Stop, or Set Speed</h2>
+        <p>
+          A shuttle moves automatically along its one-way rail route when it receives
+          <code>ON</code>. Send <code>OFF</code> to stop it at its current position.
+          Add a positive <code>speed</code> in metres per second to an <code>ON</code>
+          command to choose the travel speed.
+        </p>
+
+        <h3>Step 1: Launch One Stopped Shuttle</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: Room 315 with one right shuttle</span><button class="copy-btn" data-copy="cmd-shuttle-move-launch">Copy</button></div>
+          <pre><code id="cmd-shuttle-move-launch">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true \
+  enable_room315_left_rail:=false \
+  room315_right_shuttle_count:=1 \
+  room315_right_start_slot:=1 \
+  room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2 \
+  room315_show_device_markers:=true</code></pre>
+        </div>
+
+        <h3>Step 2: Move Continuously, Stop, and Resume</h3>
+        <p class="note">
+          Run these boxes one at a time and observe the state before continuing.
+          They control <code>room315_right_shuttle_1</code>; the final <code>ON</code>
+          resumes with the retained <code>0.2 m/s</code> speed.
+        </p>
+        <div class="grid">
+          <div class="command">
+            <div class="command-bar"><span>1. Start continuous motion</span><button class="copy-btn" data-copy="cmd-shuttle-continuous">Copy</button></div>
+            <pre><code id="cmd-shuttle-continuous">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON', speed: 0.2}"</code></pre>
+          </div>
+          <div class="command">
+            <div class="command-bar"><span>2. Stop at the current position</span><button class="copy-btn" data-copy="cmd-shuttle-stop">Copy</button></div>
+            <pre><code id="cmd-shuttle-stop">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'OFF'}"</code></pre>
+          </div>
+        </div>
+        <div class="command">
+          <div class="command-bar"><span>3. Resume with the retained speed</span><button class="copy-btn" data-copy="cmd-shuttle-resume">Copy</button></div>
+          <pre><code id="cmd-shuttle-resume">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON'}"</code></pre>
+        </div>
+
+        <h3>Step 3: Confirm Motion or Stop</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3: watch the shuttle state</span><button class="copy-btn" data-copy="cmd-shuttle-state-check">Copy</button></div>
+          <pre><code id="cmd-shuttle-state-check">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic echo /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState</code></pre>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>State field</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>mode: MOVING</code></td><td>The shuttle is travelling.</td></tr>
+            <tr><td><code>mode: DISABLED</code></td><td>The drive is disabled initially or after an <code>OFF</code> command.</td></tr>
+            <tr><td><code>mode: WAITING</code></td><td>The shuttle is enabled but a stopper, another shuttle, or a motion guard is blocking it.</td></tr>
+            <tr><td><code>mode: FALLING</code></td><td>No valid route successor was available. Stop the launch and follow the empty-rail procedure in <a href="#switch-control">Switch Control</a>; do not reroute the occupied rail in place.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          For the left rail, replace <code>right</code> with <code>left</code> in the
+          topic and use <code>room315_left_shuttle_1</code>. Rail travel is forward-only;
+          switches choose the route and stoppers must be open for passage. Change a
+          switch route only while that rail is empty; see <a href="#switch-control">Switch Control</a>.
+          To verify an <code>OFF</code>, read a newer <code>mode: DISABLED</code> state:
+          the <code>speed</code> field is the retained setting, not live velocity.
+        </div>
+      </section>
+
+      <section id="scenario-shuttle-life" data-category="Shuttles">
+        <h2>Shuttle Management: Add, Reset, and Remove</h2>
+        <p>Use this scenario to test the full shuttle lifecycle. Adding a shuttle is a service call: <code>start_enabled: false</code> spawns it stopped, and <code>start_enabled: true</code> spawns it moving immediately. The copied sequence pauses between actions so Gazebo can finish spawning and you can observe each state.</p>
 
         <details open>
           <summary>Commands for one shuttle</summary>
@@ -631,18 +903,22 @@ ros2 service call /room_315/rails/right/shuttles/add \
   mfja_rail_interfaces/srv/AddShuttle \
   "{name: 'room315_right_test_1', start_slot: '3', speed: 0.2, start_enabled: false}"
 
+read -rp "Wait until the shuttle appears, then press Enter to send ON..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_right_test_1', command: 'ON'}"
 
+read -rp "Observe motion, then press Enter to send OFF..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_right_test_1', command: 'OFF'}"
 
+read -rp "Confirm mode DISABLED, then press Enter to RESET..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_right_test_1', command: 'RESET'}"
 
+read -rp "Wait for the reset pose, then press Enter to REMOVE..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'room315_right_test_1', command: 'REMOVE'}"</code></pre>
@@ -654,33 +930,61 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command \
           <summary>Commands for all shuttles on a rail</summary>
           <div class="details-body">
             <div class="command">
-              <div class="command-bar"><span>Control ALL shuttles</span><button class="copy-btn" data-copy="cmd-shuttle-life-all">Copy</button></div>
+              <div class="command-bar"><span>Stop, reset, then optionally start ALL shuttles</span><button class="copy-btn" data-copy="cmd-shuttle-life-all">Copy</button></div>
               <pre><code id="cmd-shuttle-life-all">ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
   "{name: 'ALL', command: 'OFF'}"
 
+read -rp "Confirm all modes are DISABLED, then press Enter to RESET..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
-  "{name: 'ALL', command: 'ON'}"
+  "{name: 'ALL', command: 'RESET'}"
 
+# Press Ctrl+C at this prompt if the shuttles should remain stopped.
+read -rp "Confirm the reset poses, then press Enter to send ON..."
 ros2 topic pub --once /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand \
-  "{name: 'ALL', command: 'RESET'}"</code></pre>
+  "{name: 'ALL', command: 'ON'}"</code></pre>
             </div>
           </div>
         </details>
       </section>
 
-      <section id="scenario-switches">
-        <h2>Scenario 3: Change Switch Positions and Test Stoppers</h2>
+      <section id="switch-control" data-category="Switches">
+        <span id="scenario-switches"></span>
+        <h2>Switch Control: Select the Rail Route</h2>
         <p>
-          Switch states are <code>EXTERIOR</code> and <code>INTERIOR</code>. Stoppers use <code>1</code> to close and stop a shuttle, and <code>0</code> to open and allow passage.
+          Switch states are <code>EXTERIOR</code> and <code>INTERIOR</code>.
+          The public switch topic is a low-level simulation interface, so change
+          routes only on an empty rail. Treat <code>A1/A2</code> and
+          <code>A3/A4</code> as coordinated pairs.
         </p>
 
+        <h3>Step 1: Launch an Empty Rail Before Changing Its Route</h3>
+        <div class="command">
+          <div class="command-bar"><span>Terminal 1: Room 315 with zero shuttles</span><button class="copy-btn" data-copy="cmd-switch-empty-launch">Copy</button></div>
+          <pre><code id="cmd-switch-empty-launch">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  start_paused:=false \
+  gui:=true \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true \
+  enable_room315_left_rail:=false \
+  room315_right_shuttle_count:=0 \
+  room315_left_shuttle_count:=0 \
+  room315_show_device_markers:=true</code></pre>
+        </div>
+
+        <h3>Step 2: Command a Route and Read the Actual State</h3>
+        <p class="note">Choose one route command below. Do not run both as one sequence.</p>
         <div class="grid">
           <div class="command">
-            <div class="command-bar"><span>Switch route test</span><button class="copy-btn" data-copy="cmd-switch-test">Copy</button></div>
-            <pre><code id="cmd-switch-test">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+            <div class="command-bar"><span>Option A: all switches exterior</span><button class="copy-btn" data-copy="cmd-switch-exterior">Copy</button></div>
+            <pre><code id="cmd-switch-exterior">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -688,16 +992,52 @@ ros2 topic pub --once /room_315/rails/right/switches/command \
   mfja_rail_interfaces/msg/SwitchCommand \
   "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
 
-ros2 topic pub --once /room_315/rails/right/switches/command \
-  mfja_rail_interfaces/msg/SwitchCommand \
-  "{switches: [{name: 'A1', state: 'INTERIOR'}]}"
-
 ros2 topic echo /room_315/rails/right/switches/state \
   mfja_rail_interfaces/msg/SwitchState</code></pre>
           </div>
           <div class="command">
-            <div class="command-bar"><span>Stopper close / open test</span><button class="copy-btn" data-copy="cmd-stopper-test">Copy</button></div>
-            <pre><code id="cmd-stopper-test">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+            <div class="command-bar"><span>Option B: A1/A2 interior pair</span><button class="copy-btn" data-copy="cmd-switch-interior-pair">Copy</button></div>
+            <pre><code id="cmd-switch-interior-pair">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'A1', state: 'INTERIOR'}, {name: 'A2', state: 'INTERIOR'}]}"
+
+ros2 topic echo /room_315/rails/right/switches/state \
+  mfja_rail_interfaces/msg/SwitchState</code></pre>
+          </div>
+        </div>
+
+        <p class="note">Commands are requests; wait for the state topic to report the requested actual state before continuing.</p>
+
+        <div class="callout warning">
+          Do not reroute a moving or stopped shuttle in place. A shuttle can still
+          occupy a branch or guard segment even after one stopper closes. Stop the
+          current launch, restart with zero shuttles, change the coordinated pair,
+          and confirm the state. Normal numbered start slots are on exterior guard
+          segments, so an ordinary <code>AddShuttle</code> or <code>RESET</code> is not
+          safe preparation for an <code>INTERIOR</code> route. Start motion only through
+          a validated route-compatible scenario.
+        </div>
+      </section>
+
+      <section id="stopper-control" data-category="Stoppers">
+        <h2>Stopper Control: Block or Allow Shuttle Passage</h2>
+        <p>
+          A stopper uses <code>1</code> / <code>CLOSED</code> to block a shuttle and
+          <code>0</code> / <code>OPEN</code> to allow passage. Stoppers do not select
+          the route; they are independent from switches.
+        </p>
+        <p class="note">
+          Run a Room 315 rail launch first. For a visible passage test, use
+          <a href="#shuttle-control">Shuttle Control</a> to start a slow shuttle,
+          then close or open the stopper here without changing the switch route.
+        </p>
+        <div class="command">
+          <div class="command-bar"><span>Close A1, read state, then open all stoppers</span><button class="copy-btn" data-copy="cmd-stopper-test">Copy</button></div>
+          <pre><code id="cmd-stopper-test">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -705,32 +1045,35 @@ ros2 topic pub --once /room_315/rails/right/stoppers/command \
   mfja_rail_interfaces/msg/StopperCommand \
   "{stoppers: [{name: 'A1', state: '1'}]}"
 
+# Confirm A1 is closed, then press Ctrl+C so the open command below can run.
 ros2 topic echo /room_315/rails/right/stoppers/state \
   mfja_rail_interfaces/msg/StopperState
 
 ros2 topic pub --once /room_315/rails/right/stoppers/command \
   mfja_rail_interfaces/msg/StopperCommand \
-  "{stoppers: [{name: 'A1', state: '0'}]}"</code></pre>
-          </div>
-        </div>
-
-        <div class="callout">
-          Practical flow: run a slow shuttle, close <code>A1</code>, wait until it stops, change the switch route, then open <code>A1</code> so the shuttle continues.
+  "{stoppers: [{name: 'ALL', state: '0'}]}"</code></pre>
         </div>
       </section>
 
-      <section id="scenario-sensors">
-        <h2>Scenario 4: Move One Shuttle and Watch Sensor Output</h2>
+      <section id="scenario-sensors" data-category="Sensors">
+        <h2>Sensors: Watch Live Rail Feedback</h2>
         <p>
-          The sensors are binary: they report <code>active: 1</code> when a shuttle is on the sensor point and <code>active: 0</code> when it is clear.
+          The sensors are binary: they report <code>active: 1</code> when a shuttle is
+          inside the sensor's configured <code>radius_m</code>, and <code>active: 0</code>
+          when that area is clear.
           For <code>A*_STOPPER_SENSOR</code>, the sensor point is derived from the matching
           stopper point minus <code>before_stopper_m</code>.
-          Every reading uses <code>sensor_type: sensor</code>. All sensor names are published together on one topic:
+          Every reading uses <code>sensor_type: sensor</code>; <code>shuttle_name</code>
+          identifies the detected shuttle when active. The <code>segment</code>,
+          <code>s</code>, and <code>s_ratio</code> fields are privileged simulator/debug
+          metadata, not additional physical sensor measurements.
+          See <a href="#sensor-names">Sensor Names and Meaning</a> for the detector families.
+          All sensor readings are published together on one topic:
           <code>/room_315/rails/right/sensors/feedback</code>.
         </p>
 
         <div class="command">
-          <div class="command-bar"><span>Terminal 1: one slow moving shuttle</span><button class="copy-btn" data-copy="cmd-one-shuttle-sensors-launch">Copy</button></div>
+          <div class="command-bar"><span>Terminal 1: one slow shuttle, initially stopped</span><button class="copy-btn" data-copy="cmd-one-shuttle-sensors-launch">Copy</button></div>
           <pre><code id="cmd-one-shuttle-sensors-launch">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -744,14 +1087,33 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   enable_room315_left_rail:=false \
   room315_right_shuttle_count:=1 \
   room315_right_start_slot:=2 \
-  room315_shuttles_start_enabled:=true \
+  room315_shuttles_start_enabled:=false \
   room315_shuttle_speed:=0.08 \
   room315_sensor_publish_rate_hz:=10.0 \
   room315_show_device_markers:=true</code></pre>
         </div>
 
         <div class="command">
-          <div class="command-bar"><span>Terminal 2: all rail sensor feedback</span><button class="copy-btn" data-copy="cmd-watch-sensors">Copy</button></div>
+          <div class="command-bar"><span>Terminal 2: confirm the exterior route, then start motion</span><button class="copy-btn" data-copy="cmd-start-sensor-shuttle">Copy</button></div>
+          <pre><code id="cmd-start-sensor-shuttle">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+
+# Wait until all switches report EXTERIOR, then press Ctrl+C to continue.
+ros2 topic echo /room_315/rails/right/switches/state \
+  mfja_rail_interfaces/msg/SwitchState
+
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON', speed: 0.08}"</code></pre>
+        </div>
+
+        <div class="command">
+          <div class="command-bar"><span>Terminal 3: all rail sensor feedback</span><button class="copy-btn" data-copy="cmd-watch-sensors">Copy</button></div>
           <pre><code id="cmd-watch-sensors">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -760,10 +1122,17 @@ ros2 topic echo /room_315/rails/right/sensors/feedback \
   mfja_rail_interfaces/msg/SensorFeedback</code></pre>
         </div>
 
+        <div class="callout">
+          This smoke test exercises the exterior route only. Do not switch an
+          exterior-start shuttle to the interior route while it is present; use a
+          dedicated route-compatible scenario after applying the empty-rail procedure
+          in <a href="#switch-control">Switch Control</a>.
+        </div>
+
       </section>
 
-      <section id="scenario-markers">
-        <h2>Scenario 5: Show or Hide Sensors and Stoppers in Gazebo</h2>
+      <section id="scenario-markers" data-category="Sensors">
+        <h2>Sensor Markers: Show or Hide Sensors and Stoppers in Gazebo</h2>
         <p>
           Gazebo device markers include position sensors and stoppers. Keep them visible during training, or hide them when you want a cleaner scene.
         </p>
@@ -816,8 +1185,8 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
         </div>
       </section>
 
-      <section id="scenario-device-positions">
-        <h2>Tool: Edit Rail Device Positions from the Terminal</h2>
+      <section id="scenario-device-positions" data-category="Sensors">
+        <h2>Sensor and Stopper Positions: Edit Devices from the Terminal</h2>
         <p>
           Use <code>room_315_device_position_tool.py</code> when you have a desired Gazebo
           <code>x/y/z</code> point and want the YAML tool to convert it to the nearest rail
@@ -965,8 +1334,8 @@ ros2 run mfja_robot_control_config room_315_device_position_tool.py \
         </ol>
       </section>
 
-      <section id="scenario-floor">
-        <h2>Scenario 6: Run the Full Third Floor Without Robots</h2>
+      <section id="scenario-floor" data-category="Worlds &amp; Launches">
+        <h2>Full-Floor Launch: Third Floor Without Robots</h2>
         <p>Use this when you want the full third-floor environment with the Room 315 rails and shuttles, without loading all robots.</p>
 
         <div class="command">
@@ -987,9 +1356,9 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
         </div>
       </section>
 
-      <section id="scenario-single-robot">
-        <h2>Scenario 7: Run One Selected Robot with Its Table Only</h2>
-        <p>This scenario isolates one industrial robot with its table. It does not start Room 315 or the full floor. Use Scenario 11 for TIAGo or for a robot inside the full third-floor world.</p>
+      <section id="scenario-single-robot" data-category="Robots">
+        <h2>Robot Launch: One Industrial Robot with Its Table</h2>
+        <p>This launch isolates one industrial robot with its table. It does not start Room 315 or the full floor. Use <a href="#scenario-move-one-robot">Robot Motion Examples</a> for TIAGo or for a robot inside the full third-floor world.</p>
 
         <div class="grid">
           <div class="tile">
@@ -1039,18 +1408,24 @@ ros2 run mfja_robot_control_config robot_gripper_command.py "$ROBOT" close 100</
         </p>
       </section>
 
-      <section id="scenario-all-robots">
-        <h2>Scenario 8: Full Third Floor with All Robots and Shuttles</h2>
-        <p>This is the heaviest scenario, but it is useful for full integration testing: complete world, every enabled robot entry from <code>robots.yaml</code>, both rails, one right shuttle, and one left shuttle. Room 315 shuttles use the same simulation clock as the robots, so all motion stays synchronized.</p>
+      <section id="scenario-all-robots" data-category="Worlds &amp; Launches">
+        <h2>Full Integration Launch: Industrial Robots, One TIAGo, and Shuttles</h2>
+        <p>This is the heaviest scenario, but it is useful for full integration testing: complete world, all four industrial robots, one TIAGo variant, both rails, one right shuttle, and one left shuttle. Room 315 shuttles use the same simulation clock as the robots, so all motion stays synchronized.</p>
+
+        <div class="callout warning">
+          Do not use <code>robots:=all</code> with the current configuration: it
+          selects both TIAGo variants, whose mobile TF frame names collide. Select
+          exactly one TIAGo until those frames are instance-prefixed.
+        </div>
 
         <div class="command">
-          <div class="command-bar"><span>Terminal 1: full floor with all robots and shuttles</span><button class="copy-btn" data-copy="cmd-all-robots">Copy</button></div>
+          <div class="command-bar"><span>Terminal 1: full floor, four industrial robots, one TIAGo, and shuttles</span><button class="copy-btn" data-copy="cmd-all-robots">Copy</button></div>
           <pre><code id="cmd-all-robots">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
-  robots:=all \
+  robots:=kuka1,staubli1,yaskawa_hc10_1,yaskawa_hc10dt_1,tiago1 \
   start_paused:=false \
   gui:=true \
   enable_room315_kinematic_shuttles:=true \
@@ -1076,18 +1451,22 @@ done</code></pre>
         </div>
       </section>
 
-      <section id="scenario-tiago-variants">
-        <h2>Scenario 9: TIAGo Variants from YAML</h2>
+      <section id="scenario-tiago-variants" data-category="Robots">
+        <h2>TIAGo Setup: Choose One YAML Variant</h2>
         <p>
-          TIAGo robots are configured only from <code>mfja_robot_control_config/config/robots.yaml</code>.
-          Add or remove entries in the YAML, then rebuild and source the workspace. Commented lines that start with
-          <code>#</code> are examples only; they are not spawned.
+          The full-floor launch reads
+          <code>mfja_robot_control_config/config/robots.yaml</code>; the Room 315-only
+          launch reads <code>mfja_robot_control_config/config/robots_room_315_only.yaml</code>.
+          Add or remove entries in the YAML for the launch profile you use, then rebuild
+          and source the workspace. Commented lines that start with <code>#</code> are
+          examples only; they are not spawned.
         </p>
 
         <div class="callout">
           Use a unique <code>name</code> for every TIAGo. Use <code>model: tiago_with_arm</code> for the full TIAGo
           with arm, and <code>model: tiago_base</code> for the TIAGo body without the arm or head.
-          When both variants exist, prefer exact names such as <code>robots:=tiago1,tiago_base1</code>.
+          Both variants may exist in the YAML, but launch exactly one per ROS graph:
+          <code>robots:=tiago1</code> or <code>robots:=tiago_base1</code>.
         </div>
 
         <h3>YAML pattern</h3>
@@ -1108,7 +1487,7 @@ done</code></pre>
     y_pose: -3.0
     z_pose: 0.0
     yaw: 1.57
-    enabled: true</code></pre>
+    enabled: false  # Enable this only when tiago1 is disabled or not selected.</code></pre>
         </div>
 
         <div class="grid">
@@ -1135,31 +1514,35 @@ ros2 pkg prefix mfja_3rd_floor_description</code></pre>
         </div>
 
         <div class="command">
-          <div class="command-bar"><span>Launch both TIAGo variants only</span><button class="copy-btn" data-copy="cmd-tiago-variants-launch">Copy</button></div>
+          <div class="command-bar"><span>Launch one selected TIAGo variant</span><button class="copy-btn" data-copy="cmd-tiago-variants-launch">Copy</button></div>
           <pre><code id="cmd-tiago-variants-launch">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
+# Choose exactly one: tiago1 or tiago_base1.
+TIAGO=tiago1
+
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
-  robots:=tiago1,tiago_base1 \
+  robots:="$TIAGO" \
   start_paused:=false \
   gui:=true \
   enable_room315_kinematic_shuttles:=false</code></pre>
         </div>
 
         <div class="command">
-          <div class="command-bar"><span>Check both TIAGo namespaces</span><button class="copy-btn" data-copy="cmd-tiago-variants-check">Copy</button></div>
+          <div class="command-bar"><span>Check the selected TIAGo namespace</span><button class="copy-btn" data-copy="cmd-tiago-variants-check">Copy</button></div>
           <pre><code id="cmd-tiago-variants-check">cd "${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 node list | grep tiago
-ros2 topic list | grep -E '^/(tiago1|tiago_base1)/'</code></pre>
+TIAGO=tiago1  # Keep this equal to the selector used at launch.
+ros2 node list | grep "$TIAGO"
+ros2 topic list | grep -E "^/$TIAGO/"</code></pre>
         </div>
       </section>
 
-      <section id="scenario-robot-control">
-        <h2>Scenario 10: Robot Control Topics and Names</h2>
+      <section id="scenario-robot-control" data-category="Robots">
+        <h2>Robot Control: Topics, Names, and Interfaces</h2>
         <p>
           The configured robots are controlled through ROS topics bridged to Gazebo.
           Fixed-base robots use <code>/&lt;robot_name&gt;/joint_trajectory</code>.
@@ -1215,8 +1598,8 @@ ros2 interface show geometry_msgs/msg/Twist</code></pre>
         </div>
       </section>
 
-      <section id="gripper-control">
-        <h2>Industrial Gripper Control</h2>
+      <section id="gripper-control" data-category="Grippers">
+        <h2>Gripper Control: Industrial Robots</h2>
         <p>
           The four industrial robots have an independent symmetric gripper command.
           Use <code>robot_gripper_command.py</code> instead of adding jaw positions to
@@ -1408,8 +1791,8 @@ ros2 topic echo --once /kuka1/joint_states
         </div>
       </section>
 
-      <section id="scenario-move-one-robot">
-        <h2>Scenario 11: Move Any One Robot and Test Its Gripper</h2>
+      <section id="scenario-move-one-robot" data-category="Robots">
+        <h2>Robot Motion Examples: Move Any One Robot</h2>
         <p>
           Use this scenario when you want to command one robot manually. First launch the full floor with only the robot you want.
           Change <code>robots:=kuka</code> to <code>staubli</code>, <code>hc10</code>, <code>hc10dt</code>, <code>tiago1</code>, or <code>tiago_base1</code>.
@@ -1602,8 +1985,8 @@ ros2 topic pub --once /tiago_base1/cmd_vel geometry_msgs/msg/Twist \
         </details>
       </section>
 
-      <section id="validation">
-        <h2>Quick Checks When Something Fails</h2>
+      <section id="validation" data-category="Troubleshooting">
+        <h2>Troubleshooting: Quick Checks When Something Fails</h2>
         <div class="grid">
           <div>
             <h3>Inspect topics and messages</h3>
@@ -1680,6 +2063,65 @@ ros2 interface show geometry_msgs/msg/Twist</code></pre>
         }, 1400);
       });
     });
+
+    const navigationLinks = Array.from(
+      document.querySelectorAll('nav a[href^="#"]')
+    );
+    const navigationTargets = navigationLinks
+      .map((link) => {
+        const target = document.querySelector(link.getAttribute("href"));
+        return target ? { link, target } : null;
+      })
+      .filter(Boolean);
+    let navigationFrame = null;
+
+    const updateActiveNavigation = () => {
+      navigationFrame = null;
+      const targetLine = 96;
+      const orderedTargets = [...navigationTargets].sort(
+        (left, right) =>
+          left.target.getBoundingClientRect().top -
+          right.target.getBoundingClientRect().top
+      );
+      let current = orderedTargets[0] || null;
+
+      orderedTargets.forEach((item) => {
+        if (item.target.getBoundingClientRect().top <= targetLine) {
+          current = item;
+        }
+      });
+
+      const atPageEnd = window.scrollY + window.innerHeight >=
+        document.documentElement.scrollHeight - 4;
+      if (atPageEnd && orderedTargets.length > 0) {
+        current = orderedTargets[orderedTargets.length - 1];
+      }
+
+      navigationLinks.forEach((link) => {
+        const isCurrent = current && link === current.link;
+        link.classList.toggle("active", Boolean(isCurrent));
+        if (isCurrent) {
+          link.setAttribute("aria-current", "location");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+
+      document.querySelectorAll(".nav-group").forEach((group) => {
+        group.classList.toggle(
+          "active-group",
+          Boolean(group.querySelector("a.active"))
+        );
+      });
+    };
+
+    window.addEventListener("scroll", () => {
+      if (navigationFrame === null) {
+        navigationFrame = window.requestAnimationFrame(updateActiveNavigation);
+      }
+    }, { passive: true });
+    window.addEventListener("hashchange", updateActiveNavigation);
+    updateActiveNavigation();
   </script>
 </body>
 </html>

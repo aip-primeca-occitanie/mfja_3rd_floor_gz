@@ -1,10 +1,13 @@
 <?xml version="1.0"?>
 <robot name="tiago">
   <material name="tiago_white">
-    <color rgba="0.85 0.85 0.85 1.0"/>
+    <color rgba="0.86 0.87 0.88 1.0"/>
   </material>
   <material name="tiago_dark">
-    <color rgba="0.25 0.25 0.25 1.0"/>
+    <color rgba="0.12 0.13 0.14 1.0"/>
+  </material>
+  <material name="tiago_orange">
+    <color rgba="0.90 0.45 0.10 1.0"/>
   </material>
 
   <link name="base_link">
@@ -13,7 +16,7 @@
       <geometry>
         <cylinder radius="0.20" length="0.20"/>
       </geometry>
-      <material name="tiago_dark"/>
+      <material name="tiago_orange"/>
     </visual>
     <collision>
       <origin xyz="0 0 0.22" rpy="0 0 0"/>
@@ -90,7 +93,7 @@
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/torso/torso_fix.stl"/>
       </geometry>
-      <material name="tiago_white"/>
+      <material name="tiago_dark"/>
     </visual>
     <collision>
       <geometry>
@@ -146,7 +149,7 @@
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_3.stl"/>
       </geometry>
-      <material name="tiago_dark"/>
+      <material name="tiago_white"/>
     </visual>
     <collision>
       <geometry>
@@ -188,7 +191,7 @@
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/arm/arm_6-wrist-2010.stl"/>
       </geometry>
-      <material name="tiago_white"/>
+      <material name="tiago_dark"/>
     </visual>
     <collision>
       <geometry>
@@ -203,7 +206,7 @@
       <geometry>
         <cylinder radius="0.02" length="0.04"/>
       </geometry>
-      <material name="tiago_dark"/>
+      <material name="tiago_white"/>
     </visual>
     <collision>
       <origin xyz="0 0 0.02" rpy="0 0 0"/>
@@ -234,7 +237,7 @@
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/tiago/meshes/head/head_1.stl"/>
       </geometry>
-      <material name="tiago_white"/>
+      <material name="tiago_dark"/>
     </visual>
     <collision>
       <geometry>
