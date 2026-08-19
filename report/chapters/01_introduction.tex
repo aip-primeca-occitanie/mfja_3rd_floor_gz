@@ -1,34 +1,36 @@
 \chapter{General Introduction}
 \label{chap:introduction}
 
-\paragraph{Context and engineering objective.}
+The MFJA robots, transport cells and cameras did not yet form a coherent
+simulation for reliable planning and experiments. The original assignment was
+to build the Room~315 environment and reusable launch foundation. Its early
+completion enabled Phase~2 on task-level English and paired-camera observations.
+PlanSys2 requests symbolic plans from rules written in the Planning Domain
+Definition Language (PDDL) \citep{plansys2}. PDDL defines the objects, state,
+actions, preconditions and effects \citep{pddl}. Learned models supply checked
+task and scene descriptions; they never issue commands.
 
-The MFJA robotics platforms bring together industrial manipulators, a mobile
-robot, transport cells, cameras and programmable devices. Integrating this
-equipment in simulation requires compatible models, coordinate frames,
-namespaces, commands and state descriptions. The work went beyond constructing
-a visually accurate Gazebo scene: the simulated
-equipment also had to behave consistently enough to support routing, planning
-and experimentation.
+\paragraph{Problem and objectives.}
 
-The project also examined whether camera observations and English requests
-could describe a task without sending motor commands directly. The language and
-vision paths supply information about the request and the scene. PlanSys2
-produces the symbolic sequence, and the software execution supervisor checks
-each requested step before execution. Neither learned model produces a plan or
-an action vector.
+I used Autodesk Inventor for the computer-aided-design (CAD) geometry
+\citep{autodeskinventor}, Gazebo to execute the scenes
+\citep{gazeboharmonic}, and ROS~2 to connect their software components
+\citep{ros2jazzyinterfaces}.
 
-\paragraph{Objectives and principal contribution.}
+\noindent\textbf{Engineering problem.} \emph{How can the heterogeneous robots,
+rail cells and overhead-camera observations of Room~315 be integrated into a
+reproducible Gazebo environment that transforms constrained English requests
+into checked shuttle motion without giving learned models direct command
+authority?}
 
-The project pursued four engineering objectives within simulation:
+To answer this question, the project pursued four engineering objectives:
 
 \begin{enumerate}[label=\textbf{O\arabic*.},leftmargin=*,itemsep=0.22em]
-  \item establish a maintainable Gazebo representation of the MFJA third floor
-  and Room~315, with configuration-driven launch and unified ROS~2 access to
-  the supported simulated robots;
-  \item implement continuous multi-shuttle transport over calibrated rail
-  geometry and explicit topology, including device semantics, routing,
-  reservations and collision-avoidance constraints;
+  \item design the third-floor geometry and furnished-room contents, then
+  integrate the Room~315 robots and cells in a maintainable Gazebo environment
+  with selectable launch and unified ROS~2 access;
+  \item implement calibrated, directed multi-shuttle transport with device
+  semantics, routing, reservations and separation constraints;
   \item define typed command and state interfaces, together with supervision
   rules for checking commands and confirming their effects; and
   \item design and evaluate a neuro-symbolic workflow that combines
@@ -36,32 +38,32 @@ The project pursued four engineering objectives within simulation:
   PDDL/PlanSys2 planning and software-supervised execution.
 \end{enumerate}
 
-The four objectives form a progression from the simulated environment and its
-transport system to task-level interaction through language and vision. The
-objective identifiers O1--O4 are used again in
-\cref{tab:objective-results} to connect each objective to its evaluated result.
+O1--O4 progress from simulation to task-level interaction and are assessed in
+\cref{tab:objective-results}.
 
-\paragraph{Method and headline results.}
+\paragraph{Method.}
 
-Development followed short build, test and review cycles. Each part was first
-implemented and checked separately, then connected to the preceding layers.
-This made it possible to resolve modelling, interface and coordination issues
-before evaluating the complete workflow. The software, dataset and model
-versions used for the reported evaluations are listed in
-\cref{app:reproducibility}.
+Development followed short build--test--review cycles. I checked each layer
+before integrating it, then froze the software, data and model versions used for
+evaluation (\cref{app:reproducibility}). Preserving consistent geometry,
+identity and state across layers was the main integration challenge.
 
-The frozen visual estimator passed all predeclared Final Test acceptance checks,
-while all 12 isolated English-to-motion runs reached their declared terminal
-state.
-\Cref{chap:results} reports the detailed metrics, evidence and simulation-only
-scope.
+The delivered Gazebo system starts six isolated robot instances and coordinates
+eight shuttles. The frozen estimator reached 99.94\% segment accuracy; 12/12
+closed-loop tasks and 5/5 fault cases met their predefined outcomes
+(\cref{chap:results}).
+
+\begin{keybox}[Project demonstration videos]
+Project demonstrations are available in the
+\href{https://1drv.ms/f/c/b9a744d4252a8ea4/IgDZe0nBqhLRQYNN5V2g-S-nAVb9ZIn0VUSxfA4CWJeYxTA?e=eGmKr2}
+{\textcolor{mfjablue}{\textbf{\underline{online demonstration-video folder}}}}.
+The videos provide a visual
+overview; the measured results and reproducibility records remain in
+\cref{chap:results,app:reproducibility}.
+\end{keybox}
 
 \paragraph{Report structure.}
-The host environment, mission and principal design choices are introduced in
-\cref{chap:host,chap:mission,chap:background}. The engineering foundations are
-then developed in
-\cref{chap:digital-twin,chap:multi-robot,chap:transport,chap:interfaces}, followed
-by the language integration, paired-camera data generation and visual training
-process in \cref{chap:ai-development}. \Cref{chap:neurosymbolic} follows one
-English instruction through planning, software-supervised motion and result checking,
-and \cref{chap:results,chap:perspectives} present the results and future work.
+Chapters~2--4 introduce the host, mission and design choices. Chapters~5--8
+develop the simulation, robot, transport and interface foundations; Chapters~9
+and~10 add the AI inputs and checked planning loop. Chapters~11--13 assess the
+evidence, limitations and contributions against O1--O4.

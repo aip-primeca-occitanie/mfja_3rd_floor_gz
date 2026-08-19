@@ -1,47 +1,39 @@
 \chapter{Conclusion}
 \label{chap:conclusion}
 
-The four internship objectives were completed in simulation. The project
-delivers a maintainable ROS~2 Jazzy and Gazebo Harmonic environment with
-selective launch, namespaced command and feedback interfaces, and verified
-motion of the industrial and mobile robots. For Room~315 it adds geometrically
-calibrated rail paths, switch-dependent routes, typed contracts, planning and
-supervision, English task grounding and rail-isolated paired-camera perception.
-\Cref{tab:objective-results} maps each objective to its evaluation evidence.
+MFJA needed a reproducible environment that could connect its heterogeneous
+third-floor robots to checked task execution.
 
-The language interface produced the intended outcome in all ten declared cases,
-including clarification, rejection and cancellation. The complete
-request-to-motion path succeeded in all 12 isolated cold-start runs; every final
-effect was verified and every controller stopped. The postcondition,
-supervision, planning, replanning and observation records are reported in
-\cref{sec:v4-closed-loop-campaign}.
+In Phase~1, I designed the third-floor CAD and the furnishings of Rooms~314 and
+315 in Autodesk Inventor. I then integrated the supplied rail cells and
+attributed robot assets into Gazebo. In Phase~2, I implemented multi-shuttle
+transport, versioned interfaces, visual and language grounding, symbolic
+planning and a supervisor that verifies effects before reporting success.
+Together, these elements form one chain from task-level English to verified
+simulated effects, rather than separate demonstrations. Configuration,
+automated tests, retained evidence and run instructions form the handover to
+MFJA.
 
-The independent one-shot Final Test evaluated 4,680 visible shuttle instances
-across 1,040 Gazebo scenes. Public-segment
-top-1 accuracy reached 99.9359\%, while joint
-segment and longitudinal accuracy at
-\(\lvert\Delta s_{ratio}\rvert\leq0.05\) reached 90.8974\%; all 80 predefined gates passed.
-\Cref{tab:visual-v4-final-test-results} reports the remaining per-rail,
-loaded-state, localisation and bounding-box metrics. The camera
-counterfactuals support the intended rail isolation and enforced camera order.
+The declared evaluation succeeded in all 10 language cases and all 12 isolated
+request-to-motion runs. It also succeeded in all 5 closed-loop fault cases. The
+one-shot Final Test evaluated 4,680 targets and passed all 80 predeclared gates.
+Segment classification was 99.9359\%; the stricter joint segment/position result
+was 90.8974\% at $|\Delta s_{ratio}|\leq0.05$. The discrete facts supplied to
+planning were therefore strong, but fine position along a rail remained the
+clearest measured weakness. The retained evidence supports O1--O4 within the
+stated scope. \Cref{tab:objective-results} maps each objective to its principal
+evidence.
 
-The observation-only checks ran in dry-run mode without issuing control actions.
-The separate closed-loop fault campaign passed 5/5 declared scenarios with
-no false success and stopped controllers. The approved runtime profile is
-limited to \path{gazebo_v4_closed_loop_runtime_only}. Command execution starts
-disabled and requires explicit operator activation; once enabled and given a
-confirmed task, closed-loop planning and execution proceed automatically in
-Gazebo. Physical deployment is not approved. The task gateway, rather than the
-inference node, owns planning-state construction and Gazebo actuation.
+These claims apply to fixed simulated cameras, known shuttles, kinematic rail
+motion and mostly one execution per scene. They do not establish physical
+transfer, simultaneous six-robot motion, repeated-run reliability or certified
+safety. The selected runtime is Gazebo-only and starts with command execution
+disabled. The priority extensions are a genuinely shifted visual set, repeated
+seeded campaigns, live-fault recovery and stronger concurrency tests.
 
-For MFJA, the result is a reusable platform for practical teaching, software
-integration, synthetic-data generation, and planning or perception studies.
-For me, the central lesson was how to divide a broad integration request into
-small, testable components and connect them through explicit contracts. I also
-prepared configuration, regression tests and run instructions so that the host
-team can continue and extend the work.
-
-The evaluation priorities are listed in \Cref{tab:remaining-plan}. Within the
-present scope, command authority remains limited to Gazebo; any future transfer
-to the physical MFJA platforms should preserve the same explicit validation,
-supervision and effect-verification boundaries.
+For MFJA, the outcome is a reusable platform for teaching, integration and
+controlled planning or perception comparisons. Working under platform
+constraints required me to turn a broad request into testable contracts and
+revise designs when weaknesses appeared. The main professional lesson for me
+was learning to justify design choices with evidence, discuss them with my
+supervisors and state clearly what the results do and do not demonstrate.

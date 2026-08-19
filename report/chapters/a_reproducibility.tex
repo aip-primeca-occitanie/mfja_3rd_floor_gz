@@ -1,222 +1,145 @@
 \chapter{Reproducibility Records}
 \label{app:reproducibility}
 
-\section{Source, environment and build}
+This appendix identifies the source, external artefacts and shortest paths to
+the records supporting \cref{chap:results}. Ubuntu~24.04, ROS~2 Jazzy, Gazebo
+Harmonic and Python~3.12 form the reference environment. The source repository
+is identified by \citep{mfjarepository}; build and operating procedures remain
+in \path{docs/INSTALLATION.md}, \mbox{\code{runbook.html}} and
+\mbox{\code{docs/}}\allowbreak
+\mbox{\code{QUICK\_START\_AND\_}}\allowbreak
+\mbox{\code{FEATURE\_GUIDE.md}}.
 
-The project repository is identified by \citep{mfjarepository}. The reference
-environment is Ubuntu~24.04, ROS~2 Jazzy, Gazebo Harmonic and Python~3.12. The
-revision carrying this report stores the implementation, active runtime
-configurations, tests, lightweight evidence and submission PDF together. A
-clean checkout of that revision therefore reconstructs the source handover.
-The model checkpoint, sealed dataset and raw ROS bags are external
-objects identified by the fingerprints below rather than files stored in Git;
-their byte-exact current-V4 copies are published in the full-evidence release
-identified below.
-Here, a checkpoint is a saved network-weight state, a sealed dataset is a
-frozen hash-identified dataset (not an encrypted or still-unseen one), and a ROS
-bag is a timestamped recording of ROS messages. An external object is retained
-outside Git because of size, while its digest fixes the object used by the
-reported run.
+\section{Identities and releases}
 
-From the workspace root, the source revision can be recorded and the installed
-overlay rebuilt with the commands below. In ROS/colcon terminology, an overlay
-is this workspace's build and install output layered over the base ROS
-installation.
-
-\begin{lstlisting}[language=bash]
-source /opt/ros/jazzy/setup.bash
-git -C src/mfja_3rd_floor_gz rev-parse HEAD
-git -C src/mfja_3rd_floor_gz status --short
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-source install/setup.bash
-\end{lstlisting}
-
-From \path{report/}, \code{make check} builds the A4 PDF, rejects unresolved
-references or citations and checks for overfull boxes. The retained build log
-and delivery-PDF fingerprint are stored under \path{report/evidence/}; keeping
-the PDF digest outside the PDF avoids a self-referential identity. Operating
-procedures and launch arguments are documented in \path{runbook.html},
-\path{docs/INSTALLATION.md}, \path{docs/QUICK_START_AND_FEATURE_GUIDE.md} and
-\path{docs/ROOM315_LANGUAGE_TO_MOTION_RUNTIME.md}.
-
-\section{Data and artefact availability}
-
-The repository-relative evidence package is
-\path{report/evidence/room315_visual_v4_submission_2026-08-11}. Its
-\path{evidence_manifest.json} has SHA-256
-\path{840787b617e0f671628dfc7d8122ff559d76664506ff8f94ac31d043737da446},
-and the package-wide \path{SHA256SUMS} file has SHA-256
-\path{dec74565a8ccfba57a32d83dfdd03236daeafeff226d5243594e328fa4adc5ab}.
-Together they cryptographically bind the lightweight copies and external-object
-fingerprints, and map each reported result to its source record. The complete
-per-file hashes and JSON Pointers remain
-in that package and in \path{report/evidence/ACTIVE_EVIDENCE.md}; they are not
-repeated in this appendix.
-
-The corresponding full payload is published at the
-\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11}{Room 315 Visual Model V4 full-evidence release}.
-Its tag \path{room315-visual-v4-evidence-2026-08-11} targets
-revision \path{0d19e1601d57416b83c871c1a8d413ec0dd523a6}, which introduced
-the V4 runtime and the compact package; that package is byte-identical at the
-revision carrying this report. The archive is \path{247825706} bytes with
-SHA-256
-\path{35b583baca4f45eed6aad659c253180d00f1a5830ce389266ba714a4445a8ecc}.
-Its 6,492 files include the selected checkpoint, the sealed 1,040-scene Test
-with 2,080 images, the final active runtime bundle and 18 MCAP recordings from
-the positive, fail-closed and post-promotion-smoke runs. The release tag's
-V4 identifies the visual-model generation; it is unrelated to the historical
-repository tag \path{version-4}.
-
-\emph{Lightweight} means that the package retains manifests, controls, results
-and checksums but not the large checkpoint, images or raw bags. Binding means
-that any content change produces a different SHA-256 and fails verification; it
-does not make a file physically impossible to edit. A JSON Pointer is the
-recorded path to one field inside a JSON document.
-
-The selected epoch-11 visual checkpoint has SHA-256
-\path{869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d}.
-The sealed 1,040-scene Final Test has dataset fingerprint
-\path{226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef}.
-These fingerprints identify the two principal external objects used by the
-visual evaluation; each is the SHA-256 identifier recorded by its governing
-protocol. Some copied machine-generated records preserve absolute
-archival paths from the evaluation host. They are retained for provenance but
-are not submission locations; the authored evidence index uses relative paths.
-
-The earlier full-evidence release assets described above can be downloaded and
-verified without adding their payload to Git. These commands require
-\code{curl}, GNU \code{sha256sum}, GNU \code{tar} with Zstandard support and
-the \code{zstd} executable:
-
-\begin{lstlisting}[language=bash]
-TAG=room315-visual-v4-evidence-2026-08-11
-BASE=https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/download/$TAG
-curl -fLO "$BASE/room315_visual_v4_full_evidence_2026-08-11.tar.zst"
-curl -fLO "$BASE/room315_visual_v4_full_evidence_2026-08-11.tar.zst.sha256"
-sha256sum -c \
-  room315_visual_v4_full_evidence_2026-08-11.tar.zst.sha256
-tar --zstd -xf \
-  room315_visual_v4_full_evidence_2026-08-11.tar.zst
-cd room315_visual_v4_full_evidence_2026-08-11
-sha256sum --strict -c SHA256SUMS
-\end{lstlisting}
-
-The repository landing record
-\path{report/evidence/ROOM315_VISUAL_V4_RELEASE.md} repeats the asset identity,
-scope and extraction instructions. Raw records preserve archival host paths
-and reviewer/name provenance byte-for-byte. They remain Gazebo-only evidence
-and confer no physical-deployment authority.
-
-\paragraph{Data and replay release.}
-The organisation-owned
-\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz}{source project}
-publishes the
-\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1}{data and replay release
-\code{v4-seed31520260811-dataset-v1}}. Its tag targets revision
-\path{a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30}, and GitHub records
-\code{published\_at} as \path{2026-08-16T18:40:57Z}. The tag is treated as
-immutable: later documentation records this target rather than retargeting it.
-The release contains the four labelled roles used by the reported procedure:
-5,528 Training, 512 Validation, 256 Development-Canary and 1,040 Final-Test
-scenes. Thus \(5{,}528+512+256+1{,}040=7{,}336\) paired-camera scenes account
-for 14,672 images. It also retains the predecessor V3 initialisation checkpoint
-(SHA-256
-\path{8a2d865e3d3551ec4284b53aa913d66f24640e23556f2f26b49a165f3ce8d51d}),
-the selected V4 epoch-11 checkpoint identified above, the frozen evaluation
-source and a portable stateless replay program.
-
-These materials support repeating the documented procedure and re-evaluating
-the selected checkpoint on Validation, Canary and Final Test. They do not claim
-bit-identical retraining across arbitrary hardware/software environments.
-Public accessibility is a reproduction-delivery property, not an ``open
-dataset'' designation or a standalone reuse licence. Publication occurred only
-after training, checkpoint selection, Canary evaluation and the immutable
-Final-Test attempt had completed; it therefore changes availability, not any
-partition's experimental role, and the stateless replay does not reopen the
-historical one-shot attempt.
-
-Prerequisites for anonymous download and verification are Git, \code{curl}, GNU
-\code{sha256sum}, \code{tar} with Zstandard support and Python~3:
-
-\begin{lstlisting}[language=bash]
-set -eu
-DATA_TAG=v4-seed31520260811-dataset-v1
-TARGET=a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30
-PROJECT_URL=https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz
-git clone --branch "$DATA_TAG" --depth 1 \
-  "$PROJECT_URL.git" room315-v4-release
-cd room315-v4-release
-test "$(git rev-parse HEAD)" = "$TARGET"
-cd report/evidence/room315_visual_v4_dataset_release_v1
-mkdir -p release-assets
-while read -r _digest asset; do
-  curl -fL --retry 3 -o "release-assets/$asset" \
-    "$PROJECT_URL/releases/download/$DATA_TAG/$asset"
-done < SHA256SUMS
-(cd release-assets && sha256sum --strict -c ../SHA256SUMS)
-\end{lstlisting}
-
-The data-release inventory and the \code{tar --zstd} extraction and stateless
-replay commands are in
-\path{report/evidence/room315_visual_v4_dataset_release_v1/README.md}. Matching
-the recorded full CUDA replay setup additionally requires the environment in
-\path{report/evidence/room315_visual_v4_dataset_release_v1/ENVIRONMENT.md}.
-
-\section{Result-to-record index}
-
-\Cref{tab:evidence-roots} gives the shortest path from each reported result to
-its inspectable record. Paths beginning with \path{model/}, \path{final_test/}
-or \path{runtime/} are relative to the primary evidence package above.
-
-\begin{longtable}{@{}
->{\raggedright\arraybackslash}p{0.22\textwidth}
->{\raggedright\arraybackslash}p{0.67\textwidth}@{}}
-\caption{Records supporting the reported results.}
-\label{tab:evidence-roots}\\
+\begin{longtable}{@{}p{0.25\textwidth}p{0.64\textwidth}@{}}
+\caption{Principal source, data and evidence identities.}
+\label{tab:artefact-identities}\\
 \toprule
-\textbf{Result group} & \textbf{Records and scope}\\
+\textbf{Item} & \textbf{Identity and scope}\\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Result group} & \textbf{Records and scope}\\
+\textbf{Item} & \textbf{Identity and scope}\\
 \midrule
 \endhead
-Visual model and Final Test & \path{model/} contains the effective training
-configuration, input fingerprints, selected-run report and hard-case Validation records;
-\path{canary/} is the labelled development regression check.
-\path{final_test/final/controls/} contains the sealed controls and one-shot
-evaluation contract, while \path{final_test/final/results/} contains the
-immutable completion ledger and measurements. The controls freeze what may run;
-the ledger records that the single permitted attempt was consumed and
-completed.\\
+Source and lightweight records & The report revision in the
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz}{project
+repository} contains the implementation, tests and compact evidence. The
+package is
+\mbox{\code{report/evidence/}}\allowbreak
+\mbox{\code{room315\_visual\_v4\_}}\allowbreak
+\mbox{\code{submission\_2026-08-11}}; its
+\mbox{\code{evidence\_manifest.json}} SHA-256 is
+\path{840787b617e0f671628dfc7d8122ff559d76664506ff8f94ac31d043737da446},
+and its package-wide \path{SHA256SUMS} SHA-256 is
+\path{dec74565a8ccfba57a32d83dfdd03236daeafeff226d5243594e328fa4adc5ab}.\\
 \tablerowrule
-Runtime qualification & \path{runtime/shadow/}, \path{runtime/campaign/} and
-\path{runtime/safety/} contain the observation-only comparison, scene campaign
-and visual-input fault checks. \path{runtime/closed_loop/positive/},
-\path{runtime/closed_loop/fault/} and
-\path{runtime/closed_loop/active_runtime/} contain the positive campaign, fault
-campaign, manually approved Gazebo runtime and its selected-case smoke. Exact
-per-record digests are available in
-\path{report/evidence/ACTIVE_EVIDENCE.md}.\\
+Project demonstration videos &
+\href{https://1drv.ms/f/c/b9a744d4252a8ea4/IgDZe0nBqhLRQYNN5V2g-S-nAVb9ZIn0VUSxfA4CWJeYxTA?e=eGmKr2}
+{\textcolor{mfjablue}{\textbf{\underline{Online demonstration-video folder}}}}.
+The folder provides a visual overview of the project.
+These videos are supplementary; the frozen records and hashes in this appendix
+remain the evidence for the reported measurements.\\
 \tablerowrule
-Language interface &
-\path{report/evidence/room315_language_semantic_evaluation_v3} contains the
-pinned ten-case corpus, configuration, raw model envelopes, fusion traces,
-environment and checksums. The directory suffix is an evidence revision and
-does not select the visual runtime.\\
+Full runtime evidence & Release
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/room315-visual-v4-evidence-2026-08-11}{\code{room315-visual-v4-evidence-2026-08-11}}
+targets \path{0d19e1601d57416b83c871c1a8d413ec0dd523a6}. Its
+247,825,706-byte archive has SHA-256
+\path{35b583baca4f45eed6aad659c253180d00f1a5830ce389266ba714a4445a8ecc}
+and contains the checkpoint, sealed Final Test and 18 ROS-bag recordings stored
+in the MCAP container format \citep{mcap}.\\
 \tablerowrule
-Software and full-floor checks & The recorded component commands and outputs
-are the three \path{pytest_current_source_*_2026-08-07.log} files under
-\path{report/evidence/}. The isolated all-robot launch/interface record is
-\path{report/evidence/multi_robot_cold_start_smoke_2026-08-07}.\\
+Data and replay & Release
+\href{https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz/releases/tag/v4-seed31520260811-dataset-v1}{\code{v4-seed31520260811-dataset-v1}}
+targets \path{a26dbd5569b5bb1ab4f794f96fbbd3e8486aca30}. It contains 5,528
+Training, 512 Validation, 256 post-selection-regression and 1,040 Final-Test
+paired-camera scenes, both required checkpoints, frozen evaluation source and
+stateless replay.\\
 \tablerowrule
-Experimental camera figure & The exact B03 frames, extraction program,
-provenance and checksums for \cref{fig:b03-camera-evidence} are under
-\path{report/evidence/room315_v4_closed_loop_campaign_figures_2026-08-12}.\\
+Selected visual model & Epoch-11 checkpoint SHA-256:
+\path{869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d}.\\
 \tablerowrule
-Active runtime configuration & The active files are
-\path{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}
-and \path{task_execution_runtime.yaml}. The task configuration defaults to
-\code{execution\_enabled=false}.\\
+Final Test & The 1,040-scene dataset fingerprint is
+\path{226f4b5889f7d8b66bccc87d3e8dd494f710c8f4b228fab4851d6da7448e2eef};
+the run contains 2,080 images and 4,680 visible targets.\\
 \bottomrule
 \end{longtable}
+
+Large checkpoints, images and ROS bags remain outside Git because of size; the
+table's hashes bind the exact objects used by the reported runs. A sealed
+dataset is frozen and hash-identified, not encrypted or still unseen. Public
+release enables replay without changing the historical role of a partition.
+
+\section{Single verification procedure}
+
+For either release, retrieve the assets using its retained README, confirm that
+the immutable tag resolves to the commit listed in
+\cref{tab:artefact-identities}, compare the downloaded archive with its declared
+SHA-256, then extract it and run the included package-wide
+\verb|sha256sum --strict -c SHA256SUMS|. For the lightweight repository package,
+also compare the two manifest identities in the first table row. Any mismatch
+invalidates the provenance chain and the associated result claim. The release
+README files retain the platform-specific download, extraction and stateless
+replay commands so that those listings need not be duplicated here.
+
+The replay re-evaluates the selected checkpoint but does not reopen the
+historical one-shot Final Test or claim bit-identical retraining across arbitrary
+hardware. The reference environment for the recorded replay used CUDA~12.8
+\citep{cuda} and is documented in
+{\def\UrlBreaks{\do\/\do\_}\def\UrlBigBreaks{}\Urlmuskip=0mu\relax%
+\path{report/evidence/room315_visual_v4_dataset_release_v1/ENVIRONMENT.md}}.
+
+\section{Result-to-record index}
+
+\begingroup
+\def\UrlBreaks{\do\/\do\_}
+\def\UrlBigBreaks{}
+\Urlmuskip=0mu\relax
+Paths beginning with \path{model/}, \path{final_test/} or \path{runtime/} are
+relative to the lightweight evidence package identified above.
+
+\begin{longtable}{@{}p{0.24\textwidth}>{\raggedright\arraybackslash}p{0.65\textwidth}@{}}
+\caption{Compact index of records supporting the reported results.}
+\label{tab:evidence-roots}\\
+\toprule
+\textbf{Result group} & \textbf{Primary record}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Result group} & \textbf{Primary record}\\
+\midrule
+\endhead
+Visual model and Final Test & \path{model/} stores training/selection controls;
+the historical \path{canary/} directory---a legacy path name for the
+post-selection regression records---stores that development check.
+\path{final_test/final/controls/} and
+\path{final_test/final/results/} store the sealed contract, completion ledger
+and measurements.\\
+\tablerowrule
+Observation and closed-loop campaigns & \path{runtime/shadow/},
+\path{runtime/campaign/} and \path{runtime/safety/} store observation checks;
+\path{runtime/closed_loop/positive/}, \path{runtime/closed_loop/fault/} and
+\path{runtime/closed_loop/active_runtime/} store the positive, fault and selected
+Gazebo-runtime records.\\
+\tablerowrule
+Language interface &
+\path{report/evidence/room315_language_semantic_evaluation_v3} stores the fixed
+ten-case corpus, raw envelopes, fusion traces, environment and checksums.\\
+\tablerowrule
+Software and full-floor checks & The three
+\path{pytest_current_source_*_2026-08-07.log} records and
+\path{report/evidence/multi_robot_cold_start_smoke_2026-08-07} support the named
+suites and six-robot launch result.\\
+\tablerowrule
+Runtime configuration and camera figure & Active files are under
+\path{mfja_robot_control_config/config/room_315_vla/}; execution defaults to
+\code{false}. B03 frame provenance and checksums are under
+\path{report/evidence/room315_v4_closed_loop_campaign_figures_2026-08-12}.\\
+\bottomrule
+\end{longtable}
+\endgroup
+
+Exact per-file hashes and JSON pointers remain in
+\path{report/evidence/ACTIVE_EVIDENCE.md}; raw records preserve their original
+archival provenance. The index identifies where evidence can be inspected.

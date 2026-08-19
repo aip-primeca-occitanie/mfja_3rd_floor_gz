@@ -86,7 +86,7 @@
 \usepackage{xurl}
 \usepackage[hidelinks,pdfencoding=auto]{hyperref}
 \hypersetup{
-  pdftitle={From a Multi-Robot Digital Twin to Safety-Gated Neuro-Symbolic Language-to-Motion Control},
+  pdftitle={Development of a Unified Digital Twin for Multi-Robot Integration, Perception, and Neuro-Symbolic Planning},
   pdfauthor={Ali IBRAHIM},
   pdfsubject={M2 Industrial Robotics internship report},
   pdfkeywords={ROS 2, Gazebo, digital twin, multi-robot, PlanSys2, PDDL,
@@ -147,6 +147,38 @@
   arc=1.5mm,
   title=#1,
   fonttitle=\bfseries\sffamily
+}
+\newtcolorbox{contributionbox}{
+  enhanced,
+  breakable,
+  colback=mfjalight,
+  colframe=mfjablue,
+  boxrule=0.6pt,
+  arc=1.5mm,
+  title={Contribution boundary},
+  fonttitle=\bfseries\sffamily,
+  fontupper=\normalsize\raggedright,
+  before skip=0.7em,
+  after skip=0.9em,
+  left=1.5mm,
+  right=1.5mm,
+  top=1mm,
+  bottom=0.5mm
+}
+\newcommand{\contributionitem}[2]{%
+  \noindent\textbf{\textcolor{mfjablue}{#1:}} #2\par
+}
+\newcommand{\contributionboundary}[5]{%
+  \begin{contributionbox}
+    \contributionitem{Start-of-internship baseline}{#1}
+    \contributionitem{Project and supervisor input}{#2}
+    \contributionitem{Reused foundation}{#3}
+    \contributionitem{My contribution}{#4}
+    \contributionitem{Validation performed by me}{#5}
+  \end{contributionbox}
+}
+\newcommand{\chapterguide}[1]{%
+  \par\noindent\textbf{\textcolor{mfjablue}{Chapter guide.}} #1\par\medskip
 }
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\term}[1]{\emph{#1}}

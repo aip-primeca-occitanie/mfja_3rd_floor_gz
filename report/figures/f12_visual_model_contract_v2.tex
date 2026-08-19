@@ -83,7 +83,7 @@
     Per identity: \textcolor{mfjablue}{14 segment logits}
     + \textcolor{mfjablue}{2 loaded-state logits}
     + \textcolor{mfjaorange}{4 normalised bounding-box values}
-    + \textcolor{mfjaorange}{1 normalised position \(s_{ratio}\)}\\[0.4mm]
+    + \textcolor{mfjaorange}{1 normalised position \texttt{s\_ratio}}\\[0.4mm]
     \textbf{\(8\times(14+2+4+1)=168\)}};
 
   \draw[flow] (left) -- (leftstem);
@@ -113,8 +113,8 @@
     at ([yshift=-3mm]$(0,0 |- runtimebottom.south)$) {
     \textbf{Values that are not learned}\\[-0.2ex]
     side from identity prefix;\quad
-    \(L_{segment}\) from side + decoded segment;\\
-    \(s_m=s_{ratio}L_{segment}\)};
+    \texttt{L\_segment} from side + decoded segment;\\
+    \texttt{s\_m} = \texttt{s\_ratio} \(\times\) \texttt{L\_segment}};
 
   % Seven millimetres leave a dedicated routing channel for the external
   % registry.  Its arrow travels outside the derivation box before entering

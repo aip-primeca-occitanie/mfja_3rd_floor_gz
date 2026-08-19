@@ -1,40 +1,37 @@
 \chapter{Host Organisation and MFJA Robotics Platforms}
 \label{chap:host}
 
+The project took place in a shared university facility, so its users, equipment
+and operating constraints shaped the technical design. Understanding
+Universit\'e de Toulouse, MFJA, Room~315 and the division of responsibilities is
+therefore necessary to explain the mission's educational, operational and
+strategic value.
+
 \section{Université de Toulouse}
 
-The internship was formally hosted by Université de Toulouse, whose legal
-address is 118 route de Narbonne, 31062 Toulouse Cedex~9. The work itself was
-carried out at the MFJA site, 1 rue Tarfaya, 31400 Toulouse. As a public
-university, the institution combines higher education, research and knowledge
-transfer. Its official
-Nomenclature d'activités française/Activité principale exercée (NAF/APE) code
-is 85.42Z \citep{univtoulousesirene}, which the French national statistics
-institute (INSEE) classifies as \emph{higher education}, including first-,
-second- and third-cycle university programmes \citep{insee8542z}.
-
-Université de Toulouse has operated as an experimental public institution since
-January 2025. Official figures published for 2026 indicate approximately 39,000
-students and 4,200 staff \citep{univtoulousefigures}. These figures concern the
-university as a whole, while the internship took place within the smaller MFJA
-environment.
+The internship was hosted by Université de Toulouse, 118 route de Narbonne,
+31062 Toulouse Cedex~9, and carried out at the MFJA site, 1 rue Tarfaya, 31400
+Toulouse. The university has operated as an
+experimental public institution since 1 January 2025
+\citep[p.~5]{univtoulousefigures}. Its Nomenclature d'activités
+française/Activité principale exercée (NAF/APE) code is 85.42Z, classified by
+the French national statistics institute (INSEE) as \emph{higher education}
+\citep{univtoulousesirene,insee8542z}. The same institutional document reports
+about 39,000 students and 4,200 staff across the university
+\citep[p.~5]{univtoulousefigures}; the internship itself took place in the
+smaller MFJA environment.
 
 \section{Maison de la Formation Jacqueline Auriol}
 
-The MFJA is a shared centre for engineering education on the Toulouse Aerospace
-innovation campus. Its activities cover research and innovation, knowledge and
-skills transfer, and initial and continuing education. According to its official
-presentation, the site brings together more than 1,500 students from 15
-mechanical-engineering programmes associated with Université de Toulouse, INSA
-Toulouse and ISAE-SUPAERO. It supports work in mechanical engineering, manufacturing,
-aeronautics, automation and robotics in collaboration with industrial partners
-and research laboratories \citep{mfjaofficial}.
-
-Because the facilities are shared across teaching and research activities, the
-software developed for the platform must support several configurations, remain
-usable by different operators and be maintainable beyond a single development
-environment. These requirements influenced the package and launch architecture
-presented in Chapters~5--6.
+The MFJA is a shared engineering-education centre on the Toulouse Aerospace
+innovation campus. Its activities combine initial and continuing education,
+research, innovation and skills transfer. It brings together more than 1,500
+students from 15 mechanical-engineering programmes; its official description
+also identifies aeronautics and space partnerships and an automation and
+robotics laboratory \citep{mfjaofficial}. Sharing the equipment among these
+activities required configurable, multi-user software that remains maintainable
+beyond one developer; this constraint shaped the package and launch architecture
+in Chapters~5--6.
 
 \section{The Room 315 robotics environment}
 
@@ -46,30 +43,18 @@ each rail follows its own measured spatial path. Each cell has four numbered
 shuttle slots.
 Four industrial-robot workstations surround the two cells. In the configuration
 used for this project, right-rail slots~1--2 are served by the Yaskawa HC10DT
-workstation and slots~3--4 by the Stäubli TX2-60L workstation; left-rail
+workstation and slots~3--4 by the Stäubli TX2-60L workstation. On the left rail,
 slots~1--2 are served by the Yaskawa HC10 workstation and slots~3--4 by the
 KUKA KR6 R900 sixx workstation. Each circuit contains outer and inner branches,
-four switching zones, indexing detectors and stoppers. A switching zone diverts
-a shuttle between branches, an indexing detector reports its alignment or
-presence, and a stopper holds or releases it. A shuttle may be empty or carry a
-payload.
+four switching zones, indexing detectors and stoppers. Both rail networks are
+directed, so a shuttle can traverse each segment only in its defined forward
+direction. A switching zone diverts a shuttle between branches, an indexing
+detector reports its alignment or presence, and a directional stopper holds or
+releases an approaching shuttle. A shuttle may be empty or carry a payload.
 
-This arrangement brings together several engineering disciplines:
-
-\begin{itemize}
-  \item mechanical layout, computer-aided design (CAD), kinematics and
-  collision geometry;
-  \item industrial automation, sensors, stoppers and route switching;
-  \item robot middleware, namespace prefixes that isolate robot interfaces,
-  timing and distributed communication;
-  \item planning, scheduling and resource conflicts among shuttles sharing rail
-  sections;
-  \item computer vision, data collection and model evaluation;
-  \item human--robot interaction through task-level language.
-\end{itemize}
-
-Together, these disciplines make Room~315 a practical platform for studying the
-integration of robotics, transport, perception and control.
+The installation therefore combines mechanical modelling, industrial
+automation, robot communication, shared-resource planning, computer vision and
+task-level language in one platform.
 \Cref{fig:room315-orientation} shows the simulated layout; Chapters~7--8 define
 the rail topology, device semantics and supervisory constraints.
 
@@ -91,89 +76,121 @@ associated with the internship.
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.94\textwidth}{!}{%
 \begin{tikzpicture}[
-  node distance=7mm and 8mm,
-  box/.style={draw,rounded corners,align=center,minimum height=10mm,text width=43mm,fill=mfjalight},
-  role/.style={draw,rounded corners,align=left,minimum height=13mm,text width=58mm,fill=white},
-  institutional/.style={-{Latex[length=2.2mm]},thick,mfjablue},
-  supervision/.style={-{Latex[length=2.2mm]},thick,mfjagreen},
-  association/.style={-{Latex[length=2.2mm]},thick,black!55,dashed}
+  font=\small,
+  hostbox/.style={draw=mfjablue!75,rounded corners=2pt,align=center,
+    minimum height=10mm,fill=mfjalight,inner sep=2mm},
+  supervisor/.style={draw=mfjagreen!75!black,rounded corners=2pt,align=center,
+    minimum height=18mm,text width=58mm,fill=mfjagreen!7,inner sep=2mm},
+  intern/.style={draw=mfjablue!80,rounded corners=2pt,align=center,
+    minimum height=20mm,text width=68mm,fill=mfjablue!5,inner sep=2mm},
+  grouplabel/.style={font=\bfseries\footnotesize,text=mfjablue},
+  institutional/.style={-{Latex[length=2.4mm,width=1.6mm]},
+    line width=0.9pt,mfjablue},
+  supervision/.style={-{Latex[length=2.4mm,width=1.6mm]},
+    line width=0.9pt,mfjagreen!80!black}
 ]
-  \node[box] (host) {Université de Toulouse};
-  \node[box,below=of host] (mfja) {Maison de la Formation\\Jacqueline Auriol};
-  \node[box,below=of mfja] (unit) {Room~315 robotics platforms};
-  \node[role,below=of unit] (ops) {\textbf{MFJA platform support}\\Operational knowledge\\Platform access\\Practical organisation};
-
-  \node[box,right=26mm of host] (tutor) {Diane Bury\\Internship supervisor\\MFJA};
-  \node[box,right=of tutor] (cosupervisor) {Olivier Stasse\\Internship supervisor\\LAAS-CNRS};
-  \coordinate (supervisionmid) at ($(tutor)!0.5!(cosupervisor)$);
-  \node[box,below=24mm of supervisionmid] (student) {Ali Ibrahim\\Second-year Master's intern (M2)};
-  \node[role,below=of student] (dev) {\textbf{Ali Ibrahim's internship work}\\Architecture and implementation\\Testing and evaluation\\Documentation and handover};
-
+  \node[hostbox,text width=37mm] (host) {Université de Toulouse};
+  \node[hostbox,text width=48mm,right=7mm of host] (mfja)
+    {Maison de la Formation\\Jacqueline Auriol};
+  \node[hostbox,text width=37mm,right=7mm of mfja] (unit)
+    {Room~315 robotics platforms};
   \draw[institutional] (host) -- (mfja);
   \draw[institutional] (mfja) -- (unit);
-  \draw[supervision] (tutor) -- (student);
-  \draw[supervision] (cosupervisor) -- (student);
-  \draw[association] (unit) -- (ops);
-  \draw[association] (unit.east) -- (student.west);
-  \draw[association] (student) -- (dev);
+
+  \node[grouplabel,below=6mm of mfja] (supervisionlabel)
+    {JOINT INTERNSHIP SUPERVISION};
+  \node[supervisor,below=4mm of supervisionlabel,xshift=-34mm] (tutor)
+    {\textbf{Diane Bury}\\Internship supervisor\\\emph{MFJA}};
+  \node[supervisor,below=4mm of supervisionlabel,xshift=34mm] (cosupervisor)
+    {\textbf{Olivier Stasse}\\Internship supervisor\\\emph{LAAS-CNRS}};
+  \coordinate (supervisionbottom) at
+    ($(tutor.south)!0.5!(cosupervisor.south)$);
+  \node[intern,below=8mm of supervisionbottom] (student)
+    {\textbf{Ali Ibrahim}\\\emph{M2 intern}\\Architecture \& implementation\\
+     Testing \& evaluation\\Documentation \& handover};
+
+  \coordinate (tutorentry) at
+    ([xshift=8mm]tutor.south |- student.north);
+  \coordinate (cosupervisorentry) at
+    ([xshift=-8mm]cosupervisor.south |- student.north);
+  \draw[supervision] ([xshift=8mm]tutor.south) -- (tutorentry);
+  \draw[supervision] ([xshift=-8mm]cosupervisor.south) -- (cosupervisorentry);
 \end{tikzpicture}
-}
-\caption{Host-unit placement, parallel supervision and distribution of internship responsibilities.}
+\caption{Institutional setting, joint internship supervision and the intern's
+responsibilities.}
 \label{fig:organisation}
 \end{figure}
 
-Diane Bury and Olivier Stasse were the two internship supervisors, with equal
-supervisory roles. Diane Bury was based at MFJA and Olivier Stasse at
-LAAS-CNRS. Together they provided scientific direction and reviewed choices
-related to the platform. MFJA personnel
-supported access, scheduling and practical organisation. I was responsible for
-the architecture, implementation, evaluation, documentation and handover
-described in \cref{chap:mission}.
+Diane Bury, affiliated with MFJA, and Olivier Stasse, affiliated with
+LAAS-CNRS, jointly supervised the internship. I was responsible for
+architecture, implementation, testing, evaluation, documentation and handover.
+Room~315 supports both teaching activities and research prototyping.
 
-Within the MFJA, the host unit for this work was the Room~315 robotics-platform
-activity, connecting shared teaching infrastructure with research prototyping.
-
+\pagebreak
 \section{Position of the mission within the host}
 
-The mission connects platform operation with research prototyping. Platform
-managers, students and researchers can use the system to launch robots and rail
-scenarios reproducibly. The same foundation can support synthetic-data
-generation, task-planning experiments and comparisons between simulation
-configurations. Possible uses include a teaching exercise on ROS~2 topics, a
-planner benchmark, a visual-perception dataset or a simulation demonstrator.
+The platform has three main user groups, each with different operational needs.
 
-This range of uses motivated the emphasis on reusable configuration, explicit
-interfaces and documented operating procedures.
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.12}
+\caption{Stakeholders, operating needs and resulting design requirements.}
+\label{tab:host-stakeholders}
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash}p{0.20\textwidth}
+>{\raggedright\arraybackslash}p{0.34\textwidth}
+>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Stakeholder} & \textbf{Operating need} & \textbf{Design consequence}\\
+\midrule
+MFJA platform staff & Prepare configurations, diagnose interfaces and maintain
+the environment & Versioned configuration, selectable profiles, diagnostics
+and operating guides\\ \tablerowrule
+Students & Repeat ROS~2 and controller exercises without monopolising the
+physical cells & Focused worlds, isolated robots and predictable start-up\\
+\tablerowrule
+Researchers & Compare planning or perception under controlled conditions &
+Typed contracts, frozen case matrices and retained evidence\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The environment is intended for continued use by MFJA students and researchers,
+including researchers from LAAS-CNRS. In teaching activities, simulation can
+serve as a preliminary validation stage before students proceed to supervised
+trials on the physical platform.
+
+The resulting software and supporting documentation were handed over through
+the shared project repository to facilitate continued use and maintenance after
+the internship.
 
 \section{Economic and strategic value}
 
-Because the host is a public university rather than a commercial company,
-turnover and export revenue are not meaningful indicators of this mission's
-value. To indicate the scale of the institution, the university's 2026--2029
-strategic document reports a 2024 global budget of nearly EUR~474 million and EUR~114 million in
-purchases \citep{univtoulousefigures}. These university-wide figures provide
-context, not a financial return for this project. The value of the mission lies
-instead in practical reuse, training capacity and reduced integration effort.
-The main benefits are:
+Because the host is a public university, turnover and export revenue do not
+measure this mission's value. Its strategic document reports a 2024 global
+budget of nearly EUR~474 million and EUR~114 million in purchases
+\citep[p.~5]{univtoulousefigures}; these university-wide figures indicate
+scale, not project return. The project is expected to create operational and
+educational value through:
 
 \begin{itemize}
+  \setlength{\itemsep}{0.28\baselineskip}
   \item \textbf{reuse}: one model and launch framework avoids recreating an
   integration for each practical class or research project;
-  \item \textbf{risk reduction}: simulation and supervised execution check
-  naming, topology and commands before access to costly equipment;
-  \item \textbf{asset visibility}: a digital twin makes robot capabilities
-  available for remote preparation, including capabilities that might otherwise
-  remain under-used;
-  \item \textbf{training capacity}: repeatable scenario generation creates
-  data and exercises without monopolising the physical cell;
-  \item \textbf{maintenance}: typed interfaces, tests and documentation reduce
-  dependence on knowledge held by a single developer;
-  \item \textbf{technology transfer}: the MFJA can demonstrate current ROS~2,
-  planning and AI methods while maintaining clear safety boundaries.
+  \item \textbf{risk reduction}: simulation and supervision expose naming,
+  topology and command errors before costly equipment is used;
+  \item \textbf{asset visibility}: the digital environment supports remote
+  preparation and makes available configurations easier to inspect;
+  \item \textbf{training capacity}: repeatable scenarios create exercises and
+  data without monopolising the physical cells;
+  \item \textbf{maintainability}: typed interfaces, tests and documentation
+  reduce dependence on knowledge held by one developer; and
+  \item \textbf{technology transfer}: the platform may support demonstrations
+  of current ROS~2, planning and AI methods while retaining explicit
+  software-safety boundaries.
 \end{itemize}
 
-These benefits align with the MFJA's institutional role of sharing costly
-engineering resources and connecting education with contemporary industrial
-methods.
+These constraints led me to prioritise configurable launch, stable interfaces
+and documentation that could be reused after the internship.

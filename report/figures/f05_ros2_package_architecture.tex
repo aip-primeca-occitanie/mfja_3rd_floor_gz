@@ -1,0 +1,56 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  package/.style={draw,thick,rounded corners=2mm,align=center,
+    inner xsep=3mm,inner ysep=2.2mm},
+  description/.style={package,draw=mfjablue,fill=mfjablue!7,
+    text width=61mm,minimum height=24mm},
+  interfaces/.style={package,draw=mfjagreen,fill=mfjagreen!7,
+    text width=61mm,minimum height=24mm},
+  control/.style={package,draw=black!52,fill=black!3,
+    text width=102mm,minimum height=23mm},
+  bringup/.style={package,draw=mfjaorange,fill=mfjaorange!7,
+    text width=102mm,minimum height=18mm},
+  dependency/.style={-{Stealth[length=2.3mm,width=1.7mm]},thick,
+    draw=black!58,line cap=round,line join=round}
+]
+  \path[use as bounding box] (-80mm,-47mm) rectangle (80mm,46mm);
+  \path[draw=mfjablue!28,fill=white,rounded corners=3pt,line width=0.6pt]
+    (-79.5mm,-46.5mm) rectangle (79.5mm,45.5mm);
+
+  \node[anchor=west,font=\sffamily\scriptsize\bfseries,text=mfjablue]
+    at (-74mm,40mm) {PACKAGE RESPONSIBILITIES};
+  \node[anchor=east,font=\sffamily\scriptsize,text=black!62]
+    at (74mm,40mm)
+    {\texttt{package.xml} \texttt{exec\_depend}: provider
+      \(\rightarrow\) dependent};
+
+  \node[description] (description) at (-38mm,22mm) {
+    \textbf{\texttt{mfja\_3rd\_floor\_description}}\\[0.8mm]
+    worlds, SDF/URDF, models and meshes\\
+    static description tests};
+
+  \node[interfaces] (interfaces) at (38mm,22mm) {
+    \textbf{\texttt{mfja\_rail\_interfaces}}\\[0.8mm]
+    typed rail and visual-state messages\\
+    and the \texttt{AddShuttle} service};
+
+  \node[control] (control) at (0,-7mm) {
+    \textbf{\texttt{mfja\_robot\_control\_config}}\\[0.8mm]
+    controllers, configuration and subsystem launch files\\
+    planning, perception, training tools and tests};
+
+  \node[bringup] (bringup) at (0,-35mm) {
+    \textbf{\texttt{mfja\_3rd\_floor\_bringup}}\\[0.8mm]
+    Room~315, full-floor and isolated-robot launch entry points};
+
+  % The four arrows reproduce the internal exec_depend relationships declared
+  % by the two dependent package manifests.  They are not a runtime message-flow
+  % graph or an exhaustive map of launch-file inclusion.
+  \draw[dependency]
+    (description.south) -- ([xshift=-38mm]control.north);
+  \draw[dependency]
+    (interfaces.south) -- ([xshift=38mm]control.north);
+  \draw[dependency] (control.south) -- (bringup.north);
+  \draw[dependency,rounded corners=1.5mm]
+    ([xshift=-23mm]description.south) |- (bringup.west);
+\end{tikzpicture}

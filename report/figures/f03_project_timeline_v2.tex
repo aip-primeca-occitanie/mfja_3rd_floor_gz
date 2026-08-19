@@ -1,117 +1,133 @@
 \begin{tikzpicture}[
-  font=\sffamily\small,
+  font=\sffamily\footnotesize,
   panel/.style={draw=mfjablue!35,fill=white,rounded corners=3pt,
-    line width=0.6pt},
-  foundation/.style={draw=mfjablue,fill=mfjablue!16,rounded corners=1.5pt,
+    line width=0.6pt,inner sep=0pt},
+  recorded/.style={draw=mfjablue,fill=mfjablue!17,rounded corners=1.2pt,
     line width=0.7pt},
-  integration/.style={draw=mfjagreen,fill=mfjagreen!16,rounded corners=1.5pt,
-    line width=0.7pt},
-  research/.style={draw=mfjaorange,fill=mfjaorange!17,rounded corners=1.5pt,
-    line width=0.7pt},
-  gridline/.style={draw=mfjablue!18,line width=0.45pt},
-  milestone/.style={draw=mfjablue!65,line width=0.7pt,densely dashed}
+  planned/.style={draw=mfjaorange!90!black,fill=mfjaorange!6,
+    rounded corners=1.2pt,line width=0.8pt,densely dashed},
+  gridline/.style={draw=mfjablue!15,line width=0.4pt},
+  milestone/.style={draw=mfjagreen!75!black,line width=0.65pt,
+    densely dashed},
+  statusline/.style={draw=black!55,line width=0.75pt}
 ]
 
-% ---------------------------------------------------------------------------
-% Panel A: engineering and research work.
-% The horizontal positions are proportional to calendar time from 2 March
-% (x=-25 mm) to 11 August (x=73 mm).  The wider left margin keeps every lane
-% label on one line.
-% ---------------------------------------------------------------------------
-\node[panel,minimum width=158mm,minimum height=104mm] (engineering) at (0,0) {};
+% A single calendar scale is used throughout.  Horizontal positions are
+% proportional to the 179 days from 2 March (x=-20 mm) to 28 August (x=74 mm).
+\node[panel,minimum width=160mm,minimum height=130mm] (timeline) at (0,-5mm) {};
+
 \node[anchor=west,font=\sffamily\bfseries\large,text=mfjablue]
-  at ([xshift=5mm,yshift=-6mm]engineering.north west)
-  {(a) Engineering and research chronology};
+  at (-75mm,54mm) {Internship chronology};
 \node[anchor=east,font=\sffamily\small,text=black!62]
-  at ([xshift=-5mm,yshift=-6mm]engineering.north east)
-  {2 March--11 August 2026};
+  at (75mm,54mm) {Status at 18 August 2026};
 
-% Calendar axis and month grid.
-\draw[mfjablue,line width=0.8pt] (-25mm,25mm) -- (73mm,25mm);
+% Shade the interval after the report-review date before drawing the grid.
+\path[fill=mfjaorange!3] (68.75mm,30mm) rectangle (74mm,-58mm);
+
+% Common calendar axis and month grid.
+\draw[mfjablue,line width=0.8pt] (-20mm,35mm) -- (74mm,35mm);
 \foreach \x/\month in {
-  -25/{2 Mar},
-  -6.0/{Apr},
-  13.0/{May},
-  32.6/{Jun},
-  51.5/{Jul},
-  73/{11 Aug}}
+  -20/{2 Mar},
+  -4.25/{Apr},
+  11.51/{May},
+  27.79/{Jun},
+  43.55/{Jul},
+  59.82/{Aug},
+  74/{28 Aug}}
 {
-  \draw[mfjablue,line width=0.7pt] (\x mm,23.8mm) -- (\x mm,26.2mm);
-  \node[anchor=north,font=\sffamily\small,text=black!70]
-    at (\x mm,22.9mm) {\month};
-  \draw[gridline] (\x mm,18mm) -- (\x mm,-39mm);
+  \draw[mfjablue,line width=0.65pt] (\x mm,33.8mm) -- (\x mm,36.2mm);
+  \node[anchor=north,font=\sffamily\scriptsize,text=black!68]
+    at (\x mm,32.8mm) {\month};
+  \draw[gridline] (\x mm,30mm) -- (\x mm,-58mm);
 }
 
-% Decision gates.  Labels are staggered to preserve legibility.
-\draw[milestone] (-10.5mm,25mm) -- (-10.5mm,31.5mm);
-\fill[mfjablue] (-10.5mm,25mm) circle (1.15pt);
-\node[anchor=south,align=center,font=\sffamily\small,text=mfjablue]
-  at (-10.5mm,32mm) {25 Mar\\package split};
+% Evidence-backed decision milestones and the completed Final Test.
+\draw[milestone] (-7.92mm,35mm) -- (-7.92mm,43.5mm);
+\fill[mfjagreen!75!black] (-7.92mm,35mm) circle (1.05pt);
+\node[anchor=south,align=center,font=\sffamily\scriptsize,
+  text=mfjagreen!65!black] at (-7.92mm,44mm)
+  {25 Mar\\package architecture};
 
-\draw[milestone] (16.8mm,25mm) -- (16.8mm,28mm);
-\fill[mfjablue] (16.8mm,25mm) circle (1.15pt);
-\node[anchor=south,align=center,font=\sffamily\small,text=mfjablue]
-  at (16.8mm,28.5mm) {7 May\\typed rail interfaces};
+\draw[milestone] (14.66mm,35mm) -- (14.66mm,39.5mm);
+\fill[mfjagreen!75!black] (14.66mm,35mm) circle (1.05pt);
+\node[anchor=south,align=center,font=\sffamily\scriptsize,
+  text=mfjagreen!65!black] at (14.66mm,40mm)
+  {7 May\\typed rail interfaces};
 
-\draw[milestone] (57.8mm,25mm) -- (57.8mm,33.5mm);
-\fill[mfjablue] (57.8mm,25mm) circle (1.15pt);
-\node[anchor=south,align=center,font=\sffamily\small,text=mfjablue]
-  at (57.8mm,34mm) {11 Jul\\closed-loop integration};
+\draw[milestone] (48.79mm,35mm) -- (48.79mm,43.5mm);
+\fill[mfjagreen!75!black] (48.79mm,35mm) circle (1.05pt);
+\node[anchor=south east,align=right,font=\sffamily\scriptsize,
+  text=mfjagreen!65!black] at (54.5mm,44mm)
+  {11 Jul\\closed-loop contracts};
 
-% Work-package lanes.
+\draw[milestone] (65.07mm,35mm) -- (65.07mm,39.5mm);
+\fill[mfjagreen!75!black] (65.07mm,35mm) circle (1.05pt);
+\node[anchor=south west,align=left,font=\sffamily\scriptsize,
+  text=mfjagreen!65!black] at (59.5mm,40mm)
+  {11 Aug\\Final Test};
+
+% Phase 1: platform construction and integration.
+\node[anchor=east,align=right,font=\sffamily\scriptsize\bfseries,text=mfjablue]
+  at (-23mm,27mm) {PHASE 1 --- PLATFORM \& INTEGRATION};
 \foreach \y/\label in {
-  12/{Floor / asset integration},
-  4/{Multi-robot launch},
-  -4/{Rail modelling / kinematics},
-  -12/{Typed interfaces / safety},
-  -20/{Visual data / perception},
-  -28/{PDDL / PlanSys2},
-  -36/{Perception qualification /\\Final Test preparation}}
+  21/{CAD/Gazebo scene and robot setup},
+  15/{Multi-robot launch and isolation},
+  9/{Rail topology, motion and devices},
+  3/{Typed interfaces and safety checks},
+  -3/{Camera data and scene estimation}}
 {
-  \node[anchor=east,align=right,font=\sffamily\small]
-    at (-30mm,\y mm) {\label};
+  \node[anchor=east,align=right] at (-24mm,\y mm) {\label};
 }
+\path[recorded] (-20mm,19.1mm) rectangle (-7.92mm,22.9mm);
+\path[recorded] (-18.42mm,13.1mm) rectangle (29.36mm,16.9mm);
+\path[recorded] (-7.92mm,7.1mm) rectangle (29.36mm,10.9mm);
+\path[recorded] (14.66mm,1.1mm) rectangle (51.95mm,4.9mm);
+\path[recorded] (29.36mm,-4.9mm) rectangle (51.95mm,-1.1mm);
 
-\path[foundation] (-25mm,9.35mm) rectangle (-10.5mm,14.65mm);
-\path[foundation] (-23.1mm,1.35mm) rectangle (31.9mm,6.65mm);
-\path[integration] (-10.5mm,-6.65mm) rectangle (31.9mm,-1.35mm);
-\path[integration] (16.8mm,-14.65mm) rectangle (57.8mm,-9.35mm);
-\path[integration] (31.9mm,-22.65mm) rectangle (57.8mm,-17.35mm);
-\path[research] (41.5mm,-30.65mm) rectangle (70.4mm,-25.35mm);
-\path[research] (57.8mm,-38.65mm) rectangle (73mm,-33.35mm);
+\draw[mfjablue!18,line width=0.45pt] (-75mm,-7.5mm) -- (74mm,-7.5mm);
 
-\node[align=center,font=\sffamily\scriptsize\itshape,text=black!62]
-  at (24mm,-46mm)
-  {Bars show principal activity windows; integration and perception validation\\
-   continued across the connected work packages.};
+% Phase 2: planning, validation and the fixed evidence gate.
+\node[anchor=east,align=right,font=\sffamily\scriptsize\bfseries,text=mfjablue]
+  at (-23mm,-11mm) {PHASE 2 --- PLANNING \& VALIDATION};
+\node[anchor=east] at (-24mm,-17mm) {PDDL/PlanSys2 planning};
+\node[anchor=east] at (-24mm,-23mm) {Validation and Final Test};
+\path[recorded] (34.61mm,-18.9mm) rectangle (62.97mm,-15.1mm);
+\path[recorded] (48.79mm,-24.9mm) rectangle (65.07mm,-21.1mm);
 
-% ---------------------------------------------------------------------------
-% Panel B: reporting and communication schedule.  Widths are schematic so
-% that the shorter final phases remain legible.
-% ---------------------------------------------------------------------------
-\node[panel,minimum width=158mm,minimum height=46mm,below=6mm of engineering]
-  (reporting) {};
-\begin{scope}[shift={(reporting.center)}]
-  \node[anchor=west,font=\sffamily\bfseries\large,text=mfjablue]
-    at (-74mm,16mm) {(b) Reporting and communication chronology};
+\draw[mfjablue!18,line width=0.45pt] (-75mm,-27.5mm) -- (74mm,-27.5mm);
 
-  % Reporting began with the internship, became the principal activity on
-  % 4 August, and was followed by defence preparation.
-  \path[draw=mfjablue,fill=mfjablue!14,rounded corners=2pt,line width=0.8pt]
-    (-70mm,-8mm) rectangle (-12mm,8mm);
-  \path[draw=mfjaorange,fill=mfjaorange!16,rounded corners=2pt,line width=0.8pt]
-    (-12mm,-8mm) rectangle (28mm,8mm);
-  \path[draw=mfjagreen,fill=mfjagreen!14,rounded corners=2pt,line width=0.8pt]
-    (28mm,-8mm) rectangle (70mm,8mm);
-  \draw[white,line width=1.4pt] (-12mm,-7.8mm) -- (-12mm,7.8mm);
-  \draw[white,line width=1.4pt] (28mm,-7.8mm) -- (28mm,7.8mm);
+% Reporting shares the same scale; the short final interval is therefore not
+% exaggerated.  Only the period after 18 August is styled as planned work.
+\node[anchor=east,align=right,font=\sffamily\scriptsize\bfseries,text=mfjablue]
+  at (-23mm,-31mm) {DOCUMENTATION AND REPORTING};
+\node[anchor=east] at (-24mm,-37mm)
+  {Project documentation};
+\node[anchor=east] at (-24mm,-43mm)
+  {Report section drafting};
+\node[anchor=east] at (-24mm,-49mm)
+  {Final report assembly and revision};
+\node[anchor=east] at (-24mm,-55mm)
+  {Defence preparation};
+\path[recorded] (-20mm,-38.9mm) rectangle (68.75mm,-35.1mm);
+\path[recorded] (-20mm,-44.9mm) rectangle (61.40mm,-41.1mm);
+\path[recorded] (61.40mm,-50.9mm) rectangle (68.75mm,-47.1mm);
+\path[planned] (68.75mm,-56.9mm) rectangle (74mm,-53.1mm);
 
-  \node[align=center,font=\sffamily\scriptsize,text=mfjablue]
-    at (-41mm,0mm) {\textbf{2 March--4 August}\\Report drafting and documentation\\alongside technical work};
-  \node[align=center,font=\sffamily\scriptsize,text=mfjaorange!85!black]
-    at (8mm,0mm) {\textbf{4--18 August}\\Final report and project\\documentation (principal work)};
-  \node[align=center,font=\sffamily\scriptsize,text=mfjagreen!75!black]
-    at (49mm,0mm) {\textbf{18--28 August}\\Defence-presentation\\preparation};
-\end{scope}
+% The review boundary separates recorded work from the remaining plan.
+\draw[statusline] (68.75mm,30mm) -- (68.75mm,-58mm);
+\node[rotate=90,anchor=south,font=\sffamily\scriptsize\bfseries,
+  text=black!62,fill=white,inner xsep=1.2pt,inner ysep=0.5pt]
+  at (68.75mm,-14mm) {18 Aug review};
+
+% Compact legend.
+\path[recorded] (-73mm,-65mm) rectangle (-68.5mm,-61.6mm);
+\node[anchor=west,font=\sffamily\scriptsize,text=black!68]
+  at (-66.5mm,-63.3mm) {Recorded activity period};
+\path[planned] (-13mm,-65mm) rectangle (-8.5mm,-61.6mm);
+\node[anchor=west,font=\sffamily\scriptsize,text=black!68]
+  at (-6.5mm,-63.3mm) {Planned after 18 Aug};
+\fill[mfjagreen!75!black] (40mm,-63.3mm) circle (1.05pt);
+\node[anchor=west,font=\sffamily\scriptsize,text=black!68]
+  at (43mm,-63.3mm) {Milestone / evidence gate};
 
 \end{tikzpicture}

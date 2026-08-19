@@ -24,10 +24,10 @@
   % Endpoint and local tangents follow the corresponding Bézier derivatives.
   \draw[-{Latex[length=2mm]},thick,mfjagreen]
     (p0) -- ++(18mm,12mm)
-    node[right=1mm] {\(\mathbf t_0\)};
+    node[right=1mm] {\(\mathbf t(0)\)};
   \draw[-{Latex[length=2mm]},thick,mfjagreen]
     (p1) -- ++(15mm,7.7mm)
-    node[above left] {\(\mathbf t_1\)};
+    node[above left] {\(\mathbf t(1)\)};
   \draw[-{Latex[length=2mm]},thick,mfjaorange]
     (ps) -- ++(16mm,-3.2mm)
     node[pos=0.72,above=1mm] {\(\mathbf t(s)\)};
@@ -36,8 +36,8 @@
 
   \fill[mfjablue] (p0) circle (1.1mm);
   \fill[mfjablue] (p1) circle (1.1mm);
-  \node[below left] at (p0) {\(P_0\)};
-  \node[below right] at (p1) {\(P_1\)};
+  \node[below left] at (p0) {\(P(0)\)};
+  \node[below right] at (p1) {\(P(1)\)};
 
   \coordinate (axisleft) at ([xshift=16mm,yshift=14mm]geometry.south west);
   \coordinate (axisright) at ([xshift=-16mm,yshift=14mm]geometry.south east);

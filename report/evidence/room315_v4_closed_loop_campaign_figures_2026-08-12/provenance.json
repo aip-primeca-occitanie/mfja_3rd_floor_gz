@@ -9,11 +9,11 @@
     "target_slot": "4",
     "utterance": "Move the green shuttle to slot 4 on the right rail."
   },
-  "derived_at_utc": "2026-08-12T00:11:58.616043+00:00",
+  "derived_at_utc": "2026-08-18T17:35:36.338362+00:00",
   "derived_files": {
     "b03_v4_closed_loop_right_camera_initial_final.png": {
-      "bytes": 172479,
-      "sha256": "3afef390900901598926f0d11226bb460a70b818ce0c4c765594aefb6fd614dc"
+      "bytes": 174867,
+      "sha256": "88846d35f2f03cd720703034fa99145ee04c6ca9f3d3db46c0efec7f4d0afcf7"
     },
     "b03_v4_right_camera_final.png": {
       "bytes": 20005,
@@ -24,8 +24,8 @@
       "sha256": "fdf6b892eaea1bf307923edea6ebe3a937b0191d47abe675a57734e18ff0a9c4"
     },
     "report/images/b03_v4_closed_loop_right_camera_initial_final.png": {
-      "bytes": 172479,
-      "sha256": "3afef390900901598926f0d11226bb460a70b818ce0c4c765594aefb6fd614dc"
+      "bytes": 174867,
+      "sha256": "88846d35f2f03cd720703034fa99145ee04c6ca9f3d3db46c0efec7f4d0afcf7"
     }
   },
   "image_contract": {
@@ -150,7 +150,7 @@
     "numpy": "1.26.4",
     "pillow": "10.2.0",
     "python": "3.12.3",
-    "script_sha256": "d45888deb9f11671f8b6c07982b91665c3bae25591c4d39ec29e7135319763a1"
+    "script_sha256": "cb8002cfe2eeefefc192e081e2fb2a3c6bbe017702790d1bc5a12221cb055519"
   },
   "source_integrity": {
     "campaign_checksum_contract_unchanged": true,

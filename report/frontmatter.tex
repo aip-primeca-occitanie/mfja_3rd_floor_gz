@@ -121,115 +121,90 @@ Report language & English\\
 
 \cleardoublepage
 \chapter*{Abstract}
-The internship developed a common Gazebo environment for the industrial and
-mobile robots used at the Maison de la Formation Jacqueline Auriol (MFJA). The
-mission centred on a digital twin of Room~315, an industrial robotics practice
-site comprising two rail-transport cells and four industrial-robot workstations,
-together with unified Robot Operating System~2 (ROS~2) access, calibrated
-multi-shuttle transport and an investigation of overhead-camera perception with
-English task requests. The implemented solution is a schema-constrained
-neuro-symbolic interface: learned models propose fields in fixed task and scene
-formats, while deterministic checks, symbolic planning and software supervision
-determine which commands may execute. It is therefore not an end-to-end
-vision--language--action policy
-that maps images and language directly to robot actions.
+During this internship, I developed a unified Gazebo environment for the
+industrial and mobile robotics platforms of the MFJA. Room~315 combines two
+rail-transport cells, four industrial-robot workstations, cameras and
+programmable devices, but these heterogeneous elements needed compatible
+geometry, identities, interfaces and state descriptions before they could
+support repeatable experiments. The objective was therefore not only to
+reproduce the room visually, but to provide a coherent simulation for
+multi-robot launch, shuttle routing, scene observation and task-level English
+requests.
 
-Configuration-driven launch and typed ROS~2 interfaces connect the simulated
-robots, rail topology and software execution supervisor. A local
-Qwen2.5-1.5B-Instruct
-model proposes structured task fields. The paired-view ResNet-18 estimator,
-identified as V4 in the versioned artefacts, uses shared low-level processing
-and a separate higher-level output branch for each rail. A visual observation is
-accepted only when every present shuttle passes the identity, freshness,
-vocabulary, numeric and confidence checks, and task fields must belong to the
-permitted Room~315 domain. PlanSys2/POPF then produces a symbolic plan; the
-software execution supervisor authorises one plan action, translated into a
-typed command, at a time, and the execution layer checks its observed effect.
+I reconstructed the MFJA third-floor geometry in Autodesk Inventor, designed
+the furniture and static contents of Rooms~314 and~315, and exported the
+resulting assets to Gazebo. In Room~315, I integrated the project-supplied
+transport parts and attributed upstream robot models, then implemented
+configuration-driven launch through Robot Operating System~2 (ROS~2), typed
+interfaces and a calibrated directed transport network. The rail backend manages
+stable shuttle identities, switches, stoppers, sensors, occupancy and temporary
+blocker relocation. This created reproducible operating scenes while keeping the
+different robot command interfaces explicit.
 
-The visual model selected at epoch~11 was frozen and then evaluated once on a
-preregistered Final Test whose protocol was fixed in advance and which was
-separate from training, Hard-case Validation and the Development Canary. Across
-1,040 scenes and 4,680 shuttle targets labelled as present, 90.8974\% received
-the correct canonical rail-segment label with a longitudinal error no greater
-than 0.05, or 5\% of that segment's length; all 80 predeclared acceptance checks
-passed.
+For task-level operation, I used learned models only to interpret uncertain
+inputs: a local language model converts English requests into checked task
+fields, and a paired-camera ResNet-18 estimator produces structured scene
+observations. PlanSys2 uses Planning Domain Definition Language (PDDL) rules to
+generate an inspectable symbolic action sequence. A software supervisor then
+authorises one typed action at a time and checks its observed effect before
+planning continues. This neuro-symbolic separation prevents either learned
+model from directly commanding simulated equipment.
 
-The closed-loop Gazebo evaluation, in which each command is followed by a new
-observation and effect check, completed all 12 isolated runs. All 24 expected
-step effects and 48 software-supervisor decisions were accepted, and every
-shuttle controller ended in a stopped state. A separate ten-case language
-evaluation matched every
-declared outcome. The five-scenario fault-injection campaign passed 5/5 without
-incorrectly declaring success and left all controllers disabled. The reported
-results apply only to the explicitly authorised Gazebo-only runtime
-configuration. Command execution starts disabled and requires operator
-activation; once enabled and given a confirmed task, closed-loop planning and
-execution proceed automatically in Gazebo. The evidence therefore supports only
-this simulated profile; physical transfer would require additional validation,
-as discussed with the wider limitations and future work in
-Chapter~\ref{chap:perspectives}.
+The frozen visual model achieved 99.94\% rail-segment classification accuracy
+on labelled Final Test targets. Under the stricter joint criterion, 90.90\% had
+both the correct segment and a longitudinal error no greater than 5\% of that
+segment's length. The isolated closed-loop campaign completed 12/12 declared
+tasks, and the five injected-fault scenarios passed 5/5 without a false success.
+
+These results apply only to the evaluated Gazebo configuration, fixed synthetic
+cameras, known shuttle fleet and kinematic rail model. They do not establish
+transfer to physical cameras or machines, long-run reliability or
+machinery-safety certification.
 
 \textbf{Keywords:} ROS~2; Gazebo Harmonic; industrial robotics; digital twin;
 multi-robot systems; flexible manufacturing; PDDL; PlanSys2; computer vision;
-language-and-vision interface; neuro-symbolic control; safety supervision.
+language-and-vision interface; neuro-symbolic control; software supervision.
 
 \cleardoublepage
 \chapter*{Résumé}
-Le stage a produit un environnement Gazebo commun pour les robots industriels
-et mobiles de la Maison de la Formation Jacqueline Auriol (MFJA). La mission
-a réuni un jumeau numérique de la salle~315, site de travaux pratiques en
-robotique industrielle comprenant deux cellules de transport sur rail et quatre
-postes de robot industriel, un accès Robot Operating System~2 (ROS~2) unifié,
-un transport multi-navette calibré et une étude de perception par caméras en
-hauteur associée à des requêtes en anglais. La solution est une interface
-neuro-symbolique contrainte par schéma : les modèles appris proposent des champs
-dans des formats fixes de tâche et d'état de scène, tandis que les vérifications
-déterministes, la planification symbolique et la supervision logicielle
-déterminent quelles commandes peuvent être exécutées. Elle n'est donc pas une
-politique vision--langage--action de bout en
-bout qui transforme directement images et langage en actions robotiques.
+Durant ce stage, j'ai développé, dans le simulateur robotique Gazebo, un
+environnement commun pour les robots industriels et mobiles de la Maison de la
+Formation Jacqueline Auriol (MFJA). La mission portait sur la salle~315, qui
+comprend deux cellules de transport sur rails et quatre postes de robots
+industriels. Le travail a combiné leur intégration via ROS~2, un système de
+transport multi-navettes calibré, la perception par caméras et l'interprétation
+de requêtes en anglais. Les modèles appris proposent des descriptions
+structurées de la tâche et de la scène, mais seuls les contrôles déterministes,
+la planification symbolique et la supervision autorisent les commandes. Cette
+interface neuro-symbolique n'est donc pas une politique
+vision--langage--action de bout en bout.
 
-Le lancement piloté par configuration et les interfaces ROS~2 typées relient
-les robots simulés, la topologie ferroviaire et le superviseur logiciel
-d'exécution. Un modèle
-Qwen2.5-1.5B-Instruct local propose les champs structurés de la tâche. Le
-ResNet-18 à deux vues partage le traitement visuel générique, puis utilise une
-branche de sortie de haut niveau propre à chaque rail. Une observation visuelle
-n'est acceptée que si chaque navette présente satisfait les contrôles
-d'identité, de fraîcheur, de vocabulaire, de validité numérique et de confiance ;
-les champs de tâche doivent aussi appartenir au domaine autorisé de la
-salle~315. PlanSys2/POPF produit ensuite le plan symbolique ; le superviseur
-logiciel d'exécution autorise une action du plan, traduite en commande typée, à
-la fois, puis la couche d'exécution vérifie son effet observé.
+J'ai conçu sous Autodesk Inventor la géométrie du troisième étage, le mobilier
+et les équipements statiques des deux salles détaillées, puis je les ai exportés
+vers Gazebo. Pour la salle~315, j'ai créé son modèle dédié et assemblé ses postes
+et cellules sur rails avec les éléments de transport fournis par le projet et
+des modèles de robots externes cités.
 
-Le modèle retenu à l'issue de l'époque~11 a été figé avant d'être évalué une
-seule fois sur un test final défini à l'avance, distinct de l'entraînement, de
-la validation des cas difficiles et de la partition sentinelle de développement
-(Development Canary). Sur 1\,040 scènes et 4\,680 cibles correspondant aux
-navettes annotées comme présentes, 90,8974\,\% ont reçu l'étiquette canonique
-correcte de segment ferroviaire avec une erreur longitudinale au plus égale à
-0,05, soit 5\,\% de la longueur du segment. Les 80 critères d'acceptation, fixés
-avant l'évaluation, ont été satisfaits.
+Des lancements configurables et des interfaces ROS~2 typées relient les robots
+simulés, la topologie des rails et le superviseur d'exécution. Le modèle local
+Qwen2.5-1.5B-Instruct propose les champs structurés de la tâche ; un ResNet-18 à
+deux vues estime, pour chaque navette connue présente, son segment, sa position
+relative, sa boîte englobante et son état de chargement. Après validation,
+PlanSys2 et son planificateur POPF produisent une séquence symbolique exécutée
+action par action, avec vérification de chaque effet observé.
 
-Les 12 exécutions isolées de la campagne Gazebo en boucle fermée, où chaque
-commande est suivie d'une nouvelle observation et d'un contrôle de son effet,
-ont réussi. Les 24 effets attendus des étapes et les 48 décisions du superviseur
-logiciel ont été validés, et tous les contrôleurs de navette se trouvaient à
-l'arrêt. L'évaluation
-linguistique menée sur dix cas a
-produit les résultats attendus. La campagne d'injection de fautes a réussi ses
-cinq scénarios sans aucun succès déclaré à tort et a laissé tous les contrôleurs
-désactivés. Ces résultats concernent uniquement la configuration d'exécution
-réservée à Gazebo et explicitement autorisée pour cette évaluation.
-L'émission de commandes est désactivée au démarrage et doit être activée
-explicitement par l'opérateur ; une fois l'émission de commandes activée et la tâche confirmée,
-la planification et l'exécution en boucle fermée fonctionnent automatiquement
-dans Gazebo. Ces éléments n'autorisent pas un déploiement physique, qui exigerait
-les validations supplémentaires discutées au Chapitre~\ref{chap:perspectives}.
+Le modèle visuel figé a atteint 99,94\,\% d'exactitude pour l'identification des
+segments sur les cibles annotées du test final. Selon le critère conjoint plus
+strict, 90,90\,\% des estimations associent le bon segment à une erreur
+longitudinale inférieure ou égale à 5\,\% de sa longueur. L'évaluation en boucle
+fermée dans Gazebo a réussi 12/12 scénarios positifs. La campagne d'injection de
+fautes a réussi 5/5 scénarios, sans faux succès. Ces résultats concernent
+exclusivement la configuration Gazebo évaluée et ne démontrent pas une aptitude
+au déploiement sur les équipements physiques.
 
 \textbf{Mots-clés :} ROS~2 ; Gazebo ; robotique industrielle ; jumeau
-numérique ; système multi-robot ; PDDL ; PlanSys2 ; vision ; VLA ; commande
-neuro-symbolique ; supervision de sécurité.
+numérique ; systèmes multi-robots ; PDDL ; PlanSys2 ; vision ; VLA ; commande
+neuro-symbolique ; supervision logicielle.
 
 \cleardoublepage
 \chapter*{Acknowledgements}
@@ -240,36 +215,40 @@ improve the experimental methodology and develop the initial modelling
 assignment into a broader integration and research project for the MFJA
 platforms.
 
-I would also like to thank Nicolas Seguy for his academic supervision and for
-following the progress of the placement. Finally, I am grateful to the
-administrative and technical staff at the MFJA for coordinating access to the
-facilities, helping with organisational procedures and providing the practical
-support needed throughout the internship.
+This work was granted access to the KAIROS high-performance computing resources
+operated by the CALMIP supercomputing centre.
+
+I would also like to thank the teaching staff at my university for their
+guidance, availability and continued interest throughout the master's
+programme, including their support during the internship. I also thank the
+MFJA for providing the facilities and working environment in which this
+internship was carried out.
 
 \cleardoublepage
 \chapter*{Use of Generative Artificial Intelligence}
-Generative artificial intelligence tools, primarily OpenAI ChatGPT, were used
-during the preparation of this work as supporting tools. Their use included
-improving the grammatical correctness, clarity, and fluency of the report;
-enhancing the visual quality and presentation of selected figures and diagrams;
-and assisting with the generation, organisation, and refactoring of selected
-portions of code, as well as with repetitive development tasks and workflow
-optimisation.
+In accordance with the university's generative-AI guidance
+\citep[p.~17]{evryreportinstructions2026}, I declare that I used OpenAI
+ChatGPT \citep{openaichatgptfaq} while preparing this report. I used it to
+improve language and document structure, suggest selected code refactorings,
+and assist with repetitive build and consistency checks. ChatGPT also assisted
+in drafting and iteratively reviewing parts of the initial Room~315 PDDL
+domain, especially repetitive predicate and action schemas.
 
-All technical choices, system design, implementation, experiments, results,
-analyses, and conclusions presented in this report remain the author's own work
-and responsibility. AI-assisted code, figures, and suggestions were
-systematically reviewed, adapted where necessary, tested or validated as
-appropriate, and integrated by the author. Generative AI was therefore used as
-a supporting tool to improve efficiency and presentation quality, rather than
-as a substitute for the author's technical reasoning, engineering decisions,
-implementation, or validation. This disclosure follows the university
-reporting guidance \citep{evryreportinstructions2026}.
+ChatGPT did not define the objectives, select the evidence or approve the
+conclusions. Every suggestion was reviewed before it was accepted, adapted or
+rejected. Accepted textual and code changes were then checked by me. All
+reported results come from the recorded experimental artefacts and logs cited
+in this report, not from generated claims.
+\vfill
 
 \cleardoublepage
 \chapter*{Glossary and Acronyms}
 \section*{Acronyms}
+\begingroup
+\footnotesize
 \begin{acronym}[LAAS-CNRS]
+  \setlength{\itemsep}{0pt}
+  \setlength{\parsep}{0pt}
   \acro{AI}{Artificial Intelligence}
   \acro{APE}{Activité Principale Exercée, the French principal-activity code}
   \acro{API}{Application Programming Interface}
@@ -311,44 +290,47 @@ reporting guidance \citep{evryreportinstructions2026}.
   \acro{VLM}{Vision--Language Model}
   \acro{YAML}{YAML Ain't Markup Language}
 \end{acronym}
+\endgroup
 
+\clearpage
 \section*{Project-specific terms}
 \begin{description}
   \item[Acceptance gate] A pass/fail criterion fixed before evaluation, distinct
   from a project-management decision milestone.
-  \item[Approved Gazebo profile] A hash-identified Gazebo runtime selected after
-  manual review. Selection neither enables actuation nor grants physical-safety
-  approval; operator activation is separate.
   \item[Checkpoint] Model weights saved after an epoch; freezing prevents further
   updates before evaluation.
   \item[Closed loop] Execution in which each command is followed by a new
   observation and a check of its expected effect before planning continues.
+  \item[Consumed historical Test] The predecessor test partition that was
+  evaluated once and is therefore no longer locked or used as the current Final
+  Test.
   \item[Digital twin] A versioned digital representation of a defined physical
   system that includes its relevant information flows.
   \item[Fail-closed] A policy that blocks an operation when required state is
   missing, stale, contradictory or from an unapproved source.
+  \item[Final Test] The preregistered post-freeze partition used as the
+  project's final visual-model evidence.
   \item[Hard-case Validation] The current development partition used for
   checkpoint selection and calibration, distinct from the historical Grouped
   Validation and the Final Test.
-  \item[Development Canary] A post-selection regression partition used to check
-  the frozen candidate without checkpoint selection or refitting.
   \item[Historical Grouped Validation] The predecessor validation partition
   that selected the checkpoint later used to initialise the V4 backbone; it is
   not a direct V4 input.
-  \item[Consumed historical Test] The predecessor test partition that was
-  evaluated once and is therefore no longer locked or used as the current Final
-  Test.
-  \item[Final Test] The preregistered post-freeze partition used as the
-  project's final visual-model evidence.
   \item[Neuro-symbolic interface] An architecture in which learned components
   propose fixed-schema task and scene fields, while deterministic validation,
   symbolic planning and the software execution supervisor determine which
   commands may be published.
   \item[\code{ObservedState}] A timestamped state snapshot whose accepted facts
   carry source, confidence and known/unknown/stale/conflicting status.
+  \item[Post-selection regression set] A small development partition checked
+  only after checkpoint selection. Retained artefacts call it the
+  \emph{Development Canary} or use \code{canary} in paths and schema fields.
   \item[Public topology] The common logical route graph and its canonical
   segment labels exposed to ROS~2 and planning, distinct from each rail's
   internal geometric curve identifiers.
+  \item[Selected Gazebo profile] A hash-identified Gazebo runtime that I selected
+  after manually reviewing its retained evidence. Selection does not enable
+  actuation; operator activation is separate.
   \item[SHA-256] A cryptographic digest used here to identify the exact files or
   model weights associated with an evaluation.
   \item[Shuttle] An independently controlled pallet carrier that travels around

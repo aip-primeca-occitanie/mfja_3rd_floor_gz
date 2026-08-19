@@ -1,186 +1,201 @@
 \chapter{From an English Instruction to Shuttle Motion}
 \label{chap:neurosymbolic}
 
+\chapterguide{I combined the confirmed goal and accepted scene in an
+observe--plan--supervise--verify loop. Each iteration accounts for Room~315's
+one-way routes, occupancy and device states, handles temporary blocker moves
+and replans from the next observation.}
+
+\contributionboundary
+  {The starting repository contained no Room~315 PDDL domain or
+  English-to-motion loop. I reused the simulation, rail control and typed
+  contracts that I had developed earlier.}
+  {The supervisors reviewed the neuro-symbolic architecture and supplied
+  platform constraints.}
+  {I used PDDL to define symbolic states, actions and goals \citep{pddl},
+  PlanSys2 to request plans \citep{plansys2}, and POPF to search for action
+  sequences \citep{popf}; I developed none of them.}
+  {I defined and implemented the Room~315 PDDL domain and fresh-problem builder,
+  integrated PlanSys2, added deterministic plan translation, and developed the
+  observe--plan--supervise--verify--replan executive.}
+  {I ran planning, translation and effect-checking tests, twelve closed-loop
+  Gazebo cases and five fault cases
+  reported in \cref{chap:results}.}
+
 \section{Runtime architecture}
 
-\Cref{fig:neurosymbolic-architecture} follows English and camera inputs through
-validated proposals, PlanSys2/POPF planning, supervised typed commands and
-verified Gazebo effects; an incomplete goal re-enters observation and planning.
-Interface rules are in \cref{chap:interfaces}.
+\Cref{fig:neurosymbolic-architecture} shows the loop and the feedback path used
+while a grounded goal remains incomplete. Interface rules are in
+\cref{chap:interfaces}.
+
+\Cref{tab:pddl-decision-rules} gives the principal symbolic decisions before the
+complete runtime sequence. It links a room situation to the conditions that
+make an action applicable and to the state change predicted by that action.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.02}
+\caption{Principal decision cases in the Room~315 PDDL domain.}
+\label{tab:pddl-decision-rules}
+\begin{tabularx}{\textwidth}{@{}p{0.21\textwidth}p{0.35\textwidth}X@{}}
+\toprule
+\textbf{Current situation} & \textbf{Decisive conditions} &
+\textbf{Applicable action and symbolic result}\\
+\midrule
+Exterior-route preparation & Validated side and connected stations; normal-route
+and device facts & \path{prepare_switches} and \path{open_stoppers} establish
+readiness\\ \tablerowrule
+Direct exact-slot move & Matching source occupancy; free target; ready route; no
+pending clearance & \path{move_shuttle_to_slot} transfers occupancy and records
+the reservation\\ \tablerowrule
+Topology or segment-origin route & Known topology block and authorised route to
+the target & Prepare, then move; a segment-origin action does not assert source-slot
+occupancy\\ \tablerowrule
+Blocked required route & Ordered clearance and a capacity-safe holding
+destination & Relocate one blocker, observe the effect and rebuild the problem\\
+\tablerowrule
+Route normalisation & Clearance complete and reconfiguration allowed &
+\path{restore_normal_route} re-establishes exterior-route readiness\\
+\tablerowrule
+Terminal or inspection state & Target/device facts hold, or inspection is
+confirmed & Terminal actions predict completion; \mbox{\code{inspect\_state}} never
+actuates\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+I translated each operating rule into predicates, action preconditions and
+effects. I then tested valid cases and closely related invalid cases. The tests
+covered both rails, slots, switches, stoppers, shuttles obstructing a route, and
+interior and exterior paths. A valid state had to produce an allowed step.
+Missing, stale, contradictory or impossible state had to produce no executable
+command. After execution, new sensor and controller feedback had to match the
+expected effect before replanning. These tests provide evidence for the covered
+cases; they are not a mathematical proof that the domain contains no error.
+
+\section{Why the executive uses one-step replanning}
+
+A complete POPF sequence is inspectable, but later steps are predictions about a
+state that has not yet been observed. Executing the whole sequence open-loop
+would let an occupancy change, failed device update or incomplete arrival make
+its remaining preconditions obsolete. The executive therefore translates and
+checks only the first supported action, observes its effect and builds a fresh
+problem before continuing. This costs additional planner calls, but it keeps the
+next decision tied to accepted state rather than to an earlier symbolic forecast.
+
+\paragraph{Engineering iteration for blocker staging.}
+An early planning assumption treated several blocker destinations as if they
+could be allocated from one unchanged observation. Dense configurations exposed
+the flaw: moving the first blocker changes both occupancy and the capacity-safe
+destination available to the next one. I changed the design to authorise one
+relocation at a time, retain the required holding capacity, obtain a fresh
+observation and then either relocate the next blocker or restore the normal
+exterior route. Builder and regression cases cover both rails and full-rail
+distributions; they establish the implemented bounded strategy, not a general
+deadlock proof.
 
 \begin{figure}[p]
   \centering
   \input{figures/f10_runtime_vertical.tex}
   \caption[Room~315 English-to-motion runtime architecture.]
-  {End-to-end sequence from task and paired-camera inputs to a verified Gazebo
+  {Complete layered sequence from task and paired-camera inputs to a verified
+  Gazebo
   result; the dashed green path denotes observation and replanning while the
   grounded goal remains incomplete.}
   \label{fig:neurosymbolic-architecture}
 \end{figure}
-\FloatBarrier
 
 \section{Step 1---interpret and confirm the English task}
 
-The CLI applies \cref{chap:ai-development}, clarifies missing fields and requires
-confirmation before publishing \code{TaskGoal}. It resolves explicit identities
-and colour aliases; scene-dependent policies remain ungrounded. \emph{Grounding}
-selects one shuttle and, for station requests, an admissible slot; the planner,
-not the language model, chooses actions.
+The CLI applies \cref{chap:ai-development}, resolves identities and colour
+aliases, and clarifies missing fields before confirmation publishes
+\code{TaskGoal}. Scene-dependent policies remain ungrounded: the gateway selects
+the shuttle or admissible station slot from current state, while the planner
+chooses actions.
 
 \section{Step 2---read the current scene and ground the goal}
 
-The visual runtime verifies its manifest---the hash-bound artefact, schema,
-configuration and Gazebo-scope record---plus checkpoint, preprocessing and
-camera order. Any missing, stale, conflicting or low-confidence requirement
-rejects the pair; an accepted \code{VisualStateObservation} carries schema and
-provenance. The inference node does not mutate ProblemExpert: the gateway fuses
-the observation with presence, device and identity-bearing sensor reports into
-\code{ObservedState} for planning.
-
-Symbolic shuttle locations are derived directly from the accepted visual
-observation rather than from controller coordinates.
-
-The gateway validates and grounds \emph{any}, \emph{nearest} and station-slot
-policies against current state/occupancy. Payload-based selection requires, by
-default, five distinct consecutive accepted observations within freshness
-limits. The grounded identity retains the goal ID and stays fixed for execution.
+The hash-bound visual runtime checks schema, preprocessing, camera order,
+freshness and confidence. Only the gateway can fuse accepted visual locations
+with presence, device and identity-bearing sensor reports or change PlanSys2
+state. It grounds \emph{any}, \emph{nearest} and station-slot policies against
+current occupancy; payload selection requires five consecutive accepted
+observations, after which the identity remains fixed.
 
 \section{Step 3---build a fresh PDDL problem and plan}
 
-\subsection{From current state to decision predicates}
+Each cycle turns the grounded goal and latest valid \code{ObservedState} into a
+fresh PDDL problem containing shuttle, location, occupancy, payload and device
+facts. It receives no raw image or text; unknown, stale or conflicting state
+blocks generation instead of implying free space. Transport actions require
+validated side, location, occupancy and route facts. The direct, blocked-route,
+normalisation and terminal cases are summarised in
+\cref{tab:pddl-decision-rules}; the predicate-level reference remains in the
+versioned PDDL artefact indexed by \cref{app:reproducibility}.
 
-Each cycle builds a fresh PDDL problem from the grounded goal and latest
-\code{ObservedState}: present shuttles, locations, occupancy, payload and device
-facts. PDDL receives no raw image/text; unknown, stale or conflicting state
-blocks generation rather than implying free space.
+POPF minimises symbolic setup and relocation cost, not travel time. The executive
+uses the PlanSys2 planner service rather than its action Executor, translates the
+plan, and selects only its first supported checked step. PDDL effects remain
+predictions: the next cycle always starts from the observed post-action state.
 
-\subsection{How the current facts constrain the next action}
-
-Transport actions require \code{validated\_state}, matching
-\code{active\_goal\_side}, and action-specific location, occupancy and route
-predicates. POPF minimises dimensionless symbolic cost (setup/relocation
-penalties, not travel time) among goal-reaching plans; supervisor checks remain
-separate. \Cref{tab:pddl-decision-rules} summarises the principal cases.
-
-In the table, \code{validated\_state} marks contract-valid facts. The field
-\code{active\_goal\_side} names the grounded rail. \emph{Normal route} is the
-exterior-loop switch arrangement; a \emph{topology block} is a segment-level,
-non-slot location; \emph{clearance mode} temporarily relocates blockers;
-\emph{capacity-safe} respects holding/separation limits; and a device group is
-one route's configured switches/stoppers.
-
-\begin{table}[H]
-\centering
-\footnotesize
-\caption{Principal symbolic decision cases in the current Room~315 PDDL domain.}
-\label{tab:pddl-decision-rules}
-\begin{tabularx}{\textwidth}{@{}
-  >{\raggedright\arraybackslash}p{0.22\textwidth}
-  >{\raggedright\arraybackslash}p{0.36\textwidth}
-  >{\raggedright\arraybackslash}X@{}}
-\toprule
-\textbf{Current symbolic situation} & \textbf{Decisive conditions} &
-\textbf{Applicable action and symbolic result}\\
-\midrule
-Canonical exterior-route preparation & Validated active side, connected
-stations, normal-route and named device-group facts &
-\path{prepare_switches}, then \path{open_stoppers}, establish
-\code{switches\_ready}, \code{stoppers\_open} and \code{path\_ready} when those
-facts are still required\\
-\tablerowrule
-Direct move from an exact slot & Source occupancy agrees with the selected
-shuttle; target is \code{slot\_free}; route is clear and ready; no clearance is
-pending & \path{move_shuttle_to_slot} releases the source occupancy and marks
-the target occupied and reserved\\
-\tablerowrule
-Switch-specific or segment-origin route & A topology block is known; a route to
-the free target is available and clear; no clearance is pending &
-\path{prepare_topology_route} or \path{prepare_slot_topology_route}, followed by
-the matching topology move, configures a legal route without inventing a
-source slot\\
-\tablerowrule
-Another shuttle blocks the required route & An ordered clearance is pending;
-the next relocation or staging destination is capacity-safe and its interior
-entry is clear & The clearance family enters \code{clearance\_mode} and selects
-one permitted next relocation. Each completed step produces a fresh problem;
-finish or pause actions control route restoration\\
-\tablerowrule
-Mixed route requiring normalisation & Route reconfiguration is allowed;
-clearance mode is inactive; no relocation remains &
-\path{restore_normal_route} restores the exterior route and its readiness facts\\
-\tablerowrule
-Arrival or inspection is ready to close & Target station/slot and \code{DISABLED} controller-state
-facts hold, or a confirmed inspection is required & \path{stop_shuttle} and the
-terminal actions establish task completion; \path{inspect_state} completes an
-inspection without an actuation command\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-PDDL effects are predictions; the next cycle always uses the observed
-post-action state. The executive calls the POPF-backed PlanSys2 planner service
-(not its Executor), validates the plan and selects its first supported
-\code{PddlPlanStep}/\code{TranslatedPlanStep}: an action the translator can map
-to a checked command tied to the planning state.
-
-\section{Step 4---translate, supervise and move}
+\section{Steps 4 and 5---execute one step and verify its effect}
 
 The translator makes a sparse named \code{TranslatedPlanStep}; the supervisor
-applies \cref{chap:interfaces} before publishing a typed device/shuttle command,
-after which the kinematic controller updates shuttle state and Gazebo pose.
-
-\section{Step 5---check the result and decide what follows}
-
-The executive checks postconditions against newer state and, if incomplete,
-replans from it. Final-slot success requires the DZI/controller conditions in
-\cref{chap:interfaces}.
+checks it before publishing a typed command. The executive then checks the
+observed effect and replans if incomplete. Final-slot success requires the
+DZI/controller evidence in \cref{chap:interfaces}; a command alone is never
+success.
 
 \section{Case B03 from instruction to arrival}
 
-For \emph{Move the green shuttle to slot 4 on the right rail}, the campaign
-fixed request, goal and launch state but left planning open. From a cold start
-(fresh Gazebo process with no retained task, observation or controller state),
-the planner chose one direct step to R3's slot~4/DZI4R destination
-(\cref{tab:green-shuttle-trace}).
+The retained B03 fresh-process run is small enough to expose every boundary from
+request to terminal evidence (\cref{tab:green-shuttle-trace}). Its before/after
+camera frames appear in \cref{fig:b03-camera-evidence}.
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \small
-\caption{English-to-motion record for campaign case B03.}
+\caption{Stage-by-stage record for representative campaign case B03.}
 \label{tab:green-shuttle-trace}
-\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.21\textwidth}X@{}}
+\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}X@{}}
 \toprule
 \textbf{Stage} & \textbf{Recorded result}\\
 \midrule
-Interactive request & \emph{Move the green shuttle to slot 4 on the right
-rail.} The harness supplied \code{yes} after the rendered interpretation
-matched the case declaration\\
-\tablerowrule
-Confirmed task & Transport
-\code{room315\_right\_shuttle\_3} on the right rail to slot~4\\
-\tablerowrule
-Current state & Visual state supplies current location and
-occupancy; a fresh PDDL problem is sent to POPF and the executive selects the
-first supported step\\
-\tablerowrule
-Execution step & The recorded initial state places R3 at slot~3 with
-slot~4 free. The motion portion contains one
-\code{move\_shuttle\_to\_slot} step; it requires neither blocker clearance nor
-a topology relocation\\
-\tablerowrule
-Motion command & \code{move\_shuttle\_to\_slot} for R3 from right
-slot~3 to right slot~4 within the Stäubli TX2-60L section at \SI{0.2}{m/s}\\
-\tablerowrule
-Arrival & Two separately timestamped DZI4R readings report identity R3;
-the matching \code{ShuttleState} reports target slot~4 and \code{DISABLED}, and
-a newer visual observation records the final scene\\
-\tablerowrule
-Outcome & Every recorded postcondition is satisfied; the final status is
-\code{succeeded} with reason \code{task\_goal\_satisfied}\\
+Request and goal & ``Move the green shuttle to slot 4 on the right rail'';
+confirmed as R3 to right slot~4\\ \tablerowrule
+Current state and plan & R3 observed at slot~3, slot~4 free; POPF returned one
+supported direct move\\ \tablerowrule
+Command & Supervised \code{move\_shuttle\_to\_slot}, right slot~3 to slot~4, at
+\SI{0.2}{m/s}\\ \tablerowrule
+Effect & Two newer DZI4R reports identified R3; controller reported target
+slot~4 and \mbox{\code{DISABLED}}\\ \tablerowrule
+Outcome & All postconditions satisfied; \code{task\_goal\_satisfied}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Other identity, colour and payload policies use the same workflow, grounding
-from the current scene before PDDL construction. Results are in
-\cref{chap:results}.
+\paragraph{Why this record counts as success.}
+The five rows are not five equivalent success claims. The confirmed request
+fixes what must be achieved, and the current-state row shows why the returned
+action was applicable; neither proves that motion occurred. Likewise, the
+supervisor's accepted command proves authorisation, not arrival. The effect row
+is the decisive evidence: two reports newer than the command identify R3 at the
+requested slot, and the controller independently reports that the target slot
+was reached and motion was \code{DISABLED}. Only after those declared
+postconditions agree does the executive append
+\code{task\_goal\_satisfied}. The trace therefore separates intended effect,
+symbolic prediction, command authorisation and observed effect instead of
+equating a planner response or published command with success.
+
+\paragraph{Scope of the example.}
+B03 deliberately uses one direct move so that every software boundary remains
+visible in a short record. It does not exercise blocker relocation, route
+restoration or competing occupancy; those cases appear in the twelve-case
+matrix in \cref{sec:v4-closed-loop-campaign} and
+\cref{tab:campaign-case-details}.
+
+The implemented loop grounds, plans and authorises one action at a time, then
+replans from the observed effect. The B03 trace shows this contract end to end;
+the campaign in \cref{sec:v4-closed-loop-campaign} covers blocker clearance and
+occupancy changes beyond that direct-move example.

@@ -1,0 +1,231 @@
+\chapter{Technical Reference and Detailed Matrices}
+\label{app:technical}
+
+This appendix retains implementation and experiment detail that would interrupt
+the main argument. The chapters explain why each design was selected and what
+the results mean; the tables below preserve the corresponding configuration and
+case-level reference. Installed configuration, the runbook and the
+hash-identified records in \cref{app:reproducibility} remain authoritative.
+
+\section{Robot and rail configuration}
+
+The following table consolidates package ownership, rail geometry, device
+semantics and maintenance constraints used by the integrated platform.
+
+\begin{longtable}{@{}p{0.24\textwidth}p{0.65\textwidth}@{}}
+\caption{Operational configuration moved from the main chapters.}
+\label{tab:operational-reference}\\
+\toprule
+\textbf{Area} & \textbf{Reference detail}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Area} & \textbf{Reference detail}\\
+\midrule
+\endhead
+Package ownership & \code{mfja\_3rd\_floor\_description} owns worlds and
+models; \code{mfja\_3rd\_floor\_bringup} composes them;
+\code{mfja\_rail\_interfaces} owns public rail types; and
+\code{mfja\_robot\_control\_config} owns controllers, planning, perception,
+configuration and tests.\\
+\tablerowrule
+Robot helper & \path{robot_joint_command.py} validates the selected profile,
+joint-vector length and angular/linear units before publishing to the
+instance namespace. Exact invocations remain in \mbox{\code{runbook.html}}.\\
+\tablerowrule
+Rail source and mapping & Fourteen CSV curves contain 276 ordered
+\code{index,x,y,z} centre-line rows. Twelve named anchors join curve ends;
+side-specific affine scale/rotation/translation and height/yaw offsets map the
+source geometry into Gazebo.\\
+\tablerowrule
+Devices & Switches retain inherited IDs A1--A4. DZI names identify indexed
+slot detectors; DA names identify switch approaches/branches. Stopper state
+\code{0} is released and \code{1} held; linked detectors are configured
+\SI{0.10}{m} upstream, and the switch protected distance is \SI{0.35}{m}.\\
+\tablerowrule
+Fleet lifecycle & Per-shuttle commands are ON, OFF, RESET and REMOVE; ON/OFF/
+RESET also accept \code{ALL}. Reported controller modes are MOVING, WAITING,
+DISABLED and the latched no-successor mode FALLING.\\
+\tablerowrule
+Motion and separation & Controller and pose-publication rate limits default to
+\SI{30}{Hz}; default minimum centre separation is \SI{0.33}{m}. The stored
+speed field is a setting, not an instantaneous-velocity measurement.\\
+\tablerowrule
+Maintenance and staging & The device-position tool defaults to a non-writing
+projection preview and guards excessive residuals. A retained clearance
+certificate binds shuttle identity, interior destination, entry sensor,
+bounded motion, controller stop and post-stop observation; later ON motion
+invalidates it.\\
+\bottomrule
+\end{longtable}
+
+\clearpage
+\section{Contracts and symbolic decisions}
+
+The following table identifies the principal records exchanged across the
+closed loop and the components authorised to produce them.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{0.96}
+\caption{Principal closed-loop contracts and authorised producers.}
+\label{tab:contracts}
+\begin{tabularx}{\textwidth}{@{}p{0.25\textwidth}p{0.39\textwidth}X@{}}
+\toprule
+\textbf{Contract} & \textbf{Meaning} & \textbf{Allowed producer}\\
+\midrule
+\makecell[l]{\code{ObservedFact}/\\\code{ObservedState}} & Values with
+known/unknown/stale/conflicting status, freshness and provenance & Authorised
+visual/rule provider, then state-fusion layer\\ \tablerowrule
+\code{SemanticParseEnvelope} & Strict semantic proposal; PDDL, plan and command
+fields are forbidden & Local language model\\ \tablerowrule
+\code{TaskGoalDraft}/\code{TaskGoal} & Fused proposal followed by immutable,
+domain-valid and optionally grounded constraints & Field resolver, domain
+validator and grounding gateway\\ \tablerowrule
+\makecell[l]{\code{PddlPlanStep}/\\\code{TranslatedPlanStep}} & Returned symbolic action,
+then deterministic sparse command metadata & PlanSys2 boundary, then plan
+translator\\ \tablerowrule
+Checked command and typed ROS~2 messages & Authorised named actuation intent &
+Executive/macro dispatcher, then rule-based supervisor\\ \tablerowrule
+\code{PostconditionCheck} and task records & Observed effect, reason and
+step/task outcome & Executive using controller, sensor and observation reports\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+
+\section{Visual-model lineage}
+
+The predecessor V3 grouped split contained 1,528 training scenes and 256 scenes
+each for Validation and the consumed historical Test. The V3
+Validation-selected backbone initialised V4, but neither historical evaluation
+partition enters V4. The active V4 output contains, for each of eight known
+identities, 14 segment scores, two loaded-state scores, four normalised box
+values and one within-segment ratio: \(8(14+2+4+1)=168\) learned values. A
+derived 200-value adapter is diagnostic only. The selected optimisation,
+sampling and evaluation controls now appear beside their rationale in
+\cref{tab:v4-training-controls}; online and offline thresholds are distinguished
+in \cref{tab:visual-threshold-map}.
+
+\FloatBarrier
+\section{Detailed experiment matrices}
+
+The following matrices distinguish closed-loop case coverage, per-rail Final
+Test metrics, observation-only checks and symbolic-runtime boundaries.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Case-level detail for the closed-loop campaign.}
+\label{tab:campaign-case-details}
+\begin{tabularx}{\textwidth}{@{}p{0.07\textwidth}p{0.17\textwidth}p{0.14\textwidth}Xp{0.10\textwidth}@{}}
+\toprule
+\textbf{Case} & \textbf{Family} & \textbf{Rail/shuttle} &
+\textbf{Recorded task path} & \textbf{Result}\\
+\midrule
+B01 & Colour alias & Right/R1 & Slot 1 to slot 2 & 1/1 passed\\ \tablerowrule
+B02 & Explicit identity & Right/R2 & Slot 2 to slot 3 & 1/1 passed\\ \tablerowrule
+B03 & Colour alias & Right/R3 & Slot 3 to slot 4 & 1/1 passed\\ \tablerowrule
+B04 & Station target & Right/R4 & Slot 4 to Yaskawa slot 1 & 1/1 passed\\
+\tablerowrule
+B05 & Colour alias & Left/L1 & Slot 1 to slot 2 & 1/1 passed\\ \tablerowrule
+B06 & Explicit identity & Left/L2 & Slot 2 to slot 3 & 1/1 passed\\ \tablerowrule
+B07 & Colour alias & Left/L3 & Slot 3 to slot 4 & 1/1 passed\\ \tablerowrule
+B08 & Station target & Left/L4 & Slot 4 to Yaskawa slot 1 & 1/1 passed\\
+\tablerowrule
+P01 & Payload-nearest & Right/R1 & R2 cleared; slot 1 to slot 3 & 4/4 passed\\
+\tablerowrule
+P02 & Payload-nearest & Left/L1 & L2 cleared; slot 1 to slot 3 & 4/4 passed\\
+\tablerowrule
+M01 & Multi-shuttle route & Right/R1 & R2 cleared; slot 1 to slot 3 & 4/4 passed\\
+\tablerowrule
+M02 & Multi-shuttle route & Left/L1 & L2 cleared; slot 1 to slot 3 & 4/4 passed\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.08}
+\caption{Per-rail metrics from the one-shot Final Test.}
+\label{tab:visual-v4-final-test-detailed}
+\begin{tabularx}{\textwidth}{@{}Xp{0.16\textwidth}p{0.16\textwidth}p{0.16\textwidth}@{}}
+\toprule
+\textbf{Metric} & \textbf{Global} & \textbf{Left} & \textbf{Right}\\
+\midrule
+Segment top-1 & 99.9359\% & 99.8726\% & 100.0000\%\\ \tablerowrule
+Segment macro F1 & 99.9117\% & 99.7460\% & 100.0000\%\\ \tablerowrule
+Loaded-state accuracy & 99.9145\% & 99.9151\% & 99.9140\%\\ \tablerowrule
+Joint segment and \(\lvert\Delta s_{ratio}\rvert\leq0.05\) & 90.8974\% &
+89.8089\% & 92.0000\%\\ \tablerowrule
+Joint segment and \(\lvert\Delta s_{ratio}\rvert\leq0.12\) & 99.0385\% &
+98.9384\% & 99.1398\%\\ \tablerowrule
+Correct-segment \(s_m\) MAE & \SI{0.01573}{m} & \SI{0.01552}{m} &
+\SI{0.01594}{m}\\ \tablerowrule
+Correct-segment \(s_m\) p95 & \SI{0.05850}{m} & \SI{0.05660}{m} &
+\SI{0.06030}{m}\\ \tablerowrule
+Mean box IoU & 0.83400 & 0.83103 & 0.83701\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.08}
+\caption{Development and observation-only reference results.}
+\label{tab:visual-v4-runtime-results}
+\begin{tabularx}{\textwidth}{@{}p{0.24\textwidth}Xp{0.22\textwidth}@{}}
+\toprule
+\textbf{Check} & \textbf{Recorded result} & \textbf{Interpretation}\\
+\midrule
+Validation / post-selection regression & 76/76 and 74/74 gates passed;
+segment top-1 99.9113\% and 100.0000\%; joint 0.05 94.9867\% and 94.5622\%
+& Development evidence, not independent Test evidence\\ \tablerowrule
+Same-frame shadow & 55 paired frames; 52 accepted; no wrong-side identities or
+reported comparison errors & Remaining three rejections are not explained by
+the aggregate record\\ \tablerowrule
+Seven-scene acceptance & 7/7 scenes; 53/53 reobservations at 0.12; 150/169
+identity checks at 0.05 & Observation only; 19 strict misses repeat two biased
+A12E estimates\\ \tablerowrule
+Visual-input faults / dense dry run & 8/8 faults rejected; 10/10 dense-scene
+reobservations matched & PlanSys2 mutation and actuation disabled\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.10}
+\caption{Files and boundaries of the implemented symbolic-planning path.}
+\label{tab:pddl-implementation-reference}
+\begin{tabularx}{\textwidth}{@{}p{0.23\textwidth}X@{}}
+\toprule
+\textbf{Boundary} & \textbf{Retained implementation detail}\\
+\midrule
+Domain & \path{domain_room315_runtime.pddl} defines the typed predicates and 21
+action schemas used by the runtime\\
+\tablerowrule
+Problem construction & The scenario builder creates a fresh \code{:init} and
+goal from accepted state; unknown, stale or conflicting input prevents problem
+generation\\ \tablerowrule
+Planner boundary & PlanSys2 sends the problem to POPF. Learned inputs provide
+checked goal and scene records but neither call the solver nor publish a
+command\\ \tablerowrule
+Translation & A deterministic whitelist checks each returned action name, typed
+argument and sparse-command mapping before any command request exists\\
+\tablerowrule
+Supervised execution & The executive offers only the first supported action;
+the rule-based supervisor rechecks its command fields and current authority\\
+\tablerowrule
+Effect and replan & The executive compares the declared postconditions with
+observed reports and rebuilds a fresh problem before continuing\\
+\bottomrule
+\end{tabularx}
+\end{table}

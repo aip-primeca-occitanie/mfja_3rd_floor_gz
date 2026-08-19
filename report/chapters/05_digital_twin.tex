@@ -1,191 +1,266 @@
 \chapter{Building the MFJA Digital Twin}
 \label{chap:digital-twin}
 
-\section{Reconstruction strategy}
+I first built the third-floor CAD and Gazebo scenes, then integrated the robot
+assets and reusable launch profiles. The resulting shared simulation underpins
+the later transport, camera and planning work.
 
-The work began with a minimal MFJA third-floor model, establishing a
-recognisable, geometrically coherent environment before adding behaviour. The
-third-floor mesh was imported and reoriented, the ground plane enlarged, and
-Room~315 completed with doors and an interior window. Furniture, protective
-guards, robot tables and laboratory assets followed.
+\contributionboundary
+  {The starting repository contained a minimal ROS/Gazebo scaffold: ground and
+  sun, one basic world and launch file, and preliminary floor STL exports. It
+  contained no completed third-floor model, furnished interiors, dedicated
+  Room~315 world, robot registry or rail runtime.}
+  {The supervisors provided platform knowledge and technical review; project
+  resources provided equipment access.}
+  {I reused ROS~2, Gazebo, project-supplied conveyor and rail CAD parts, and the
+  robot descriptions attributed below; their source geometry is not my work.}
+  {I designed the retained third floor in Autodesk Inventor, exported it for
+  Gazebo, and designed and placed both rooms' furniture and static contents. I
+  built the Room~315 model, integrated its robot workstations and rail cells,
+  composed the operational worlds and launches, and organised the repository
+  into four packages.}
+  {I checked dimensions, scale, orientation, coordinates and collision
+  representations, added static world and robot checks, and ran the retained
+  six-robot cold-start smoke test reported in \cref{chap:results}.}
+
+\section{CAD modelling and Gazebo integration strategy}
+
+I iteratively exported my Autodesk Inventor third-floor design to Gazebo. The
+earliest retained stage exposed a missing room, incorrect door dimensions,
+incomplete windows, an unsuitable ground plane and a mesh-orientation error. I
+revised the source CAD rather than hiding those discrepancies with unrelated
+Gazebo offsets, then added the furniture and static contents of both furnished
+rooms. I created the dedicated Room~315 shell and assembled its workstations,
+guards and supplied rail-cell parts. The attributed robot geometry was reused;
+my work was its adaptation, placement and integration.
+
+The robot-body assets have package-level provenance. KUKA uses
+\path{kuka_kr6_support} \citep{rosindustrialkuka}. Stäubli uses
+\path{staubli_tx2_60_support} and shared TX60 meshes
+\citep{rosindustrialstaubli,rosindustrialstaublitx60}. Both Yaskawa variants
+use \path{motoman_hc10_support} \citep{rosindustrialmotoman}. TIAGo uses
+\path{tiago_description} from the Tiago-Harmonic fork of PAL Robotics'
+\path{tiago_robot} \citep{tiagoharmonic}. I adapted these assets through local
+URDF/SDF wrappers, paths and simulator integration; I did not create their
+robot-body geometry.
 
 Each asset required consistent units, origin, pose, visual material and
-collision representation. CAD origins are often inconvenient manufacturing
-datums, while Stereolithography (STL) files contain no unit metadata. Explicit
-scale and orientation checks therefore aligned visual and collision geometry
-with the intended room coordinates. Integration proceeded incrementally:
+an explicit collision-model decision. CAD origins are often inconvenient
+manufacturing datums, while Stereolithography (STL) files contain no unit
+metadata. Explicit scale and orientation checks therefore aligned the visual
+geometry and, where enabled, the collision geometry with the intended room
+coordinates. Integration proceeded in three stages:
 
 \begin{enumerate}
-  \item load one asset in an isolated scene;
-  \item verify scale and orientation against known room dimensions;
-  \item establish a stable model frame;
-  \item separate visual and collision geometry where necessary;
-  \item place the asset in the full floor;
-  \item add a static test for paths and SDF structure.
+  \item load each asset alone and verify scale, orientation and reference frame;
+  \item decide whether collision geometry was required, then place the asset in
+  common coordinates; and
+  \item integrate it in the full scene and add static path/SDF checks.
 \end{enumerate}
 
-The KUKA model followed this process, using a targeted, documented
-collision-mesh configuration that preserved the required collision behaviour.
+Static room and rail-cell assets retain collision geometry where needed. The
+four industrial-arm models omit it for deterministic debugging, so they cannot
+test contact or collision avoidance.
+
+\paragraph{Engineering iteration.}
+The first useful check was not visual similarity at one camera angle, but whether
+known room features kept the same scale, orientation and relative position when
+loaded separately and in the complete world. A failed check returned the work to
+the Autodesk Inventor export or to the explicit SDF transform, depending on
+whether the discrepancy belonged to the source geometry or its simulation
+placement. After integration, static tests checked referenced assets, the
+deliberate presence or absence of collision elements and initial robot joints.
+This process produced a traceable final scene. No independent metrology was
+available to quantify geometric error.
 
 \section{World decomposition}
 
-The final description package provides three principal world configurations:
+Three configurations cover the shared third floor, focused Room~315 experiments
+and isolated robot checks. Launch passes the selected world's internal Gazebo
+name so that entity and pose services remain aligned with it. Their retained
+entry points and intended uses are summarised in \cref{tab:world-profiles}; the
+complete arguments and commands remain in the runbook.
 
-\begin{itemize}
-  \item \code{mfja\_3rd\_floor.world} for the shared third-floor environment;
-  \item \code{room\_315\_only.world} for fast, focused rail, perception and
-  language-integration work;
-  \item isolated industrial-robot worlds assembled by launch for controller
-  and geometry checks.
-\end{itemize}
+\begin{table}[htbp]
+\centering
+\small
+\caption{Principal world and launch profiles.}
+\label{tab:world-profiles}
+\begin{tabularx}{\textwidth}{@{}p{0.21\textwidth}p{0.31\textwidth}X@{}}
+\toprule
+\textbf{Profile} & \textbf{Entry point} & \textbf{Purpose}\\
+\midrule
+Full third floor & \path{full_floor.launch.py} & Shared spatial context,
+furnished rooms and selectable multi-robot integration\\
+\tablerowrule
+Room~315 only & \path{room_315_only.launch.py} & Faster rail, camera, planning
+and supervised-execution experiments\\
+\tablerowrule
+Isolated robot & \path{single_industrial_robot.launch.py} & Asset, namespace,
+bridge and command-interface checks without the complete floor\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-Because pose-update, entity-creation and removal service names include the
-internal Gazebo world name, that name forms part of the interface. The bring-up
-package explicitly passes both the selected world and its internal name, keeping
-shuttle-controller services aligned with the active world; the runbook checks
-the available services. \Cref{fig:room315-twin} shows the reconstruction.
+\Cref{fig:room315-twin} shows the reconstruction.
 
 \begin{figure}[p]
   \centering
-  \captionsetup[subfigure]{skip=2pt}
-  \begin{subfigure}[t]{0.96\textwidth}
+  \captionsetup[subfigure]{skip=1pt}
+  \begin{subfigure}[t]{0.76\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{early_full_floor.png}
-    \caption{Earliest documented reconstruction stage produced during the internship.}
+    \includegraphics[width=\linewidth,trim={0 119 741 40},clip]
+      {early_full_floor.png}
+    \caption{Earliest retained reconstruction stage.}
     \label{fig:early-floor-context}
   \end{subfigure}
 
-  \vspace{1.5mm}
-  \begin{subfigure}[t]{0.58\textwidth}
+  \vspace{1mm}
+  \begin{subfigure}[t]{0.76\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{f01a_full_mfja_floor.png}
-    \caption{Reconstructed third-floor context.}
+    \includegraphics[width=\linewidth,trim={0 132 0 70},clip]
+      {f01a_full_mfja_floor.png}
+    \caption{Third-floor CAD model I designed, rendered in Gazebo.}
     \label{fig:full-floor-context}
   \end{subfigure}
 
-  \vspace{1.5mm}
-  \begin{subfigure}[t]{0.75\textwidth}
+  \vspace{1mm}
+  \begin{subfigure}[t]{0.76\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{f01b_room315_focus.png}
-    \caption{Room~315 cells and robots.}
+    \includegraphics[width=\linewidth,trim={128 57 129 50},clip]
+      {f01b_room315_focus.png}
+    \caption{Room~315 with the integrated rail cells and robot models.}
     \label{fig:room315-focus}
   \end{subfigure}
-  \caption[Reconstruction progression from the floor model to Room~315.]
-  {The reconstruction progressed from the earliest retained intermediate stage
-  to the complete building context and the detailed Room~315 model.}
+  \caption[CAD-to-Gazebo progression from the third floor to Room~315.]
+  {My CAD-to-Gazebo work progressed from the earliest retained intermediate
+  stage to the complete Autodesk Inventor floor geometry and the detailed
+  Room~315 integration.}
   \label{fig:room315-twin}
 \end{figure}
 
 \section{Repository refactoring}
 
-As assets and launch components grew, the flat layout was refactored on 25
-March into one repository containing several ROS packages. Its root ceased to
-be a ROS package, and four packages received separate responsibilities:
+ROS~2 organises software into packages \citep{ros2packages}. As the project
+grew, I split the flat layout into four of them: description assets, user-facing
+bring-up, typed rail interfaces and control/configuration. This separates
+reusable interfaces from their implementation and lets bring-up compose the
+system without owning control algorithms. \code{colcon} is the workspace build
+tool \citep{colcon}; I used it to keep the workspace selectively buildable.
+\cref{fig:packages} shows the declared internal package dependencies and
+\cref{app:technical} lists the package contents.
 
-\begin{description}
-  \item[\code{mfja\_3rd\_floor\_description}] SDF, URDF, worlds, models,
-  meshes and static description tests;
-  \item[\code{mfja\_3rd\_floor\_bringup}] user-facing launch entry points and
-  shared floor/Room~315 orchestration;
-  \item[\code{mfja\_rail\_interfaces}] custom messages and the shuttle-add
-  service;
-  \item[\code{mfja\_robot\_control\_config}] robot configuration, rail
-  controllers, planning, perception, learning tools, launches and tests.
-\end{description}
+The initial flat package was adequate while it held only a world and a few
+assets, but adding robot wrappers, rail control, custom messages, planning,
+perception and tests made ownership ambiguous. In particular, a launch package
+that also defined message types or controller code would force unrelated users
+to depend on the complete research stack. I therefore kept models and worlds in
+the description package, made the public rail contracts independently buildable,
+placed runtime implementations and tests in control/configuration, and reserved
+bring-up for composition. After the move, I checked resource paths, package
+dependencies and the retained launch profiles from a clean build. The refactor
+did not change runtime message direction; it made build-time ownership and
+handover boundaries explicit.
 
-This gives dependencies a clear direction: description assets remain separate
-from planning code; interfaces remain independent of controller implementation;
-bring-up composes the system without control algorithms; and control/configuration
-depends on description and interfaces. It also supports selective builds with
-\code{colcon}, the ROS~2 workspace build tool. \Cref{fig:packages} shows the
-ownership and composition boundaries.
+\FloatBarrier
 
-\begin{figure}[htbp]
+\begin{figure}[H]
   \centering
-  \includegraphics[width=0.97\textwidth]{f09_ros2_package_architecture.png}
-  \caption[ROS~2 package ownership and launch-composition dependencies.]
-  {ROS~2 package ownership and composition. Description assets and
-  typed rail contracts feed the control/configuration package; the bring-up
-  package provides user-facing composition. Arrows represent dependency or
-  launch composition, not runtime ROS message flow.}
+  \input{figures/f05_ros2_package_architecture.tex}
+  \caption[ROS~2 package responsibilities and declared internal dependencies.]
+  {Responsibilities and internal dependencies declared in the four ROS~2
+  package manifests. Each arrow points from the package supplying a dependency
+  to the package that declares it; the arrows do not represent ROS message
+  flow.}
   \label{fig:packages}
 \end{figure}
 
 \section{Model integration}
 
-\subsection{Industrial robots}
+For each fixed-base arm, integration preserved the vendor link--joint tree and
+aligned its visual geometry with the controller joint list. TIAGo required a
+different composition because
+its mobile base, torso, arm and head expose several control groups rather than
+one fixed-base arm. These differences motivated the common access layer in
+\cref{chap:multi-robot} without pretending that all robots share one command
+surface.
 
-The fixed-base robots are a KUKA KR6 R900 sixx, Stäubli TX2-60L, Yaskawa HC10
-and Yaskawa HC10DT. Each model includes a link--joint kinematic tree, separate
-visual and collision geometry, mounting geometry and a controller-facing joint
-list. Integration preserves vendor-specific joint structure while exposing a
-common higher-level command tool.
+\subsection{Qualitative physical-to-simulation comparison}
 
-\subsection{TIAGo}
+\Cref{fig:physical-gazebo-left-workstations,fig:physical-gazebo-right-workstations,fig:physical-gazebo-tiago}
+compare each physical platform with its integrated Gazebo model. They check
+recognisable morphology, joints and tooling. The comparisons are qualitative
+because the viewpoints differ.
 
-TIAGo has a mobile base, torso, arm and head, unlike the industrial arms; a
-base-only variant supports focused tests. \Cref{chap:multi-robot} describes its
-embodiment-specific command and feedback surfaces.
+\begin{figure}[p]
+  \centering
+  \captionsetup{skip=4pt}
+  \includegraphics[width=0.94\textwidth,trim=7bp 123bp 11bp 27bp,clip]
+  {reality_to_simulation/robot_yaskawa_hc10.png}
+  \par\vspace{1mm}
+  \includegraphics[width=0.94\textwidth,trim=29bp 112bp 31bp 41bp,clip]
+  {reality_to_simulation/robot_kuka_kr6.png}
+  \caption[Physical-to-Gazebo comparison of the left-rail robot workstations.]
+  {Qualitative physical-to-Gazebo comparison of the industrial workstations
+  beside the left rail: Yaskawa HC10 (above) and KUKA KR6 R900 sixx (below).
+  Each panel shows the physical installation on the left and the integrated
+  Gazebo model on the right.}
+  \label{fig:physical-gazebo-left-workstations}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \captionsetup{skip=4pt}
+  \includegraphics[width=0.94\textwidth,trim=9bp 114bp 11bp 33bp,clip]
+  {reality_to_simulation/robot_yaskawa_hc10dt.png}
+  \par\vspace{1mm}
+  \includegraphics[width=0.94\textwidth,trim=7bp 157bp 40bp 18bp,clip]
+  {reality_to_simulation/robot_staubli_tx2_60l.png}
+  \caption[Physical-to-Gazebo comparison of the right-rail robot workstations.]
+  {Qualitative physical-to-Gazebo comparison of the industrial workstations
+  beside the right rail: Yaskawa HC10DT (above) and Stäubli TX2-60L (below).
+  Each panel shows the physical installation on the left and the integrated
+  Gazebo model on the right.}
+  \label{fig:physical-gazebo-right-workstations}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \captionsetup{skip=4pt}
+  \includegraphics[width=0.96\textwidth,trim=12bp 138bp 53bp 36bp,clip]
+  {reality_to_simulation/robot_tiago.png}
+  \caption[Physical-to-Gazebo comparison of TIAGo.]
+  {Qualitative physical-to-Gazebo comparison of TIAGo: the physical platform
+  is shown on the left and the model integrated in the shared Gazebo
+  environment on the right.}
+  \label{fig:physical-gazebo-tiago}
+\end{figure}
+
+\FloatBarrier
 
 \subsection{Room and device assets}
 
-Beyond the room shell, Room~315 has separate models for the static left and
-right cell frames, rail paths, switches, shuttles, carried payloads, cameras and
-visual markers. Markers aid inspection and can be hidden for clean camera
-capture. The task uses two payload states: \emph{loaded} and \emph{empty}.
+Room~315 also has separate cell, rail, device, shuttle, payload and camera assets;
+capture can hide inspection markers, and payload is \emph{loaded} or \emph{empty}.
 
-\section{Launch architecture}
+\section{Launch profiles and reproducibility}
 
-The bring-up package exposes three stable entry points:
-\path{full_floor.launch.py}, \path{room_315_only.launch.py} and
-\path{single_industrial_robot.launch.py}. Shared Room~315 arguments are
-declared once in \code{room\_315\_floor\_common.py}. This avoids configuration
-drift in which the full-floor and room-only launch files gradually develop
-different parameter names or defaults.
+ROS~2 provides a configurable package launch system \citep{ros2launch}. I used
+it to reuse one Room~315 argument set for full-floor, Room-only and
+isolated-robot modes. Operators select robots, shuttles, cameras, markers,
+initial slots and graphical or headless operation; research components require
+explicit activation. These profiles isolate an integration boundary or scale
+without changing public namespaces; their entry points, runbook and status are
+indexed in \cref{app:technical,chap:results}.
 
-Launch choices cover graphical user interface (GUI) or headless mode (no
-Gazebo graphical window), pause state, selected robots, kinematic shuttles,
-Room~315 overhead cameras, visual markers, active shuttle identities, starting
-slots and the initially loaded shuttle. Defaults leave the scene inactive or
-readily inspectable; computationally expensive or research-specific nodes
-require explicit activation. The launch layer also starts the ROS--Gazebo
-bridges for entity creation, removal and pose updates.
+The Ubuntu~24.04, ROS~2 Jazzy and Gazebo Harmonic workspace installs the recorded
+runtime. The full-floor smoke covers startup and interface availability;
+\cref{app:reproducibility} gives the build record.
 
-\begin{lstlisting}[language=bash,caption={Focused Room~315 launch used as the basic transport test.},label={lst:room-launch}]
-ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
-  robots:=none \
-  start_paused:=false \
-  gui:=true \
-  enable_room315_kinematic_shuttles:=true
-\end{lstlisting}
+\section{Conclusion}
 
-\section{Operational profiles}
-
-The launch layer combines installed assets into repeatable operational
-profiles: documented launch choices for a particular experiment. Operators can
-isolate an integration boundary, control computational load and scale to the
-shared environment without changing package ownership or public namespaces.
-Profiles are documented in \path{runbook.html} and
-\path{docs/QUICK_START_AND_FEATURE_GUIDE.md}; their verification status is
-presented in \cref{chap:results}.
-
-\section{Build and environment reproducibility}
-
-The baseline is Ubuntu~24.04, ROS~2 Jazzy and Gazebo Harmonic in a standard
-\code{colcon} workspace. Install rules cover the runtime scripts,
-configuration, launch files, models and interfaces. Recorded campaigns and the
-full-floor smoke test used executables and launch files from the built install
-space. A smoke test is a narrow startup and interface check, not a performance
-or reliability experiment. \Cref{app:reproducibility} specifies the environment
-and build procedure.
-
-\section{Outcome and model fidelity}
-
-This phase produced usable full-floor and Room~315 simulation models,
-selectable robots and a package structure supporting transport, perception,
-language interpretation and planning. Recorded evaluations include one
-all-robot full-floor cold start---new ROS and Gazebo processes rather than a
-reused session---and the Room~315 integrated campaign. Later chapters report
-transport, perception and result checking separately; \cref{chap:transport}
-details the transport model and kinematic assumptions, and
-\cref{chap:perspectives} discusses the next evaluation steps.
+The retained third-floor and Room~315 scenes now load through reproducible
+profiles with integrated robot assets. Static checks and the six-robot
+cold-start confirmed loading, isolated names and fresh feedback. The main
+difficulty was aligning CAD units and origins while documenting each
+collision-model decision.

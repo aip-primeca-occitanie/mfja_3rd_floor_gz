@@ -283,6 +283,11 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
     figure, ax = plt.subplots(figsize=(13.2, 8.0), constrained_layout=False)
     figure.patch.set_facecolor("white")
 
+    # This 13.2-inch source is inserted at 0.98 of the 165-mm report text
+    # width, a scale factor of about 0.482.  Independent labels therefore use
+    # at least 18.8 pt here so that they remain about 9 pt on printed A4.
+    print_safe_font_size = 18.8
+
     draw_runtime_paths(ax, network, colored=True, linewidth=4.0, arrows=True)
 
     raw_point_count = 0
@@ -306,7 +311,12 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
     if set(network.segments) != EXTERIOR_SEGMENTS | INTERIOR_SEGMENTS | TRUNK_SEGMENTS:
         raise RuntimeError("The public 14-segment vocabulary changed; update this figure.")
 
-    draw_switches(ax, network, radius=0.092, font_size=13.0)
+    draw_switches(
+        ax,
+        network,
+        radius=0.092,
+        font_size=print_safe_font_size,
+    )
 
     for slot_number, slot in sorted(devices.slots.items(), key=lambda item: int(item[0])):
         x, y = slot.x, -slot.y
@@ -327,7 +337,7 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
             f"slot {slot_number}",
             ha="center",
             va="center",
-            fontsize=11.2,
+            fontsize=print_safe_font_size,
             fontweight="bold",
             color=SLOT_COLOR,
             zorder=10,
@@ -356,21 +366,21 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
             segment_midpoint(network, name),
             label_position,
             segment_label_color(name),
-            font_size=9.8 if len(name) > 3 else 10.2,
+            font_size=print_safe_font_size,
         )
 
     ax.set_title(
-        "Current Room 315 right-rail source geometry: points and runtime reconstruction",
-        fontsize=16.8,
+        "Right-rail geometry: 276 CSV samples and runtime reconstruction",
+        fontsize=21.0,
         fontweight="bold",
         color="#17365d",
         pad=10,
     )
 
     legend_handles = [
-        Line2D([0], [0], color=TRUNK_COLOR, lw=4.0, label="shared trunk"),
-        Line2D([0], [0], color=EXTERIOR_COLOR, lw=4.0, label="exterior family"),
-        Line2D([0], [0], color=INTERIOR_COLOR, lw=4.0, label="interior family"),
+        Line2D([0], [0], color=TRUNK_COLOR, lw=4.0, label="trunk"),
+        Line2D([0], [0], color=EXTERIOR_COLOR, lw=4.0, label="exterior"),
+        Line2D([0], [0], color=INTERIOR_COLOR, lw=4.0, label="interior"),
         Line2D(
             [0],
             [0],
@@ -379,7 +389,7 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
             markerfacecolor=RAW_POINT_COLOR,
             markeredgecolor="#555555",
             markersize=6.5,
-            label="ordered CSV sample",
+            label="CSV samples",
         ),
         Line2D(
             [0],
@@ -390,7 +400,7 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
             markeredgecolor=SLOT_COLOR,
             markeredgewidth=1.7,
             markersize=7.5,
-            label="configured slot point",
+            label="slot anchors",
         ),
     ]
     ax.legend(
@@ -399,7 +409,7 @@ def generate_geometry_figure(network: RailNetwork, devices) -> None:
         bbox_to_anchor=(0.5, -0.015),
         ncol=5,
         frameon=False,
-        fontsize=10.5,
+        fontsize=print_safe_font_size,
         handlelength=2.5,
         columnspacing=1.6,
     )

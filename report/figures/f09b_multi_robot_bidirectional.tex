@@ -1,5 +1,5 @@
 \begin{tikzpicture}[
-  font=\sffamily\small,
+  font=\sffamily\normalsize,
   cfg/.style={
     draw=mfjablue,
     very thick,
@@ -8,16 +8,16 @@
     minimum height=13mm,
     text width=42mm,
     align=center,
-    font=\sffamily\small
+    font=\sffamily\normalsize
   },
   helper/.style={
     draw=mfjablue,
     rounded corners=1.3mm,
     fill=mfjablue!6,
-    minimum height=25mm,
+    minimum height=29mm,
     text width=38mm,
     align=center,
-    font=\sffamily\small
+    font=\sffamily\normalsize
   },
   bridge/.style={
     draw=mfjaorange,
@@ -26,7 +26,7 @@
     minimum height=15mm,
     text width=38mm,
     align=center,
-    font=\sffamily\small
+    font=\sffamily\normalsize
   },
   sim/.style={
     draw=mfjagreen,
@@ -35,7 +35,7 @@
     minimum height=15mm,
     text width=38mm,
     align=center,
-    font=\sffamily\small
+    font=\sffamily\normalsize
   },
   configflow/.style={
     -{Latex[length=2.2mm]},
@@ -68,14 +68,14 @@
   },
   lanehead/.style={
     align=center,
-    font=\sffamily\small\bfseries,
+    font=\sffamily\normalsize\bfseries,
     text=mfjablue
   }
 ]
   % One source of truth selects, validates and derives the bridge rules.
   \node[cfg] (registry) {YAML robot registry\\+ selector};
   \node[cfg,right=9mm of registry] (launch)
-    {Shared launch\\+ fixed configuration checks};
+    {Shared launch\\+ fixed configuration\\checks};
   \node[cfg,right=9mm of launch] (rules)
     {Selected entries\\+ per-instance bridge rules};
   \draw[configflow] (registry) -- (launch);
@@ -150,14 +150,14 @@
   \coordinate (derivebus) at ($(khead.north)!0.5!(thead.north)+(0,7mm)$);
   \draw[derive] (rules.south) -- ++(0,-5mm) -| (derivebus);
   \node[above=1mm of derivebus,fill=white,inner sep=1mm,
-    font=\sffamily\small,text=mfjaorange]
+    font=\sffamily\normalsize,text=mfjaorange]
     {derive one isolated lane per selected entry};
   \draw[derive] (derivebus) -| (khead.north);
   \draw[derive] (derivebus) -- (shead.north);
   \draw[derive] (derivebus) -| (thead.north);
 
   \node[below=7mm of sg,align=center,text width=145mm,
-    font=\sffamily\small\bfseries,text=mfjablue]
+    font=\sffamily\normalsize\bfseries,text=mfjablue]
     {Namespace isolation preserves robot identity across command surfaces,
      per-instance bridge, Gazebo entity and feedback.};
 \end{tikzpicture}

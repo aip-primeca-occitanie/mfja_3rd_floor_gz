@@ -215,9 +215,12 @@ def make_composite(
     canvas = Image.new("RGB", (canvas_width, canvas_height), "#ffffff")
     draw = ImageDraw.Draw(canvas)
     title_font = ImageFont.truetype(str(FONT_BOLD), 54)
-    panel_font = ImageFont.truetype(str(FONT_BOLD), 36)
-    stamp_font = ImageFont.truetype(str(FONT_REGULAR), 29)
-    note_font = ImageFont.truetype(str(FONT_REGULAR), 28)
+    # The composite is printed at 0.99 text width on A4.  At that scale,
+    # 38 raster pixels correspond to about 8.8 pt, so no independent label
+    # is smaller than the report's 8.5--9 pt print target.
+    panel_font = ImageFont.truetype(str(FONT_BOLD), 38)
+    stamp_font = ImageFont.truetype(str(FONT_REGULAR), 38)
+    note_font = ImageFont.truetype(str(FONT_REGULAR), 38)
     arrow_font = ImageFont.truetype(str(FONT_BOLD), 58)
 
     title = "V4 campaign case B03 · R3 transport · slot 3 → slot 4"
@@ -232,13 +235,13 @@ def make_composite(
 
     panels = [
         (
-            "(a) Initial accepted V4 observation — slot 3",
+            "(a) Initial accepted observation — slot 3",
             f"right-camera stamp: {initial_stamp_ns / 1_000_000_000:.3f} s",
             initial_image,
             left_x,
         ),
         (
-            "(b) Final accepted V4 observation — slot 4",
+            "(b) Final accepted observation — slot 4",
             f"right-camera stamp: {final_stamp_ns / 1_000_000_000:.3f} s",
             final_image,
             right_x,
@@ -280,10 +283,7 @@ def make_composite(
         fill="#008577",
     )
 
-    note = (
-        "Exact V4 observation-bound frames; DZI3R/DZI4R and stopped-controller "
-        "records certify the slot transition."
-    )
+    note = "DZI3R/DZI4R and stopped-controller records certify the slot transition."
     note_box = draw.textbbox((0, 0), note, font=note_font)
     draw.text(
         ((canvas_width - (note_box[2] - note_box[0])) / 2, 969),

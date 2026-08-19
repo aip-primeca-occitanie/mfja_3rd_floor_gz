@@ -1,120 +1,110 @@
 \chapter{Limitations and Perspectives}
 \label{chap:perspectives}
 
-\section{Limitations}
+Although Chapter~\ref{chap:results} establishes controlled evidence, transfer,
+repeatability and recovery remain unresolved. The discussion below links each
+limitation to its engineering consequence and to the evaluation needed before
+broader claims can be made.
 
-The first phase integrated all six configured robots, namespaced commands and
-feedback, but its one full-floor cold start does not establish simultaneous-
-motion accuracy or repeatability. Individual motion exists; collision-aware,
-contact-verified autonomous manipulation does not.
+\section{Measured limits}
 
-The integrated campaigns are Gazebo-only. Their kinematic shuttle backend
-supports topology and task-execution studies but omits torque, slip, braking,
-play and payload inertia; its software supervisor is not a certified safety
-function.
+\paragraph{Simulation and operation.}
+The six-robot check was one cold start, not a simultaneous-motion or
+repeatability study. Room~315 uses a kinematic shuttle backend that omits torque,
+slip, braking, play and payload inertia. Positive and fault cases were each run
+once; long
+outages, profile switching, longer wait-for cycles, temporal non-progress and
+device acknowledgement correlated to a specific command remain untested.
 
-The perception study uses the known shuttle fleet, fixed simulated cameras and
-generated scene families. Its one-shot Final Test is procedurally separate and
-disjoint from the current training, hard-case Validation and Canary inputs at
-the audited exact scene-ID, canonical generation-parameter fingerprint,
-image-byte and complete-label-row levels. This does not imply
-presence-configuration or perception-distribution independence:
-presence configurations intentionally recur, and the Test still characterises
-the same camera geometry and synthetic distribution rather than unseen
-hardware, lighting or installation conditions. Identity presence comes from an
-external registry and rail side from the L/R identity contract; these are
-assumptions, not learned achievements. Segment confidence is
-Validation-calibrated, while the loaded-state softmax value is not a calibrated
-probability. The 0.05 and 0.12 coordinate-error criteria use ground-truth labels
-offline and are not confidence gates that the live runtime can evaluate.
+\paragraph{Perception and data.}
+The visual results concern the known fleet, fixed simulated cameras and
+generated scene families. Scene IDs, generation-payload fingerprints, image
+bytes and complete label rows are disjoint, but a post-hoc audit found repeated
+target-state, trajectory and geometry support across development partitions.
+This is not sample reuse, yet it means the evidence is not independent of the
+underlying synthetic distribution. The Final Test therefore says nothing about
+new hardware, lighting, textures or installation conditions. Identity presence
+and rail side also come from configured registries rather than learned outputs.
 
-A post-hoc registry audit found support overlap below the sample level. Hard
-Training and Hard-case Validation share 23 complete visual-target payloads,
-plus 14 trajectory and 14 geometry fingerprints; Hard Training and Canary share
-14 target payloads, plus eight trajectory and eight geometry fingerprints. This
-is target/state support overlap, not sample or image reuse: scene IDs, images,
-complete label rows, scene families and generated variants remain disjoint.
+The segment score is Validation-calibrated, the loaded-state score is not a
+calibrated probability, and the labelled 0.05/0.12 tolerances are offline
+measures rather than runtime confidence. Their relationship to the separate
+online slot-radius rule is fixed in \cref{tab:visual-threshold-map}. The
+unexplained 52/55 shadow acceptance is an additional observation-level limit.
 
-The twelve command-producing rows cover selected valid scenes; the Final Test
-is perception-only, and manual approval remains Gazebo-only.
+\paragraph{Task and interface scope.}
+The twelve command-producing cases cover selected valid scenes only; neither
+the Final Test nor the observation studies execute a task. English evaluation
+uses ten selected requests, so open-vocabulary and multilingual behaviour are
+unknown. Finally, CLI risk labels are heuristics and the subscriber assumes a
+trusted ROS graph; multi-user use would require authenticated sources or graph
+isolation.
 
-Each positive row, fault and all-robot check ran once, so controlled-seed
-repetition (the same protocol under declared pseudorandom seeds), long-outage
-recovery and profile switching remain unmeasured. Shuttle arrival uses
-command-linked observations; device-report correlation, longer circular
-wait-for cycles and temporal non-progress remain open.
+\section{Priority next steps}
 
-The CLI confirmation heuristic labels transport high, otherwise shuttle/
-selection/rail targets medium, and all else low; these prompt labels are not a
-certified risk assessment. The subscriber trusts the ROS graph and official CLI,
-so multi-user service requires authenticated sources or graph isolation and
-sender identity.
-
-The language study covers ten selected English requests, including
-clarification, rejection and cancellation. Open-vocabulary and multilingual
-evaluation remain future extensions.
-
-\section{Next evaluation steps}
-
-\Cref{tab:remaining-plan} orders the next simulation-focused tasks by the
-question each one would answer.
+\paragraph{Evaluation order and stopping rule.}
+The completed Final Test remains a fixed reference and must not become a tuning
+set. I would first create the domain-shift data and repeat the existing
+observation and campaign protocols unchanged. A failure would open a new
+development cycle evaluated on Validation and the post-selection regression
+set; it would not justify modifying the completed Test result. Physical
+deployment is governed by the separate trial gate defined below.
 
 \begin{table}[H]
 \centering
-\caption{Priority experiments for extending the evaluation.}
+\small
+\renewcommand{\arraystretch}{1.08}
+\caption{Priority experiments for extending the evidence.}
 \label{tab:remaining-plan}
-\begin{tabularx}{\textwidth}{@{}
->{\raggedright\arraybackslash}p{0.09\textwidth}
->{\raggedright\arraybackslash}p{0.36\textwidth}
->{\raggedright\arraybackslash}X@{}}
+\begin{tabularx}{\textwidth}{@{}p{0.10\textwidth}p{0.36\textwidth}X@{}}
 \toprule
-\textbf{Priority} & \textbf{Engineering task} & \textbf{Purpose}\\
+\textbf{Priority} & \textbf{Engineering task} & \textbf{Question answered}\\
 \midrule
-P0 & Generate a separate visual-shift evaluation set & Measure transfer to
-varied camera poses, lighting, textures and sensor noise without tuning on the
-completed one-shot Final Test\\
+P0 & Create a separate visual-shift set with varied cameras, lighting, textures
+and sensor noise & Does perception transfer beyond the completed synthetic
+distribution without tuning on the Final Test?\\
 \tablerowrule
-P0 & Repeat the seven-scene review across controlled seeds & Measure
-same-frame acceptance, exact segment/payload agreement and longitudinal-error
-variation in sparse, dense and blocker arrangements\\
+P0 & Repeat the seven-scene observation review across declared seeds & How
+variable are acceptance and localisation in sparse, dense and blocker scenes,
+including the current 52/55 shadow result?\\
 \tablerowrule
-P0 & Inject and recover faults in the live ROS graph & Extend the completed
-eight-case fail-closed contract check with timed camera/presence loss, node
-restart, planner timeout and emergency-stop recovery\\
+P0 & Inject timed camera, presence, planner and node-restart faults in the live
+ROS graph & Can the runtime recover while preserving fail-closed behaviour?\\
 \tablerowrule
-P0 & Repeat the positive and fault campaigns across controlled seeds &
-Quantify completion, abstention and recovery variation while preserving the
-exact schema, checkpoint, terminal-effect and controller-stop checks\\
+P0 & Repeat the positive and fault campaigns across controlled seeds & How
+variable are completion, abstention, recovery and controller stop?\\
 \tablerowrule
-P1 & Relate switch and stopper acknowledgements to commands & Correlate each
-device result with a matching state update newer than the command\\
+P1 & Correlate switch/stopper acknowledgements with commands and extend
+reservation/deadlock cases & Do devices and multiple shuttles remain consistent
+under delayed feedback and longer conflicts?\\
 \tablerowrule
-P1 & Mirror and periodically restore-test the reproducibility release & Verify
-the published archive and nested checksums from a fresh machine, retain an
-independent institutional copy and document any future evidence revision\\
+P1 & Mirror the releases and perform a clean-machine restore and replay & Can
+MFJA recover the exact source, data and evidence independently?\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{Continued use at MFJA}
 
-For teaching, students can launch selected robots, inspect interfaces, alter a
-rail scene, generate PDDL and trace a supervised step from a configured cold
-start using the runbooks.
+The handover remains suitable for Gazebo teaching and research: students can
+launch selected robots, inspect interfaces, alter rail scenes, generate PDDL
+and trace a supervised task. Alternative planners, perception checkpoints or
+grounding methods can reuse the fixed cases without changing controller or
+arrival contracts. New model selection must use Validation; the small
+post-selection regression set remains a development check, and new visual
+conditions require a separate domain-shift evaluation rather than reuse of the
+completed Final Test. Here, domain shift means a change in the visual-data
+distribution, not a change to the PDDL action domain or ROS Domain ID.
 
-The same assets provide a reference benchmark. Alternative planners,
-perception checkpoints or task-grounding methods can use the fixed case matrix
-without changing controller behaviour or arrival checks. Model selection must
-use Validation; the Canary remains a regression check and the Final Test remains
-the fixed one-shot evaluation. Added camera, occlusion, clutter or payload
-perturbations belong in a separate domain-shift partition.
-Here, domain shift means a change in the visual data distribution, not a change
-to the PDDL action domain or ROS Domain ID.
+\paragraph{Gate before a physical trial.}
+Simulation qualification would be a prerequisite, not deployment authority. A
+future physical trial would also require an independent machinery-risk review,
+an explicit mapping to the platform's certified emergency functions, an
+authenticated command owner, and a low-speed commissioning protocol with
+predefined abort criteria. None of those controls is supplied by the current
+Gazebo supervisor, so a successful simulation replay alone must not be used to
+authorise hardware motion.
 
-\section{Focused research extensions}
-
-Planner/runtime changes must retain canonical rail alignment, executable
-translation/effect checks, schema/checkpoint allowlists, presence-aware
-abstention, calibrated confidence and operator approval. Only independently
-tested atomic (non-overlapping) tasks should progress to concurrency, after
-reservation and deadlock evaluation.
+The completed Final Test should remain unchanged. Future experiments should
+examine new visual conditions, repeated runs, live faults and concurrent shuttle
+operation.

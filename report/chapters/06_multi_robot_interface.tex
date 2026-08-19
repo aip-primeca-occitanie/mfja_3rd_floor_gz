@@ -1,54 +1,51 @@
 \chapter{Unified Multi-Robot Access and Control}
 \label{chap:multi-robot}
 
+Six different robot models had to run together without losing their
+model-specific command interfaces. I linked a shared registry and instance
+selector to isolated communication links and a common command tool.
+
+Using the project-supplied inventory and the robot models attributed in
+\cref{chap:digital-twin}, I designed and tested a registry in YAML, a
+human-readable configuration format.
+I also implemented selector rules, isolated namespaces, bridge generation, the
+launcher and the command helper; none of this shared access layer was present in
+the baseline.
+
 \section{What ``unified'' means}
 
-In this project, a \emph{unified} access layer is defined by four concrete
-properties:
+Here, \emph{unified} means that one YAML registry declares selectable instances,
+one launch path starts them and their bridges, one separate helper validates a
+named robot and joint vector, and instance-derived namespaces isolate commands
+and feedback.
 
-\begin{enumerate}
-  \item common YAML configuration declares selectable robot instances;
-  \item a common launch path spawns the selected instances and their bridges;
-  \item a separate common command helper validates a named robot and its joint
-  vector;
-  \item instance-derived namespaces isolate commands and feedback.
-\end{enumerate}
-
-The layer preserves operational differences. Fixed-base arms use joint
-trajectories; TIAGo also exposes base velocity and a linear torso joint. Joint
-limits, counts, names and units remain robot-specific. The common helper
-validates the selector, vector and units for \path{/joint_trajectory}, while
-structure-specific interfaces such as \path{/cmd_vel} remain separate.
+A joint trajectory is a timed sequence of joint targets. Fixed-base arms use
+these trajectories, whereas TIAGo also exposes base velocity and a linear torso
+joint. The helper validates the selected robot, vector and units without hiding
+these model-specific interfaces.
 
 \section{Multi-robot operation in one Gazebo process}
 
-The first phase established per-instance command interfaces for heterogeneous
-robots in one Gazebo process. Each selected YAML entry defines an instance
-name, model, spawn pose and enabled state. Shared launch rejects duplicate
-names and derives namespace and bridge rules from that identity. For each
-supported structure, the helper has a separate command definition---aliases,
-joint order, topic and units---distinct from the operational launch profiles in
-\cref{chap:digital-twin}. Thus selection, spawning, commands and feedback share
-one identity chain. The retained live smoke covers the all-robot profile;
-automated suites in \cref{chap:results} cover the other selector forms.
+Each selected YAML entry defines an instance name, model, pose and enabled
+state. Launch rejects duplicate names and derives its namespace and bridge from
+that identity; the helper supplies the corresponding joint order, topic and
+units. Selection, spawning, commands and feedback therefore share one identity
+chain. The retained smoke covers all six robots, while automated tests cover
+the remaining selector forms (\cref{chap:results}).
 
 \section{Configuration-driven robot registry}
 
-Robot instances come from YAML entries containing the instance name, model,
-spawn pose and enabled flag. The full floor and Room~315 may use different
-files with the same loader. Launch derives SDF/URDF paths, ROS namespace and
-bridge topics from these fields. Users may select a full name, derived short
-alias, numeric order, comma-separated set, \code{all} or \code{none};
-\cref{tab:robots} summarises the principal surfaces.
-
-The operator helper uses a separate validated Python table for aliases, joint
-ordering, command topics and angular or linear unit semantics. Tests cover both
-configuration boundaries, although YAML entries and helper definitions are not
-generated from one source.
+The full floor and Room~315 use the same loader with different YAML files.
+Selectors accept a full name, alias, numeric order, set, \code{all} or
+\code{none}; the retained instances and their principal command surfaces are
+listed in \cref{tab:robots}. A separate validated Python table records aliases, joint
+order, topics and unit semantics. This remaining duplication is test-covered,
+but the two configuration sources are not generated from one definition.
 
 \begin{table}[htbp]
 \centering
-\caption{Principal robot selectors and command surfaces.}
+\small
+\caption{Robot selectors and principal command surfaces.}
 \label{tab:robots}
 \begin{tabularx}{\textwidth}{@{}l l l X@{}}
 \toprule
@@ -56,90 +53,99 @@ generated from one source.
 \midrule
 \code{kuka} & \code{kuka1} & KUKA KR6 &
 \makecell[l]{\code{/kuka1/}\\\code{joint\_trajectory}}\\ \tablerowrule
-\code{staubli} & \code{staubli1} & Stäubli TX2 &
+\code{staubli} & \code{staubli1} & St\"aubli TX2 &
 \makecell[l]{\code{/staubli1/}\\\code{joint\_trajectory}}\\ \tablerowrule
 \code{hc10} & \code{yaskawa\_hc10\_1} & Yaskawa HC10 &
 \makecell[l]{\code{/yaskawa\_hc10\_1/}\\\code{joint\_trajectory}}\\ \tablerowrule
 \code{hc10dt} & \code{yaskawa\_hc10dt\_1} & Yaskawa HC10DT &
 \makecell[l]{\code{/yaskawa\_hc10dt\_1/}\\\code{joint\_trajectory}}\\ \tablerowrule
 \code{tiago} & \code{tiago1} & Mobile manipulator &
-\makecell[l]{\code{/tiago1/}\\\code{joint\_trajectory}\\\code{/tiago1/cmd\_vel}}\\ \tablerowrule
+Joint trajectory and \makecell[l]{\code{/tiago1/}\\\code{cmd\_vel}}\\ \tablerowrule
 \code{tiago\_base} & \code{tiago\_base1} & Mobile base with torso &
-\makecell[l]{\code{/tiago\_base1/}\\\code{joint\_trajectory}\\
-\code{/tiago\_base1/cmd\_vel}}\\
+Joint trajectory and \makecell[l]{\code{/tiago\_base1/}\\\code{cmd\_vel}}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-YAML-driven launch eliminated duplicated launch scripts for every robot
-combination. Tests check unique instance names and asset resolution; helper
-tests check definition selection, joint counts, units and command topics.
-
 \section{Dynamic bridge generation}
 
-Gazebo Transport and ROS~2 use different communication middleware and message
-types. Launch derives each selected robot's bridge configuration and starts
-\code{ros\_gz\_bridge} instances. Joint commands travel from ROS~2 to Gazebo;
-joint state, odometry and transform information return where required. Under
-the official bridge model, YAML connects a ROS topic, Gazebo topic,
-corresponding message types and communication direction
-\citep{gazeborosintegration}.
+\code{ros\_gz\_bridge} translates between Gazebo Transport and ROS~2 messages
+\citep{gazeborosintegration}. In my implementation, launch derives one bridge
+lane per selected YAML identity. Commands enter Gazebo and required state,
+odometry and transforms return on that lane, preserving one-to-one addressing
+(\cref{fig:robot-flow}).
 
-Derivation from selected YAML entries synchronises renamed namespaces and
-bridge configuration, while per-instance command topics preserve one-to-one
-addressing. Thus launch selection, spawned identity and bridge topic all come
-from the same entry (\cref{fig:robot-flow}).
+Deriving the bridge from the selected registry entry is important: a renamed
+instance changes its spawned entity, ROS namespace and bridge topics together.
+A hand-written bridge list could leave one of those three names stale and route
+a valid command to the wrong model. The loader therefore rejects duplicate
+instances before spawn, and tests compare the selected identity with the topics
+created for it.
 
 \begin{figure}[htbp]
 \centering
 \resizebox{0.98\textwidth}{!}{\input{figures/f09b_multi_robot_bidirectional.tex}}
 \caption[Configuration-driven multi-robot command and feedback isolation.]
-{Configuration-driven multi-robot launch, command and feedback isolation.
-Selected YAML entries generate per-instance bridges; the selected
-operator-helper profile addresses the corresponding name. There is no shared
-global joint-command topic.}
+{Selected YAML entries generate isolated per-instance bridges and helper
+addressing; there is no shared global joint-command topic.}
 \label{fig:robot-flow}
 \end{figure}
 
 \section{Joint-command helper}
 
-Publishing raw \code{trajectory\_msgs/JointTrajectory} messages is cumbersome
-and error-prone. The \code{robot\_joint\_command.py} operator tool lists
-supported names, checks the expected position count, maps names to joints,
-accepts radians or degrees for angular joints, uses metres for linear joints
-and publishes only to the selected namespace.
-
-\begin{lstlisting}[language=bash,caption={Examples of the common robot command tool.},label={lst:robot-command}]
-ros2 run mfja_robot_control_config robot_joint_command.py --list
-
-ros2 run mfja_robot_control_config robot_joint_command.py \
-  kuka --unit deg --positions 34.38 -57.30 63.03 0 34.38 0
-
-ros2 run mfja_robot_control_config robot_joint_command.py \
-  staubli --unit rad --positions 0.1 0.4 -0.6 0 0.5 0
-\end{lstlisting}
-
-The helper standardises input and creates a short, correctly ordered trajectory
-command. Trajectory planning, collision-free arm motion, transport-cell
-synchronisation and controller-specific constraints remain separate.
-
-\section{Interface portability}
-
-Public namespaces and typed state boundaries are independent of the simulator
-backend. A provider is the runtime component accepting commands or supplying
-state behind them. Gazebo can therefore be replaced while preserving identity,
-units, timestamps, freshness and controller-feedback semantics. The reported
-implementation and results use the Gazebo providers identified in
+The helper validates robot identity, position count, joint mapping and units
+before namespaced publication; it does not plan trajectories, collision-free
+motion or cell synchronisation. Typed boundaries allow another provider to
+preserve identity, units, timestamps and feedback. Usage and provenance are in
 \cref{app:reproducibility}.
 
-\section{Results}
+Publishing a raw \code{JointTrajectory} remains possible, but the helper removes
+two common operator ambiguities: the order of the numeric positions and whether
+an angular value is expressed in degrees or radians. Linear joints remain in
+metres. A rejected vector produces no publication, while a valid vector is sent
+only to the selected instance namespace.
 
-The selector implements \code{none}, one exact name, comma-separated sets and
-\code{all}. In the retained all-robot cold-start smoke test, the full-floor
-entry point spawned all six enabled registry entries. Each exposed a distinct
-joint-command topic and a newly received, post-launch namespaced state sample;
-both TIAGo variants also exposed independent base-velocity topics. The smoke
-recorded startup and feedback without motion commands. Named automated suites
-in \cref{chap:results} cover command-helper and launch-selection rules, including
-the remaining selector rules. Together, the live check and automated tests show
-that the separate simulation models share a maintainable access interface.
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.04}
+\caption{Checks applied at the shared robot-access boundary.}
+\label{tab:robot-access-checks}
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash}p{0.20\textwidth}
+>{\raggedright\arraybackslash}p{0.36\textwidth}
+>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Boundary} & \textbf{Rejected condition} & \textbf{Observable oracle}\\
+\midrule
+Selection and identity & Unknown or duplicate selector; inconsistent instance
+identity & Launch stops before spawn, so no ambiguous namespace or bridge is
+created\\ \tablerowrule
+Command vector & Unknown robot, wrong value count or unsupported unit & The
+helper publishes no trajectory\\ \tablerowrule
+Configuration parity & Alias, joint order or topic differs between the registry
+and helper table & The parity test fails before the configuration is used for a
+command\\ \tablerowrule
+Feedback isolation & Missing fresh state or an identity/topic mismatch & The
+cold-start check fails unless every selected instance has distinct feedback\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Automated selector, parity and helper tests cover the first three boundaries.
+The retained six-instance cold start verifies distinct, fresh feedback for the
+fourth.
+
+\paragraph{Portability boundary.}
+
+The public identity, command and feedback contracts are independent of the
+Gazebo mesh and could be preserved by a future hardware provider. Implementing
+that provider was outside this work.
+
+\section{Conclusion}
+
+The resulting access layer starts six isolated robot instances without hiding
+their command differences. The 42-check suite and cold-start smoke confirmed
+selector behaviour, distinct names and fresh feedback
+(\cref{chap:results}). The main integration difficulty was preserving one
+identity chain across different joint counts, units and mobile-base interfaces.
