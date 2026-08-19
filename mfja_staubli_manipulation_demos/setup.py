@@ -3,6 +3,18 @@ from os.path import isfile
 from setuptools import setup
 
 package_name = "mfja_staubli_manipulation_demos"
+room315_executables = [
+    "scripts/room315_check_setup.sh",
+    "scripts/room315_demo.sh",
+    "scripts/room315_hpp_manipulation.sh",
+    "scripts/room315_manipulation_demo.sh",
+    "scripts/room315_moving_shuttle_demo.sh",
+]
+room315_support_scripts = [
+    "scripts/room315_env.sh",
+    "scripts/room315_manipulation_sequence.py",
+    "scripts/room315_moving_shuttle_sequence.py",
+]
 
 setup(
     name=package_name,
@@ -17,15 +29,20 @@ setup(
         (f"share/{package_name}/hpp", [path for path in glob("hpp/*") if isfile(path)]),
         (
             f"share/{package_name}/scripts",
-            [path for path in glob("scripts/*") if isfile(path)],
+            room315_executables + room315_support_scripts,
+        ),
+        (
+            f"lib/{package_name}",
+            room315_executables + ["scripts/room315_env.sh"],
         ),
         (
             f"share/{package_name}/models/staubli_tx2_60l_gripper",
             glob("models/staubli_tx2_60l_gripper/*"),
         ),
-        (f"share/{package_name}/urdf", glob("urdf/*.urdf")),
+        (f"share/{package_name}/models", glob("models/*.sdf")),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="Paul Sardin",
     maintainer_email="paulsardin123@gmail.com",

@@ -1,23 +1,20 @@
-"""ROS, Gazebo, gripper, and payload execution helpers for the Room 315 demo."""
+"""Execute the Room 315 manipulation plan through ROS and Gazebo."""
 
 import time
 
 import numpy as np
 import rclpy
 from builtin_interfaces.msg import Duration
-from hpp_exec import configs_to_joint_trajectory
+from hpp_exec import configs_to_joint_trajectory, send_trajectory
 from rclpy.node import Node
 from ros_gz_interfaces.msg import Entity
-from ros_gz_interfaces.srv import DeleteEntity, SetEntityPose, SpawnEntity
+from ros_gz_interfaces.srv import SetEntityPose
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Bool
 from trajectory_msgs.msg import JointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 from room315_problem import (
-    BOX_ENTITY_NAME,
     JOINT_NAMES,
-    PAYLOAD_BOX_SDF,
     box_rank,
     box_world_pose_msg,
     normalize_box_quaternion,
@@ -72,36 +69,6 @@ def duration_msg(seconds):
     return msg
 
 
-class BoolCommandGripperOutput:
-    def __init__(self, node, args):
-        self.node = node
-        self.topic = args.gripper_command_topic or (
-            f"/{args.robot_name}/gripper/command"
-        )
-        self.settle_s = args.gripper_settle_s
-        self.publisher = node.create_publisher(Bool, self.topic, 10)
-        wait_for_subscriber(node, self.publisher, self.topic, args.subscriber_timeout)
-
-    def command(self, closed):
-        message = Bool()
-        message.data = closed
-        self.publisher.publish(message)
-        rclpy.spin_once(self.node, timeout_sec=0.05)
-        action = "close" if closed else "open"
-        print(f"gripper pre-action {action}: {self.topic}={closed}", flush=True)
-        if self.settle_s > 0.0:
-            sleep_with_spin(self.node, self.settle_s)
-
-    def open(self):
-        self.command(False)
-
-    def close(self):
-        self.command(True)
-
-    def destroy(self):
-        pass
-
-
 class JointTrajectoryGripperOutput:
     def __init__(self, node, args):
         self.node = node
@@ -113,13 +80,12 @@ class JointTrajectoryGripperOutput:
         self.close_positions = list(args.gripper_close_positions)
         self.duration = args.gripper_motion_duration
         self.settle_s = args.gripper_settle_s
+        if len(self.open_positions) != len(self.joints):
+            raise RuntimeError("gripper open positions do not match its joints")
+        if len(self.close_positions) != len(self.joints):
+            raise RuntimeError("gripper close positions do not match its joints")
         self.publisher = node.create_publisher(JointTrajectory, self.topic, 10)
         wait_for_subscriber(node, self.publisher, self.topic, args.subscriber_timeout)
-
-        if len(self.open_positions) != len(self.joints):
-            raise RuntimeError("--gripper-open-positions must match --gripper-joints")
-        if len(self.close_positions) != len(self.joints):
-            raise RuntimeError("--gripper-close-positions must match --gripper-joints")
 
     def command(self, positions, label):
         trajectory = JointTrajectory()
@@ -130,7 +96,7 @@ class JointTrajectoryGripperOutput:
         trajectory.points.append(point)
         publish_trajectory(self.node, self.publisher, self.topic, trajectory)
         print(
-            f"gripper pre-action {label}: {self.topic} {self.joints} -> {positions}",
+            f"gripper {label}: {self.topic} {self.joints} -> {positions}",
             flush=True,
         )
         if self.duration + self.settle_s > 0.0:
@@ -142,40 +108,33 @@ class JointTrajectoryGripperOutput:
     def close(self):
         self.command(self.close_positions, "close")
 
-    def destroy(self):
-        pass
-
 
 class StaubliIOGripperOutput:
     def __init__(self, node, args):
-        from staubli_msgs.msg import IOModule
-        from staubli_msgs.msg import ServiceReturnCode
-        from staubli_msgs.srv import WriteSingleIO
+        try:
+            from staubli_msgs.msg import IOModule
+            from staubli_msgs.msg import ServiceReturnCode
+            from staubli_msgs.srv import WriteSingleIO
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "staubli_msgs is required for --gripper-output staubli-io"
+            ) from exc
 
         self.node = node
         self.WriteSingleIO = WriteSingleIO
         self.ServiceReturnCode = ServiceReturnCode
         self.service_name = args.staubli_io_service
-        self.pin = args.staubli_io_pin
-        self.module_id = (
-            IOModule.VALVE_OUT
-            if args.staubli_io_module_id is None
-            else args.staubli_io_module_id
-        )
-        self.closed_state = not args.staubli_io_inverted
-        self.open_state = args.staubli_io_inverted
+        self.module_id = IOModule.VALVE_OUT
+        self.pin = 0
         self.timeout = args.staubli_io_timeout
         self.settle_s = args.gripper_settle_s
         self.client = node.create_client(WriteSingleIO, self.service_name)
-
-    def command(self, close):
-        label = "close" if close else "open"
-        state = self.closed_state if close else self.open_state
         if not self.client.wait_for_service(timeout_sec=self.timeout):
             raise RuntimeError(
                 f"Staubli IO service {self.service_name} is unavailable"
             )
 
+    def command(self, state, label):
         request = self.WriteSingleIO.Request()
         request.module.id = self.module_id
         request.pin = self.pin
@@ -196,7 +155,7 @@ class StaubliIOGripperOutput:
             )
 
         print(
-            f"gripper pre-action {label}: {self.service_name} "
+            f"gripper {label}: {self.service_name} "
             f"module={self.module_id} pin={self.pin} state={state}",
             flush=True,
         )
@@ -204,13 +163,10 @@ class StaubliIOGripperOutput:
             sleep_with_spin(self.node, self.settle_s)
 
     def open(self):
-        self.command(False)
+        self.command(True, "open")
 
     def close(self):
-        self.command(True)
-
-    def destroy(self):
-        pass
+        self.command(False, "close")
 
 
 class NoGripperOutput:
@@ -220,13 +176,8 @@ class NoGripperOutput:
     def close(self):
         pass
 
-    def destroy(self):
-        pass
-
 
 def make_gripper_output(node, args):
-    if args.gripper_output == "bool":
-        return BoolCommandGripperOutput(node, args)
     if args.gripper_output == "joint-trajectory":
         return JointTrajectoryGripperOutput(node, args)
     if args.gripper_output == "staubli-io":
@@ -236,13 +187,9 @@ def make_gripper_output(node, args):
 
 def publish_trajectory(node, publisher, topic, trajectory):
     if publisher.get_subscription_count() == 0:
-        node.get_logger().warning(f"no subscriber detected on {topic}")
+        raise RuntimeError(f"no subscriber detected on {topic}")
     publisher.publish(trajectory)
     rclpy.spin_once(node, timeout_sec=0.05)
-
-
-def timed_joint_trajectory(configs, times):
-    return configs_to_joint_trajectory(configs, times, JOINT_NAMES)
 
 
 def wait_for_subscriber(node, publisher, topic, timeout):
@@ -250,10 +197,10 @@ def wait_for_subscriber(node, publisher, topic, timeout):
     while time.monotonic() < deadline and publisher.get_subscription_count() == 0:
         rclpy.spin_once(node, timeout_sec=0.1)
     if publisher.get_subscription_count() == 0:
-        node.get_logger().warning(f"no subscriber detected on {topic}")
+        raise RuntimeError(f"no subscriber detected on {topic}")
 
 
-def call_service(node, client, request, label, timeout=3.0, require_success=True):
+def call_service(node, client, request, label, timeout=3.0):
     if not client.wait_for_service(timeout_sec=timeout):
         raise RuntimeError(f"{label} service is unavailable")
 
@@ -265,44 +212,9 @@ def call_service(node, client, request, label, timeout=3.0, require_success=True
     result = future.result()
     if result is None:
         raise RuntimeError(f"{label} service returned no result")
-    if require_success and hasattr(result, "success") and not result.success:
+    if not result.success:
         raise RuntimeError(f"{label} service failed: {result}")
     return result
-
-
-def delete_payload(node, client, entity_name):
-    request = DeleteEntity.Request()
-    request.entity.name = entity_name
-    request.entity.type = Entity.MODEL
-    try:
-        call_service(
-            node,
-            client,
-            request,
-            f"delete {entity_name}",
-            timeout=2.0,
-            require_success=False,
-        )
-    except RuntimeError as exc:
-        node.get_logger().warning(str(exc))
-
-
-def spawn_payload(node, spawn_client, entity_name, pose):
-    request = SpawnEntity.Request()
-    request.entity_factory.name = entity_name
-    request.entity_factory.allow_renaming = False
-    request.entity_factory.sdf = PAYLOAD_BOX_SDF.replace(
-        f'model name="{BOX_ENTITY_NAME}"',
-        f'model name="{entity_name}"',
-    )
-    request.entity_factory.pose = pose
-    request.entity_factory.relative_to = "world"
-    try:
-        call_service(node, spawn_client, request, f"spawn {entity_name}", timeout=5.0)
-        return True
-    except RuntimeError as exc:
-        node.get_logger().warning(str(exc))
-        return False
 
 
 def make_set_payload_pose_request(entity_name, pose):
@@ -441,6 +353,7 @@ def follow_payload(
     last_payload_config = None
     last_report = start
     pending_pose = None
+    pending_payload_config = None
 
     while True:
         now = time.monotonic()
@@ -449,6 +362,25 @@ def follow_payload(
                 f"no fresh joint state on {tracker.topic} for "
                 f"{args.joint_state_stale_timeout:.1f} s"
             )
+
+        if pending_pose is not None and pending_pose.done():
+            try:
+                result = pending_pose.result()
+            except Exception as exc:
+                raise RuntimeError(
+                    f"set pose for {entity_name} failed: {exc}"
+                ) from exc
+            if result is None:
+                raise RuntimeError(
+                    f"set pose for {entity_name} returned no result"
+                )
+            if not result.success:
+                raise RuntimeError(
+                    f"set pose for {entity_name} failed: {result}"
+                )
+            last_payload_config = pending_payload_config
+            pending_pose = None
+            pending_payload_config = None
 
         current = tracker.current()
         phase_end_error = float("inf")
@@ -470,43 +402,38 @@ def follow_payload(
                 last_report = now
             phase_end_error = float(np.max(np.abs(current - arm_positions[-1])))
 
-        q = interpolate_indexed_config(robot, payload_configs, progress)
-        if payload_pose_changed(robot, last_payload_config, q, args.payload_pose_epsilon):
-            if pending_pose is not None and pending_pose.done():
-                pending_pose = None
-            if pending_pose is None:
-                pending_pose = set_payload_pose_async(
-                    pose_client,
-                    entity_name,
-                    box_world_pose_msg(robot, q),
-                )
-                rclpy.spin_once(node, timeout_sec=0.0)
-                last_payload_config = q
+        if pending_pose is not None and now >= deadline:
+            raise RuntimeError(
+                f"set pose for {entity_name} did not complete before "
+                "the payload sync deadline"
+            )
 
         if phase_end_error <= args.segment_tolerance:
-            set_payload_pose(
-                node,
-                pose_client,
-                entity_name,
-                box_world_pose_msg(robot, payload_configs[-1]),
-                timeout=0.5,
-            )
-            print(
-                f"payload sync final snap: arm reached phase end, "
-                f"progress={progress:.1f}/{len(arm_configs) - 1}",
-                flush=True,
-            )
-            break
-        if progress >= len(arm_configs) - 1:
-            set_payload_pose(
-                node,
-                pose_client,
-                entity_name,
-                box_world_pose_msg(robot, payload_configs[-1]),
-                timeout=0.5,
-            )
-            break
-        if now >= deadline:
+            if pending_pose is None:
+                set_payload_pose(
+                    node,
+                    pose_client,
+                    entity_name,
+                    box_world_pose_msg(robot, payload_configs[-1]),
+                    timeout=0.5,
+                )
+                print(
+                    f"payload sync final snap: arm reached phase end, "
+                    f"progress={progress:.1f}/{len(arm_configs) - 1}",
+                    flush=True,
+                )
+                break
+        elif progress >= len(arm_configs) - 1:
+            if pending_pose is None:
+                set_payload_pose(
+                    node,
+                    pose_client,
+                    entity_name,
+                    box_world_pose_msg(robot, payload_configs[-1]),
+                    timeout=0.5,
+                )
+                break
+        elif now >= deadline:
             final_snap_start = len(arm_configs) - 1 - args.payload_final_snap_samples
             if progress >= final_snap_start:
                 set_payload_pose(
@@ -526,51 +453,20 @@ def follow_payload(
                 f"payload sync timed out at progress {progress:.1f}/"
                 f"{len(arm_configs) - 1}"
             )
+        else:
+            q = interpolate_indexed_config(robot, payload_configs, progress)
+            if pending_pose is None and payload_pose_changed(
+                robot, last_payload_config, q, args.payload_pose_epsilon
+            ):
+                pending_pose = set_payload_pose_async(
+                    pose_client,
+                    entity_name,
+                    box_world_pose_msg(robot, q),
+                )
+                pending_payload_config = q.copy()
+                rclpy.spin_once(node, timeout_sec=0.0)
         next_tick += period
         sleep_with_spin(node, max(0.0, next_tick - time.monotonic()))
-
-
-def set_payload_config(node, pose_client, robot, entity_name, config):
-    set_payload_pose(
-        node,
-        pose_client,
-        entity_name,
-        box_world_pose_msg(robot, config),
-    )
-
-
-def semantic_grasp(
-    node,
-    gripper,
-    pose_client,
-    robot,
-    entity_name,
-    phase,
-):
-    gripper.close()
-    print("semantic grasp: payload follows gripper TCP pose")
-    if pose_client is not None:
-        set_payload_config(
-            node, pose_client, robot, entity_name, phase.payload_configs[0]
-        )
-    return True
-
-
-def semantic_release(
-    node,
-    gripper,
-    pose_client,
-    robot,
-    entity_name,
-    phase,
-):
-    gripper.open()
-    print(f"semantic release: payload fixed in {phase.payload_mode}")
-    if pose_client is not None:
-        set_payload_config(
-            node, pose_client, robot, entity_name, phase.payload_configs[0]
-        )
-    return True
 
 
 def execute_phase(
@@ -584,13 +480,24 @@ def execute_phase(
     phase,
     args,
 ):
-    trajectory = timed_joint_trajectory(phase.configs, phase.times)
     print(
-        f"publishing phase {phase.name}: "
+        f"executing phase {phase.name}: "
         f"{len(phase.configs)} points, {phase.times[-1]:.1f} s",
         flush=True,
     )
-    publish_trajectory(node, publisher, topic, trajectory)
+    if publisher is None:
+        if not send_trajectory(
+            phase.configs,
+            phase.times,
+            JOINT_NAMES,
+            controller_topic=topic,
+        ):
+            raise RuntimeError(f"Staubli failed phase {phase.name} on {topic}")
+    else:
+        trajectory = configs_to_joint_trajectory(
+            phase.configs, phase.times, JOINT_NAMES
+        )
+        publish_trajectory(node, publisher, topic, trajectory)
 
     if phase.payload_mode == "follow" and pose_client is not None:
         follow_payload(
@@ -604,47 +511,7 @@ def execute_phase(
             phase.times,
             args,
         )
-        wait_for_phase_end(node, tracker, phase, args)
-    else:
-        wait_for_phase_end(node, tracker, phase, args)
-
-
-def move_to_start(node, publisher, topic, tracker, args, q_start):
-    current = tracker.wait(args.joint_state_timeout)
-    if current is None:
-        raise RuntimeError(f"could not read {tracker.topic}")
-
-    delta = float(np.max(np.abs(current - q_start[:6])))
-    if delta < 0.02:
-        return
-
-    duration = max(args.min_start_duration, delta / args.start_joint_speed)
-    n_samples = max(3, int(duration * args.start_samples_per_second) + 1)
-    start_configs = [
-        (1.0 - alpha) * current + alpha * q_start[:6]
-        for alpha in np.linspace(0.0, 1.0, n_samples)
-    ]
-    trajectory = timed_joint_trajectory(
-        [current] + start_configs,
-        [0.0]
-        + np.linspace(args.initial_hold, args.initial_hold + duration, n_samples).tolist(),
-    )
-    print(f"moving Staubli to the planned start ({duration:.1f} s)")
-    publish_trajectory(node, publisher, topic, trajectory)
-    timeout = args.execution_timeout_scale * (args.initial_hold + duration) + 5.0
-    if not wait_for_arm_configuration(
-        node, tracker, q_start[:6], timeout, args.start_tolerance
-    ):
-        current = tracker.current()
-        error = (
-            float(np.max(np.abs(current - q_start[:6])))
-            if current is not None
-            else float("inf")
-        )
-        raise RuntimeError(
-            f"Staubli did not reach the planned start within {timeout:.1f} s "
-            f"(error {error:.3f} rad)"
-        )
+    wait_for_phase_end(node, tracker, phase, args)
 
 
 def require_start(node, tracker, args, q_start):
@@ -656,48 +523,12 @@ def require_start(node, tracker, args, q_start):
     error = float(np.max(np.abs(current - target)))
     if error > args.start_tolerance:
         raise RuntimeError(
-            f"Staubli is {error:.3f} rad from the HPP start. Run the moving "
-            "demo helper's pre-position step first, or pass --q-start for the "
-            "real robot pose. Only use --start-mode move after checking that "
-            "pre-position path is clear."
+            f"Staubli is {error:.3f} rad from the HPP start. In simulation, "
+            "run the moving demo's preposition step. On hardware, pass "
+            "--q-start for the measured robot pose after reconciling the model."
         )
 
-    print(f"Staubli already at the planned start (error {error:.3f} rad)", flush=True)
-
-
-def snap_to_start(node, publisher, topic, tracker, args, q_start):
-    current = tracker.wait(args.joint_state_timeout)
-    if current is None:
-        raise RuntimeError(f"could not read {tracker.topic}")
-
-    target = q_start[:6]
-    delta = float(np.max(np.abs(current - target)))
-    if delta < 0.02:
-        return
-
-    duration = args.snap_start_duration
-    n_samples = max(2, int(duration * args.start_samples_per_second) + 1)
-    start_configs = [
-        (1.0 - alpha) * current + alpha * target
-        for alpha in np.linspace(0.0, 1.0, n_samples)
-    ]
-    trajectory = timed_joint_trajectory(
-        start_configs,
-        np.linspace(0.0, duration, n_samples).tolist(),
-    )
-    print(f"snapping Staubli to the planned start ({duration:.1f} s)", flush=True)
-    publish_trajectory(node, publisher, topic, trajectory)
-    if not wait_for_arm_configuration(
-        node, tracker, target, args.snap_start_timeout, args.start_tolerance
-    ):
-        current = tracker.current()
-        error = (
-            float(np.max(np.abs(current - target))) if current is not None else float("inf")
-        )
-        raise RuntimeError(
-            f"Staubli did not settle at the planned start within "
-            f"{args.snap_start_timeout:.1f} s (error {error:.3f} rad)"
-        )
+    print(f"Staubli at the planned start (error {error:.3f} rad)", flush=True)
 
 
 def execute_plan(
@@ -708,36 +539,28 @@ def execute_plan(
 ):
     rclpy.init()
     node = Node("room315_hpp_manipulation")
-    gripper = None
     try:
-        trajectory_topic = args.trajectory_topic or (
-            f"/{args.robot_name}/joint_trajectory"
+        if args.trajectory_action is None:
+            arm_target = args.trajectory_topic or (
+                f"/{args.robot_name}/joint_trajectory"
+            )
+            publisher = node.create_publisher(JointTrajectory, arm_target, 10)
+            wait_for_subscriber(node, publisher, arm_target, args.subscriber_timeout)
+        else:
+            arm_target = args.trajectory_action
+            publisher = None
+        joint_state_topic = args.joint_state_topic or (
+            "/joint_states"
+            if args.trajectory_action is not None
+            else f"/{args.robot_name}/joint_states"
         )
-        joint_state_topic = args.joint_state_topic or f"/{args.robot_name}/joint_states"
-        publisher = node.create_publisher(JointTrajectory, trajectory_topic, 10)
         tracker = JointStateTracker(node, joint_state_topic)
         gripper = make_gripper_output(node, args)
-        wait_for_subscriber(node, publisher, trajectory_topic, args.subscriber_timeout)
 
         pose_client = None
         if args.payload_output == "gazebo":
             service_prefix = f"/world/{args.world_name}"
-            spawn_client = node.create_client(SpawnEntity, f"{service_prefix}/create")
-            delete_client = node.create_client(DeleteEntity, f"{service_prefix}/remove")
             pose_client = node.create_client(SetEntityPose, f"{service_prefix}/set_pose")
-
-            if args.replace_box:
-                delete_payload(node, delete_client, args.box_entity_name)
-            spawned = spawn_payload(
-                node,
-                spawn_client,
-                args.box_entity_name,
-                box_world_pose_msg(robot, q_source),
-            )
-            if not spawned:
-                node.get_logger().info(
-                    f"using existing Gazebo entity {args.box_entity_name}"
-                )
             set_payload_pose(
                 node,
                 pose_client,
@@ -745,26 +568,15 @@ def execute_plan(
                 box_world_pose_msg(robot, q_source),
             )
 
-        if args.start_mode == "check":
-            require_start(node, tracker, args, q_source)
-        elif args.start_mode == "move":
-            move_to_start(node, publisher, trajectory_topic, tracker, args, q_source)
-        else:
-            snap_to_start(node, publisher, trajectory_topic, tracker, args, q_source)
+        require_start(node, tracker, args, q_source)
 
-        if pose_client is not None:
-            set_payload_config(
-                node,
-                pose_client,
-                robot,
-                args.box_entity_name,
-                q_source,
-            )
+        if args.gripper_output == "joint-trajectory":
+            gripper.open()
 
         execute_phase(
             node,
             publisher,
-            trajectory_topic,
+            arm_target,
             pose_client,
             tracker,
             robot,
@@ -772,18 +584,18 @@ def execute_plan(
             phases[0],
             args,
         )
-        semantic_grasp(
-            node,
-            gripper,
-            pose_client,
-            robot,
-            args.box_entity_name,
-            phases[1],
-        )
+        gripper.close()
+        if pose_client is not None:
+            set_payload_pose(
+                node,
+                pose_client,
+                args.box_entity_name,
+                box_world_pose_msg(robot, phases[1].payload_configs[0]),
+            )
         execute_phase(
             node,
             publisher,
-            trajectory_topic,
+            arm_target,
             pose_client,
             tracker,
             robot,
@@ -791,18 +603,18 @@ def execute_plan(
             phases[1],
             args,
         )
-        semantic_release(
-            node,
-            gripper,
-            pose_client,
-            robot,
-            args.box_entity_name,
-            phases[2],
-        )
+        gripper.open()
+        if pose_client is not None:
+            set_payload_pose(
+                node,
+                pose_client,
+                args.box_entity_name,
+                box_world_pose_msg(robot, phases[2].payload_configs[0]),
+            )
         execute_phase(
             node,
             publisher,
-            trajectory_topic,
+            arm_target,
             pose_client,
             tracker,
             robot,
@@ -811,31 +623,6 @@ def execute_plan(
             args,
         )
     finally:
-        if gripper is not None:
-            gripper.destroy()
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
-
-
-def touch_file(path):
-    if path is None:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f"{time.monotonic():.3f}\n")
-
-
-def wait_for_execution_start(args):
-    touch_file(args.ready_file)
-    if args.start_file is None:
-        return True
-
-    print(f"HPP plan ready; waiting for execution trigger {args.start_file}", flush=True)
-    while True:
-        if args.abort_file is not None and args.abort_file.exists():
-            print(f"HPP execution aborted by {args.abort_file}", flush=True)
-            return False
-        if args.start_file.exists():
-            print("HPP execution trigger received", flush=True)
-            return True
-        time.sleep(0.1)

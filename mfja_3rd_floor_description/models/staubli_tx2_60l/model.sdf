@@ -202,8 +202,21 @@
       <pose relative_to="flange_tool0">0 0 0 0 0 0</pose>
     </link>
 
+    <link name="gripper_mount">
+      <pose relative_to="tool0_gripper_mount_joint">0 0 0 0 0 0</pose>
+      <collision name="rear_attachment">
+        <pose>0 0 -0.0119 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0375</radius>
+            <length>0.024</length>
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+
     <link name="gripper">
-      <pose relative_to="tool0_gripper">0 0 0 0 0 0</pose>
+      <pose relative_to="gripper_mount_joint">0 0 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0.0204 0 0 0</pose>
         <mass>0.8</mass>
@@ -228,6 +241,30 @@
           <diffuse>0.22 0.23 0.23 1</diffuse>
         </material>
       </visual>
+      <collision name="gripper_body">
+        <pose>0 -0.0005 0.01235 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.025 0.0247</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="left_finger_sweep">
+        <pose>0.0134 0 0.04395 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0232 0.01 0.0415</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="right_finger_sweep">
+        <pose>-0.0134 0 0.04395 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0232 0.01 0.0415</size>
+          </box>
+        </geometry>
+      </collision>
     </link>
     <link name="gripper_tcp">
       <pose relative_to="gripper_tcp_joint">0 0 0 0 0 0</pose>
@@ -370,10 +407,16 @@
       <pose relative_to="flange">0 0 0 0 1.57079632679 0</pose>
     </joint>
 
-    <joint name="tool0_gripper" type="fixed">
+    <joint name="tool0_gripper_mount_joint" type="fixed">
       <parent>tool0</parent>
-      <child>gripper</child>
+      <child>gripper_mount</child>
       <pose relative_to="tool0">0 0 0 0 0 0</pose>
+    </joint>
+
+    <joint name="gripper_mount_joint" type="fixed">
+      <parent>gripper_mount</parent>
+      <child>gripper</child>
+      <pose relative_to="gripper_mount">0 0 0 0 0 0</pose>
     </joint>
 
     <joint name="gripper_tcp_joint" type="fixed">

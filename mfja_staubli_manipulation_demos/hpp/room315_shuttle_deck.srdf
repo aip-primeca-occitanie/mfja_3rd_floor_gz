@@ -2,7 +2,7 @@
 <robot name="room315_shuttle_deck">
   <contact name="top_surface">
     <link name="deck_link"/>
-    <point>-0.2584 -0.11 0.085   -0.2584 0.11 0.085   0.1016 0.11 0.085   0.1016 -0.11 0.085</point>
+    <point>-0.258417 -0.11 0.085   -0.258417 0.11 0.085   0.101583 0.11 0.085   0.101583 -0.11 0.085</point>
     <shape>4 0 3 2 1</shape>
   </contact>
 </robot>

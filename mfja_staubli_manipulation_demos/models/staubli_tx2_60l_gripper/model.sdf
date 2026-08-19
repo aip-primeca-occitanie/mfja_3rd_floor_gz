@@ -263,21 +263,59 @@
           <iyz>0</iyz>
         </inertia>
       </inertial>
-      <visual name="gripper_base_visual">
+      <visual name="pneumatic_adapter_visual">
+        <pose>0 0 -0.0074 0 0 0</pose>
         <geometry>
-          <box>
-            <size>0.09 0.17 0.03</size>
-          </box>
+          <cylinder>
+            <radius>0.0375</radius>
+            <length>0.015</length>
+          </cylinder>
         </geometry>
         <material>
           <ambient>0.50 0.50 0.50 1</ambient>
           <diffuse>0.50 0.50 0.50 1</diffuse>
         </material>
       </visual>
-      <collision name="gripper_base_collision">
+      <visual name="robot_adapter_visual">
+        <pose>0 0 -0.0099 3.14159265359 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://staubli_tx2_60l/meshes/gripper/staubli_pneumatic_adapter.stl</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.50 0.50 0.50 1</ambient>
+          <diffuse>0.50 0.50 0.50 1</diffuse>
+        </material>
+      </visual>
+      <visual name="gripper_body_visual">
+        <pose>0 0 0 1.57079632679 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://staubli_tx2_60l/meshes/gripper/schunk_pgn_plus_p_40_318448.stl</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.22 0.23 0.23 1</ambient>
+          <diffuse>0.22 0.23 0.23 1</diffuse>
+        </material>
+      </visual>
+      <collision name="rear_attachment_collision">
+        <pose>0 0 -0.0119 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0375</radius>
+            <length>0.024</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <collision name="gripper_body_collision">
+        <pose>0 -0.0005 0.01235 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.09 0.17 0.03</size>
+            <size>0.05 0.025 0.0247</size>
           </box>
         </geometry>
       </collision>
@@ -296,10 +334,12 @@
         </inertia>
       </inertial>
       <visual name="gripper_left_finger_visual">
+        <pose>0.0118 0 -0.01925 0 0 3.14159265359</pose>
         <geometry>
-          <box>
-            <size>0.024 0.012 0.09</size>
-          </box>
+          <mesh>
+            <uri>model://staubli_tx2_60l/meshes/gripper/staubli_custom_jaw.stl</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
         </geometry>
         <material>
           <ambient>0.01 0.01 0.012 1</ambient>
@@ -309,7 +349,7 @@
       <collision name="gripper_left_finger_collision">
         <geometry>
           <box>
-            <size>0.024 0.012 0.09</size>
+            <size>0.02 0.01 0.0415</size>
           </box>
         </geometry>
       </collision>
@@ -328,10 +368,12 @@
         </inertia>
       </inertial>
       <visual name="gripper_right_finger_visual">
+        <pose>-0.0118 0 -0.01925 0 0 0</pose>
         <geometry>
-          <box>
-            <size>0.024 0.012 0.09</size>
-          </box>
+          <mesh>
+            <uri>model://staubli_tx2_60l/meshes/gripper/staubli_custom_jaw.stl</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
         </geometry>
         <material>
           <ambient>0.01 0.01 0.012 1</ambient>
@@ -341,7 +383,7 @@
       <collision name="gripper_right_finger_collision">
         <geometry>
           <box>
-            <size>0.024 0.012 0.09</size>
+            <size>0.02 0.01 0.0415</size>
           </box>
         </geometry>
       </collision>
@@ -490,18 +532,18 @@
     <joint name="tool0_gripper_base" type="fixed">
       <parent>tool0</parent>
       <child>gripper_base</child>
-      <pose relative_to="tool0">0 0 0.035 0 0 0</pose>
+      <pose relative_to="tool0">0 0 0 0 0 0</pose>
     </joint>
 
     <joint name="gripper_left_finger_joint" type="prismatic">
       <parent>gripper_base</parent>
       <child>gripper_left_finger</child>
-      <pose relative_to="gripper_base">0 0.047 0.045 0 0 0</pose>
+      <pose relative_to="gripper_base">-0.0125 0 0.04395 0 0 0</pose>
       <axis>
-        <xyz>0 1 0</xyz>
+        <xyz>-1 0 0</xyz>
         <limit>
-          <lower>0.0255</lower>
-          <upper>0.028</upper>
+          <lower>0</lower>
+          <upper>0.0025</upper>
           <effort>180.0</effort>
           <velocity>0.17</velocity>
         </limit>
@@ -515,12 +557,12 @@
     <joint name="gripper_right_finger_joint" type="prismatic">
       <parent>gripper_base</parent>
       <child>gripper_right_finger</child>
-      <pose relative_to="gripper_base">0 -0.047 0.045 0 0 0</pose>
+      <pose relative_to="gripper_base">0.0125 0 0.04395 0 0 0</pose>
       <axis>
-        <xyz>0 -1 0</xyz>
+        <xyz>1 0 0</xyz>
         <limit>
-          <lower>0.0255</lower>
-          <upper>0.028</upper>
+          <lower>0</lower>
+          <upper>0.0025</upper>
           <effort>180.0</effort>
           <velocity>0.17</velocity>
         </limit>
@@ -534,7 +576,7 @@
     <joint name="gripper_base_tcp" type="fixed">
       <parent>gripper_base</parent>
       <child>gripper_tcp</child>
-      <pose relative_to="gripper_base">0 0 0.060 0 0 0</pose>
+      <pose relative_to="gripper_base">0 0 0.0647 0 0 0</pose>
     </joint>
 
     <plugin
@@ -623,7 +665,7 @@
       <topic>/staubli1/gripper_joint_trajectory</topic>
 
       <joint_name>gripper_left_finger_joint</joint_name>
-      <initial_position>0.028</initial_position>
+      <initial_position>0.0025</initial_position>
       <position_p_gain>180.0</position_p_gain>
       <position_i_gain>0.0</position_i_gain>
       <position_d_gain>8.0</position_d_gain>
@@ -631,7 +673,7 @@
       <position_cmd_max>25.0</position_cmd_max>
 
       <joint_name>gripper_right_finger_joint</joint_name>
-      <initial_position>0.028</initial_position>
+      <initial_position>0.0025</initial_position>
       <position_p_gain>180.0</position_p_gain>
       <position_i_gain>0.0</position_i_gain>
       <position_d_gain>8.0</position_d_gain>

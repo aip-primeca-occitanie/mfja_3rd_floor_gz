@@ -15,6 +15,7 @@ setup(
         ),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="Paul Sardin",
     maintainer_email="paulsardin123@gmail.com",

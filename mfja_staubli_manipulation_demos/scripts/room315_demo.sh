@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launch the Room 315 Staubli/shuttle manipulation scene in a clean environment.
+# Launch the Room 315 manipulation scene; this script never commands a shuttle.
 # Arguments are forwarded to ros2 launch.
 SCRIPT_DIR=$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 source "$SCRIPT_DIR/room315_env.sh"

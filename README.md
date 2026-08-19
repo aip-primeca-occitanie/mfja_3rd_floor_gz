@@ -10,6 +10,14 @@ A major focus of this repository is the **Room 315 flexible rail system**, which
 
 Whether you are testing mobile robot navigation on the full floor, running pick-and-place tasks with a single robotic arm, or orchestrating a complex multi-shuttle logistics scenario in Room 315, this repository provides the necessary models and launch configurations.
 
+The two HPP training packages are additions from the `psardin001` fork; they
+are not part of the original repository's `main` branch. The edited Staubli
+gripper CAD and Gazebo integration came from Ali's `main_ali` branch and are
+now consumed by the HPP examples through the canonical description package.
+The later MFJA split body, custom-jaw, and adapter files are preserved there as
+source geometry; they improve the collision and Gazebo models but do not yet
+define the physical Staubli `tool0` transform or grasp TCP.
+
 ---
 
 ## 🛠️ Installation Guide
@@ -35,7 +43,7 @@ Create a workspace and clone this meta-repository inside its `src/` folder:
 export MFJA_WS=~/mfja_ws
 mkdir -p "$MFJA_WS/src"
 cd "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+git clone https://github.com/psardin001/mfja_3rd_floor_gz.git
 ```
 
 ### 3. Build and Source
@@ -53,7 +61,11 @@ colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
 # Source the installed environment
 source install/setup.bash
 ```
-*(Note: You must run `source install/setup.bash` in every new terminal you open.)*
+In every new terminal, run:
+
+```bash
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+```
 
 ---
 
@@ -117,6 +129,8 @@ ros2 topic pub --once /room_315/rails/right/switches/command \
 *   `mfja_rail_interfaces/`: Custom ROS 2 interfaces for commands, states, and sensors.
 *   `mfja_robot_control_config/`: Shuttle/switch scripts, bridge configurations, and rail kinematic settings.
 *   `mfja_3rd_floor_bringup/`: Centralized launch entry points for the full floor, Room 315, and single robot setups.
+*   `mfja_staubli_demos/`: Introductory Staubli HPP arm-planning exercise.
+*   `mfja_staubli_manipulation_demos/`: Advanced Room 315 manipulation-graph and shuttle exercise.
 
 ---
 
@@ -126,4 +140,5 @@ For a deep dive into advanced features, please refer to our dedicated documentat
 
 *   **[Detailed Feature & API Guide (DETAILED_GUIDE.md)](DETAILED_GUIDE.md)**: Includes step-by-step guides for adding shuttles dynamically, reading sensor feedback, testing industrial robots, and troubleshooting.
 *   **[Room 315 Kinematic Rail Network Specs](mfja_robot_control_config/config/room_315_kinematics/README.md)**: Technical details about segment directions, device YAMLs, and sensor cookbook testing.
+*   **[Room 315 Staubli Manipulation Demo](mfja_staubli_manipulation_demos/README.md)**: New-PC setup, classroom runbook, HPP planning checks, and Gazebo/real-output boundaries.
 *   **[HTML Runbook](runbook.html)**: A focused visualization and operational guide.

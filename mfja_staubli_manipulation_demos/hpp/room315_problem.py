@@ -25,16 +25,13 @@ WORLD_NAME = "room_315_only"
 BOX_ROOM315_MARGIN = 0.03
 STAUBLI_ROOM315_MARGIN = 0.02
 
-ROBOT_URDF = (
-    "package://mfja_staubli_manipulation_demos/urdf/"
-    "staubli_tx2_60l_gripper.urdf"
-)
+ROBOT_URDF = "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
 ROBOT_SRDF = (
     "package://mfja_staubli_manipulation_demos/hpp/"
     "staubli_tx2_60l_manipulation.srdf"
 )
-CELL_URDF = "package://mfja_staubli_manipulation_demos/hpp/room315_cell.urdf"
-CELL_SRDF = "package://mfja_staubli_manipulation_demos/hpp/room315_cell.srdf"
+CELL_URDF = "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
+CELL_SRDF = "package://mfja_3rd_floor_description/urdf/room315_cell.srdf"
 BOX_URDF = "package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.urdf"
 BOX_SRDF = "package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.srdf"
 SHUTTLE_URDF = (
@@ -59,8 +56,8 @@ GAZEBO_GRIPPER_JOINTS = [
     "gripper_left_finger_joint",
     "gripper_right_finger_joint",
 ]
-GAZEBO_GRIPPER_OPEN_POSITIONS = [0.028, 0.028]
-GAZEBO_GRIPPER_CLOSE_POSITIONS = [0.0255, 0.0255]
+GAZEBO_GRIPPER_OPEN_POSITIONS = [0.0025, 0.0025]
+GAZEBO_GRIPPER_CLOSE_POSITIONS = [0.0, 0.0]
 GRASP_NAME = f"{GRIPPER_NAME} > {BOX_HANDLE}"
 RELEASE_NAME = f"{GRIPPER_NAME} < {BOX_HANDLE}"
 PICK_TRANSITIONS = [f"{GRASP_NAME} | f_{step}" for step in ("01", "12", "23", "34")]
@@ -68,42 +65,8 @@ TRANSFER_TRANSITION = "Loop | 0-0"
 RELEASE_TRANSITIONS = [
     f"{RELEASE_NAME} | 0-0_{step}" for step in ("43", "32", "21", "10")
 ]
-GRASP_TRANSITION = f"{GRASP_NAME} | f_23"
-RELEASE_TRANSITION = f"{RELEASE_NAME} | 0-0_21"
-
-PAYLOAD_BOX_SDF = f"""<?xml version="1.0"?>
-<sdf version="1.9">
-  <model name="{BOX_ENTITY_NAME}">
-    <static>true</static>
-    <link name="base_link">
-      <inertial>
-        <mass>0.2</mass>
-        <inertia>
-          <ixx>0.0002</ixx>
-          <ixy>0</ixy>
-          <ixz>0</ixz>
-          <iyy>0.0002</iyy>
-          <iyz>0</iyz>
-          <izz>0.0002</izz>
-        </inertia>
-      </inertial>
-      <visual name="payload_visual">
-        <geometry>
-          <box>
-            <size>{BOX_SIZE[0]} {BOX_SIZE[1]} {BOX_SIZE[2]}</size>
-          </box>
-        </geometry>
-        <material>
-          <ambient>0.05 0.35 0.95 1</ambient>
-          <diffuse>0.05 0.35 0.95 1</diffuse>
-          <specular>0.2 0.2 0.2 1</specular>
-        </material>
-      </visual>
-    </link>
-  </model>
-</sdf>
-"""
-
+GRASP_TRANSITION = PICK_TRANSITIONS[-2]
+RELEASE_TRANSITION = RELEASE_TRANSITIONS[-2]
 
 def se3_from_pose(pose):
     x, y, z, roll, pitch, yaw = pose
@@ -229,12 +192,6 @@ def build_problem(shuttle_pose, destination_shuttle_pose=None):
 
     graph.initialize()
     return robot, problem, graph
-
-
-def mapping_names(mapping):
-    if hasattr(mapping, "keys"):
-        return sorted(mapping.keys())
-    return sorted(entry.key() for entry in mapping)
 
 
 def box_rank(robot):

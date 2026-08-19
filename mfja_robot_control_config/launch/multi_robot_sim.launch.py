@@ -337,7 +337,18 @@ def _robot_asset_package_path(robot, description_pkg_path):
 def _resolve_robot_assets(robot, description_pkg_path, model_name):
     asset_pkg_path = _robot_asset_package_path(robot, description_pkg_path)
     model_sdf = os.path.join(asset_pkg_path, 'models', model_name, 'model.sdf')
-    urdf_path = os.path.join(asset_pkg_path, 'urdf', f'{model_name}.urdf')
+    urdf_model = str(robot.get('urdf_model', model_name)).strip()
+    urdf_asset_package = str(
+        robot.get('urdf_asset_package', _robot_asset_package(robot))
+    ).strip()
+    urdf_asset_pkg_path = (
+        description_pkg_path
+        if urdf_asset_package == DESCRIPTION_PACKAGE
+        else get_package_share_directory(urdf_asset_package)
+    )
+    urdf_path = os.path.join(
+        urdf_asset_pkg_path, 'urdf', f'{urdf_model}.urdf'
+    )
 
     if not os.path.exists(model_sdf):
         raise RuntimeError(
@@ -346,8 +357,8 @@ def _resolve_robot_assets(robot, description_pkg_path, model_name):
         )
     if not os.path.exists(urdf_path):
         raise RuntimeError(
-            f'Missing URDF file for "{model_name}": {urdf_path}. '
-            'Add urdf/<model_name>.urdf.'
+            f'Missing URDF file for "{urdf_model}": {urdf_path}. '
+            'Add urdf/<urdf_model>.urdf.'
         )
 
     return model_sdf, urdf_path

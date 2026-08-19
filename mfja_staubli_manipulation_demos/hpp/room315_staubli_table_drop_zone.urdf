@@ -11,9 +11,9 @@
       </material>
     </visual>
     <collision>
-      <origin xyz="0 0 -0.01" rpy="0 0 0"/>
+      <origin xyz="-0.2562 -0.16 -0.503" rpy="-1.57 0 1.57"/>
       <geometry>
-        <box size="0.36 0.24 0.02"/>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_table/meshes/staubli_table.stl"/>
       </geometry>
     </collision>
   </link>

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<!-- Room 315 cell fixtures as HPP obstacles. Link origins are world poses from
-     room_315_only.world; load this model with the inverse Staubli world pose. -->
+<!-- Room 315 fixtures at their world poses. Load this model with the inverse
+     Staubli world pose to express the cell in the robot base frame. -->
 <robot name="room315_cell">
   <link name="base"/>
 

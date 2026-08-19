@@ -20,24 +20,15 @@ from room315_problem import (
 class PlannedSegment:
     transition_name: str
     path: object
-    q_start: np.ndarray
-    q_goal: np.ndarray
 
 
 @dataclass
 class ExecutionPhase:
     name: str
-    planned_segments: list[PlannedSegment]
     payload_mode: str
     configs: list[np.ndarray]
     payload_configs: list[np.ndarray]
     times: list[float]
-
-
-def make_goal_matrix(robot, q_goal):
-    q_goals = np.zeros((1, robot.configSize()), order="F")
-    q_goals[0, :] = q_goal
-    return q_goals
 
 
 def validate_transition_config(transition, q, label):
@@ -68,12 +59,10 @@ def score_pick_chain(q_free, chain, preferred=None):
     return motion + 0.5 * posture + 0.5 * wrist_wrap
 
 
-def generate_pick_chain(robot, problem, graph, q_free, attempts, label, preferred=None):
+def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferred=None):
     shooter = problem.configurationShooter()
     rank = box_rank(robot)
-    best_chain = None
-    best_attempt = 0
-    best_score = float("inf")
+    candidates = []
 
     for attempt in range(attempts):
         seed = seeded_target(shooter, q_free, rank, attempt, preferred)
@@ -104,18 +93,23 @@ def generate_pick_chain(robot, problem, graph, q_free, attempts, label, preferre
             continue
 
         score = score_pick_chain(q_free, chain, preferred)
-        if score < best_score:
-            best_chain = chain
-            best_attempt = attempt + 1
-            best_score = score
+        if any(
+            np.max(np.abs(np.asarray(chain) - np.asarray(previous))) < 1e-5
+            for _, _, previous in candidates
+        ):
+            continue
+        candidates.append((score, attempt + 1, chain))
 
-    if best_chain is not None:
+    if candidates:
+        candidates.sort(key=lambda candidate: candidate[0])
+        best_score, best_attempt, _ = candidates[0]
         print(
-            f"{label} pick chain selected from {attempts} attempt(s) "
-            f"(best attempt {best_attempt}, score {best_score:.3f})",
+            f"{label}: generated {len(candidates)} distinct valid pick chain(s) from "
+            f"{attempts} attempt(s) (best attempt {best_attempt}, "
+            f"score {best_score:.3f})",
             flush=True,
         )
-        return best_chain
+        return [chain for _, _, chain in candidates]
 
     raise RuntimeError(f"failed to generate {label} pick chain after {attempts} attempts")
 
@@ -126,15 +120,17 @@ def plan_transition(robot, planner, graph, transition_name, q_start, q_goal):
     planner.setEdge(transition)
     success, path, report = planner.directPath(q_start, q_goal, True)
     if success:
-        return PlannedSegment(transition_name, path, q_start, q_goal)
+        return PlannedSegment(transition_name, path)
 
     try:
-        path = planner.planPath(q_start, make_goal_matrix(robot, q_goal), True)
+        q_goals = np.zeros((1, robot.configSize()), order="F")
+        q_goals[0, :] = q_goal
+        path = planner.planPath(q_start, q_goals, True)
     except Exception as exc:
         raise RuntimeError(
             f"failed to plan transition {transition_name}: {report}"
         ) from exc
-    return PlannedSegment(transition_name, path, q_start, q_goal)
+    return PlannedSegment(transition_name, path)
 
 
 def plan_manipulation(
@@ -147,6 +143,7 @@ def plan_manipulation(
     source_label,
     destination_label,
     target_attempts,
+    target_pair_attempts,
     transition_iterations,
     transition_timeout,
 ):
@@ -155,44 +152,83 @@ def plan_manipulation(
     planner.maxIterations(transition_iterations)
     planner.timeOut(transition_timeout)
 
-    source_pick = generate_pick_chain(
+    source_picks = generate_pick_chains(
         robot, problem, graph, q_source, target_attempts, source_label
     )
-    destination_pick = generate_pick_chain(
+    destination_picks = generate_pick_chains(
         robot,
         problem,
         graph,
         q_destination,
         target_attempts,
         destination_label,
-        preferred=source_pick[-1],
+        preferred=source_picks[0][-1],
     )
 
-    segments = []
-    current = q_source
-    for transition_name, target in zip(PICK_TRANSITIONS, source_pick):
-        segment = plan_transition(robot, planner, graph, transition_name, current, target)
-        segments.append(segment)
-        current = target
-
-    segment = plan_transition(
-        robot, planner, graph, TRANSFER_TRANSITION, current, destination_pick[-1]
-    )
-    segments.append(segment)
-    current = destination_pick[-1]
-
-    release_targets = [
-        destination_pick[2],
-        destination_pick[1],
-        destination_pick[0],
-        q_destination,
+    target_pairs = [
+        (source_index, destination_index)
+        for source_index in range(len(source_picks))
+        for destination_index in range(len(destination_picks))
     ]
-    for transition_name, target in zip(RELEASE_TRANSITIONS, release_targets):
-        segment = plan_transition(robot, planner, graph, transition_name, current, target)
-        segments.append(segment)
-        current = target
+    target_pairs.sort(key=lambda pair: (sum(pair), pair[0]))
 
-    return segments
+    last_error = None
+    attempted_pairs = 0
+    for source_index, destination_index in target_pairs[:target_pair_attempts]:
+        source_pick = source_picks[source_index]
+        destination_pick = destination_picks[destination_index]
+        attempted_pairs += 1
+        try:
+            segments = []
+            current = q_source
+            for transition_name, target in zip(PICK_TRANSITIONS, source_pick):
+                segments.append(
+                    plan_transition(
+                        robot, planner, graph, transition_name, current, target
+                    )
+                )
+                current = target
+
+            segments.append(
+                plan_transition(
+                    robot,
+                    planner,
+                    graph,
+                    TRANSFER_TRANSITION,
+                    current,
+                    destination_pick[-1],
+                )
+            )
+            current = destination_pick[-1]
+
+            release_targets = list(reversed(destination_pick[:-1])) + [q_destination]
+            for transition_name, target in zip(
+                RELEASE_TRANSITIONS, release_targets
+            ):
+                segments.append(
+                    plan_transition(
+                        robot, planner, graph, transition_name, current, target
+                    )
+                )
+                current = target
+        except RuntimeError as exc:
+            last_error = exc
+            print(
+                f"target pair {source_index + 1}/{destination_index + 1} "
+                f"failed: {exc}",
+                flush=True,
+            )
+            continue
+
+        print(
+            f"planned target pair {source_index + 1}/{destination_index + 1}",
+            flush=True,
+        )
+        return segments
+
+    raise RuntimeError(
+        f"failed to plan {attempted_pairs} target pair(s): {last_error}"
+    ) from last_error
 
 
 def direction_endpoints(direction, q_shuttle, q_table, q_drop_shuttle):
@@ -228,21 +264,13 @@ def sample_path(path, samples):
 
 
 def format_plan(segments):
-    rows = []
     total = 0.0
+    print("planned manipulation transitions:")
     for index, segment in enumerate(segments):
         length = float(segment.path.length())
         total += length
-        rows.append((index, segment.transition_name, length))
-
-    print("planned manipulation transitions:")
-    for index, name, length in rows:
-        print(f"  {index:02d}  {length:8.3f}  {name}")
+        print(f"  {index:02d}  {length:8.3f}  {segment.transition_name}")
     print(f"total HPP path parameter length: {total:.3f}")
-
-
-def path_sample_count(path, samples_per_path_unit, min_segment_samples):
-    return max(min_segment_samples, int(float(path.length()) * samples_per_path_unit) + 1)
 
 
 def retime_joint_configs(configs, *, max_joint_speed, min_sample_dt, initial_hold):
@@ -254,13 +282,6 @@ def retime_joint_configs(configs, *, max_joint_speed, min_sample_dt, initial_hol
         delta = float(np.max(np.abs(current[:6] - previous[:6])))
         times.append(times[-1] + max(min_sample_dt, delta / max_joint_speed))
     return times
-
-
-def execution_config(robot, arm_config, payload_config):
-    q = np.asarray(arm_config).copy()
-    rank = box_rank(robot)
-    q[rank : rank + 7] = payload_config[rank : rank + 7]
-    return normalize_box_quaternion(robot, q)
 
 
 def append_execution_sample(robot, arm_configs, payload_configs, arm_config, payload_config):
@@ -301,12 +322,14 @@ def build_execution_phase(
     configs = []
     payload_configs = []
     transition_names = []
+    rank = box_rank(robot)
 
     for segment_index, segment in enumerate(planned_segments):
         transition = graph.getTransition(segment.transition_name)
         transition_names.append(segment.transition_name)
-        samples = path_sample_count(
-            segment.path, args.samples_per_path_unit, args.min_segment_samples
+        samples = max(
+            args.min_segment_samples,
+            int(float(segment.path.length()) * args.samples_per_path_unit) + 1,
         )
         segment_configs = sample_path(segment.path, samples)
 
@@ -320,7 +343,9 @@ def build_execution_phase(
         ):
             arm_config = np.asarray(arm_config).flatten()
             payload_config = np.asarray(payload_config).flatten()
-            q = execution_config(robot, arm_config, payload_config)
+            q = arm_config.copy()
+            q[rank : rank + 7] = payload_config[rank : rank + 7]
+            q = normalize_box_quaternion(robot, q)
             valid, report = transition.pathValidation().validateConfiguration(q)
             if not valid:
                 raise RuntimeError(
@@ -341,7 +366,6 @@ def build_execution_phase(
         min_sample_dt=args.min_sample_dt,
         initial_hold=args.phase_start_hold,
     )
-    validate_sampled_configs(robot, configs, payload_configs, times)
     print(
         f"execution phase {name}: {payload_mode}, "
         f"{len(configs)} points, {times[-1]:.1f} s",
@@ -351,7 +375,6 @@ def build_execution_phase(
         print(f"  {transition_name}", flush=True)
     return ExecutionPhase(
         name,
-        planned_segments,
         payload_mode,
         configs,
         payload_configs,
@@ -417,15 +440,3 @@ def build_execution_phases(
         flush=True,
     )
     return phases
-
-
-def validate_sampled_configs(robot, arm_configs, payload_configs, times):
-    if not (len(arm_configs) == len(payload_configs) == len(times)):
-        raise RuntimeError(
-            "internal execution sampling error: arm, payload, and time lengths differ"
-        )
-    if len(arm_configs) < 2:
-        raise RuntimeError("internal execution sampling error: empty trajectory")
-    for index, (arm, payload) in enumerate(zip(arm_configs, payload_configs)):
-        if arm.shape[0] != robot.configSize() or payload.shape[0] != robot.configSize():
-            raise RuntimeError(f"internal execution sample {index} has wrong size")

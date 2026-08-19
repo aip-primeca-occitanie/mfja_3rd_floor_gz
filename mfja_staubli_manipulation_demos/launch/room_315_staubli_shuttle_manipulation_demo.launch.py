@@ -1,4 +1,4 @@
-"""Room 315 Staubli manipulation scene with one stopped right-rail shuttle."""
+"""Room 315 Staubli manipulation scene with an optional stopped shuttle."""
 
 import os
 
@@ -56,6 +56,12 @@ def generate_launch_description():
                 description="Render engine for the Gazebo GUI client.",
             ),
             DeclareLaunchArgument(
+                "enable_shuttles",
+                default_value="true",
+                choices=["true", "false"],
+                description="Start the Room 315 shuttle subsystem.",
+            ),
+            DeclareLaunchArgument(
                 "right_start_slot",
                 default_value="1",
                 description="Initial right-rail shuttle slot upstream of DZI3R.",
@@ -103,8 +109,12 @@ def generate_launch_description():
                             "robot_config": robot_config,
                             "gui": "false",
                             "start_paused": "false",
-                            "enable_room315_kinematic_shuttles": "true",
-                            "enable_room315_right_rail": "true",
+                            "enable_room315_kinematic_shuttles": LaunchConfiguration(
+                                "enable_shuttles"
+                            ),
+                            "enable_room315_right_rail": LaunchConfiguration(
+                                "enable_shuttles"
+                            ),
                             "enable_room315_left_rail": "false",
                             "room315_right_start_slot": LaunchConfiguration(
                                 "right_start_slot"

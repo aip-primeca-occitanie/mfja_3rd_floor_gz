@@ -1,164 +1,286 @@
-# mfja_staubli_manipulation_demos
+# Stage 2 — Room 315 Staubli Manipulation
 
-Room 315 Staubli manipulation demos for moving a small payload between the
-right-rail shuttles and the Staubli table.
+This package teaches HPP manipulation planning with a Staubli TX2-60L, a
+pneumatic parallel gripper, a payload, and two Room 315 shuttles.
 
-The package contains one shared HPP problem and small target-specific execution
-outputs. Keep planning geometry, contact surfaces, and manipulation graph common
-between Gazebo and the real robot; switch only the launch/output layer.
+The supported classroom exercise is one two-shuttle transfer. Use the
+[training runbook](docs/room315_training_runbook.md) during a session and the
+[architecture walkthrough](docs/room315_pick_place_walkthrough.md) when
+explaining or maintaining the implementation.
 
-For the full call order, ROS interfaces, Gazebo controllers, and file-by-file
-explanation, see
-[`docs/room315_pick_place_walkthrough.md`](docs/room315_pick_place_walkthrough.md).
+## Entry points
 
-The commands below are written from the repository root:
+Each command owns one layer:
+
+| Command | Responsibility |
+|---|---|
+| `room315_demo.sh` | Start the Room 315 scene. It creates a stopped shuttle by default but never commands the rail. |
+| `room315_manipulation_demo.sh` | Prepare the payload and simulated arm, then run one fixed shuttle-to-table manipulation. It does not import or use the rail API. |
+| `room315_moving_shuttle_demo.sh` | Add rail routing, shuttle motion, measured support poses, and safe `OFF` cleanup around the same manipulation runner. |
+| `room315_hpp_manipulation.sh` | Build, plan, and optionally execute one HPP cycle for poses supplied on the command line. |
+
+## Prepare a training PC
+
+Install and build the MFJA workspace with the
+[repository instructions](../README.md). Install `hpp-exec` once:
 
 ```bash
-cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source "$MFJA_WS/install/setup.bash"
+git clone -b devel https://github.com/humanoid-path-planner/hpp-exec.git \
+  "$HOME/devel/hpp-exec"
+"$HOME/devel/hpp-exec/run.sh" bash -lc \
+  'cd ~/devel/src && make all'
 ```
 
-The demo scripts default to `ROS_DOMAIN_ID=7` and pass the same domain to
-`hpp-exec`. Set `ROS_DOMAIN_ID` before running the scripts if your classroom
-setup uses another domain.
-
-## Layout
-
-- `launch/room_315_staubli_shuttle_manipulation_demo.launch.py`: Gazebo Room 315
-  scene with `staubli1` and the right shuttle rail.
-- `hpp/room315_shuttle_manipulation.py`: command-line entry point for one HPP
-  manipulation cycle.
-- `hpp/room315_problem.py`: HPP model constants, pose helpers, and problem/graph
-  construction.
-- `hpp/room315_planning.py`: pick target selection, transition planning, and
-  phase sampling.
-- `hpp/room315_execution.py`: ROS, Gazebo payload, and gripper execution outputs.
-- `hpp/*.urdf`, `hpp/*.srdf`: HPP robot/object/environment models and semantic
-  surfaces.
-- `models/staubli_tx2_60l_gripper`, `urdf/staubli_tx2_60l_gripper.urdf`: Gazebo
-  and ROS/HPP descriptions for the Staubli with placeholder gripper geometry.
-- `scripts/room315_demo.sh`: launch the Gazebo scene.
-- `scripts/room315_hpp_manipulation.sh`: run the HPP problem in `hpp-exec`.
-- `scripts/room315_moving_shuttle_demo.sh`: orchestrate the two-shuttle sequence.
-
-## Gazebo
-
-Launch the scene:
+Docker must be usable without `sudo`. Then validate the host and HPP model:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_demo.sh
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+ros2 run mfja_staubli_manipulation_demos room315_check_setup.sh
+ros2 run mfja_staubli_manipulation_demos \
+  room315_hpp_manipulation.sh --build-only
 ```
 
-For the moving-shuttle setup, the pickup shuttle starts upstream of the robot by
-default:
+The wrappers discover common workspace and `hpp-exec` locations. Override only
+non-standard installations:
+
+- `MFJA_WS=/path/to/workspace` or
+  `MFJA_SETUP=/path/to/install/setup.bash`;
+- `HPP_EXEC_DIR=/path/to/hpp-exec`;
+- `ROS_SETUP=/opt/ros/<distribution>/setup.bash`;
+- `ROS_DOMAIN_ID=<id>`, default `7`;
+- `STAUBLI_SETUP=/path/to/staubli_ws/install/local_setup.bash`, for real
+  Staubli messages.
+
+Give every workstation on the same network a different `ROS_DOMAIN_ID`.
+
+## Fixed-support simulation
+
+Use this path to test the manipulation without moving a shuttle:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_demo.sh gui:=false
+# Terminal 1: put one stopped shuttle directly at pickup slot 3
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+ros2 run mfja_staubli_manipulation_demos \
+  room315_demo.sh right_start_slot:=3
+
+# Terminal 2, after Gazebo is ready
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+ros2 run mfja_staubli_manipulation_demos \
+  room315_manipulation_demo.sh
 ```
 
-Run the default two-shuttle sequence:
+The fixed runner creates the visible payload, prepositions the simulated arm,
+and executes a shuttle-to-table cycle. It does not import
+`mfja_rail_interfaces`, publish a shuttle command, or wait for rail sensors.
+The shuttle remains only as a stationary collision/contact support. Pass
+`--shuttle-pose X Y Z ROLL PITCH YAW` when using a support pose other than
+slot 3. This option changes the pose used by the payload and HPP; it does not
+move the Gazebo shuttle. It must match the `right_start_slot` selected when the
+scene was launched.
+
+For scene-only diagnostics that do not run either manipulation cycle, the
+launch also accepts `enable_shuttles:=false`. The fixed runner still models the
+shuttle as its pickup support and must not be used with that setting.
+
+## Classroom simulation
+
+The short procedure is in the [training runbook](docs/room315_training_runbook.md).
+The two commands are:
 
 ```bash
-HPP_EXEC_DIR=$HOME/devel/nix-hpp/src/hpp-exec \
-  mfja_staubli_manipulation_demos/scripts/room315_moving_shuttle_demo.sh --replace-box
+# Terminal 1
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+ros2 run mfja_staubli_manipulation_demos room315_demo.sh
+
+# Terminal 2, after Gazebo is ready
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+ros2 run mfja_staubli_manipulation_demos room315_moving_shuttle_demo.sh
 ```
 
-The moving-shuttle helper prepares the rail route, starts the Staubli
-preposition trajectory, then immediately starts the pickup shuttle. The HPP
-execution waits until both the shuttle has arrived and the Staubli is at the HPP
-start.
+The coordinator follows one linear sequence:
 
-Gazebo execution uses:
+1. add the destination shuttle and initialize the visible payload;
+2. command and verify the rail route;
+3. preposition the simulated arm while the pickup shuttle moves;
+4. stop the shuttle and read its stable measured pose;
+5. plan the transfer with HPP;
+6. verify the arm start and execute approach, transfer, and retreat;
+7. close the simulated fingers before transfer and open them before retreat.
 
-- arm output: `/staubli1/joint_trajectory`
-- gripper output: `/staubli1/gripper_joint_trajectory` in the moving-shuttle
-  helper; direct HPP execution can enable it with
-  `--gripper-output joint-trajectory`
-- gripper stroke: the Gazebo finger joints use the SCHUNK PGN-plus-P 40
-  2.5 mm per-jaw stroke (`0.028` open, `0.0255` closed)
-- payload output: Gazebo spawn/set-pose/remove services
+Any active shuttle receives `OFF` after an error or Ctrl-C. Stop terminal 2
+before stopping Gazebo.
 
-HPP keeps the gripper geometry fixed and conservative; Gazebo animates small
-finger joints for visual timing. Closing belongs to the semantic grasp action;
-do not hide a bad approach by disabling payload/gripper collisions.
+The mobile entry point exposes the scenario identifiers that a demonstrator is
+likely to change: `--pickup-shuttle-name`, `--drop-shuttle-name`,
+`--drop-start-slot`, `--pickup-sensor`, and `--drop-sensor`. Run it with
+`--help` for the current defaults. The destination shuttle is deliberately
+created stopped. Transport topics and timing tolerances remain implementation
+defaults in the adapter.
 
-The Gazebo grasp is intentionally kinematic. The fingers open and close for
-visual and timing feedback, while the payload is attached by following the HPP
-object pose during the grasp-transfer phase instead of relying on unstable
-contact physics. The visible Gazebo payload is visual-only; HPP remains the
-collision source of truth for the box, gripper, shuttle, and table.
+The grasp is deliberately kinematic. HPP owns payload collisions and contact
+semantics; Gazebo visualizes the finger and payload motion. During transfer,
+the visible box follows the HPP object pose synchronized to measured arm
+progress rather than unstable contact physics.
 
-## HPP Checks
+## HPP checks
 
-Build the HPP scene:
-
-```bash
-mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --build-only
-```
-
-Preview the main plans:
+Planning is the default; `--execute` is required for ROS output:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --plan-only \
-  --direction shuttle-to-table
-
-mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --plan-only \
+ros2 run mfja_staubli_manipulation_demos \
+  room315_hpp_manipulation.sh \
   --direction shuttle-to-shuttle \
   --shuttle-pose -15.310 -5.536 0.839346 0 0 -0.002 \
   --destination-shuttle-pose -14.770 -5.536 0.839346 0 0 -0.0014
 ```
 
-Execute one HPP cycle in the running Gazebo scene:
+These are example measured stopping poses from the moving scenario. The fixed
+runner instead uses the nominal slot-3 pose
+`-15.240 -5.536 0.839 0 0 0` by default.
 
-```bash
-mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --execute \
-  --replace-box \
-  --gripper-output joint-trajectory
+The fixed and moving demo runners own payload creation and simulation
+prepositioning. A direct `--execute` invocation therefore requires the payload
+entity and arm start to be prepared already.
+
+## Model organization
+
+Shared descriptions live in `mfja_3rd_floor_description`:
+
+- `urdf/staubli_tx2_60l.urdf`: canonical HPP robot and conservative gripper
+  collision envelope;
+- `urdf/room315_cell.urdf`: canonical fixed-cell HPP obstacles;
+- `models/staubli_tx2_60l/meshes/gripper`: Ali's complete edited visual and
+  the supplied body, jaw, and robot-side adapter meshes;
+- `models/staubli_tx2_60l/cad`: source STEP files retained for provenance and
+  future model work.
+
+This package contains only manipulation-specific descriptions:
+
+- `hpp/staubli_tx2_60l_manipulation.srdf`: gripper semantics and required
+  self-collision exclusions;
+- `hpp/room315_payload_box.*`, `room315_shuttle_deck.*`, and
+  `room315_staubli_table_drop_zone.*`: object/support collision and contact
+  models;
+- `models/staubli_tx2_60l_gripper/model.sdf`: articulated Gazebo gripper.
+
+Gazebo renders the supplied 50 x 24.7 x 25 mm SCHUNK body, custom jaws, and
+72 mm robot-side adapter at millimetre scale. Its collision primitives,
+gripper-side attachment, joint reference, pneumatic timing, and dynamics are
+still simulation approximations.
+
+HPP uses a fixed conservative mount/body/finger envelope covering the delivered
+CAD revisions and full jaw sweep. The rear adapter remains an environment
+collision link; only unavoidable internal wrist overlaps are disabled.
+
+Confirmed model inputs are:
+
+- SCHUNK PGN-plus-P 40, product ID 318448;
+- pneumatic actuation and 2.5 mm stroke per jaw;
+- the supplied split CAD and Ali's complete edited assembly;
+- a 64.7 mm body-local jaw-tip coordinate from the source assembly.
+
+The CAD does not calibrate the Staubli `tool0` registration or a physical
+contact TCP. Ali's complete visual has a 75 mm rear plate while the newer split
+adapter is 72 mm, and their jaw reference poses differ by 0.65 mm per side.
+The conservative HPP envelope covers both until the installed revision is
+observed.
+
+## Known real-robot interfaces
+
+No custom Staubli arm adapter is needed. The execution path is:
+
+```text
+hpp_exec.send_trajectory
+  -> FollowJointTrajectory
+     /manipulator_controller/joint_trajectory_action
+  -> driver-internal JointTrajectory
+     /joint_path_command
 ```
 
-## Real Robot
-
-Use the same HPP problem and phase sampling, but disable Gazebo-only outputs.
-The Staubli gripper is a SCHUNK PGN-plus-P 40 pneumatic gripper. With the
-current Staubli ROS 2 driver, command the valve through the VAL3 IO service:
+The driver joints are `joint_1` through `joint_6`; measured state is read from
+`/joint_states`. On the deployed robot, verify the action before commissioning:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_hpp_manipulation.sh --execute \
+ros2 action list -t
+```
+
+The pneumatic gripper command is also confirmed:
+
+```bash
+# Open
+ros2 service call /io_interface/write_single_io staubli_msgs/srv/WriteSingleIO \
+  "{module: {id: 2}, pin: 0, state: true}"
+
+# Close
+ros2 service call /io_interface/write_single_io staubli_msgs/srv/WriteSingleIO \
+  "{module: {id: 2}, pin: 0, state: false}"
+```
+
+`response.code.val == 1` means the controller accepted the IO write; `-1`
+means failure. It does not measure pressure, jaw position, contact, or grasp.
+
+After the HPP model is reconciled and motion is authorized, the one-cycle
+transport flags are:
+
+```bash
+ros2 run mfja_staubli_manipulation_demos \
+  room315_hpp_manipulation.sh --execute \
   --payload-output none \
+  --trajectory-action /manipulator_controller/joint_trajectory_action \
+  --joint-state-topic /joint_states \
   --gripper-output staubli-io \
-  --staubli-io-pin PIN_TO_CONFIRM
+  --q-start Q1 Q2 Q3 Q4 Q5 Q6
 ```
 
-By default this uses `/io_interface/write_single_io`, module
-`staubli_msgs/msg/IOModule.VALVE_OUT`, `state=True` for close, and
-`state=False` for open. Add `--staubli-io-inverted` if the valve wiring uses the
-opposite polarity.
+`Q1 ... Q6` must be the measured, validated HPP start in radians. The executor
+requires the arm to be at this start and does not preposition hardware. It
+does not automatically open the real gripper; confirm that the unloaded tool is
+open before approach.
 
-For the full moving-shuttle sequence, pass the same gripper options and forward
-real-robot-only HPP options such as `--payload-output none`:
+For `staubli_msgs`, expose the external driver workspace:
 
 ```bash
-mfja_staubli_manipulation_demos/scripts/room315_moving_shuttle_demo.sh \
-  --gripper-output staubli-io \
-  --staubli-io-pin PIN_TO_CONFIRM \
-  --payload-output none
+export STAUBLI_SETUP=/absolute/path/to/staubli_ws/install/local_setup.bash
 ```
 
-Before sending motion to hardware, run `--plan-only`, check the real current
-joint seed with `--q-start` when needed, and confirm the arm execution topic or
-action, measured gripper TCP, finger geometry, opening width, speeds, and
-clearances.
+## Current blocker and later commissioning
 
-If the real arm bridge accepts `trajectory_msgs/msg/JointTrajectory` on a topic,
-select it with `--trajectory-topic` and `--joint-state-topic`. If it only exposes
-a `FollowJointTrajectory` action, add an action adapter before running on
-hardware.
+Diane's controller staging candidate is `[0, 50, 70, 0, 55, 0]` degrees
+(`[0, 0.8726646260, 1.2217304764, 0, 0.9599310886, 0]` radians). In the current
+HPP scene it collides between `staubli/link_4` and
+`room315/carter_droit`. Do not send that motion yet.
 
-## Current Surfaces
+Before checking this candidate, the only immediate model question is whether
+the HPP robot and `carter_droit` placements represent the physical cell. Once
+that is reconciled, rerun HPP collision validation at the candidate.
 
-- gripper: `staubli/tool0_gripper`
-- payload handle: `box/top_handle`
-- payload support contact: `box/bottom_surface`
-- payload size: `0.07 x 0.05 x 0.06 m`
+The following are later prerequisites for a physical grasp, not missing ROS
+interface information:
+
+- measure the assembled `tool0`-to-gripper and intended contact-TCP transform,
+  and identify the installed adapter and jaw open/closed state;
+- model the real workpiece and grasp feature—the 70 x 50 x 60 mm teaching box
+  is semantic and cannot fit between the narrow custom jaws;
+- test unloaded IO and establish pressure, settle time, payload mass/centre of
+  mass, low-speed limits, and operator approval;
+- verify physical rail interfaces before running the two-shuttle coordinator
+  outside Gazebo;
+- obtain redistribution permission before publishing third-party CAD.
+
+See `mfja_3rd_floor_description/THIRD_PARTY.md` for asset provenance.
+
+## Tests
+
+```bash
+colcon test --packages-select mfja_staubli_manipulation_demos \
+  --event-handlers console_direct+
+colcon test-result --verbose
+```
+
+Current HPP semantics:
+
+- gripper: `staubli/tool0_gripper`;
+- payload handle: `box/top_handle`;
+- payload support: `box/bottom_surface`;
 - supports: `shuttle/top_surface`, `drop_shuttle/top_surface`,
-  `staubli_table/drop_zone`
+  `staubli_table/drop_zone`.

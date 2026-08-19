@@ -17,6 +17,11 @@
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/base_link.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link_1">
@@ -26,6 +31,11 @@
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_1.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link_2">
@@ -35,6 +45,11 @@
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_2.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link_3">
@@ -44,6 +59,11 @@
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60/collision/link_3.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link_4">
@@ -53,6 +73,11 @@
       </geometry>
       <material name="staubli_yellow"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx2_60l/collision/link_4.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link_5">
@@ -62,6 +87,11 @@
       </geometry>
       <material name="staubli_grey"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_5.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="link_6">
@@ -71,11 +101,25 @@
       </geometry>
       <material name="staubli_grey"/>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/staubli_tx2_60l/meshes/tx60/collision/link_6.stl"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="flange"/>
   <link name="base"/>
   <link name="tool0"/>
+
+  <link name="gripper_mount">
+    <collision name="rear_attachment">
+      <origin xyz="0 0 -0.0119" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.0375" length="0.024"/>
+      </geometry>
+    </collision>
+  </link>
 
   <link name="gripper">
     <visual>
@@ -85,6 +129,24 @@
       </geometry>
       <material name="schunk_dark"/>
     </visual>
+    <collision name="gripper_body">
+      <origin xyz="0 -0.0005 0.01235" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.025 0.0247"/>
+      </geometry>
+    </collision>
+    <collision name="left_finger_sweep">
+      <origin xyz="0.0134 0 0.04395" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.0232 0.01 0.0415"/>
+      </geometry>
+    </collision>
+    <collision name="right_finger_sweep">
+      <origin xyz="-0.0134 0 0.04395" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.0232 0.01 0.0415"/>
+      </geometry>
+    </collision>
   </link>
   <link name="gripper_tcp"/>
 
@@ -154,9 +216,15 @@
     <child link="tool0"/>
   </joint>
 
-  <joint name="tool0_gripper" type="fixed">
+  <joint name="tool0_gripper_mount_joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <parent link="tool0"/>
+    <child link="gripper_mount"/>
+  </joint>
+
+  <joint name="gripper_mount_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="gripper_mount"/>
     <child link="gripper"/>
   </joint>
 
