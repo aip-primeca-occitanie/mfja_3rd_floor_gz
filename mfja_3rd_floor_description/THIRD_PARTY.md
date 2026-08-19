@@ -22,14 +22,14 @@ Excluded from third-party attribution because they are MFJA-local work:
 
 ## Current Status
 
-- `kuka_kr6r900sixx` uses assets confirmed by the local project contributor as coming from `ros-industrial/kuka_experimental`
+- `kuka_kr6r900sixx` uses assets verified against `kuka_kr6_support` in `ros-industrial/kuka_experimental`
 - the KUKA gripper extension uses user-provided SCHUNK KGG 140-60 CAD/STL assets from CADENAS
-- `staubli_tx2_60l` uses assets confirmed by the local project contributor as coming from `ros-industrial/staubli_experimental`
+- `staubli_tx2_60l` uses assets verified against `staubli_tx2_60_support` and shared `staubli_tx60_support` meshes
 - the Staubli gripper extension uses user-provided SCHUNK PGN-plus-P 40 CAD/STL assets
-- `yaskawa_hc10` and `yaskawa_hc10dt` use assets confirmed by the local project contributor as coming from `ros-industrial/motoman`
+- `yaskawa_hc10` and `yaskawa_hc10dt` use assets verified against `motoman_hc10_support` in `ros-industrial/motoman`
 - the Yaskawa HC10 gripper extension uses user-provided Zimmer Group GEH6040IL CAD/STL assets from CADENAS
 - the Yaskawa HC10DT gripper extension uses user-provided Zimmer Group LWR50L CAD/STL assets from CADENAS
-- `tiago` uses assets confirmed by the local project contributor as coming from the `Tiago-Harmonic` repository family
+- `tiago` uses meshes verified against `tiago_description` in `Tiago-Harmonic/tiago_robot`
 - `model.sdf`, `model.config`, launch integration, and package-local path rewrites are MFJA-local integration work
 - non-robot environment meshes, room geometry, building geometry, furniture, and other scene assets used by `worlds/` are MFJA-local work unless explicitly documented otherwise
 
@@ -46,14 +46,14 @@ Confirmed upstream source:
 
 - ROS-Industrial KUKA support assets from `ros-industrial/kuka_experimental`
 - Repository: `ros-industrial/kuka_experimental`
-- Repository URL: <https://github.com/ros-industrial/kuka_experimental>
+- Verified package snapshot: <https://github.com/ros-industrial/kuka_experimental/tree/8d9292b04a22628b1b78d989e2ddd3abb913bf92/kuka_kr6_support>
 - Package index URL: <https://index.ros.org/p/kuka_kr6_support/>
 
-Contributor-provided clarification:
+Verified asset relationship:
 
-- the imported KUKA source model used by the project was the KR6 R700 family
 - the local MFJA package currently exposes the robot under the local file and model name `kuka_kr6r900sixx`
-- the local mesh tree contains both `kr6r700sixx` and `kr6r900sixx` subdirectories, so this package should be treated as a locally adapted derivative of ROS-Industrial KUKA support assets rather than a byte-for-byte copy of a single upstream package
+- the unchanged common KR6 Agilus and KR6 R900 sixx meshes match the pinned upstream package, while `converted_visual/` contains local conversions
+- the package is therefore a locally adapted derivative, not a byte-for-byte copy of the complete upstream package
 
 Observed upstream licensing metadata:
 
@@ -107,7 +107,8 @@ Confirmed upstream source:
 
 - ROS-Industrial Staeubli support assets from `ros-industrial/staubli_experimental`
 - Package family: `staubli_tx2_60_support`
-- Repository URL: <https://github.com/ros-industrial/staubli_experimental>
+- Verified package snapshot: <https://github.com/ros-industrial/staubli_experimental/tree/256a71acea2161b64e12af1a6b925a7f26695007/staubli_tx2_60_support>
+- Shared TX60 mesh snapshot: <https://github.com/ros-industrial/staubli_experimental/tree/256a71acea2161b64e12af1a6b925a7f26695007/staubli_tx60_support>
 - Package index URL: <https://index.ros.org/p/staubli_tx2_60_support/>
 
 Contributor-provided clarification:
@@ -162,7 +163,7 @@ Confirmed upstream source:
 
 - ROS-Industrial Motoman support assets from `ros-industrial/motoman`
 - Package family: `motoman_hc10_support`
-- Repository URL: <https://github.com/ros-industrial/motoman>
+- Verified package snapshot: <https://github.com/ros-industrial/motoman/tree/846fbbc57c60223f12bf4795ea6404982d57709e/motoman_hc10_support>
 - Package index URL: <https://index.ros.org/p/motoman_hc10_support/>
 
 Contributor-provided clarification:
@@ -245,17 +246,17 @@ Local files:
 
 Confirmed upstream source:
 
-- Tiago Harmonic repository family
-- Repository URL: <https://github.com/Tiago-Harmonic>
+- package `tiago_description` in the Tiago-Harmonic fork of PAL Robotics' `tiago_robot`
+- verified package snapshot: <https://github.com/Tiago-Harmonic/tiago_robot/tree/bc2ac55a0be2c49ccca6e09f6ff533902c9fb8e2/tiago_description>
 
-Contributor-provided clarification:
+Verified asset relationship:
 
-- the TIAGo assets used in this project were taken from the `Tiago-Harmonic` GitHub organization or one of its repositories
-- the local model and mesh naming matches the TIAGo robot description stack, including arm, torso, and sensor mesh families
+- all ten redistributed TIAGo mesh files match Git blobs in the pinned `tiago_description` snapshot
+- the simplified local URDF and Gazebo wrappers remain MFJA-local integration work
 
 Observed upstream licensing metadata:
 
-- licensing for the exact imported `Tiago-Harmonic` source repository still needs to be confirmed and copied into this repository before external redistribution
+- the repository licence and `tiago_description/package.xml` identify Apache License 2.0
 
 Local modifications in this repository:
 
@@ -275,13 +276,13 @@ Local modifications in this repository:
 
 - ROS package manifest format specification: <https://ros.org/reps/rep-0149.html>
 - direct source clarification from the MFJA project contributor for KUKA, Staeubli, and Yaskawa assets
-- ROS-Industrial KUKA repository: <https://github.com/ros-industrial/kuka_experimental>
+- ROS-Industrial KUKA package snapshot: <https://github.com/ros-industrial/kuka_experimental/tree/8d9292b04a22628b1b78d989e2ddd3abb913bf92/kuka_kr6_support>
 - ROS Index entry for `kuka_kr6_support`: <https://index.ros.org/p/kuka_kr6_support/>
 - Public upstream-generated `kr6r900sixx.urdf` reference: <https://gist.github.com/gavanderhoorn/cfea4a8238e39a0c3b0a5c56d979c4d4>
-- ROS-Industrial Staeubli repository family: <https://github.com/ros-industrial/staubli_experimental>
+- ROS-Industrial Staeubli package snapshot: <https://github.com/ros-industrial/staubli_experimental/tree/256a71acea2161b64e12af1a6b925a7f26695007/staubli_tx2_60_support>
 - ROS Index entry for `staubli_tx2_60_support`: <https://index.ros.org/p/staubli_tx2_60_support/>
-- ROS-Industrial Motoman repository: <https://github.com/ros-industrial/motoman>
+- ROS-Industrial Motoman package snapshot: <https://github.com/ros-industrial/motoman/tree/846fbbc57c60223f12bf4795ea6404982d57709e/motoman_hc10_support>
 - ROS Index entry for `motoman_hc10_support`: <https://index.ros.org/p/motoman_hc10_support/>
 - Zimmer Group `GEH6040IL-03-B` technical data: <https://www.zimmer-group.com/en-us/products/components/handling-technology/2-jaw-parallel-grippers/series-geh6000il/products/geh6040il-03-b>
 - Zimmer Group `LWR50L-03-00001-A` datasheet: <https://www.zimmer-group.com/fileadmin/pim/MER/GD/PG/MER_GD_PG_LWR50L-03-00001-A__SEN__APD__V1.pdf>
-- direct source clarification from the MFJA project contributor for TIAGo assets: <https://github.com/Tiago-Harmonic>
+- Tiago-Harmonic `tiago_description` package snapshot: <https://github.com/Tiago-Harmonic/tiago_robot/tree/bc2ac55a0be2c49ccca6e09f6ff533902c9fb8e2/tiago_description>

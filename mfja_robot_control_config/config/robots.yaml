@@ -40,7 +40,7 @@ robots:
     enabled: true
   - name: tiago_base1
     model: tiago_base
-    x_pose: -7.2
+    x_pose: -6.2
     y_pose: -3.0
     z_pose: 0.0
     yaw: 1.57
