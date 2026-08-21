@@ -1,7 +1,6 @@
 import importlib.util
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -26,9 +25,9 @@ def pose(x=0.0):
 def test_simulation_defaults():
     args = DEMO.parse_args([])
 
-    assert args.preposition
-    assert args.trajectory_topic == "/staubli1/joint_trajectory"
-    assert args.joint_state_topic == "/staubli1/joint_states"
+    assert not hasattr(args, "preposition")
+    assert not hasattr(args, "q_start")
+    assert args.publisher_timeout == 5.0
 
 
 def test_scenario_names_and_slots_are_configurable():
@@ -54,19 +53,6 @@ def test_scenario_names_and_slots_are_configurable():
         args.pickup_sensor,
         args.drop_sensor,
     ) == ("source", "destination", "3", "PICK", "DROP")
-
-
-def test_scoped_joint_names_are_accepted():
-    coordinator = object.__new__(DEMO.MovingShuttleCoordinator)
-    coordinator.latest_joint_positions = None
-    message = SimpleNamespace(
-        name=[f"staubli::{name}" for name in MANIPULATION.STAUBLI_JOINT_NAMES],
-        position=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-    )
-
-    coordinator._on_joint_state(message)
-
-    assert coordinator.latest_joint_positions == message.position
 
 
 def test_route_requires_all_switches_and_stoppers():
@@ -115,7 +101,6 @@ def test_moving_scenario_adds_rail_motion_around_manipulation(monkeypatch):
     events = []
     pickup_pose = pose(1.0)
     drop_pose = pose(2.0)
-    preposition = object()
 
     class FakeCoordinator:
         def wait_for_publishers(self, _timeout):
@@ -134,17 +119,9 @@ def test_moving_scenario_adds_rail_motion_around_manipulation(monkeypatch):
         def prepare_route(self):
             events.append("route")
 
-        def start_preposition_arm(self):
-            events.append("start arm")
-            return preposition
-
         def move_to_pickup_slot(self, *_args, **_kwargs):
             events.append("move shuttle")
             return pickup_pose
-
-        def wait_preposition_arm(self, value):
-            assert value is preposition
-            events.append("wait arm")
 
     def run_hpp(_args, source, **kwargs):
         assert source is pickup_pose
@@ -163,8 +140,6 @@ def test_moving_scenario_adds_rail_motion_around_manipulation(monkeypatch):
         "add drop shuttle",
         "payload",
         "route",
-        "start arm",
         "move shuttle",
-        "wait arm",
         "manipulation",
     ]

@@ -9,10 +9,10 @@ robots:
 
   - name: staubli1
     model: staubli_tx2_60l
-    x_pose: -15.1622
+    x_pose: -15.251
     y_pose: -6.0
     z_pose: 1.0
-    yaw: 1.57
+    yaw: 0.0
     enabled: true
 
   - name: yaskawa_hc10_1

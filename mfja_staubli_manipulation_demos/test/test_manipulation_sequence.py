@@ -33,9 +33,6 @@ def assigned_value(path, name):
 def test_fixed_defaults_match_hpp_model():
     problem = PACKAGE / "hpp" / "room315_problem.py"
 
-    assert DEMO.DEFAULT_HPP_START_JOINTS == tuple(
-        assigned_value(problem, "DEFAULT_Q_START")
-    )
     assert DEMO.DEFAULT_SHUTTLE_POSE == assigned_value(
         problem, "DEFAULT_SHUTTLE_SLOT3_POSE"
     )
@@ -47,7 +44,9 @@ def test_fixed_defaults_match_hpp_model():
 
 
 def test_manipulation_runner_has_no_rail_dependency():
-    assert "mfja_rail_interfaces" not in SCRIPT.read_text()
+    source = SCRIPT.read_text()
+    assert "mfja_rail_interfaces" not in source
+    assert "preposition" not in source
 
 
 def test_fixed_scenario_command_does_not_command_shuttles():
@@ -62,9 +61,9 @@ def test_fixed_scenario_command_does_not_command_shuttles():
     assert command[command.index("--direction") + 1] == "shuttle-to-table"
     assert command[command.index("--payload-output") + 1] == "gazebo"
     assert command[command.index("--gripper-output") + 1] == "joint-trajectory"
-    assert command[command.index("--trajectory-topic") + 1] == (
-        "/staubli1/joint_trajectory"
-    )
+    assert "--q-start" not in command
+    assert "--trajectory-topic" not in command
+    assert "--joint-state-topic" not in command
     assert "--destination-shuttle-pose" not in command
     assert not any("/room_315/rails/" in value for value in command)
 
@@ -72,23 +71,11 @@ def test_fixed_scenario_command_does_not_command_shuttles():
 def test_fixed_scenario_order(monkeypatch):
     args = DEMO.parse_args([])
     events = []
-    preposition = object()
 
     class FakeCoordinator:
-        def wait_for_arm_publisher(self, _timeout):
-            events.append("arm interface")
-
         def initialize_payload(self, _pose, support):
             assert support == "fixed pickup shuttle"
             events.append("payload")
-
-        def start_preposition_arm(self):
-            events.append("start arm")
-            return preposition
-
-        def wait_preposition_arm(self, value):
-            assert value is preposition
-            events.append("wait arm")
 
     def run_hpp(_args, _pose, **kwargs):
         assert kwargs == {"direction": "shuttle-to-table"}
@@ -97,10 +84,4 @@ def test_fixed_scenario_order(monkeypatch):
     monkeypatch.setattr(DEMO, "run_hpp_cycle", run_hpp)
     DEMO.run_fixed_manipulation(FakeCoordinator(), args)
 
-    assert events == [
-        "arm interface",
-        "payload",
-        "start arm",
-        "wait arm",
-        "manipulation",
-    ]
+    assert events == ["payload", "manipulation"]

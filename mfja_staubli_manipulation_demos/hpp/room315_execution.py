@@ -42,14 +42,6 @@ class JointStateTracker:
         except KeyError:
             return
 
-    def wait(self, timeout):
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            rclpy.spin_once(self.node, timeout_sec=0.1)
-            if self.configuration is not None:
-                return self.configuration.copy()
-        return None
-
     def current(self):
         if self.configuration is None:
             return None
@@ -515,20 +507,27 @@ def execute_phase(
 
 
 def require_start(node, tracker, args, q_start):
-    current = tracker.wait(args.joint_state_timeout)
+    target = q_start[:6]
+    wait_for_arm_configuration(
+        node,
+        tracker,
+        target,
+        args.joint_state_timeout,
+        args.start_tolerance,
+    )
+    current = tracker.current()
     if current is None:
         raise RuntimeError(f"could not read {tracker.topic}")
 
-    target = q_start[:6]
     error = float(np.max(np.abs(current - target)))
     if error > args.start_tolerance:
         raise RuntimeError(
             f"Staubli is {error:.3f} rad from the HPP start. In simulation, "
-            "run the moving demo's preposition step. On hardware, pass "
-            "--q-start for the measured robot pose after reconciling the model."
+            "restart the manipulation scene and wait for its controller to reach "
+            "the configured startup target. On hardware, pass "
+            "--q-start for a measured robot pose validated in the commissioned "
+            "model."
         )
-
-    print(f"Staubli at the planned start (error {error:.3f} rad)", flush=True)
 
 
 def execute_plan(

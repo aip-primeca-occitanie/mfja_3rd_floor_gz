@@ -138,10 +138,6 @@ class MovingShuttleCoordinator(ManipulationCoordinator):
             (self.stopper_publisher, self.args.stopper_command_topic),
             (self.shuttle_publisher, self.args.shuttle_command_topic),
         ]
-        if self.trajectory_publisher is not None:
-            publishers.append(
-                (self.trajectory_publisher, self.args.trajectory_topic)
-            )
         self.wait_for_subscribers(publishers, timeout)
 
     def falling_state(self, shuttle_name):
@@ -524,6 +520,7 @@ def parse_args(argv):
         pose_stable_s=0.3,
         pose_stable_position_tolerance=0.002,
         pose_stable_yaw_tolerance=0.01,
+        publisher_timeout=5.0,
     )
     return finalize_manipulation_args(parser.parse_args(argv), script_dir)
 
@@ -536,7 +533,6 @@ def run_moving_shuttle_demo(node, args):
     node.ensure_payload_on_shuttle(args.pickup_shuttle_name)
     node.prepare_route()
 
-    preposition = node.start_preposition_arm() if args.preposition else None
     pickup_pose = node.move_to_pickup_slot(
         "arrival",
         args.pickup_shuttle_name,
@@ -545,9 +541,6 @@ def run_moving_shuttle_demo(node, args):
         timeout=args.arrival_timeout,
         stream_payload=True,
     )
-    if preposition is not None:
-        node.wait_preposition_arm(preposition)
-
     run_hpp_cycle(
         args,
         pickup_pose,

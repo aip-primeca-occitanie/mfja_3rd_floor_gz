@@ -7,7 +7,7 @@ from pyhpp.manipulation import Device, Graph, Problem, urdf
 from pyhpp.manipulation.constraint_graph_factory import ConstraintGraphFactory
 from pyhpp.manipulation.security_margins import SecurityMargins
 
-ROOM315_ROBOT_POSE = (-15.1622, -6.0, 1.0, 0.0, 0.0, 1.57)
+ROOM315_ROBOT_POSE = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
 DEFAULT_SHUTTLE_SLOT3_POSE = (-15.240, -5.536, 0.839, 0.0, 0.0, 0.0)
 DEFAULT_SHUTTLE_SLOT4_POSE = (-14.770, -5.536, 0.839346, 0.0, 0.0, -0.0014)
 TABLE_DROP_ZONE_POSE = (-14.65, -5.84, 1.003, 0.0, 0.0, 0.0)
@@ -15,7 +15,7 @@ GRAPH_NAME = "room315_staubli_shuttle_box"
 
 JOINT_NAMES = [f"joint_{i}" for i in range(1, 7)]
 DEFAULT_Q_START = np.array(
-    [-1.56136443, 0.47307870, 2.04964315, -0.00130315, -0.32991444, 0.00524110]
+    [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
 )
 BOX_SIZE = (0.07, 0.05, 0.06)
 BOX_HEIGHT = BOX_SIZE[2]

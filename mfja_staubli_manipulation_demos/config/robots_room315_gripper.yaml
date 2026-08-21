@@ -4,8 +4,8 @@ robots:
     asset_package: mfja_staubli_manipulation_demos
     urdf_model: staubli_tx2_60l
     urdf_asset_package: mfja_3rd_floor_description
-    x_pose: -15.1622
+    x_pose: -15.251
     y_pose: -6.0
     z_pose: 1.0
-    yaw: 1.57
+    yaw: 0.0
     enabled: true

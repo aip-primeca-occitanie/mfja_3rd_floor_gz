@@ -27,8 +27,24 @@ def assigned_literal(path, name):
             isinstance(target, ast.Name) and target.id == name
             for target in node.targets
         ):
-            return ast.literal_eval(node.value)
+            value = (
+                node.value.args[0]
+                if isinstance(node.value, ast.Call)
+                else node.value
+            )
+            return ast.literal_eval(value)
     raise AssertionError(f"{name} is not assigned in {path}")
+
+
+def controller_initial_positions(plugin):
+    positions = {}
+    joint_name = None
+    for element in plugin:
+        if element.tag == "joint_name":
+            joint_name = element.text
+        elif element.tag == "initial_position" and joint_name is not None:
+            positions[joint_name] = float(element.text)
+    return positions
 
 
 def urdf_joint_translation(root, name):
@@ -144,6 +160,23 @@ def test_simulated_jaw_commands_match_sdf_limits():
         assert upper - lower == pytest.approx(0.0025)
         assert open_position == pytest.approx(upper)
         assert close_position == pytest.approx(lower)
+
+
+def test_simulated_arm_controller_target_matches_hpp_default_configuration():
+    sdf = ElementTree.parse(DEMO_SDF).getroot()
+    controller = next(
+        plugin
+        for plugin in sdf.findall(".//plugin")
+        if plugin.attrib["filename"]
+        == "gz-sim-joint-trajectory-controller-system"
+        and plugin.findtext("joint_name") == "joint_1"
+    )
+    initial_positions = controller_initial_positions(controller)
+    joint_names = [f"joint_{index}" for index in range(1, 7)]
+
+    assert tuple(initial_positions[name] for name in joint_names) == pytest.approx(
+        assigned_literal(PROBLEM, "DEFAULT_Q_START")
+    )
 
 
 def test_hpp_uses_canonical_robot_and_shared_cell_descriptions():

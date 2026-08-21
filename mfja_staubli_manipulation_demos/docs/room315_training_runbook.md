@@ -37,7 +37,8 @@ Terminal 1:
 ros2 run mfja_staubli_manipulation_demos room315_demo.sh
 ```
 
-Wait until Room 315, the Staubli, and the pickup shuttle are visible.
+Wait until Room 315, the Staubli, and the pickup shuttle are visible, and the
+arm has settled at `[0, 50, 70, 0, 55, 0]` degrees.
 
 Terminal 2:
 
@@ -50,10 +51,9 @@ Expected sequence:
 
 1. A destination shuttle and payload appear.
 2. Rail switches and stoppers acknowledge the route.
-3. The simulated arm prepositions while the pickup shuttle approaches.
-4. The shuttle stops and HPP plans from its measured pose.
-5. The arm approaches, closes, transfers, opens, and retreats.
-6. Terminal 2 prints `two-shuttle manipulation demo complete`.
+3. The shuttle stops and HPP plans from its measured pose.
+4. The arm approaches, closes, transfers, opens, and retreats.
+5. Terminal 2 prints `two-shuttle manipulation demo complete`.
 
 The payload attachment is kinematic in Gazebo. HPP remains the collision and
 contact source of truth.
@@ -80,10 +80,12 @@ ros2 topic echo /room_315/rails/right/sensors/feedback
 
 ## Real-robot boundary
 
-Do not reuse the simulation preposition trajectory on hardware. The real arm
-action and gripper IO are now known, but Diane's staging candidate currently
-collides in the HPP cell model. Real motion remains blocked until that placement
-discrepancy is resolved and the physical tool/workpiece model is commissioned.
+The Gazebo model's startup controller targets do not command hardware. The real
+arm action and gripper IO are now known, and the simulation staging
+configuration `[0, 50, 70, 0, 55, 0]` degrees passes the current HPP arm/cell
+configuration validation with the corrected robot world pose. Real motion
+remains blocked until the physical tool/workpiece model is commissioned and the
+motion is authorized on site.
 
 The ordered status and exact interfaces are maintained in the package
 [README](../README.md#known-real-robot-interfaces).

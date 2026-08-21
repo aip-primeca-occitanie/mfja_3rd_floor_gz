@@ -1,3 +1,4 @@
+import ast
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -13,6 +14,25 @@ LAUNCH = (
     / "launch"
     / "multi_robot_sim.launch.py"
 )
+
+
+def assigned_literal(path, name):
+    tree = ast.parse(path.read_text())
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if any(
+            isinstance(target, ast.Name) and target.id == name
+            for target in node.targets
+        ):
+            return ast.literal_eval(node.value)
+    raise AssertionError(f"{name} is not assigned in {path}")
+
+
+def robot_pose(path, name):
+    config = yaml.safe_load(path.read_text())
+    robot = next(robot for robot in config["robots"] if robot["name"] == name)
+    return tuple(robot[key] for key in ("x_pose", "y_pose", "z_pose", "yaw"))
 
 
 def load_launch_module():
@@ -46,3 +66,27 @@ def test_gazebo_model_and_robot_description_can_use_distinct_packages():
     assert Path(urdf_path) == (
         DESCRIPTION / "urdf" / "staubli_tx2_60l.urdf"
     )
+
+
+def test_room315_staubli_pose_matches_gazebo_and_hpp_models():
+    expected_gazebo_pose = (-15.251, -6.0, 1.0, 0.0)
+    config_paths = [
+        REPOSITORY / "mfja_robot_control_config" / "config" / "robots.yaml",
+        REPOSITORY
+        / "mfja_robot_control_config"
+        / "config"
+        / "robots_room_315_only.yaml",
+        DEMO / "config" / "robots_room315_gripper.yaml",
+    ]
+
+    for path in config_paths:
+        assert robot_pose(path, "staubli1") == expected_gazebo_pose
+
+    expected_hpp_pose = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
+    hpp_paths = [
+        REPOSITORY / "mfja_staubli_demos" / "hpp" / "room315_hpp_line.py",
+        DEMO / "hpp" / "room315_problem.py",
+    ]
+
+    for path in hpp_paths:
+        assert assigned_literal(path, "ROOM315_ROBOT_POSE") == expected_hpp_pose

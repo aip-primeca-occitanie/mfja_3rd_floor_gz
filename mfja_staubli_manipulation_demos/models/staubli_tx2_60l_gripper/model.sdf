@@ -598,6 +598,7 @@
       <!-- Integral limits must exceed the gravity torque of each joint,
            otherwise the arm sags below the commanded trajectory
            (~0.13 rad on joint_2, i.e. ~12 cm at the tool). -->
+      <!-- Validated HPP start: [0, 50, 70, 0, 55, 0] degrees. -->
       <joint_name>joint_1</joint_name>
       <initial_position>0.0</initial_position>
       <position_p_gain>400.0</position_p_gain>
@@ -609,7 +610,7 @@
       <position_cmd_max>320.0</position_cmd_max>
 
       <joint_name>joint_2</joint_name>
-      <initial_position>0.0</initial_position>
+      <initial_position>0.8726646259971648</initial_position>
       <position_p_gain>600.0</position_p_gain>
       <position_i_gain>20.0</position_i_gain>
       <position_d_gain>60.0</position_d_gain>
@@ -619,7 +620,7 @@
       <position_cmd_max>340.0</position_cmd_max>
 
       <joint_name>joint_3</joint_name>
-      <initial_position>0.0</initial_position>
+      <initial_position>1.2217304763960306</initial_position>
       <position_p_gain>400.0</position_p_gain>
       <position_i_gain>15.0</position_i_gain>
       <position_d_gain>40.0</position_d_gain>
@@ -639,7 +640,7 @@
       <position_cmd_max>90.0</position_cmd_max>
 
       <joint_name>joint_5</joint_name>
-      <initial_position>0.0</initial_position>
+      <initial_position>0.9599310885968813</initial_position>
       <position_p_gain>100.0</position_p_gain>
       <position_i_gain>4.0</position_i_gain>
       <position_d_gain>12.0</position_d_gain>

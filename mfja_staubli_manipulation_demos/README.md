@@ -15,7 +15,7 @@ Each command owns one layer:
 | Command | Responsibility |
 |---|---|
 | `room315_demo.sh` | Start the Room 315 scene. It creates a stopped shuttle by default but never commands the rail. |
-| `room315_manipulation_demo.sh` | Prepare the payload and simulated arm, then run one fixed shuttle-to-table manipulation. It does not import or use the rail API. |
+| `room315_manipulation_demo.sh` | Prepare the payload, then run one fixed shuttle-to-table manipulation. It does not import or use the rail API. |
 | `room315_moving_shuttle_demo.sh` | Add rail routing, shuttle motion, measured support poses, and safe `OFF` cleanup around the same manipulation runner. |
 | `room315_hpp_manipulation.sh` | Build, plan, and optionally execute one HPP cycle for poses supplied on the command line. |
 
@@ -69,7 +69,8 @@ ros2 run mfja_staubli_manipulation_demos \
   room315_manipulation_demo.sh
 ```
 
-The fixed runner creates the visible payload, prepositions the simulated arm,
+During scene startup, the simulated arm controller targets
+`[0, 50, 70, 0, 55, 0]` degrees. The fixed runner creates the visible payload
 and executes a shuttle-to-table cycle. It does not import
 `mfja_rail_interfaces`, publish a shuttle command, or wait for rail sensors.
 The shuttle remains only as a stationary collision/contact support. Pass
@@ -101,11 +102,10 @@ The coordinator follows one linear sequence:
 
 1. add the destination shuttle and initialize the visible payload;
 2. command and verify the rail route;
-3. preposition the simulated arm while the pickup shuttle moves;
-4. stop the shuttle and read its stable measured pose;
-5. plan the transfer with HPP;
-6. verify the arm start and execute approach, transfer, and retreat;
-7. close the simulated fingers before transfer and open them before retreat.
+3. stop the shuttle and read its stable measured pose;
+4. plan the transfer with HPP;
+5. verify the spawned arm start and execute approach, transfer, and retreat;
+6. close the simulated fingers before transfer and open them before retreat.
 
 Any active shuttle receives `OFF` after an error or Ctrl-C. Stop terminal 2
 before stopping Gazebo.
@@ -138,9 +138,14 @@ These are example measured stopping poses from the moving scenario. The fixed
 runner instead uses the nominal slot-3 pose
 `-15.240 -5.536 0.839 0 0 0` by default.
 
-The fixed and moving demo runners own payload creation and simulation
-prepositioning. A direct `--execute` invocation therefore requires the payload
-entity and arm start to be prepared already.
+The Staubli itself is registered in the Room 315 world at `x=-15.251`, `y=-6`,
+`z=1`, `yaw=0` (metres and radians, with zero roll and pitch). Gazebo uses this
+pose directly; HPP applies its inverse when loading the fixed cell.
+
+The manipulation-specific SDF owns the simulation start configuration, while
+the fixed and moving demo runners own payload creation. A direct `--execute`
+invocation therefore requires the payload entity and arm start to be prepared
+already.
 
 ## Model organization
 
@@ -161,7 +166,8 @@ This package contains only manipulation-specific descriptions:
 - `hpp/room315_payload_box.*`, `room315_shuttle_deck.*`, and
   `room315_staubli_table_drop_zone.*`: object/support collision and contact
   models;
-- `models/staubli_tx2_60l_gripper/model.sdf`: articulated Gazebo gripper.
+- `models/staubli_tx2_60l_gripper/model.sdf`: articulated Gazebo gripper and
+  arm-controller startup target.
 
 Gazebo renders the supplied 50 x 24.7 x 25 mm SCHUNK body, custom jaws, and
 72 mm robot-side adapter at millimetre scale. Its collision primitives,
@@ -219,8 +225,8 @@ ros2 service call /io_interface/write_single_io staubli_msgs/srv/WriteSingleIO \
 `response.code.val == 1` means the controller accepted the IO write; `-1`
 means failure. It does not measure pressure, jaw position, contact, or grasp.
 
-After the HPP model is reconciled and motion is authorized, the one-cycle
-transport flags are:
+After the remaining model commissioning is complete and motion is authorized,
+the one-cycle transport flags are:
 
 ```bash
 ros2 run mfja_staubli_manipulation_demos \
@@ -243,16 +249,13 @@ For `staubli_msgs`, expose the external driver workspace:
 export STAUBLI_SETUP=/absolute/path/to/staubli_ws/install/local_setup.bash
 ```
 
-## Current blocker and later commissioning
+## Current validation status and later commissioning
 
-Diane's controller staging candidate is `[0, 50, 70, 0, 55, 0]` degrees
-(`[0, 0.8726646260, 1.2217304764, 0, 0.9599310886, 0]` radians). In the current
-HPP scene it collides between `staubli/link_4` and
-`room315/carter_droit`. Do not send that motion yet.
-
-Before checking this candidate, the only immediate model question is whether
-the HPP robot and `carter_droit` placements represent the physical cell. Once
-that is reconciled, rerun HPP collision validation at the candidate.
+Diane's controller staging configuration is `[0, 50, 70, 0, 55, 0]` degrees
+(`[0, 0.8726646260, 1.2217304764, 0, 0.9599310886, 0]` radians). With the
+corrected Staubli world pose, it passes the current HPP arm/cell configuration
+validation and is now the simulation/HPP default start. This model result does
+not authorize physical motion.
 
 The following are later prerequisites for a physical grasp, not missing ROS
 interface information:

@@ -10,7 +10,7 @@ model status, and real-robot readiness live in the package
 | File | Responsibility |
 |---|---|
 | `launch/room_315_staubli_shuttle_manipulation_demo.launch.py` | Start Room 315, Staubli, bridges, optional shuttle subsystem, and optional GUI. |
-| `scripts/room315_manipulation_sequence.py` | Prepare the simulated arm and payload, then execute a fixed-support manipulation without importing rail interfaces. |
+| `scripts/room315_manipulation_sequence.py` | Prepare the payload, then execute a fixed-support manipulation without importing rail interfaces. |
 | `scripts/room315_moving_shuttle_sequence.py` | Add the supported two-shuttle sequence and measured poses around the fixed-support runner. |
 | `hpp/room315_shuttle_manipulation.py` | Build endpoints, plan one manipulation cycle, and optionally execute it. |
 | `hpp/room315_problem.py` | Load models, define contacts/handles, and construct the manipulation graph. |
@@ -40,12 +40,12 @@ Removing shuttle motion therefore means selecting the fixed entry point, not
 commenting out part of the mobile scenario. Both paths keep the HPP plan and
 execution code unchanged.
 
-| Layer | Commands rail | Initializes payload | Prepositions simulated arm | Runs HPP |
-|---|---:|---:|---:|---:|
-| Scene launch | no | no | no | no |
-| Fixed manipulation runner | no | yes | yes | yes |
-| Moving-shuttle adapter | yes | via shared runner | via shared runner | via shared runner |
-| HPP core | no | no | no | yes |
+| Layer | Commands rail | Initializes payload | Runs HPP |
+|---|---:|---:|---:|
+| Scene launch | no | no | no |
+| Fixed manipulation runner | no | yes | yes |
+| Moving-shuttle adapter | yes | via shared runner | via shared runner |
+| HPP core | no | no | yes |
 
 ## Coordinate conventions
 
@@ -53,7 +53,7 @@ The cell URDF stores fixture poses in the Gazebo world frame. The Staubli world
 pose is:
 
 ```text
-(-15.1622, -6.0, 1.0, roll=0, pitch=0, yaw=1.57)
+(-15.251, -6.0, 1.0, roll=0, pitch=0, yaw=0)
 ```
 
 `build_problem()` loads the cell with the inverse robot world transform so the
@@ -71,7 +71,8 @@ The launch file:
 1. creates a process-specific Gazebo transport partition;
 2. starts `room_315_only.launch.py` without its GUI;
 3. enables one stopped right-rail shuttle when `enable_shuttles:=true`;
-4. spawns the articulated Staubli/gripper SDF;
+4. spawns the articulated Staubli/gripper SDF with the validated HPP start as
+   its arm-controller target;
 5. adds ROS-Gazebo bridges for arm trajectory/state, gripper trajectory, world
    services, and starts the optional ROS rail subsystem;
 6. starts the GUI as a separate optional process.
@@ -85,9 +86,7 @@ rail topics would interleave.
 `room315_manipulation_sequence.py` runs one direct story:
 
 ```text
-wait for the simulated arm interface
 initialize the payload on the fixed slot-3 shuttle
-preposition the simulated arm
 run one HPP shuttle-to-table cycle
 ```
 
@@ -103,12 +102,10 @@ add destination shuttle
 initialize payload on pickup shuttle
 command route
 wait for fresh switch and stopper acknowledgements
-start simulated arm preposition
 start pickup shuttle
 wait for sensor arrival
 command shuttle OFF
 wait for fresh WAITING state and stable measured pose
-wait for arm preposition endpoint
 run HPP shuttle-to-shuttle cycle using both measured shuttle poses
 ```
 
@@ -128,14 +125,15 @@ planning failure remain visible in the teaching flow.
 - Every active shuttle receives `OFF` in both the motion method and top-level
   cleanup.
 
-### Simulation preposition
+### Simulation start configuration
 
-The coordinator can publish one direct joint interpolation to
-`/staubli1/joint_trajectory` while the shuttle moves. It then checks the
-measured endpoint before HPP execution begins.
-
-This is simulation setup, not a planned HPP path. The real-arm invocation has
-no preposition step; hardware must already be at the validated HPP start.
+The manipulation-specific Gazebo SDF gives its six-joint arm controller the
+startup target `[0, 50, 70, 0, 55, 0]` degrees, matching `DEFAULT_Q_START` in
+`room315_problem.py`. The arm converges to that target while the scene starts;
+the coordinators publish no setup trajectory. Before any execution, the HPP
+executor still reads measured joint state and rejects a start outside its
+configured tolerance. Hardware must already be at a separately validated HPP
+start.
 
 ## HPP problem
 
@@ -272,8 +270,8 @@ proof.
 
 The delivered CAD confirms product geometry and a body-local tip coordinate,
 but not the physical Staubli mount or contact TCP. Those calibration tasks and
-the staging-configuration collision are tracked in the package README rather
-than embedded as provisional constants in the teaching flow.
+the staging-configuration validation status are tracked in the package README
+rather than embedded as provisional constants in the teaching flow.
 
 ## Failure interpretation
 
