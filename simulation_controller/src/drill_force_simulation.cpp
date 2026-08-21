@@ -1,6 +1,7 @@
 // Modèle basé sur https://www.sandvik.coromant.com/fr-fr/knowledge/machining-formulas-definitions/drilling-formulas-definitions
 
 #include <rclcpp/rclcpp.hpp>
+#include <random>
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <std_msgs/msg/float64.hpp>
@@ -37,8 +38,11 @@ public:
         zf = this->get_parameter("mat_zf").as_double();
         RCLCPP_INFO(this->get_logger(), "Matière: Kc1=%.0f MPa  m0=%.2f", Kc1, m0);
 
+        this->declare_parameter<double>("noise_sigma", 0.0); // écart-type du bruit [N]
+        noise_sigma = this->get_parameter("noise_sigma").as_double();
+
         // pub
-        pub_Fz = this->create_publisher<std_msgs::msg::Float64>("/Fz", 10);
+        pub_Fz = this->create_publisher<std_msgs::msg::Float64>("/Fz_raw", 10);
         pub_Fc = this->create_publisher<std_msgs::msg::Float64>("/Fc", 10);
         pub_Mz = this->create_publisher<std_msgs::msg::Float64>("/Mz", 10);
 
@@ -74,46 +78,52 @@ private:
 
     double current_z = 0.;
 
+    double noise_sigma;
+    std::mt19937 rng{std::random_device{}()};
+    std::normal_distribution<double> noise_dist{0.0, 1.0};
+
     std_msgs::msg::Float64 msg_;
 
     void poseCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
-        current_z = - msg->pose.position.z;
+        current_z = msg->pose.position.z;
         }
 
     void velCb(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
     {
         const double vz = msg->twist.linear.z; // Vitesse d'avance axiale [m/s]
 
-        if (n < 1.0 || vz <= 0.0 || current_z>z0 || zf>current_z) {
-            msg_.data = 0.;
+        if (n < 1.0 || vz >= 0.0 || current_z>z0 || zf>current_z) {
+            msg_.data = noise_sigma * noise_dist(rng);
             pub_Fz->publish(msg_);
             pub_Fc->publish(msg_);
             pub_Mz->publish(msg_);
             return;
         }
-        const double fz = vz / n / 60.; // avance par tour [m/tr]
+        double fz = std::abs(vz) * 60 / n; // avance par tour [m/tr]
 
-        const double corr_rake = 1.0 - g0 * 180.0 / M_PI / 100.0; // Correction angle de coupe, terme empirique Sandvik : (1 - γ0 / 100), γ0 en degrés
-        const double chip_thickness = fz * std::sin(kr);  // épaisseur copeau effective [m]
+        double corr_rake = 1.0 - g0 * 180.0 / M_PI / 100.0; // Correction angle de coupe, terme empirique Sandvik : (1 - γ0 / 100), γ0 en degrés
+        double chip_thickness = fz * std::sin(kr);  // épaisseur copeau effective [m]
 
-        const double Kc = Kc1 * 1e6 * std::pow(chip_thickness, -m0) * corr_rake; // Pression spécifique de coupe Kc [N/m²], vérifier unités !!!
+        double Kc = Kc1 * 1e6 * std::pow(chip_thickness, -m0) * corr_rake; // Pression spécifique de coupe Kc [N/m²], vérifier unités !!!
         // Kc = Kc1 * (fz * sin(κr))^(-m0) * (1 * γ0°/100)
 
-        const double vc = M_PI * Dc * n / 60.; // [m/s] Vitesse de coupe
+        double vc = M_PI * Dc * n / 60.; // [m/s] Vitesse de coupe
         // vc = π * Dc * n
 
-        const double Pc = vz * vc * Dc * Kc / (240. * n / 60.); // [W]
+        double Pc = vz * vc * Dc * Kc / (240. * n / 60.); // [W]
         // Pc = vz * vc * Dc * Kc / (240 * n)
 
-        const double Mz = (Pc * 30.) / (M_PI * n);  // [N m]
+        double Mz = (Pc * 30.) / (M_PI * n);  // [N m]
         // Dérivée de P = Mz * ω = Mz * 2π * n/60 -> Mz = 60 * P / (2π * n)
 
-        const double Fc = (2. * Mz) / Dc;  // [N]
+        double Fc = (2. * Mz) / Dc;  // [N]
         // Fc = 2 * Mz / Dc
 
-        const double Fz = 0.5 * Kc * Dc * fz * std::sin(kr);  // [N]
+        double Fz = 0.5 * Kc * Dc * fz * std::sin(kr);  // [N]
         // Fz = 0.5 * Kc * Dc * fz * sin(κr)
         // Kc [N/mm²], Dc [m], fz [m/tr] -> Fz [N]
+
+        Fz += noise_sigma * noise_dist(rng);
 
         msg_.data = Fz;
         pub_Fz->publish(msg_);

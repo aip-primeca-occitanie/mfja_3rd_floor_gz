@@ -82,9 +82,10 @@ public:
 
         // compute reference (position = 0)
         Eigen::VectorXd q_ref = Eigen::Map<const Eigen::VectorXd>(REF_ANGLES.data(), REF_ANGLES.size());
-        pinocchio::forwardKinematics(model, *data, q_ref);
-        pinocchio::framesForwardKinematics(model, *data, q_ref); //?
-        ref_transform = data->oMf[eef_frame_id];
+        //pinocchio::forwardKinematics(model, *data, q_ref);
+        //pinocchio::framesForwardKinematics(model, *data, q_ref); //?
+        //ref_transform = data->oMf[eef_frame_id];
+        ref_transform = pinocchio::SE3::Identity();
         q_current = q_ref;
 
         //sub
@@ -173,9 +174,12 @@ private:
     }
 
     void cartesianTargetCb(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
-        geometry_msgs::msg::Pose corrected_pose = msg->pose;
-        corrected_pose.position.x = msg->pose.position.z;
-        corrected_pose.position.z = msg->pose.position.x; //inverted ?
+        geometry_msgs::msg::Pose target = msg->pose;
+        target.position.z += 0.5; // on annule l'offset de base appliqué par cartesian_converter
+
+        geometry_msgs::msg::Pose corrected_pose = target;
+        corrected_pose.position.x = target.position.x;
+        corrected_pose.position.z = target.position.z;
 
         Eigen::Isometry3d pose_relative;
         tf2::fromMsg(corrected_pose, pose_relative);

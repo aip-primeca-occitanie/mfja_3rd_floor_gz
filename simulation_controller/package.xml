@@ -17,6 +17,7 @@
   <depend>pinocchio</depend>
   <depend>staubli_tx2_60l_controller</depend>
   <depend>ament_index_cpp</depend>
+  <depend>visualization_msgs</depend>
 
 
   <export>

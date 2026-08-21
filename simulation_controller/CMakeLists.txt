@@ -20,6 +20,7 @@ find_package(staubli_tx2_60l_controller REQUIRED)
 find_library(NIDAQMX_LIB nidaqmx)
 find_package(pinocchio REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # ---- Controller Node ---- 
 add_executable(position_commander src/position_commander.cpp) 
@@ -32,7 +33,7 @@ add_executable(force_pid_controller src/spring_force_pid_controller.cpp)
 ament_target_dependencies(force_pid_controller rclcpp geometry_msgs std_msgs staubli_tx2_60l_controller)
 
 add_executable(drill_controller src/drill_controller.cpp)
-ament_target_dependencies(drill_controller rclcpp geometry_msgs std_msgs staubli_tx2_60l_controller)
+ament_target_dependencies(drill_controller rclcpp geometry_msgs std_msgs trajectory_msgs staubli_tx2_60l_controller)
 
 # ---- Other Nodes ---- 
 add_executable(cartesian_converter src/cartesian_converter.cpp)
@@ -49,6 +50,13 @@ ament_target_dependencies(force_simulation rclcpp geometry_msgs std_msgs)
 add_executable(drill_force_simulation src/drill_force_simulation.cpp)
 ament_target_dependencies(drill_force_simulation rclcpp geometry_msgs std_msgs)
 
+add_executable(sensor_filter src/force_filter.cpp)
+ament_target_dependencies(sensor_filter rclcpp  std_msgs)
+
+add_executable(plate_marker_publisher src/plate_marker.cpp)
+ament_target_dependencies(plate_marker_publisher rclcpp visualization_msgs)
+
+
 # ---- exe ---- 
 install(TARGETS
   position_commander
@@ -59,11 +67,13 @@ install(TARGETS
   target_force_publisher
   drill_force_simulation
   drill_controller
+  sensor_filter
+  plate_marker_publisher
   DESTINATION lib/${PROJECT_NAME} )  
   
 # ---- Ressources ---- 
 install(DIRECTORY
-  launch config
+  launch config urdf
   DESTINATION share/${PROJECT_NAME} )  
 
 ament_package()

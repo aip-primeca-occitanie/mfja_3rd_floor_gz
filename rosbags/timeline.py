@@ -19,8 +19,8 @@ from scapy.all import rdpcap, IP, Raw
 # CONFIGURATION
 # ==========================
 
-BAG_PATH  = "timing_record_4"
-PCAP_PATH = "timing_record_4.pcap"
+BAG_PATH  = "timing_record_2"
+PCAP_PATH = "timing_record_2.pcap"
 OUT_PATH  = "timeline_events.txt"
 
 IP_1 = "172.31.0.1"
@@ -183,7 +183,7 @@ plt.figure(figsize=(14, 6))
 plt.plot(t_z, z_values, color="gray", linewidth=1, label=POSITION_TOPIC, zorder=1)
 for label in labels:
     
-    if label=="e" or label=="d" :
+    if label=="a" or label=="b" :
         t_event = np.array([t for t, l in events if l == label])
         z_event = np.interp(t_event, t_z, z_values)
         marker, color = MARKERS.get(label, ("o", "black"))
