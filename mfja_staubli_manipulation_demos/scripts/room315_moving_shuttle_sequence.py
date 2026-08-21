@@ -2,6 +2,7 @@
 """Coordinate the simulated moving-shuttle Room 315 manipulation demo."""
 
 import argparse
+import math
 import re
 import sys
 import time
@@ -20,6 +21,7 @@ from mfja_rail_interfaces.msg import SwitchState
 from mfja_rail_interfaces.srv import AddShuttle
 
 from room315_manipulation_sequence import (
+    DEFAULT_SHUTTLE_POSE,
     ManipulationCoordinator,
     add_manipulation_arguments,
     finalize_manipulation_args,
@@ -243,6 +245,39 @@ class MovingShuttleCoordinator(ManipulationCoordinator):
                 return
         raise RuntimeError(f"timed out waiting for {sensor_name} inactive")
 
+    def wait_for_position(
+        self,
+        shuttle_name,
+        target,
+        tolerance,
+        timeout,
+        *,
+        stream_payload=False,
+    ):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            rclpy.spin_once(self, timeout_sec=0.02)
+            falling = self.falling_state(shuttle_name)
+            if falling is not None:
+                raise RuntimeError(
+                    f"{shuttle_name} entered FALLING on "
+                    f"{falling.current_segment}@{falling.s:.3f}"
+                )
+            if stream_payload:
+                self.stream_payload_on_shuttle()
+            pose = self.latest_pose(shuttle_name)
+            if pose is None:
+                continue
+            position = pose.position
+            if math.dist(
+                (position.x, position.y, position.z), target
+            ) <= tolerance:
+                return
+        raise RuntimeError(
+            f"timed out waiting for {shuttle_name} near pickup position "
+            f"{tuple(target)}"
+        )
+
     def latest_pose(self, shuttle_name):
         stamped = self.latest_poses.get(shuttle_name)
         return stamped.pose if stamped is not None else None
@@ -434,6 +469,8 @@ class MovingShuttleCoordinator(ManipulationCoordinator):
         require_leave_first,
         timeout,
         stream_payload=False,
+        stop_position=None,
+        stop_tolerance=0.005,
     ):
         print(f"{label}: moving {shuttle_name} toward {sensor_name}", flush=True)
         self.publish_shuttle_command(shuttle_name, "ON")
@@ -452,8 +489,17 @@ class MovingShuttleCoordinator(ManipulationCoordinator):
                 timeout,
                 stream_payload=stream_payload,
             )
+            if stop_position is not None:
+                self.wait_for_position(
+                    shuttle_name,
+                    stop_position,
+                    stop_tolerance,
+                    timeout,
+                    stream_payload=stream_payload,
+                )
             print(
-                f"{label}: {sensor_name} active, stopping {shuttle_name}",
+                f"{label}: {sensor_name} pickup position reached, "
+                f"stopping {shuttle_name}",
                 flush=True,
             )
             pose_update = self.pose_updates.get(shuttle_name, 0)
@@ -498,6 +544,14 @@ def parse_args(argv):
     parser.add_argument("--drop-start-slot", default="4")
     parser.add_argument("--pickup-sensor", default=DEFAULT_PICKUP_SENSOR)
     parser.add_argument("--drop-sensor", default=DEFAULT_DROP_SENSOR)
+    parser.add_argument(
+        "--pickup-stop-position",
+        nargs=3,
+        type=float,
+        default=DEFAULT_SHUTTLE_POSE[:3],
+        metavar=("X", "Y", "Z"),
+        help="Measured shuttle position used for the DZI3R manipulation stop.",
+    )
     parser.set_defaults(
         switch_command_topic=f"{RIGHT_RAIL_PREFIX}/switches/command",
         stopper_command_topic=f"{RIGHT_RAIL_PREFIX}/stoppers/command",
@@ -520,6 +574,7 @@ def parse_args(argv):
         pose_stable_s=0.3,
         pose_stable_position_tolerance=0.002,
         pose_stable_yaw_tolerance=0.01,
+        pickup_stop_tolerance=0.005,
         publisher_timeout=5.0,
     )
     return finalize_manipulation_args(parser.parse_args(argv), script_dir)
@@ -540,6 +595,8 @@ def run_moving_shuttle_demo(node, args):
         require_leave_first=False,
         timeout=args.arrival_timeout,
         stream_payload=True,
+        stop_position=args.pickup_stop_position,
+        stop_tolerance=args.pickup_stop_tolerance,
     )
     run_hpp_cycle(
         args,

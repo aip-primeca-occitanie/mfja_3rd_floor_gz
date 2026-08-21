@@ -196,7 +196,7 @@ observed.
 No custom Staubli arm adapter is needed. The execution path is:
 
 ```text
-hpp_exec.send_trajectory
+hpp_exec.execute_segments
   -> FollowJointTrajectory
      /manipulator_controller/joint_trajectory_action
   -> driver-internal JointTrajectory

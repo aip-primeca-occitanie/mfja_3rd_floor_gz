@@ -28,6 +28,7 @@ def test_simulation_defaults():
     assert not hasattr(args, "preposition")
     assert not hasattr(args, "q_start")
     assert args.publisher_timeout == 5.0
+    assert args.pickup_stop_position == (-15.240, -5.536, 0.839)
 
 
 def test_scenario_names_and_slots_are_configurable():
@@ -94,6 +95,43 @@ def test_failed_arrival_still_stops_shuttle():
         )
 
     assert commands == ["ON", "OFF"]
+
+
+def test_arrival_reaches_pickup_position_before_stopping():
+    coordinator = object.__new__(DEMO.MovingShuttleCoordinator)
+    coordinator.args = type("Args", (), {})()
+    coordinator.active_shuttles = set()
+    coordinator.pose_updates = {"shuttle": 1}
+    coordinator.shuttle_state_updates = {"shuttle": 1}
+    events = []
+
+    def publish_command(_shuttle_name, command):
+        events.append(command)
+        if command == "ON":
+            coordinator.active_shuttles.add("shuttle")
+        else:
+            coordinator.active_shuttles.discard("shuttle")
+
+    coordinator.publish_shuttle_command = publish_command
+    coordinator.sensor_is_active = lambda *_args: False
+    coordinator.wait_for_sensor_active = lambda *_args, **_kwargs: events.append(
+        "sensor"
+    )
+    coordinator.wait_for_position = lambda *_args, **_kwargs: events.append(
+        "position"
+    )
+    coordinator.wait_for_stopped_pose = lambda *_args, **_kwargs: pose()
+
+    coordinator.move_to_pickup_slot(
+        "arrival",
+        "shuttle",
+        "sensor",
+        require_leave_first=False,
+        timeout=1.0,
+        stop_position=(-15.240, -5.536, 0.839),
+    )
+
+    assert events == ["ON", "sensor", "position", "OFF"]
 
 
 def test_moving_scenario_adds_rail_motion_around_manipulation(monkeypatch):

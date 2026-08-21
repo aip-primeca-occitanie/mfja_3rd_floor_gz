@@ -7,7 +7,7 @@ import numpy as np
 
 from room315_execution import execute_plan
 from room315_planning import (
-    build_execution_phases,
+    build_execution_plan,
     direction_endpoints,
     format_plan,
     plan_manipulation,
@@ -136,7 +136,7 @@ def parse_args(argv=None):
         min_segment_samples=8,
         max_joint_speed=0.50,
         min_sample_dt=0.03,
-        phase_start_hold=0.2,
+        segment_start_hold=0.2,
         box_rate=30.0,
         joint_state_timeout=10.0,
         joint_state_stale_timeout=5.0,
@@ -145,7 +145,6 @@ def parse_args(argv=None):
         execution_timeout_scale=6.0,
         payload_sync_error=0.50,
         payload_sync_lookahead=80,
-        payload_sync_report_period=5.0,
         payload_final_snap_samples=6,
         payload_pose_epsilon=1e-4,
     )
@@ -216,7 +215,7 @@ def main():
         transition_timeout=args.transition_timeout,
     )
     format_plan(segments)
-    phases = build_execution_phases(
+    execution_plan = build_execution_plan(
         robot,
         graph,
         segments,
@@ -230,12 +229,12 @@ def main():
     if args.execute:
         execute_plan(
             robot,
-            phases,
+            execution_plan,
             q_source,
             args,
         )
     else:
-        print("planning complete; pass --execute to run the phases")
+        print("planning complete; pass --execute to run the segments")
 
     return 0
 

@@ -1,8 +1,9 @@
-"""HPP target selection, transition planning, and phase sampling."""
+"""HPP target selection, transition planning, and execution segment sampling."""
 
 from dataclasses import dataclass
 
 import numpy as np
+from hpp_exec import Segment
 from pyhpp.manipulation import TransitionPlanner
 
 from room315_problem import (
@@ -15,6 +16,10 @@ from room315_problem import (
     normalize_box_quaternion,
 )
 
+MAX_PICK_APPROACH_JOINT_DELTA = 2.0
+MAX_FIRST_APPROACH_PATH_LENGTH = 3.0
+MAX_MANIPULATION_PATH_LENGTH = 8.0
+
 
 @dataclass
 class PlannedSegment:
@@ -23,12 +28,13 @@ class PlannedSegment:
 
 
 @dataclass
-class ExecutionPhase:
-    name: str
-    payload_mode: str
+class ExecutionPlan:
     configs: list[np.ndarray]
     payload_configs: list[np.ndarray]
     times: list[float]
+    segments: list[Segment]
+    segment_names: list[str]
+    payload_modes: list[str]
 
 
 def validate_transition_config(transition, q, label):
@@ -57,6 +63,10 @@ def score_pick_chain(q_free, chain, preferred=None):
     posture = float(np.max(np.abs(chain[-1][:6] - reference[:6])))
     wrist_wrap = float(np.sum(np.maximum(0.0, np.abs(chain[-1][:6]) - np.pi)))
     return motion + 0.5 * posture + 0.5 * wrist_wrap
+
+
+def pick_approach_joint_delta(q_free, chain):
+    return float(np.max(np.abs(chain[0][:6] - q_free[:6])))
 
 
 def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferred=None):
@@ -93,23 +103,37 @@ def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferr
             continue
 
         score = score_pick_chain(q_free, chain, preferred)
+        approach_delta = pick_approach_joint_delta(q_free, chain)
         if any(
             np.max(np.abs(np.asarray(chain) - np.asarray(previous))) < 1e-5
-            for _, _, previous in candidates
+            for _, _, _, previous in candidates
         ):
             continue
-        candidates.append((score, attempt + 1, chain))
+        candidates.append((score, attempt + 1, approach_delta, chain))
 
     if candidates:
         candidates.sort(key=lambda candidate: candidate[0])
-        best_score, best_attempt, _ = candidates[0]
+        simple_candidates = [
+            candidate
+            for candidate in candidates
+            if candidate[2] <= MAX_PICK_APPROACH_JOINT_DELTA
+        ]
+        if not simple_candidates:
+            closest_delta = min(candidate[2] for candidate in candidates)
+            raise RuntimeError(
+                f"{label} only generated distant IK branches "
+                f"(closest first-pick joint delta {closest_delta:.3f} rad; "
+                f"limit {MAX_PICK_APPROACH_JOINT_DELTA:.3f} rad)"
+            )
+
+        best_score, best_attempt, _, _ = simple_candidates[0]
         print(
-            f"{label}: generated {len(candidates)} distinct valid pick chain(s) from "
+            f"{label}: generated {len(simple_candidates)} simple pick chain(s) from "
             f"{attempts} attempt(s) (best attempt {best_attempt}, "
             f"score {best_score:.3f})",
             flush=True,
         )
-        return [chain for _, _, chain in candidates]
+        return [chain for _, _, _, chain in simple_candidates]
 
     raise RuntimeError(f"failed to generate {label} pick chain after {attempts} attempts")
 
@@ -131,6 +155,22 @@ def plan_transition(robot, planner, graph, transition_name, q_start, q_goal):
             f"failed to plan transition {transition_name}: {report}"
         ) from exc
     return PlannedSegment(transition_name, path)
+
+
+def validate_simple_plan(segments):
+    first_length = float(segments[0].path.length())
+    total_length = sum(float(segment.path.length()) for segment in segments)
+    if first_length > MAX_FIRST_APPROACH_PATH_LENGTH:
+        raise RuntimeError(
+            f"first approach path length {first_length:.3f} exceeds the simple-demo "
+            f"limit {MAX_FIRST_APPROACH_PATH_LENGTH:.3f}"
+        )
+    if total_length > MAX_MANIPULATION_PATH_LENGTH:
+        raise RuntimeError(
+            f"manipulation path length {total_length:.3f} exceeds the simple-demo "
+            f"limit {MAX_MANIPULATION_PATH_LENGTH:.3f}"
+        )
+    return first_length, total_length
 
 
 def plan_manipulation(
@@ -211,6 +251,7 @@ def plan_manipulation(
                     )
                 )
                 current = target
+            validate_simple_plan(segments)
         except RuntimeError as exc:
             last_error = exc
             print(
@@ -310,7 +351,7 @@ def append_execution_sample(robot, arm_configs, payload_configs, arm_config, pay
         payload_configs.append(payload_config)
 
 
-def build_execution_phase(
+def sample_execution_segment(
     robot,
     graph,
     name,
@@ -349,7 +390,7 @@ def build_execution_phase(
             valid, report = transition.pathValidation().validateConfiguration(q)
             if not valid:
                 raise RuntimeError(
-                    f"execution phase {name} segment {segment_index} "
+                    f"execution segment {name} transition {segment_index} "
                     f"sample {sample_index} is invalid: {report}"
                 )
             append_execution_sample(
@@ -364,25 +405,19 @@ def build_execution_phase(
         configs,
         max_joint_speed=args.max_joint_speed,
         min_sample_dt=args.min_sample_dt,
-        initial_hold=args.phase_start_hold,
+        initial_hold=args.segment_start_hold,
     )
     print(
-        f"execution phase {name}: {payload_mode}, "
+        f"execution segment {name}: {payload_mode}, "
         f"{len(configs)} points, {times[-1]:.1f} s",
         flush=True,
     )
     for transition_name in transition_names:
         print(f"  {transition_name}", flush=True)
-    return ExecutionPhase(
-        name,
-        payload_mode,
-        configs,
-        payload_configs,
-        times,
-    )
+    return configs, payload_configs, times
 
 
-def build_execution_phases(
+def build_execution_plan(
     robot,
     graph,
     segments,
@@ -403,40 +438,79 @@ def build_execution_phases(
         if segment.transition_name == RELEASE_TRANSITION
     )
 
-    phases = [
-        build_execution_phase(
-            robot,
-            graph,
+    segment_specs = [
+        (
             f"approach-{source_label}-pregrasp",
             segments[:grasp_index],
             f"{source_label}-fixed",
             q_source,
-            args,
+            segments[0].transition_name,
         ),
-        build_execution_phase(
-            robot,
-            graph,
+        (
             "grasp-transfer",
             segments[grasp_index:release_index],
             "follow",
             q_source,
-            args,
+            GRASP_TRANSITION,
         ),
-        build_execution_phase(
-            robot,
-            graph,
+        (
             f"release-{destination_label}-retreat",
             segments[release_index:],
             f"{destination_label}-fixed",
             q_destination,
-            args,
+            RELEASE_TRANSITION,
         ),
     ]
-    total_points = sum(len(phase.configs) for phase in phases)
-    total_duration = sum(phase.times[-1] for phase in phases)
+
+    configs = []
+    payload_configs = []
+    times = []
+    execution_segments = []
+    segment_names = []
+    payload_modes = []
+    time_offset = 0.0
+
+    for name, planned, payload_mode, fixed_payload, transition_name in segment_specs:
+        segment_configs, segment_payload_configs, segment_times = (
+            sample_execution_segment(
+                robot,
+                graph,
+                name,
+                planned,
+                payload_mode,
+                fixed_payload,
+                args,
+            )
+        )
+        start_index = len(configs)
+        configs.extend(segment_configs)
+        payload_configs.extend(segment_payload_configs)
+        times.extend(time_offset + value for value in segment_times)
+        end_index = len(configs)
+        end_time = time_offset + segment_times[-1]
+        execution_segments.append(
+            Segment(
+                start_index,
+                end_index,
+                start_time=time_offset,
+                end_time=end_time,
+                transition_name=transition_name,
+            )
+        )
+        segment_names.append(name)
+        payload_modes.append(payload_mode)
+        time_offset = end_time
+
     print(
-        f"execution preview: {len(phases)} phases, "
-        f"{total_points} points, {total_duration:.1f} s",
+        f"execution preview: {len(execution_segments)} segments, "
+        f"{len(configs)} points, {time_offset:.1f} s",
         flush=True,
     )
-    return phases
+    return ExecutionPlan(
+        configs,
+        payload_configs,
+        times,
+        execution_segments,
+        segment_names,
+        payload_modes,
+    )

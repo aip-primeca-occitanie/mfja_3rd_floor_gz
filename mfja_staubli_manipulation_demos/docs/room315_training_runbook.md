@@ -58,6 +58,12 @@ Expected sequence:
 The payload attachment is kinematic in Gazebo. HPP remains the collision and
 contact source of truth.
 
+The classroom launch uses a 0.1 m/s shuttle and 30 Hz rail-sensor feedback.
+DZI3R marks entry into the pickup zone; the coordinator then continues to the
+canonical `[-15.240, -5.536, 0.839]` m support position before sending `OFF`.
+This keeps the plan on the compact HPP IK branch. If HPP reports only distant
+IK branches, reset the scene instead of executing from that stop.
+
 ## Stop and reset
 
 Stop terminal 2 first with Ctrl-C; the coordinator sends `OFF` to any shuttle

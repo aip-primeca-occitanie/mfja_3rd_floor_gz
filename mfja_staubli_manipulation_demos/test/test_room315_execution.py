@@ -1,8 +1,10 @@
 import importlib.util
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
+import numpy as np
 import pytest
 
 
@@ -13,12 +15,28 @@ EXECUTION = (
 
 def load_execution_module(monkeypatch):
     hpp_exec = ModuleType("hpp_exec")
+
+    @dataclass
+    class Segment:
+        start_index: int
+        end_index: int
+        pre_actions: list = field(default_factory=list)
+        post_actions: list = field(default_factory=list)
+        transition_name: str = ""
+
     hpp_exec.configs_to_joint_trajectory = lambda *_args: None
-    hpp_exec.send_trajectory = lambda *_args, **_kwargs: True
+    hpp_exec.execute_segments = lambda *_args, **_kwargs: True
+    hpp_exec.Segment = Segment
+    hpp_exec.segments_by_transition = lambda segments: {
+        name: [segment for segment in segments if segment.transition_name == name]
+        for name in {segment.transition_name for segment in segments}
+    }
     monkeypatch.setitem(sys.modules, "hpp_exec", hpp_exec)
 
     room315_problem = ModuleType("room315_problem")
+    room315_problem.GRASP_TRANSITION = "grasp"
     room315_problem.JOINT_NAMES = [f"joint_{index}" for index in range(1, 7)]
+    room315_problem.RELEASE_TRANSITION = "release"
     room315_problem.box_rank = lambda *_args: 0
     room315_problem.box_world_pose_msg = lambda *_args: None
     room315_problem.normalize_box_quaternion = lambda *_args: None
@@ -114,39 +132,28 @@ def test_staubli_io_failure_raises(monkeypatch):
         output.open()
 
 
-def test_action_phase_uses_hpp_exec_sender(monkeypatch):
+def test_action_segments_use_hpp_exec_executor(monkeypatch):
     execution = load_execution_module(monkeypatch)
     calls = []
     configs = [object(), object()]
     times = [0.0, 2.0]
-    phase = SimpleNamespace(
-        name="transfer",
-        configs=configs,
-        times=times,
-        payload_mode="fixed",
-    )
+    segments = [object()]
+    plan = SimpleNamespace(configs=configs, times=times)
     monkeypatch.setattr(
         execution,
-        "send_trajectory",
+        "execute_hpp_segments",
         lambda *args, **kwargs: calls.append((args, kwargs)) or True,
     )
-    monkeypatch.setattr(execution, "wait_for_phase_end", lambda *_args: None)
 
-    execution.execute_phase(
-        None,
-        None,
+    execution.execute_action_segments(
+        plan,
+        segments,
         "/manipulator_controller/joint_trajectory_action",
-        None,
-        object(),
-        None,
-        "box",
-        phase,
-        SimpleNamespace(),
     )
 
     assert calls == [
         (
-            (configs, times, execution.JOINT_NAMES),
+            (segments, configs, times, execution.JOINT_NAMES),
             {
                 "controller_topic": (
                     "/manipulator_controller/joint_trajectory_action"
@@ -156,25 +163,232 @@ def test_action_phase_uses_hpp_exec_sender(monkeypatch):
     ]
 
 
-def test_action_phase_failure_raises(monkeypatch):
+def test_action_segment_failure_raises(monkeypatch):
     execution = load_execution_module(monkeypatch)
-    phase = SimpleNamespace(
-        name="transfer",
+    plan = SimpleNamespace(
         configs=[object(), object()],
         times=[0.0, 2.0],
-        payload_mode="fixed",
     )
-    monkeypatch.setattr(execution, "send_trajectory", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(
+        execution, "execute_hpp_segments", lambda *_args, **_kwargs: False
+    )
 
-    with pytest.raises(RuntimeError, match="failed phase transfer"):
-        execution.execute_phase(
-            None,
-            None,
+    with pytest.raises(RuntimeError, match="failed the HPP execution segments"):
+        execution.execute_action_segments(
+            plan,
+            [object()],
             "/test/action",
+        )
+
+
+def test_configured_segments_assign_gripper_preactions(monkeypatch):
+    execution = load_execution_module(monkeypatch)
+    Segment = sys.modules["hpp_exec"].Segment
+    planned_segments = [
+        Segment(0, 2, transition_name="approach"),
+        Segment(2, 4, transition_name="grasp"),
+        Segment(4, 6, transition_name="release"),
+    ]
+    plan = SimpleNamespace(
+        segments=planned_segments,
+        segment_names=["approach", "transfer", "retreat"],
+        payload_configs=[None] * 6,
+    )
+    calls = []
+    gripper = SimpleNamespace(
+        open=lambda: calls.append("open") or True,
+        close=lambda: calls.append("close") or True,
+    )
+
+    configured = execution.configured_segments(
+        None,
+        None,
+        None,
+        None,
+        plan,
+        gripper,
+        SimpleNamespace(
+            box_entity_name="box",
+            gripper_output="joint-trajectory",
+        ),
+    )
+
+    for segment in configured:
+        for action in segment.pre_actions:
+            assert action()
+    assert calls == ["open", "close", "open"]
+    assert all(segment.pre_actions == [] for segment in planned_segments)
+    assert all(len(segment.post_actions) == 1 for segment in configured)
+
+
+def test_topic_transport_consumes_segment_actions_in_order(monkeypatch):
+    execution = load_execution_module(monkeypatch)
+    Segment = sys.modules["hpp_exec"].Segment
+    calls = []
+    segment = Segment(
+        0,
+        2,
+        pre_actions=[lambda: calls.append("pre") or True],
+        post_actions=[lambda: calls.append("post") or True],
+        transition_name="approach",
+    )
+    plan = SimpleNamespace(
+        configs=[np.zeros(6), np.ones(6)],
+        payload_configs=[np.zeros(7), np.ones(7)],
+        times=[0.0, 1.0],
+        segment_names=["approach"],
+        payload_modes=["fixed"],
+    )
+    monkeypatch.setattr(
+        execution,
+        "configs_to_joint_trajectory",
+        lambda *_args: object(),
+    )
+    monkeypatch.setattr(
+        execution,
+        "publish_trajectory",
+        lambda *_args: calls.append("trajectory"),
+    )
+
+    execution.execute_topic_segments(
+        None,
+        object(),
+        "/staubli1/joint_trajectory",
+        None,
+        None,
+        None,
+        "box",
+        plan,
+        [segment],
+        SimpleNamespace(),
+    )
+
+    assert calls == ["pre", "trajectory", "post"]
+
+
+def test_topic_transport_preserves_three_segment_boundaries(monkeypatch):
+    execution = load_execution_module(monkeypatch)
+    Segment = sys.modules["hpp_exec"].Segment
+    calls = []
+    segments = [
+        Segment(
+            0,
+            2,
+            pre_actions=[lambda: calls.append("open") or True],
+            post_actions=[lambda: calls.append("wait-approach") or True],
+        ),
+        Segment(
+            2,
+            4,
+            pre_actions=[lambda: calls.append("close-attach") or True],
+            post_actions=[lambda: calls.append("wait-transfer") or True],
+        ),
+        Segment(
+            4,
+            6,
+            pre_actions=[lambda: calls.append("open-detach") or True],
+            post_actions=[lambda: calls.append("wait-retreat") or True],
+        ),
+    ]
+    plan = SimpleNamespace(
+        configs=[np.full(6, index) for index in range(6)],
+        payload_configs=[np.full(7, index) for index in range(6)],
+        times=[0.0, 1.0, 1.0, 3.0, 3.0, 4.5],
+        payload_modes=["fixed", "follow", "fixed"],
+    )
+
+    def make_trajectory(_configs, times, _joint_names):
+        calls.append(("trajectory", times))
+        return object()
+
+    monkeypatch.setattr(execution, "configs_to_joint_trajectory", make_trajectory)
+    monkeypatch.setattr(execution, "publish_trajectory", lambda *_args: None)
+    monkeypatch.setattr(
+        execution,
+        "follow_payload",
+        lambda *_args: calls.append("follow"),
+    )
+
+    execution.execute_topic_segments(
+        None,
+        object(),
+        "/staubli1/joint_trajectory",
+        object(),
+        None,
+        None,
+        "box",
+        plan,
+        segments,
+        SimpleNamespace(),
+    )
+
+    assert calls == [
+        "open",
+        ("trajectory", [0.0, 1.0]),
+        "wait-approach",
+        "close-attach",
+        ("trajectory", [0.0, 2.0]),
+        "follow",
+        "wait-transfer",
+        "open-detach",
+        ("trajectory", [0.0, 1.5]),
+        "wait-retreat",
+    ]
+
+
+def test_segment_actions_do_not_render_or_print_callables(monkeypatch, capsys):
+    execution = load_execution_module(monkeypatch)
+    calls = []
+
+    class Action:
+        def __call__(self):
+            calls.append("action")
+            return True
+
+        def __repr__(self):
+            raise AssertionError("segment actions must not be rendered")
+
+    execution.run_segment_actions([Action()], 0, "post")
+
+    assert calls == ["action"]
+    assert capsys.readouterr().out == ""
+
+
+def test_require_start_waits_for_controller_to_settle(monkeypatch):
+    execution = load_execution_module(monkeypatch)
+    target = np.array([0.0, 0.87, 1.22, 0.0, 0.96, 0.0])
+
+    class SettlingTracker:
+        topic = "/staubli1/joint_states"
+
+        def __init__(self):
+            self.samples = [np.zeros(6), target]
+
+        def current(self):
+            if len(self.samples) > 1:
+                return self.samples.pop(0)
+            return self.samples[0].copy()
+
+    monkeypatch.setattr(execution.rclpy, "spin_once", lambda *_args, **_kwargs: None)
+    execution.require_start(
+        None,
+        SettlingTracker(),
+        SimpleNamespace(joint_state_timeout=0.1, start_tolerance=0.01),
+        target,
+    )
+
+
+def test_require_start_rejects_final_configuration_outside_tolerance(monkeypatch):
+    execution = load_execution_module(monkeypatch)
+    tracker = SimpleNamespace(
+        topic="/staubli1/joint_states",
+        current=lambda: np.zeros(6),
+    )
+
+    with pytest.raises(RuntimeError, match=r"1\.000 rad from the HPP start"):
+        execution.require_start(
             None,
-            object(),
-            None,
-            "box",
-            phase,
-            SimpleNamespace(),
+            tracker,
+            SimpleNamespace(joint_state_timeout=0.0, start_tolerance=0.01),
+            np.ones(6),
         )

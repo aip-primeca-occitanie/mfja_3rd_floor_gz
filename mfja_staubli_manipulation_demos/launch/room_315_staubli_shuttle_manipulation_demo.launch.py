@@ -68,8 +68,13 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "shuttle_speed",
-                default_value="0.3",
+                default_value="0.1",
                 description="Right-rail shuttle speed in meters per second.",
+            ),
+            DeclareLaunchArgument(
+                "sensor_publish_rate_hz",
+                default_value="30.0",
+                description="Rail sensor feedback rate used for repeatable stopping.",
             ),
             SetEnvironmentVariable("GZ_PARTITION", gz_partition),
             SetEnvironmentVariable(
@@ -124,6 +129,9 @@ def generate_launch_description():
                             "room315_shuttles_start_enabled": "false",
                             "room315_shuttle_speed": LaunchConfiguration(
                                 "shuttle_speed"
+                            ),
+                            "room315_sensor_publish_rate_hz": LaunchConfiguration(
+                                "sensor_publish_rate_hz"
                             ),
                             "gz_partition": gz_partition,
                         }.items(),

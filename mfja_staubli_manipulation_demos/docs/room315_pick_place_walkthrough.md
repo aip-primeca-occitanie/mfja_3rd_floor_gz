@@ -14,7 +14,7 @@ model status, and real-robot readiness live in the package
 | `scripts/room315_moving_shuttle_sequence.py` | Add the supported two-shuttle sequence and measured poses around the fixed-support runner. |
 | `hpp/room315_shuttle_manipulation.py` | Build endpoints, plan one manipulation cycle, and optionally execute it. |
 | `hpp/room315_problem.py` | Load models, define contacts/handles, and construct the manipulation graph. |
-| `hpp/room315_planning.py` | Generate grasp targets, plan graph transitions, sample paths, and form three phases. |
+| `hpp/room315_planning.py` | Generate grasp targets, plan graph transitions, sample paths, and form three execution segments. |
 | `hpp/room315_execution.py` | Select arm/gripper outputs, synchronize the Gazebo payload, and verify measured endpoints. |
 | `mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf` | Canonical HPP arm/gripper model shared by both course stages. |
 | `mfja_3rd_floor_description/urdf/room315_cell.urdf` | Canonical fixed Room 315 HPP collision environment. |
@@ -171,10 +171,15 @@ plan_manipulation()
   try source/destination chain pairs
     plan each pick, transfer, release, and retreat transition
 format_plan()
-build_execution_phases()
+build_execution_plan()
 if --execute:
   execute_plan()
 ```
+
+For the moving entry point, DZI3R is an arrival-zone signal rather than the
+final support pose. The coordinator keeps the shuttle moving to the canonical
+slot position, stops it, and passes that measured stopped pose into this call
+order.
 
 Planning is the default. `--build-only` stops after graph construction;
 `--execute` is the only mode that writes to ROS.
@@ -184,25 +189,31 @@ Planning is the default. `--build-only` stops after graph construction;
 `generate_pick_chains()` samples graph-compatible arm postures while retaining
 the payload pose. It validates and scores complete source/destination chains,
 preferring shorter arm motion, compatible posture, and less wrist wrapping.
+The classroom planner discards a first approach that requires more than 2 rad
+on any arm joint, which keeps the solution on the compact IK branch.
 
 `plan_manipulation()` tries ordered source/destination chain pairs. Each
 transition first attempts a checked direct path, then invokes
 `TransitionPlanner` if needed. A pair is discarded when any transition cannot
-be planned.
+be planned. It also rejects a first approach longer than 3 path units or a
+complete cycle longer than 8 path units, so a distant branch is never sent to
+the executor.
 
-### Execution phases
+### Execution segments
 
 The semantic grasp and release transitions split the successful graph path:
 
-| Phase | Payload mode | Boundary action |
+| Segment | Payload mode | Pre-actions |
 |---|---|---|
-| approach to pregrasp | fixed on pickup support | close after endpoint |
-| grasp and transfer | follows HPP object pose | open after endpoint |
-| release and retreat | fixed on destination support | none |
+| approach to pregrasp | fixed on pickup support | open the simulated gripper |
+| grasp and transfer | follows HPP object pose | close the gripper, then attach the Gazebo payload |
+| release and retreat | fixed on destination support | open the gripper, then place the Gazebo payload |
 
 Every sampled robot/object configuration is validated with the corresponding
 transition path validation before it becomes ROS output. Arm samples are
-retimed from maximum joint motion.
+retimed from maximum joint motion. These three slices are represented by
+`hpp_exec.Segment`; grasp and release commands are boolean pre-actions on the
+segments beginning at the matching graph transitions.
 
 ## Execution outputs
 
@@ -211,20 +222,20 @@ retimed from maximum joint motion.
 1. creates a measured joint-state tracker;
 2. creates the selected gripper output;
 3. verifies the measured arm is at the first planned configuration;
-4. runs the three phases in order;
-5. checks every measured phase endpoint before the next gripper action.
+4. attaches gripper and payload pre-actions to the HPP-exec segments;
+5. checks every measured segment endpoint through a post-action.
 
-The two arm transports are intentionally a small branch in `execute_phase()`:
+The two arm transports consume the same segment and action schedule:
 
 | Target | Arm output | Joint state | Payload |
 |---|---|---|---|
 | Gazebo | `JointTrajectory` on `/staubli1/joint_trajectory` | `/staubli1/joint_states` | existing Gazebo entity |
-| Staubli driver | `FollowJointTrajectory` action on `/manipulator_controller/joint_trajectory_action` through `hpp_exec.send_trajectory` | `/joint_states` | physical world (`none`) |
+| Staubli driver | `FollowJointTrajectory` action on `/manipulator_controller/joint_trajectory_action` through `hpp_exec.execute_segments` | `/joint_states` | physical world (`none`) |
 
-Action output requires `--payload-output none`: the helper blocks while the
-action executes, whereas Gazebo payload animation must run concurrently.
-The MFJA executor verifies the endpoint from measured joint state before a
-close or open command.
+Action output uses `hpp_exec.execute_segments()` directly. Gazebo uses the same
+`hpp_exec.Segment` pre/post actions with its raw-topic sender because payload
+animation must run concurrently with the arm trajectory. Action output still
+requires `--payload-output none`.
 
 Gripper outputs are:
 
@@ -247,7 +258,7 @@ simulation entry points:
    the shuttle moves;
 3. leave the existing entity for HPP execution.
 
-The HPP executor only calls `/set_pose`. During fixed phases it keeps the box
+The HPP executor only calls `/set_pose`. During fixed segments it keeps the box
 on its support; during transfer `follow_payload()`:
 
 1. reads measured arm joints;
@@ -278,7 +289,7 @@ rather than embedded as provisional constants in the teaching flow.
 - No arm subscriber: Gazebo/controller is absent or the configured topic is
   wrong.
 - Action sender failure: stop before any subsequent gripper action.
-- Phase endpoint timeout: inspect measured joint state; do not loosen a
+- Segment endpoint timeout: inspect measured joint state; do not loosen a
   tolerance until the commanded path and controller state are understood.
 - Payload set-pose failure: reset the Gazebo scene; do not continue with a
   detached visual.

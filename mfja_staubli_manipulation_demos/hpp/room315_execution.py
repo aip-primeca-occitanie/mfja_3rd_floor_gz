@@ -1,11 +1,16 @@
 """Execute the Room 315 manipulation plan through ROS and Gazebo."""
 
+from copy import copy
 import time
 
 import numpy as np
 import rclpy
 from builtin_interfaces.msg import Duration
-from hpp_exec import configs_to_joint_trajectory, send_trajectory
+from hpp_exec import (
+    configs_to_joint_trajectory,
+    execute_segments as execute_hpp_segments,
+    segments_by_transition,
+)
 from rclpy.node import Node
 from ros_gz_interfaces.msg import Entity
 from ros_gz_interfaces.srv import SetEntityPose
@@ -14,7 +19,9 @@ from trajectory_msgs.msg import JointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 from room315_problem import (
+    GRASP_TRANSITION,
     JOINT_NAMES,
+    RELEASE_TRANSITION,
     box_rank,
     box_world_pose_msg,
     normalize_box_quaternion,
@@ -79,7 +86,7 @@ class JointTrajectoryGripperOutput:
         self.publisher = node.create_publisher(JointTrajectory, self.topic, 10)
         wait_for_subscriber(node, self.publisher, self.topic, args.subscriber_timeout)
 
-    def command(self, positions, label):
+    def command(self, positions):
         trajectory = JointTrajectory()
         trajectory.joint_names = self.joints
         point = JointTrajectoryPoint()
@@ -87,18 +94,15 @@ class JointTrajectoryGripperOutput:
         point.time_from_start = duration_msg(self.duration)
         trajectory.points.append(point)
         publish_trajectory(self.node, self.publisher, self.topic, trajectory)
-        print(
-            f"gripper {label}: {self.topic} {self.joints} -> {positions}",
-            flush=True,
-        )
         if self.duration + self.settle_s > 0.0:
             sleep_with_spin(self.node, self.duration + self.settle_s)
+        return True
 
     def open(self):
-        self.command(self.open_positions, "open")
+        return self.command(self.open_positions)
 
     def close(self):
-        self.command(self.close_positions, "close")
+        return self.command(self.close_positions)
 
 
 class StaubliIOGripperOutput:
@@ -146,27 +150,23 @@ class StaubliIOGripperOutput:
                 f"{self.service_name} pin {self.pin}: code {response.code.val}"
             )
 
-        print(
-            f"gripper {label}: {self.service_name} "
-            f"module={self.module_id} pin={self.pin} state={state}",
-            flush=True,
-        )
         if self.settle_s > 0.0:
             sleep_with_spin(self.node, self.settle_s)
+        return True
 
     def open(self):
-        self.command(True, "open")
+        return self.command(True, "open")
 
     def close(self):
-        self.command(False, "close")
+        return self.command(False, "close")
 
 
 class NoGripperOutput:
     def open(self):
-        pass
+        return True
 
     def close(self):
-        pass
+        return True
 
 
 def make_gripper_output(node, args):
@@ -225,6 +225,7 @@ def set_payload_pose(node, pose_client, entity_name, pose, timeout=1.0):
         f"set pose for {entity_name}",
         timeout=timeout,
     )
+    return True
 
 
 def set_payload_pose_async(pose_client, entity_name, pose):
@@ -306,21 +307,30 @@ def wait_for_arm_configuration(node, tracker, target, timeout, tolerance):
     return False
 
 
-def wait_for_phase_end(node, tracker, phase, args):
-    timeout = args.execution_timeout_scale * phase.times[-1] + 5.0
+def segment_samples(plan, segment):
+    configs = plan.configs[segment.start_index : segment.end_index]
+    payload_configs = plan.payload_configs[segment.start_index : segment.end_index]
+    times = plan.times[segment.start_index : segment.end_index]
+    start_time = times[0]
+    return configs, payload_configs, [value - start_time for value in times]
+
+
+def wait_for_segment_end(node, tracker, plan, segment, name, args):
+    configs, _, times = segment_samples(plan, segment)
+    timeout = args.execution_timeout_scale * times[-1] + 5.0
     if wait_for_arm_configuration(
-        node, tracker, phase.configs[-1][:6], timeout, args.segment_tolerance
+        node, tracker, configs[-1][:6], timeout, args.segment_tolerance
     ):
         return True
 
     current = tracker.current()
     error = (
-        float(np.max(np.abs(current - phase.configs[-1][:6])))
+        float(np.max(np.abs(current - configs[-1][:6])))
         if current is not None
         else float("inf")
     )
     raise RuntimeError(
-        f"Staubli did not finish phase {phase.name} within {timeout:.1f} s "
+        f"Staubli did not finish segment {name} within {timeout:.1f} s "
         f"(error {error:.3f} rad)"
     )
 
@@ -343,7 +353,6 @@ def follow_payload(
     next_tick = start
     progress = 0.0
     last_payload_config = None
-    last_report = start
     pending_pose = None
     pending_payload_config = None
 
@@ -375,7 +384,7 @@ def follow_payload(
             pending_payload_config = None
 
         current = tracker.current()
-        phase_end_error = float("inf")
+        segment_end_error = float("inf")
         if current is not None:
             candidate, error = nearest_arm_progress(
                 current,
@@ -385,14 +394,7 @@ def follow_payload(
             )
             if error <= args.payload_sync_error:
                 progress = candidate
-            elif now - last_report >= args.payload_sync_report_period:
-                print(
-                    f"payload sync waiting: progress={progress:.1f}/"
-                    f"{len(arm_configs) - 1}, nearest error={error:.3f} rad",
-                    flush=True,
-                )
-                last_report = now
-            phase_end_error = float(np.max(np.abs(current - arm_positions[-1])))
+            segment_end_error = float(np.max(np.abs(current - arm_positions[-1])))
 
         if pending_pose is not None and now >= deadline:
             raise RuntimeError(
@@ -400,7 +402,7 @@ def follow_payload(
                 "the payload sync deadline"
             )
 
-        if phase_end_error <= args.segment_tolerance:
+        if segment_end_error <= args.segment_tolerance:
             if pending_pose is None:
                 set_payload_pose(
                     node,
@@ -408,11 +410,6 @@ def follow_payload(
                     entity_name,
                     box_world_pose_msg(robot, payload_configs[-1]),
                     timeout=0.5,
-                )
-                print(
-                    f"payload sync final snap: arm reached phase end, "
-                    f"progress={progress:.1f}/{len(arm_configs) - 1}",
-                    flush=True,
                 )
                 break
         elif progress >= len(arm_configs) - 1:
@@ -435,11 +432,6 @@ def follow_payload(
                     box_world_pose_msg(robot, payload_configs[-1]),
                     timeout=0.5,
                 )
-                print(
-                    f"payload sync final snap: progress={progress:.1f}/"
-                    f"{len(arm_configs) - 1}",
-                    flush=True,
-                )
                 break
             raise RuntimeError(
                 f"payload sync timed out at progress {progress:.1f}/"
@@ -461,7 +453,15 @@ def follow_payload(
         sleep_with_spin(node, max(0.0, next_tick - time.monotonic()))
 
 
-def execute_phase(
+def run_segment_actions(actions, segment_index, position):
+    for action in actions:
+        if not action():
+            raise RuntimeError(
+                f"execution segment {segment_index} {position}-action failed"
+            )
+
+
+def execute_topic_segments(
     node,
     publisher,
     topic,
@@ -469,41 +469,95 @@ def execute_phase(
     tracker,
     robot,
     entity_name,
-    phase,
+    plan,
+    segments,
     args,
 ):
-    print(
-        f"executing phase {phase.name}: "
-        f"{len(phase.configs)} points, {phase.times[-1]:.1f} s",
-        flush=True,
-    )
-    if publisher is None:
-        if not send_trajectory(
-            phase.configs,
-            phase.times,
-            JOINT_NAMES,
-            controller_topic=topic,
-        ):
-            raise RuntimeError(f"Staubli failed phase {phase.name} on {topic}")
-    else:
+    for index, (segment, payload_mode) in enumerate(
+        zip(segments, plan.payload_modes)
+    ):
+        run_segment_actions(segment.pre_actions, index, "pre")
+        configs, payload_configs, times = segment_samples(plan, segment)
         trajectory = configs_to_joint_trajectory(
-            phase.configs, phase.times, JOINT_NAMES
+            configs, times, JOINT_NAMES
         )
         publish_trajectory(node, publisher, topic, trajectory)
 
-    if phase.payload_mode == "follow" and pose_client is not None:
-        follow_payload(
-            node,
-            pose_client,
-            tracker,
-            robot,
-            entity_name,
-            phase.configs,
-            phase.payload_configs,
-            phase.times,
-            args,
+        if payload_mode == "follow" and pose_client is not None:
+            follow_payload(
+                node,
+                pose_client,
+                tracker,
+                robot,
+                entity_name,
+                configs,
+                payload_configs,
+                times,
+                args,
+            )
+        run_segment_actions(segment.post_actions, index, "post")
+
+
+def configured_segments(node, tracker, pose_client, robot, plan, gripper, args):
+    segments = []
+    for segment in plan.segments:
+        configured = copy(segment)
+        configured.pre_actions = list(segment.pre_actions)
+        configured.post_actions = list(segment.post_actions)
+        segments.append(configured)
+
+    by_transition = segments_by_transition(segments)
+    grasp_segment = by_transition[GRASP_TRANSITION][0]
+    release_segment = by_transition[RELEASE_TRANSITION][0]
+
+    if args.gripper_output == "joint-trajectory":
+        segments[0].pre_actions.append(gripper.open)
+    grasp_segment.pre_actions.append(gripper.close)
+    release_segment.pre_actions.append(gripper.open)
+
+    if pose_client is not None:
+        grasp_pose = box_world_pose_msg(
+            robot, plan.payload_configs[grasp_segment.start_index]
         )
-    wait_for_phase_end(node, tracker, phase, args)
+        release_pose = box_world_pose_msg(
+            robot, plan.payload_configs[release_segment.start_index]
+        )
+
+        def attach_payload():
+            return set_payload_pose(
+                node, pose_client, args.box_entity_name, grasp_pose
+            )
+
+        def detach_payload():
+            return set_payload_pose(
+                node, pose_client, args.box_entity_name, release_pose
+            )
+
+        grasp_segment.pre_actions.append(attach_payload)
+        release_segment.pre_actions.append(detach_payload)
+
+    for segment, name in zip(segments, plan.segment_names):
+
+        def wait_for_end(segment=segment, name=name):
+            return wait_for_segment_end(
+                node, tracker, plan, segment, name, args
+            )
+
+        segment.post_actions.append(wait_for_end)
+    return segments
+
+
+def execute_action_segments(plan, segments, controller_topic):
+    if not execute_hpp_segments(
+        segments,
+        plan.configs,
+        plan.times,
+        JOINT_NAMES,
+        controller_topic=controller_topic,
+    ):
+        raise RuntimeError(
+            f"Staubli failed the HPP execution segments on {controller_topic}"
+        )
 
 
 def require_start(node, tracker, args, q_start):
@@ -532,7 +586,7 @@ def require_start(node, tracker, args, q_start):
 
 def execute_plan(
     robot,
-    phases,
+    plan,
     q_source,
     args,
 ):
@@ -568,59 +622,30 @@ def execute_plan(
             )
 
         require_start(node, tracker, args, q_source)
-
-        if args.gripper_output == "joint-trajectory":
-            gripper.open()
-
-        execute_phase(
+        segments = configured_segments(
             node,
-            publisher,
-            arm_target,
-            pose_client,
             tracker,
+            pose_client,
             robot,
-            args.box_entity_name,
-            phases[0],
+            plan,
+            gripper,
             args,
         )
-        gripper.close()
-        if pose_client is not None:
-            set_payload_pose(
+        if publisher is None:
+            execute_action_segments(plan, segments, arm_target)
+        else:
+            execute_topic_segments(
                 node,
+                publisher,
+                arm_target,
                 pose_client,
+                tracker,
+                robot,
                 args.box_entity_name,
-                box_world_pose_msg(robot, phases[1].payload_configs[0]),
+                plan,
+                segments,
+                args,
             )
-        execute_phase(
-            node,
-            publisher,
-            arm_target,
-            pose_client,
-            tracker,
-            robot,
-            args.box_entity_name,
-            phases[1],
-            args,
-        )
-        gripper.open()
-        if pose_client is not None:
-            set_payload_pose(
-                node,
-                pose_client,
-                args.box_entity_name,
-                box_world_pose_msg(robot, phases[2].payload_configs[0]),
-            )
-        execute_phase(
-            node,
-            publisher,
-            arm_target,
-            pose_client,
-            tracker,
-            robot,
-            args.box_entity_name,
-            phases[2],
-            args,
-        )
     finally:
         node.destroy_node()
         if rclpy.ok():
