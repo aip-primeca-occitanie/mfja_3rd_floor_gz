@@ -87,10 +87,10 @@ rosdep update
 ### 2. Clone The Repository
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS=~/mfja_ws
 mkdir -p "$MFJA_WS/src"
 cd "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+git clone https://github.com/psardin001/mfja_3rd_floor_gz.git
 ```
 
 ### 3. Optional: Enter The Nix Shell
@@ -129,7 +129,7 @@ source install/setup.bash
 Without Nix:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS=~/mfja_ws
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -138,7 +138,7 @@ source install/setup.bash
 With hybrid Nix:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS=~/mfja_ws
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
 nix develop
 
@@ -220,7 +220,7 @@ quickly without searching through the reference sections below.
 Use this terminal before any launch or topic command:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS=~/mfja_ws
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
@@ -230,7 +230,7 @@ source install/setup.bash
 If the workspace is already built and you only opened a new terminal, use:
 
 ```bash
-export MFJA_WS=~/test_mfja_ws
+export MFJA_WS=~/mfja_ws
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
@@ -242,7 +242,7 @@ Terminal 1 - start Room 315 with rails, device YAML, markers, typed topics,
 and shuttle nodes enabled, but with no initial shuttles:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -259,7 +259,7 @@ Terminal 2 - check that the rail topics exist:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic list | grep /room_315/rails
 ```
@@ -276,7 +276,7 @@ Expected namespaces:
 Terminal 1:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -293,7 +293,7 @@ Terminal 2 - verify the full-floor Gazebo services:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 service list | grep /world/mfja_3rd_floor
 ```
@@ -315,7 +315,7 @@ fixtures, other robots, or TIAGo.
 Terminal 1 - choose exactly one robot:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -337,7 +337,7 @@ Terminal 2 - check the selected robot topics. Example for KUKA:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic list | grep kuka1
 ```
@@ -404,7 +404,7 @@ with an `ON` command:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 service call /room_315/rails/right/shuttles/add \
   mfja_rail_interfaces/srv/AddShuttle \
@@ -490,7 +490,7 @@ Terminal 3 - command switch A1 to the interior branch:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic pub --once /room_315/rails/right/switches/command \
   mfja_rail_interfaces/msg/SwitchCommand \
@@ -528,7 +528,7 @@ Terminal 3 - close stopper A1:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source "${MFJA_WS:-$HOME/test_mfja_ws}/install/setup.bash"
+source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
 
 ros2 topic pub --once /room_315/rails/right/stoppers/command \
   mfja_rail_interfaces/msg/StopperCommand \
@@ -737,10 +737,10 @@ spawned from the YAML-resolved positions:
   orange for state `E` / `EXTERIOR`
 
 Position sensor markers sit slightly above the rail so a visible part remains
-above the shuttle body while a shuttle is crossing the sensor. Approach sensor
-definitions remain in YAML and feedback, inherit stopper locations, and do not
-spawn visual markers. The old continuous sensor distance field has been fully
-removed from the sensor interface.
+above the shuttle body while a shuttle is crossing the sensor. Stopper-linked
+position sensors inherit stopper locations and can spawn the same normal sensor
+markers. The old continuous sensor distance field has been fully removed from
+the sensor interface.
 
 Hide device markers when you want a cleaner Gazebo scene:
 
@@ -868,7 +868,7 @@ arguments.
 Terminal 1 - start Room 315 with the rail stack:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -920,7 +920,7 @@ Optional advanced mode - start one right-rail kinematic shuttle directly after
 launching Gazebo with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -938,7 +938,7 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
 Optional advanced mode - start one left-rail kinematic shuttle directly:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -958,7 +958,7 @@ Optional advanced mode - start the ready-made dual launch separately:
 Right only:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -973,7 +973,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Left only:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -988,7 +988,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Both rails together:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1006,7 +1006,7 @@ ros2 launch mfja_robot_control_config room_315_dual_kinematic_shuttles.launch.py
 Open one extra terminal for commands:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
@@ -1071,8 +1071,8 @@ ros2 topic echo /room_315/rails/left/sensors/feedback mfja_rail_interfaces/msg/S
 
 Common slot notes:
 
-- Right rail uses its own `slot 1..4` set from `rail_network_right.yaml`.
-- Left rail uses its own `slot 1..4` set from `rail_network_left.yaml`.
+- Right rail uses its own `slot 1..4` set from `rail_devices_right.yaml`.
+- Left rail uses its own `slot 1..4` set from `rail_devices_left.yaml`.
 - If a shuttle enters `FALLING`, use `RESET` on that rail's `shuttles/command` topic.
 
 Unless a later example explicitly uses `/room_315/rails/left/...`, the remaining
@@ -1137,7 +1137,7 @@ That is why the shuttle node must use:
 Terminal 1 - start the full floor with the Room 315 rail stack:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1165,7 +1165,7 @@ Optional advanced mode - start one kinematic shuttle on the full floor after
 launching with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1190,7 +1190,7 @@ The launch automatically starts ROS-Gazebo service bridges for:
 Check them with:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1225,7 +1225,7 @@ or select only the robots you need.
 Full floor with all configured robots:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1243,7 +1243,7 @@ because the whole simulation is slower.
 Room 315 only with all configured robots:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -1320,7 +1320,7 @@ robot:=hc10dt
 After launching the simulation with robots enabled, open a new terminal:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
@@ -1406,10 +1406,10 @@ Only these four start slots are allowed:
 
 | Slot | Gazebo pose |
 | --- | --- |
-| `1` | `-15.43 -3.86 0.84 0 0 3.14` |
-| `2` | `-14.95 -3.86 0.84 0 0 3.14` |
-| `3` | `-14.77 -5.54 0.84 0 0 0` |
-| `4` | `-15.24 -5.54 0.84 0 0 0` |
+| `1` | `-14.95 -3.86 0.84 0 0 3.14` |
+| `2` | `-15.43 -3.86 0.84 0 0 3.14` |
+| `3` | `-15.24 -5.54 0.84 0 0 0` |
+| `4` | `-14.77 -5.54 0.84 0 0 0` |
 
 Example:
 
@@ -1641,7 +1641,7 @@ Virtual position detector names are published on the same sensor feedback topic:
 These detector names follow the same public `A1` to `A4` structure already used
 for switches and stoppers:
 
-- `DZI2R`, `DZI1R`, `DZI4R`, `DZI3R`: right-rail indexing-zone detectors for
+- `DZI1R`, `DZI2R`, `DZI3R`, `DZI4R`: right-rail indexing-zone detectors for
   `slot 1`, `slot 2`, `slot 3`, and `slot 4`.
 - `DA1R`, `DA2R`, `DA3R`, `DA4R`: right-rail detector on the single-track side
   of each switch.
@@ -1667,7 +1667,7 @@ ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interface
 Expected detector families:
 
 - `slot 1`, `slot 2`, `slot 3`, and `slot 4` startup positions trigger
-  `DZI2R`, `DZI1R`, `DZI4R`, and `DZI3R`.
+  `DZI1R`, `DZI2R`, `DZI3R`, and `DZI4R`.
 - `ALL=EXTERIOR` makes the shuttle pass through `...ER` branch detectors.
 - `ALL=INTERIOR` makes the shuttle pass through `...IR` branch detectors.
 

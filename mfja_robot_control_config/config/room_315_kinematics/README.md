@@ -6,9 +6,9 @@ from CSV rail geometry, then pushed into Gazebo with `set_pose`. Contact
 dynamics, wheel physics, and rail contact are intentionally not part of this
 phase.
 
-The repository root `README.md` contains the full operator guide for launching
-Gazebo, running one or more shuttles, adding shuttles at runtime, changing
-switch states, and controlling the robots.
+The repository root `README.md` is the installation and quick-start entry
+point. `DETAILED_GUIDE.md` at the repository root contains the full operator
+reference.
 
 ## Files
 
@@ -192,7 +192,7 @@ at the new
 Use the meta-repository build command from the workspace root:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 
 colcon build --base-paths \
@@ -219,7 +219,7 @@ count defaults to `0`, so no shuttle moves until you add one or request startup
 shuttles:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -261,7 +261,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 Start the full floor with the same Room 315 rail stack enabled:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -279,7 +279,7 @@ Optional advanced mode: start a kinematic shuttle node manually after launching
 Gazebo with `enable_room315_kinematic_shuttles:=false`:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -342,7 +342,7 @@ working in Gazebo.
 Launch the right rail with four slow shuttles:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -413,7 +413,7 @@ otherwise.
 Launch only the left rail:
 
 ```bash
-cd "${MFJA_WS:-$HOME/test_mfja_ws}"
+cd "${MFJA_WS:-$HOME/mfja_ws}"
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
@@ -443,12 +443,9 @@ ros2 topic pub --once /room_315/rails/left/switches/command \
   "{switches: [{name: 'ALL', state: 'INTERIOR'}]}"
 ```
 
-Watch both left-rail sensor streams:
+Watch the left-rail sensor stream:
 
 ```bash
-timeout 120s ros2 topic echo /room_315/rails/left/sensors/feedback \
-  mfja_rail_interfaces/msg/SensorFeedback
-
 timeout 120s ros2 topic echo /room_315/rails/left/sensors/feedback \
   mfja_rail_interfaces/msg/SensorFeedback
 ```
@@ -577,7 +574,7 @@ The rail device YAML also defines virtual shuttle position detector names on the
 
 The public detector set is:
 
-- `DZI2R`, `DZI1R`, `DZI4R`, `DZI3R` for the right-rail indexing-zone
+- `DZI1R`, `DZI2R`, `DZI3R`, `DZI4R` for the right-rail indexing-zone
   detector positions near the four slot areas.
 - `DA1R`, `DA2R`, `DA3R`, `DA4R` on the single-track side of each switch.
 - `DA1ER`, `DA2ER`, `DA3ER`, `DA4ER` on the `EXTERIOR` branch.
