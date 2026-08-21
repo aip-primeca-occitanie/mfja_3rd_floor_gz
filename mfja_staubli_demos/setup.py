@@ -1,6 +1,13 @@
+from glob import glob
+from os.path import isfile
 from setuptools import setup
 
 package_name = "mfja_staubli_demos"
+room315_scripts = [
+    "scripts/room315_demo.sh",
+    "scripts/room315_env.sh",
+    "scripts/room315_hpp_line.sh",
+]
 
 setup(
     name=package_name,
@@ -8,11 +15,14 @@ setup(
     packages=[],
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
-        (f"share/{package_name}", ["package.xml"]),
+        (f"share/{package_name}", ["package.xml", "README.md"]),
         (
             f"share/{package_name}/launch",
             ["launch/room_315_staubli_cartesian_demo.launch.py"],
         ),
+        (f"share/{package_name}/hpp", [path for path in glob("hpp/*") if isfile(path)]),
+        (f"share/{package_name}/scripts", room315_scripts),
+        (f"lib/{package_name}", room315_scripts),
     ],
     install_requires=["setuptools"],
     tests_require=["pytest"],

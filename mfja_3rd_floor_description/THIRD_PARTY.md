@@ -172,9 +172,9 @@ Local modifications in this repository:
   metre scale
 - the split STLs retain millimetre-valued coordinates and are scaled by 0.001
   when referenced from Gazebo
-- Gazebo uses the exact supplied custom jaw and robot-side adapter visuals.
-  The body, missing gripper-side plate, collisions, mass, and dynamics remain
-  simplified
+- the articulated Gazebo model uses the exact supplied SCHUNK body, custom jaw,
+  and robot-side adapter visuals. The missing gripper-side plate, collisions,
+  mass, and dynamics remain simplified
 - HPP collision uses four conservative primitives covering both supplied CAD
   revisions and the full confirmed 2.5 mm per-jaw opening sweep
 - the rear adapter is a separate fixed collision link: it remains checked

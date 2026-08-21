@@ -24,19 +24,17 @@ from trajectory_msgs.msg import JointTrajectory
 
 JOINT_NAMES = [f"joint_{i}" for i in range(1, 7)]
 FRAME = "staubli/tool0"
-# Start configuration with tool0 inside the cell enclosure at 1/4 of the
-# robot height (0.32 m), 0.5 m in front of the base, so the default line
-# goes straight up to 3/4 of the robot height (0.97 m) inside the glass.
+# Room 315 staging configuration supplied in degrees as [0, 50, 70, 0, 55, 0].
 DEFAULT_Q_START = np.array(
-    [-1.56136443, 0.47307870, 2.04964315, -0.00130315, -0.32991444, 0.00524110]
+    [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
 )
-DEFAULT_LINE = np.array([0.0, 0.0, 0.6475])
-ROOM315_ROBOT_POSE = (-15.1622, -6.0, 1.0, 0.0, 0.0, 1.57)
+DEFAULT_LINE = np.array([0.0, 0.0, 0.4])
+ROOM315_ROBOT_POSE = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
 
 ROBOT_URDF = "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
 ROBOT_SRDF = "package://mfja_staubli_demos/hpp/staubli_tx2_60l.srdf"
-CELL_URDF = "package://mfja_staubli_demos/hpp/room315_cell.urdf"
-CELL_SRDF = "package://mfja_staubli_demos/hpp/room315_cell.srdf"
+CELL_URDF = "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
+CELL_SRDF = "package://mfja_3rd_floor_description/urdf/room315_cell.srdf"
 
 START_HOLD = 1.0
 JOINT_STATE_TIMEOUT = 10.0
@@ -117,10 +115,11 @@ def main():
     parser.add_argument(
         "--goto-start",
         action="store_true",
-        help="Move smoothly to the --q-start configuration (collision-checked "
-        "joint motion) instead of planning a line. Use once after the "
-        "simulation starts: lines are not reachable from the upright spawn "
-        "pose.",
+        help=(
+            "Simulation-only setup motion to --q-start. A valid spawn uses "
+            "collision checking; recovery from the invalid upright Gazebo "
+            "spawn is deliberately unchecked."
+        ),
     )
     args = parser.parse_args()
     if args.goto_start and args.plan_only:
