@@ -43,7 +43,7 @@ The direct project dependencies fall into these groups:
 
 | Layer | Dependencies | Installation source |
 | --- | --- | --- |
-| Host tools | Git, GCC/build-essential, CMake, Ninja, pkg-config, colcon, rosdep, Python, PyYAML | Ubuntu `apt` |
+| Host tools | Git, GCC/build-essential, CMake, Ninja, pkg-config, `mesa-utils` / `glxinfo`, colcon, rosdep, Python, PyYAML | Ubuntu `apt` |
 | ROS build/interfaces | `ament_cmake`, ROSIDL generators/runtime, `std_msgs` | `rosdep` |
 | Gazebo development libraries | `gz-common5`, `gz-msgs10`, `gz-plugin2`, `gz-sim8`, `gz-transport13` vendor packages | `rosdep` / `ros-jazzy-ros-gz` |
 | ROS runtime | `rclpy`, launch/launch_ros, standard ROS messages, robot state publisher, `ros_gz_bridge`, `ros_gz_interfaces`, `ros_gz_sim` | `rosdep` |
@@ -134,6 +134,7 @@ packages and requires `sudo`:
     build-essential \
     cmake \
     git \
+    mesa-utils \
     ninja-build \
     pkg-config \
     python3-dev \
@@ -151,6 +152,23 @@ packages and requires `sudo`:
 )
 ```
 
+Do not continue unless the block prints `MFJA host setup completed
+successfully`. Once it succeeds, save any open work and **always reboot once**
+before continuing. Do this even when Ubuntu does not display a reboot prompt.
+After login, open a new terminal in the local graphical desktop and continue
+with the post-reboot verification below; do not repeat A2.
+
+```bash
+sudo reboot
+```
+
+This checkpoint is important after a kernel or NVIDIA driver update. Until the
+reboot, the loaded kernel driver can differ from the newly installed graphics
+libraries, causing `nvidia-smi`, `glxinfo`, and Gazebo to fail even though the
+project itself is installed correctly. The
+[official Ubuntu NVIDIA driver guide](https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/)
+also requires a reboot after updating the system and kernel.
+
 Initialize rosdep once per machine, then verify the supported versions:
 
 ```bash
@@ -167,11 +185,44 @@ Initialize rosdep once per machine, then verify the supported versions:
   gz sim --versions
   cmake --version
   python3 --version
+
+  if [ -z "${DISPLAY:-}" ]; then
+    printf 'ERROR: run this GUI preflight from the local graphical desktop.\n' >&2
+    exit 1
+  fi
+
+  MFJA_GLX_INFO="$(LC_ALL=C glxinfo -B)"
+  printf '%s\n' "$MFJA_GLX_INFO"
+  grep -Fq 'direct rendering: Yes' <<<"$MFJA_GLX_INFO"
+  grep -Eq '^OpenGL (core profile )?version string:' <<<"$MFJA_GLX_INFO"
+
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+  fi
 )
 ```
 
 Gazebo must report the Harmonic / `gz-sim8` generation, CMake must be at least
-3.28, and Python must be 3.12.
+3.28, Python must be 3.12, `glxinfo` must report `direct rendering: Yes`, and
+OpenGL must be above 3.3 (4.3 or newer is preferred). On a normal Mesa-only
+laptop, `nvidia-smi` is absent and is skipped. If NVIDIA utilities are installed,
+their query must succeed without `Driver/library version mismatch`.
+
+Finally, test the same Qt/Ogre2 rendering path used by the simulator before
+cloning or building this project:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+gz sim --force-version 8 -v 4 shapes.sdf
+```
+
+The Gazebo 3D window must open and render the shapes. Stop it with `Ctrl-C`,
+then continue to A3. If this stock world fails, stop here and fix the host
+graphics/session first; deleting the workspace or rebuilding the project cannot
+repair it. The standard laptop path intentionally performs this check in a
+local graphical session. A truly headless machine instead needs a separately
+validated EGL setup; `gui:=false` alone is not sufficient because project
+cameras still require server-side rendering.
 
 ### A3. Create the Workspace and Clone `main_ali`
 
@@ -334,6 +385,10 @@ pkg-config, colcon, or ROS/Gazebo packages installed through apt.
 Complete [A1](#a1-confirm-ubuntu-and-architecture) and
 [A2](#a2-install-ros-2-gazebo-and-build-tools-one-time) first. Confirm that the
 host compiler/runtime tools used by the flake exist:
+
+Completing A2 includes its mandatory reboot and post-reboot OpenGL/Gazebo smoke
+test. Do not enter `nix develop` until both pass; Nix cannot repair or replace
+the host kernel graphics driver.
 
 ```bash
 test -f /opt/ros/jazzy/setup.bash
@@ -571,6 +626,12 @@ Run `exit` when you want to leave the interactive Nix shell.
   header checks in the Nix verification step. If either file is absent,
   install/reinstall `python3-dev` and `libpython3.12-dev`, then enter a new Nix
   shell and repeat the mixed-header smoke test.
+- `nvidia-smi` reports `Driver/library version mismatch`, or Gazebo reports
+  `Failed to create OpenGL context` / GLX `BadValue` immediately after the host
+  update: do not clean colcon, change `flake.nix`, or reclone the repository.
+  Perform the mandatory reboot from A2 and repeat the host graphics smoke test.
+  If it still fails after reboot, diagnose the Ubuntu graphics driver, Secure
+  Boot, and graphical session before continuing.
 - Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
   and the graphics driver. `gui:=false` disables the client, although sensor
   rendering can still require a working EGL/headless backend.
