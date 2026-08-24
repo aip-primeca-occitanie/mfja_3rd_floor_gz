@@ -174,6 +174,7 @@ is authoritative if its repository setup changes.
     git \
     ninja-build \
     pkg-config \
+    python3-dev \
     python3-colcon-common-extensions \
     python3-pip \
     python3-pytest \
@@ -633,6 +634,10 @@ command -v gz
 pkg-config --exists uuid
 pkg-config --atleast-version=4 libzmq
 test -f /usr/include/zmq.hpp
+test -f /usr/include/python3.12/Python.h
+test -f "/usr/include/$(/usr/bin/gcc -print-multiarch)/python3.12/pyconfig.h"
+printf '#include <Python.h>\n' | \
+  gcc -x c -fsyntax-only -isystem /usr/include/python3.12 -
 
 printf 'MFJA_NIX_MODE=%s\n' "$MFJA_NIX_MODE"
 printf 'ROS_DISTRO=%s\n' "$ROS_DISTRO"
@@ -643,6 +648,8 @@ selected ROS-compatible shared libraries. Its shell hook sources
 `/opt/ros/jazzy/setup.bash`, defaults `RMW_IMPLEMENTATION` to
 `rmw_fastrtps_cpp`, forwards `colcon` to `/usr/bin/colcon`, and exposes the
 Ubuntu multiarch CMake/pkg-config paths required by the host Gazebo libraries.
+The Nix compiler keeps its own system headers first and uses `/usr/include`
+only as a final fallback for Ubuntu's split multiarch Python headers.
 
 ### N8. Build and Verify Inside the Nix Shell
 
@@ -1027,6 +1034,10 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
 - Nix CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
   exit the old Nix shell, update this branch, enter `nix develop` again, and
   rebuild with `--cmake-clean-cache`. Do not delete the checkout or `/nix/store`.
+- Compilation cannot find `<multiarch>/python3.12/pyconfig.h`: rerun the Python
+  header checks in the Nix verification step. If either file is absent,
+  install/reinstall `python3-dev` and `libpython3.12-dev`; otherwise update the
+  branch, enter a new Nix shell, and rebuild with `--cmake-clean-cache`.
 - Colcon reports a duplicate MFJA package: keep downloaded datasets/frozen
   source trees outside workspace `src/` and use the four explicit `--paths`
   from this README, not a broad `--base-paths` scan.

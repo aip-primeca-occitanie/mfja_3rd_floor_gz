@@ -115,6 +115,9 @@
               export CMAKE_PREFIX_PATH="/usr:/usr/lib/${hostMultiarch}:/usr/lib/${hostMultiarch}/cmake''${CMAKE_PREFIX_PATH:+:}''${CMAKE_PREFIX_PATH:-}"
               export CMAKE_LIBRARY_PATH="/usr/lib/${hostMultiarch}:/usr/lib''${CMAKE_LIBRARY_PATH:+:}''${CMAKE_LIBRARY_PATH:-}"
               export CMAKE_INCLUDE_PATH="/usr/include/${hostMultiarch}:/usr/include''${CMAKE_INCLUDE_PATH:+:}''${CMAKE_INCLUDE_PATH:-}"
+              # Ubuntu's Python.h dispatches to a Debian multiarch header under
+              # /usr/include. Keep Nix headers first and use it only as fallback.
+              export NIX_CFLAGS_COMPILE="''${NIX_CFLAGS_COMPILE:-}''${NIX_CFLAGS_COMPILE:+ }-idirafter /usr/include"
               export PKG_CONFIG_PATH="/usr/lib/${hostMultiarch}/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig''${PKG_CONFIG_PATH:+:}''${PKG_CONFIG_PATH:-}"
               export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
               export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
