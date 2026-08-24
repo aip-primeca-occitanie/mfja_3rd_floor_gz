@@ -571,32 +571,6 @@ Run `exit` when you want to leave the interactive Nix shell.
   header checks in the Nix verification step. If either file is absent,
   install/reinstall `python3-dev` and `libpython3.12-dev`, then enter a new Nix
   shell and repeat the mixed-header smoke test.
-- Compilation reports `__time64_t does not name a type`, errors inside both
-  `/nix/store/.../glibc...` and `/usr/include/...`, or a cached Nix compiler:
-  update the branch, exit the old shell, enter `nix develop` again, and run the
-  following clean transition build once. It clears CMake's old compiler cache
-  and old objects without deleting the checkout or `/nix/store`:
-
-  ```bash
-  cd "$MFJA_WS"
-
-  colcon build \
-    --symlink-install \
-    --executor sequential \
-    --cmake-clean-cache \
-    --cmake-clean-first \
-    --paths \
-    "$MFJA_REPO/mfja_rail_interfaces" \
-    "$MFJA_REPO/mfja_3rd_floor_description" \
-    "$MFJA_REPO/mfja_robot_control_config" \
-    "$MFJA_REPO/mfja_3rd_floor_bringup" \
-    --cmake-args \
-      -DCMAKE_C_COMPILER=/usr/bin/gcc \
-      -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
-      -DPython3_EXECUTABLE=/usr/bin/python3
-  ```
-
-  After this succeeds, use the normal N6 build command for later changes.
 - Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
   and the graphics driver. `gui:=false` disables the client, although sensor
   rendering can still require a working EGL/headless backend.
