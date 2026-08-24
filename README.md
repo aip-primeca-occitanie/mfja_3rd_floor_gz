@@ -597,11 +597,6 @@ Run `exit` when you want to leave the interactive Nix shell.
   ```
 
   After this succeeds, use the normal N6 build command for later changes.
-- A new terminal or `nix develop` prints a missing workspace path such as
-  `bash: /home/tiago/sri2_g2_hela_ws/install/setup.bash: No such file or
-  directory`: a shell startup file contains a stale `source` command. Follow
-  [Remove a stale workspace source](#remove-a-stale-workspace-source) below;
-  cloning or rebuilding this repository does not repair an unrelated path.
 - Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
   and the graphics driver. `gui:=false` disables the client, although sensor
   rendering can still require a working EGL/headless backend.
@@ -609,63 +604,6 @@ Run `exit` when you want to leave the interactive Nix shell.
   shown in A6.
 - A shuttle is visible but does not move: set `start_paused:=false`, then publish
   the `ON` command from A7.
-
-### Remove a Stale Workspace Source
-
-First locate startup lines that automatically source a workspace overlay. This
-check is read-only and tolerates startup files that do not exist:
-
-```bash
-grep -nHE \
-  '^[[:space:]]*(source|\.)[[:space:]].*/install/(local_)?setup\.bash' \
-  "$HOME/.bashrc" "$HOME/.bash_aliases" "$HOME/.bash_profile" \
-  "$HOME/.bash_login" "$HOME/.profile" \
-  2>/dev/null || true
-```
-
-Choose the file reported by `grep`, back it up, and open it. Replace `.bashrc`
-below if the stale line is in a different startup file:
-
-```bash
-MFJA_STARTUP_FILE="$HOME/.bashrc"
-test -f "$MFJA_STARTUP_FILE"
-MFJA_STARTUP_BACKUP="${MFJA_STARTUP_FILE}.mfja-backup.$(date +%Y%m%d-%H%M%S)"
-
-cp -a -- "$MFJA_STARTUP_FILE" "$MFJA_STARTUP_BACKUP"
-printf 'Backup: %s\n' "$MFJA_STARTUP_BACKUP"
-"${EDITOR:-nano}" "$MFJA_STARTUP_FILE"
-```
-
-Comment out the stale line. If that old workspace is still intentionally used,
-guard it instead so a missing checkout does not break every new shell:
-
-```bash
-# Preferred for an obsolete workspace:
-# source "$HOME/sri2_g2_hela_ws/install/setup.bash"
-
-# Alternative only when the old workspace is still intentionally used:
-MFJA_LEGACY_SETUP="$HOME/sri2_g2_hela_ws/install/setup.bash"
-if [ -f "$MFJA_LEGACY_SETUP" ]; then
-  source "$MFJA_LEGACY_SETUP"
-fi
-unset MFJA_LEGACY_SETUP
-```
-
-Validate the edited file before opening another terminal:
-
-```bash
-if ! bash -n "$MFJA_STARTUP_FILE"; then
-  cp -a -- "$MFJA_STARTUP_BACKUP" "$MFJA_STARTUP_FILE"
-  printf 'Syntax error: restored %s from the backup.\n' "$MFJA_STARTUP_FILE" >&2
-  false
-fi
-```
-
-Do not automatically source any colcon workspace's `install/setup.bash` from
-`.bashrc` or another login file. Workspace overlays are order-sensitive and
-become stale when a directory is renamed or removed. Enter `nix develop` first,
-then source only the intended `$MFJA_WS/install/setup.bash` explicitly after a
-successful build, as shown in N6 and N7.
 
 ---
 
