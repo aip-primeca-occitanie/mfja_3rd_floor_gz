@@ -10,54 +10,478 @@ A major focus of this repository is the **Room 315 flexible rail system**, which
 
 Whether you are testing mobile robot navigation on the full floor, running pick-and-place tasks with a single robotic arm, or orchestrating a complex multi-shuttle logistics scenario in Room 315, this repository provides the necessary models and launch configurations.
 
+**Navigation:** [requirements](#requirements-and-installation-choices)
+· [native Ubuntu setup](#method-a-native-ubuntu-setup)
+· [Nix setup](#method-b-hybrid-nix-setup)
+· [first run](#a6-start-room-315-terminal-1)
+· [quick commands](#basic-commands-and-quick-start)
+· [detailed guide](DETAILED_GUIDE.md)
+
 ---
 
-## 🛠️ Installation Guide
+## Requirements and Installation Choices
 
-The project requires **Ubuntu 24.04** and **ROS 2 Jazzy**. The repository acts as a meta-repository and must be built inside a colcon workspace.
+This guide installs the `main_ali` branch on a new laptop. The repository root
+is a meta-repository, not a ROS package, so it must be cloned below a colcon
+workspace `src/` directory and built from the workspace root.
 
-### 1. Install Prerequisites
-Make sure ROS 2 Jazzy is installed, along with essential build tools:
+| Component | Supported requirement |
+| --- | --- |
+| Operating system | Ubuntu 24.04 Noble; `x86_64` is the safest target |
+| ROS | ROS 2 Jazzy Desktop |
+| Simulator | Gazebo Harmonic / `gz-sim8` through `ros_gz` |
+| Python | Python 3.12 |
+| CMake | 3.28 or newer |
+| Graphics | OpenGL-capable display for the Gazebo GUI |
+
+The base clone contains all project worlds, models, meshes, URDF/SDF assets,
+rail CSV/YAML configuration, launch files, and typed interfaces. It has no Git
+submodules and does not require a dataset, checkpoint, Torch, CUDA, or a
+discrete GPU.
+
+The direct project dependencies fall into these groups:
+
+| Layer | Dependencies | Installation source |
+| --- | --- | --- |
+| Host tools | Git, GCC/build-essential, CMake, Ninja, pkg-config, colcon, rosdep, Python, PyYAML | Ubuntu `apt` |
+| ROS build/interfaces | `ament_cmake`, ROSIDL generators/runtime, `std_msgs` | `rosdep` |
+| Gazebo development libraries | `gz-common5`, `gz-msgs10`, `gz-plugin2`, `gz-sim8`, `gz-transport13` vendor packages | `rosdep` / `ros-jazzy-ros-gz` |
+| ROS runtime | `rclpy`, launch/launch_ros, standard ROS messages, robot state publisher, `ros_gz_bridge`, `ros_gz_interfaces`, `ros_gz_sim` | `rosdep` |
+
+Do not install every ROS dependency manually. The `rosdep install` step below
+reads the four `package.xml` files and installs the correct Jazzy/Noble package
+names.
+
+Choose one complete installation path:
+
+| Path | Build environment | ROS/Gazebo source |
+| --- | --- | --- |
+| [Method A: native Ubuntu](#method-a-native-ubuntu-setup) | Ubuntu packages | Ubuntu packages |
+| [Method B: hybrid Nix](#method-b-hybrid-nix-setup) | Pinned Nix build tools plus required host tools | Ubuntu packages |
+
+> **Important Nix boundary:** `flake.nix` is hybrid. It does not install ROS 2,
+> Gazebo, rosdep, the ROS package dependencies, or colcon. Both methods first
+> install ROS 2 Jazzy, Gazebo Harmonic, rosdep, and `/usr/bin/colcon` on Ubuntu.
+> Nix then supplies the compiler/build environment. This is not a pure-Nix,
+> NixOS, macOS, or Windows setup.
+
+## Method A: Native Ubuntu Setup
+
+Follow A1 through A8 in order. Commands marked one-time are not repeated after
+the laptop is configured.
+
+### A1. Confirm Ubuntu and Architecture
+
 ```bash
-sudo apt update
-sudo apt install -y build-essential cmake git ninja-build pkg-config \
-  python3-colcon-common-extensions python3-rosdep python3-yaml \
-  ros-jazzy-desktop ros-jazzy-robot-state-publisher ros-jazzy-ros-gz
-
-# Initialize rosdep if you haven't already
-sudo rosdep init || true
-rosdep update
+grep -E '^(NAME|VERSION_ID)=' /etc/os-release
+uname -m
 ```
 
-### 2. Clone the Repository
-Create a workspace and clone this meta-repository inside its `src/` folder:
+Continue only with Ubuntu `24.04`. The ROS/Nix files support `x86_64-linux` and
+`aarch64-linux`, but Gazebo rendering on ARM is best-effort and must be
+validated locally.
+
+### A2. Install ROS 2, Gazebo, and Build Tools (One Time)
+
+The following block updates Ubuntu, configures the
+[official ROS 2 Jazzy apt source](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
+when needed, and installs the complete host tool set. It changes system
+packages and requires `sudo`:
+
 ```bash
-export MFJA_WS=~/mfja_ws
-mkdir -p "$MFJA_WS/src"
-cd "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git
+(
+  set -euo pipefail
+
+  . /etc/os-release
+  MFJA_UBUNTU_CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
+  test "$MFJA_UBUNTU_CODENAME" = "noble"
+
+  sudo apt update
+  sudo apt upgrade -y
+  sudo apt install -y \
+    ca-certificates \
+    curl \
+    locales \
+    software-properties-common
+
+  if ! locale | grep -qi 'utf-8'; then
+    sudo locale-gen en_US en_US.UTF-8
+    sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+    export LANG=en_US.UTF-8
+    export LC_ALL=en_US.UTF-8
+  fi
+
+  sudo add-apt-repository -y universe
+
+  if ! apt-cache show ros-jazzy-desktop >/dev/null 2>&1; then
+    MFJA_ROS_APT_SOURCE_VERSION="$(
+      curl -fsSL \
+        https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
+        | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p'
+    )"
+    test -n "$MFJA_ROS_APT_SOURCE_VERSION"
+
+    MFJA_ROS_APT_DEB="$(mktemp --suffix=.deb)"
+    trap 'rm -f -- "$MFJA_ROS_APT_DEB"' EXIT
+    curl -fL -o "$MFJA_ROS_APT_DEB" \
+      "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${MFJA_ROS_APT_SOURCE_VERSION}/ros2-apt-source_${MFJA_ROS_APT_SOURCE_VERSION}.${MFJA_UBUNTU_CODENAME}_all.deb"
+    sudo dpkg -i "$MFJA_ROS_APT_DEB"
+  fi
+
+  sudo apt update
+  sudo apt install -y \
+    build-essential \
+    cmake \
+    git \
+    ninja-build \
+    pkg-config \
+    python3-colcon-common-extensions \
+    python3-pip \
+    python3-pytest \
+    python3-rosdep \
+    python3-venv \
+    python3-yaml \
+    ros-jazzy-desktop \
+    ros-jazzy-robot-state-publisher \
+    ros-jazzy-ros-gz
+
+  printf 'MFJA host setup completed successfully.\n'
+)
 ```
 
-### 3. Build and Source
-Install ROS dependencies, build the workspace, and source it:
+Initialize rosdep once per machine, then verify the supported versions:
+
+```bash
+(
+  set -eo pipefail
+
+  if [ ! -e /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+    sudo rosdep init
+  fi
+  rosdep update
+
+  source /opt/ros/jazzy/setup.bash
+  test "$ROS_DISTRO" = jazzy
+  gz sim --versions
+  cmake --version
+  python3 --version
+)
+```
+
+Gazebo must report the Harmonic / `gz-sim8` generation, CMake must be at least
+3.28, and Python must be 3.12.
+
+### A3. Create the Workspace and Clone `main_ali`
+
+The repository's default GitHub branch is not `main_ali`, so the branch must be
+selected explicitly:
+
+```bash
+(
+  set -euo pipefail
+
+  MFJA_WS="$HOME/mfja_ws"
+  MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
+  mkdir -p "$MFJA_WS/src"
+  test ! -e "$MFJA_REPO"
+
+  git clone --branch main_ali --single-branch \
+    https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+    "$MFJA_REPO"
+
+  test "$(git -C "$MFJA_REPO" branch --show-current)" = main_ali
+  git -C "$MFJA_REPO" status --short --branch
+)
+```
+
+Do not clone over an existing checkout. To update an existing `main_ali`
+checkout, preserve local work first, then run `git pull --ff-only` from that
+repository.
+
+### A4. Install the Project Dependencies
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+source /opt/ros/jazzy/setup.bash
+
+rosdep install --from-paths \
+  "$MFJA_REPO/mfja_3rd_floor_bringup" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  --ignore-src --rosdistro jazzy -y
+
+rosdep check --from-paths \
+  "$MFJA_REPO/mfja_3rd_floor_bringup" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  --ignore-src --rosdistro jazzy
+```
+
+The dependency check must finish with `All system dependencies have been
+satisfied`.
+
+### A5. Build and Verify the Four Packages
+
+Build from the workspace root. The explicit paths prevent colcon from finding
+duplicate packages in unrelated datasets or copied source trees:
+
 ```bash
 cd "$MFJA_WS"
 source /opt/ros/jazzy/setup.bash
 
-# Install dependencies defined in package.xml files
-rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
+colcon build --symlink-install --paths \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  "$MFJA_REPO/mfja_3rd_floor_bringup"
 
-# Build the workspace
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
+source "$MFJA_WS/install/setup.bash"
 
-# Source the installed environment
-source install/setup.bash
+ros2 pkg prefix mfja_3rd_floor_bringup
+ros2 pkg prefix mfja_3rd_floor_description
+ros2 pkg prefix mfja_rail_interfaces
+ros2 pkg prefix mfja_robot_control_config
+ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
 ```
-*(Note: You must run `source install/setup.bash` in every new terminal you open.)*
+
+Every package prefix must point inside `$MFJA_WS/install`. On a low-memory
+laptop, add `--executor sequential` after `--symlink-install`.
+
+### A6. Start Room 315 (Terminal 1)
+
+This first run disables the heavier robot models, starts Gazebo unpaused, and
+creates one stopped right-rail shuttle:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  gui:=true \
+  start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false
+```
+
+Leave Terminal 1 running and wait about five seconds for the delayed rail nodes
+to start.
+
+### A7. Verify and Move the Shuttle (Terminal 2)
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+
+ros2 topic echo --once /clock
+ros2 service list | grep '^/world/room_315_only/'
+ros2 topic echo --once /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState
+```
+
+Start the shuttle and confirm that it moves in Gazebo:
+
+```bash
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON', speed: 0.2}"
+
+ros2 topic echo --once /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState
+```
+
+Stop the shuttle with:
+
+```bash
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'OFF'}"
+```
+
+Stop the launch with `Ctrl-C` in Terminal 1.
+
+### A8. Source Every New Terminal
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+```
+
+Source the ROS base first and the workspace overlay second before running any
+`ros2` command.
+
+## Method B: Hybrid Nix Setup
+
+Follow N1 through N7 in order. The checked-in `flake.lock` pins the Nix build
+tools, but it does not pin the ROS/Gazebo packages installed through apt.
+
+### N1. Install the Required Host Runtime
+
+Complete [A1](#a1-confirm-ubuntu-and-architecture) and
+[A2](#a2-install-ros-2-gazebo-and-build-tools-one-time) first. Confirm that the
+two host files used by the flake exist:
+
+```bash
+test -f /opt/ros/jazzy/setup.bash
+test -x /usr/bin/colcon
+```
+
+### N2. Install Nix (One Time)
+
+The following command downloads and executes the multi-user installer from the
+[official Nix download page](https://nixos.org/download/), creates `/nix`, and
+configures the Nix daemon:
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl xz-utils
+
+curl --proto '=https' --tlsv1.2 -L \
+  https://nixos.org/nix/install \
+  | sh -s -- --daemon
+```
+
+Run it as the normal user, not with `sudo`; the installer requests elevated
+permission itself. Close the terminal, open a new one, and verify:
+
+```bash
+nix --version
+```
+
+### N3. Enable Flake Commands (One Time)
+
+```bash
+MFJA_NIX_CONF="$HOME/.config/nix/nix.conf"
+mkdir -p "$(dirname "$MFJA_NIX_CONF")"
+touch "$MFJA_NIX_CONF"
+
+if ! grep -Eq \
+  '^[[:space:]]*(extra-)?experimental-features[[:space:]]*=.*nix-command.*flakes' \
+  "$MFJA_NIX_CONF"; then
+  printf '%s\n' \
+    'extra-experimental-features = nix-command flakes' \
+    >> "$MFJA_NIX_CONF"
+fi
+
+nix flake --help >/dev/null
+```
+
+If the configuration cannot be changed, add
+`--extra-experimental-features 'nix-command flakes'` to every Nix command.
+
+### N4. Clone `main_ali` and Install ROS Dependencies
+
+Complete [A3](#a3-create-the-workspace-and-clone-main_ali) and
+[A4](#a4-install-the-project-dependencies). Nix does not replace the explicit
+`main_ali` clone or rosdep.
+
+### N5. Enter and Verify the Development Shell
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+cd "$MFJA_REPO"
+nix flake show
+nix develop
+```
+
+The first entry requires network access and space in `/nix/store`. Once the new
+interactive shell opens, verify both sides of the hybrid environment:
+
+```bash
+test "$MFJA_NIX_MODE" = hybrid
+test "$ROS_DISTRO" = jazzy
+test -x /usr/bin/colcon
+
+command -v cmake
+command -v gcc
+command -v ninja
+command -v pkg-config
+command -v python3
+command -v ros2
+command -v gz
+```
+
+### N6. Build and Verify Inside Nix
+
+Stay inside `nix develop`:
+
+```bash
+cd "$MFJA_WS"
+
+colcon build --symlink-install --paths \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  "$MFJA_REPO/mfja_3rd_floor_bringup"
+
+source "$MFJA_WS/install/setup.bash"
+
+ros2 pkg prefix mfja_3rd_floor_bringup
+ros2 pkg prefix mfja_3rd_floor_description
+ros2 pkg prefix mfja_rail_interfaces
+ros2 pkg prefix mfja_robot_control_config
+ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
+```
+
+### N7. Run from Nix and Open Later Terminals
+
+For Terminal 1 and every later terminal, enter the Nix shell first:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+cd "$MFJA_REPO"
+nix develop
+```
+
+Then, inside the Nix shell, source the overlay and use the launch/verification
+commands from [A6](#a6-start-room-315-terminal-1) and
+[A7](#a7-verify-and-move-the-shuttle-terminal-2):
+
+```bash
+source "$MFJA_WS/install/setup.bash"
+```
+
+Run `exit` when you want to leave the interactive Nix shell.
+
+## Installation Troubleshooting
+
+- `Package ... not found`: source `/opt/ros/jazzy/setup.bash`, then the intended
+  workspace's `install/setup.bash` in the same terminal.
+- Colcon reports a duplicate package: keep copied source trees and datasets
+  outside workspace `src/`, and use the four explicit `--paths` above instead
+  of a broad `--base-paths` scan.
+- A low-memory build is killed: rebuild with `--executor sequential`.
+- `nix: command not found` after installation: close the terminal and open a
+  new one so the Nix profile is loaded.
+- Nix says flakes are disabled: repeat N3 or pass the temporary experimental
+  feature flag documented there.
+- The Nix shell cannot find ROS or colcon: return to N1; the flake intentionally
+  does not supply those host packages.
+- Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
+  and the graphics driver. `gui:=false` disables the client, although sensor
+  rendering can still require a working EGL/headless backend.
+- No shuttle is visible: initial counts default to zero; pass a shuttle count as
+  shown in A6.
+- A shuttle is visible but does not move: set `start_paused:=false`, then publish
+  the `ON` command from A7.
 
 ---
 
-## ⚡ Basic Commands & Quick Start
+## Basic Commands and Quick Start
 
 The repository offers multiple run modes depending on what you want to test.
 
@@ -77,6 +501,7 @@ If you only want to focus on the flexible rail system and shuttles in Room 315:
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   gui:=true \
+  start_paused:=false \
   enable_room315_kinematic_shuttles:=true \
   room315_right_shuttle_count:=1 \
   room315_left_shuttle_count:=1 \
