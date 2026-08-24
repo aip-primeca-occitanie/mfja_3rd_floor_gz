@@ -729,34 +729,7 @@ Every package prefix must point inside `$MFJA_WS/install`. On a low-memory
 machine, repeat the build with `--executor sequential` immediately after
 `--symlink-install`.
 
-If this workspace was configured by the older hybrid shell and compilation
-mentions `__time64_t`, Nix GCC, or both `/nix/store/.../glibc` and
-`/usr/include/...` in the same error, perform this transition build exactly
-once. It clears the old CMake compiler selection and asks each CMake package to
-clean its previous objects; it does not delete the checkout, the install tree,
-or `/nix/store`:
-
-```bash
-cd "$MFJA_WS"
-
-colcon build \
-  --cmake-clean-cache \
-  --cmake-clean-first \
-  --symlink-install \
-  --executor sequential \
-  --paths \
-  "$MFJA_REPO/mfja_rail_interfaces" \
-  "$MFJA_REPO/mfja_3rd_floor_description" \
-  "$MFJA_REPO/mfja_robot_control_config" \
-  "$MFJA_REPO/mfja_3rd_floor_bringup" \
-  --cmake-args \
-  -DCMAKE_C_COMPILER=/usr/bin/gcc \
-  -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
-  -DPython3_EXECUTABLE=/usr/bin/python3
-```
-
-After either successful build, confirm that CMake recorded the Ubuntu
-compilers:
+After the successful build, confirm that CMake recorded the Ubuntu compilers:
 
 ```bash
 grep -Eq '^CMAKE_C_COMPILER:(FILEPATH|STRING)=/usr/bin/gcc$' \
@@ -1123,15 +1096,10 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
   repeat Method A Step 4 and the `/usr/bin/pkg-config` checks in N7. Install the
   missing dependency through Ubuntu/rosdep; do not add a second Nix copy of an
   Ubuntu Gazebo runtime library.
-- Compilation reports `__time64_t`, or one error contains both Nix glibc and
-  Ubuntu `/usr/include` paths: exit the old shell, update this branch, enter a
-  new `nix develop`, pass the N7 compiler/header checks, then run the one-time
-  transition build in N8 with both `--cmake-clean-cache` and
-  `--cmake-clean-first`.
 - Compilation cannot find `<multiarch>/python3.12/pyconfig.h`: rerun the Python
   header checks in the Nix verification step. If either file is absent,
-  install/reinstall `python3-dev` and `libpython3.12-dev`; otherwise update the
-  branch, enter a new Nix shell, and rebuild with `--cmake-clean-cache`.
+  install/reinstall `python3-dev` and `libpython3.12-dev`, then enter a new Nix
+  shell and repeat the mixed-header smoke test before rebuilding.
 - Colcon reports a duplicate MFJA package: keep downloaded datasets/frozen
   source trees outside workspace `src/` and use the four explicit `--paths`
   from this README, not a broad `--base-paths` scan.
