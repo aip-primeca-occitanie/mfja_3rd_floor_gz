@@ -21,6 +21,12 @@
             inherit system;
           };
 
+          hostMultiarch =
+            if system == "x86_64-linux" then
+              "x86_64-linux-gnu"
+            else
+              "aarch64-linux-gnu";
+
           pythonEnv = pkgs.python312.withPackages (ps: with ps; [
             catkin-pkg
             empy
@@ -80,11 +86,6 @@
           default = pkgs.mkShell {
             name = "mfja-hybrid-ros2-jazzy-gz-harmonic";
 
-            buildInputs = [
-              # Gazebo's gz-common5 CMake package requires uuid.h and libuuid.
-              pkgs.libuuid
-            ];
-
             packages = [
               pkgs.bashInteractive
               pkgs.cmake
@@ -108,6 +109,15 @@
               export MFJA_NIX_MODE=hybrid
               export RMW_IMPLEMENTATION="''${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}"
               export LD_LIBRARY_PATH="${rosRuntimeLibs}''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
+
+              # ROS and Gazebo come from Ubuntu. Nix's CMake and pkg-config do
+              # not search Ubuntu's multiarch development paths by default.
+              export CMAKE_PREFIX_PATH="/usr:/usr/lib/${hostMultiarch}:/usr/lib/${hostMultiarch}/cmake''${CMAKE_PREFIX_PATH:+:}''${CMAKE_PREFIX_PATH:-}"
+              export CMAKE_LIBRARY_PATH="/usr/lib/${hostMultiarch}:/usr/lib''${CMAKE_LIBRARY_PATH:+:}''${CMAKE_LIBRARY_PATH:-}"
+              export CMAKE_INCLUDE_PATH="/usr/include/${hostMultiarch}:/usr/include''${CMAKE_INCLUDE_PATH:+:}''${CMAKE_INCLUDE_PATH:-}"
+              export PKG_CONFIG_PATH="/usr/lib/${hostMultiarch}/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig''${PKG_CONFIG_PATH:+:}''${PKG_CONFIG_PATH:-}"
+              export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+              export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
 
               if [ -f /opt/ros/jazzy/setup.bash ]; then
                 source /opt/ros/jazzy/setup.bash

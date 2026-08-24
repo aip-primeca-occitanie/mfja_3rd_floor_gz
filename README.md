@@ -436,7 +436,14 @@ command -v pkg-config
 command -v python3
 command -v ros2
 command -v gz
+
+pkg-config --exists uuid
+pkg-config --atleast-version=4 libzmq
+test -f /usr/include/zmq.hpp
 ```
+
+The shell hook exposes the Ubuntu multiarch CMake and pkg-config paths required
+by the host Gazebo libraries while keeping ROS and Gazebo outside the Nix store.
 
 ### N6. Build and Verify Inside Nix
 
@@ -496,6 +503,9 @@ Run `exit` when you want to leave the interactive Nix shell.
   feature flag documented there.
 - The Nix shell cannot find ROS or colcon: return to N1; the flake intentionally
   does not supply those host packages.
+- Nix CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
+  exit the old Nix shell, update this branch, enter `nix develop` again, and
+  rebuild with `--cmake-clean-cache`. Do not delete the checkout or `/nix/store`.
 - Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
   and the graphics driver. `gui:=false` disables the client, although sensor
   rendering can still require a working EGL/headless backend.
