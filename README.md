@@ -13,7 +13,7 @@ Whether you are testing mobile robot navigation on the full floor, running pick-
 **Navigation:** [requirements](#requirements-and-installation-choices)
 · [native Ubuntu setup](#method-a-native-ubuntu-setup)
 · [Nix setup](#method-b-hybrid-nix-setup)
-· [first run](#a6-start-room-315-terminal-1)
+· [first run](#a8-start-room-315-terminal-1)
 · [quick commands](#basic-commands-and-quick-start)
 · [detailed guide](DETAILED_GUIDE.md)
 
@@ -68,7 +68,7 @@ Choose one complete installation path:
 
 ## Method A: Native Ubuntu Setup
 
-Follow A1 through A8 in order. Commands marked one-time are not repeated after
+Follow A1 through A10 in order. Commands marked one-time are not repeated after
 the laptop is configured.
 
 ### A1. Confirm Ubuntu and Architecture
@@ -153,14 +153,22 @@ packages and requires `sudo`:
 ```
 
 Do not continue unless the block prints `MFJA host setup completed
-successfully`. Once it succeeds, save any open work and **always reboot once**
-before continuing. Do this even when Ubuntu does not display a reboot prompt.
-After login, open a new terminal in the local graphical desktop and continue
-with the post-reboot verification below; do not repeat A2.
+successfully`.
+
+### A3. Reboot the Laptop Manually (One Time)
+
+Nothing in A2 restarts the laptop automatically. This is a separate,
+user-initiated checkpoint so that a reboot never happens unexpectedly. Save
+your work and close any applications when you are ready. The following command
+immediately ends the current desktop session and restarts the laptop:
 
 ```bash
 sudo reboot
 ```
+
+If you are not ready to restart, stop here and return to A3 later. Do not
+continue to A4 until the reboot has completed. After login, open a new terminal
+in the local graphical desktop and continue with A4; do not repeat A2.
 
 This checkpoint is important after a kernel or NVIDIA driver update. Until the
 reboot, the loaded kernel driver can differ from the newly installed graphics
@@ -168,6 +176,8 @@ libraries, causing `nvidia-smi`, `glxinfo`, and Gazebo to fail even though the
 project itself is installed correctly. The
 [official Ubuntu NVIDIA driver guide](https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/)
 also requires a reboot after updating the system and kernel.
+
+### A4. Verify the Host Tools and Graphics After Reboot
 
 Initialize rosdep once per machine, then verify the supported versions:
 
@@ -217,14 +227,14 @@ gz sim --force-version 8 -v 4 shapes.sdf
 ```
 
 The Gazebo 3D window must open and render the shapes. Stop it with `Ctrl-C`,
-then continue to A3. If this stock world fails, stop here and fix the host
+then continue to A5. If this stock world fails, stop here and fix the host
 graphics/session first; deleting the workspace or rebuilding the project cannot
 repair it. The standard laptop path intentionally performs this check in a
 local graphical session. A truly headless machine instead needs a separately
 validated EGL setup; `gui:=false` alone is not sufficient because project
 cameras still require server-side rendering.
 
-### A3. Create the Workspace and Clone `main_ali`
+### A5. Create the Workspace and Clone `main_ali`
 
 The repository's default GitHub branch is not `main_ali`, so the branch must be
 selected explicitly:
@@ -252,7 +262,7 @@ Do not clone over an existing checkout. To update an existing `main_ali`
 checkout, preserve local work first, then run `git pull --ff-only` from that
 repository.
 
-### A4. Install the Project Dependencies
+### A6. Install the Project Dependencies
 
 ```bash
 export MFJA_WS="$HOME/mfja_ws"
@@ -277,7 +287,7 @@ rosdep check --from-paths \
 The dependency check must finish with `All system dependencies have been
 satisfied`.
 
-### A5. Build and Verify the Four Packages
+### A7. Build and Verify the Four Packages
 
 Build from the workspace root. The explicit paths prevent colcon from finding
 duplicate packages in unrelated datasets or copied source trees:
@@ -305,7 +315,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
 Every package prefix must point inside `$MFJA_WS/install`. On a low-memory
 laptop, add `--executor sequential` after `--symlink-install`.
 
-### A6. Start Room 315 (Terminal 1)
+### A8. Start Room 315 (Terminal 1)
 
 This first run disables the heavier robot models, starts Gazebo unpaused, and
 creates one stopped right-rail shuttle:
@@ -328,7 +338,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 Leave Terminal 1 running and wait about five seconds for the delayed rail nodes
 to start.
 
-### A7. Verify and Move the Shuttle (Terminal 2)
+### A9. Verify and Move the Shuttle (Terminal 2)
 
 ```bash
 export MFJA_WS="$HOME/mfja_ws"
@@ -362,7 +372,7 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command \
 
 Stop the launch with `Ctrl-C` in Terminal 1.
 
-### A8. Source Every New Terminal
+### A10. Source Every New Terminal
 
 ```bash
 export MFJA_WS="$HOME/mfja_ws"
@@ -382,13 +392,13 @@ pkg-config, colcon, or ROS/Gazebo packages installed through apt.
 
 ### N1. Install the Required Host Runtime
 
-Complete [A1](#a1-confirm-ubuntu-and-architecture) and
-[A2](#a2-install-ros-2-gazebo-and-build-tools-one-time) first. Confirm that the
-host compiler/runtime tools used by the flake exist:
+Complete [A1](#a1-confirm-ubuntu-and-architecture) through
+[A4](#a4-verify-the-host-tools-and-graphics-after-reboot) first. Confirm that
+the host compiler/runtime tools used by the flake exist:
 
-Completing A2 includes its mandatory reboot and post-reboot OpenGL/Gazebo smoke
-test. Do not enter `nix develop` until both pass; Nix cannot repair or replace
-the host kernel graphics driver.
+A3 is a separate, manually initiated reboot, and A4 contains the post-reboot
+OpenGL/Gazebo smoke test. Do not enter `nix develop` until both are complete;
+Nix cannot repair or replace the host kernel graphics driver.
 
 ```bash
 test -f /opt/ros/jazzy/setup.bash
@@ -472,7 +482,7 @@ the checkout explicitly before entering the development shell:
 ```
 
 After the clone succeeds, complete
-[A4](#a4-install-the-project-dependencies). Nix does not replace rosdep.
+[A6](#a6-install-the-project-dependencies). Nix does not replace rosdep.
 
 ### N5. Enter and Verify the Development Shell
 
@@ -595,8 +605,8 @@ nix develop
 ```
 
 Then, inside the Nix shell, source the overlay and use the launch/verification
-commands from [A6](#a6-start-room-315-terminal-1) and
-[A7](#a7-verify-and-move-the-shuttle-terminal-2):
+commands from [A8](#a8-start-room-315-terminal-1) and
+[A9](#a9-verify-and-move-the-shuttle-terminal-2):
 
 ```bash
 source "$MFJA_WS/install/setup.bash"
@@ -619,7 +629,7 @@ Run `exit` when you want to leave the interactive Nix shell.
 - The Nix shell cannot find ROS or colcon: return to N1; the flake intentionally
   does not supply those host packages.
 - CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
-  repeat A4 and the `$PKG_CONFIG` checks in N5. Install the missing dependency
+  repeat A6 and the `$PKG_CONFIG` checks in N5. Install the missing dependency
   through Ubuntu/rosdep; do not add a second Nix copy of an Ubuntu Gazebo
   runtime library.
 - Compilation cannot find `<multiarch>/python3.12/pyconfig.h`: rerun the Python
@@ -629,16 +639,16 @@ Run `exit` when you want to leave the interactive Nix shell.
 - `nvidia-smi` reports `Driver/library version mismatch`, or Gazebo reports
   `Failed to create OpenGL context` / GLX `BadValue` immediately after the host
   update: do not clean colcon, change `flake.nix`, or reclone the repository.
-  Perform the mandatory reboot from A2 and repeat the host graphics smoke test.
-  If it still fails after reboot, diagnose the Ubuntu graphics driver, Secure
-  Boot, and graphical session before continuing.
+  Manually reboot as described in A3, then repeat the A4 host graphics smoke
+  test. If it still fails after reboot, diagnose the Ubuntu graphics driver,
+  Secure Boot, and graphical session before continuing.
 - Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
   and the graphics driver. `gui:=false` disables the client, although sensor
   rendering can still require a working EGL/headless backend.
 - No shuttle is visible: initial counts default to zero; pass a shuttle count as
-  shown in A6.
+  shown in A8.
 - A shuttle is visible but does not move: set `start_paused:=false`, then publish
-  the `ON` command from A7.
+  the `ON` command from A9.
 
 ---
 
