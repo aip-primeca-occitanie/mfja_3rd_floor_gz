@@ -382,9 +382,34 @@ If the configuration cannot be changed, add
 
 ### N4. Clone `main_ali` and Install ROS Dependencies
 
-Complete [A3](#a3-create-the-workspace-and-clone-main_ali) and
-[A4](#a4-install-the-project-dependencies). Nix does not replace the explicit
-`main_ali` clone or rosdep.
+Nix does not download or clone the project repository. On a new laptop, create
+the checkout explicitly before entering the development shell:
+
+```bash
+(
+  set -euo pipefail
+
+  MFJA_WS="$HOME/mfja_ws"
+  MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
+  mkdir -p "$MFJA_WS/src"
+
+  if [ ! -e "$MFJA_REPO" ]; then
+    git clone --branch main_ali --single-branch \
+      https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+      "$MFJA_REPO"
+  fi
+
+  test "$(git -C "$MFJA_REPO" rev-parse --is-inside-work-tree)" = true
+  test "$(git -C "$MFJA_REPO" branch --show-current)" = main_ali
+  test -f "$MFJA_REPO/flake.nix"
+  test -f "$MFJA_REPO/flake.lock"
+  git -C "$MFJA_REPO" status --short --branch
+)
+```
+
+After the clone succeeds, complete
+[A4](#a4-install-the-project-dependencies). Nix does not replace rosdep.
 
 ### N5. Enter and Verify the Development Shell
 
