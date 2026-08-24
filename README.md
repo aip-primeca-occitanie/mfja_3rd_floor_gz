@@ -549,19 +549,44 @@ below.
 
 ### N5. Create the Workspace and Clone the Project
 
-Complete [Method A, Step 3](#3-create-the-workspace-and-clone-the-repository).
-That clone block selects the current documented branch when GitHub's default
-branch does not yet contain this runtime. Then restore the path variables in
-the current terminal and verify the Nix inputs:
+Nix does not download or clone the project repository. On a new laptop, run
+this step before installing the ROS package dependencies or entering the Nix
+shell:
 
 ```bash
 export MFJA_WS="$HOME/mfja_ws"
 export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 
-test -f "$MFJA_REPO/flake.nix"
-test -f "$MFJA_REPO/flake.lock"
-git -C "$MFJA_REPO" status --short --branch
+(
+  set -euo pipefail
+
+  mkdir -p "$MFJA_WS/src"
+
+  if [ ! -e "$MFJA_REPO" ]; then
+    git clone \
+      https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+      "$MFJA_REPO"
+  fi
+
+  test "$(git -C "$MFJA_REPO" rev-parse --is-inside-work-tree)" = true
+
+  if [ ! -f "$MFJA_REPO/docs/INSTALLATION.md" ] ||
+     [ ! -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py" ]; then
+    git -C "$MFJA_REPO" switch --track \
+      origin/ali/neuro-symbolic-closed-loop
+  fi
+
+  test -f "$MFJA_REPO/flake.nix"
+  test -f "$MFJA_REPO/flake.lock"
+  test -f "$MFJA_REPO/docs/INSTALLATION.md"
+  test -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py"
+  git -C "$MFJA_REPO" status --short --branch
+)
 ```
+
+The block clones the repository when it is missing and reuses a valid existing
+checkout. It selects `ali/neuro-symbolic-closed-loop` only while the documented
+runtime is not yet available from GitHub's default branch.
 
 Do not run `nix flake update` during normal installation. The committed lock
 file is what pins the development environment used by the project.
