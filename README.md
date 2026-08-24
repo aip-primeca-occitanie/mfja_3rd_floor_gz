@@ -56,7 +56,7 @@ needed for the first simulation run.
 | --- | --- | --- |
 | Host platform | Ubuntu 24.04 Noble, Bash, a working OpenGL display for the GUI | Laptop/VM installation |
 | ROS and simulator | ROS 2 Jazzy Desktop, Gazebo Harmonic, `ros_gz`, `robot_state_publisher` | Method A/B host `apt` step |
-| Workspace tools | Git, GCC/build-essential, CMake 3.28+, Ninja, pkg-config, colcon, rosdep, Python 3.12, pip, venv, pytest, PyYAML | Host `apt`; Method B pins only Bash, Ninja, Make, and Git with Nix |
+| Workspace tools | Git, GCC/build-essential, CMake 3.28+, Ninja, pkg-config, `mesa-utils` / `glxinfo`, colcon, rosdep, Python 3.12, pip, venv, pytest, PyYAML | Host `apt`; Method B pins only Bash, Ninja, Make, and Git with Nix |
 | Package build interfaces | `ament_cmake`, ROSIDL generators/runtime, Gazebo vendor libraries (`gz-common5`, `gz-msgs10`, `gz-plugin2`, `gz-sim8`, `gz-transport13`) | `rosdep` |
 | ROS runtime | `rclpy`, launch/launch_ros, standard ROS messages, `cv_bridge`, `message_filters`, `robot_state_publisher`, `ros_gz_bridge`, `ros_gz_interfaces`, `ros_gz_sim`, and PlanSys2 messages/bringup/planner | `rosdep` |
 | Base Python runtime | OpenCV, NumPy, Pillow, PyYAML | `rosdep` |
@@ -173,6 +173,7 @@ is authoritative if its repository setup changes.
     build-essential \
     cmake \
     git \
+    mesa-utils \
     ninja-build \
     pkg-config \
     python3-dev \
@@ -191,8 +192,21 @@ is authoritative if its repository setup changes.
 ```
 
 Do not continue unless the block prints `MFJA host setup completed
-successfully`. Reboot first if Ubuntu reports that a reboot is required, then
-return to the next command.
+successfully`. Once it succeeds, save any open work and **always reboot once**
+before continuing. Do this even when Ubuntu does not display a reboot prompt.
+After login, open a new terminal in the local graphical desktop and continue
+with the post-reboot verification below; do not repeat Step 2.
+
+```bash
+sudo reboot
+```
+
+This checkpoint is important after a kernel or NVIDIA driver update. Until the
+reboot, the loaded kernel driver can differ from the newly installed graphics
+libraries, causing `nvidia-smi`, `glxinfo`, and Gazebo to fail even though the
+project itself is installed correctly. The
+[official Ubuntu NVIDIA driver guide](https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/)
+also requires a reboot after updating the system and kernel.
 
 If the original terminal did not already use UTF-8, apply the generated locale
 to that terminal as well. A new login shell receives it automatically:
@@ -220,11 +234,44 @@ Initialize `rosdep` once per machine, then verify the host tools:
   gz sim --versions
   cmake --version
   python3 --version
+
+  if [ -z "${DISPLAY:-}" ]; then
+    printf 'ERROR: run this GUI preflight from the local graphical desktop.\n' >&2
+    exit 1
+  fi
+
+  MFJA_GLX_INFO="$(LC_ALL=C glxinfo -B)"
+  printf '%s\n' "$MFJA_GLX_INFO"
+  grep -Fq 'direct rendering: Yes' <<<"$MFJA_GLX_INFO"
+  grep -Eq '^OpenGL (core profile )?version string:' <<<"$MFJA_GLX_INFO"
+
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+  fi
 )
 ```
 
 Expected results are `jazzy`, the Gazebo Harmonic / `gz-sim8` generation,
-CMake 3.28 or newer, and Python 3.12.
+CMake 3.28 or newer, Python 3.12, `direct rendering: Yes`, and an OpenGL version
+above 3.3 (4.3 or newer is preferred). On a normal Mesa-only laptop,
+`nvidia-smi` is absent and is skipped. If NVIDIA utilities are installed, their
+query must succeed without `Driver/library version mismatch`.
+
+Finally, test the same Qt/Ogre2 rendering path used by the simulator before
+cloning or building this project:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+gz sim --force-version 8 -v 4 shapes.sdf
+```
+
+The Gazebo 3D window must open and render the shapes. Stop it with `Ctrl-C`,
+then continue to Step 3. If this stock world fails, stop here and fix the host
+graphics/session first; deleting the workspace or rebuilding the project cannot
+repair it. The standard laptop path intentionally performs this check in a
+local graphical session. A truly headless machine instead needs a separately
+validated EGL setup; `gui:=false` alone is not sufficient because project
+cameras still require server-side rendering.
 
 ### 3. Create the Workspace and Clone the Repository
 
@@ -485,6 +532,10 @@ provide:
   `/usr/bin/pkg-config` from Ubuntu;
 - `/usr/bin/colcon`, `rosdep`, and the Ubuntu Python/ROS integration;
 - the initial `rosdep` database.
+
+Completing Method A Step 2 includes its mandatory reboot and the post-reboot
+OpenGL/Gazebo smoke test. Do not enter `nix develop` until both pass; Nix cannot
+repair or replace the host kernel graphics driver.
 
 Verify this boundary before installing Nix:
 
@@ -1100,6 +1151,12 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
   header checks in the Nix verification step. If either file is absent,
   install/reinstall `python3-dev` and `libpython3.12-dev`, then enter a new Nix
   shell and repeat the mixed-header smoke test before rebuilding.
+- `nvidia-smi` reports `Driver/library version mismatch`, or Gazebo reports
+  `Failed to create OpenGL context` / GLX `BadValue` immediately after the host
+  update: do not clean colcon, change `flake.nix`, or reclone the repository.
+  Perform the mandatory reboot from Step 2 and repeat the host graphics smoke
+  test. If it still fails after reboot, diagnose the Ubuntu graphics driver,
+  Secure Boot, and graphical session before continuing.
 - Colcon reports a duplicate MFJA package: keep downloaded datasets/frozen
   source trees outside workspace `src/` and use the four explicit `--paths`
   from this README, not a broad `--base-paths` scan.
