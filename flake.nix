@@ -80,6 +80,11 @@
           default = pkgs.mkShell {
             name = "mfja-hybrid-ros2-jazzy-gz-harmonic";
 
+            buildInputs = [
+              # Gazebo's gz-common5 CMake package requires uuid.h and libuuid.
+              pkgs.libuuid
+            ];
+
             packages = [
               pkgs.bashInteractive
               pkgs.cmake
