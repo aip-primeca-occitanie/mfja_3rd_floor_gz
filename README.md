@@ -57,13 +57,14 @@ Choose one complete installation path:
 | Path | Build environment | ROS/Gazebo source |
 | --- | --- | --- |
 | [Method A: native Ubuntu](#method-a-native-ubuntu-setup) | Ubuntu packages | Ubuntu packages |
-| [Method B: hybrid Nix](#method-b-hybrid-nix-setup) | Pinned Nix build tools plus required host tools | Ubuntu packages |
+| [Method B: hybrid Nix](#method-b-hybrid-nix-setup) | Nix Bash/Ninja/Make/Git plus Ubuntu CMake, compiler, and Python | Ubuntu packages |
 
-> **Important Nix boundary:** `flake.nix` is hybrid. It does not install ROS 2,
-> Gazebo, rosdep, the ROS package dependencies, or colcon. Both methods first
-> install ROS 2 Jazzy, Gazebo Harmonic, rosdep, and `/usr/bin/colcon` on Ubuntu.
-> Nix then supplies the compiler/build environment. This is not a pure-Nix,
-> NixOS, macOS, or Windows setup.
+> **Important Nix boundary:** `flake.nix` is hybrid. Nix supplies Bash, Ninja,
+> Make, and Git only. Ubuntu supplies CMake, GCC/G++, Python, pkg-config,
+> colcon, ROS 2 Jazzy, Gazebo Harmonic, rosdep, and all ROS package
+> dependencies. Keeping CMake and the compiler/runtime stack entirely on
+> Ubuntu avoids mixing Nix and Noble discovery paths, system headers, or shared
+> libraries. This is not a pure-Nix, NixOS, macOS, or Windows setup.
 
 ## Method A: Native Ubuntu Setup
 
@@ -324,17 +325,23 @@ Source the ROS base first and the workspace overlay second before running any
 
 ## Method B: Hybrid Nix Setup
 
-Follow N1 through N7 in order. The checked-in `flake.lock` pins the Nix build
-tools, but it does not pin the ROS/Gazebo packages installed through apt.
+Follow N1 through N7 in order. The checked-in `flake.lock` pins Nix Bash,
+Ninja, Make, and Git. It does not pin Ubuntu CMake, the compiler, Python,
+pkg-config, colcon, or ROS/Gazebo packages installed through apt.
 
 ### N1. Install the Required Host Runtime
 
 Complete [A1](#a1-confirm-ubuntu-and-architecture) and
 [A2](#a2-install-ros-2-gazebo-and-build-tools-one-time) first. Confirm that the
-two host files used by the flake exist:
+host compiler/runtime tools used by the flake exist:
 
 ```bash
 test -f /opt/ros/jazzy/setup.bash
+test -x /usr/bin/cmake
+test -x /usr/bin/gcc
+test -x /usr/bin/g++
+test -x /usr/bin/python3
+test -x /usr/bin/pkg-config
 test -x /usr/bin/colcon
 ```
 
@@ -426,31 +433,68 @@ The first entry requires network access and space in `/nix/store`. Once the new
 interactive shell opens, verify both sides of the hybrid environment:
 
 ```bash
-test "$MFJA_NIX_MODE" = hybrid
-test "$ROS_DISTRO" = jazzy
-test -x /usr/bin/colcon
+(
+  set -euo pipefail
 
-command -v cmake
-command -v gcc
-command -v ninja
-command -v pkg-config
-command -v python3
-command -v ros2
-command -v gz
+  test "$MFJA_NIX_MODE" = hybrid
+  test "$ROS_DISTRO" = jazzy
+  test -x /usr/bin/colcon
 
-pkg-config --exists uuid
-pkg-config --atleast-version=4 libzmq
-test -f /usr/include/zmq.hpp
-test -f /usr/include/python3.12/Python.h
-test -f "/usr/include/$(/usr/bin/gcc -print-multiarch)/python3.12/pyconfig.h"
-printf '#include <Python.h>\n' | \
-  gcc -x c -fsyntax-only -isystem /usr/include/python3.12 -
+  test "$CC" = /usr/bin/gcc
+  test "$CXX" = /usr/bin/g++
+  test "$PYTHON" = /usr/bin/python3
+  test "$PKG_CONFIG" = /usr/bin/pkg-config
+  test "$(command -v cmake)" = /usr/bin/cmake
+  test "$(command -v gcc)" = /usr/bin/gcc
+  test "$(command -v g++)" = /usr/bin/g++
+  test "$(command -v python3)" = /usr/bin/python3
+  test "$(command -v pkg-config)" = /usr/bin/pkg-config
+  test "$(command -v colcon)" = /usr/bin/colcon
+  test -z "${NIX_CFLAGS_COMPILE:-}"
+  test -z "${NIXPKGS_CMAKE_PREFIX_PATH:-}"
+
+  MFJA_CMAKE_VERSION="$(cmake --version | awk 'NR == 1 { print $3 }')"
+  test -n "$MFJA_CMAKE_VERSION"
+  /usr/bin/dpkg --compare-versions "$MFJA_CMAKE_VERSION" ge 3.28
+  printf 'Ubuntu CMake version: %s\n' "$MFJA_CMAKE_VERSION"
+  unset MFJA_CMAKE_VERSION
+
+  for MFJA_NIX_TOOL in ninja make git; do
+    case "$(command -v "$MFJA_NIX_TOOL")" in
+      /nix/store/*/bin/*) ;;
+      *) printf 'ERROR: %s is not coming from Nix.\n' \
+           "$MFJA_NIX_TOOL" >&2; false ;;
+    esac
+  done
+  unset MFJA_NIX_TOOL
+  command -v ros2
+  command -v gz
+
+  "$PKG_CONFIG" --exists uuid
+  "$PKG_CONFIG" --atleast-version=4 libzmq
+  test -f /usr/include/zmq.hpp
+  test -f /usr/include/python3.12/Python.h
+  test -f "/usr/include/$(/usr/bin/gcc -print-multiarch)/python3.12/pyconfig.h"
+
+  printf '%s\n' \
+    '#include <cstdlib>' \
+    '#include <chrono>' \
+    '#include <sys/types.h>' \
+    '#include <Python.h>' \
+    '#include <uuid/uuid.h>' \
+    'int main() { time_t value{}; (void)value; return 0; }' | \
+    "$CXX" -std=c++17 -x c++ -fsyntax-only \
+      -isystem /usr/include/python3.12 -
+)
 ```
 
-The shell hook exposes the Ubuntu multiarch CMake and pkg-config paths required
-by the host Gazebo libraries while keeping ROS and Gazebo outside the Nix store.
-The Nix compiler keeps its own system headers first and uses `/usr/include`
-only as a final fallback for Ubuntu's split multiarch Python headers.
+CMake, `CC`, `CXX`, `PYTHON`, and `PKG_CONFIG` must resolve to the exact
+`/usr/bin` tools shown above, and Ubuntu CMake must be version 3.28 or newer.
+The shell removes inherited Nix discovery/compiler flags and old ROS overlays
+before sourcing Jazzy. Nix remains responsible only for Bash, Ninja, Make, and
+Git. The final compile-only smoke test deliberately combines C++, glibc,
+Python, and UUID headers; success confirms they all come from the compatible
+Ubuntu toolchain.
 
 ### N6. Build and Verify Inside Nix
 
@@ -459,20 +503,29 @@ Stay inside `nix develop`:
 ```bash
 cd "$MFJA_WS"
 
-colcon build --symlink-install --paths \
-  "$MFJA_REPO/mfja_rail_interfaces" \
-  "$MFJA_REPO/mfja_3rd_floor_description" \
-  "$MFJA_REPO/mfja_robot_control_config" \
-  "$MFJA_REPO/mfja_3rd_floor_bringup"
+if colcon build --symlink-install --paths \
+    "$MFJA_REPO/mfja_rail_interfaces" \
+    "$MFJA_REPO/mfja_3rd_floor_description" \
+    "$MFJA_REPO/mfja_robot_control_config" \
+    "$MFJA_REPO/mfja_3rd_floor_bringup" \
+    --cmake-args \
+      -DCMAKE_C_COMPILER=/usr/bin/gcc \
+      -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
+      -DPython3_EXECUTABLE=/usr/bin/python3; then
+  source "$MFJA_WS/install/setup.bash"
 
-source "$MFJA_WS/install/setup.bash"
-
-ros2 pkg prefix mfja_3rd_floor_bringup
-ros2 pkg prefix mfja_3rd_floor_description
-ros2 pkg prefix mfja_rail_interfaces
-ros2 pkg prefix mfja_robot_control_config
-ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
-ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
+  ros2 pkg prefix mfja_3rd_floor_bringup
+  ros2 pkg prefix mfja_3rd_floor_description
+  ros2 pkg prefix mfja_rail_interfaces
+  ros2 pkg prefix mfja_robot_control_config
+  ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
+  ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
+else
+  printf '%s\n' \
+    'ERROR: colcon build failed; the install overlay was not sourced and ROS checks were skipped.' \
+    >&2
+  false
+fi
 ```
 
 ### N7. Run from Nix and Open Later Terminals
@@ -510,13 +563,45 @@ Run `exit` when you want to leave the interactive Nix shell.
   feature flag documented there.
 - The Nix shell cannot find ROS or colcon: return to N1; the flake intentionally
   does not supply those host packages.
-- Nix CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
-  exit the old Nix shell, update this branch, enter `nix develop` again, and
-  rebuild with `--cmake-clean-cache`. Do not delete the checkout or `/nix/store`.
+- CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
+  repeat A4 and the `$PKG_CONFIG` checks in N5. Install the missing dependency
+  through Ubuntu/rosdep; do not add a second Nix copy of an Ubuntu Gazebo
+  runtime library.
 - Compilation cannot find `<multiarch>/python3.12/pyconfig.h`: rerun the Python
   header checks in the Nix verification step. If either file is absent,
-  install/reinstall `python3-dev` and `libpython3.12-dev`; otherwise update the
-  branch, enter a new Nix shell, and rebuild with `--cmake-clean-cache`.
+  install/reinstall `python3-dev` and `libpython3.12-dev`, then enter a new Nix
+  shell and repeat the mixed-header smoke test.
+- Compilation reports `__time64_t does not name a type`, errors inside both
+  `/nix/store/.../glibc...` and `/usr/include/...`, or a cached Nix compiler:
+  update the branch, exit the old shell, enter `nix develop` again, and run the
+  following clean transition build once. It clears CMake's old compiler cache
+  and old objects without deleting the checkout or `/nix/store`:
+
+  ```bash
+  cd "$MFJA_WS"
+
+  colcon build \
+    --symlink-install \
+    --executor sequential \
+    --cmake-clean-cache \
+    --cmake-clean-first \
+    --paths \
+    "$MFJA_REPO/mfja_rail_interfaces" \
+    "$MFJA_REPO/mfja_3rd_floor_description" \
+    "$MFJA_REPO/mfja_robot_control_config" \
+    "$MFJA_REPO/mfja_3rd_floor_bringup" \
+    --cmake-args \
+      -DCMAKE_C_COMPILER=/usr/bin/gcc \
+      -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
+      -DPython3_EXECUTABLE=/usr/bin/python3
+  ```
+
+  After this succeeds, use the normal N6 build command for later changes.
+- A new terminal or `nix develop` prints a missing workspace path such as
+  `bash: /home/tiago/sri2_g2_hela_ws/install/setup.bash: No such file or
+  directory`: a shell startup file contains a stale `source` command. Follow
+  [Remove a stale workspace source](#remove-a-stale-workspace-source) below;
+  cloning or rebuilding this repository does not repair an unrelated path.
 - Gazebo opens with a rendering error: verify `DISPLAY`, OpenGL acceleration,
   and the graphics driver. `gui:=false` disables the client, although sensor
   rendering can still require a working EGL/headless backend.
@@ -524,6 +609,63 @@ Run `exit` when you want to leave the interactive Nix shell.
   shown in A6.
 - A shuttle is visible but does not move: set `start_paused:=false`, then publish
   the `ON` command from A7.
+
+### Remove a Stale Workspace Source
+
+First locate startup lines that automatically source a workspace overlay. This
+check is read-only and tolerates startup files that do not exist:
+
+```bash
+grep -nHE \
+  '^[[:space:]]*(source|\.)[[:space:]].*/install/(local_)?setup\.bash' \
+  "$HOME/.bashrc" "$HOME/.bash_aliases" "$HOME/.bash_profile" \
+  "$HOME/.bash_login" "$HOME/.profile" \
+  2>/dev/null || true
+```
+
+Choose the file reported by `grep`, back it up, and open it. Replace `.bashrc`
+below if the stale line is in a different startup file:
+
+```bash
+MFJA_STARTUP_FILE="$HOME/.bashrc"
+test -f "$MFJA_STARTUP_FILE"
+MFJA_STARTUP_BACKUP="${MFJA_STARTUP_FILE}.mfja-backup.$(date +%Y%m%d-%H%M%S)"
+
+cp -a -- "$MFJA_STARTUP_FILE" "$MFJA_STARTUP_BACKUP"
+printf 'Backup: %s\n' "$MFJA_STARTUP_BACKUP"
+"${EDITOR:-nano}" "$MFJA_STARTUP_FILE"
+```
+
+Comment out the stale line. If that old workspace is still intentionally used,
+guard it instead so a missing checkout does not break every new shell:
+
+```bash
+# Preferred for an obsolete workspace:
+# source "$HOME/sri2_g2_hela_ws/install/setup.bash"
+
+# Alternative only when the old workspace is still intentionally used:
+MFJA_LEGACY_SETUP="$HOME/sri2_g2_hela_ws/install/setup.bash"
+if [ -f "$MFJA_LEGACY_SETUP" ]; then
+  source "$MFJA_LEGACY_SETUP"
+fi
+unset MFJA_LEGACY_SETUP
+```
+
+Validate the edited file before opening another terminal:
+
+```bash
+if ! bash -n "$MFJA_STARTUP_FILE"; then
+  cp -a -- "$MFJA_STARTUP_BACKUP" "$MFJA_STARTUP_FILE"
+  printf 'Syntax error: restored %s from the backup.\n' "$MFJA_STARTUP_FILE" >&2
+  false
+fi
+```
+
+Do not automatically source any colcon workspace's `install/setup.bash` from
+`.bashrc` or another login file. Workspace overlays are order-sensitive and
+become stale when a directory is renamed or removed. Enter `nix develop` first,
+then source only the intended `$MFJA_WS/install/setup.bash` explicitly after a
+successful build, as shown in N6 and N7.
 
 ---
 

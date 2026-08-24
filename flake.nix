@@ -1,5 +1,5 @@
 {
-  description = "Hybrid development shell for the MFJA 3rd floor ROS 2 Jazzy / Gazebo Harmonic simulation";
+  description = "Pinned auxiliary build-tool shell for the Ubuntu MFJA ROS 2 Jazzy / Gazebo Harmonic simulation";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -21,106 +21,71 @@
             inherit system;
           };
 
-          hostMultiarch =
-            if system == "x86_64-linux" then
-              "x86_64-linux-gnu"
-            else
-              "aarch64-linux-gnu";
-
-          pythonEnv = pkgs.python312.withPackages (ps: with ps; [
-            catkin-pkg
-            empy
-            lark
-            numpy
-            pyyaml
-            setuptools
-          ]);
-
-          spdlogRos = (pkgs.spdlog.override {
-            fmt = pkgs.fmt_9;
-          }).overrideAttrs (finalAttrs: _oldAttrs: {
-            version = "1.12.0";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "gabime";
-              repo = "spdlog";
-              rev = "v${finalAttrs.version}";
-              hash = "sha256-cxTaOuLXHRU8xMz9gluYz0a93O0ez2xOxbloyc1m1ns=";
-            };
-
-            patches = [ ];
-            doCheck = false;
-          });
-
-          tinyxml2Ros = pkgs.tinyxml-2.overrideAttrs (finalAttrs: _oldAttrs: {
-            version = "10.0.0";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "leethomason";
-              repo = "tinyxml2";
-              rev = finalAttrs.version;
-              hash = "sha256-9xrpPFMxkAecg3hMHzzThuy0iDt970Iqhxs57Od+g2g=";
-            };
-          });
-
-          rosRuntimeLibs = pkgs.lib.makeLibraryPath [
-            pkgs.fmt_9
-            pkgs.lttng-ust.out
-            pkgs.openssl
-            spdlogRos
-            pkgs.stdenv.cc.cc.lib
-            tinyxml2Ros
+          nixTools = [
+            pkgs.bashInteractive
+            pkgs.git
+            pkgs.gnumake
+            pkgs.ninja
           ];
 
-          colconWrapper = pkgs.writeShellScriptBin "colcon" ''
-            if [ -x /usr/bin/colcon ]; then
-              exec /usr/bin/colcon "$@"
-            fi
-
-            echo "colcon is not installed on the host." >&2
-            echo "Install it with: sudo apt install python3-colcon-common-extensions" >&2
-            exit 127
-          '';
+          nixToolPath = pkgs.lib.makeBinPath nixTools;
         in
         {
-          default = pkgs.mkShell {
+          default = pkgs.mkShellNoCC {
             name = "mfja-hybrid-ros2-jazzy-gz-harmonic";
 
-            packages = [
-              pkgs.bashInteractive
-              pkgs.cmake
-              colconWrapper
-              pkgs.gcc
-              pkgs.fmt_9
-              pkgs.git
-              pkgs.gnumake
-              pkgs.lttng-ust.out
-              pkgs.ninja
-              pkgs.openssl
-              pkgs.pkg-config
-              spdlogRos
-              pkgs.stdenv.cc.cc.lib
-              tinyxml2Ros
-              pythonEnv
-            ];
+            packages = nixTools;
 
             shellHook = ''
+              # Remove overlays and compiler flags inherited from interactive
+              # Bash startup files before loading the supported Ubuntu stack.
+              unset AMENT_PREFIX_PATH CMAKE_PREFIX_PATH COLCON_PREFIX_PATH
+              unset CMAKE_INCLUDE_PATH CMAKE_LIBRARY_PATH
+              unset PYTHONPATH LD_LIBRARY_PATH ROS_PACKAGE_PATH
+              unset PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR
+              unset PKG_CONFIG_ALLOW_SYSTEM_CFLAGS PKG_CONFIG_ALLOW_SYSTEM_LIBS
+              unset NIXPKGS_CMAKE_PREFIX_PATH
+              unset NIX_CFLAGS_COMPILE NIX_CFLAGS_COMPILE_FOR_BUILD
+              unset NIX_CFLAGS_LINK NIX_LDFLAGS NIX_LDFLAGS_FOR_BUILD
+              unset NIX_CXXSTDLIB_COMPILE
+              unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+              unset COMPILER_PATH GCC_EXEC_PREFIX
+              unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH
+              unset PYTHONHOME VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV
+
+              # Keep the pinned ABI-neutral Nix tools, then use only Ubuntu
+              # executables for the compiler/runtime side of the ROS stack.
+              export PATH="${nixToolPath}:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin"
+
               export ROS_DISTRO=jazzy
               export MFJA_NIX_MODE=hybrid
               export RMW_IMPLEMENTATION="''${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}"
-              export LD_LIBRARY_PATH="${rosRuntimeLibs}''${LD_LIBRARY_PATH:+:}''${LD_LIBRARY_PATH:-}"
 
-              # ROS and Gazebo come from Ubuntu. Nix's CMake and pkg-config do
-              # not search Ubuntu's multiarch development paths by default.
-              export CMAKE_PREFIX_PATH="/usr:/usr/lib/${hostMultiarch}:/usr/lib/${hostMultiarch}/cmake''${CMAKE_PREFIX_PATH:+:}''${CMAKE_PREFIX_PATH:-}"
-              export CMAKE_LIBRARY_PATH="/usr/lib/${hostMultiarch}:/usr/lib''${CMAKE_LIBRARY_PATH:+:}''${CMAKE_LIBRARY_PATH:-}"
-              export CMAKE_INCLUDE_PATH="/usr/include/${hostMultiarch}:/usr/include''${CMAKE_INCLUDE_PATH:+:}''${CMAKE_INCLUDE_PATH:-}"
-              # Ubuntu's Python.h dispatches to a Debian multiarch header under
-              # /usr/include. Keep Nix headers first and use it only as fallback.
-              export NIX_CFLAGS_COMPILE="''${NIX_CFLAGS_COMPILE:-}''${NIX_CFLAGS_COMPILE:+ }-idirafter /usr/include"
-              export PKG_CONFIG_PATH="/usr/lib/${hostMultiarch}/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig''${PKG_CONFIG_PATH:+:}''${PKG_CONFIG_PATH:-}"
-              export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
-              export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
+              # ROS/Gazebo apt packages must be compiled and loaded with the
+              # matching Ubuntu compiler, Python, pkg-config, and binutils.
+              export CC=/usr/bin/gcc
+              export CXX=/usr/bin/g++
+              export AR=/usr/bin/ar
+              export AS=/usr/bin/as
+              export LD=/usr/bin/ld
+              export NM=/usr/bin/nm
+              export RANLIB=/usr/bin/ranlib
+              export STRIP=/usr/bin/strip
+              export PKG_CONFIG=/usr/bin/pkg-config
+              export PYTHON=/usr/bin/python3
+
+              for hostTool in \
+                /usr/bin/cmake \
+                /usr/bin/colcon \
+                /usr/bin/gcc \
+                /usr/bin/g++ \
+                /usr/bin/pkg-config \
+                /usr/bin/python3; do
+                if [ ! -x "$hostTool" ]; then
+                  echo "WARNING: required Ubuntu tool is missing: $hostTool" >&2
+                fi
+              done
+              unset hostTool
 
               if [ -f /opt/ros/jazzy/setup.bash ]; then
                 source /opt/ros/jazzy/setup.bash
@@ -132,9 +97,10 @@
                 echo "Install ROS 2 Jazzy and the ROS-Gazebo packages on the host before building."
               fi
 
-              echo "Nix provides build tools only; ROS 2 and Gazebo come from the host apt installation."
+              echo "Nix provides Bash, Ninja, Make, and Git."
+              echo "Ubuntu provides CMake, GCC/G++, Python, pkg-config, colcon, ROS 2, and Gazebo."
               echo "Build from the colcon workspace root, for example:"
-              echo "  cd ../.. && colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz"
+              echo "  cd ../.. && colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz --cmake-args -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DPython3_EXECUTABLE=/usr/bin/python3"
             '';
           };
         });
