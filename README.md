@@ -192,14 +192,23 @@ is authoritative if its repository setup changes.
 ```
 
 Do not continue unless the block prints `MFJA host setup completed
-successfully`. Once it succeeds, save any open work and **always reboot once**
-before continuing. Do this even when Ubuntu does not display a reboot prompt.
-After login, open a new terminal in the local graphical desktop and continue
-with the post-reboot verification below; do not repeat Step 2.
+successfully`.
+
+### 3. Reboot the Laptop Manually (One Time)
+
+Nothing in Step 2 restarts the laptop automatically. This is a separate,
+user-initiated checkpoint so that a reboot never happens unexpectedly. Save
+your work and close any applications when you are ready. The following command
+immediately ends the current desktop session and restarts the laptop:
 
 ```bash
 sudo reboot
 ```
+
+If you are not ready to restart, stop here and return to this step later. Do not
+continue to Step 4 until the reboot has completed. After login, open a new
+terminal in the local graphical desktop and continue with Step 4; do not repeat
+Step 2.
 
 This checkpoint is important after a kernel or NVIDIA driver update. Until the
 reboot, the loaded kernel driver can differ from the newly installed graphics
@@ -207,6 +216,8 @@ libraries, causing `nvidia-smi`, `glxinfo`, and Gazebo to fail even though the
 project itself is installed correctly. The
 [official Ubuntu NVIDIA driver guide](https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/)
 also requires a reboot after updating the system and kernel.
+
+### 4. Verify the Host Tools and Graphics After Reboot
 
 If the original terminal did not already use UTF-8, apply the generated locale
 to that terminal as well. A new login shell receives it automatically:
@@ -266,14 +277,14 @@ gz sim --force-version 8 -v 4 shapes.sdf
 ```
 
 The Gazebo 3D window must open and render the shapes. Stop it with `Ctrl-C`,
-then continue to Step 3. If this stock world fails, stop here and fix the host
+then continue to Step 5. If this stock world fails, stop here and fix the host
 graphics/session first; deleting the workspace or rebuilding the project cannot
 repair it. The standard laptop path intentionally performs this check in a
 local graphical session. A truly headless machine instead needs a separately
 validated EGL setup; `gui:=false` alone is not sufficient because project
 cameras still require server-side rendering.
 
-### 3. Create the Workspace and Clone the Repository
+### 5. Create the Workspace and Clone the Repository
 
 The normal clone follows GitHub's default branch. During the current integration
 window, the documented runtime may still be on
@@ -310,7 +321,7 @@ merge and `main` after it. If the repository already exists at
 `$HOME/mfja_ws/src/mfja_3rd_floor_gz`, do not clone over it; use the
 [update procedure](docs/INSTALLATION.md#updating-an-existing-checkout).
 
-### 4. Install Repository Dependencies
+### 6. Install Repository Dependencies
 
 Source ROS first, then let `rosdep` resolve the four ROS packages in this
 meta-repository:
@@ -346,7 +357,7 @@ simulation and may not have installable apt candidates. Install them later in
 an isolated environment only if you need learned visual inference, training,
 or the Torch-gated tests.
 
-### 5. Build and Verify the Workspace
+### 7. Build and Verify the Workspace
 
 Build from the workspace root, not from the repository directory:
 
@@ -383,7 +394,7 @@ paths are used during dependency resolution and building so datasets or frozen
 source snapshots elsewhere on the machine are not discovered as duplicate
 colcon packages.
 
-### 6. Start Room 315 (Terminal 1)
+### 8. Start Room 315 (Terminal 1)
 
 This lightweight profile disables the heavier robot models, starts Gazebo
 unpaused, and creates one visible right-rail shuttle in the stopped state:
@@ -407,7 +418,7 @@ Leave this terminal running. Gazebo starts first and the rail nodes are added
 after about four seconds. Wait about five seconds before running the checks in
 Terminal 2; slower machines may need longer.
 
-### 7. Verify the Runtime and Move the Shuttle (Terminal 2)
+### 9. Verify the Runtime and Move the Shuttle (Terminal 2)
 
 Open a second terminal and source the same environments again:
 
@@ -455,7 +466,7 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command \
 Stop the simulation with `Ctrl-C` in Terminal 1 before starting another launch
 profile.
 
-### 8. Source Every New Terminal
+### 10. Source Every New Terminal
 
 Opening a new terminal does not preserve the ROS environment. Run these lines
 before every `ros2` command:
@@ -522,9 +533,10 @@ locally when using `aarch64`.
 
 ### N2. Install the Host ROS/Gazebo Runtime
 
-On a clean laptop, complete [Method A, Step 2](#2-install-ros-2-gazebo-and-build-tools-one-time)
-exactly as written. That step installs the host components that Nix does not
-provide:
+On a clean laptop, complete
+[Method A, Steps 2 through 4](#2-install-ros-2-gazebo-and-build-tools-one-time)
+exactly as written. Those steps install and validate the host components that
+Nix does not provide:
 
 - ROS 2 Jazzy Desktop and `/opt/ros/jazzy/setup.bash`;
 - Gazebo Harmonic and the `ros_gz` packages;
@@ -533,9 +545,9 @@ provide:
 - `/usr/bin/colcon`, `rosdep`, and the Ubuntu Python/ROS integration;
 - the initial `rosdep` database.
 
-Completing Method A Step 2 includes its mandatory reboot and the post-reboot
-OpenGL/Gazebo smoke test. Do not enter `nix develop` until both pass; Nix cannot
-repair or replace the host kernel graphics driver.
+Method A Step 3 is a separate, manually initiated reboot, and Step 4 contains
+the post-reboot OpenGL/Gazebo smoke test. Do not enter `nix develop` until both
+are complete; Nix cannot repair or replace the host kernel graphics driver.
 
 Verify this boundary before installing Nix:
 
@@ -553,8 +565,9 @@ test "$ROS_DISTRO" = jazzy
 gz sim --versions
 ```
 
-If any `test` command fails, return to Method A Step 2. Entering the Nix shell
-cannot repair a missing Ubuntu build tool, ROS, or colcon installation.
+If any `test` command fails, return to the relevant host setup or verification
+step in Method A Steps 2 through 4. Entering the Nix shell cannot repair a
+missing Ubuntu tool, ROS installation, or graphics driver.
 
 ### N3. Install Nix (One Time)
 
@@ -655,7 +668,7 @@ file is what pins the development environment used by the project.
 ### N6. Install the ROS Package Dependencies
 
 Nix does not replace rosdep. Complete
-[Method A, Step 4](#4-install-repository-dependencies) before entering the
+[Method A, Step 6](#6-install-repository-dependencies) before entering the
 development shell. It installs the package-manifest dependencies and checks
 them while skipping only the optional Torch/TorchVision keys.
 
@@ -837,7 +850,7 @@ ros2 topic echo --once /room_315/rails/right/shuttles/state \
 ```
 
 Use the ON/OFF commands in
-[Method A, Step 7](#7-verify-the-runtime-and-move-the-shuttle-terminal-2) to
+[Method A, Step 9](#9-verify-the-runtime-and-move-the-shuttle-terminal-2) to
 prove shuttle motion. Stop the launch with `Ctrl-C`; run `exit` in each terminal
 when you want to leave its Nix shell.
 
@@ -1144,7 +1157,7 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
 - The Nix shell warns that ROS or colcon is missing: install the host packages
   from N2; the flake intentionally cannot supply either one.
 - CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
-  repeat Method A Step 4 and the `/usr/bin/pkg-config` checks in N7. Install the
+  repeat Method A Step 6 and the `/usr/bin/pkg-config` checks in N7. Install the
   missing dependency through Ubuntu/rosdep; do not add a second Nix copy of an
   Ubuntu Gazebo runtime library.
 - Compilation cannot find `<multiarch>/python3.12/pyconfig.h`: rerun the Python
@@ -1154,9 +1167,9 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
 - `nvidia-smi` reports `Driver/library version mismatch`, or Gazebo reports
   `Failed to create OpenGL context` / GLX `BadValue` immediately after the host
   update: do not clean colcon, change `flake.nix`, or reclone the repository.
-  Perform the mandatory reboot from Step 2 and repeat the host graphics smoke
-  test. If it still fails after reboot, diagnose the Ubuntu graphics driver,
-  Secure Boot, and graphical session before continuing.
+  Manually reboot as described in Step 3, then repeat the Step 4 host graphics
+  smoke test. If it still fails after reboot, diagnose the Ubuntu graphics
+  driver, Secure Boot, and graphical session before continuing.
 - Colcon reports a duplicate MFJA package: keep downloaded datasets/frozen
   source trees outside workspace `src/` and use the four explicit `--paths`
   from this README, not a broad `--base-paths` scan.
