@@ -630,6 +630,10 @@ command -v python3
 command -v ros2
 command -v gz
 
+pkg-config --exists uuid
+pkg-config --atleast-version=4 libzmq
+test -f /usr/include/zmq.hpp
+
 printf 'MFJA_NIX_MODE=%s\n' "$MFJA_NIX_MODE"
 printf 'ROS_DISTRO=%s\n' "$ROS_DISTRO"
 ```
@@ -637,7 +641,8 @@ printf 'ROS_DISTRO=%s\n' "$ROS_DISTRO"
 The shell supplies CMake, GCC, Ninja, Git, pkg-config, Python 3.12 packages, and
 selected ROS-compatible shared libraries. Its shell hook sources
 `/opt/ros/jazzy/setup.bash`, defaults `RMW_IMPLEMENTATION` to
-`rmw_fastrtps_cpp`, and forwards `colcon` to `/usr/bin/colcon`.
+`rmw_fastrtps_cpp`, forwards `colcon` to `/usr/bin/colcon`, and exposes the
+Ubuntu multiarch CMake/pkg-config paths required by the host Gazebo libraries.
 
 ### N8. Build and Verify Inside the Nix Shell
 
@@ -1019,6 +1024,9 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
   `--extra-experimental-features 'nix-command flakes'` to the command.
 - The Nix shell warns that ROS or colcon is missing: install the host packages
   from N2; the flake intentionally cannot supply either one.
+- Nix CMake reports a missing `UUID`, `ZeroMQ`, or another Gazebo dependency:
+  exit the old Nix shell, update this branch, enter `nix develop` again, and
+  rebuild with `--cmake-clean-cache`. Do not delete the checkout or `/nix/store`.
 - Colcon reports a duplicate MFJA package: keep downloaded datasets/frozen
   source trees outside workspace `src/` and use the four explicit `--paths`
   from this README, not a broad `--base-paths` scan.
