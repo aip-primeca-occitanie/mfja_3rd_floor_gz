@@ -3,13 +3,13 @@
 
 import argparse
 import math
-import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 import rclpy
+from ament_index_python.packages import get_package_share_path
 from geometry_msgs.msg import Pose
 from rclpy.node import Node
 from ros_gz_interfaces.msg import Entity
@@ -23,12 +23,7 @@ BOX_SIZE = (0.07, 0.05, 0.06)
 SHUTTLE_CONTACT_Z = 0.085
 PAYLOAD_ON_SHUTTLE_Z = SHUTTLE_CONTACT_Z + 0.5 * BOX_SIZE[2]
 
-PACKAGE_DIR = Path(
-    os.environ.get(
-        "ROOM315_PACKAGE_DIR",
-        Path(__file__).resolve().parents[1],
-    )
-)
+PACKAGE_DIR = get_package_share_path("mfja_staubli_manipulation_demos")
 PAYLOAD_BOX_SDF = (PACKAGE_DIR / "models" / "room315_payload_box.sdf").read_text()
 
 

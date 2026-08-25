@@ -2,13 +2,14 @@
 <package format="3">
   <name>mfja_staubli_demos</name>
   <version>1.0.0</version>
-  <description>HPP-planned straight Cartesian line demo for the Room 315 Staubli TX2-60L: planning in the hpp-exec container, execution in the Gazebo simulation.</description>
+  <description>HPP-planned straight Cartesian line demo for the Room 315 Staubli TX2-60L.</description>
   <maintainer email="paulsardin123@gmail.com">Paul Sardin</maintainer>
   <license>Apache License 2.0</license>
   <author email="paulsardin123@gmail.com">Paul Sardin</author>
 
   <buildtool_depend>python3-setuptools</buildtool_depend>
 
+  <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>mfja_3rd_floor_bringup</exec_depend>

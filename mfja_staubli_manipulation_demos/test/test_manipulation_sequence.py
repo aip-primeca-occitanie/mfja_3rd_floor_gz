@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from xml.etree import ElementTree
 
+from ament_index_python.packages import get_package_share_path
+
 
 PACKAGE = Path(__file__).parents[1]
 SCRIPT = PACKAGE / "scripts" / "room315_manipulation_sequence.py"
@@ -41,6 +43,17 @@ def test_fixed_defaults_match_hpp_model():
     model = ElementTree.fromstring(DEMO.PAYLOAD_BOX_SDF)
     size = tuple(float(value) for value in model.findtext(".//box/size").split())
     assert size == DEMO.BOX_SIZE
+
+
+def test_payload_model_comes_from_package_share():
+    installed_model = (
+        get_package_share_path("mfja_staubli_manipulation_demos")
+        / "models"
+        / "room315_payload_box.sdf"
+    )
+
+    assert DEMO.PACKAGE_DIR == installed_model.parent.parent
+    assert DEMO.PAYLOAD_BOX_SDF == installed_model.read_text()
 
 
 def test_manipulation_runner_has_no_rail_dependency():

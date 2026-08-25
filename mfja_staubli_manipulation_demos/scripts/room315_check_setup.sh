@@ -1,6 +1,10 @@
-#!/bin/bash
-# Check the host setup needed by the complete Room 315 manipulation demo.
-SCRIPT_DIR=$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
+#!/usr/bin/env bash
+# Check the installed environment needed by the Room 315 manipulation demo.
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd -P)
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=room315_env.sh
 source "$SCRIPT_DIR/room315_env.sh"
 
 failures=0
@@ -15,15 +19,23 @@ fail() {
 }
 
 printf 'Room 315 setup check\n'
-pass "ROS setup: $ROS_SETUP"
-pass "MFJA setup: $MFJA_SETUP"
+MFJA_PREFIX=$(ros2 pkg prefix mfja_staubli_manipulation_demos 2>/dev/null || true)
+pass "MFJA overlay: $MFJA_PREFIX"
 pass "ROS domain: $ROS_DOMAIN_ID"
 
-for command in ros2 gz docker; do
+for command in ros2 gz python3; do
   if command -v "$command" >/dev/null 2>&1; then
     pass "command: $command"
   else
     fail "missing command: $command"
+  fi
+done
+
+for subcommand in interface service; do
+  if ros2 "$subcommand" --help >/dev/null 2>&1; then
+    pass "ROS CLI: ros2 $subcommand"
+  else
+    fail "missing ROS CLI: ros2 $subcommand"
   fi
 done
 
@@ -33,7 +45,8 @@ for package in \
   mfja_3rd_floor_description \
   mfja_rail_interfaces \
   mfja_robot_control_config \
-  ros_gz_sim; do
+  ros_gz_sim \
+  staubli_msgs; do
   if ros2 pkg prefix "$package" >/dev/null 2>&1; then
     pass "ROS package: $package"
   else
@@ -51,27 +64,21 @@ for executable in \
   if grep -Fq "mfja_staubli_manipulation_demos $executable" <<<"$installed_executables"; then
     pass "ROS executable: $executable"
   else
-    fail "missing ROS executable: $executable; rebuild and source the MFJA workspace"
+    fail "missing ROS executable: $executable; rebuild the MFJA overlay"
   fi
 done
 
-if [[ -x "${HPP_EXEC_DIR:-}/run.sh" ]]; then
-  pass "hpp-exec: $HPP_EXEC_DIR"
-  if [[ -d "$HPP_EXEC_DIR/docker/devel/install/share/hpp-manipulation" ]]; then
-    pass "HPP manipulation stack is built"
-  else
-    fail "HPP stack is not built; run hpp-exec once, then 'cd ~/devel/src && make all' in the container"
-  fi
+if python3 -c 'import hpp_exec, pyhpp, rclpy; from pyhpp.manipulation import Device' >/dev/null; then
+  pass "HPP manipulation and ROS Python imports"
 else
-  fail "hpp-exec not found; set HPP_EXEC_DIR"
+  fail "HPP manipulation and ROS Python imports"
 fi
 
-if command -v docker >/dev/null 2>&1; then
-  if docker info >/dev/null 2>&1; then
-    pass "Docker daemon is accessible"
-  else
-    fail "Docker daemon is not accessible by this user"
-  fi
+HPP_EXEC_PATH=$(python3 -c 'import hpp_exec; print(hpp_exec.__file__)' 2>/dev/null || true)
+if [[ -n "$HPP_EXEC_PATH" && -f "$HPP_EXEC_PATH" ]]; then
+  pass "installed hpp-exec: $HPP_EXEC_PATH"
+else
+  fail "hpp-exec is unavailable from the active HPP underlay"
 fi
 
 if ((failures)); then
@@ -79,6 +86,8 @@ if ((failures)); then
   exit 1
 fi
 
+printf '\nSetup is ready. Planning-only check:\n'
+printf '  ros2 run mfja_staubli_manipulation_demos room315_hpp_manipulation.sh --build-only\n'
 printf '\nSetup is ready. Fixed-support test:\n'
 printf '  ros2 run mfja_staubli_manipulation_demos room315_demo.sh gui:=false right_start_slot:=3\n'
 printf '  ros2 run mfja_staubli_manipulation_demos room315_manipulation_demo.sh\n'

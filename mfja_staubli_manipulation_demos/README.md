@@ -22,34 +22,24 @@ Each command owns one layer:
 ## Prepare a training PC
 
 Install and build the MFJA workspace with the
-[repository instructions](../README.md). Install `hpp-exec` once:
+[repository instructions](../README.md):
 
 ```bash
-git clone -b devel https://github.com/humanoid-path-planner/hpp-exec.git \
-  "$HOME/devel/hpp-exec"
-"$HOME/devel/hpp-exec/run.sh" bash -lc \
-  'cd ~/devel/src && make all'
-```
-
-Docker must be usable without `sudo`. Then validate the host and HPP model:
-
-```bash
-source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+cd /home/psardin/devel/mfja_3rd_floor_gz
+git submodule update --init --recursive
+./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
+./mfja_staubli_demos/scripts/room315_build_overlay.sh
+source /home/psardin/devel/mfja_ws/install/setup.bash
+./mfja_staubli_demos/scripts/room315_check_integration.sh
 ros2 run mfja_staubli_manipulation_demos room315_check_setup.sh
 ros2 run mfja_staubli_manipulation_demos \
   room315_hpp_manipulation.sh --build-only
 ```
 
-The wrappers discover common workspace and `hpp-exec` locations. Override only
-non-standard installations:
-
-- `MFJA_WS=/path/to/workspace` or
-  `MFJA_SETUP=/path/to/install/setup.bash`;
-- `HPP_EXEC_DIR=/path/to/hpp-exec`;
-- `ROS_SETUP=/opt/ros/<distribution>/setup.bash`;
-- `ROS_DOMAIN_ID=<id>`, default `7`;
-- `STAUBLI_SETUP=/path/to/staubli_ws/install/local_setup.bash`, for real
-  Staubli messages.
+The one setup file exposes MFJA, HPP, ROS Jazzy, and the pinned Staubli
+messages. After editing `nix-hpp/src/hpp-exec`, rerun the HPP builder. Use
+`HPP_SETUP=/path/to/hpp/environment.sh` with `room315_build_overlay.sh` to
+select another compatible HPP installation.
 
 Give every workstation on the same network a different `ROS_DOMAIN_ID`.
 
@@ -243,10 +233,10 @@ requires the arm to be at this start and does not preposition hardware. It
 does not automatically open the real gripper; confirm that the unloaded tool is
 open before approach.
 
-For `staubli_msgs`, expose the external driver workspace:
+The standard MFJA overlay already contains `staubli_msgs`. Verify it with:
 
 ```bash
-export STAUBLI_SETUP=/absolute/path/to/staubli_ws/install/local_setup.bash
+python3 -c 'from staubli_msgs.srv import WriteSingleIO'
 ```
 
 ## Current validation status and later commissioning

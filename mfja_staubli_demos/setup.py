@@ -1,12 +1,17 @@
 from glob import glob
 from os.path import isfile
+
 from setuptools import setup
 
 package_name = "mfja_staubli_demos"
 room315_scripts = [
+    "scripts/room315_check_environment.py",
     "scripts/room315_demo.sh",
     "scripts/room315_env.sh",
+    "scripts/room315_export_staubli_line.py",
+    "scripts/room315_export_staubli_line.sh",
     "scripts/room315_hpp_line.sh",
+    "scripts/room315_read_configuration.py",
 ]
 
 setup(
@@ -25,10 +30,11 @@ setup(
         (f"lib/{package_name}", room315_scripts),
     ],
     install_requires=["setuptools"],
-    tests_require=["pytest"],
     zip_safe=True,
     maintainer="Paul Sardin",
     maintainer_email="paulsardin123@gmail.com",
-    description="HPP-planned Cartesian line demo for the Room 315 Staubli TX2-60L.",
+    description=(
+        "HPP-planned Cartesian line demo for the Room 315 Staubli TX2-60L."
+    ),
     license="Apache License 2.0",
 )

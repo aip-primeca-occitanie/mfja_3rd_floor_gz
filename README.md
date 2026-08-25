@@ -27,50 +27,52 @@ Staubli-to-gripper transform or grasp TCP.
 
 ## 🛠️ Installation Guide
 
-The project requires **Ubuntu 24.04** and **ROS 2 Jazzy**. The repository acts as a meta-repository and must be built inside a colcon workspace.
+The default setup is a standard ROS 2 colcon underlay/overlay. HPP is built
+from local sources for ROS Jazzy's Python 3.12, then MFJA and the pinned
+Staubli driver stack are built on top. Docker and Nix are not part of the
+runtime.
 
-### 1. Install Prerequisites
-Make sure ROS 2 Jazzy is installed, along with essential build tools:
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake git ninja-build pkg-config \
-  python3-colcon-common-extensions python3-rosdep python3-yaml \
-  ros-jazzy-desktop ros-jazzy-robot-state-publisher ros-jazzy-ros-gz
-
-# Initialize rosdep if you haven't already
-sudo rosdep init || true
-rosdep update
-```
-
-### 2. Clone the Repository
-Create a workspace and clone this meta-repository inside its `src/` folder:
-```bash
-export MFJA_WS=~/mfja_ws
-mkdir -p "$MFJA_WS/src"
-cd "$MFJA_WS/src"
-git clone https://github.com/psardin001/mfja_3rd_floor_gz.git
-```
-
-### 3. Build and Source
-Install ROS dependencies, build the workspace, and source it:
-```bash
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-
-# Install dependencies defined in package.xml files
-rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
-
-# Build the workspace
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
-
-# Source the installed environment
-source install/setup.bash
-```
-In every new terminal, run:
+Keep one source checkout and initialize its Staubli submodule:
 
 ```bash
-source "${MFJA_WS:-$HOME/mfja_ws}/install/setup.bash"
+cd /home/psardin/devel/mfja_3rd_floor_gz
+git submodule update --init --recursive
 ```
+
+Install the host HPP dependencies once, then build both workspaces:
+
+```bash
+sudo apt install ros-jazzy-coal ros-jazzy-jrl-cmakemodules \
+  ros-jazzy-pinocchio ros-jazzy-proxsuite
+
+cd /home/psardin/devel/mfja_3rd_floor_gz
+./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
+./mfja_staubli_demos/scripts/room315_build_overlay.sh
+source /home/psardin/devel/mfja_ws/install/setup.bash
+./mfja_staubli_demos/scripts/room315_check_integration.sh
+```
+
+The HPP builder reads the canonical local sources below
+`/home/psardin/devel/nix-hpp/src`, including `hpp-exec`, and installs them in
+`hpp_jazzy_ws`. The directory name does not make this host build depend on
+Nix. After modifying `hpp-exec`, rerun `room315_build_hpp_underlay.sh`.
+
+For normal work, every new terminal needs only:
+
+```bash
+source /home/psardin/devel/mfja_ws/install/setup.bash
+```
+
+To build against another compatible HPP installation, point the overlay
+builder at its setup file:
+
+```bash
+HPP_SETUP=/path/to/hpp/environment.sh \
+  ./mfja_staubli_demos/scripts/room315_build_overlay.sh
+```
+
+That environment must expose `pyhpp`, `hpp_exec`, and `rclpy` to the same
+Python interpreter.
 
 ---
 

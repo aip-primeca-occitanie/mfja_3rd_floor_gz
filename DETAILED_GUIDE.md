@@ -42,9 +42,8 @@ runbook.html
 
 ## Installation
 
-Use Ubuntu 24.04 with ROS 2 Jazzy. This repository is a meta-repository, so
-clone it inside a colcon workspace `src/` directory and build from the
-workspace root.
+Use Ubuntu 24.04 with ROS 2 Jazzy. Keep one canonical source checkout and link
+it into the colcon build workspace.
 
 ### 1. Install ROS 2 And Build Tools
 
@@ -76,6 +75,10 @@ sudo apt install -y \
   python3-rosdep \
   python3-yaml \
   ros-jazzy-desktop \
+  ros-jazzy-coal \
+  ros-jazzy-jrl-cmakemodules \
+  ros-jazzy-pinocchio \
+  ros-jazzy-proxsuite \
   ros-jazzy-robot-state-publisher \
   ros-jazzy-ros-gz
 
@@ -87,64 +90,57 @@ rosdep update
 ### 2. Clone The Repository
 
 ```bash
-export MFJA_WS=~/mfja_ws
+export DEVEL_ROOT=$HOME/devel
+export MFJA_WS=$DEVEL_ROOT/mfja_ws
 mkdir -p "$MFJA_WS/src"
-cd "$MFJA_WS/src"
-git clone https://github.com/psardin001/mfja_3rd_floor_gz.git
+git clone --recurse-submodules \
+  https://github.com/psardin001/mfja_3rd_floor_gz.git \
+  "$DEVEL_ROOT/mfja_3rd_floor_gz"
+ln -s "$DEVEL_ROOT/mfja_3rd_floor_gz" "$MFJA_WS/src/mfja_3rd_floor_gz"
 ```
 
-### 3. Optional: Enter The Nix Shell
+For an existing checkout, initialize the pinned Staubli driver with
+`git submodule update --init --recursive`.
 
-If you use Nix, install it once:
+### 3. Build The HPP Underlay
+
+The canonical local HPP sources are below `$DEVEL_ROOT/nix-hpp/src`:
 
 ```bash
-sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
+cd "$DEVEL_ROOT/mfja_3rd_floor_gz"
+./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
 ```
 
-Then enter the shell from the repository directory before building:
+This creates `$DEVEL_ROOT/hpp_jazzy_ws/install/setup.bash` with ROS Jazzy's
+Python 3.12. The build uses host colcon and does not use Nix.
+
+### 4. Build The MFJA Overlay
 
 ```bash
-cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-nix develop
+cd "$DEVEL_ROOT/mfja_3rd_floor_gz"
+./mfja_staubli_demos/scripts/room315_build_overlay.sh
 ```
 
-### 4. Build The Workspace
+To use another compatible HPP installation, provide its setup file:
 
 ```bash
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-
-rosdep install --from-paths src/mfja_3rd_floor_gz -y --ignore-src --rosdistro jazzy
-colcon build --symlink-install --base-paths src/mfja_3rd_floor_gz
+HPP_SETUP=/path/to/hpp/environment.sh \
+  ./mfja_staubli_demos/scripts/room315_build_overlay.sh
 ```
 
 ### 5. Source The Workspace
 
 ```bash
-source install/setup.bash
+source "$MFJA_WS/install/setup.bash"
 ```
 
 ### 6. Every New Terminal
 
-Without Nix:
-
 ```bash
-export MFJA_WS=~/mfja_ws
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
+source "$HOME/devel/mfja_ws/install/setup.bash"
 ```
 
-With hybrid Nix:
-
-```bash
-export MFJA_WS=~/mfja_ws
-cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-nix develop
-
-cd "$MFJA_WS"
-source install/setup.bash
-```
+That setup automatically chains the HPP underlay and `/opt/ros/jazzy`.
 
 ## Tested Launch Commands
 

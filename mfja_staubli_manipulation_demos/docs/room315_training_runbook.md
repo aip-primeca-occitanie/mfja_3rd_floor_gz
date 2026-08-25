@@ -5,15 +5,20 @@ not authorize real Staubli motion.
 
 ## Before learners arrive
 
-Source the workspace and validate the PC:
+Build when sources changed, then source the standard workspace and validate the
+PC:
 
 ```bash
-export MFJA_WS=${MFJA_WS:-$HOME/mfja_ws}
-source "$MFJA_WS/install/setup.bash"
+cd /home/psardin/devel/mfja_3rd_floor_gz
+./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
+./mfja_staubli_demos/scripts/room315_build_overlay.sh
+source /home/psardin/devel/mfja_ws/install/setup.bash
+./mfja_staubli_demos/scripts/room315_check_integration.sh
 ros2 run mfja_staubli_manipulation_demos room315_check_setup.sh
 ```
 
-Give each workstation on the network a different `ROS_DOMAIN_ID`.
+The HPP builder installs the canonical `nix-hpp/src/hpp-exec` source. Rerun it
+after changing that repository.
 
 After changing HPP code or geometry, run a dry plan:
 
@@ -29,11 +34,15 @@ Both checks must finish successfully.
 
 ## Learner exercise
 
-Use two terminals sourced from the same workspace.
+Stop any physical Staubli bridge on this computer. Use two terminals with DDS
+restricted to localhost and the same unused domain.
 
 Terminal 1:
 
 ```bash
+source /home/psardin/devel/mfja_ws/install/setup.bash
+export ROS_DOMAIN_ID=229
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 ros2 run mfja_staubli_manipulation_demos room315_demo.sh
 ```
 
@@ -43,9 +52,15 @@ arm has settled at `[0, 50, 70, 0, 55, 0]` degrees.
 Terminal 2:
 
 ```bash
+source /home/psardin/devel/mfja_ws/install/setup.bash
+export ROS_DOMAIN_ID=229
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 ros2 run mfja_staubli_manipulation_demos \
   room315_moving_shuttle_demo.sh
 ```
+
+The second command publishes simulated arm and rail commands. Do not run it on
+a domain shared with a physical driver.
 
 Expected sequence:
 

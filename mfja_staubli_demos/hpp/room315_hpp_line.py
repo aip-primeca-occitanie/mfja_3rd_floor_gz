@@ -1,79 +1,32 @@
 #!/usr/bin/python3
-"""Plan a straight Cartesian tool0 line with HPP and send it to Gazebo.
-"""
+"""Plan a straight Cartesian tool0 line with HPP for Gazebo or Staubli export."""
 
 import argparse
+import sys
 import time
 
 import numpy as np
-import pinocchio as pin
 import rclpy
-from hpp_exec import configs_to_joint_trajectory, read_current_configuration
-from pinocchio import StdVec_Bool as Mask
-from pyhpp.constraints import (
-    ComparisonType,
-    ComparisonTypes,
-    Implicit,
-    Orientation,
-    Position,
+from hpp_exec import (
+    configs_to_joint_trajectory,
+    read_current_configuration,
 )
-from pyhpp.core import ConfigProjector, ConstraintSet, Dichotomy, Problem, Straight
-from pyhpp.pinocchio import Device, urdf
 from rclpy.node import Node
 from trajectory_msgs.msg import JointTrajectory
 
-JOINT_NAMES = [f"joint_{i}" for i in range(1, 7)]
-FRAME = "staubli/tool0"
-# Room 315 staging configuration supplied in degrees as [0, 50, 70, 0, 55, 0].
-DEFAULT_Q_START = np.array(
-    [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
+from room315_cartesian_line import (
+    DEFAULT_LINE,
+    DEFAULT_Q_START,
+    JOINT_NAMES,
+    START_HOLD,
+    build_problem,
+    plan_cartesian_line,
+    sample_path,
 )
-DEFAULT_LINE = np.array([0.0, 0.0, 0.4])
-ROOM315_ROBOT_POSE = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
+from staubli_trajectory_export import render_joint_trajectory
 
-ROBOT_URDF = "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
-ROBOT_SRDF = "package://mfja_staubli_demos/hpp/staubli_tx2_60l.srdf"
-CELL_URDF = "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
-CELL_SRDF = "package://mfja_3rd_floor_description/urdf/room315_cell.srdf"
-
-START_HOLD = 1.0
 JOINT_STATE_TIMEOUT = 10.0
 SUBSCRIBER_TIMEOUT = 5.0
-
-
-def build_problem():
-    robot = Device("staubli")
-    urdf.loadModel(
-        robot, 0, "staubli", "anchor", ROBOT_URDF, ROBOT_SRDF, pin.SE3.Identity()
-    )
-
-    x, y, z, roll, pitch, yaw = ROOM315_ROBOT_POSE
-    robot_world = pin.SE3(
-        pin.rpy.rpyToMatrix(roll, pitch, yaw), np.array([x, y, z])
-    )
-    # Cell link origins are world poses; placing the cell at the inverse of
-    # the robot world pose expresses everything in the robot base frame.
-    urdf.loadModel(
-        robot, 0, "room315", "anchor", CELL_URDF, CELL_SRDF, robot_world.inverse()
-    )
-
-    problem = Problem(robot)
-    problem.addConfigValidation("CollisionValidation")
-    problem.addConfigValidation("JointBoundValidation")
-    problem.steeringMethod(Straight(problem))
-    problem.pathValidation(Dichotomy(robot, 0.0))
-    return robot, problem
-
-
-def sample_path(path, samples):
-    length = path.length()
-    configs = []
-    for i in range(samples):
-        q, ok = path(i / (samples - 1) * length)
-        if not ok:
-            raise RuntimeError(f"path evaluation failed at sample {i}")
-        configs.append(np.asarray(q).flatten())
-    return configs
 
 
 def publish_trajectory(node, topic, trajectory):
@@ -106,12 +59,31 @@ def main():
         "--q-start",
         nargs=6,
         metavar=tuple(JOINT_NAMES),
-        default=DEFAULT_Q_START,
+        default=None,
         type=float,
-        help="Start configuration for --plan-only (live runs start from the "
-        "current robot configuration).",
+        help="Start configuration for --plan-only or offline Staubli export "
+        "(live Gazebo runs start from the current robot configuration).",
     )
-    parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument(
+        "--joint-states-topic",
+        help=(
+            "Read the export start configuration from this JointState topic "
+            "instead of --q-start. Only valid with "
+            "--print-joint-trajectory."
+        ),
+    )
+    offline_mode = parser.add_mutually_exclusive_group()
+    offline_mode.add_argument("--plan-only", action="store_true")
+    offline_mode.add_argument(
+        "--print-joint-trajectory",
+        "--print-joint-path-command",
+        dest="print_joint_trajectory",
+        action="store_true",
+        help=(
+            "Compute and print the JointTrajectory JSON payload for the "
+            "Staubli /joint_path_command topic."
+        ),
+    )
     parser.add_argument(
         "--goto-start",
         action="store_true",
@@ -122,21 +94,62 @@ def main():
         ),
     )
     args = parser.parse_args()
-    if args.goto_start and args.plan_only:
-        parser.error("--goto-start needs the live robot")
+    q_start_was_explicit = args.q_start is not None
+    if args.joint_states_topic and not args.print_joint_trajectory:
+        parser.error(
+            "--joint-states-topic is only valid with "
+            "--print-joint-trajectory"
+        )
+    if (
+        args.print_joint_trajectory
+        and q_start_was_explicit
+        and args.joint_states_topic
+    ):
+        parser.error(
+            "--q-start and --joint-states-topic cannot be used together"
+        )
+    if args.q_start is None:
+        args.q_start = DEFAULT_Q_START.copy()
+    if args.goto_start and (args.plan_only or args.print_joint_trajectory):
+        parser.error("--goto-start needs the live Gazebo robot")
+    if args.samples < 2:
+        parser.error("--samples must be at least 2")
+    if not np.isfinite(args.duration) or args.duration <= 0.0:
+        parser.error("--duration must be finite and positive")
+    if not np.all(np.isfinite(args.q_start)):
+        parser.error("--q-start values must be finite")
+    if not args.goto_start and (
+        not np.all(np.isfinite(args.line)) or np.linalg.norm(args.line) <= 0.0
+    ):
+        parser.error("--line must be finite and non-zero")
 
-    robot, problem = build_problem()
-    model = robot.model()
-    frame_id = model.getFrameId(FRAME)
-    frame = model.frames[frame_id]
-    joint_id = frame.parentJoint
-    tool_in_joint = frame.placement
-    data = model.createData()
     line = np.array(args.line)
 
     node = None
-    if args.plan_only:
+    if args.plan_only or (
+        args.print_joint_trajectory and not args.joint_states_topic
+    ):
         q_start = np.array(args.q_start)
+    elif args.print_joint_trajectory:
+        rclpy.init()
+        reader = Node("room315_staubli_joint_state_reader")
+        try:
+            q_start = read_current_configuration(
+                reader,
+                JOINT_NAMES,
+                topic=args.joint_states_topic,
+                timeout_sec=JOINT_STATE_TIMEOUT,
+                require_single_publisher=True,
+            )
+        finally:
+            reader.destroy_node()
+            rclpy.shutdown()
+        if q_start is None:
+            raise RuntimeError(
+                f"could not read {args.joint_states_topic}; verify that the "
+                "topic produces messages and ROS_DOMAIN_ID matches the "
+                "Staubli driver"
+            )
     else:
         rclpy.init()
         node = Node("room315_hpp_line")
@@ -154,9 +167,12 @@ def main():
                 "is the Room 315 simulation running?"
             )
 
-    valid, report = problem.isConfigValid(q_start)
+    if not np.all(np.isfinite(q_start)):
+        raise RuntimeError("the start configuration contains non-finite values")
 
     if args.goto_start:
+        robot, problem = build_problem()
+        valid, report = problem.isConfigValid(q_start)
         q_target = np.array(args.q_start)
         if valid:
             success, path, report = problem.directPath(q_start, q_target, True)
@@ -171,151 +187,69 @@ def main():
         duration = max(3.0, float(np.max(np.abs(q_target - q_start))) / 0.3)
         print(f"moving to the start configuration ({duration:.1f} s)")
     else:
-        if not valid:
-            raise RuntimeError(f"start configuration is invalid: {report}")
-        pin.forwardKinematics(model, data, q_start)
-        pin.updateFramePlacements(model, data)
-        start_pose = data.oMf[frame_id].copy()
-        goal_pose = pin.SE3(start_pose.rotation, start_pose.translation + line)
-
-        xyz = Mask()
-        xyz[:] = (True, True, True)
-        line_xy = Mask()
-        line_xy[:] = (True, True, False)
-        active_xy = Mask()
-        active_xy[:] = (True, True)
-        equal3 = ComparisonTypes()
-        equal3[:] = (ComparisonType.EqualToZero,) * 3
-        equal2 = ComparisonTypes()
-        equal2[:] = (ComparisonType.EqualToZero,) * 2
-
-        goal_projector = ConfigProjector(robot, "goal_projector", 1e-4, 200)
-        goal_projector.add(
-            Implicit(
-                Position(
-                    "tool0_goal_position",
-                    robot,
-                    joint_id,
-                    tool_in_joint,
-                    goal_pose,
-                    xyz,
-                ),
-                equal3,
-                xyz,
-            ),
-            0,
+        plan = plan_cartesian_line(
+            q_start=q_start,
+            line=line,
+            samples=args.samples,
         )
-        goal_projector.add(
-            Implicit(
-                Orientation(
-                    "tool0_goal_orientation",
-                    robot,
-                    joint_id,
-                    pin.SE3(tool_in_joint.rotation, np.zeros(3)),
-                    pin.SE3(goal_pose.rotation, np.zeros(3)),
-                    xyz,
-                ),
-                equal3,
-                xyz,
-            ),
-            0,
+        configs = plan.configurations
+        diagnostics = sys.stderr if args.print_joint_trajectory else sys.stdout
+        print(f"line start position: {plan.start_position}", file=diagnostics)
+        print(f"line end position: {plan.end_position}", file=diagnostics)
+        print(
+            f"max straight-line deviation: {plan.max_deviation:.6f} m",
+            file=diagnostics,
         )
-        goal_constraints = ConstraintSet(robot, "goal")
-        goal_constraints.addConstraint(goal_projector)
-        problem.setConstraints(goal_constraints)
-        success, q_goal, residual = problem.applyConstraints(q_start)
-        if not success:
-            raise RuntimeError(
-                f"line end {np.round(goal_pose.translation, 3)} is not reachable "
-                f"from the current configuration (HPP projection residual "
-                f"{residual:.3g}). The line starts wherever the robot currently "
-                "is: move back first (e.g. the opposite --line), or use "
-                "--goto-start to return to the working pose."
-            )
-        q_goal = np.asarray(q_goal).flatten()
-        valid, report = problem.isConfigValid(q_goal)
-        if not valid:
-            raise RuntimeError(f"goal configuration is invalid: {report}")
-
-        # setConstraints installs the projector into the core problem, so the
-        # steering method projects every configuration onto the line.
-        direction = line / np.linalg.norm(line)
-        z = direction
-        x = np.cross([0.0, 0.0, 1.0], z)
-        if np.linalg.norm(x) < 1e-6:
-            x = np.cross([0.0, 1.0, 0.0], z)
-        x /= np.linalg.norm(x)
-        line_frame = pin.SE3(
-            np.column_stack([x, np.cross(z, x), z]), start_pose.translation
-        )
-
-        projector = ConfigProjector(robot, "line_projector", 1e-4, 40)
-        projector.add(
-            Implicit(
-                Position(
-                    "tool0_on_line",
-                    robot,
-                    joint_id,
-                    tool_in_joint,
-                    line_frame,
-                    line_xy,
-                ),
-                equal2,
-                active_xy,
-            ),
-            0,
-        )
-        projector.add(
-            Implicit(
-                Orientation(
-                    "tool0_orientation",
-                    robot,
-                    joint_id,
-                    pin.SE3(tool_in_joint.rotation, np.zeros(3)),
-                    pin.SE3(start_pose.rotation, np.zeros(3)),
-                    xyz,
-                ),
-                equal3,
-                xyz,
-            ),
-            0,
-        )
-        constraint_set = ConstraintSet(robot, "line")
-        constraint_set.addConstraint(projector)
-        problem.setConstraints(constraint_set)
-
-        success, path, report = problem.directPath(q_start, q_goal, True)
-        if not success:
-            raise RuntimeError(
-                f"HPP could not find a collision-free line motion: {report}"
-            )
-
-        configs = sample_path(path, args.samples)
-        positions = []
-        for config in configs:
-            pin.forwardKinematics(model, data, config)
-            pin.updateFramePlacements(model, data)
-            positions.append(data.oMf[frame_id].translation.copy())
-        positions = np.array(positions)
-        offsets = positions - start_pose.translation
-        closest = np.outer(offsets @ direction, direction)
-        deviation = np.max(np.linalg.norm(offsets - closest, axis=1))
-        print(f"line start position: {start_pose.translation}")
-        print(f"line end position: {start_pose.translation + line}")
-        print(f"max straight-line deviation: {deviation:.6f} m")
         duration = args.duration
 
     if args.plan_only:
         return 0
 
-    topic = f"/{args.robot_name}/joint_trajectory"
     times = [0.0] + np.linspace(
         START_HOLD, START_HOLD + duration, len(configs)
     ).tolist()
+    trajectory_configs = [configs[0]] + configs
+    if args.print_joint_trajectory:
+        if args.joint_states_topic:
+            print(
+                f"# Start configuration read from {args.joint_states_topic}.",
+                file=sys.stderr,
+            )
+        elif q_start_was_explicit:
+            print(
+                "# Start configuration supplied with --q-start.", file=sys.stderr
+            )
+        else:
+            print(
+                "# Start configuration is the demo DEFAULT_Q_START.",
+                file=sys.stderr,
+            )
+        print("# Joint positions are radians.", file=sys.stderr)
+        print(
+            "# Verify the first point against fresh /joint_states before use.",
+            file=sys.stderr,
+        )
+        print(
+            "# Zero velocity arrays select the driver's 10% fallback speed.",
+            file=sys.stderr,
+        )
+        print(
+            "# Direct topic publication is fire-and-forget; use an action "
+            "interface for results and goal-scoped cancellation.",
+            file=sys.stderr,
+        )
+        print(
+            "# The current VAL3 driver treats --duration as trajectory metadata.",
+            file=sys.stderr,
+        )
+        print(render_joint_trajectory(trajectory_configs, times, JOINT_NAMES))
+        return 0
+
+    topic = f"/{args.robot_name}/joint_trajectory"
     publish_trajectory(
         node,
         topic,
-        configs_to_joint_trajectory([configs[0]] + configs, times, JOINT_NAMES),
+        configs_to_joint_trajectory(trajectory_configs, times, JOINT_NAMES),
     )
     print(f"published {len(configs) + 1} points to {topic}")
 
