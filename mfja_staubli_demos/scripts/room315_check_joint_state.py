@@ -18,12 +18,12 @@ from sensor_msgs.msg import JointState
 
 TOPIC = "/mfja_hpp_joint_state_self_test"
 VALID_CONFIGURATION = [
-    -1.56136443,
-    0.47307870,
-    2.04964315,
-    -0.00130315,
-    -0.32991444,
-    0.00524110,
+    0.0,
+    0.8726646259971648,
+    1.2217304763960306,
+    0.0,
+    0.9599310885968813,
+    0.0,
 ]
 
 

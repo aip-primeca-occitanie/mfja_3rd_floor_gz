@@ -1,4 +1,6 @@
 *~
+/.envrc
+/.direnv/
 build/
 install/
 log/

@@ -84,7 +84,10 @@ def test_room315_staubli_pose_matches_gazebo_and_hpp_models():
 
     expected_hpp_pose = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
     hpp_paths = [
-        REPOSITORY / "mfja_staubli_demos" / "hpp" / "room315_hpp_line.py",
+        REPOSITORY
+        / "mfja_staubli_demos"
+        / "hpp"
+        / "room315_cartesian_line.py",
         DEMO / "hpp" / "room315_problem.py",
     ]
 

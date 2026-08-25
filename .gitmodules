@@ -1,0 +1,3 @@
+[submodule "Staubli_ROS2"]
+	path = Staubli_ROS2
+	url = https://github.com/IvoD1998/Staubli_ROS2.git
