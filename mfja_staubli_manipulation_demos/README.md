@@ -128,7 +128,7 @@ These are example measured stopping poses from the moving scenario. The fixed
 runner instead uses the nominal slot-3 pose
 `-15.240 -5.536 0.839 0 0 0` by default.
 
-The Staubli itself is registered in the Room 315 world at `x=-15.251`, `y=-6`,
+The Staubli itself is registered in the Room 315 world at `x=-15.03`, `y=-6`,
 `z=1`, `yaw=0` (metres and radians, with zero roll and pitch). Gazebo uses this
 pose directly; HPP applies its inverse when loading the fixed cell.
 

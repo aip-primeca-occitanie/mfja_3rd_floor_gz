@@ -26,7 +26,7 @@ DEFAULT_Q_START = np.array(
     [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
 )
 DEFAULT_LINE = np.array([0.0, 0.0, 0.4])
-ROOM315_ROBOT_POSE = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
+ROOM315_ROBOT_POSE = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
 
 ROBOT_URDF = "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
 ROBOT_SRDF = "package://mfja_staubli_demos/hpp/staubli_tx2_60l.srdf"

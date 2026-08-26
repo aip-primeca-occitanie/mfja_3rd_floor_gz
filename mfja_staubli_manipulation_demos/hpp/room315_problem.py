@@ -7,7 +7,7 @@ from pyhpp.manipulation import Device, Graph, Problem, urdf
 from pyhpp.manipulation.constraint_graph_factory import ConstraintGraphFactory
 from pyhpp.manipulation.security_margins import SecurityMargins
 
-ROOM315_ROBOT_POSE = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
+ROOM315_ROBOT_POSE = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
 DEFAULT_SHUTTLE_SLOT3_POSE = (-15.240, -5.536, 0.839, 0.0, 0.0, 0.0)
 DEFAULT_SHUTTLE_SLOT4_POSE = (-14.770, -5.536, 0.839346, 0.0, 0.0, -0.0014)
 TABLE_DROP_ZONE_POSE = (-14.65, -5.84, 1.003, 0.0, 0.0, 0.0)

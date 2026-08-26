@@ -8,7 +8,7 @@ robots:
     enabled: true
   - name: staubli1
     model: staubli_tx2_60l
-    x_pose: -15.251
+    x_pose: -15.03
     y_pose: -6.0
     z_pose: 1.0
     yaw: 0.0

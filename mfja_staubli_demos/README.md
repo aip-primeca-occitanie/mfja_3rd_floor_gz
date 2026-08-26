@@ -27,7 +27,7 @@ HPP builder and source the MFJA setup in a new terminal.
 
 ## Room registration
 
-The Room 315 Staubli world pose is `x=-15.251`, `y=-6`, `z=1`, `yaw=0`
+The Room 315 Staubli world pose is `x=-15.03`, `y=-6`, `z=1`, `yaw=0`
 (metres and radians, with zero roll and pitch). The Gazebo spawn configuration
 uses that pose, and HPP applies its inverse to express the fixed cell in the
 robot base frame.

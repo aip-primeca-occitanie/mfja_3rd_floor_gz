@@ -53,7 +53,7 @@ The cell URDF stores fixture poses in the Gazebo world frame. The Staubli world
 pose is:
 
 ```text
-(-15.251, -6.0, 1.0, roll=0, pitch=0, yaw=0)
+(-15.03, -6.0, 1.0, roll=0, pitch=0, yaw=0)
 ```
 
 `build_problem()` loads the cell with the inverse robot world transform so the

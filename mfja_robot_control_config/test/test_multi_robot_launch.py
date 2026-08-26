@@ -69,7 +69,7 @@ def test_gazebo_model_and_robot_description_can_use_distinct_packages():
 
 
 def test_room315_staubli_pose_matches_gazebo_and_hpp_models():
-    expected_gazebo_pose = (-15.251, -6.0, 1.0, 0.0)
+    expected_gazebo_pose = (-15.03, -6.0, 1.0, 0.0)
     config_paths = [
         REPOSITORY / "mfja_robot_control_config" / "config" / "robots.yaml",
         REPOSITORY
@@ -82,7 +82,7 @@ def test_room315_staubli_pose_matches_gazebo_and_hpp_models():
     for path in config_paths:
         assert robot_pose(path, "staubli1") == expected_gazebo_pose
 
-    expected_hpp_pose = (-15.251, -6.0, 1.0, 0.0, 0.0, 0.0)
+    expected_hpp_pose = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
     hpp_paths = [
         REPOSITORY
         / "mfja_staubli_demos"
