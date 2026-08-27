@@ -39,6 +39,8 @@ install(
     config/room_315_vla/task_execution_runtime_v4.yaml
     config/room_315_vla/task_goal_english_benchmark.yaml
     config/room_315_vla/task_goal_understanding.yaml
+    config/room_315_vla/visual_state_experiment_a_dataset_v3.yaml
+    config/room_315_vla/visual_state_experiment_a_dataset_v3r1.yaml
     config/room_315_vla/visual_state_runtime.yaml
     config/room_315_vla/visual_state_final_test_v4.json
     config/room_315_vla/visual_state_training_v4.json

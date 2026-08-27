@@ -399,12 +399,15 @@ def test_audit_only_pipeline_preserves_successful_stage_results(tmp_path):
 
 
 def test_experiment_config_excludes_canary_and_legacy_test():
-    config = (
+    config_path = (
         REPO_ROOT
+        / 'mfja_robot_control_config'
         / 'config'
         / 'room_315_vla'
         / 'visual_state_experiment_a_dataset_v3r1.yaml'
-    ).read_text(encoding='utf-8')
+    )
+    assert audit.default_experiment_config_path(config_path.name) == config_path
+    config = config_path.read_text(encoding='utf-8')
     assert 'old_replay_train: 0.5' in config
     assert 'new_hard_case_train: 0.5' in config
     assert 'permitted_for_training: false' in config

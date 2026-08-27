@@ -118,7 +118,7 @@ and runs the final audit.
 
 ## Experiment A
 
-`config/room_315_vla/visual_state_experiment_a_dataset_v3r1.yaml` uses
+`mfja_robot_control_config/config/room_315_vla/visual_state_experiment_a_dataset_v3r1.yaml` uses
 deterministic 50/50 source-balanced sampling between approved old
 training-replay data and V3R1 hard-case train. Canary is excluded from
 training and checkpoint selection. Pending hashes deliberately fail closed

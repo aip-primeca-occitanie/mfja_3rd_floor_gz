@@ -1082,7 +1082,6 @@ This repository is a colcon meta-repository, not a ROS package itself.
 | `mfja_3rd_floor_description/` | Gazebo worlds, SDF models, meshes, URDF, and the symmetric-gripper C++ plugin |
 | `mfja_rail_interfaces/` | Typed Room 315 messages and the runtime shuttle-add service |
 | `mfja_robot_control_config/` | Robot spawning, rail runtime, VLA/planning nodes, tools, configuration, launch files, and most tests |
-| `config/room_315_vla/` | Top-level experiment configuration retained for specific dataset work |
 | `docs/` | User, operator, architecture, maintenance, research, and audit documentation |
 | `report/` | English report sources, figures, and checksum-bound evidence records |
 | `flake.nix` | Optional hybrid Nix development shell |

@@ -45,6 +45,24 @@ from room_315_visual_v3_common import sha256_file
 from room_315_visual_v3_common import side_for_identity
 
 
+def default_experiment_config_path(filename: str) -> Path:
+    """Resolve an experiment config from the source tree or package share."""
+    source_path = SCRIPT_DIR.parent / 'config' / 'room_315_vla' / filename
+    if source_path.is_file():
+        return source_path
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return (
+            Path(get_package_share_directory('mfja_robot_control_config'))
+            / 'config'
+            / 'room_315_vla'
+            / filename
+        )
+    except Exception:
+        return source_path
+
+
 def _write_csv(
     path: Path,
     fieldnames: list[str],
@@ -528,11 +546,8 @@ def _resolve_experiment_a_hashes(
     config_path: Path | None = None,
 ) -> None:
     if config_path is None:
-        config_path = (
-            Path(__file__).resolve().parents[2]
-            / 'config'
-            / 'room_315_vla'
-            / 'visual_state_experiment_a_dataset_v3.yaml'
+        config_path = default_experiment_config_path(
+            'visual_state_experiment_a_dataset_v3.yaml'
         )
     loaded = yaml.safe_load(config_path.read_text(encoding='utf-8'))
     new_train = loaded['training_sources']['sources']['new_hard_case_train']
