@@ -1,0 +1,1281 @@
+<!doctype html>
+<!-- Generated from build_tutorial_videos.TUTORIALS and display_command() by tutorial_tools/generate_tutorial_index.py. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MFJA Project Demos</title>
+  <style>
+    :root { color-scheme: dark; --bg:#071018; --panel:#0d1a25; --panel-2:#112331; --ink:#eef7fb; --muted:#9eb4c2; --cyan:#32d7ff; --green:#55e6a5; --line:#244050; --danger:#ff8b8b; --shadow:0 18px 50px rgba(0,0,0,.28); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(circle at 85% -10%,rgba(50,215,255,.17),transparent 32rem),linear-gradient(180deg,#071018 0%,#09141d 100%); color:var(--ink); font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    header,main,footer { width:min(1440px,calc(100% - 40px)); margin-inline:auto; }
+    header { padding:64px 0 36px; }
+    .eyebrow { color:var(--cyan); font-size:.78rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { max-width:900px; margin:8px 0 12px; font-size:clamp(2.3rem,5vw,5.2rem); line-height:1.02; letter-spacing:-.05em; }
+    .lead { max-width:920px; margin:0; color:var(--muted); font-size:clamp(1rem,2vw,1.22rem); }
+    .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:30px 0 24px; }
+    .stat { padding:18px 20px; border:1px solid var(--line); border-radius:16px; background:rgba(17,35,49,.75); }
+    .stat strong { display:block; color:var(--green); font-size:1.42rem; }
+    .stat span { color:var(--muted); font-size:.86rem; }
+    .toolbar { position:sticky; top:0; z-index:4; display:flex; gap:10px; flex-wrap:wrap; padding:14px 0; background:rgba(7,16,24,.93); backdrop-filter:blur(14px); }
+    button { border:1px solid var(--line); border-radius:999px; padding:9px 15px; background:var(--panel); color:var(--muted); cursor:pointer; font:inherit; font-size:.88rem; }
+    button:hover,button.active { border-color:var(--cyan); color:var(--ink); background:#123144; }
+    button:focus-visible,a:focus-visible,summary:focus-visible,pre:focus-visible { outline:3px solid var(--cyan); outline-offset:3px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; padding:20px 0 70px; align-items:start; }
+    article { overflow:hidden; border:1px solid var(--line); border-radius:22px; background:linear-gradient(145deg,rgba(17,35,49,.98),rgba(10,25,35,.98)); box-shadow:var(--shadow); }
+    article[hidden] { display:none; }
+    video { display:block; width:100%; aspect-ratio:16/9; background:#03080c; }
+    .body { padding:22px; }
+    .meta { display:flex; justify-content:space-between; gap:10px; color:var(--cyan); font-size:.75rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    h2 { margin:10px 0 9px; font-size:1.35rem; line-height:1.25; letter-spacing:-.02em; }
+    p { margin:0 0 18px; color:var(--muted); }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; }
+    a { text-decoration:none; }
+    .primary,.secondary { display:inline-flex; align-items:center; border-radius:10px; padding:10px 13px; font-weight:750; font-size:.88rem; }
+    .primary { background:var(--cyan); color:#031018; } .secondary { border:1px solid var(--line); color:var(--ink); }
+    .primary:hover { background:#7ae6ff; } .secondary:hover { border-color:var(--cyan); }
+    details.commands { margin-top:18px; border-top:1px solid var(--line); padding-top:16px; }
+    details.commands > summary { cursor:pointer; color:var(--ink); font-weight:780; }
+    .terminal-group { margin-top:16px; }
+    .terminal-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:7px; }
+    h3 { margin:0; color:var(--cyan); font-size:.88rem; letter-spacing:.06em; text-transform:uppercase; }
+    .copy-button { flex:none; padding:6px 12px; border-radius:8px; }
+    .copy-button.copied { border-color:var(--green); color:var(--green); }
+    .copy-button.copy-error { border-color:var(--danger); color:var(--danger); }
+    pre { max-height:26rem; margin:0; padding:15px; overflow:auto; border:1px solid var(--line); border-radius:12px; background:#050c12; color:#e8f3f8; font:13px/1.55 "Cascadia Code","SFMono-Regular",Consolas,monospace; white-space:pre; tab-size:2; }
+    .copy-status { display:block; min-height:1.3em; padding-top:4px; color:var(--green); font-size:.78rem; }
+    footer { border-top:1px solid var(--line); padding:28px 0 45px; color:var(--muted); } footer a { color:var(--cyan); }
+    @media (max-width:850px) { .summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:1fr; } header { padding-top:38px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">MFJA · Third-Floor Digital Twin</div>
+    <h1>Project demonstration videos</h1>
+    <p class="lead">Sixteen silent 4K demos synchronized with the commands that produce each visible action. Expand any command panel and copy a complete terminal block directly from this offline page.</p>
+    <div class="summary">
+      <div class="stat"><strong>16</strong><span>separate demos</span></div>
+      <div class="stat"><strong>4K</strong><span>3840 × 2160 at 30 fps</span></div>
+      <div class="stat"><strong>Silent</strong><span>no audio stream</span></div>
+      <div class="stat"><strong>Copy</strong><span>commands embedded below each video</span></div>
+    </div>
+  </header>
+  <main>
+    <nav class="toolbar" aria-label="Demo filters">
+      <button class="active" data-filter="all">All demos</button><button data-filter="setup">Setup</button><button data-filter="robots">Robots</button><button data-filter="rail">Rail devices</button><button data-filter="intelligence">Language &amp; planning</button><button data-filter="safety">Safety</button>
+    </nav>
+    <section class="grid">
+      <article data-category="setup">
+        <video controls preload="metadata" src="tutorial_videos/01_Launch_the_Full_Floor_Digital_Twin/01_Launch_the_Full_Floor_Digital_Twin_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 01</span><span>Setup</span></div>
+          <h2>Launch the Full-Floor Digital Twin</h2>
+          <p>Display all six robot models together in the complete third-floor scene.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/01_Launch_the_Full_Floor_Digital_Twin/01_Launch_the_Full_Floor_Digital_Twin_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-01-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-01-commands-1-label">EVERY TERMINAL · WORKSPACE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-01-commands-1" aria-describedby="demo-01-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-01-commands-1">export MFJA_WS=&quot;$HOME/mfja_3rd_floor_ros2_ws&quot;
+cd &quot;$HOME/mfja_3rd_floor_ros2_ws&quot;
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash</code></pre>
+                <span class="copy-status" id="demo-01-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-01-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-01-commands-2-label">TERMINAL 1 · ALL SIX ROBOTS</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-01-commands-2" aria-describedby="demo-01-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-01-commands-2">ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=all gui:=true gui_config:=config/mfja_light.gui.config \
+  start_paused:=false enable_room315_vla:=false \
+  enable_room315_kinematic_shuttles:=false \
+  room315_show_device_markers:=false \
+  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+                <span class="copy-status" id="demo-01-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="robots">
+        <video controls preload="metadata" src="tutorial_videos/02_Control_a_KUKA_Arm_and_Gripper/02_Control_a_KUKA_Arm_and_Gripper_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 02</span><span>Robots</span></div>
+          <h2>Control a KUKA Arm and Gripper</h2>
+          <p>Move the KUKA arm, cycle its gripper, and return to the home pose.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/02_Control_a_KUKA_Arm_and_Gripper/02_Control_a_KUKA_Arm_and_Gripper_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-02-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-02-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-02-commands-1" aria-describedby="demo-02-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-02-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export GZ_PARTITION=mfja_tutorial_v2_robot_02_20260827
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=kuka1 gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=false \
+  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-02-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-02-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-02-commands-2-label">TERMINAL 1B · INITIAL GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-02-commands-2" aria-describedby="demo-02-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-02-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  kuka close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-02-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-02-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-02-commands-3-label">TERMINAL 2 · ARM TARGET</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-02-commands-3" aria-describedby="demo-02-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-02-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_joint_command.py kuka1 \
+  --unit deg --duration 6 --positions 90 -30 110 40 -2 0</code></pre>
+                <span class="copy-status" id="demo-02-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-02-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-02-commands-4-label">TERMINAL 2 · GRIPPER OPEN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-02-commands-4" aria-describedby="demo-02-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-02-commands-4">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  kuka open 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-02-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-02-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-02-commands-5-label">TERMINAL 2 · GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-02-commands-5" aria-describedby="demo-02-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-02-commands-5">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  kuka close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-02-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-02-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-02-commands-6-label">TERMINAL 2 · RETURN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-02-commands-6" aria-describedby="demo-02-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-02-commands-6">ros2 run mfja_robot_control_config robot_joint_command.py kuka1 \
+  --unit deg --duration 6 --positions 0 -90 110 0 -2 0</code></pre>
+                <span class="copy-status" id="demo-02-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="robots">
+        <video controls preload="metadata" src="tutorial_videos/03_Control_a_Staubli_Arm_and_Gripper/03_Control_a_Staubli_Arm_and_Gripper_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 03</span><span>Robots</span></div>
+          <h2>Control a Stäubli Arm and Gripper</h2>
+          <p>Run a smooth Stäubli arm motion and a visible gripper cycle.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/03_Control_a_Staubli_Arm_and_Gripper/03_Control_a_Staubli_Arm_and_Gripper_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-03-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-03-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-03-commands-1" aria-describedby="demo-03-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-03-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export GZ_PARTITION=mfja_tutorial_v2_robot_03_20260827
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=staubli1 gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=false \
+  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-03-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-03-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-03-commands-2-label">TERMINAL 1B · INITIAL GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-03-commands-2" aria-describedby="demo-03-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-03-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  staubli close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-03-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-03-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-03-commands-3-label">TERMINAL 2 · ARM TARGET</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-03-commands-3" aria-describedby="demo-03-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-03-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_joint_command.py staubli1 \
+  --unit deg --duration 6 --positions 35 30 -55 35 45 30</code></pre>
+                <span class="copy-status" id="demo-03-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-03-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-03-commands-4-label">TERMINAL 2 · GRIPPER OPEN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-03-commands-4" aria-describedby="demo-03-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-03-commands-4">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  staubli open 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-03-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-03-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-03-commands-5-label">TERMINAL 2 · GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-03-commands-5" aria-describedby="demo-03-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-03-commands-5">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  staubli close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-03-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-03-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-03-commands-6-label">TERMINAL 2 · RETURN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-03-commands-6" aria-describedby="demo-03-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-03-commands-6">ros2 run mfja_robot_control_config robot_joint_command.py staubli1 \
+  --unit deg --duration 6 --positions 0 0 0 0 0 0</code></pre>
+                <span class="copy-status" id="demo-03-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="robots">
+        <video controls preload="metadata" src="tutorial_videos/04_Control_a_Yaskawa_HC10_Arm_and_Gripper/04_Control_a_Yaskawa_HC10_Arm_and_Gripper_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 04</span><span>Robots</span></div>
+          <h2>Control a Yaskawa HC10 Arm and Gripper</h2>
+          <p>Execute the HC10 trajectory and its complete gripper cycle.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/04_Control_a_Yaskawa_HC10_Arm_and_Gripper/04_Control_a_Yaskawa_HC10_Arm_and_Gripper_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-04-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-04-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-04-commands-1" aria-describedby="demo-04-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-04-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export GZ_PARTITION=mfja_tutorial_v2_robot_04_20260827
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=yaskawa_hc10_1 gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=false \
+  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-04-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-04-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-04-commands-2-label">TERMINAL 1B · INITIAL GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-04-commands-2" aria-describedby="demo-04-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-04-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10 close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-04-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-04-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-04-commands-3-label">TERMINAL 2 · ARM TARGET</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-04-commands-3" aria-describedby="demo-04-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-04-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_joint_command.py yaskawa_hc10_1 \
+  --unit deg --duration 6 --positions 25 -45 65 35 35 30</code></pre>
+                <span class="copy-status" id="demo-04-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-04-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-04-commands-4-label">TERMINAL 2 · GRIPPER OPEN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-04-commands-4" aria-describedby="demo-04-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-04-commands-4">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10 open 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-04-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-04-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-04-commands-5-label">TERMINAL 2 · GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-04-commands-5" aria-describedby="demo-04-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-04-commands-5">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10 close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-04-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-04-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-04-commands-6-label">TERMINAL 2 · RETURN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-04-commands-6" aria-describedby="demo-04-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-04-commands-6">ros2 run mfja_robot_control_config robot_joint_command.py yaskawa_hc10_1 \
+  --unit deg --duration 6 --positions 0 0 0 0 0 0</code></pre>
+                <span class="copy-status" id="demo-04-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="robots">
+        <video controls preload="metadata" src="tutorial_videos/05_Control_a_Yaskawa_HC10DT_Arm_and_Gripper/05_Control_a_Yaskawa_HC10DT_Arm_and_Gripper_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 05</span><span>Robots</span></div>
+          <h2>Control a Yaskawa HC10DT Arm and Gripper</h2>
+          <p>Move the HC10DT, show both gripper states, and return home.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/05_Control_a_Yaskawa_HC10DT_Arm_and_Gripper/05_Control_a_Yaskawa_HC10DT_Arm_and_Gripper_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-05-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-05-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-05-commands-1" aria-describedby="demo-05-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-05-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export GZ_PARTITION=mfja_tutorial_v2_robot_05_20260827
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=yaskawa_hc10dt_1 gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=false \
+  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-05-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-05-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-05-commands-2-label">TERMINAL 1B · INITIAL GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-05-commands-2" aria-describedby="demo-05-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-05-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10dt close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-05-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-05-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-05-commands-3-label">TERMINAL 2 · ARM TARGET</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-05-commands-3" aria-describedby="demo-05-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-05-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_joint_command.py yaskawa_hc10dt_1 \
+  --unit deg --duration 6 --positions -25 -35 55 -35 40 -30</code></pre>
+                <span class="copy-status" id="demo-05-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-05-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-05-commands-4-label">TERMINAL 2 · GRIPPER OPEN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-05-commands-4" aria-describedby="demo-05-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-05-commands-4">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10dt open 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-05-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-05-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-05-commands-5-label">TERMINAL 2 · GRIPPER CLOSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-05-commands-5" aria-describedby="demo-05-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-05-commands-5">ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10dt close 100 --ready-timeout 5</code></pre>
+                <span class="copy-status" id="demo-05-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-05-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-05-commands-6-label">TERMINAL 2 · RETURN</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-05-commands-6" aria-describedby="demo-05-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-05-commands-6">ros2 run mfja_robot_control_config robot_joint_command.py yaskawa_hc10dt_1 \
+  --unit deg --duration 6 --positions 0 0 0 0 0 0</code></pre>
+                <span class="copy-status" id="demo-05-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="robots">
+        <video controls preload="metadata" src="tutorial_videos/06_Control_TIAGo_Arm_Head_and_Mobile_Base/06_Control_TIAGo_Arm_Head_and_Mobile_Base_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 06</span><span>Robots</span></div>
+          <h2>Control TIAGo Arm, Head, and Mobile Base</h2>
+          <p>Move the arm and head, then translate and rotate the mobile base.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/06_Control_TIAGo_Arm_Head_and_Mobile_Base/06_Control_TIAGo_Arm_Head_and_Mobile_Base_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-06-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-06-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-06-commands-1" aria-describedby="demo-06-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-06-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export GZ_PARTITION=mfja_tutorial_v2_robot_06_20260827
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=tiago1 gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=false \
+  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-06-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-06-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-06-commands-2-label">TERMINAL 2 · ARM + HEAD TARGET 1</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-06-commands-2" aria-describedby="demo-06-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-06-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run mfja_robot_control_config robot_joint_command.py tiago1 \
+  --unit rad --duration 6 --positions \
+  0.05 0.30 -0.50 -0.40 1.00 0.20 -0.20 0.10 0.35 -0.20</code></pre>
+                <span class="copy-status" id="demo-06-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-06-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-06-commands-3-label">TERMINAL 2 · ARM + HEAD TARGET 2</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-06-commands-3" aria-describedby="demo-06-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-06-commands-3">ros2 run mfja_robot_control_config robot_joint_command.py tiago1 \
+  --unit rad --duration 5 --positions \
+  0.05 0.30 -0.50 -0.40 1.00 0.45 -0.45 0.55 0.30 -0.20</code></pre>
+                <span class="copy-status" id="demo-06-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-06-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-06-commands-4-label">TERMINAL 2 · COMPACT POSE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-06-commands-4" aria-describedby="demo-06-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-06-commands-4">ros2 run mfja_robot_control_config robot_joint_command.py tiago1 \
+  --unit rad --duration 5 --positions \
+  0.05 0.30 -0.50 -0.40 1.00 0.20 -0.20 0.10 0.00 0.00</code></pre>
+                <span class="copy-status" id="demo-06-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-06-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-06-commands-5-label">TERMINAL 2 · FORWARD + ZERO</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-06-commands-5" aria-describedby="demo-06-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-06-commands-5">timeout --signal=INT 3s ros2 topic pub -r 20 /tiago1/cmd_vel \
+  geometry_msgs/msg/Twist \
+  &quot;{linear: {x: 0.12, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}&quot; \
+  || true
+ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
+  &quot;{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}&quot;</code></pre>
+                <span class="copy-status" id="demo-06-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-06-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-06-commands-6-label">TERMINAL 2 · ROTATE + ZERO</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-06-commands-6" aria-describedby="demo-06-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-06-commands-6">timeout --signal=INT 3s ros2 topic pub -r 20 /tiago1/cmd_vel \
+  geometry_msgs/msg/Twist \
+  &quot;{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: -0.30}}&quot; \
+  || true
+ros2 topic pub --once /tiago1/cmd_vel geometry_msgs/msg/Twist \
+  &quot;{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}&quot;</code></pre>
+                <span class="copy-status" id="demo-06-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="robots">
+        <video controls preload="metadata" src="tutorial_videos/07_Move_TIAGo_Base_with_cmd_vel/07_Move_TIAGo_Base_with_cmd_vel_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 07</span><span>Robots</span></div>
+          <h2>Move TIAGo Base with cmd_vel</h2>
+          <p>Drive TIAGo Base with velocity commands and stop with a zero Twist.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/07_Move_TIAGo_Base_with_cmd_vel/07_Move_TIAGo_Base_with_cmd_vel_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-07-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-07-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-07-commands-1" aria-describedby="demo-07-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-07-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export GZ_PARTITION=mfja_tutorial_v2_robot_07_20260827
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=tiago_base1 gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=false \
+  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-07-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-07-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-07-commands-2-label">TERMINAL 2 · ARC + EXPLICIT ZERO</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-07-commands-2" aria-describedby="demo-07-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-07-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+timeout --signal=INT 6s ros2 topic pub -r 20 \
+  /tiago_base1/cmd_vel geometry_msgs/msg/Twist \
+  &quot;{linear: {x: 0.10, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.10}}&quot; \
+  || true
+ros2 topic pub --once /tiago_base1/cmd_vel \
+  geometry_msgs/msg/Twist \
+  &quot;{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}&quot;</code></pre>
+                <span class="copy-status" id="demo-07-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="rail">
+        <video controls preload="metadata" src="tutorial_videos/08_Move_a_Shuttle_Directly_to_a_Target_Slot/08_Move_a_Shuttle_Directly_to_a_Target_Slot_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 08</span><span>Rail devices</span></div>
+          <h2>Move a Shuttle Directly to a Target Slot</h2>
+          <p>Send R1 to a target slot and verify its automatic stop and arrival state.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/08_Move_a_Shuttle_Directly_to_a_Target_Slot/08_Move_a_Shuttle_Directly_to_a_Target_Slot_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-08-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-08-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-08-commands-1" aria-describedby="demo-08-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-08-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export ROS_DOMAIN_ID=208 GZ_PARTITION=mfja_tutorial_v3_rail_08_20260827_v4
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 room315_right_active_identities:=R1 \
+  room315_right_start_slot:=1 room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false room315_shuttle_speed:=0.15 \
+  room315_show_device_markers:=true gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-08-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-08-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-08-commands-2-label">TERMINAL 3 · TARGET SLOT</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-08-commands-2" aria-describedby="demo-08-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-08-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=208
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_shuttle_1&#x27;, command: &#x27;ON&#x27;, \
+    speed: 0.15, target_slot: &#x27;3&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-08-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="rail">
+        <video controls preload="metadata" src="tutorial_videos/09_Add_Start_Stop_Reset_and_Remove_a_Shuttle/09_Add_Start_Stop_Reset_and_Remove_a_Shuttle_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 09</span><span>Rail devices</span></div>
+          <h2>Add, Start, Stop, Reset, and Remove a Shuttle</h2>
+          <p>Run the complete low-level shuttle lifecycle and observe each transition.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/09_Add_Start_Stop_Reset_and_Remove_a_Shuttle/09_Add_Start_Stop_Reset_and_Remove_a_Shuttle_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-09-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-09-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-09-commands-1" aria-describedby="demo-09-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-09-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export ROS_DOMAIN_ID=209 GZ_PARTITION=mfja_tutorial_v3_rail_09_20260827_v4
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=false \
+  room315_right_shuttle_count:=0 room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false room315_shuttle_speed:=0.2 \
+  room315_show_device_markers:=true gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-09-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-09-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-09-commands-2-label">TERMINAL 3 · ADD</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-09-commands-2" aria-describedby="demo-09-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-09-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=209
+ros2 service call /room_315/rails/right/shuttles/add \
+  mfja_rail_interfaces/srv/AddShuttle \
+  &quot;{name: &#x27;room315_right_test_1&#x27;, start_slot: &#x27;3&#x27;, \
+    speed: 0.15, start_enabled: false}&quot;</code></pre>
+                <span class="copy-status" id="demo-09-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-09-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-09-commands-3-label">TERMINAL 3 · ON</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-09-commands-3" aria-describedby="demo-09-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-09-commands-3">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_test_1&#x27;, command: &#x27;ON&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-09-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-09-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-09-commands-4-label">TERMINAL 3 · OFF</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-09-commands-4" aria-describedby="demo-09-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-09-commands-4">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_test_1&#x27;, command: &#x27;OFF&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-09-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-09-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-09-commands-5-label">TERMINAL 3 · RESET</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-09-commands-5" aria-describedby="demo-09-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-09-commands-5">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_test_1&#x27;, command: &#x27;RESET&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-09-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-09-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-09-commands-6-label">TERMINAL 3 · REMOVE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-09-commands-6" aria-describedby="demo-09-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-09-commands-6">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_test_1&#x27;, command: &#x27;REMOVE&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-09-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="rail">
+        <video controls preload="metadata" src="tutorial_videos/10_Control_Rail_Switches_Safely/10_Control_Rail_Switches_Safely_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 10</span><span>Rail devices</span></div>
+          <h2>Control Rail Switches Safely</h2>
+          <p>Move A1–A4 from EXTERIOR to INTERIOR and back with no shuttles present.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/10_Control_Rail_Switches_Safely/10_Control_Rail_Switches_Safely_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-10-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-10-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-10-commands-1" aria-describedby="demo-10-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-10-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export ROS_DOMAIN_ID=210 GZ_PARTITION=mfja_tutorial_v3_rail_10_20260827_v6
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=false \
+  room315_right_shuttle_count:=0 room315_left_shuttle_count:=0 \
+  room315_show_device_markers:=true room315_switch_motion_delay_s:=2.0 \
+  pause_during_switch_update:=true room315_visual_debug_colors:=true \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-10-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-10-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-10-commands-2-label">TERMINAL 3 · APPLY ALL INTERIOR</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-10-commands-2" aria-describedby="demo-10-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-10-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=210
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  &quot;{switches: [{name: &#x27;ALL&#x27;, state: &#x27;INTERIOR&#x27;}]}&quot;</code></pre>
+                <span class="copy-status" id="demo-10-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-10-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-10-commands-3-label">TERMINAL 3 · RESTORE ALL EXTERIOR</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-10-commands-3" aria-describedby="demo-10-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-10-commands-3">ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  &quot;{switches: [{name: &#x27;ALL&#x27;, state: &#x27;EXTERIOR&#x27;}]}&quot;</code></pre>
+                <span class="copy-status" id="demo-10-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="rail">
+        <video controls preload="metadata" src="tutorial_videos/11_Open_and_Close_a_Rail_Stopper/11_Open_and_Close_a_Rail_Stopper_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 11</span><span>Rail devices</span></div>
+          <h2>Open and Close a Rail Stopper</h2>
+          <p>Stop R1 at closed A4, then open A4 and watch the same shuttle resume.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/11_Open_and_Close_a_Rail_Stopper/11_Open_and_Close_a_Rail_Stopper_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-11-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-11-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-11-commands-1" aria-describedby="demo-11-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-11-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export ROS_DOMAIN_ID=211 GZ_PARTITION=mfja_tutorial_v3_rail_11_20260827_v7
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=false \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 room315_right_active_identities:=R1 \
+  room315_right_start_slot:=3 room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false room315_shuttle_speed:=0.12 \
+  room315_show_device_markers:=true room315_stopper_motion_delay_s:=1.0 \
+  room315_sensor_publish_rate_hz:=10.0 gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-11-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-11-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-11-commands-2-label">TERMINAL 5 · CLOSE A4</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-11-commands-2" aria-describedby="demo-11-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-11-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=211
+ros2 topic pub --once /room_315/rails/right/stoppers/command \
+  mfja_rail_interfaces/msg/StopperCommand \
+  &quot;{stoppers: [{name: &#x27;A4&#x27;, state: &#x27;1&#x27;}]}&quot;</code></pre>
+                <span class="copy-status" id="demo-11-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-11-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-11-commands-3-label">TERMINAL 5 · START R1</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-11-commands-3" aria-describedby="demo-11-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-11-commands-3">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_shuttle_1&#x27;, command: &#x27;ON&#x27;, speed: 0.12}&quot;</code></pre>
+                <span class="copy-status" id="demo-11-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-11-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-11-commands-4-label">TERMINAL 5 · OPEN A4 + COMPLETE AUTO-RESUME</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-11-commands-4" aria-describedby="demo-11-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-11-commands-4">ros2 topic pub --once /room_315/rails/right/stoppers/command \
+  mfja_rail_interfaces/msg/StopperCommand \
+  &quot;{stoppers: [{name: &#x27;A4&#x27;, state: &#x27;0&#x27;}]}&quot;</code></pre>
+                <span class="copy-status" id="demo-11-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-11-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-11-commands-5-label">TERMINAL 5 · OFF</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-11-commands-5" aria-describedby="demo-11-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-11-commands-5">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_shuttle_1&#x27;, command: &#x27;OFF&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-11-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="rail">
+        <video controls preload="metadata" src="tutorial_videos/12_Read_Rail_Occupancy_Sensors/12_Read_Rail_Occupancy_Sensors_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 12</span><span>Rail devices</span></div>
+          <h2>Read Rail Occupancy Sensors</h2>
+          <p>Add and remove R1 and correlate the visible shuttle with sensor feedback.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/12_Read_Rail_Occupancy_Sensors/12_Read_Rail_Occupancy_Sensors_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-12-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-12-commands-1-label">TERMINAL 1A · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-12-commands-1" aria-describedby="demo-12-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-12-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export ROS_DOMAIN_ID=212 GZ_PARTITION=mfja_tutorial_v3_rail_12_20260827_v5
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=false \
+  room315_right_shuttle_count:=0 room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false \
+  room315_sensor_publish_rate_hz:=10.0 room315_show_device_markers:=true \
+  gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
+                <span class="copy-status" id="demo-12-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-12-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-12-commands-2-label">TERMINAL 2 · PERSISTENT SENSOR MONITOR</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-12-commands-2" aria-describedby="demo-12-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-12-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=212
+ros2 topic echo /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback</code></pre>
+                <span class="copy-status" id="demo-12-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-12-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-12-commands-3-label">TERMINAL 3 · ADD AT SLOT 2</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-12-commands-3" aria-describedby="demo-12-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-12-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=212
+ros2 service call /room_315/rails/right/shuttles/add \
+  mfja_rail_interfaces/srv/AddShuttle \
+  &quot;{name: &#x27;room315_right_shuttle_1&#x27;, start_slot: &#x27;2&#x27;, \
+    speed: 0.2, start_enabled: false}&quot;</code></pre>
+                <span class="copy-status" id="demo-12-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-12-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-12-commands-4-label">TERMINAL 3 · REMOVE</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-12-commands-4" aria-describedby="demo-12-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-12-commands-4">ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  &quot;{name: &#x27;room315_right_shuttle_1&#x27;, command: &#x27;REMOVE&#x27;}&quot;</code></pre>
+                <span class="copy-status" id="demo-12-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="rail">
+        <video controls preload="metadata" src="tutorial_videos/13_View_Eight_Shuttles_and_Paired_RGB_D_Cameras/13_View_Eight_Shuttles_and_Paired_RGB_D_Cameras_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 13</span><span>Rail devices</span></div>
+          <h2>View Eight Shuttles and Paired RGB-D Cameras</h2>
+          <p>Inspect all eight shuttles and the independent right and left camera streams.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/13_View_Eight_Shuttles_and_Paired_RGB_D_Cameras/13_View_Eight_Shuttles_and_Paired_RGB_D_Cameras_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-13-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-13-commands-1-label">TERMINAL 1 · EXACT LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-13-commands-1" aria-describedby="demo-13-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-13-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false use_sim_time:=true \
+  gui_config:=config/room315_runtime_safe.gui.config \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_enable_payload_visuals:=true \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=4 \
+  room315_right_active_identities:=R1,R2,R3,R4 \
+  room315_right_start_slots:=1,2,3,4 \
+  room315_right_loaded_shuttles:=R4 \
+  room315_left_shuttle_count:=4 \
+  room315_left_active_identities:=L1,L2,L3,L4 \
+  room315_left_start_slots:=1,2,3,4 \
+  room315_shuttles_start_enabled:=false \
+  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+                <span class="copy-status" id="demo-13-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-13-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-13-commands-2-label">TERMINAL 2 · RIGHT CAMERA</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-13-commands-2" aria-describedby="demo-13-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-13-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run rqt_image_view rqt_image_view \
+  /room_315/vla/right_rail_rgbd/image</code></pre>
+                <span class="copy-status" id="demo-13-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-13-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-13-commands-3-label">TERMINAL 3 · LEFT CAMERA</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-13-commands-3" aria-describedby="demo-13-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-13-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
+ros2 run rqt_image_view rqt_image_view \
+  /room_315/vla/left_rail_rgbd/image</code></pre>
+                <span class="copy-status" id="demo-13-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="intelligence">
+        <video controls preload="metadata" src="tutorial_videos/14_Send_an_English_Command_to_a_Shuttle/14_Send_an_English_Command_to_a_Shuttle_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 14</span><span>Language &amp; planning</span></div>
+          <h2>Send an English Command to a Shuttle</h2>
+          <p>Follow English request → TaskGoal → V4 → PlanSys2 → supervisor → arrival.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/14_Send_an_English_Command_to_a_Shuttle/14_Send_an_English_Command_to_a_Shuttle_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-14-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-14-commands-1-label">TERMINAL 1 · EXACT B03 LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-14-commands-1" aria-describedby="demo-14-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-14-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false use_sim_time:=true \
+  gui_config:=config/room315_runtime_safe.gui.config \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_enable_payload_visuals:=true \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 \
+  room315_right_active_identities:=R3 \
+  room315_right_start_slots:=3 \
+  room315_left_shuttle_count:=0 room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2 \
+  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+                <span class="copy-status" id="demo-14-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-14-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-14-commands-2-label">TERMINAL 2 · V4 START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-14-commands-2" aria-describedby="demo-14-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-14-commands-2">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export V4_RUNTIME=&quot;$HOME/room315_visual_runtime_candidate_v4_\
+seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1&quot;
+export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:$HOME/\
+room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}&quot;
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  runtime_config:=&quot;$V4_RUNTIME/runtime_ros_parameters.yaml&quot; \
+  runtime_mode:=active device:=cuda enable_camera_bridge:=false \
+  v4_promotion_manifest:=&quot;$V4_RUNTIME/runtime_promotion_manifest.json&quot; \
+  v4_promotion_manifest_sha256:=\
+506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
+                <span class="copy-status" id="demo-14-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-14-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-14-commands-3-label">TERMINAL 3 · PLANSYS2 START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-14-commands-3" aria-describedby="demo-14-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-14-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
+mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml&quot;
+export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
+ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
+  runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
+                <span class="copy-status" id="demo-14-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-14-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-14-commands-4-label">TERMINAL 6 · CLI START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-14-commands-4" aria-describedby="demo-14-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-14-commands-4">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+cd &quot;$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz&quot;
+source &quot;$HOME/models/room315_intent/room315_intent.env&quot;
+export PYTHONPATH=&quot;$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}&quot;
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
+  --config &quot;$HOME/models/room315_intent/task_goal_understanding.local.yaml&quot; \
+  --publish-topic /room_315/task_goal \
+  --publish-timeout-s 10 --wait-for-result --result-timeout-s 600</code></pre>
+                <span class="copy-status" id="demo-14-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-14-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-14-commands-5-label">TERMINAL 6 · ENGLISH INPUT</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-14-commands-5" aria-describedby="demo-14-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-14-commands-5">Move the green shuttle to slot 4 on the right rail.</code></pre>
+                <span class="copy-status" id="demo-14-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-14-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-14-commands-6-label">TERMINAL 6 · CONFIRM</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-14-commands-6" aria-describedby="demo-14-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-14-commands-6">yes</code></pre>
+                <span class="copy-status" id="demo-14-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="intelligence">
+        <video controls preload="metadata" src="tutorial_videos/15_Clear_a_Blocker_and_Replan/15_Clear_a_Blocker_and_Replan_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 15</span><span>Language &amp; planning</span></div>
+          <h2>Clear a Blocker and Replan</h2>
+          <p>Relocate a blocker, take a fresh observation, replan, and finish the goal.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/15_Clear_a_Blocker_and_Replan/15_Clear_a_Blocker_and_Replan_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-15-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-15-commands-1-label">TERMINAL 1 · EXACT P01 LAUNCH</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-15-commands-1" aria-describedby="demo-15-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-15-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false use_sim_time:=true \
+  gui_config:=config/room315_runtime_safe.gui.config \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_enable_payload_visuals:=true \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=2 \
+  room315_right_active_identities:=R1,R2 \
+  room315_right_start_slots:=1,2 \
+  room315_right_loaded_shuttles:=R1 \
+  room315_left_shuttle_count:=0 room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2 \
+  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+                <span class="copy-status" id="demo-15-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-15-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-15-commands-2-label">TERMINAL 2 · V4 START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-15-commands-2" aria-describedby="demo-15-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-15-commands-2">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export V4_RUNTIME=&quot;$HOME/room315_visual_runtime_candidate_v4_\
+seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1&quot;
+export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:$HOME/\
+room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}&quot;
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  runtime_config:=&quot;$V4_RUNTIME/runtime_ros_parameters.yaml&quot; \
+  runtime_mode:=active device:=cuda enable_camera_bridge:=false \
+  v4_promotion_manifest:=&quot;$V4_RUNTIME/runtime_promotion_manifest.json&quot; \
+  v4_promotion_manifest_sha256:=\
+506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
+                <span class="copy-status" id="demo-15-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-15-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-15-commands-3-label">TERMINAL 3 · PLANSYS2 START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-15-commands-3" aria-describedby="demo-15-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-15-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
+mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml&quot;
+export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
+ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
+  runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
+                <span class="copy-status" id="demo-15-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-15-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-15-commands-4-label">TERMINAL 7 · CLI START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-15-commands-4" aria-describedby="demo-15-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-15-commands-4">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+cd &quot;$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz&quot;
+source &quot;$HOME/models/room315_intent/room315_intent.env&quot;
+export PYTHONPATH=&quot;$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}&quot;
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
+  --config &quot;$HOME/models/room315_intent/task_goal_understanding.local.yaml&quot; \
+  --publish-topic /room_315/task_goal \
+  --publish-timeout-s 10 --wait-for-result --result-timeout-s 600</code></pre>
+                <span class="copy-status" id="demo-15-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-15-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-15-commands-5-label">TERMINAL 7 · ENGLISH INPUT + CONFIRM</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-15-commands-5" aria-describedby="demo-15-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-15-commands-5">Please move the nearest loaded right shuttle to slot 3.
+yes</code></pre>
+                <span class="copy-status" id="demo-15-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+
+      <article data-category="safety">
+        <video controls preload="metadata" src="tutorial_videos/16_Trigger_an_Emergency_Stop_and_Verify_Fail_Closed/16_Trigger_an_Emergency_Stop_and_Verify_Fail_Closed_tutorial_4k.mp4"></video>
+        <div class="body">
+          <div class="meta"><span>Demo 16</span><span>Safety</span></div>
+          <h2>Trigger an Emergency Stop and Verify Fail-Closed</h2>
+          <p>Inject a simulated emergency stop after motion begins and verify a safe abort.</p>
+          <div class="actions">
+            <a class="primary" href="tutorial_videos/16_Trigger_an_Emergency_Stop_and_Verify_Fail_Closed/16_Trigger_an_Emergency_Stop_and_Verify_Fail_Closed_tutorial_4k.mp4">Open video</a>
+          </div>
+          <details class="commands">
+            <summary>Commands used in this demo</summary>
+              <section class="terminal-group" aria-labelledby="demo-16-commands-1-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-16-commands-1-label">TERMINAL 1 · EXACT FAULT SCENARIO</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-16-commands-1" aria-describedby="demo-16-commands-1-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-16-commands-1">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false use_sim_time:=true \
+  gui_config:=config/room315_runtime_safe.gui.config \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_right_rail:=true enable_room315_left_rail:=true \
+  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_dataset_recorder:=false \
+  enable_room315_vla_obstacles:=false \
+  room315_show_device_markers:=false room315_visual_debug_colors:=false \
+  room315_enable_payload_visuals:=true \
+  room315_identity_selection_mode:=explicit \
+  room315_right_shuttle_count:=1 \
+  room315_right_active_identities:=R4 \
+  room315_right_start_slots:=1 \
+  room315_left_shuttle_count:=0 room315_shuttles_start_enabled:=false \
+  room315_shuttle_speed:=0.2 \
+  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+                <span class="copy-status" id="demo-16-commands-1-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-16-commands-2-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-16-commands-2-label">TERMINAL 2 · V4 START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-16-commands-2" aria-describedby="demo-16-commands-2-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-16-commands-2">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export V4_RUNTIME=&quot;$HOME/room315_visual_runtime_candidate_v4_\
+seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1&quot;
+export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:$HOME/\
+room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}&quot;
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  runtime_config:=&quot;$V4_RUNTIME/runtime_ros_parameters.yaml&quot; \
+  runtime_mode:=active device:=cuda enable_camera_bridge:=false \
+  v4_promotion_manifest:=&quot;$V4_RUNTIME/runtime_promotion_manifest.json&quot; \
+  v4_promotion_manifest_sha256:=\
+506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
+                <span class="copy-status" id="demo-16-commands-2-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-16-commands-3-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-16-commands-3-label">TERMINAL 3 · PLANSYS2 START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-16-commands-3" aria-describedby="demo-16-commands-3-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-16-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
+mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml&quot;
+export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
+ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
+  runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
+                <span class="copy-status" id="demo-16-commands-3-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-16-commands-4-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-16-commands-4-label">TERMINAL 6 · ARMED E-STOP INJECTOR</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-16-commands-4" aria-describedby="demo-16-commands-4-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-16-commands-4">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+timeout 120 ros2 topic echo /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand --once \
+  --filter &quot;m.name == &#x27;room315_right_shuttle_4&#x27; and m.command == &#x27;ON&#x27;&quot; &amp;&amp; \
+ros2 topic pub --once /room_315/vla/emergency_stop \
+  std_msgs/msg/Bool &quot;{data: true}&quot;</code></pre>
+                <span class="copy-status" id="demo-16-commands-4-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-16-commands-5-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-16-commands-5-label">TERMINAL 7 · CLI START</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-16-commands-5" aria-describedby="demo-16-commands-5-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-16-commands-5">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
+cd &quot;$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz&quot;
+source &quot;$HOME/models/room315_intent/room315_intent.env&quot;
+export PYTHONPATH=&quot;$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}&quot;
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
+  --config &quot;$HOME/models/room315_intent/task_goal_understanding.local.yaml&quot; \
+  --publish-topic /room_315/task_goal \
+  --publish-timeout-s 10 --wait-for-result --result-timeout-s 600</code></pre>
+                <span class="copy-status" id="demo-16-commands-5-status" role="status" aria-live="polite"></span>
+              </section>
+              <section class="terminal-group" aria-labelledby="demo-16-commands-6-label">
+                <div class="terminal-heading">
+                  <h3 id="demo-16-commands-6-label">TERMINAL 7 · ENGLISH INPUT + CONFIRM</h3>
+                  <button class="copy-button" type="button" data-copy-target="demo-16-commands-6" aria-describedby="demo-16-commands-6-status">Copy</button>
+                </div>
+                <pre tabindex="0"><code id="demo-16-commands-6">Move the yellow shuttle to slot 4 on the right rail.
+yes</code></pre>
+                <span class="copy-status" id="demo-16-commands-6-status" role="status" aria-live="polite"></span>
+              </section>
+          </details>
+        </div>
+      </article>
+    </section>
+  </main>
+  <footer>All videos are silent. Commands are embedded in this page and work offline. Stop the previous launch before starting another demo.</footer>
+  <script>
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    const cards = document.querySelectorAll('article[data-category]');
+    filterButtons.forEach(button => button.addEventListener('click', () => {
+      filterButtons.forEach(item => item.classList.toggle('active', item === button));
+      const filter = button.dataset.filter;
+      cards.forEach(card => { card.hidden = filter !== 'all' && card.dataset.category !== filter; });
+    }));
+
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const helper = document.createElement('textarea');
+      helper.value = text;
+      helper.setAttribute('readonly', '');
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.select();
+      const copied = document.execCommand('copy');
+      helper.remove();
+      if (!copied) throw new Error('Browser rejected the copy command');
+    }
+
+    document.querySelectorAll('.copy-button').forEach(button => button.addEventListener('click', async () => {
+      const code = document.getElementById(button.dataset.copyTarget);
+      const status = document.getElementById(`${button.dataset.copyTarget}-status`);
+      button.classList.remove('copied', 'copy-error');
+      try {
+        await copyText(code.textContent);
+        button.textContent = 'Copied';
+        button.classList.add('copied');
+        status.textContent = 'Commands copied to the clipboard.';
+      } catch (error) {
+        button.textContent = 'Copy failed';
+        button.classList.add('copy-error');
+        status.textContent = 'Copy failed. Select the command block and copy it manually.';
+      }
+      window.setTimeout(() => {
+        button.textContent = 'Copy';
+        button.classList.remove('copied', 'copy-error');
+        status.textContent = '';
+      }, 2200);
+    }));
+  </script>
+</body>
+</html>
