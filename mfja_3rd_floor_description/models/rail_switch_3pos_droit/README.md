@@ -1,6 +1,6 @@
 # rail_switch_3pos_droit
 
-This model contains the rotating switch blade only.
+This model provides the rotating switch blade.
 
 - Mesh: `aiguillage3.stl`
 - Pivot: mesh origin from SolidWorks
@@ -8,7 +8,7 @@ This model contains the rotating switch blade only.
 
 Notes:
 
-- No local pose offset is applied in `model.sdf`
+- `model.sdf` places the pivot at the mesh origin
 - A uniform mesh scale is applied because the SolidWorks export is smaller than the previous in-scene blade by a constant factor
 - The fixed rail base remains a separate model: `cell_static_droit_final`
 - Default world pivot position used by the worlds and control script: `-15.7470 -4.42 0.73`

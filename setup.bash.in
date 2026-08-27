@@ -1,0 +1,9 @@
+# Source this file in every terminal used for the Room 315 pick-and-place.
+_MFJA_SETUP_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+export MFJA_WORK_DIR="$_MFJA_SETUP_ROOT"
+export PYTHONNOUSERSITE=1
+# shellcheck disable=SC1091
+source "$_MFJA_SETUP_ROOT/.venv/bin/activate"
+# shellcheck disable=SC1091
+source "$_MFJA_SETUP_ROOT/mfja_ws/install/setup.bash"
+unset _MFJA_SETUP_ROOT

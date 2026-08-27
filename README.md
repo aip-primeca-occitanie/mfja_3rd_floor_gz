@@ -1,84 +1,117 @@
-# MFJA 3rd Floor Gazebo Simulation
+# MFJA 3rd Floor
 
-This repository contains the Gazebo Harmonic / ROS 2 Jazzy simulation assets for the MFJA 3rd floor. 
+This repository contains the ROS 2 and Gazebo models for the MFJA third floor.
+Its simplest Staubli example plans one table pick-and-place with HPP and uses
+the same plan in Viser, Gazebo, or through the direct VAL3 robot driver.
 
-## 📖 General Overview
+## Install the Staubli pick-and-place
 
-The simulation environment provides a comprehensive digital twin of the MFJA 3rd floor, featuring multiple work cells, industrial robotic arms (KUKA, Stäubli, Yaskawa), and mobile robots (TIAGo). 
+The installer supports Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic.
 
-A major focus of this repository is the **Room 315 flexible rail system**, which currently utilizes a highly reliable **kinematic shuttle simulation**. Instead of relying on complex physics interactions like wheel friction, shuttles move along arc-length paths generated from a calibrated explicit rail graph, ensuring smooth and predictable behavior for testing routing logic, multi-shuttle interactions, and switch controls.
-
-Whether you are testing mobile robot navigation on the full floor, running pick-and-place tasks with a single robotic arm, or orchestrating a complex multi-shuttle logistics scenario in Room 315, this repository provides the necessary models and launch configurations.
-
-The `psardin001` fork adds a two-stage HPP course:
-
-1. [Cartesian line planning](mfja_staubli_demos/README.md) introduces the HPP
-   robot, constraints, and continuous collision checking.
-2. [Manipulation planning](mfja_staubli_manipulation_demos/README.md) adds a
-   gripper, payload, contact graph, and the Room 315 shuttles. Instructors use
-   its [short classroom runbook](mfja_staubli_manipulation_demos/docs/room315_training_runbook.md).
-
-Ali's edited Staubli/gripper assembly and the later MFJA split gripper CAD are
-shared through `mfja_3rd_floor_description`. The split meshes improve Gazebo
-fidelity and collision envelopes, but do not calibrate the physical
-Staubli-to-gripper transform or grasp TCP.
-
----
-
-## 🛠️ Installation Guide
-
-The default setup is a standard ROS 2 colcon underlay/overlay. HPP is built
-from local sources for ROS Jazzy's Python 3.12, then MFJA and the pinned
-Staubli driver stack are built on top. Docker and Nix are not part of the
-runtime.
-
-Keep one source checkout and initialize its Staubli submodule:
+First install ROS 2 Jazzy from the
+[official Ubuntu instructions](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
+Then install the remaining packages:
 
 ```bash
-cd /home/psardin/devel/mfja_3rd_floor_gz
-git submodule update --init --recursive
-```
-
-Install the host HPP dependencies once, then build both workspaces:
-
-```bash
-sudo apt install ros-jazzy-coal ros-jazzy-jrl-cmakemodules \
+sudo apt update
+sudo apt install -y \
+  build-essential doxygen git python3-venv ros-dev-tools \
+  ros-jazzy-desktop ros-jazzy-ros-gz \
+  ros-jazzy-coal ros-jazzy-jrl-cmakemodules \
   ros-jazzy-pinocchio ros-jazzy-proxsuite
-
-cd /home/psardin/devel/mfja_3rd_floor_gz
-./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
-./mfja_staubli_demos/scripts/room315_build_overlay.sh
-source /home/psardin/devel/mfja_ws/install/setup.bash
-./mfja_staubli_demos/scripts/room315_check_integration.sh
 ```
 
-The HPP builder reads the canonical local sources below
-`/home/psardin/devel/nix-hpp/src`, including `hpp-exec`, and installs them in
-`hpp_jazzy_ws`. The directory name does not make this host build depend on
-Nix. After modifying `hpp-exec`, rerun `room315_build_hpp_underlay.sh`.
-
-For normal work, every new terminal needs only:
+Create one folder, clone the repository, and run the installer:
 
 ```bash
-source /home/psardin/devel/mfja_ws/install/setup.bash
+export MFJA_WORK_DIR="$HOME/mfja"
+mkdir -p "$MFJA_WORK_DIR"
+git clone --recurse-submodules \
+  https://github.com/psardin001/mfja_3rd_floor_gz.git \
+  "$MFJA_WORK_DIR/mfja_3rd_floor_gz"
+"$MFJA_WORK_DIR/mfja_3rd_floor_gz/install.sh" "$MFJA_WORK_DIR"
+source "$MFJA_WORK_DIR/setup.bash"
 ```
 
-To build against another compatible HPP installation, point the overlay
-builder at its setup file:
+The installer imports the exact HPP revisions from `hpp_jazzy.repos` and
+creates this single-folder layout:
+
+```text
+mfja/
+├── .venv/
+├── hpp_sources/
+├── hpp_ws/
+├── mfja_3rd_floor_gz/
+├── mfja_ws/
+└── setup.bash
+```
+
+Source `$HOME/mfja/setup.bash` in every new terminal. It sets `MFJA_WORK_DIR`
+to its own folder, so the commands below also work in a fresh shell. The source
+checkout may be placed elsewhere by passing that work folder to `install.sh`.
+The first HPP build is lengthy. On a machine with enough memory, prefix the
+install command with `CMAKE_BUILD_PARALLEL_LEVEL=2` to use two compiler jobs.
+
+## Test the pick-and-place
+
+Planning computes and validates the trajectory locally:
 
 ```bash
-HPP_SETUP=/path/to/hpp/environment.sh \
-  ./mfja_staubli_demos/scripts/room315_build_overlay.sh
+ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh
 ```
 
-That environment must expose `pyhpp`, `hpp_exec`, and `rclpy` to the same
-Python interpreter.
+Viser opens the same planned paths at `http://localhost:8000`:
 
----
+```bash
+ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --viser
+```
 
-## ⚡ Basic Commands & Quick Start
+For Gazebo, use the same isolated ROS domain in both terminals:
 
-The repository offers multiple run modes depending on what you want to test.
+```bash
+# Terminal 1
+source "$MFJA_WORK_DIR/setup.bash"
+export ROS_DOMAIN_ID=42
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+ros2 launch mfja_staubli_manipulation_demos \
+  room_315_staubli_pick_place_sim.launch.py
+```
+
+```bash
+# Terminal 2
+source "$MFJA_WORK_DIR/setup.bash"
+export ROS_DOMAIN_ID=42
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --execute
+```
+
+For an authorized physical robot, use the cell's ROS domain in both terminals
+and enter the controller address when launching the driver:
+
+```bash
+# Terminal 1
+source "$MFJA_WORK_DIR/setup.bash"
+read -r -p "Staubli controller IP: " ROBOT_IP
+ros2 launch mfja_staubli_manipulation_demos \
+  room_315_staubli_hardware.launch.py robot_ip:="$ROBOT_IP"
+```
+
+```bash
+# Terminal 2: read the current joint positions, then plan from them
+source "$MFJA_WORK_DIR/setup.bash"
+ros2 run mfja_staubli_demos room315_read_configuration.py
+
+# Copy the six values from the reported "positions" array.
+ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh \
+  --execution-profile hardware \
+  --q-start Q1 Q2 Q3 Q4 Q5 Q6
+```
+
+After commissioning, path review, and operator approval, add `--execute` to the
+terminal 2 command. Automated checks cover planning and simulation; the
+operator validates physical execution in the commissioned cell.
+
+## Other simulations
 
 ### 1. Launching the Full Floor
 To run the complete 3rd-floor environment with all rooms, you can launch the `full_floor.launch.py`. You can choose to load all robots or none:
@@ -91,7 +124,7 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
 *(Change `robots:=none` to `robots:=all` to spawn TIAGo, KUKA, Stäubli, and Yaskawa robots).*
 
 ### 2. Launching Room 315 (Rail Simulation)
-If you only want to focus on the flexible rail system and shuttles in Room 315:
+Launch the flexible rail system and shuttles in Room 315:
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
@@ -103,7 +136,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 ```
 
 ### 3. Launching a Single Industrial Robot
-For isolated testing of a specific robotic arm (e.g., KUKA) without the rest of the floor:
+Launch one industrial robot and its support table (for example, KUKA):
 ```bash
 ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
   robot:=kuka \
@@ -137,7 +170,8 @@ ros2 topic pub --once /room_315/rails/right/switches/command \
 *   `mfja_robot_control_config/`: Shuttle/switch scripts, bridge configurations, and rail kinematic settings.
 *   `mfja_3rd_floor_bringup/`: Centralized launch entry points for the full floor, Room 315, and single robot setups.
 *   `mfja_staubli_demos/`: Stage 1 Staubli HPP arm-planning exercise.
-*   `mfja_staubli_manipulation_demos/`: Stage 2 Room 315 manipulation-graph and shuttle exercise.
+*   `mfja_staubli_manipulation_demos/`: Staubli HPP table pick-and-place.
+*   `hpp_jazzy.repos`: exact HPP source manifest for a reproducible host underlay.
 
 ---
 
@@ -148,5 +182,5 @@ For a deep dive into advanced features, please refer to our dedicated documentat
 *   **[Detailed Feature & API Guide (DETAILED_GUIDE.md)](DETAILED_GUIDE.md)**: Includes step-by-step guides for adding shuttles dynamically, reading sensor feedback, testing industrial robots, and troubleshooting.
 *   **[Room 315 Kinematic Rail Network Specs](mfja_robot_control_config/config/room_315_kinematics/README.md)**: Technical details about segment directions, device YAMLs, and sensor cookbook testing.
 *   **[Stage 1: Staubli Cartesian HPP Demo](mfja_staubli_demos/README.md)**: Constrained arm planning and collision checking.
-*   **[Stage 2: Room 315 Staubli Manipulation Demo](mfja_staubli_manipulation_demos/README.md)**: Manipulation graph, classroom runbook, and Gazebo/real-output boundaries.
+*   **[Stage 2: Room 315 Staubli Manipulation Demo](mfja_staubli_manipulation_demos/README.md)**: Table pick-and-place in Gazebo or through the direct VAL3 driver.
 *   **[HTML Runbook](runbook.html)**: A focused visualization and operational guide.

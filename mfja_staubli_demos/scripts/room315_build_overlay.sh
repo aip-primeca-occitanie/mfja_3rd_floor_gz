@@ -7,7 +7,7 @@ script_dir=$(cd -- "$(dirname -- "$script_path")" && pwd -P)
 mfja_root=$(cd -- "$script_dir/../.." && pwd -P)
 devel_root=$(dirname "$mfja_root")
 workspace=${MFJA_WS:-$devel_root/mfja_ws}
-hpp_setup=${HPP_SETUP:-$devel_root/hpp_jazzy_ws/install/setup.bash}
+hpp_setup=${HPP_SETUP:-$devel_root/hpp_ws/install/setup.bash}
 staubli_source=${STAUBLI_ROS2_SOURCE:-$mfja_root/Staubli_ROS2}
 build_base=${MFJA_BUILD_BASE:-$workspace/build}
 install_base=${MFJA_INSTALL_BASE:-$workspace/install}
@@ -25,6 +25,7 @@ if [[ "${ROOM315_OVERLAY_BUILD_ENV:-}" != "1" ]]; then
     MFJA_LOG_BASE="$log_base" \
     MFJA_WS="$workspace" \
     STAUBLI_ROS2_SOURCE="$staubli_source" \
+    CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-1}" \
     ROOM315_OVERLAY_BUILD_ENV=1 \
     /bin/bash "$script_path" "$@"
 fi
@@ -86,14 +87,9 @@ staubli_packages=(
   industrial_msgs
   industrial_robot_client
   industrial_utils
-  motion_control_msgs
-  moveit_interface
-  robot_middleware
   simple_message
   staubli_msgs
-  staubli_support
   staubli_tx2_60l_description
-  staubli_tx2_60l_moveit_config
   staubli_val3_driver
   urdf_extention
 )
@@ -101,14 +97,9 @@ staubli_package_dirs=(
   industrial_msgs
   industrial_robot_client
   industrial_utils
-  adaptive_motion_control/motion_control_msgs
-  adaptive_motion_control/moveit_interface
-  adaptive_motion_control/robot_middleware
   simple_message
   staubli_msgs
-  staubli_support
   staubli_tx2_60l_description
-  staubli_tx2_60l_moveit_config
   staubli_val3_driver
   urdf_extention
 )
@@ -138,7 +129,6 @@ else
     simple_message
     staubli_msgs
     staubli_tx2_60l_description
-    staubli_tx2_60l_moveit_config
     staubli_val3_driver
     urdf_extention
   )
@@ -162,10 +152,52 @@ if [[ -f "$install_base/.colcon_install_layout" ]] \
   echo "$install_base uses a non-merged layout; preserve it before rebuilding." >&2
   exit 1
 fi
+
+obsolete_staubli_packages=(
+  motion_control_msgs
+  moveit_interface
+  robot_middleware
+  staubli_support
+  staubli_tx2_60l_moveit_config
+)
+stale_staubli_packages=()
+for package in "${obsolete_staubli_packages[@]}"; do
+  marker="$install_base/share/ament_index/resource_index/packages/$package"
+  if [[ -e "$marker" || -L "$marker" ]]; then
+    stale_staubli_packages+=("$package")
+  fi
+done
+if [[ ${#stale_staubli_packages[@]} -gt 0 ]]; then
+  echo "$install_base contains packages removed from the lean overlay:" >&2
+  printf '  %s\n' "${stale_staubli_packages[@]}" >&2
+  echo "Preserve that generated install and rebuild into an empty install base." >&2
+  echo "Alternatively, set MFJA_INSTALL_BASE to a clean directory." >&2
+  exit 1
+fi
+
+legacy_manipulation_artifacts=(
+  "$install_base/lib/mfja_staubli_manipulation_demos/room315_demo.sh"
+  "$install_base/lib/mfja_staubli_manipulation_demos/room315_hpp_manipulation.sh"
+  "$install_base/lib/mfja_staubli_manipulation_demos/room315_manipulation_demo.sh"
+  "$install_base/lib/mfja_staubli_manipulation_demos/room315_moving_shuttle_demo.sh"
+  "$install_base/share/mfja_staubli_manipulation_demos/launch/room_315_staubli_shuttle_manipulation_demo.launch.py"
+  "$install_base/share/mfja_staubli_manipulation_demos/models/room315_pick_support.sdf"
+  "$install_base/share/mfja_staubli_manipulation_demos/hpp/room315_shuttle_manipulation.py"
+  "$install_base/share/mfja_staubli_manipulation_demos/hpp/room315_shuttle_deck.urdf"
+  "$install_base/share/mfja_staubli_manipulation_demos/hpp/room315_shuttle_deck.srdf"
+)
+for artifact in "${legacy_manipulation_artifacts[@]}"; do
+  if [[ -e "$artifact" || -L "$artifact" ]]; then
+    echo "$install_base contains obsolete manipulation files." >&2
+    echo "Preserve that generated install and rebuild into an empty install base." >&2
+    exit 1
+  fi
+done
+
 mkdir -p "$build_base" "$install_base" "$log_base"
 
 export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-1}
-export MAKEFLAGS=-j1
+export MAKEFLAGS="-j$CMAKE_BUILD_PARALLEL_LEVEL"
 python_executable=$(command -v python3)
 colcon --log-base "$log_base" build \
   --base-paths "${base_paths[@]}" \
@@ -188,7 +220,6 @@ set -u
 for package in \
   industrial_robot_client \
   staubli_tx2_60l_description \
-  staubli_tx2_60l_moveit_config \
   staubli_val3_driver; do
   ros2 pkg prefix "$package" >/dev/null
 done
@@ -215,6 +246,6 @@ print(f"Python: {sys.version.split()[0]}")
 print(f"payload model: {model}")
 PY
 ros2 run mfja_staubli_manipulation_demos \
-  room315_moving_shuttle_demo.sh --help >/dev/null
+  room315_pick_place.sh --help >/dev/null
 
 echo "Run 'source $install_base/setup.bash' to use MFJA."

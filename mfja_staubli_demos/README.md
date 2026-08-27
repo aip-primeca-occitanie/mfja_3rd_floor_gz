@@ -13,17 +13,12 @@ Use the standard host underlay/overlay from the
 [top-level instructions](../README.md):
 
 ```bash
-cd /home/psardin/devel/mfja_3rd_floor_gz
-git submodule update --init --recursive
-./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
-./mfja_staubli_demos/scripts/room315_build_overlay.sh
-source /home/psardin/devel/mfja_ws/install/setup.bash
-./mfja_staubli_demos/scripts/room315_check_integration.sh
+source "$MFJA_WORK_DIR/setup.bash"
+"$MFJA_WORK_DIR/mfja_3rd_floor_gz/mfja_staubli_demos/scripts/room315_check_integration.sh"
 ```
 
 The one MFJA setup chains ROS Jazzy and the installed HPP Python 3.12
-underlay. After editing the canonical `nix-hpp/src/hpp-exec` source, rerun the
-HPP builder and source the MFJA setup in a new terminal.
+underlay.
 
 ## Room registration
 
@@ -73,45 +68,37 @@ ros2 run mfja_staubli_demos room315_hpp_line.sh \
   --line 0 0.2 0 --duration 8
 ```
 
-A line starts at the current tool pose. Return first if a new line is not
-reachable from the current configuration.
+A line starts at the current tool pose. Return to the previous pose first when
+the next line requires that configuration for reachability.
 
 ## Real Staubli feedback and trajectory export
 
-These commands can reach physical hardware. Start the MoveIt configuration
-first, then the VAL3 driver, in separate terminals that use the same setup and
-`ROS_DOMAIN_ID`:
+These commands connect to physical hardware. The direct driver bringup provides
+the robot model, state feedback, trajectory action, IO, and system services.
+Use an authorized robot terminal for this section:
 
 ```bash
-source /home/psardin/devel/mfja_ws/install/setup.bash
-export ROS_DOMAIN_ID=0
-ros2 launch staubli_tx2_60l_moveit_config \
-  staubli_tx2_60l_planning_execution_real.launch.py
+source "$MFJA_WORK_DIR/setup.bash"
+read -r -p "Staubli controller IP: " ROBOT_IP
+ros2 launch mfja_staubli_manipulation_demos \
+  room_315_staubli_hardware.launch.py \
+  robot_ip:="$ROBOT_IP"
 ```
 
-```bash
-source /home/psardin/devel/mfja_ws/install/setup.bash
-export ROS_DOMAIN_ID=0
-ros2 launch staubli_val3_driver robot_interface_streaming.launch.py \
-  robot_ip:=172.31.0.1
-```
-
-Use a third terminal for the read-only feedback checks:
+Use another terminal to inspect state feedback:
 
 ```bash
-source /home/psardin/devel/mfja_ws/install/setup.bash
-export ROS_DOMAIN_ID=0
+source "$MFJA_WORK_DIR/setup.bash"
 ros2 topic echo /joint_states
-python3 /home/psardin/devel/mfja_3rd_floor_gz/mfja_staubli_demos/scripts/room315_read_configuration.py \
+ros2 run mfja_staubli_demos room315_read_configuration.py \
   --topic /joint_states
 ```
 
-Once the reported configuration matches the physical robot, compute a line
-from that live state without publishing it:
+Once the reported configuration matches the physical robot, export a line from
+that live state to a JSON trajectory:
 
 ```bash
-cd /home/psardin/devel/mfja_3rd_floor_gz
-python3 mfja_staubli_demos/scripts/room315_export_staubli_line.py \
+ros2 run mfja_staubli_demos room315_export_staubli_line.py \
   --joint-states-topic /joint_states \
   --line 0 0 0.10 \
   --duration 5 \
@@ -121,8 +108,7 @@ python3 mfja_staubli_demos/scripts/room315_export_staubli_line.py \
 
 Inspect the saved trajectory, its first point, the current cell and tool
 geometry, and the robot mode before an authorized operator publishes it on
-`/joint_path_command`. The build and integration checks never publish robot
-commands.
+`/joint_path_command`. Build and integration checks are read-only.
 
 ## Main options
 
@@ -132,10 +118,10 @@ commands.
 | `--duration` | `5.0` | Execution duration, seconds. |
 | `--samples` | `80` | HPP path samples sent to Gazebo. |
 | `--q-start J1 ... J6` | `0 50 70 0 55 0` degrees, converted to radians | Planning start for `--plan-only`; target for `--goto-start`. |
-| `--goto-start` | off | Move to the exercise start instead of planning a line. |
-| `--plan-only` | off | Plan and validate without ROS output. |
+| `--goto-start` | off | Move to the exercise start. |
+| `--plan-only` | off | Plan and validate locally. |
 | `--joint-states-topic TOPIC` | unset | Read a named-joint start configuration for trajectory export. |
-| `--print-joint-trajectory` | off | Print the Staubli `JointTrajectory` payload without publishing it. |
+| `--print-joint-trajectory` | off | Print the Staubli `JointTrajectory` payload for review. |
 | `--robot-name` | `staubli1` | Gazebo robot namespace. |
 
 ## Implementation map
@@ -163,8 +149,8 @@ first point is held briefly so the Gazebo controller settles.
 
 `--goto-start` is a simulation setup helper. If Gazebo starts in a configuration
 that the HPP model reports in collision, it performs a slow unchecked retreat
-before reaching the validated exercise pose. Do not use that recovery behavior
-on hardware.
+before reaching the validated exercise pose. Hardware startup uses the measured
+current configuration and a commissioned path.
 
 ## Alternative HPP installations
 
@@ -176,5 +162,5 @@ HPP_SETUP=/path/to/hpp/environment.sh \
   ./mfja_staubli_demos/scripts/room315_build_overlay.sh
 ```
 
-Use a distinct `ROS_DOMAIN_ID` for each training workstation. The wrappers
-default to domain `7`.
+Use a distinct `ROS_DOMAIN_ID` for each simulation workstation. For hardware,
+use the commissioned cell domain in every terminal.

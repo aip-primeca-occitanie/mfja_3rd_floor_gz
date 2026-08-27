@@ -23,6 +23,5 @@ if ! python3 -c 'import hpp_exec, pyhpp, rclpy; from pyhpp.manipulation import D
   exit 1
 fi
 
-export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-7}
 export ROOM315_PACKAGE_DIR
 set -u

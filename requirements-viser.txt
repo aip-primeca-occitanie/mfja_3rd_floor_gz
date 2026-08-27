@@ -1,0 +1,4 @@
+viser==1.0.30
+trimesh==4.10.0
+pycollada==0.9.2
+websockets==15.0.1

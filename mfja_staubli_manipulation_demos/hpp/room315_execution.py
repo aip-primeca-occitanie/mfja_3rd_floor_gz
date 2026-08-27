@@ -591,7 +591,7 @@ def execute_plan(
     args,
 ):
     rclpy.init()
-    node = Node("room315_hpp_manipulation")
+    node = Node("room315_pick_place")
     try:
         if args.trajectory_action is None:
             arm_target = args.trajectory_topic or (

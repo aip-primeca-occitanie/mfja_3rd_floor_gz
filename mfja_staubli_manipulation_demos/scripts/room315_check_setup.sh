@@ -21,7 +21,7 @@ fail() {
 printf 'Room 315 setup check\n'
 MFJA_PREFIX=$(ros2 pkg prefix mfja_staubli_manipulation_demos 2>/dev/null || true)
 pass "MFJA overlay: $MFJA_PREFIX"
-pass "ROS domain: $ROS_DOMAIN_ID"
+pass "ROS domain: ${ROS_DOMAIN_ID:-0}"
 
 for command in ros2 gz python3; do
   if command -v "$command" >/dev/null 2>&1; then
@@ -43,7 +43,6 @@ for package in \
   mfja_staubli_manipulation_demos \
   mfja_3rd_floor_bringup \
   mfja_3rd_floor_description \
-  mfja_rail_interfaces \
   mfja_robot_control_config \
   ros_gz_sim \
   staubli_msgs; do
@@ -57,10 +56,7 @@ done
 installed_executables=$(ros2 pkg executables mfja_staubli_manipulation_demos 2>/dev/null || true)
 for executable in \
   room315_check_setup.sh \
-  room315_demo.sh \
-  room315_hpp_manipulation.sh \
-  room315_manipulation_demo.sh \
-  room315_moving_shuttle_demo.sh; do
+  room315_pick_place.sh; do
   if grep -Fq "mfja_staubli_manipulation_demos $executable" <<<"$installed_executables"; then
     pass "ROS executable: $executable"
   else
@@ -68,7 +64,7 @@ for executable in \
   fi
 done
 
-if python3 -c 'import hpp_exec, pyhpp, rclpy; from pyhpp.manipulation import Device' >/dev/null; then
+if python3 -c 'import coal, sys; sys.modules.setdefault("hppfcl", coal); import hpp_exec, pyhpp, pyhpp_viser, rclpy, trimesh, viser; from pyhpp.manipulation import Device' >/dev/null; then
   pass "HPP manipulation and ROS Python imports"
 else
   fail "HPP manipulation and ROS Python imports"
@@ -87,10 +83,10 @@ if ((failures)); then
 fi
 
 printf '\nSetup is ready. Planning-only check:\n'
-printf '  ros2 run mfja_staubli_manipulation_demos room315_hpp_manipulation.sh --build-only\n'
-printf '\nSetup is ready. Fixed-support test:\n'
-printf '  ros2 run mfja_staubli_manipulation_demos room315_demo.sh gui:=false right_start_slot:=3\n'
-printf '  ros2 run mfja_staubli_manipulation_demos room315_manipulation_demo.sh\n'
-printf '\nFull moving-shuttle demo:\n'
-printf '  ros2 run mfja_staubli_manipulation_demos room315_demo.sh gui:=false\n'
-printf '  ros2 run mfja_staubli_manipulation_demos room315_moving_shuttle_demo.sh\n'
+printf '  ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --build-only\n'
+printf '\nViser:\n'
+printf '  ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --viser\n'
+printf '\nSimulation:\n'
+printf '  ros2 launch mfja_staubli_manipulation_demos room_315_staubli_pick_place_sim.launch.py\n'
+printf '  ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --execute\n'
+printf '\nAuthorized hardware execution requires the hardware launch, hardware profile, and measured --q-start.\n'

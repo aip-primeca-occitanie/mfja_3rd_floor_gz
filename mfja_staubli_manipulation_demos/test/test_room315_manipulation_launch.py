@@ -1,58 +1,38 @@
-import ast
 from pathlib import Path
 
 
-LAUNCH = (
+HARDWARE_LAUNCH = (
     Path(__file__).parents[1]
     / "launch"
-    / "room_315_staubli_shuttle_manipulation_demo.launch.py"
+    / "room_315_staubli_hardware.launch.py"
+)
+PICK_PLACE_LAUNCH = (
+    Path(__file__).parents[1]
+    / "launch"
+    / "room_315_staubli_pick_place_sim.launch.py"
 )
 
 
-def launch_argument_default(name):
-    tree = ast.parse(LAUNCH.read_text())
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        if (
-            not isinstance(node.func, ast.Name)
-            or node.func.id != "DeclareLaunchArgument"
-        ):
-            continue
-        if not node.args or ast.literal_eval(node.args[0]) != name:
-            continue
-        default = next(
-            keyword.value
-            for keyword in node.keywords
-            if keyword.arg == "default_value"
-        )
-        return ast.literal_eval(default)
-    raise AssertionError(f"launch argument {name} was not declared")
+def test_hardware_bringup_uses_direct_driver_and_explicit_ip():
+    source = HARDWARE_LAUNCH.read_text()
+
+    assert "staubli_val3_driver" in source
+    assert "staubli_tx2_60l_description" in source
+    assert "robot_state_publisher" in source
+    assert "staubli_tx2_60l_moveit_config" not in source
+    assert 'DeclareLaunchArgument(\n                "robot_ip"' in source
+    assert "default_value=\"172." not in source
+    assert '"joint_config": joint_config' in source
+    assert '"enable_system",\n                default_value="false"' in source
 
 
-def forwarded_launch_arguments():
-    tree = ast.parse(LAUNCH.read_text())
-    forwarded = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Dict):
-            continue
-        for key, value in zip(node.keys, node.values):
-            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
-                continue
-            if not isinstance(value, ast.Call):
-                continue
-            if (
-                not isinstance(value.func, ast.Name)
-                or value.func.id != "LaunchConfiguration"
-            ):
-                continue
-            forwarded[key.value] = ast.literal_eval(value.args[0])
-    return forwarded
+def test_fixed_pick_place_simulation_uses_focused_scene():
+    source = PICK_PLACE_LAUNCH.read_text()
 
-
-def test_shuttle_stop_defaults_are_repeatable():
-    assert launch_argument_default("shuttle_speed") == "0.1"
-    assert launch_argument_default("sensor_publish_rate_hz") == "30.0"
-    assert forwarded_launch_arguments()["room315_sensor_publish_rate_hz"] == (
-        "sensor_publish_rate_hz"
-    )
+    assert "multi_robot_sim.launch.py" in source
+    assert "room315_payload_box.sdf" in source
+    assert '"room315_payload_box"' in source
+    assert "room315_pick_support" not in source
+    assert '"enable_conveyor_controller": "false"' in source
+    assert "room_315_dual_kinematic_shuttles" not in source
+    assert "mfja_rail_interfaces" not in source

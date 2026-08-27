@@ -3,24 +3,18 @@
 This repository contains the Gazebo Harmonic / ROS 2 Jazzy simulation assets for
 the MFJA 3rd floor, with the current focus on the Room 315 flexible rail system.
 
-The current project state is a **kinematic-first shuttle simulation**. The
-shuttle does not currently use contact dynamics or wheel physics. Instead, it
-moves along an arc-length path backend generated from calibrated CSV rail
-geometry and an explicit rail graph, then updates the Gazebo model pose through
-`/world/<world_name>/set_pose`.
-
-Dynamic shuttle work is intentionally not used in the current main version. The
-current version focuses on kinematic shuttle motion, switch routing,
-independent stoppers before switches, multi-shuttle operation, runtime spawning,
-explicit shuttle enable/disable commands, simple collision avoidance, and
-continuous cubic Hermite path sampling for smoother generalized motion.
+The current **kinematic-first shuttle simulation** moves each shuttle along an
+arc-length path generated from calibrated CSV rail geometry and an explicit
+rail graph, then updates its Gazebo pose through
+`/world/<world_name>/set_pose`. It supports switch routing, independent
+stoppers, multi-shuttle operation, runtime spawning, enable/disable commands,
+center-distance collision avoidance, and cubic Hermite path sampling.
 
 ## Repository Layout
 
-This git repository is intentionally organized as a **meta-repository**. The
-repository root is not a ROS 2 package. Do not add root-level `package.xml`,
-`CMakeLists.txt`, `launch/`, `config/`, `models/`, `worlds/`, or `CSV/`
-directories. Package-specific files must live inside the package that owns them.
+This git repository is organized as a **meta-repository**. Package-specific
+files live inside the ROS 2 package that owns them; the root holds shared
+installation and documentation files.
 
 - `mfja_3rd_floor_description/`: models, meshes, worlds, and URDF/SDF assets.
 - `mfja_rail_interfaces/`: typed ROS 2 message interfaces for Room 315 rail commands, states, and sensors.
@@ -42,105 +36,57 @@ runbook.html
 
 ## Installation
 
-Use Ubuntu 24.04 with ROS 2 Jazzy. Keep one canonical source checkout and link
-it into the colcon build workspace.
+Use Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic. The short installation
+procedure is maintained in the [top-level README](README.md).
 
 ### 1. Install ROS 2 And Build Tools
 
-If ROS 2 Jazzy is not installed yet, configure the ROS apt repository:
-
-```bash
-sudo apt update
-sudo apt install -y curl gnupg lsb-release software-properties-common
-sudo add-apt-repository -y universe
-
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-  -o /usr/share/keyrings/ros-archive-keyring.gpg
-
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo "$UBUNTU_CODENAME") main" | \
-  sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-```
-
-Install the required packages:
+Install ROS 2 Jazzy from the
+[official Ubuntu instructions](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html),
+then:
 
 ```bash
 sudo apt update
 sudo apt install -y \
   build-essential \
-  cmake \
+  doxygen \
   git \
-  ninja-build \
-  pkg-config \
-  python3-colcon-common-extensions \
-  python3-rosdep \
-  python3-yaml \
+  python3-venv \
+  ros-dev-tools \
   ros-jazzy-desktop \
   ros-jazzy-coal \
   ros-jazzy-jrl-cmakemodules \
   ros-jazzy-pinocchio \
   ros-jazzy-proxsuite \
-  ros-jazzy-robot-state-publisher \
   ros-jazzy-ros-gz
-
-# Run this only if rosdep has not already been initialized on the machine.
-sudo rosdep init || true
-rosdep update
 ```
 
 ### 2. Clone The Repository
 
 ```bash
-export DEVEL_ROOT=$HOME/devel
-export MFJA_WS=$DEVEL_ROOT/mfja_ws
-mkdir -p "$MFJA_WS/src"
+export MFJA_WORK_DIR="$HOME/mfja"
+mkdir -p "$MFJA_WORK_DIR"
 git clone --recurse-submodules \
   https://github.com/psardin001/mfja_3rd_floor_gz.git \
-  "$DEVEL_ROOT/mfja_3rd_floor_gz"
-ln -s "$DEVEL_ROOT/mfja_3rd_floor_gz" "$MFJA_WS/src/mfja_3rd_floor_gz"
+  "$MFJA_WORK_DIR/mfja_3rd_floor_gz"
 ```
 
-For an existing checkout, initialize the pinned Staubli driver with
-`git submodule update --init --recursive`.
-
-### 3. Build The HPP Underlay
-
-The canonical local HPP sources are below `$DEVEL_ROOT/nix-hpp/src`:
+### 3. Install
 
 ```bash
-cd "$DEVEL_ROOT/mfja_3rd_floor_gz"
-./mfja_staubli_demos/scripts/room315_build_hpp_underlay.sh
+"$MFJA_WORK_DIR/mfja_3rd_floor_gz/install.sh" "$MFJA_WORK_DIR"
 ```
 
-This creates `$DEVEL_ROOT/hpp_jazzy_ws/install/setup.bash` with ROS Jazzy's
-Python 3.12. The build uses host colcon and does not use Nix.
+The installer imports the pinned HPP sources, builds the HPP and MFJA
+workspaces, creates the Viser Python environment, and checks the result.
 
-### 4. Build The MFJA Overlay
+### 4. Source The Workspace
 
 ```bash
-cd "$DEVEL_ROOT/mfja_3rd_floor_gz"
-./mfja_staubli_demos/scripts/room315_build_overlay.sh
+source "$MFJA_WORK_DIR/setup.bash"
 ```
 
-To use another compatible HPP installation, provide its setup file:
-
-```bash
-HPP_SETUP=/path/to/hpp/environment.sh \
-  ./mfja_staubli_demos/scripts/room315_build_overlay.sh
-```
-
-### 5. Source The Workspace
-
-```bash
-source "$MFJA_WS/install/setup.bash"
-```
-
-### 6. Every New Terminal
-
-```bash
-source "$HOME/devel/mfja_ws/install/setup.bash"
-```
-
-That setup automatically chains the HPP underlay and `/opt/ros/jazzy`.
+Use the same command in every new terminal.
 
 ## Tested Launch Commands
 
@@ -164,9 +110,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   enable_room315_kinematic_shuttles:=true
 ```
 
-If you only edit README files, no rebuild is required. If you edit launch files,
-Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
-config files, rebuild and source again.
+README changes take effect immediately. Rebuild and source again after changing
+launch files, Python scripts, package metadata, interfaces, models, worlds,
+URDF, SDF, or configuration files.
 
 ## Multiple TIAGo Robots From YAML
 
@@ -304,9 +250,8 @@ Expected services include:
 
 ### 4. Launch Only One Industrial Robot and Its Table
 
-This mode loads only the ground plane, one selected industrial robot, and that
-robot's support table. It does not load Room 315, rails, shuttles, sensors,
-fixtures, other robots, or TIAGo.
+This mode loads the ground plane, one selected industrial robot, and its support
+table.
 
 Terminal 1 - choose exactly one robot:
 
@@ -551,13 +496,12 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 
 ### 10. Read Sensor Feedback
 
-Room 315 rail sensors are binary occupancy sensors, not distance sensors.
-For normal rail-point sensors, `active: 1` means a shuttle is on top of the
-sensor point within its YAML `radius_m`. `A*_STOPPER_SENSOR` names are regular
-position sensors linked to their matching stoppers; their point is the stopper
-point minus `before_stopper_m`. `active: 0` means the sensor is clear.
-A sensor only reports occupancy; stopping is controlled by the matching stopper
-state and uses the linked before-stopper sensor point as the stop trigger.
+Room 315 rail sensors publish binary occupancy. For normal rail-point sensors,
+`active: 1` means a shuttle is on top of the sensor point within its YAML
+`radius_m`. `A*_STOPPER_SENSOR` names are position sensors linked to their
+matching stoppers; their point is the stopper point minus `before_stopper_m`.
+`active: 0` means the sensor is clear. The matching stopper state controls
+motion and uses the linked before-stopper sensor point as its trigger.
 All rail readings use `sensor_type: sensor`; the sensor name explains the
 purpose of the detector.
 
@@ -734,9 +678,8 @@ spawned from the YAML-resolved positions:
 
 Position sensor markers sit slightly above the rail so a visible part remains
 above the shuttle body while a shuttle is crossing the sensor. Stopper-linked
-position sensors inherit stopper locations and can spawn the same normal sensor
-markers. The old continuous sensor distance field has been fully removed from
-the sensor interface.
+position sensors inherit stopper locations and use the same marker style. The
+sensor interface publishes binary occupancy feedback.
 
 Hide device markers when you want a cleaner Gazebo scene:
 
@@ -831,9 +774,8 @@ ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py robot:=kuka
 
 ## Room 315 Continuous Path Backend
 
-The Room 315 rail geometry still starts from measured CSV segment files. The
-runtime no longer has to treat those CSV rows as isolated pose steps. It can
-sample each segment through a path backend:
+The Room 315 rail geometry starts from measured CSV segment files. The runtime
+samples each segment through a path backend:
 
 - `cubic_hermite`: recommended default. It builds a continuous arc-length
   parameterized path from the CSV points and tangents.
@@ -857,9 +799,8 @@ To compare against the direct CSV interpolation, use:
 This launch starts Gazebo and, by default, also starts the Room 315 right and
 left rail nodes. That means the YAML devices, visual markers, typed
 command/state topics, and `/room_315/rails/{right,left}/...` namespaces are
-available from the same launch. Initial shuttle count defaults to `0`, so no
-shuttle moves until you add one or request startup shuttles with launch
-arguments.
+available from the same launch. Initial shuttle count defaults to `0`; add a
+shuttle or set the startup counts to begin motion.
 
 Terminal 1 - start Room 315 with the rail stack:
 
@@ -902,7 +843,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_shuttles_start_enabled:=true
 ```
 
-To start Gazebo without the rail shuttle nodes:
+To start Gazebo with the rail shuttle nodes disabled:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
@@ -1007,13 +948,11 @@ source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
 
-In the integrated room-only and full-floor launches, the rail nodes start by
-default but `room315_right_shuttle_count:=0` and
-`room315_left_shuttle_count:=0`, so no shuttle is created at startup. Add a
+In the integrated room-only and full-floor launches, the rail nodes start with
+`room315_right_shuttle_count:=0` and `room315_left_shuttle_count:=0`. Add a
 shuttle with `/room_315/rails/{right,left}/shuttles/add` while Gazebo is
-already running. Use `start_enabled: false` when you want the shuttle to appear
-and wait for a later `ON` command, or `start_enabled: true` when you want it to
-move immediately.
+running. Use `start_enabled: false` to create a shuttle that waits for a later
+`ON` command, or `start_enabled: true` to start its motion immediately.
 If you start initial shuttles with a nonzero count, use
 `room315_shuttles_start_enabled:=false` to make them wait for `ON`, or
 `room315_shuttles_start_enabled:=true` to make them move immediately.
@@ -1214,9 +1153,8 @@ using the wrong world name. Stop Gazebo, rebuild if needed, and restart the laun
 
 ## Robot Spawning and Control
 
-The same launch files can run the world with or without industrial robots. For
-shuttle-only testing, use `robots:=none`. For robot experiments, use `robots:=all`
-or select only the robots you need.
+The launch configuration accepts `robots:=none`, `robots:=all`, or a selected
+robot set.
 
 Full floor with all configured robots:
 
@@ -1290,10 +1228,8 @@ mfja_robot_control_config/config/robots_room_315_only.yaml
 
 ### Single Industrial Robot Mode
 
-Use this mode when you want only one industrial robot, its support table, and
-the ground plane. It does not load Room 315, rails, shuttles, sensors, lab
-furniture, or other robots. This mode is only for the four industrial robots:
-`kuka`, `staubli`, `hc10`, and `hc10dt`.
+Single Industrial Robot mode starts one robot, its support table, and the ground
+plane. Available selectors are `kuka`, `staubli`, `hc10`, and `hc10dt`.
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
@@ -1456,9 +1392,8 @@ ros2 run mfja_robot_control_config room_315_kinematic_shuttle_node.py --ros-args
   -p gazebo_set_pose_rate_hz:=10.0
 ```
 
-There is no hard software limit on shuttle count during runtime. At startup,
-each initial shuttle must use a unique, unoccupied start slot. Additional
-shuttles can be added later after a start slot becomes free.
+Runtime shuttle count follows available start slots. Each initial shuttle uses a
+unique free slot, and another shuttle can be added whenever a slot becomes free.
 
 ## Add Shuttles During Runtime
 
@@ -1604,10 +1539,9 @@ Echo the sensor readings:
 ros2 topic echo /room_315/rails/right/sensors/feedback mfja_rail_interfaces/msg/SensorFeedback
 ```
 
-Each message contains one `SensorReading` per configured rail sensor.
-Rail sensors are binary occupancy sensors, not distance sensors: for normal
-sensors, `active: 1` means a shuttle is on top of that sensor within its YAML
-`radius_m`; `A*_STOPPER_SENSOR` names are regular position sensors whose point is
+Each message contains one `SensorReading` per configured rail sensor. For
+normal sensors, `active: 1` means a shuttle is on top of that sensor within its
+YAML `radius_m`; `A*_STOPPER_SENSOR` names are position sensors whose point is
 derived from the matching stopper minus `before_stopper_m`. `active: 0` means
 the sensor is clear. The published `sensor_type` is
 always `sensor`. When active, `shuttle_name` identifies the detected shuttle.

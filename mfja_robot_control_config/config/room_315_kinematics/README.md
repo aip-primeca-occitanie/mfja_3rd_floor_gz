@@ -1,10 +1,8 @@
 # Room 315 Kinematic Rail Network
 
-This directory contains the Room 315 kinematic-first shuttle network. The
-shuttle is controlled by graph routing and an arc-length path backend generated
-from CSV rail geometry, then pushed into Gazebo with `set_pose`. Contact
-dynamics, wheel physics, and rail contact are intentionally not part of this
-phase.
+This directory contains the Room 315 kinematic-first shuttle network. Graph
+routing and an arc-length path backend generated from calibrated CSV rail
+geometry drive each shuttle pose in Gazebo through `set_pose`.
 
 The repository root `README.md` is the installation and quick-start entry
 point. `DETAILED_GUIDE.md` at the repository root contains the full operator
@@ -24,14 +22,12 @@ reference.
 
 ## Segment Direction
 
-Every rail segment is one-way only. Motion always follows the CSV order from
-`index=0` to the last row in that file. The geometry is used for pose
-interpolation only. Routing is decided by `rail_network_right.yaml`, not by exact
-endpoint equality.
+Every rail segment is directed. Motion follows the CSV order from `index=0` to
+the last row in that file. The geometry provides pose interpolation, while
+`rail_network_right.yaml` defines routing.
 
-If a shuttle reaches the end of a segment and the graph has no valid successor
-for the current switch state, the shuttle enters `FALLING` mode instead of
-silently correcting or teleporting.
+At the end of each segment, the graph selects a successor for the current switch
+state. An unavailable route places the shuttle in `FALLING` mode.
 
 ## Path Backends
 
@@ -43,8 +39,8 @@ sampled in two ways:
 - `polyline`: direct CSV polyline interpolation used as a reference and debug
   backend.
 
-Use `cubic_hermite` for normal demos and `polyline` only when comparing the
-continuous path against the measured CSV points.
+Use `cubic_hermite` for normal demos and `polyline` to compare the continuous
+path against the measured CSV points.
 
 ## Rail Device YAML
 
@@ -86,13 +82,10 @@ s = s_ratio * segment.length
 The node then resolves device pose from the existing
 `SegmentGeometry.sample(s)` method.
 
-For `position_sensors`, binary feedback is driven only by `segment`,
-`s_ratio`, and `radius_m`. Fields such as `switch` and `branch` are descriptive
-YAML labels kept for readability and compatibility; changing them does not move
-the detector. Older custom files may also contain `index_zone`, `start_slot`, or
-`aliases`, but those legacy labels do not move the detector either. To move a
-`DZI*` or `DA*` detector, edit its `segment` and `s_ratio`, or use the device
-position tool.
+For `position_sensors`, `segment`, `s_ratio`, and `radius_m` define binary
+feedback. Fields such as `switch` and `branch` are descriptive YAML labels.
+Move a `DZI*` or `DA*` detector by editing its `segment` and `s_ratio`, or use
+the device position tool.
 
 To move a position sensor, stopper, or slot, edit only its `segment` and
 `s_ratio` in the matching rail device YAML. For example, moving `DA1R` slightly
@@ -101,10 +94,8 @@ converging branch segments, keep one public stopper name and edit the individual
 entries under `stoppers[].points`.
 
 Before-stopper detectors are regular `position_sensors` entries linked to a
-matching stopper. They define `stopper`, `before_stopper_m`, and `radius_m`.
-Their runtime point is derived from the stopper point minus `before_stopper_m`,
-so moving the stopper also moves the linked detector. Do not put `segment`,
-`s_ratio`, or `points` on a stopper-linked position sensor.
+matching stopper. Define them with `stopper`, `before_stopper_m`, and
+`radius_m`; their runtime point follows the stopper at the configured distance.
 
 All position sensor entries use `radius_m` as their occupancy radius. Missing
 `radius_m` is a configuration error so sensor behavior stays explicit in YAML.
@@ -112,7 +103,7 @@ The canonical rail sensor topic is
 `/room_315/rails/right/sensors/feedback` or
 `/room_315/rails/left/sensors/feedback`; it contains both before-stopper
 detectors and rail-point sensors.
-The public rail API uses typed `mfja_rail_interfaces` messages only.
+The public rail API uses typed `mfja_rail_interfaces` messages.
 
 ### Moving Single-Point and Multi-Point Devices
 
@@ -153,12 +144,10 @@ when its state is `1`.
 
 ## Gazebo Device Markers
 
-The kinematic shuttle node spawns visual-only Gazebo markers from the loaded
-device YAML when `enable_device_markers` is true. This is enabled by default and
-uses the existing Gazebo create/remove services. Markers are static SDF models
-with a single visual and no collision element, so they do not affect physics.
-Markers are spawned gradually instead of all at once so Gazebo has time to
-accept every create request.
+The kinematic shuttle node spawns collision-free visual Gazebo markers from the
+loaded device YAML when `enable_device_markers` is true. This is enabled by
+default and uses the Gazebo create/remove services. Markers are queued gradually
+so Gazebo can accept every create request.
 
 Colors:
 
@@ -170,9 +159,8 @@ Colors:
 
 Position sensor markers sit slightly above the rail so a visible part remains
 above the shuttle body while a shuttle is crossing the sensor. Stopper-linked
-position sensors are normal position sensors, so they also publish normal
-sensor feedback and can spawn normal sensor markers. The old continuous sensor
-distance field has been fully removed from the sensor interface.
+position sensors publish the same binary occupancy feedback and use the same
+marker style.
 
 Example marker names:
 
@@ -215,8 +203,7 @@ source install/setup.bash
 Start Room 315 only. This starts Gazebo and the Room 315 right/left rail stack
 by default, including YAML devices, visual markers, typed topics, command/state
 separation, and `/room_315/rails/{right,left}/...` namespaces. Initial shuttle
-count defaults to `0`, so no shuttle moves until you add one or request startup
-shuttles:
+count defaults to `0`; add a shuttle or set the startup counts to begin motion:
 
 ```bash
 cd "${MFJA_WS:-$HOME/mfja_ws}"
@@ -272,7 +259,7 @@ ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   enable_room315_kinematic_shuttles:=true
 ```
 
-To run Gazebo without the Room 315 rail stack, pass
+To launch Gazebo with the Room 315 rail stack disabled, pass
 `enable_room315_kinematic_shuttles:=false` to either launch.
 
 Optional advanced mode: start a kinematic shuttle node manually after launching
@@ -311,7 +298,7 @@ ros2 topic pub --once /room_315/rails/right/switches/command mfja_rail_interface
 ros2 topic echo /room_315/rails/right/switches/state mfja_rail_interfaces/msg/SwitchState
 ```
 
-2. Reset after `FALLING` without restarting Gazebo:
+2. Reset after `FALLING` while Gazebo remains running:
 
 ```bash
 ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interfaces/msg/ShuttleCommand "{name: 'room315_right_shuttle_1', command: 'RESET'}"
@@ -464,7 +451,7 @@ main command/state topics from `std_msgs/msg/String` to typed
 `mfja_rail_interfaces` messages. Phase 5 moves the canonical topics under
 `/room_315/rails/{right,left}/...`. Commands ask for a change. State topics
 report the actual state after the configured motion delay has elapsed. Rail
-routing uses the actual switch state, not the raw command payload.
+routing follows the applied switch state.
 
 Right rail APIs:
 
@@ -552,9 +539,7 @@ field contains binary occupancy readings. For normal rail-point sensors,
 `radius_m`. `A*_STOPPER_SENSOR` names are regular position sensors linked to their
 matching stoppers; their point is the stopper point minus
 `before_stopper_m`. `active=0` means the detector is clear.
-When active,
-`shuttle_name` identifies the detected shuttle. Sensors do not publish
-continuous distance values.
+When active, `shuttle_name` identifies the detected shuttle.
 
 Example:
 
@@ -594,7 +579,7 @@ Practical use:
 ## Start Slots
 
 The four allowed start slots are defined in `rail_devices_right.yaml` and
-`rail_devices_left.yaml` with `segment` + `s_ratio`. The legacy right-rail
+`rail_devices_left.yaml` with `segment` + `s_ratio`. The calibrated right-rail
 physical positions correspond approximately to:
 
 ```text
@@ -636,17 +621,14 @@ ros2 topic pub --once /room_315/rails/right/shuttles/command mfja_rail_interface
 
 ## Collision Avoidance
 
-Simple center-distance collision avoidance is enabled by default. The default
-distance is `0.33 m`. This is not full block occupancy yet; it only prevents
-kinematic shuttles from overlapping by stopping a following shuttle when it gets
-too close to another active shuttle.
+Simple center-distance collision avoidance is enabled by default. At the
+default `0.33 m` distance, a following shuttle stops before overlapping another
+active shuttle.
 
 ## Robot-Shuttle Gazebo Collision
 
 The `room315_shuttle` model has a simple box collision volume for robot contact.
-Room 315 rail path and switch collisions use a separate Gazebo
-`collide_bitmask`, so shuttles do not collide with the rail geometry they are
-kinematically following. Robot collision models keep the default Gazebo mask, so
-robot links still collide with the shuttle body.
+A dedicated Gazebo `collide_bitmask` lets each shuttle follow the rail path,
+while robot collision models keep contact with the shuttle body.
 
 Visual-only device markers remain collision-free.

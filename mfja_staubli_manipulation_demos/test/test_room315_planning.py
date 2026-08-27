@@ -9,11 +9,6 @@ import pytest
 
 
 PLANNING = Path(__file__).parents[1] / "hpp" / "room315_planning.py"
-Q_START = np.array(
-    [0.0, 0.872664626, 1.221730476, 0.0, 0.959931089, 0.0, *([0.0] * 7)]
-)
-
-
 def load_planning_module(monkeypatch):
     hpp_exec = ModuleType("hpp_exec")
 
@@ -58,12 +53,6 @@ def load_planning_module(monkeypatch):
     return module
 
 
-def chain(first_arm):
-    first = Q_START.copy()
-    first[:6] = first_arm
-    return [first]
-
-
 class FakePath:
     def __init__(self, length):
         self._length = length
@@ -82,17 +71,6 @@ def segments(module, lengths):
         module.PlannedSegment(name, FakePath(length))
         for name, length in zip(names, lengths)
     ]
-
-
-def test_pickup_branch_gate_separates_observed_ik_solutions(monkeypatch):
-    planning = load_planning_module(monkeypatch)
-    compact = chain([1.631233, 0.903268, 1.893250, 0.0, 0.345074, 1.633040])
-    distant = chain(
-        [-1.387891, -0.905193, -1.887371, 0.0, -0.349028, -1.386131]
-    )
-
-    assert planning.pick_approach_joint_delta(Q_START, compact) < 2.0
-    assert planning.pick_approach_joint_delta(Q_START, distant) > 3.0
 
 
 def test_simple_plan_accepts_compact_observed_path(monkeypatch):

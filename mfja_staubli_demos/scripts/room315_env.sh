@@ -11,5 +11,3 @@ if ! python3 -c 'import hpp_exec, pyhpp, rclpy' >/dev/null 2>&1; then
   echo "Source the MFJA workspace install/setup.bash built on your HPP underlay." >&2
   exit 1
 fi
-
-export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-7}

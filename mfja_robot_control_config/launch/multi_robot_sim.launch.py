@@ -384,6 +384,10 @@ def _launch_setup(context, *args, **kwargs):
     pause_during_switch_update = (
         LaunchConfiguration('pause_during_switch_update').perform(context).lower() == 'true'
     )
+    enable_conveyor_controller = (
+        LaunchConfiguration('enable_conveyor_controller').perform(context).lower()
+        == 'true'
+    )
     robot_config = LaunchConfiguration('robot_config').perform(context)
     selected_robots = _parse_selected_robots(
         LaunchConfiguration('robots').perform(context)
@@ -442,15 +446,19 @@ def _launch_setup(context, *args, **kwargs):
                 'on_exit_shutdown': 'true',
             }.items(),
         ),
-        Node(
-            package=CONTROL_CONFIG_PACKAGE,
-            executable='conveyor_loop_mode_controller.py',
-            name='conveyor_loop_mode_controller',
-            output='screen',
-            arguments=conveyor_controller_arguments,
-            parameters=[{'use_sim_time': use_sim_time}],
-        ),
     ]
+
+    if enable_conveyor_controller:
+        actions.append(
+            Node(
+                package=CONTROL_CONFIG_PACKAGE,
+                executable='conveyor_loop_mode_controller.py',
+                name='conveyor_loop_mode_controller',
+                output='screen',
+                arguments=conveyor_controller_arguments,
+                parameters=[{'use_sim_time': use_sim_time}],
+            )
+        )
 
     if enable_gui:
         actions.append(
@@ -609,6 +617,12 @@ def generate_launch_description():
             default_value='false',
             choices=['true', 'false'],
             description='Pause Gazebo while applying visual switch pose updates.',
+        ),
+        DeclareLaunchArgument(
+            'enable_conveyor_controller',
+            default_value='true',
+            choices=['true', 'false'],
+            description='Start the conveyor loop and switch controller.',
         ),
         OpaqueFunction(function=_launch_setup),
     ])

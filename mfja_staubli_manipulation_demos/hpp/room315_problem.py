@@ -8,10 +8,8 @@ from pyhpp.manipulation.constraint_graph_factory import ConstraintGraphFactory
 from pyhpp.manipulation.security_margins import SecurityMargins
 
 ROOM315_ROBOT_POSE = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
-DEFAULT_SHUTTLE_SLOT3_POSE = (-15.240, -5.536, 0.839, 0.0, 0.0, 0.0)
-DEFAULT_SHUTTLE_SLOT4_POSE = (-14.770, -5.536, 0.839346, 0.0, 0.0, -0.0014)
 TABLE_DROP_ZONE_POSE = (-14.65, -5.84, 1.003, 0.0, 0.0, 0.0)
-GRAPH_NAME = "room315_staubli_shuttle_box"
+GRAPH_NAME = "room315_staubli_pick_place"
 
 JOINT_NAMES = [f"joint_{i}" for i in range(1, 7)]
 DEFAULT_Q_START = np.array(
@@ -19,7 +17,6 @@ DEFAULT_Q_START = np.array(
 )
 BOX_SIZE = (0.07, 0.05, 0.06)
 BOX_HEIGHT = BOX_SIZE[2]
-SHUTTLE_CONTACT_Z = 0.085
 BOX_ENTITY_NAME = "room315_payload_box"
 WORLD_NAME = "room_315_only"
 BOX_ROOM315_MARGIN = 0.03
@@ -34,12 +31,6 @@ CELL_URDF = "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
 CELL_SRDF = "package://mfja_3rd_floor_description/urdf/room315_cell.srdf"
 BOX_URDF = "package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.urdf"
 BOX_SRDF = "package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.srdf"
-SHUTTLE_URDF = (
-    "package://mfja_staubli_manipulation_demos/hpp/room315_shuttle_deck.urdf"
-)
-SHUTTLE_SRDF = (
-    "package://mfja_staubli_manipulation_demos/hpp/room315_shuttle_deck.srdf"
-)
 TABLE_URDF = (
     "package://mfja_staubli_manipulation_demos/hpp/"
     "room315_staubli_table_drop_zone.urdf"
@@ -68,6 +59,7 @@ RELEASE_TRANSITIONS = [
 GRASP_TRANSITION = PICK_TRANSITIONS[-2]
 RELEASE_TRANSITION = RELEASE_TRANSITIONS[-2]
 
+
 def se3_from_pose(pose):
     x, y, z, roll, pitch, yaw = pose
     return pin.SE3(pin.rpy.rpyToMatrix(roll, pitch, yaw), np.array([x, y, z]))
@@ -90,7 +82,7 @@ def pose_msg_from_se3(placement):
     return pose
 
 
-def build_problem(shuttle_pose, destination_shuttle_pose=None):
+def build_problem():
     robot = Device("room315_staubli_manipulation")
 
     urdf.loadModel(
@@ -105,31 +97,6 @@ def build_problem(shuttle_pose, destination_shuttle_pose=None):
         CELL_SRDF,
         se3_from_pose(ROOM315_ROBOT_POSE).inverse(),
     )
-    urdf.loadModel(
-        robot,
-        0,
-        "shuttle",
-        "anchor",
-        SHUTTLE_URDF,
-        SHUTTLE_SRDF,
-        world_pose_in_robot_frame(shuttle_pose),
-    )
-    environment_contacts = ["shuttle/top_surface", "staubli_table/drop_zone"]
-    security_margin_names = ["staubli", "box", "room315", "shuttle", "staubli_table"]
-
-    if destination_shuttle_pose is not None:
-        urdf.loadModel(
-            robot,
-            0,
-            "drop_shuttle",
-            "anchor",
-            SHUTTLE_URDF,
-            SHUTTLE_SRDF,
-            world_pose_in_robot_frame(destination_shuttle_pose),
-        )
-        environment_contacts.append("drop_shuttle/top_surface")
-        security_margin_names.append("drop_shuttle")
-
     urdf.loadModel(
         robot,
         0,
@@ -177,17 +144,19 @@ def build_problem(shuttle_pose, destination_shuttle_pose=None):
         [[BOX_HANDLE]],
         [[BOX_CONTACT]],
     )
-    factory.environmentContacts(environment_contacts)
+    factory.environmentContacts(["staubli_table/drop_zone"])
     factory.generate()
 
     margins = SecurityMargins(
         problem,
         factory,
-        security_margin_names,
+        ["staubli", "box", "room315", "staubli_table"],
         robot,
     )
     margins.setSecurityMarginBetween("box", "room315", BOX_ROOM315_MARGIN)
-    margins.setSecurityMarginBetween("staubli", "room315", STAUBLI_ROOM315_MARGIN)
+    margins.setSecurityMarginBetween(
+        "staubli", "room315", STAUBLI_ROOM315_MARGIN
+    )
     margins.apply()
 
     graph.initialize()
@@ -214,14 +183,16 @@ def box_configuration_from_world_pose(q_arm, world_pose):
     return np.r_[q_arm, box_pose.translation, pin.Quaternion(box_pose.rotation).coeffs()]
 
 
-def shuttle_box_world_pose(shuttle_pose):
-    x, y, z, roll, pitch, yaw = shuttle_pose
-    return (x, y, z + SHUTTLE_CONTACT_Z + 0.5 * BOX_HEIGHT, roll, pitch, yaw)
-
-
-def table_box_world_pose():
+def table_box_world_pose(x_offset=0.0, y_offset=0.0):
     x, y, z, roll, pitch, yaw = TABLE_DROP_ZONE_POSE
-    return (x, y, z + 0.5 * BOX_HEIGHT, roll, pitch, yaw)
+    return (
+        x + x_offset,
+        y + y_offset,
+        z + 0.5 * BOX_HEIGHT,
+        roll,
+        pitch,
+        yaw,
+    )
 
 
 def project_free_configuration(problem, graph, q, label):

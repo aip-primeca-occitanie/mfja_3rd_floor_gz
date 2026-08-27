@@ -6,9 +6,9 @@ script_path=$(readlink -f "${BASH_SOURCE[0]}")
 script_dir=$(cd -- "$(dirname -- "$script_path")" && pwd -P)
 mfja_root=$(cd -- "$script_dir/../.." && pwd -P)
 devel_root=$(dirname "$mfja_root")
-hpp_source_root=${HPP_SOURCE_ROOT:-$devel_root/nix-hpp/src}
+hpp_source_root=${HPP_SOURCE_ROOT:-$devel_root/hpp_sources}
 hpp_exec_source=${HPP_EXEC_SOURCE:-$hpp_source_root/hpp-exec}
-hpp_workspace=${HPP_WS:-$devel_root/hpp_jazzy_ws}
+hpp_workspace=${HPP_WS:-$devel_root/hpp_ws}
 ros_setup=${ROS_SETUP:-/opt/ros/jazzy/setup.bash}
 
 if [[ "${ROOM315_HOST_BUILD_ENV:-}" != "1" ]]; then
@@ -21,6 +21,7 @@ if [[ "${ROOM315_HOST_BUILD_ENV:-}" != "1" ]]; then
     HPP_SOURCE_ROOT="$hpp_source_root" \
     HPP_WS="$hpp_workspace" \
     ROS_SETUP="$ros_setup" \
+    CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-1}" \
     ROOM315_HOST_BUILD_ENV=1 \
     /bin/bash "$script_path" "$@"
 fi
@@ -87,6 +88,7 @@ source_directories=(
   hpp-manipulation
   hpp-manipulation-urdf
   hpp-python
+  hpp-gepetto-viewer
   hpp-exec
 )
 
@@ -125,7 +127,7 @@ log_base="$hpp_workspace/log"
 mkdir -p "$build_base" "$install_base" "$log_base"
 
 export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-1}
-export MAKEFLAGS=-j1
+export MAKEFLAGS="-j$CMAKE_BUILD_PARALLEL_LEVEL"
 export PYTHONNOUSERSITE=1
 python_executable=$(command -v python3)
 base_paths=("${source_directories[@]/#/$hpp_workspace/src/}")
@@ -170,6 +172,7 @@ build_stage hpp_core
 build_stage hpp_manipulation
 build_stage hpp-manipulation-urdf
 build_stage hpp_python
+build_stage hpp_gepetto_viewer
 build_stage hpp-exec
 
 # shellcheck disable=SC1090
@@ -180,8 +183,11 @@ python3 - "$install_base" "$hpp_exec_source" <<'PY'
 import sys
 from pathlib import Path
 
+import coal
 import hpp_exec
 import pyhpp
+sys.modules.setdefault("hppfcl", coal)
+import pyhpp_viser
 import rclpy
 from pyhpp.manipulation import Device
 
@@ -189,7 +195,7 @@ prefix = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
 if sys.version_info[:2] != (3, 12):
     raise SystemExit(f"unexpected runtime Python: {sys.version}")
-for module in (hpp_exec, pyhpp):
+for module in (hpp_exec, pyhpp, pyhpp_viser):
     path = Path(module.__file__).resolve()
     if not path.is_relative_to(prefix):
         raise SystemExit(f"{module.__name__} is outside {prefix}: {path}")

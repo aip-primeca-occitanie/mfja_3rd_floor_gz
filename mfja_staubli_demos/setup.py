@@ -30,6 +30,7 @@ setup(
         (f"lib/{package_name}", room315_scripts),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="Paul Sardin",
     maintainer_email="paulsardin123@gmail.com",

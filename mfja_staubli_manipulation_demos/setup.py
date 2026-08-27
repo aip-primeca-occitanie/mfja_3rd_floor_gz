@@ -1,19 +1,29 @@
 from glob import glob
-from os.path import isfile
+
 from setuptools import setup
 
 package_name = "mfja_staubli_manipulation_demos"
 room315_executables = [
     "scripts/room315_check_setup.sh",
-    "scripts/room315_demo.sh",
-    "scripts/room315_hpp_manipulation.sh",
-    "scripts/room315_manipulation_demo.sh",
-    "scripts/room315_moving_shuttle_demo.sh",
+    "scripts/room315_pick_place.sh",
 ]
-room315_support_scripts = [
-    "scripts/room315_env.sh",
-    "scripts/room315_manipulation_sequence.py",
-    "scripts/room315_moving_shuttle_sequence.py",
+room315_support_scripts = ["scripts/room315_env.sh"]
+room315_launch_files = [
+    "launch/room_315_staubli_hardware.launch.py",
+    "launch/room_315_staubli_pick_place_sim.launch.py",
+]
+room315_docs = ["docs/room315_pick_place_walkthrough.md"]
+room315_hpp_files = [
+    "hpp/room315_execution.py",
+    "hpp/room315_execution_profiles.py",
+    "hpp/room315_payload_box.srdf",
+    "hpp/room315_payload_box.urdf",
+    "hpp/room315_pick_place.py",
+    "hpp/room315_planning.py",
+    "hpp/room315_problem.py",
+    "hpp/room315_staubli_table_drop_zone.srdf",
+    "hpp/room315_staubli_table_drop_zone.urdf",
+    "hpp/staubli_tx2_60l_manipulation.srdf",
 ]
 
 setup(
@@ -24,9 +34,9 @@ setup(
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
         (f"share/{package_name}", ["package.xml", "README.md"]),
         (f"share/{package_name}/config", glob("config/*.yaml")),
-        (f"share/{package_name}/docs", glob("docs/*.md")),
-        (f"share/{package_name}/launch", glob("launch/*.launch.py")),
-        (f"share/{package_name}/hpp", [path for path in glob("hpp/*") if isfile(path)]),
+        (f"share/{package_name}/docs", room315_docs),
+        (f"share/{package_name}/launch", room315_launch_files),
+        (f"share/{package_name}/hpp", room315_hpp_files),
         (
             f"share/{package_name}/scripts",
             room315_executables + room315_support_scripts,
@@ -42,12 +52,10 @@ setup(
         (f"share/{package_name}/models", glob("models/*.sdf")),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="Paul Sardin",
     maintainer_email="paulsardin123@gmail.com",
-    description=(
-        "HPP manipulation demos for the Room 315 Staubli with the kinematic "
-        "shuttle system."
-    ),
+    description="HPP table pick-and-place for the Room 315 Staubli.",
     license="Apache License 2.0",
 )

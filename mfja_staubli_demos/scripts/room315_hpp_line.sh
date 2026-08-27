@@ -15,5 +15,4 @@ if [[ ! -f "$planner" ]]; then
   exit 1
 fi
 
-export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-7}"
 exec python3 "$planner" "$@"

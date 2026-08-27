@@ -9,8 +9,11 @@ REPOSITORY = Path(__file__).parents[2]
 DESCRIPTION = REPOSITORY / "mfja_3rd_floor_description"
 DEMO = REPOSITORY / "mfja_staubli_manipulation_demos"
 ROBOT_URDF = DESCRIPTION / "urdf" / "staubli_tx2_60l.urdf"
+CELL_URDF = DESCRIPTION / "urdf" / "room315_cell.urdf"
+ROOM315_WORLD = DESCRIPTION / "worlds" / "room_315_only.world"
 ROBOT_SDF = DESCRIPTION / "models" / "staubli_tx2_60l" / "model.sdf"
 DEMO_SDF = DEMO / "models" / "staubli_tx2_60l_gripper" / "model.sdf"
+TABLE_URDF = DEMO / "hpp" / "room315_staubli_table_drop_zone.urdf"
 PROBLEM = DEMO / "hpp" / "room315_problem.py"
 
 
@@ -51,8 +54,23 @@ def urdf_joint_translation(root, name):
     return floats(root.find(f"./joint[@name='{name}']/origin").attrib["xyz"])
 
 
+def urdf_joint_pose(root, name):
+    origin = root.find(f"./joint[@name='{name}']/origin")
+    return floats(origin.attrib["xyz"]) + floats(origin.attrib["rpy"])
+
+
 def sdf_joint_translation(root, name):
     return floats(root.find(f".//joint[@name='{name}']/pose").text)[:3]
+
+
+def sdf_include_pose(root, name):
+    return floats(
+        next(
+            include
+            for include in root.findall(".//include")
+            if include.findtext("name") == name
+        ).findtext("pose")
+    )
 
 
 def add_vectors(*vectors):
@@ -185,4 +203,59 @@ def test_hpp_uses_canonical_robot_and_shared_cell_descriptions():
     )
     assert assigned_literal(PROBLEM, "CELL_URDF") == (
         "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
+    )
+
+
+def test_hpp_room_fixture_visuals_match_collision_meshes_and_world_poses():
+    cell = ElementTree.parse(CELL_URDF).getroot()
+    world = ElementTree.parse(ROOM315_WORLD).getroot()
+    fixtures = {
+        "carter_droit": "room315_carter_droit_1",
+        "carter_gauche": "room315_carter_gauche_1",
+        "cell_static_droit": "room315_cell_static_droit_final_1",
+        "cell_static_gauche": "cell_static_gauche_final_1",
+        "cell_path_left": "room315_cell_path_left_1",
+        "cell_path_right": "room315_cell_path_right_1",
+    }
+
+    for link_name, world_name in fixtures.items():
+        link = cell.find(f"./link[@name='{link_name}']")
+        visual = link.find("visual/geometry/mesh").attrib["filename"]
+        collision = link.find("collision/geometry/mesh").attrib["filename"]
+        assert visual == collision
+        assert urdf_joint_pose(cell, f"{link_name}_joint") == pytest.approx(
+            sdf_include_pose(world, world_name)
+        )
+
+    shell = cell.find("./link[@name='room_shell']/visual/geometry/mesh")
+    assert shell.attrib["filename"].endswith("/room_315/meshes/315_room.stl")
+    assert urdf_joint_pose(cell, "room_shell_joint") == pytest.approx(
+        sdf_include_pose(world, "room_315_1")
+    )
+
+
+def test_hpp_table_visual_and_collision_match_the_room_table_pose():
+    table = ElementTree.parse(TABLE_URDF).getroot()
+    world = ElementTree.parse(ROOM315_WORLD).getroot()
+    link = table.find("./link[@name='drop_zone_link']")
+    table_visual = next(
+        visual
+        for visual in link.findall("visual")
+        if visual.find("geometry/mesh") is not None
+    )
+    collision = link.find("collision")
+
+    assert table_visual.find("geometry/mesh").attrib["filename"] == (
+        collision.find("geometry/mesh").attrib["filename"]
+    )
+    assert table_visual.find("origin").attrib == collision.find("origin").attrib
+
+    drop_zone_pose = assigned_literal(PROBLEM, "TABLE_DROP_ZONE_POSE")
+    mesh_pose = add_vectors(
+        drop_zone_pose[:3], floats(collision.find("origin").attrib["xyz"])
+    )
+    world_pose = sdf_include_pose(world, "room315_staubli_table_1")
+    assert mesh_pose == pytest.approx(world_pose[:3])
+    assert floats(collision.find("origin").attrib["rpy"]) == pytest.approx(
+        world_pose[3:]
     )

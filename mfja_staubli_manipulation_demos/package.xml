@@ -2,7 +2,7 @@
 <package format="3">
   <name>mfja_staubli_manipulation_demos</name>
   <version>0.1.0</version>
-  <description>HPP manipulation demos for the Room 315 Staubli with the kinematic shuttle system.</description>
+  <description>HPP table pick-and-place for the Room 315 Staubli.</description>
   <maintainer email="paulsardin123@gmail.com">Paul Sardin</maintainer>
   <license>Apache License 2.0</license>
   <author email="paulsardin123@gmail.com">Paul Sardin</author>
@@ -16,18 +16,21 @@
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>mfja_3rd_floor_bringup</exec_depend>
   <exec_depend>mfja_3rd_floor_description</exec_depend>
-  <exec_depend>mfja_rail_interfaces</exec_depend>
   <exec_depend>mfja_robot_control_config</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>ros_gz_interfaces</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>staubli_msgs</exec_depend>
+  <exec_depend>staubli_tx2_60l_description</exec_depend>
+  <exec_depend>staubli_val3_driver</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>xacro</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
-
   <export>
     <build_type>ament_python</build_type>
   </export>

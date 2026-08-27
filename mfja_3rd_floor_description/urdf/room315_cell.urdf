@@ -2,9 +2,39 @@
 <!-- Room 315 fixtures at their world poses. Load this model with the inverse
      Staubli world pose to express the cell in the robot base frame. -->
 <robot name="room315_cell">
+  <material name="room315_shell">
+    <color rgba="0.78 0.80 0.83 0.25"/>
+  </material>
+  <material name="room315_glass">
+    <color rgba="0.72 0.76 0.80 0.65"/>
+  </material>
+  <material name="room315_fixture">
+    <color rgba="0.72 0.74 0.78 1"/>
+  </material>
+
   <link name="base"/>
 
+  <link name="room_shell">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/room_315/meshes/315_room.stl"/>
+      </geometry>
+      <material name="room315_shell"/>
+    </visual>
+  </link>
+  <joint name="room_shell_joint" type="fixed">
+    <parent link="base"/>
+    <child link="room_shell"/>
+    <origin xyz="0 0 0" rpy="0 0 -1.57"/>
+  </joint>
+
   <link name="carter_droit">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/carter_droit/meshes/carter_droit.stl"/>
+      </geometry>
+      <material name="room315_glass"/>
+    </visual>
     <collision>
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/carter_droit/meshes/carter_droit.stl"/>
@@ -18,6 +48,12 @@
   </joint>
 
   <link name="carter_gauche">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/carter_gauche/meshes/carter_gauche.stl"/>
+      </geometry>
+      <material name="room315_glass"/>
+    </visual>
     <collision>
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/carter_gauche/meshes/carter_gauche.stl"/>
@@ -31,6 +67,12 @@
   </joint>
 
   <link name="cell_static_droit">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/cell_static_droit_final/meshes/cell_static_droit_final.STL"/>
+      </geometry>
+      <material name="room315_fixture"/>
+    </visual>
     <collision>
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/cell_static_droit_final/meshes/cell_static_droit_final.STL"/>
@@ -40,10 +82,16 @@
   <joint name="cell_static_droit_joint" type="fixed">
     <parent link="base"/>
     <child link="cell_static_droit"/>
-    <origin xyz="-15.9170 -5.81 0" rpy="0 0 0"/>
+    <origin xyz="-15.9170 -5.81 0.317" rpy="0 0 0"/>
   </joint>
 
   <link name="cell_static_gauche">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/cell_static_gauche_final/meshes/cell_static_gauche_final.STL"/>
+      </geometry>
+      <material name="room315_fixture"/>
+    </visual>
     <collision>
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/cell_static_gauche_final/meshes/cell_static_gauche_final.STL"/>
@@ -53,10 +101,16 @@
   <joint name="cell_static_gauche_joint" type="fixed">
     <parent link="base"/>
     <child link="cell_static_gauche"/>
-    <origin xyz="-9.65 -3.6 0" rpy="0 0 3.14"/>
+    <origin xyz="-9.65 -3.6 0.317" rpy="0 0 3.14"/>
   </joint>
 
   <link name="cell_path_left">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/cell_path_left/meshes/CELL_PATH_LEFT.STL"/>
+      </geometry>
+      <material name="room315_fixture"/>
+    </visual>
     <collision>
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/cell_path_left/meshes/CELL_PATH_LEFT.STL"/>
@@ -66,10 +120,16 @@
   <joint name="cell_path_left_joint" type="fixed">
     <parent link="base"/>
     <child link="cell_path_left"/>
-    <origin xyz="-11.865 -5.56 0.733" rpy="0 0 0"/>
+    <origin xyz="-11.865 -5.56 1.05" rpy="0 0 0"/>
   </joint>
 
   <link name="cell_path_right">
+    <visual>
+      <geometry>
+        <mesh filename="package://mfja_3rd_floor_description/models/cell_path_right/meshes/CELL_PATH_RIGHT.STL"/>
+      </geometry>
+      <material name="room315_fixture"/>
+    </visual>
     <collision>
       <geometry>
         <mesh filename="package://mfja_3rd_floor_description/models/cell_path_right/meshes/CELL_PATH_RIGHT.STL"/>
@@ -79,6 +139,6 @@
   <joint name="cell_path_right_joint" type="fixed">
     <parent link="base"/>
     <child link="cell_path_right"/>
-    <origin xyz="-13.705 -3.843 0.733" rpy="0 0 3.14"/>
+    <origin xyz="-13.705 -3.843 1.05" rpy="0 0 3.14"/>
   </joint>
 </robot>

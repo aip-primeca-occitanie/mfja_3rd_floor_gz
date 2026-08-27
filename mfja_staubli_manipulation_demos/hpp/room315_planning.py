@@ -16,7 +16,6 @@ from room315_problem import (
     normalize_box_quaternion,
 )
 
-MAX_PICK_APPROACH_JOINT_DELTA = 2.0
 MAX_FIRST_APPROACH_PATH_LENGTH = 3.0
 MAX_MANIPULATION_PATH_LENGTH = 8.0
 
@@ -65,10 +64,6 @@ def score_pick_chain(q_free, chain, preferred=None):
     return motion + 0.5 * posture + 0.5 * wrist_wrap
 
 
-def pick_approach_joint_delta(q_free, chain):
-    return float(np.max(np.abs(chain[0][:6] - q_free[:6])))
-
-
 def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferred=None):
     shooter = problem.configurationShooter()
     rank = box_rank(robot)
@@ -103,37 +98,23 @@ def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferr
             continue
 
         score = score_pick_chain(q_free, chain, preferred)
-        approach_delta = pick_approach_joint_delta(q_free, chain)
         if any(
             np.max(np.abs(np.asarray(chain) - np.asarray(previous))) < 1e-5
-            for _, _, _, previous in candidates
+            for _, _, previous in candidates
         ):
             continue
-        candidates.append((score, attempt + 1, approach_delta, chain))
+        candidates.append((score, attempt + 1, chain))
 
     if candidates:
         candidates.sort(key=lambda candidate: candidate[0])
-        simple_candidates = [
-            candidate
-            for candidate in candidates
-            if candidate[2] <= MAX_PICK_APPROACH_JOINT_DELTA
-        ]
-        if not simple_candidates:
-            closest_delta = min(candidate[2] for candidate in candidates)
-            raise RuntimeError(
-                f"{label} only generated distant IK branches "
-                f"(closest first-pick joint delta {closest_delta:.3f} rad; "
-                f"limit {MAX_PICK_APPROACH_JOINT_DELTA:.3f} rad)"
-            )
-
-        best_score, best_attempt, _, _ = simple_candidates[0]
+        best_score, best_attempt, _ = candidates[0]
         print(
-            f"{label}: generated {len(simple_candidates)} simple pick chain(s) from "
+            f"{label}: generated {len(candidates)} valid pick chain(s) from "
             f"{attempts} attempt(s) (best attempt {best_attempt}, "
             f"score {best_score:.3f})",
             flush=True,
         )
-        return [chain for _, _, _, chain in simple_candidates]
+        return [chain for _, _, chain in candidates]
 
     raise RuntimeError(f"failed to generate {label} pick chain after {attempts} attempts")
 
@@ -141,7 +122,7 @@ def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferr
 def plan_transition(robot, planner, graph, transition_name, q_start, q_goal):
     transition = graph.getTransition(transition_name)
     validate_transition_config(transition, q_goal, transition_name)
-    planner.setEdge(transition)
+    planner.setTransition(transition)
     success, path, report = planner.directPath(q_start, q_goal, True)
     if success:
         return PlannedSegment(transition_name, path)
@@ -270,18 +251,6 @@ def plan_manipulation(
     raise RuntimeError(
         f"failed to plan {attempted_pairs} target pair(s): {last_error}"
     ) from last_error
-
-
-def direction_endpoints(direction, q_shuttle, q_table, q_drop_shuttle):
-    if direction == "shuttle-to-table":
-        return q_shuttle, q_table, "shuttle", "table"
-    if direction == "table-to-shuttle":
-        return q_table, q_shuttle, "table", "shuttle"
-    if direction == "shuttle-to-shuttle":
-        if q_drop_shuttle is None:
-            raise RuntimeError("shuttle-to-shuttle requires --destination-shuttle-pose")
-        return q_shuttle, q_drop_shuttle, "pickup-shuttle", "drop-shuttle"
-    raise ValueError(f"unsupported manipulation direction: {direction}")
 
 
 def sample_path(path, samples):
