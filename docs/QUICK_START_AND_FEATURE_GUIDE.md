@@ -42,14 +42,14 @@ If you only edit README files, no rebuild is required. If you edit launch files,
 Python scripts, package metadata, interfaces, models, worlds, URDF, SDF, or
 config files, rebuild and source again.
 
-## TIAGo YAML Configuration and Current Single-Mobile Limit
+## TIAGo YAML Configuration and Per-Instance Frames
 
 `mfja_robot_control_config/config/robots.yaml` and
 `mfja_robot_control_config/config/robots_room_315_only.yaml` are the robot spawn
 lists. TIAGo variants may be stored as separate entries, and every entry must
-have a unique `name`. Launch at most one mobile entry on a ROS graph: the
-current mobile URDF and DiffDrive frames are unprefixed, so two TIAGos publish
-duplicate `odom`, `base_footprint`, and related TF frame IDs.
+have a unique `name`. The launch prefixes both robot-state and DiffDrive frame
+IDs with that name, so multiple TIAGo variants can share one ROS graph without
+publishing duplicate `odom`, `base_link`, or `base_footprint` frames.
 
 Supported TIAGo variants:
 
@@ -80,10 +80,10 @@ robots:
 ```
 
 You can also keep `model: tiago` and switch the variant with `arm: true` or
-`arm: false`. Enable or explicitly select only one mobile entry. In the
-checked-in full-floor YAML, both mobile variants are enabled; therefore use an
-exact selector such as `robots:=tiago1` or `robots:=tiago_base1` instead of an
-empty selector, `robots:=all`, or the ambiguous `robots:=tiago`.
+`arm: false`. In the checked-in full-floor YAML, both mobile variants are
+enabled; an empty selector or `robots:=all` launches both safely. The generic
+`robots:=tiago` selector is still ambiguous, so use `robots:=tiago1` or
+`robots:=tiago_base1` when selecting only one variant.
 
 ## Step-by-Step Feature Guide
 

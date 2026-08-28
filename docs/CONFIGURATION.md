@@ -133,9 +133,9 @@ Rules:
   launch. Update the hard-coded instance/topic profiles in
   `robot_joint_command.py` and `robot_gripper_command.py` if the helpers must
   support the new name.
-- Launch at most one TIAGo/mobile instance on one ROS graph. Mobile URDF and
-  DiffDrive frames are currently unprefixed, so multiple instances publish
-  duplicate `odom`/`base_footprint` and related TF frame IDs.
+- Mobile robot-state and DiffDrive frames are prefixed with the unique instance
+  name, so multiple TIAGo variants can share one ROS graph. Keep every robot
+  name unique and use exact selectors when a short alias is ambiguous.
 
 After editing, rebuild `mfja_robot_control_config`, source the overlay, and
 relaunch. Verify with:

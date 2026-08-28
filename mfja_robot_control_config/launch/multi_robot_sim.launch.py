@@ -334,6 +334,10 @@ def _materialize_mobile_model_sdf(model_sdf_path, robot_name):
         '<topic>cmd_vel</topic>': f'<topic>/model/{robot_name}/cmd_vel</topic>',
         '<odom_topic>odom</odom_topic>': f'<odom_topic>/model/{robot_name}/odom</odom_topic>',
         '<tf_topic>tf</tf_topic>': f'<tf_topic>/model/{robot_name}/tf</tf_topic>',
+        '<frame_id>odom</frame_id>': f'<frame_id>{robot_name}/odom</frame_id>',
+        '<child_frame_id>base_footprint</child_frame_id>': (
+            f'<child_frame_id>{robot_name}/base_link</child_frame_id>'
+        ),
     }
 
     for source, target in replacements.items():
@@ -555,7 +559,7 @@ def _launch_setup(context, *args, **kwargs):
         yaw = float(robot.get('yaw', 0.0))
         model_sdf, urdf_path = _resolve_robot_assets(description_pkg_path, model_name)
         spawn_sdf = model_sdf
-        frame_prefix = '' if model_name in MOBILE_MODELS else f'{robot_name}/'
+        frame_prefix = f'{robot_name}/'
 
         if model_name in INDUSTRIAL_MODELS:
             gripper_assets = _materialize_gripper_assets(

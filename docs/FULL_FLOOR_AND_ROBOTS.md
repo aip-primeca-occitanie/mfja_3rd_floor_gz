@@ -110,12 +110,10 @@ The same launch files can run the world with or without configured robots. For
 shuttle-only testing, use `robots:=none`. For robot experiments, explicitly
 select only the robots you need.
 
-Do **not** use `robots:=all` with the current full-floor configuration.
-`robots:=all` selects every YAML entry regardless of its `enabled` value, and
-the full-floor file currently contains both `tiago1` and `tiago_base1`. Those
-mobile variants publish duplicate, unprefixed TF frame names and therefore must
-not run in the same ROS graph. Select exactly one TIAGo variant until the mobile
-TF frames are instance-prefixed.
+`robots:=all` selects every YAML entry regardless of its `enabled` value. The
+full-floor file contains both `tiago1` and `tiago_base1`; their transport topics
+and TF frames are prefixed with their instance names, so both can run in the
+same ROS graph. Use an exact name when only one TIAGo variant is needed.
 
 Full floor with all four industrial robots and the arm-equipped TIAGo:
 
@@ -148,9 +146,8 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui:=true
 ```
 
-The room-only YAML currently has only one TIAGo entry, so its `robots:=all`
-selection does not create the two-mobile-robot TF conflict. Recheck that file
-before using `all` after adding another mobile robot.
+The room-only YAML currently has one TIAGo entry. Additional mobile entries are
+safe when each has a unique name, pose, and command source.
 
 Robot selection supports exact names, short aliases, numeric YAML order,
 `all`, and `none`. Prefer exact names, especially in multi-robot commands;

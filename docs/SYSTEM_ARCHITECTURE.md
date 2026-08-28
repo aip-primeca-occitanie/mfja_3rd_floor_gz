@@ -282,10 +282,10 @@ Industrial robots additionally expose
 `/<name>/cmd_vel` and `/<name>/odom`; their Gazebo DiffDrive bridge also
 publishes transforms on `/<name>/tf`.
 
-Industrial `robot_state_publisher` frame IDs are instance-prefixed. Mobile
-frame IDs are currently unprefixed even though their topics are namespaced, so
-two TIAGo variants still collide on frame IDs such as `odom` and
-`base_footprint`. Launch at most one mobile instance in a ROS graph.
+All `robot_state_publisher` frame IDs are instance-prefixed. For each mobile
+instance, Gazebo DiffDrive publishes `<name>/odom -> <name>/base_link`, and the
+prefixed robot-state tree continues from `<name>/base_link`. Multiple TIAGo
+variants can therefore share one ROS graph without TF frame collisions.
 
 The active robot list is configuration, not world composition: robot entities
 are spawned after Gazebo starts. Static room, rail, furniture, camera, and

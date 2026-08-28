@@ -239,6 +239,10 @@ if(BUILD_TESTING)
     test/test_robot_joint_command.py
   )
   ament_add_pytest_test(
+    test_mobile_robot_frame_isolation
+    test/test_mobile_robot_frame_isolation.py
+  )
+  ament_add_pytest_test(
     test_room315_device_marker_lifecycle
     test/test_room315_device_marker_lifecycle.py
   )
