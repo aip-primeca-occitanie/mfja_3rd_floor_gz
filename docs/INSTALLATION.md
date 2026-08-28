@@ -28,7 +28,9 @@ normal Git clone.
 - CMake 3.28 or newer for the description, control, and bringup packages.
 - Enough disk space for the repository, colcon outputs, and optional datasets.
   Large research datasets/checkpoints can require many additional gigabytes.
-- A working OpenGL display for the Gazebo GUI, or use `gui:=false`.
+- A working OpenGL display for the Gazebo GUI. `gui:=false` suppresses the GUI
+  client, but RGB-D camera sensors can still require a working EGL/headless
+  rendering backend on a display-less host.
 
 A CUDA GPU is optional. Basic simulation, rail control, CPU tests, and many data
 tools do not require one.
@@ -93,15 +95,48 @@ generation.
 ## 2. Create a Workspace and Clone the Repository
 
 The repository root is not a ROS package. Clone it under a colcon workspace
-`src/` directory:
+`src/` directory. The normal clone follows GitHub's default branch. During the
+current integration window, the marker check below switches to
+`INTERNSHIP-ALI-2026` only when the default branch does not yet
+contain the launch stack documented here. After the merge, the same commands
+remain on `main`.
+
+Run this block only for a new checkout. If
+`$HOME/mfja_ws/src/mfja_3rd_floor_gz` already exists, skip it and use
+[Updating an Existing Checkout](#updating-an-existing-checkout).
+
+```bash
+(
+  set -euo pipefail
+
+  MFJA_WS="$HOME/mfja_ws"
+  MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
+  mkdir -p "$MFJA_WS/src"
+  git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+    "$MFJA_REPO"
+
+  if [ ! -f "$MFJA_REPO/docs/INSTALLATION.md" ] ||
+     [ ! -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py" ]; then
+    git -C "$MFJA_REPO" switch --track \
+      origin/INTERNSHIP-ALI-2026
+  fi
+
+  test -f "$MFJA_REPO/docs/INSTALLATION.md"
+  test -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py"
+  git -C "$MFJA_REPO" status --short --branch
+)
+```
+
+The final command prints the integration branch before the merge and `main`
+after it. The two file checks prevent continuing with a revision that does not
+match this guide.
+
+Define the workspace paths in the current terminal for the remaining steps:
 
 ```bash
 export MFJA_WS="$HOME/mfja_ws"
 export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
-
-mkdir -p "$MFJA_WS/src"
-git clone https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
-  "$MFJA_REPO"
 ```
 
 If you already cloned it elsewhere, either move it under `src/` or set
@@ -223,7 +258,9 @@ This file is a disposable pose cache. Add
 `room315_vla_obstacle_pose_file`, ensure that it names only the intended cache
 file because the default startup action unlinks the configured path.
 
-Start a lightweight headless Room 315 runtime:
+Start a lightweight server-only Room 315 runtime. This disables the Gazebo GUI
+client; a display-less machine may still need a working EGL/headless rendering
+backend because the world includes camera sensors:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
@@ -376,8 +413,31 @@ not grant a license beyond the terms attached to that release.
 
 ## Updating an Existing Checkout
 
-First preserve or commit your own work. Then update using the Git workflow
-appropriate for your branch. After source changes:
+First preserve or commit your own work and confirm that `git status --short` is
+clean. To update the currently checked-out branch without creating a merge
+commit:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
+git -C "$MFJA_REPO" fetch origin
+git -C "$MFJA_REPO" pull --ff-only
+```
+
+After the integration work reaches `main`, a checkout created by the temporary
+fallback in Step 2 can move to the default branch with:
+
+```bash
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+
+git -C "$MFJA_REPO" fetch origin
+git -C "$MFJA_REPO" switch main
+git -C "$MFJA_REPO" pull --ff-only origin main
+```
+
+Then reinstall dependency changes and rebuild:
 
 ```bash
 cd "$MFJA_WS"
@@ -415,7 +475,8 @@ or copy files directly into `install/` to avoid rebuilding.
 - [ ] All four `ros2 pkg prefix` checks succeed after sourcing.
 - [ ] `ShuttleCommand` can be shown through `ros2 interface show`.
 - [ ] The Room 315 launch arguments can be displayed.
-- [ ] The headless smoke publishes `/clock`, world services, and shuttle state.
+- [ ] The server-only smoke publishes `/clock`, world services, and shuttle
+      state.
 - [ ] Optional model/data artifacts are stored outside Git/workspace `src`.
 
 For any failed item, use [Troubleshooting](TROUBLESHOOTING.md).

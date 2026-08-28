@@ -288,7 +288,7 @@ cameras still require server-side rendering.
 
 The normal clone follows GitHub's default branch. During the current integration
 window, the documented runtime may still be on
-`ali/neuro-symbolic-closed-loop`; the marker check below switches to that branch
+`INTERNSHIP-ALI-2026`; the marker check below switches to that branch
 only when the default branch does not contain the current launch stack. After
 the merge, the same block remains on `main` without requiring an edit.
 
@@ -307,7 +307,7 @@ the merge, the same block remains on `main` without requiring an edit.
   if [ ! -f "$MFJA_REPO/docs/INSTALLATION.md" ] ||
      [ ! -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py" ]; then
     git -C "$MFJA_REPO" switch --track \
-      origin/ali/neuro-symbolic-closed-loop
+      origin/INTERNSHIP-ALI-2026
   fi
 
   test -f "$MFJA_REPO/docs/INSTALLATION.md"
@@ -316,7 +316,7 @@ the merge, the same block remains on `main` without requiring an edit.
 )
 ```
 
-The last command prints `ali/neuro-symbolic-closed-loop` before the integration
+The last command prints `INTERNSHIP-ALI-2026` before the integration
 merge and `main` after it. If the repository already exists at
 `$HOME/mfja_ws/src/mfja_3rd_floor_gz`, do not clone over it; use the
 [update procedure](docs/INSTALLATION.md#updating-an-existing-checkout).
@@ -647,7 +647,7 @@ export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
   if [ ! -f "$MFJA_REPO/docs/INSTALLATION.md" ] ||
      [ ! -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py" ]; then
     git -C "$MFJA_REPO" switch --track \
-      origin/ali/neuro-symbolic-closed-loop
+      origin/INTERNSHIP-ALI-2026
   fi
 
   test -f "$MFJA_REPO/flake.nix"
@@ -659,7 +659,7 @@ export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 ```
 
 The block clones the repository when it is missing and reuses a valid existing
-checkout. It selects `ali/neuro-symbolic-closed-loop` only while the documented
+checkout. It selects `INTERNSHIP-ALI-2026` only while the documented
 runtime is not yet available from GitHub's default branch.
 
 Do not run `nix flake update` during normal installation. The committed lock
@@ -1002,11 +1002,11 @@ Robot spawn lists live in:
 - `mfja_robot_control_config/config/robots.yaml` for the complete floor.
 - `mfja_robot_control_config/config/robots_room_315_only.yaml` for Room 315.
 
-The current full-floor YAML enables both `tiago1` and `tiago_base1`, but mobile
-frames are not instance-prefixed. Launching both produces duplicate TF frame
-IDs such as `odom` and `base_footprint`. For TF-dependent work, select at most
-one mobile robot by exact name; the generic `tiago` selector is ambiguous when
-both entries exist. Avoid `robots:=all` until mobile-frame namespacing is added.
+The current full-floor YAML enables both `tiago1` and `tiago_base1`. Mobile
+topics and TF frame IDs are instance-prefixed, so both variants can run in the
+same ROS graph without sharing `odom`, `base_link`, or `base_footprint` frames.
+The generic `tiago` selector remains ambiguous when both entries exist; use an
+exact name when selecting only one variant.
 
 The `robots` launch argument accepts `none`, `all`, an exact robot name, a
 supported unambiguous alias, a YAML list index, or a comma-separated
