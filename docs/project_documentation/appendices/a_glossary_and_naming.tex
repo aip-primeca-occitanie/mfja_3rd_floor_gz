@@ -1,0 +1,103 @@
+\chapter{Glossary and Naming Conventions}
+\label{app:glossary}
+
+\section{Source Domains}
+
+The glossary associates each term with a readable source domain. The table
+below maps those domains to the primary owning files without repeating long
+paths in every definition.
+
+\scriptsize
+\begin{longtable}{L{0.18\textwidth} L{0.20\textwidth} L{0.53\textwidth}}
+\caption{Glossary source domains and owning files}
+\label{tab:glossary-source-keys}\\
+\toprule
+\tableheader Source domain & Responsibility & Primary source path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Source domain & Responsibility & Primary source path(s) \\
+\midrule
+\endhead
+Build and install & Package build, dependencies, and installed surface & \file{mfja_3rd_floor_bringup/CMakeLists.txt}; \file{mfja_3rd_floor_description/CMakeLists.txt}; \file{mfja_rail_interfaces/CMakeLists.txt}; \file{mfja_robot_control_config/CMakeLists.txt} \\ \rowseparator
+Repository & Source and non-source boundaries & \file{.gitignore}; \file{README.md}; \file{mfja_3rd_floor_bringup/package.xml}; \file{mfja_3rd_floor_description/package.xml}; \file{mfja_rail_interfaces/package.xml}; \file{mfja_robot_control_config/package.xml} \\ \rowseparator
+Simulation assets & Gazebo worlds and models & \file{mfja_3rd_floor_description/worlds/room_315_only.world}; \file{mfja_3rd_floor_description/worlds/mfja_3rd_floor.world}; \file{mfja_3rd_floor_description/models/room315_shuttle/model.sdf} \\ \rowseparator
+Historical visual research & Earlier visual-state generations & \file{mfja_robot_control_config/config/room_315_vla/visual_state_experiment_a_dataset_v3.yaml}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_experiment_a_dataset_v3r1.yaml} \\ \rowseparator
+ROS interfaces & Message and service contracts & \file{mfja_rail_interfaces/CMakeLists.txt}; \file{mfja_rail_interfaces/msg/ShuttleState.msg}; \file{mfja_rail_interfaces/msg/VisualStateObservation.msg} \\ \rowseparator
+Launch composition & Runtime composition and arguments & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
+Rail runtime & Rail state, geometry, and devices & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml} \\ \rowseparator
+Task execution & Grounding, planning, and authorization & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}; \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl} \\ \rowseparator
+Visual runtime & Active learned-state contract & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_vla_train_v4.py}; \file{mfja_robot_control_config/scripts/room_315_promote_runtime_v4.py}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml} \\ \rowseparator
+VLA supervision & Primitive supervision and recovery & \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}; \file{mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml}; \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\scriptsize
+\begin{longtable}{L{0.18\textwidth} L{0.54\textwidth} L{0.19\textwidth}}
+\caption{Project glossary and source domains}
+\label{tab:project-glossary}\\
+\toprule
+\tableheader Term & Meaning in this project & Source domain \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Term & Meaning in this project & Source domain \\
+\midrule
+\endhead
+Ament & ROS 2 build/test conventions used by all four packages; packages use \code{ament_cmake} & Build and install \\ \rowseparator
+Arc length $s$ & Metres travelled from the beginning of the current directed rail segment & Rail runtime; ROS interfaces \\ \rowseparator
+Block/segment & One of 14 public rail classes: A12E/I, A14, A1E/I, A23, A2E/I, A34E/I, A3E/I, A4E/I & Rail runtime \\ \rowseparator
+Candidate & Immutable proposed learned-runtime bundle before manual promotion & Visual runtime \\ \rowseparator
+Checkpoint hash & SHA-256 identity of the exact learned model admitted by the visual/task contract & Visual runtime; Task execution \\ \rowseparator
+Clean clone & Git-tracked repository content without local ignored build output, caches, datasets, or external models & Repository \\ \rowseparator
+Colcon overlay & Workspace \file{install/setup.bash} layered after the base ROS distribution & Build and install \\ \rowseparator
+Copied install & Normal CMake/colcon installation containing copied scripts/assets; exposes source-relative path bugs hidden by symlinks & Build and install \\ \rowseparator
+DA sensor & Configured rail approach/branch detector near a switch & Rail runtime \\ \rowseparator
+DZI sensor & Identity-bearing slot detector used for exact slot occupancy/arrival & Rail runtime; Task execution \\ \rowseparator
+Effect verification & Requiring fresh post-command observation/controller evidence before declaring a primitive complete & Task execution; VLA supervision \\ \rowseparator
+FALLING & Latched logical rail fault caused by the absence of a valid directed successor/guard & Rail runtime \\ \rowseparator
+Gazebo authority & World/entity/plugin/service state owned by Gazebo, distinct from logical Python state & Simulation assets; Rail runtime \\ \rowseparator
+GGUF & External local-language-model file format used by the optional English semantic backend & Task execution \\ \rowseparator
+GZ partition & Gazebo transport isolation name; does not isolate fixed ROS topic/service names & Launch composition \\ \rowseparator
+Headway & Software minimum center-distance rule between managed shuttles & Rail runtime \\ \rowseparator
+Known-empty heartbeat & Blank-name ShuttleState proving a live side currently manages no shuttle & Rail runtime; ROS interfaces \\ \rowseparator
+Manifest & Versioned metadata tying code/config/data/model/output identities and hashes into one artifact & Visual runtime; Task execution \\ \rowseparator
+PlanSys2 & ROS 2 planning framework providing the lifecycle planner and \rosname{/planner/get_plan} & Task execution; Launch composition \\ \rowseparator
+Presence & Deterministic present/absent/unknown identity state derived only from rail heartbeats/freshness for learned-runtime gating & Visual runtime; Task execution \\ \rowseparator
+Primitive & Bounded deterministic supervisor action such as switches, stoppers, shuttle ON, stop, or done & VLA supervision \\ \rowseparator
+Promotion & Manual decision that admits one exact immutable candidate to a stated inference deployment mode & Visual runtime \\ \rowseparator
+Public/internal segment name & Left rail's published vocabulary versus rotated raw-geometry vocabulary; right names currently coincide & Rail runtime \\ \rowseparator
+QoS & ROS 2 delivery/history/durability policy; compatibility must be checked at both endpoints & ROS interfaces; Rail runtime \\ \rowseparator
+Rail authority & Side-specific node state based on topology, CSV, devices, commands, and simulation time & Rail runtime \\ \rowseparator
+Runtime authorization & Separate hash-bound permission for a promoted bundle to participate in Gazebo closed-loop task actuation & Task execution; Visual runtime \\ \rowseparator
+$s_{ratio}$ & Dimensionless normalized segment coordinate $s/L$ in $[0,1]$ & Rail runtime; ROS interfaces \\ \rowseparator
+Sealed final test & Frozen evaluation input whose results must not be used for further tuning and then rerun as if unseen & Visual runtime \\ \rowseparator
+Shadow mode & Learned inference publishes under a separate topic root without active fusion/planning mutation & Visual runtime \\ \rowseparator
+Source of truth & The owning machine-readable definition used at runtime/build, not an installed copy or historical explanation & Repository; Build and install \\ \rowseparator
+Stopper & Delayed binary device; 0 open/pass and 1 closed/stop & Rail runtime; ROS interfaces \\ \rowseparator
+Supervisor & Deterministic VLA primitive validator/recovery node; only optional-stack component that publishes typed rail commands & VLA supervision \\ \rowseparator
+Symlink install & Development colcon mode linking many installed programs back to source; convenient but can hide portability/mode issues & Build and install \\ \rowseparator
+TaskGoal & Confirmed constrained JSON goal grounded into a fresh symbolic problem & Task execution \\ \rowseparator
+Typed feedback & ROS message from the \code{mfja_rail_interfaces} package, contrasted with simulation-only JSON diagnostics/control & ROS interfaces \\ \rowseparator
+V3/V3R1 & Historical visual/dataset research generations retained for provenance/offline reproduction & Historical visual research \\ \rowseparator
+V4 & Sole learned visual generation admitted to the current active planning path & Visual runtime \\ \rowseparator
+VLA & Project term for the optional vision/language/action research stack; learned components do not directly actuate & VLA supervision; Visual runtime; Task execution \\ \rowseparator
+Visual facts & Learned segment/position/bounding-box/load outputs after validation, distinct from controller geometry & Visual runtime; ROS interfaces \\ \rowseparator
+World internal name & SDF \code{<world name>} used to construct Gazebo service paths; must match launch expectation & Simulation assets; Launch composition \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Case, Side, and Identity Conventions}
+
+ROS endpoints are lowercase absolute names rooted at \rosname{/room_315}.
+Rail side is lowercase \code{left}/\code{right}. Public switches use uppercase
+\code{A1--A4}; segments use uppercase A/E/I names. Visual identities are short
+\code{L1--L4,R1--R4}; Gazebo/rail entity names are
+\code{room315_left_shuttle_1--4} and
+\code{room315_right_shuttle_1--4}. Keep identity and entity distinct in APIs.
+
+Naming is shared by the ROS interfaces, rail runtime, visual runtime, and launch
+composition domains in Table~\ref{tab:glossary-source-keys}. Review those
+owning files together when migrating a public name.

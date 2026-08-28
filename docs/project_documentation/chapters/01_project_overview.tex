@@ -1,0 +1,180 @@
+\chapter{Project Overview and Boundaries}
+\label{ch:orientation}
+\chapteroverview{Establish the project's purpose, supported surfaces, explicit
+boundaries, and evidence hierarchy before any implementation detail is
+introduced.}{Onboarding to the repository, deciding whether a requested use is
+supported, or locating the authoritative source for a high-level claim.}
+
+\section{Chapter Source Map}
+
+The table maps each topic in this chapter to its primary repository authority.
+Detailed inventories remain in the subsystem chapters and appendices.
+
+\small
+\begin{longtable}{L{0.23\textwidth} L{0.69\textwidth}}
+\caption{Authoritative sources for the project overview and boundaries}
+\label{tab:orientation-source-map}\\
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endhead
+Simulation profiles and composition &
+  \file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py};
+  \file{mfja_3rd_floor_bringup/launch/full_floor.launch.py};
+  \file{mfja_3rd_floor_bringup/launch/single_industrial_robot.launch.py};
+  \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
+  \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Rail and robot simulation boundaries &
+  \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py};
+  \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py};
+  \file{mfja_3rd_floor_description/src/SmoothJointTrajectoryController.cc};
+  \file{mfja_3rd_floor_description/src/SymmetricGripperController.cc} \\ \rowseparator
+Visual, language, and execution boundaries &
+  \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py};
+  \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py};
+  \file{mfja_robot_control_config/scripts/room_315_task_goal_builder.py};
+  \file{mfja_robot_control_config/scripts/room_315_task_execution.py};
+  \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+Supported and optional dependency surfaces &
+  \file{mfja_rail_interfaces/package.xml};
+  \file{mfja_3rd_floor_description/package.xml};
+  \file{mfja_robot_control_config/package.xml};
+  \file{mfja_3rd_floor_bringup/package.xml};
+  \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml};
+  \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml};
+  \file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml};
+  \file{mfja_robot_control_config/scripts/room_315_vla_to_lerobot.py} \\ \rowseparator
+Onboarding procedure &
+  \file{docs/INSTALLATION.md};
+  \file{docs/QUICK_START_AND_FEATURE_GUIDE.md};
+  \file{docs/TROUBLESHOOTING.md};
+  \file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py} \\ \rowseparator
+Repository structure baseline &
+  \file{mfja_rail_interfaces/CMakeLists.txt};
+  \file{mfja_3rd_floor_description/CMakeLists.txt};
+  \file{mfja_robot_control_config/CMakeLists.txt};
+  \file{mfja_3rd_floor_bringup/CMakeLists.txt} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{System Purpose and Capabilities}
+
+The maintained project provides a focused Room 315 simulation, the complete
+MFJA third-floor simulation, and an isolated industrial-robot simulation for
+fast arm and gripper work. Chapter~\ref{ch:launch} identifies the stable launch
+entry point and defaults for each profile.
+
+Within Room 315, the software can spawn configured robots, command robot joints
+and mobile bases through namespaced bridges, move multiple shuttles on
+calibrated directed rail geometry, command switches and stoppers, publish
+binary occupancy sensors, attach simulation-only payload visuals, and expose
+the maintained control surface through typed ROS 2 interfaces.
+
+An optional vision-language-action (VLA) research stack adds paired-camera
+visual-state estimation, constrained English task understanding, PDDL/PlanSys2
+planning, one-step closed-loop execution, deterministic supervision, effect
+verification, dataset generation, model training, artifact promotion, and
+fault/acceptance campaigns. These are separate capabilities: enabling the VLA
+camera/supervisor branch does not implicitly start learned inference or task
+execution.
+
+\section{Supported and Optional Surfaces}
+
+\begin{longtable}{L{0.24\textwidth} L{0.33\textwidth} L{0.35\textwidth}}
+\caption{Supported runtime surfaces and prerequisites beyond a clean clone}
+\label{tab:supported-runtime-surfaces}\\
+\toprule
+\tableheader Surface & Clean clone/base installation & Extra prerequisite \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Surface & Clean clone/base installation & Extra prerequisite \\
+\midrule
+\endhead
+Worlds and robots & Available & Working OpenGL display only for GUI \\ \rowseparator
+Kinematic rails and typed devices & Available & None beyond ROS/Gazebo dependencies \\ \rowseparator
+Camera and primitive supervisor topics & Available, disabled by default & Enable the VLA launch branch \\ \rowseparator
+Dataset generation tools & Code/config available & Disk space; some workflows need long Gazebo runs \\ \rowseparator
+Learned visual inference & Code available, model absent & Isolated Torch environment and complete promoted V4 bundle \\ \rowseparator
+English semantic model & Deterministic parser remains available & \code{llama-cpp-python} and separately downloaded GGUF checkpoint \\ \rowseparator
+PlanSys2 execution & Code/config available, actuation disabled & PlanSys2 packages plus exact V4 promotion and task authorization artifacts \\ \rowseparator
+LeRobot export & Export adapter available & Separately installed LeRobot stack \\
+\bottomrule
+\end{longtable}
+
+\section{Boundaries and Non-goals}
+
+\begin{longtable}{L{0.22\textwidth} L{0.35\textwidth} L{0.35\textwidth}}
+\caption{Maintained project boundaries and explicitly excluded assurances}
+\label{tab:orientation-boundaries}\\
+\toprule
+\tableheader Boundary & Inside this project & Explicitly outside \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Boundary & Inside this project & Explicitly outside \\
+\midrule
+\endhead
+Simulation & Gazebo worlds, models, kinematic joints, pose services, cameras, and ROS bridges & Validated equivalence to every physical sensor, drive, PLC, and collision envelope \\ \rowseparator
+Rail propulsion & Arc-length motion over calibrated directed CSV geometry & Wheel/rail contact, motor dynamics, traction, and certified block control \\ \rowseparator
+Robot motion & Deterministic visual joint trajectories and symmetric gripper articulation & Force-controlled grasping, payload attachment, and validated collision avoidance \\ \rowseparator
+Perception & Visual shuttle segment/position, bounding box, and loaded-state facts after strict acceptance & Direct learned planning, direct learned actuation, or controller pose used to improve visual localization \\ \rowseparator
+Language & Constrained \code{TaskGoal} drafts, deterministic validation, clarification, and confirmation & Arbitrary English converted directly into robot programs \\ \rowseparator
+Execution & Gazebo-only, checksum-authorized, one-step planning through a deterministic supervisor & Physical-machine authorization or bypass of supervisor/effect checks \\
+\bottomrule
+\end{longtable}
+
+The complete deployment boundary and known-gap register are maintained in
+Chapter~\ref{ch:handover}. Subsystem chapters state only the additional local
+limitations needed to interpret their behavior safely.
+
+\section{Source-of-Truth Order}
+
+When two statements disagree, use this order:
+
+\begin{enumerate}
+  \item \file{mfja_rail_interfaces/msg/*.msg} and
+        \file{mfja_rail_interfaces/srv/*.srv} for wire fields;
+  \item current launch code and \code{ros2 launch ... --show-args} for launch
+        inputs and defaults;
+  \item versioned YAML, JSON, PDDL, CSV, SDF, and URDF for declarative contracts;
+  \item node or plugin implementation for runtime behavior;
+  \item maintained operator and architecture documentation for supported
+        procedures; and
+  \item historical reports, audits, presentations, and evidence for provenance
+        only.
+\end{enumerate}
+
+Never copy a value from a generated \file{install/} tree back into source. A
+symlink install can make source and install appear identical, but interfaces,
+CMake metadata, compiled plugins, and many installed files still require a
+rebuild.
+
+\section{First Twenty Minutes for a New Maintainer}
+
+\begin{procedurebox}[Onboarding checklist]
+\begin{enumerate}
+  \item Confirm the checked-out branch and commit with \code{git status} and
+        \code{git log -1 --oneline}.
+  \item Read the non-negotiable deployment boundary in
+        Chapter~\ref{ch:handover} and the package ownership map in
+        Chapter~\ref{ch:packages}.
+  \item Create or identify the colcon workspace; keep this repository as one
+        directory under \file{src/}.
+  \item Follow the dependency and build procedure in
+        Chapter~\ref{ch:installation}.
+  \item Launch the headless Room 315 smoke profile from
+        Chapter~\ref{ch:operations}.
+  \item Verify \rosname{/clock}, the three world services, and one rail state
+        and sensor topic.
+  \item Run the smallest test that covers the intended first change.
+  \item Before editing, identify the source owner using
+        Chapter~\ref{ch:configuration} and the Repository Source Index in
+        Appendix~\ref{app:catalog}.
+\end{enumerate}
+\end{procedurebox}

@@ -1,0 +1,212 @@
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+  \centering
+  \vspace*{0.8cm}
+  {\sffamily\bfseries\color{mfjablue}\fontsize{28}{33}\selectfont
+    \ManualTitle\par}
+  \vspace{0.35cm}
+  {\sffamily\Large\color{black!72}\ManualSubtitle\par}
+  \vspace{1.2cm}
+  {\color{mfjablue}\rule{0.91\textwidth}{1.2pt}\par}
+  \vspace{1.2cm}
+  {\sffamily\large\color{black!70}
+    A source-traceable reference for architecture, interfaces, runtime data
+    flow, operation, testing, and long-term maintenance.\par}
+
+  \vfill
+  \begin{tcolorbox}[
+    width=0.91\textwidth,
+    colback=mfjalight,
+    colframe=mfjablue,
+    boxrule=0.7pt,
+    arc=1.5mm
+  ]
+    \centering
+    \small
+    \begin{tabularx}{0.96\linewidth}{L{0.29\linewidth}Y}
+      \textbf{Manual revision} & \ManualVersion \\ \rowseparator
+      \textbf{Document date} & \ManualDate \\ \rowseparator
+      \textbf{Repository branch} & \RepositoryBranch \\ \rowseparator
+      \textbf{Documented commit} & \RepositoryCommitShort \\ \rowseparator
+      \textbf{Commit timestamp} & \RepositoryCommitDate \\ \rowseparator
+      \textbf{Supported platform} & \SupportedOS; \SupportedROS; \SupportedGazebo \\
+    \end{tabularx}
+  \end{tcolorbox}
+
+  \vspace{0.45cm}
+  {\small Prepared as the authoritative engineering handover for future
+  developers, operators, and maintainers.\par}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+\chapter*{Document Information}
+\addcontentsline{toc}{chapter}{Document Information}
+
+\begin{keybox}[How this manual is controlled]
+This manual is versioned against repository commit \RepositoryCommitShort. It
+records the architecture and maintenance rules but does not replace the code.
+Exact message fields, launch defaults, and configuration values remain
+authoritative in the repository paths named throughout the manual. Refresh the
+Repository Source Index and revise the affected chapter after a public change.
+\end{keybox}
+
+\begin{longtable}{L{0.25\textwidth} L{0.67\textwidth}}
+\caption{Document control and maintenance rules}\label{tab:document-control}\\
+\toprule
+\tableheader Item & Control rule \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Item & Control rule \\
+\midrule
+\endhead
+Document owner & The maintainers declared in the four ROS package manifests. \\ \rowseparator
+Primary language & English. Historical Arabic/French explanatory artifacts are supplemental and are not runtime sources. \\ \rowseparator
+Scope & The four ROS 2 packages, their public interfaces, launch/configuration surface, simulation assets, control and research software, tests, and operational lifecycle. \\ \rowseparator
+Excluded as source & Colcon output, caches, temporary files, locally recorded datasets, external checkpoints, presentation binaries, and generated evidence. They are classified in this manual but must not be edited as product source. \\ \rowseparator
+Update trigger & Any changed package dependency, executable, launch argument, message/service, topic, parameter, configuration schema, safety gate, supported command, or required operational step. \\ \rowseparator
+Required release checks & Refresh the Repository Source Index, compile the PDF, check references/overflow, inspect the diff, and run the change-appropriate project tests. \\
+\bottomrule
+\end{longtable}
+
+\section*{Maintainer Contacts in Package Metadata}
+
+All four package manifests name Olivier Stasse, Diane Bury, and Ali Ibrahim as
+maintainers, with contact addresses stored in each
+\file{package.xml}. The exact authoritative paths are
+\file{mfja_rail_interfaces/package.xml},
+\file{mfja_3rd_floor_description/package.xml},
+\file{mfja_robot_control_config/package.xml}, and
+\file{mfja_3rd_floor_bringup/package.xml}. Update these manifests first when
+ownership changes; do not maintain a divergent contact list only in this PDF.
+
+\clearpage
+\section*{Revision History}
+
+\begin{longtable}{L{0.12\textwidth} L{0.17\textwidth} L{0.63\textwidth}}
+\caption{Manual revision history}\label{tab:revision-history}\\
+\toprule
+\tableheader Revision & Date & Change \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Revision & Date & Change \\
+\midrule
+\endhead
+1.0 & 2026-08-28 & Initial comprehensive architecture, operation, maintenance, and continuation handover at commit \RepositoryCommitShort. \\
+\bottomrule
+\end{longtable}
+
+\clearpage
+\chapter*{Executive Summary}
+\addcontentsline{toc}{chapter}{Executive Summary}
+
+The repository implements a ROS 2 Jazzy and Gazebo Harmonic digital twin of
+the MFJA third floor. Its most detailed cell is Room 315: two directed rail
+loops, up to eight identity-bearing shuttles, four industrial robots, optional
+TIAGo variants, paired RGB-D cameras, typed rail interfaces, deterministic
+safety supervision, and an optional V4 visual-state plus PlanSys2
+language-to-motion research path.
+
+The four ROS packages form a deliberately layered system. Their concise
+ownership map is given in Table~\ref{tab:executive-package-map}; detailed
+dependency and installation rules are kept in Chapters~\ref{ch:packages}
+and~\ref{ch:installation}.
+
+\begin{longtable}{L{0.29\textwidth} L{0.63\textwidth}}
+\caption{Executive package and source-path map}\label{tab:executive-package-map}\\
+\toprule
+\tableheader Package path & Responsibility and authoritative package files \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Package path & Responsibility and authoritative package files \\
+\midrule
+\endhead
+\file{mfja_rail_interfaces} & Typed rail messages and the shuttle lifecycle service.\par
+  \textbf{Authority:} \file{mfja_rail_interfaces/package.xml};
+  \file{mfja_rail_interfaces/CMakeLists.txt}. \\ \rowseparator
+\file{mfja_3rd_floor_description} & Worlds, Gazebo models, simulation plugins,
+  URDF descriptions, and structural tests.\par
+  \textbf{Authority:} \file{mfja_3rd_floor_description/package.xml};
+  \file{mfja_3rd_floor_description/CMakeLists.txt}. \\ \rowseparator
+\file{mfja_robot_control_config} & Robot, rail, perception, dataset, planning,
+  and execution logic.\par
+  \textbf{Authority:} \file{mfja_robot_control_config/package.xml};
+  \file{mfja_robot_control_config/CMakeLists.txt}. \\ \rowseparator
+\file{mfja_3rd_floor_bringup} & Stable user-facing launch entry points and
+  shared composition.\par
+  \textbf{Authority:} \file{mfja_3rd_floor_bringup/package.xml};
+  \file{mfja_3rd_floor_bringup/CMakeLists.txt}. \\
+\bottomrule
+\end{longtable}
+
+The base simulation needs no dataset or learned checkpoint. Learned V4
+inference and closed-loop execution require separate, immutable,
+checksum-verified artifacts and remain disabled by default. The relevant
+defaults and guards are defined in
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}
+and
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}.
+
+\begin{safetybox}[Non-negotiable scope boundary]
+This is simulation and research software. It is not a safety-certified
+controller for physical equipment. Rail motion is kinematic, collision
+protection is software-only, robot/gripper motion is primarily visual, and the
+current V4 authorization is Gazebo-only. A physical deployment requires a new
+hardware interface, trusted presence/device sources, independent risk analysis,
+and an approved safety architecture.
+
+\textbf{Source files:}
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py},
+\file{mfja_3rd_floor_description/src/SmoothJointTrajectoryController.cc},
+\file{mfja_3rd_floor_description/src/SymmetricGripperController.cc}, and
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime_v4.yaml}.
+\end{safetybox}
+
+The appendices proceed from shared terminology to exact ROS interfaces, launch
+arguments, and the package-oriented Repository Source Index.
+
+\section*{How to Use This Manual}
+
+Use the shortest reading path that matches the current role or maintenance
+phase. The sequence column is intentional: it moves from context and authority
+to action and then verification.
+
+\begin{longtable}{L{0.19\textwidth} L{0.17\textwidth} L{0.38\textwidth} L{0.18\textwidth}}
+\caption{Recommended reading paths by role and maintenance phase}
+\label{tab:manual-reading-paths}\\
+\toprule
+\tableheader Role or phase & Start with & Continue in this order & Finish with \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Role or phase & Start with & Continue in this order & Finish with \\
+\midrule
+\endhead
+New maintainer & Chapters~\ref{ch:orientation}--\ref{ch:interfaces} &
+  Chapters~\ref{ch:installation}--\ref{ch:launch}, then the relevant
+  subsystem in Chapters~\ref{ch:robots}--\ref{ch:vla-planning} &
+  Chapters~\ref{ch:operations}--\ref{ch:handover} \\ \rowseparator
+Host setup or rebuild & Chapter~\ref{ch:installation} &
+  Chapters~\ref{ch:configuration}--\ref{ch:launch}, then the operator preflight in
+  Chapter~\ref{ch:operations} & Chapter~\ref{ch:testing} \\ \rowseparator
+Simulation operator & Chapter~\ref{ch:launch} &
+  Follow the selected profile in Chapter~\ref{ch:operations} &
+  Chapters~\ref{ch:testing}--\ref{ch:maintenance} for evidence or faults \\ \rowseparator
+Robot maintainer & Chapter~\ref{ch:interfaces} &
+  Chapters~\ref{ch:configuration}--\ref{ch:robots} as relevant &
+  Chapters~\ref{ch:testing}--\ref{ch:maintenance} \\ \rowseparator
+Rail maintainer & Chapter~\ref{ch:interfaces} &
+  Chapters~\ref{ch:configuration}--\ref{ch:launch}, then
+  Chapter~\ref{ch:rail} &
+  Chapters~\ref{ch:testing}--\ref{ch:maintenance} \\ \rowseparator
+Visual/planning maintainer & Chapter~\ref{ch:interfaces} &
+  Chapters~\ref{ch:configuration}--\ref{ch:launch}, then
+  Chapter~\ref{ch:vla-planning} &
+  Chapters~\ref{ch:operations}--\ref{ch:handover} \\ \rowseparator
+Release or handover & Chapter~\ref{ch:testing} &
+  Chapter~\ref{ch:maintenance} and the exact interface, launch, and source
+  appendices & Chapter~\ref{ch:handover} \\
+\bottomrule
+\end{longtable}

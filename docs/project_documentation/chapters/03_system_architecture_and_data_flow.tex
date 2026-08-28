@@ -1,0 +1,262 @@
+\chapter{System Architecture, Interfaces, and Data Flow}
+\label{ch:interfaces}
+
+\chapteroverview
+  {Defines the runtime boundaries, authoritative representations, and public
+   interfaces that connect configuration, Gazebo, rail control, visual state,
+   and task execution.}
+  {Read the architecture and authority tables first, then use the boundary and
+   API sections to trace a value from its producer to the feedback that proves
+   its effect. Exact message fields remain in \cref{app:interfaces}.}
+
+This chapter describes how information crosses package and process boundaries.
+Field-by-field message definitions are collected in \cref{app:interfaces}; the
+purpose here is to state ownership, direction, and the checks that make a value
+safe to consume.
+
+\section{High-Level Runtime Architecture}
+
+\begin{longtable}{L{0.18\textwidth} L{0.37\textwidth} L{0.36\textwidth}}
+\caption{End-to-end runtime flows and their implementation sources}
+\label{tab:end-to-end-data-flow}\\
+\toprule
+\tableheader Flow & Runtime contract & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Flow & Runtime contract & Source file(s) \\
+\midrule
+\endhead
+Configuration $\rightarrow$ launch & YAML/CSV/SDF/URDF and launch arguments select the world, robots, rails, and optional VLA branch. & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Launch $\rightarrow$ Gazebo/robots & Gazebo, world bridges, robot spawners, state publishers, and per-robot bridges are composed before delayed rail startup. & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Rail $\rightarrow$ Gazebo & Logical rail state is transformed into pose/create/remove service requests; Gazebo is visual/physical presentation, not topology authority. & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py} \\ \rowseparator
+Gazebo $\rightarrow$ cameras $\rightarrow$ vision & Paired RGB images are bridged and synchronized before V4 inference; presence heartbeats accompany image input. & \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\ \rowseparator
+Vision $\rightarrow$ gateway & Only accepted typed observations enter task grounding; raw JSON remains diagnostic. & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py} \\ \rowseparator
+Gateway $\leftrightarrow$ supervisor & The gateway emits one JSON primitive and consumes structured safety/status feedback before replanning. & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+Supervisor $\leftrightarrow$ rails & The supervisor publishes typed shuttle/switch/stopper commands and consumes newer typed actual state and sensors. & \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/CMakeLists.txt} \\
+\bottomrule
+\end{longtable}
+
+\section{Authority Matrix}
+
+\begin{longtable}{L{0.16\textwidth} L{0.20\textwidth} L{0.25\textwidth} L{0.30\textwidth}}
+\caption{Runtime authority and explicitly non-authoritative representations}
+\label{tab:runtime-authority-matrix}\\
+\toprule
+\tableheader Fact/action & Authority & Non-authoritative representation & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Fact/action & Authority & Non-authoritative representation & Source file(s) \\
+\midrule
+\endhead
+Message fields/types & Tracked message/service definitions & Wiki prose, JSON examples, or stale installed bindings & \file{mfja_rail_interfaces/msg/}; \file{mfja_rail_interfaces/srv/}; \file{mfja_rail_interfaces/CMakeLists.txt} \\ \rowseparator
+World/entity existence & Gazebo plus create/delete result & Logical registry or successful asynchronous request alone & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Rail route/position & Rail node, network YAML, CSV geometry & Visual switch model, marker pose, retained speed & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml} \\ \rowseparator
+Actual switch/stopper state & Delayed typed state registry & Requested command or animation & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Exact slot occupancy & Fresh identity-bearing DZI state & Learned position or privileged coordinates & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Learned position/load facts & Accepted authorized V4 observation & Raw JSON, controller geometry, simulator payload state & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py} \\ \rowseparator
+Primitive safety/recovery & Deterministic supervisor & Learned action vector or planner assumption & \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+Symbolic plan & Completely validated PlanSys2 response & One unvalidated PDDL action name & \file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Task completion & Fresh effect plus explicit controller stop & Publication, elapsed time, or planner success alone & \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Deployment identity & Immutable manifest/authorization hashes & Directory name, latest symlink, recollection & \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_config.py} \\
+\bottomrule
+\end{longtable}
+
+\section{Gazebo--ROS Boundary}
+
+The base bridge exposes ROS simulation time at \rosname{/clock} and three
+world-scoped services under \rosname{/world/<world>/}: \code{set_pose},
+\code{create}, and \code{remove}. The rail nodes call these services to move,
+spawn, and delete visuals. Their logical state is internal Python state; Gazebo
+does not compute rail topology.
+
+Source files for this boundary are
+\file{mfja_robot_control_config/launch/multi_robot_sim.launch.py},
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py},
+\file{mfja_3rd_floor_description/src/SmoothJointTrajectoryController.cc}, and
+\file{mfja_3rd_floor_description/src/SymmetricGripperController.cc}.
+
+Every robot instance has a namespaced bridge:
+
+\begin{longtable}{L{0.38\textwidth} L{0.12\textwidth} L{0.40\textwidth}}
+\caption{Namespaced robot interfaces crossing the Gazebo--ROS boundary}
+\label{tab:gazebo-ros-robot-boundary}\\
+\toprule
+\tableheader ROS endpoint & Direction & Gazebo endpoint/meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader ROS endpoint & Direction & Gazebo endpoint/meaning \\
+\midrule
+\endhead
+\rosname{/<robot>/joint_trajectory} & ROS $\rightarrow$ GZ & \rosname{/model/<robot>/joint_trajectory}; plugin command \\ \rowseparator
+\rosname{/<robot>/joint_trajectory_progress} & GZ $\rightarrow$ ROS & Normalized plugin trajectory progress \\ \rowseparator
+\rosname{/<robot>/joint_states} & GZ $\rightarrow$ ROS & Joint feedback for state publisher/consumers \\ \rowseparator
+\rosname{/<robot>/gripper/position_command} & ROS $\rightarrow$ GZ & Industrial scalar gripper command \\ \rowseparator
+\rosname{/<robot>/cmd_vel} & ROS $\rightarrow$ GZ & TIAGo variants only \\ \rowseparator
+\rosname{/<robot>/odom} and \rosname{/<robot>/tf} & GZ $\rightarrow$ ROS & TIAGo variants only \\
+\bottomrule
+\end{longtable}
+
+Each \code{robot_state_publisher} runs in the robot namespace, remaps
+\rosname{tf}/\rosname{tf_static}, and prefixes frames with \code{<robot>/}.
+Do not remove the prefix to make a visualization look shorter; duplicate robot
+links would then collide in the shared TF graph.
+
+\section{Canonical Rail API}
+
+Replace \code{<side>} with \code{right} or \code{left}. All entries below are
+public ROS interfaces unless marked simulation-only.
+
+The exact declarations and publishers/subscribers are in
+\file{mfja_rail_interfaces/CMakeLists.txt}, the files under
+\file{mfja_rail_interfaces/msg/} and \file{mfja_rail_interfaces/srv/}, and
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}.
+
+\begin{longtable}{L{0.39\textwidth} L{0.23\textwidth} L{0.29\textwidth}}
+\caption{Canonical public Room 315 rail endpoints}
+\label{tab:canonical-rail-api}\\
+\toprule
+\tableheader Endpoint & Type/direction & Purpose \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Endpoint & Type/direction & Purpose \\
+\midrule
+\endhead
+\rosname{/room_315/rails/<side>/shuttles/command} & \code{ShuttleCommand}, subscribe & ON, OFF, RESET, or REMOVE a named shuttle \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/state} & \code{ShuttleState}, publish & One message per managed shuttle plus known-empty heartbeat \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/add} & \code{AddShuttle}, service & Validate and add/deploy a named shuttle \\ \rowseparator
+\rosname{/room_315/rails/<side>/switches/command} & \code{SwitchCommand}, subscribe & Request named switch states \\ \rowseparator
+\rosname{/room_315/rails/<side>/switches/state} & \code{SwitchState}, publish & Delayed actual switch state \\ \rowseparator
+\rosname{/room_315/rails/<side>/stoppers/command} & \code{StopperCommand}, subscribe & Request named stopper states \\ \rowseparator
+\rosname{/room_315/rails/<side>/stoppers/state} & \code{StopperState}, publish & Delayed actual stopper state \\ \rowseparator
+\rosname{/room_315/rails/<side>/sensors/feedback} & \code{SensorFeedback}, publish & Binary device occupancy and simulation metadata \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/pose_cmd} & \code{PoseStamped}, publish & First shuttle's transformed Gazebo pose \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/<safe-entity-name>/pose_cmd} & \code{PoseStamped}, publish & Per-entity pose for additional/dynamic shuttles; the Gazebo entity name is sanitized for ROS \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/pose_offset_command} & \code{String}, subscribe & Expert JSON calibration offset; simulation-only \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/payload_command} & \code{String}, subscribe & Payload visual JSON; simulation/dataset-only \\ \rowseparator
+\rosname{/room_315/rails/<side>/shuttles/payload_state} & \code{String}, publish & Logical payload visual state JSON \\
+\bottomrule
+\end{longtable}
+
+Commands, state, and sensors normally use reliable volatile depth-10 QoS. The
+visual switch feedback subscription is the notable exception: reliable,
+transient-local, depth 1, so a late rail node receives the last latched visual
+summary. Camera images and rail-presence inputs to learned vision use sensor-data
+QoS. When debugging a missing sample, compare endpoint QoS before changing code.
+
+\noindent\textbf{QoS sources:}
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} and
+\file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}.
+
+\subsection{Command-to-Effect Rule}
+
+The command path is defined by
+\file{mfja_rail_interfaces/msg/ShuttleCommand.msg},
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}, and
+\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}:
+
+\begin{enumerate}
+  \item An operator or supervisor publishes a typed command.
+  \item The side-specific rail node validates identity, legal state, occupancy,
+        topology, and delayed device rules.
+  \item Logical motion advances on simulation time and publishes fresh typed
+        state and sensor feedback.
+  \item The node converts logical rail position to a world pose and calls
+        Gazebo \code{SetEntityPose}.
+  \item The initiator verifies newer authoritative feedback; publication alone
+        is never completion.
+\end{enumerate}
+
+\section{Switch Visual Synchronization}
+
+This path is implemented by
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} and
+\file{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py}.
+
+The rail node schedules a typed actual switch change, publishes it, and mirrors
+the accepted state as a comma-separated \code{selector=EXTERIOR/INTERIOR}
+\code{std_msgs/msg/String} assignment list on
+\rosname{/mfja/conveyor/switch_cmd}. The visual controller animates/configures
+the Gazebo switch entity and publishes a latched assignment summary on
+\rosname{/mfja/conveyor/switch_states}. Matching feedback acknowledges an
+outstanding typed target; conflicting feedback is ignored until that target is
+acknowledged. When no typed target is outstanding and
+\code{sync_from_visual_switch_states=true}, an unmatched summary may schedule a
+delayed update of the typed actual-state registry. Because routing reads that
+registry, this synchronization path can affect topology; it is not merely a GUI
+presentation update.
+
+\section{Optional VLA and Task Topics}
+
+Topic creation and consumption are defined in
+\file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py},
+\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py},
+\file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py},
+and \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}.
+
+\begin{longtable}{L{0.39\textwidth} L{0.22\textwidth} L{0.30\textwidth}}
+\caption{Optional VLA, visual-state, diagnostics, and task endpoints}
+\label{tab:optional-vla-task-topics}\\
+\toprule
+\tableheader Endpoint & Type & Owner/consumer \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Endpoint & Type & Owner/consumer \\
+\midrule
+\endhead
+\rosname{/room_315/vla/right_rail_rgbd/image} & \code{sensor_msgs/Image} & Gazebo camera bridge $\rightarrow$ supervisor/vision/recorder \\ \rowseparator
+\rosname{/room_315/vla/left_rail_rgbd/image} & \code{sensor_msgs/Image} & Gazebo camera bridge $\rightarrow$ supervisor/vision/recorder \\ \rowseparator
+\rosname{/room_315/vla/command} & \code{std_msgs/String} JSON & Operator/task gateway $\rightarrow$ supervisor \\ \rowseparator
+\rosname{/room_315/vla/status} & \code{std_msgs/String} JSON & Supervisor $\rightarrow$ gateway/operator/recorder \\ \rowseparator
+\rosname{/room_315/vla/emergency_stop} & \code{std_msgs/Bool} & Operator/safety source $\rightarrow$ supervisor \\ \rowseparator
+\rosname{/room_315/visual_state/raw} & \code{VisualStateObservation} & V4 inference, before acceptance \\ \rowseparator
+\rosname{/room_315/visual_state/raw_model_prediction} & \code{String} JSON & Diagnostic model output only \\ \rowseparator
+\rosname{/room_315/visual_state/validation} & \code{VisualStateObservation} & Validator decision/causes \\ \rowseparator
+\rosname{/room_315/visual_state/observed_state} & \code{VisualStateObservation} & Accepted V4 state $\rightarrow$ task gateway \\ \rowseparator
+\rosname{/room_315/task_goal} & \code{std_msgs/String} JSON & Confirmed English CLI/operator $\rightarrow$ gateway \\ \rowseparator
+\rosname{/room_315/task_goal/status} & \code{std_msgs/String} JSON & Gateway lifecycle/result $\rightarrow$ operator \\ \rowseparator
+\rosname{/diagnostics} & \code{DiagnosticArray} & Visual runtime and task gateway health \\ \rowseparator
+\rosname{/planner/get_plan} & \code{plansys2_msgs/GetPlan} & Gateway $\rightarrow$ PlanSys2 planner \\
+\bottomrule
+\end{longtable}
+
+The supervisor still subscribes to legacy
+\rosname{/room_315/rails/<side>/sensors/position_feedback}; the rail runtime
+does not publish that topic. It is compatibility scaffolding, not a missing
+required connection. Current consumers use \rosname{sensors/feedback}.
+
+For the optional visual path, paired RGB images are synchronized and validated
+before an accepted observation may enter task grounding. For the optional task
+path, a confirmed \code{TaskGoal} is grounded, planned, fully translated, and
+executed one deterministic primitive at a time; every primitive requires newer
+effect evidence before replanning. The complete gates and their authoritative
+source paths are organized in \cref{ch:vla-planning}.
+
+\section{Adding or Changing an Interface}
+
+The interface build/install authority is \file{mfja_rail_interfaces/CMakeLists.txt};
+runtime consumers are centered in
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py},
+\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}, and
+\file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}.
+
+\begin{procedurebox}[Contract-change checklist]
+\begin{enumerate}
+  \item Decide whether the value is a public typed fact, simulation-only JSON,
+        or internal implementation detail. Prefer a typed interface for stable
+        cross-process contracts.
+  \item Modify the owning \file{.msg}/\file{.srv} or versioned JSON schema;
+        define units, legal values, empty/stale semantics, and authority.
+  \item Update every publisher, subscriber, bridge, launch/config default,
+        recorder/serializer, test fixture, and PDDL/visual adapter that consumes it.
+  \item Rebuild \file{mfja_rail_interfaces} before dependent packages; source
+        the new overlay in every terminal.
+  \item Test valid, invalid, empty, stale, duplicate, delayed, and restart cases.
+  \item Update this chapter, \cref{app:interfaces}, and the Repository Source
+        Index.
+\end{enumerate}
+\end{procedurebox}

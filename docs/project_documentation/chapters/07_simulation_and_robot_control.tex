@@ -1,0 +1,197 @@
+\chapter{Simulation and Robot Control}
+\label{ch:robots}
+\chapteroverview{Explain how Gazebo assets are resolved, how robot instances are
+selected and isolated, and how validated commands cross the ROS--Gazebo
+boundary.}{Adding or selecting a robot, diagnosing missing assets or topics,
+changing arm/gripper behavior, or evaluating simulation-specific limitations.}
+
+\section{Chapter Source Map}
+
+\small
+\begin{longtable}{L{0.23\textwidth} L{0.69\textwidth}}
+\caption{Authoritative sources for simulation and robot control}
+\label{tab:robot-source-map}\\
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endhead
+World and model resolution & \file{mfja_3rd_floor_description/CMakeLists.txt}; \file{mfja_3rd_floor_description/worlds/}; \file{mfja_3rd_floor_description/models/}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Robot registry and selection & \file{mfja_robot_control_config/config/robots.yaml}; \file{mfja_robot_control_config/config/robots_room_315_only.yaml}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Joint command and trajectory control & \file{mfja_robot_control_config/scripts/robot_joint_command.py}; \file{mfja_3rd_floor_description/src/SmoothJointTrajectoryController.cc}; industrial and TIAGo \file{model.sdf} plugin declarations \\ \rowseparator
+Gripper configuration and control & \file{mfja_robot_control_config/config/gripper_command_defaults.yaml}; \file{mfja_robot_control_config/launch/gripper_range_config.py}; \file{mfja_robot_control_config/scripts/robot_gripper_command.py}; \file{mfja_3rd_floor_description/src/SymmetricGripperController.cc} \\ \rowseparator
+TIAGo frame isolation & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_3rd_floor_description/models/tiago/model.sdf}; \file{mfja_3rd_floor_description/models/tiago_base/model.sdf}; \file{mfja_3rd_floor_description/urdf/tiago.urdf}; \file{mfja_3rd_floor_description/urdf/tiago_base.urdf} \\ \rowseparator
+Industrial collision boundary & \file{mfja_3rd_floor_description/models/kuka_kr6r900sixx/model.sdf}; \file{mfja_3rd_floor_description/models/staubli_tx2_60l/model.sdf}; \file{mfja_3rd_floor_description/models/yaskawa_hc10/model.sdf}; \file{mfja_3rd_floor_description/models/yaskawa_hc10dt/model.sdf} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Asset and Model Resolution}
+
+Every maintained reusable Gazebo model normally has this form:
+
+\begin{lstlisting}
+mfja_3rd_floor_description/models/<model_name>/
+  model.config
+  model.sdf
+  meshes/...        # where required
+\end{lstlisting}
+
+World SDF includes models with \code{model://...} URIs. The launch prepends the
+description model directory to Gazebo's model and resource paths while
+preserving any pre-existing entries. A missing model/mesh error usually means
+the description package was not built/sourced, a URI does not match its model
+directory, or a local environment overwrote the resource path.
+
+The main worlds include static room/furniture/cell assets. Robots are not fixed
+world composition: they are selected from YAML and spawned after Gazebo starts.
+Eight identity-specific Room 315 shuttle models are preloaded below the scene
+and are revealed or managed by the rail nodes.
+
+\section{Robot Instances and Runtime Boundary}
+
+\subsection{Robot registry}
+
+The authoritative instance, model, spawn-pose, and profile-default mapping is
+kept once in Table~\ref{tab:robot-registry-contract}. Its owning configuration
+files are \file{mfja_robot_control_config/config/robots.yaml} and
+\file{mfja_robot_control_config/config/robots_room_315_only.yaml}; this chapter
+focuses on how those selected instances cross the runtime boundary.
+
+The full-floor registry enables all six listed instances. TIAGo aliases include
+\code{tiago}, \code{tiago_with_arm}, and \code{tiago_arm}; base aliases include
+\code{tiago_base}, \code{tiago_no_arm}, and \code{tiago_mobile_base}. A mobile
+entry may also use variant/type fields or an explicit arm boolean. Names must be
+unique because each name becomes a Gazebo entity, ROS namespace, bridge-file
+name, and TF prefix.
+
+\subsection{Per-robot data flow}
+
+\begin{longtable}{L{0.17\textwidth} L{0.17\textwidth} L{0.34\textwidth} L{0.24\textwidth}}
+\caption{Per-instance robot command and feedback boundaries}
+\label{tab:robot-data-flow}\\
+\toprule
+\tableheader Stage & Direction & Responsibility & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Stage & Direction & Responsibility & Source file(s) \\
+\midrule
+\endhead
+Validated helper & Operator $\rightarrow$ ROS & Resolve one registry instance, validate the request, and publish only to its namespace & \file{mfja_robot_control_config/scripts/robot_joint_command.py}; \file{mfja_robot_control_config/scripts/robot_gripper_command.py} \\ \rowseparator
+Generated bridge & ROS $\leftrightarrow$ Gazebo & Map instance-specific command, state, odometry, and TF topics & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Model controller & Gazebo transport $\rightarrow$ model & Apply bounded joint, gripper, or mobile-base motion inside Gazebo & \file{mfja_3rd_floor_description/src/SmoothJointTrajectoryController.cc}; \file{mfja_3rd_floor_description/src/SymmetricGripperController.cc}; selected model \file{model.sdf} \\ \rowseparator
+Feedback lane & Gazebo $\rightarrow$ ROS & Return joint state, progress, odometry, and TF through the same instance boundary & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; selected URDF/model SDF \\
+\bottomrule
+\end{longtable}
+
+There is no global broadcast joint-command topic.
+
+\subsection{Canonical robot ROS topics}
+
+Replace \code{<name>} with the registry instance name.
+
+\begin{longtable}{L{0.36\textwidth} L{0.27\textwidth} L{0.27\textwidth}}
+\caption{Canonical namespaced ROS topics exposed for robot instances}
+\label{tab:robot-topics}\\
+\toprule
+\tableheader ROS name/type & Direction & Availability \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader ROS name/type & Direction & Availability \\
+\midrule
+\endhead
+\rosname{/<name>/joint_trajectory} --- \code{trajectory_msgs/JointTrajectory} & ROS $\rightarrow$ Gazebo & Every robot \\ \rowseparator
+\rosname{/<name>/joint_trajectory_progress} --- \code{std_msgs/Float32} & Gazebo $\rightarrow$ ROS & Every robot using the smooth plugin \\ \rowseparator
+\rosname{/<name>/joint_states} --- \code{sensor_msgs/JointState} & Gazebo $\rightarrow$ ROS & Every robot \\ \rowseparator
+\rosname{/<name>/tf}, \rosname{/<name>/tf_static} & State publisher/Gazebo $\rightarrow$ ROS & Every robot; mobile TF also comes from DiffDrive \\ \rowseparator
+\rosname{/<name>/gripper/position_command} --- \code{std_msgs/Float64} & ROS $\rightarrow$ Gazebo & Industrial robots \\ \rowseparator
+\rosname{/<name>/cmd_vel} --- \code{geometry_msgs/Twist} & ROS $\rightarrow$ Gazebo & TIAGo variants \\ \rowseparator
+\rosname{/<name>/odom} --- \code{nav_msgs/Odometry} & Gazebo $\rightarrow$ ROS & TIAGo variants \\
+\bottomrule
+\end{longtable}
+
+\section{Industrial Arm Control}
+
+\subsection{Joint command helper}
+
+\file{robot_joint_command.py} resolves the robot profile, validates joint
+names/counts/limits, waits for a complete live joint state, and publishes once a
+dense quintic trajectory sampled at 100--200 Hz to the selected namespace.
+Inspect its live help because supported options are executable authority:
+
+\begin{lstlisting}[language=bash]
+ros2 run mfja_robot_control_config robot_joint_command.py --help
+ros2 run mfja_robot_control_config robot_joint_command.py --list
+\end{lstlisting}
+
+Use its dry-run/validation path before a new pose. The helper's dense message is
+interpolated as a multi-point trajectory by the smooth controller, which retimes
+motion when necessary to remain within configured joint velocity limits. The
+controller rejects unknown/duplicate joints, non-finite values, mismatched point
+sizes, non-monotonic times, and positions outside SDF limits.
+
+\subsection{Trajectory controller semantics}
+
+\file{SmoothJointTrajectoryController.cc} is deterministic and simulation-time
+driven. It uses joint position/velocity reset components on every step, then
+rewrites public joint state after physics so gravity/solver residue does not
+leak into feedback.
+
+\begin{itemize}
+  \item One-point trajectories are goals: current state to target through a
+        quintic minimum-jerk blend.
+  \item Multi-point trajectories are timestamped samples and interpolate
+        linearly between points after velocity-limit retiming.
+  \item A newer valid message replaces the active trajectory.
+  \item Commands received while paused are retained; progress starts when
+        simulation time advances.
+  \item Progress is published on the Gazebo trajectory topic plus
+        \code{_progress}, at no more than one update per 0.05 simulated seconds.
+\end{itemize}
+
+\section{Gripper Configuration and Control}
+
+\file{gripper_command_defaults.yaml} declares, per industrial instance, the
+per-jaw position at 0\% and 100\%, plus default open/close percentages. Current
+100\% per-jaw travels are 0.030 m (KUKA), 0.010 m (St\"aubli), 0.040 m (HC10),
+and 0.010 m (HC10DT).
+
+At launch, \file{gripper_range_config.py} validates the selected robots and
+config, then materializes temporary SDF/URDF content with consistent joint and
+plugin limits. \file{robot_gripper_command.py} maps an operator percentage or
+bounded position into \rosname{/<name>/gripper/position_command}. Inspect before
+actuation:
+
+\begin{lstlisting}[language=bash]
+ros2 run mfja_robot_control_config robot_gripper_command.py --help
+\end{lstlisting}
+
+\begin{safetybox}[Gripper realism]
+The symmetric plugin animates two opposite-axis jaws at bounded velocity. It
+does not create a grasp constraint, attach a payload, or validate contact force.
+A visually enclosed object is not a physically held object.
+\end{safetybox}
+
+\section{TIAGo Frame Isolation}
+
+For each mobile instance, the launch creates an instance-specific SDF copy that
+rewrites \code{cmd_vel}, odometry, TF, frame, and child-frame names. Gazebo
+DiffDrive publishes \code{<name>/odom -> <name>/base_link}; the namespaced state
+publisher adds the remaining tree with \code{frame_prefix=<name>/}. Multiple
+TIAGo variants can therefore share a graph without colliding on
+\code{odom}, \code{base_link}, or downstream frames.
+
+\section{Robot Model Limitations}
+
+Industrial assets are optimized for visual integration and intentionally use
+collision simplification; some are collision-free. Visual overlap is not proof
+of safe physical clearance. Commands are not ROS 2 control actions and there is
+no hardware controller manager in this stack. Before adapting a robot to
+hardware, replace the simulation bridge/controller boundary and establish
+hardware limits, collision monitoring, e-stop behavior, and vendor-specific
+safety integration independently.

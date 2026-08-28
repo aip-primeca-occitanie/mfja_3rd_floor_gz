@@ -1,0 +1,237 @@
+\chapter{Launch and Runtime Composition}
+\label{ch:launch}
+\chapteroverview{Describe the supported entry points, selected defaults,
+process ownership, startup sequence, isolation rules, runtime files, and clean
+shutdown order.}{Changing launch composition, diagnosing a missing process or
+late topic, comparing profiles, or determining which process created a runtime
+artifact.}
+
+\section{Chapter Source Map}
+
+\small
+\begin{longtable}{L{0.23\textwidth} L{0.69\textwidth}}
+\caption{Authoritative sources for launch and runtime composition}
+\label{tab:launch-runtime-source-map}\\
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endhead
+Stable profiles and common floor policy & \file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py}; \file{mfja_3rd_floor_bringup/launch/full_floor.launch.py}; \file{mfja_3rd_floor_bringup/launch/single_industrial_robot.launch.py}; \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
+Base Gazebo and robot composition & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_robot_control_config/launch/room_315_launch_utils.py}; \file{mfja_robot_control_config/launch/gripper_range_config.py}; \file{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py} \\ \rowseparator
+Rail and optional VLA composition & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
+Task-gateway singleton and shutdown & \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}; \file{mfja_robot_control_config/scripts/room_315_closed_loop_executive.py} \\ \rowseparator
+Persistent dataset output & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Stable Entry Points}
+
+Operators should normally start one of the bringup-package wrappers:
+
+\small
+\begin{longtable}{L{0.31\textwidth} L{0.19\textwidth} L{0.18\textwidth} L{0.24\textwidth}}
+\caption{Stable operator entry points and their default simulation profiles}
+\label{tab:stable-entry-points}\\
+\toprule
+\tableheader Entry point & World & Initial state & Intended use \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Entry point & World & Initial state & Intended use \\
+\midrule
+\endhead
+\file{room_315_only.launch.py} & \code{room_315_only} & Running & Rail, robot, camera, VLA, and maintenance work in the focused cell \\ \rowseparator
+\file{full_floor.launch.py} & \code{mfja_3rd_floor} & Paused & Complete-floor demonstration and integration \\ \rowseparator
+\file{single_industrial_robot.launch.py} & \code{isolated_industrial_robot} & Running & Fast arm/gripper work with one selected industrial robot \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+Both floor wrappers call
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}. Profile defaults
+differ, but the composition and public argument names stay aligned. The
+isolated wrapper delegates to
+\file{mfja_robot_control_config/launch/isolated_industrial_robot.launch.py}.
+
+\section{Launch Profile Defaults}
+
+\begin{longtable}{L{0.32\textwidth} L{0.25\textwidth} L{0.25\textwidth}}
+\caption{Default values selected by the two stable floor profiles}
+\label{tab:launch-profile-defaults}\\
+\toprule
+\tableheader Setting & Room 315 only & Full floor \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Setting & Room 315 only & Full floor \\
+\midrule
+\endhead
+World file/entity & \code{room_315_only} & \code{mfja_3rd_floor} \\ \rowseparator
+Robot registry & \file{mfja_robot_control_config/config/robots_room_315_only.yaml} & \file{mfja_robot_control_config/config/robots.yaml} \\ \rowseparator
+GUI profile & \file{mfja_robot_control_config/config/room315_runtime_safe.gui.config} & \file{mfja_robot_control_config/config/mfja_light.gui.config} \\ \rowseparator
+Start paused & false & true \\ \rowseparator
+Rails & both enabled & both enabled \\ \rowseparator
+Initial shuttle count & zero per side & zero per side \\ \rowseparator
+Initial shuttle drive & disabled & disabled \\ \rowseparator
+VLA camera/supervisor & disabled & disabled \\ \rowseparator
+Removable VLA obstacles & disabled & disabled \\ \rowseparator
+Obstacle cache cleanup & enabled & enabled \\ \rowseparator
+Device/payload markers & enabled & enabled \\
+\bottomrule
+\end{longtable}
+
+The wrapper and shared-common files in Table~\ref{tab:launch-runtime-source-map} own
+these defaults. If \code{robots} is empty, enabled flags in the selected
+registry decide what spawns. \code{robots:=all} includes disabled entries,
+\code{robots:=none} produces a rail-only run, and a comma list accepts exact
+names, model/short aliases, or one-based YAML indices. Ambiguous or unknown
+selectors fail before spawn; the selector implementation is
+\file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}.
+
+\section{Base Gazebo Composition}
+
+\file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} performs the
+following work in order:
+
+\begin{enumerate}
+  \item Resolve the selected world and read its internal entity name.
+  \item Optionally write an obstacle-free temporary world without modifying the
+        checked-in source.
+  \item Prepend the description model directory to
+        \code{GZ_SIM_MODEL_PATH} and \code{GZ_SIM_RESOURCE_PATH}.
+  \item Set the selected Gazebo transport partition.
+  \item Start the Gazebo server; add \code{-r} only when the profile is not paused.
+  \item Start \file{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py}
+        as the visual switch sink.
+  \item Optionally start the Gazebo GUI with the selected GUI config.
+  \item After three seconds, bridge \rosname{/clock} and the world
+        \code{set_pose}, \code{create}, and \code{remove} services.
+  \item Load, validate, select, and spawn every requested robot; generate its
+        bridge mapping and start its namespaced state publisher.
+\end{enumerate}
+
+The full-floor profile starts paused. Simulation-time timers, trajectory
+controllers, rail motion, delayed switch/stopper updates, and many freshness
+checks do not advance until Gazebo is unpaused.
+
+\section{Runtime Process Inventory}
+
+\scriptsize
+\begin{longtable}{L{0.18\textwidth} L{0.18\textwidth} L{0.31\textwidth} L{0.25\textwidth}}
+\caption{Processes participating in base and optional runtime compositions}
+\label{tab:runtime-process-inventory}\\
+\toprule
+\tableheader Process & Started by & Responsibility & Launch or implementation authority \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Process & Started by & Responsibility & Launch or implementation authority \\
+\midrule
+\endhead
+Gazebo server/GUI & Base simulation launch & World, entities, physics/rendering, Gazebo transport/services & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+\code{conveyor_loop_mode_controller} & Base simulation launch & Visual switch actuator and feedback adapter; synchronized feedback can affect routing & \file{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py} \\ \rowseparator
+Clock/world bridge & Delayed base actions & ROS clock and entity pose/create/remove services & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Per-robot create node & Delayed base actions & Spawn one configured entity & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Per-robot state publisher & Delayed base actions & Namespaced, instance-prefixed URDF TF tree & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Per-robot parameter bridge & Delayed base actions & Joint/gripper/base commands and state feedback & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Two rail nodes & Dual rail launch & Authoritative logical rail motion, lifecycle, devices, sensors, markers, pose calls & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+VLA supervisor & Optional VLA launch & Primitive validation, safety gates, typed rail command publication & \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+VLA recorder & Optional VLA launch & Episode/camera/action recording & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py} \\ \rowseparator
+Visual inference node & Separate visual launch & Verified V4 inference and accepted visual observations & \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\ \rowseparator
+PlanSys2 planner & Separate task launch & Lifecycle-managed PDDL planner service & \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
+Task gateway & Separate task launch & Authorization, grounding, one-step planning/execution/effect verification & \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py} \\ \rowseparator
+English CLI & Separate operator terminal & Parse, clarify, confirm, publish \code{TaskGoal}, display result & \file{mfja_robot_control_config/scripts/room_315_task_goal_cli.py} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Floor Launch Sequence}
+
+\begin{longtable}{L{0.10\textwidth} L{0.22\textwidth} L{0.37\textwidth} L{0.23\textwidth}}
+\caption{Ordered floor-startup stages and their implementation sources}
+\label{tab:floor-launch-sequence}\\
+\toprule
+\tableheader Delay & Stage & Work started & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Delay & Stage & Work started & Source file(s) \\
+\midrule
+\endhead
+0 s & Host guard & Acquire the advisory floor lock and apply obstacle-cache policy & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
+0 s & Base simulation & Start Gazebo and the visual switch controller & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+3 s & ROS integration & Start clock/world bridges, robot spawners, per-robot bridges, and TF publishers & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+4 s & Rail runtime & Start the right and left authoritative rail nodes & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py} \\ \rowseparator
+5 s, optional & VLA branch & Start camera bridges, deterministic supervisor, and optional recorder & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py} \\
+\bottomrule
+\end{longtable}
+
+Treat topics and services that appear during this five-second sequence as
+delayed startup unless the relevant stage has exceeded its configured gate.
+
+\begin{warningbox}[What the high-level VLA switch does not start]
+\code{enable_room315_vla:=true} starts camera bridges and the deterministic
+primitive supervisor; it can also start the recorder. It does not start the
+learned V4 inference node, PlanSys2 planner, English CLI, or task-execution
+gateway. Those remain separate, artifact-dependent launches listed in
+Table~\ref{tab:runtime-process-inventory}.
+\end{warningbox}
+
+\section{Singleton Locks and Namespace Isolation}
+
+The floor composition locks
+\file{/tmp/mfja_room315_floor_runtime.lock} with \code{fcntl.flock}. Only one
+high-level Room 315/full-floor process is supported on one host because the rail
+ROS names and world services are fixed. A unique Gazebo \code{GZ_PARTITION}
+isolates transport, but does not rename the ROS graph.
+
+A lock pathname may remain after a clean shutdown; the operating-system lock is
+released when the descriptor closes. Do not delete or bypass the lock while an
+owner is alive. Stop the owner. The task-execution node has a second singleton
+lock at \file{/tmp/mfja_room315_task_execution_node.lock} to prevent concurrent
+gateways. The owning sources are
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} and
+\file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}.
+
+\section{Temporary and Persistent Runtime Files}
+
+\scriptsize
+\begin{longtable}{L{0.26\textwidth} L{0.24\textwidth} L{0.20\textwidth} L{0.22\textwidth}}
+\caption{Generated runtime files, user data, and their maintenance rules}
+\label{tab:runtime-files}\\
+\toprule
+\tableheader Location & Contents & Rule & Creating source \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Location & Contents & Rule & Creating source \\
+\midrule
+\endhead
+\file{/tmp/<robot>_bridge.yaml} & Generated per-robot bridge map & Inspect for diagnosis; never edit as source & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+\file{/tmp/<robot>_mobile_model.sdf} & Instance-specific mobile topic/frame substitutions & Temporary & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+\file{/tmp/mfja_*_gripper_range_*.sdf} & Launch-patched gripper limits & Temporary & \file{mfja_robot_control_config/launch/gripper_range_config.py} \\ \rowseparator
+\file{/tmp/*_without_room315_vla_obstacles_*.world} & Filtered world copy & Temporary & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+\file{~/.ros/log/} & ROS logs & Preserve when diagnosing; otherwise disposable & ROS 2 runtime \\ \rowseparator
+\file{~/.ros/room315_vla_obstacles.json} & Optional obstacle pose cache & Cleared by default; override only to an intended file & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
+\file{~/.ros/room315_visual_state_datasets/<run>/} & Recorded episodes and frames & User data outside Git; back up deliberately & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py} \\ \rowseparator
+External selected directories & Datasets, checkpoints, manifests, authorization, reports & Preserve hashes/provenance; never edit promoted artifacts in place & Runtime paths in the V4 configuration files \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Shutdown Semantics}
+
+For an actuating rail task, send a controlled \state{OFF} or supervisor
+\code{stop_all}, wait for explicit \state{DISABLED} feedback, stop interactive
+helpers, then press Ctrl-C in the high-level launch. The task gateway publishes
+\code{stop_all} during exception or shutdown handling when an active goal
+exists. Ctrl-C should propagate so the floor lock releases and child processes
+exit. The owning implementation is
+\file{mfja_robot_control_config/scripts/room_315_task_execution_node.py},
+\file{mfja_robot_control_config/scripts/room_315_closed_loop_executive.py}, and
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}.

@@ -1,0 +1,290 @@
+\chapter{Verification Strategy and Evidence}
+\label{ch:testing}
+
+\chapteroverview
+  {Maps each source change to the least expensive valid verification layers and
+   defines what evidence is required before a result can support release.}
+  {Choose the scope from the change-to-test matrix, run static, focused,
+   registered, and runtime checks in increasing cost, then record exact commands,
+   counts, environment, exclusions, and retained evidence.}
+
+\section{What Each Test Layer Proves}
+
+\begin{longtable}{L{0.23\textwidth} L{0.32\textwidth} L{0.37\textwidth}}
+\caption{Testing layers and their assurance boundaries}\label{tab:test-layers}\\
+\toprule
+\tableheader Layer & Proves & Does not prove \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Layer & Proves & Does not prove \\
+\midrule
+\endhead
+Static/source pytest & Parser, schema, topology, contracts, deterministic cores, source-tree integration & Installation, compiled plugin loading, live ROS/Gazebo timing \\ \rowseparator
+Ament/colcon tests & CMake-registered package tests in a built workspace & Nine unregistered source tests or unavailable optional-dependency cases \\ \rowseparator
+Copied-install audit & Package-share lookup, program modes, explicit install lists & Live runtime behavior \\ \rowseparator
+Headless smoke & Launch composition, graph/services, clock, basic rail state/sensors & GUI rendering, all robots, long routing, learned qualification \\ \rowseparator
+GUI/system scenario & Visual assets, robot/rail/camera alignment and operator flow & Certified physics or physical-machine safety \\ \rowseparator
+V4 unit/offline qualification & Dataset/model/schema/hash metrics under frozen contracts & Live timing and fault behavior \\ \rowseparator
+Shadow, acceptance, and fault campaign & Integrated visual/runtime failure handling for an exact candidate & Authorization for another artifact or real hardware \\
+\bottomrule
+\end{longtable}
+
+\noindent\textbf{Source paths:}
+\file{mfja_3rd_floor_description/CMakeLists.txt},
+\file{mfja_3rd_floor_description/test/},
+\file{mfja_robot_control_config/CMakeLists.txt},
+\file{mfja_robot_control_config/test/}, and
+\file{mfja_robot_control_config/scripts/room_315_runtime_acceptance_campaign_v4.py}.
+
+A passing lower layer never substitutes for a required upper layer. Conversely,
+a missing external model should be reported as an unmet prerequisite, not
+silently turned into either a pass or a code failure.
+
+\section{Change-to-Test Matrix}
+
+\begin{longtable}{L{0.28\textwidth} L{0.62\textwidth}}
+\caption{Minimum validation by changed source area}\label{tab:change-test-matrix}\\
+\toprule
+\tableheader Change area & Minimum focused validation before broader regression \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Change area & Minimum focused validation before broader regression \\
+\midrule
+\endhead
+Robot selector/registry/launch & Full-package static and multi-shuttle launch-argument tests; CLI \code{--list}; \code{--show-args}; headless spawn \\ \rowseparator
+World, model, URDF, plugin & Seven description tests as relevant; compiled install; Gazebo load, joint, and gripper smoke \\ \rowseparator
+Rail CSV/topology/names & Kinematic core, segment names/normalization, route topology, device and collision tests, switch authority \\ \rowseparator
+Device/slot/stopper & Rail-device loader, crossing/marker lifecycle, live sensor and delayed actual-state verification \\ \rowseparator
+Identity, payload, headway & Identity config, assets, and tracker; payload visual and occlusion; keepout, block reservation, multi-shuttle safety \\ \rowseparator
+Message/service & Interface rebuild plus all consumers, contract tests, \code{ros2 interface show}, live type/service call \\ \rowseparator
+Launch argument/composition & Static launch tests, singleton tests, \code{--show-args}, default and override headless runs \\ \rowseparator
+Supervisor/safety & Supervisor, fleet safety, headway/block reservation, model-input boundary, emergency-stop/recovery tests \\ \rowseparator
+TaskGoal, PDDL, executive & Builder, semantic, validation, scenario gate, problem generator, planner/translator, authorization, and closed-loop tests \\ \rowseparator
+V4 visual, model, artifact & Contract, model, calibration, runtime, acceptance, shadow, fault, and promotion tests; CPU smoke with hashes \\ \rowseparator
+Dataset, split, evaluation & Recorder, extractor, validator, split, leakage, audit, and role tests; verify output manifest and no input mutation \\ \rowseparator
+Documentation and Source Index & Documentation-build consistency, LaTeX validation, links, English scan, and \code{git diff --check} \\
+\bottomrule
+\end{longtable}
+
+\noindent\textbf{Validation source map:} tests are under
+\file{mfja_3rd_floor_description/test/} and
+\file{mfja_robot_control_config/test/}; package test registration is in their
+respective \file{CMakeLists.txt}; documentation checks are defined in
+\file{docs/project_documentation/Makefile}.
+
+\section{Dependency and Static Checks}
+
+From the workspace root:
+
+\begin{lstlisting}[language=bash]
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+
+rosdep check --from-paths \
+  "$MFJA_REPO/mfja_3rd_floor_bringup" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  --ignore-src --rosdistro jazzy \
+  --skip-keys "python3-torch python3-torchvision"
+
+git diff --check
+python3 -m py_compile \
+  "$MFJA_REPO"/mfja_robot_control_config/scripts/*.py \
+  "$MFJA_REPO"/mfja_robot_control_config/launch/*.py \
+  "$MFJA_REPO"/mfja_3rd_floor_bringup/launch/*.py
+\end{lstlisting}
+
+The rosdep skip is for the base path only. Record and verify the isolated Torch
+environment when running learned-runtime tests. A CMake cache created without
+Torch registers only 84 cases even if Torch is installed later; rerun configure
+with \code{--cmake-clean-cache}.
+
+\noindent\textbf{Dependency and build sources:} the four package
+\file{package.xml} manifests and the four package \file{CMakeLists.txt} files,
+all at the repository package roots listed in
+Table~\ref{tab:executive-package-map}.
+
+\section{Focused Source Tests}
+
+Start with the exact file related to a change:
+
+\begin{lstlisting}[language=bash]
+cd "$MFJA_REPO"
+python3 -m pytest -q \
+  mfja_robot_control_config/test/test_room315_rail_devices.py
+
+python3 -m pytest -q \
+  mfja_3rd_floor_description/test/test_room315_vla_camera_model.py
+\end{lstlisting}
+
+Use an exact test node or \code{-k} expression while iterating. Some modules
+perform module-level optional-dependency skips. Without Torch, a broad direct
+invocation of the entire control test directory can terminate with pytest exit
+code 5 (no tests collected) after collection behavior; that is not a pass.
+Prefer explicit families/files and record counts.
+
+\section{Registered Package Tests}
+
+After a fresh build and overlay source:
+
+\begin{lstlisting}[language=bash]
+cd "$MFJA_WS"
+colcon test --packages-select \
+  mfja_3rd_floor_description \
+  mfja_robot_control_config \
+  --event-handlers console_cohesion+
+colcon test-result --verbose
+\end{lstlisting}
+
+Do not report only the command's shell exit status. Capture passed, failed,
+errored, skipped, and not-run counts, the configured optional dependencies, and
+the Git commit. Remove/rebuild stale test metadata if a result unexpectedly
+references a deleted test.
+
+\section{Runtime Smoke Protocol}
+
+Launch the base headless procedure from \cref{ch:operations}, wait at least five
+seconds, then verify:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo --once /clock
+ros2 service list | rg '^/world/room_315_only/(set_pose|create|remove)$'
+ros2 topic echo --once \
+  /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState
+ros2 topic echo --once \
+  /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+ros2 topic info --verbose /mfja/conveyor/switch_states
+\end{lstlisting}
+
+Confirm the known-empty heartbeat when count is zero or the expected identity
+when count is one. For motion tests, publish ON, observe MOVING/WAITING and
+changing arc length, then publish OFF and require a newer DISABLED message.
+Preserve logs for any pose-service or entity divergence.
+
+\noindent\textbf{Smoke-protocol sources:}
+\file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py},
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py},
+\file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}, and
+\file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}.
+
+\section{Current Test Inventory and Registration Gaps}
+
+The description package contains \RepositoryDescriptionTestCount{} test modules,
+all registered by CMake. The control package contains
+\RepositoryControlTestCount{} \file{test_*.py} modules. Its CMake registers 84
+without Torch and 89 when Torch is importable at configure time; five are
+Torch-gated.
+
+These nine control tests are source-only and therefore absent from ordinary
+\code{colcon test}:
+
+\begin{itemize}
+  \item \file{mfja_robot_control_config/test/test_room315_floor_runtime_singleton.py};
+  \item \file{mfja_robot_control_config/test/test_room315_pddl_scenario_validation_gate.py};
+  \item \file{mfja_robot_control_config/test/test_room315_rail_segment_names.py};
+  \item \file{mfja_robot_control_config/test/test_room315_route_topology.py};
+  \item \file{mfja_robot_control_config/test/test_room315_runtime_contracts.py};
+  \item \file{mfja_robot_control_config/test/test_room315_switch_feedback_authority.py};
+  \item \file{mfja_robot_control_config/test/test_room315_task_execution_singleton.py};
+  \item \file{mfja_robot_control_config/test/test_room315_visual_v4_final_test_coverage_compat.py}; and
+  \item \file{mfja_robot_control_config/test/test_room315_visual_v4_final_test_coverage_extension.py}.
+\end{itemize}
+
+Register them when they are deterministic and suitable for the ament
+environment, or retain a written reason and execute them explicitly in the
+release procedure. The Repository Source Index in \cref{app:catalog} classifies
+every test by family.
+
+\noindent\textbf{Registration sources:}
+\file{mfja_3rd_floor_description/CMakeLists.txt} and
+\file{mfja_robot_control_config/CMakeLists.txt}. The complete source inventory
+is taken from the two package \file{test/} directories above.
+
+\section{Evidence Recorded for This Manual}
+
+During the repository audit at \RepositoryCommitShort, \code{rosdep check}
+passed on the audited host for the declared base dependency surface. A selected
+148-test source run completed with zero failures in 5.06 s, and ten selected V4
+coverage tests completed with zero failures in 7.91 s. These were deliberately
+selected scopes, not a claim that every package, Torch, ROS-integration,
+artifact-dependent, or live Gazebo test passed.
+
+The exact source-smoke command, run from the repository root, was:
+
+\begin{lstlisting}[language=bash]
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider \
+  mfja_3rd_floor_description/test \
+  mfja_robot_control_config/test/test_room315_full_package_static.py \
+  mfja_robot_control_config/test/test_room315_multi_shuttle_launch_args.py \
+  mfja_robot_control_config/test/test_room315_floor_runtime_singleton.py \
+  mfja_robot_control_config/test/test_room315_rail_devices.py \
+  mfja_robot_control_config/test/test_room315_rail_segment_names.py \
+  mfja_robot_control_config/test/test_room315_route_topology.py \
+  mfja_robot_control_config/test/test_room315_switch_feedback_authority.py \
+  mfja_robot_control_config/test/test_room315_runtime_contracts.py \
+  mfja_robot_control_config/test/test_room315_task_execution_singleton.py \
+  mfja_robot_control_config/test/test_room315_pddl_scenario_validation_gate.py
+\end{lstlisting}
+
+The exact selected V4 coverage command was:
+
+\begin{lstlisting}[language=bash]
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider \
+  mfja_robot_control_config/test/test_room315_visual_v4_final_test_coverage_compat.py \
+  mfja_robot_control_config/test/test_room315_visual_v4_final_test_coverage_extension.py
+\end{lstlisting}
+
+No portable, repository-controlled log was retained for these two runs.
+Consequently, the commands, counts, and timings are audit context rather than
+release evidence. A release rerun must save its own pytest output and
+environment record under the release evidence directory.
+
+A stored older colcon result reports 1,748 tests, zero failures, and 11 skips,
+but predates the documented commit and is historical evidence only. Do not use
+it as current release proof. It is an aggregate of XML files under
+\file{/home/tiago/mfja_3rd_floor_ros2_ws/build/*/test_results/}, not a sealed
+single-commit result bundle. Re-run the appropriate suite in the target
+environment and preserve the resulting \file{log/test_<timestamp>/} directory
+with the commit and dependency record.
+
+\section{CI Gap and Recommended Baseline}
+
+No checked-in continuous-integration workflow, \file{pyproject.toml},
+\file{pytest.ini}, or lint configuration currently enforces the test surface.
+The minimum future CI should contain:
+
+\begin{enumerate}
+  \item a clean Ubuntu 24.04/ROS Jazzy base dependency and four-package build;
+  \item source tests including the nine unregistered files;
+  \item ament tests with and without the optional Torch environment recorded;
+  \item copied-install and installed-surface audits;
+  \item headless Room 315 smoke with topic/service assertions;
+  \item Repository Source Index and documentation validation with \code{make check}; and
+  \item separately gated artifact-dependent V4 jobs that verify immutable
+        bundle hashes before running.
+\end{enumerate}
+
+\noindent\textbf{Repository basis:} the repository root (absence of a checked-in
+CI workflow and the named Python test configuration files), the four package
+\file{CMakeLists.txt} files, and \file{docs/project_documentation/Makefile}.
+
+\section{Test Result Record}
+
+Every handover/release result should state:
+
+\begin{itemize}
+  \item commit, branch, date, supported OS/ROS/Gazebo, and workspace overlay;
+  \item exact command and selected test files/packages;
+  \item optional dependencies and external artifact identifiers/hashes;
+  \item pass/fail/error/skip/uncollected counts and elapsed time;
+  \item whether GUI/live Gazebo, copied install, and rollback were exercised;
+  \item log/result locations and any known exclusions.
+\end{itemize}
+
+Never summarize ``tests pass'' when only a cached, selected, skipped, or
+historical result exists.

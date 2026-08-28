@@ -22,11 +22,12 @@ path for your role, then use the categorized index when you need detail.
 
 ### Maintainer or Developer
 
-1. [System Architecture](SYSTEM_ARCHITECTURE.md)
-2. [Configuration and Customization](CONFIGURATION.md)
-3. [Maintenance Guide](MAINTENANCE.md)
-4. [Troubleshooting](TROUBLESHOOTING.md)
-5. [Third-Party Asset Attribution](../mfja_3rd_floor_description/THIRD_PARTY.md)
+1. [Project Handover and Maintenance Manual](project_documentation/MFJA_Project_Handover_and_Maintenance_Manual.pdf)
+2. [System Architecture](SYSTEM_ARCHITECTURE.md)
+3. [Configuration and Customization](CONFIGURATION.md)
+4. [Maintenance Guide](MAINTENANCE.md)
+5. [Troubleshooting](TROUBLESHOOTING.md)
+6. [Third-Party Asset Attribution](../mfja_3rd_floor_description/THIRD_PARTY.md)
 
 ### VLA or Planning Researcher
 
@@ -69,6 +70,7 @@ document, use the operational document and verify launch arguments with
 
 | Status | Document | Purpose |
 | --- | --- | --- |
+| Reference | [Project Handover and Maintenance Manual](project_documentation/MFJA_Project_Handover_and_Maintenance_Manual.pdf) | Complete English project handover, architecture, operation, verification, maintenance, and source-location reference |
 | Reference | [System Architecture](SYSTEM_ARCHITECTURE.md) | Package boundaries, launch sequence, runtime data flow, ROS API, safety boundaries, and output locations |
 | Operational | [Configuration and Customization](CONFIGURATION.md) | Sources of truth and safe recipes for common changes |
 | Operational | [Maintenance Guide](MAINTENANCE.md) | Build/test matrix, extension recipes, repository hygiene, release artifacts, and handover checklist |

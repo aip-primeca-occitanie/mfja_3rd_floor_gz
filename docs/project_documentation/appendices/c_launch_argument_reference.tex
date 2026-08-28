@@ -1,0 +1,371 @@
+\chapter{Launch Argument Reference}
+\label{app:launch}
+
+This appendix documents the public and lower-level launch arguments used by the
+supported simulation, visual-runtime, and task-execution profiles. Launch
+values remain strings until launch or node conversion. Confirm the effective
+arguments in an installed workspace with:
+
+\begin{lstlisting}[language=bash]
+ros2 launch <package> <file.launch.py> --show-args
+\end{lstlisting}
+
+\section{Launch Surfaces and Source Paths}
+
+Table~\ref{tab:launch-source-map} is the source registry for this appendix.
+Each argument table uses the same readable launch-surface name. Verify defaults
+and forwarding behavior in the corresponding source files after a launch
+change.
+
+\scriptsize
+\begin{longtable}{L{0.30\textwidth} L{0.61\textwidth}}
+\caption{Launch surfaces and owning source files}
+\label{tab:launch-source-map}\\
+\toprule
+\tableheader Launch surface & Source path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Launch surface & Source path(s) \\
+\midrule
+\endhead
+Stable floor core and base & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py}; \file{mfja_3rd_floor_bringup/launch/full_floor.launch.py}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Stable floor rail and shuttle & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py} \\ \rowseparator
+Stable floor optional VLA & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py} \\ \rowseparator
+Stable isolated robot & \file{mfja_3rd_floor_bringup/launch/single_industrial_robot.launch.py}; \file{mfja_robot_control_config/launch/isolated_industrial_robot.launch.py} \\ \rowseparator
+VLA supervisor and recorder & \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py} \\ \rowseparator
+V4 visual runtime & \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py} \\ \rowseparator
+Task execution & \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
+Observation-only acceptance & \file{mfja_robot_control_config/launch/room_315_runtime_acceptance.launch.py} \\ \rowseparator
+Lower-level arguments & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Stable Floor Wrappers (49 Arguments)}
+
+\file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py} and
+\file{mfja_3rd_floor_bringup/launch/full_floor.launch.py} contain no local
+declarations; both use
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}. Their public names are
+identical and their profile defaults differ only where shown.
+
+\subsection{Core and base arguments}
+
+\scriptsize
+\begin{longtable}{L{0.30\textwidth} L{0.16\textwidth} L{0.16\textwidth} L{0.27\textwidth}}
+\caption{Stable floor core and base arguments}
+\label{tab:floor-core-base-arguments}\\
+\toprule
+\tableheader Argument & Room default & Full default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Room default & Full default & Meaning \\
+\midrule
+\endhead
+\code{world_name} & \code{room_315_only} & \code{mfja_3rd_floor} & World file/stem and expected internal name \\ \rowseparator
+\code{robots} & empty & empty & Empty uses enabled YAML entries; \code{none}, \code{all}, or selector list \\ \rowseparator
+\code{robot_config} & \file{mfja_robot_control_config/config/robots_room_315_only.yaml} & \file{mfja_robot_control_config/config/robots.yaml} & Registry path \\ \rowseparator
+\code{gripper_config} & \file{mfja_robot_control_config/config/gripper_command_defaults.yaml} & \file{mfja_robot_control_config/config/gripper_command_defaults.yaml} & Gripper range/default path \\ \rowseparator
+\code{gz_partition} & \code{room_315_only_<PID>} & \code{mfja_3rd_floor_<PID>} & Gazebo transport partition \\ \rowseparator
+\code{use_sim_time} & \multicolumn{2}{l}{\code{true} (true/false)} & Use \rosname{/clock} \\ \rowseparator
+\code{gui} & \multicolumn{2}{l}{\code{true} (true/false)} & Start Gazebo client \\ \rowseparator
+\code{gui_config} & \file{mfja_robot_control_config/config/room315_runtime_safe.gui.config} & \file{mfja_robot_control_config/config/mfja_light.gui.config} & GUI profile \\ \rowseparator
+\code{start_paused} & \code{false} & \code{true} & Gazebo initial pause state \\ \rowseparator
+\code{initial_loop_mode} & \multicolumn{2}{l}{\code{auto}} & Initial visual conveyor loop mode \\ \rowseparator
+\code{pause_during_switch_update} & \multicolumn{2}{l}{\code{false} (true/false)} & Visual controller pause policy \\ \rowseparator
+\code{room315_visual_debug_colors} & \multicolumn{2}{l}{\code{true} (true/false)} & Switch/device debug colouring \\ \rowseparator
+\code{enable_room315_vla_obstacles} & \multicolumn{2}{l}{\code{false} (true/false)} & Include removable VLA obstacle markers \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\subsection{Rail and shuttle arguments}
+
+\scriptsize
+\begin{longtable}{L{0.41\textwidth} L{0.18\textwidth} L{0.32\textwidth}}
+\caption{Stable floor rail and shuttle arguments}
+\label{tab:floor-rail-arguments}\\
+\toprule
+\tableheader Argument & Both defaults & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Both defaults & Meaning \\
+\midrule
+\endhead
+\code{enable_room315_kinematic_shuttles} & \code{true} & Include delayed dual-rail launch \\ \rowseparator
+\code{enable_room315_right_rail} & \code{true} & Start right side \\ \rowseparator
+\code{enable_room315_left_rail} & \code{true} & Start left side \\ \rowseparator
+\code{room315_right_start_slot} & \code{2} & Scalar fallback start slot \\ \rowseparator
+\code{room315_right_start_slots} & empty & Per-selected-shuttle slot list \\ \rowseparator
+\code{room315_right_start_positions} & empty & Per-selected-shuttle segment/position overrides \\ \rowseparator
+\code{room315_left_start_slot} & \code{2} & Scalar fallback start slot \\ \rowseparator
+\code{room315_left_start_slots} & empty & Per-selected-shuttle slot list \\ \rowseparator
+\code{room315_left_start_positions} & empty & Per-selected-shuttle segment/position overrides \\ \rowseparator
+\code{room315_shuttle_speed} & \code{0.2} & Configured speed, m/s \\ \rowseparator
+\code{room315_falling_stop_offset_m} & \code{0.0} & Fault presentation offset, m \\ \rowseparator
+\code{room315_shuttle_collision_distance_m} & \code{0.33} & Software headway, m \\ \rowseparator
+\code{room315_shuttles_start_enabled} & \code{false} & Begin selected shuttles moving \\ \rowseparator
+\code{room315_right_shuttle_count} & \code{0} & Initial right identity count \\ \rowseparator
+\code{room315_right_active_identities} & empty & Explicit right identities \\ \rowseparator
+\code{room315_left_shuttle_count} & \code{0} & Initial left identity count \\ \rowseparator
+\code{room315_left_active_identities} & empty & Explicit left identities \\ \rowseparator
+\code{room315_identity_selection_mode} & \code{count_prefix} & \code{count_prefix} or \code{explicit} \\ \rowseparator
+\code{room315_switch_motion_delay_s} & \code{0.3} & Requested-to-actual switch delay, sim s \\ \rowseparator
+\code{room315_stopper_motion_delay_s} & \code{0.1} & Requested-to-actual stopper delay, sim s \\ \rowseparator
+\code{room315_sensor_publish_rate_hz} & \code{30.0} & Feedback frequency \\ \rowseparator
+\code{room315_sync_sensor_feedback_to_motion_tick} & \code{true} & Align feedback to motion tick \\ \rowseparator
+\code{room315_gazebo_set_pose_rate_hz} & \code{30.0} & Gazebo pose call rate \\ \rowseparator
+\code{room315_show_device_markers} & \code{true} & Spawn device markers \\ \rowseparator
+\code{room315_enable_payload_visuals} & \code{true} & Spawn/follow logical payload visuals \\ \rowseparator
+\code{room315_payload_pose_x_offset_m} & \code{-0.08} & Payload longitudinal visual offset \\ \rowseparator
+\code{room315_right_loaded_shuttles} & empty & Initially loaded right identities \\ \rowseparator
+\code{room315_left_loaded_shuttles} & empty & Initially loaded left identities \\ \rowseparator
+\code{room315_sensor_marker_visual_hold_s} & \code{0.35} & Active-colour visual hold, s \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\subsection{Optional VLA arguments}
+
+\scriptsize
+\begin{longtable}{L{0.43\textwidth} L{0.22\textwidth} L{0.27\textwidth}}
+\caption{Stable floor optional VLA arguments}
+\label{tab:floor-vla-arguments}\\
+\toprule
+\tableheader Argument & Both defaults & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Both defaults & Meaning \\
+\midrule
+\endhead
+\code{enable_room315_vla} & \code{false} & Include supervisor/camera/optional recorder at 5 s \\ \rowseparator
+\code{room315_clear_vla_obstacle_pose_cache} & \code{true} & Unlink configured cache before includes \\ \rowseparator
+\code{room315_vla_obstacle_pose_file} & \file{~/.ros/room315_vla_obstacles.json} & Exact cache target \\ \rowseparator
+\code{enable_room315_vla_camera_bridge} & \code{true} & Bridge paired RGB-D topics \\ \rowseparator
+\code{enable_room315_vla_dataset_recorder} & \code{false} & Start recorder \\ \rowseparator
+\code{room315_vla_dataset_dir} & \file{~/.ros/room315_visual_state_datasets/demo} & Recorder output \\ \rowseparator
+\code{room315_vla_dataset_sample_period_s} & \code{0.2} & Recorder sampling period \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Stable Isolated-Robot Wrapper (9 Arguments)}
+
+\begin{longtable}{L{0.37\textwidth} L{0.25\textwidth} L{0.29\textwidth}}
+\caption{Stable isolated-robot arguments}
+\label{tab:isolated-robot-arguments}\\
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endhead
+\code{robot} & \code{kuka} & Bounded short selector \\ \rowseparator
+\code{robot_config} & \file{mfja_robot_control_config/config/robots_room_315_only.yaml} & Robot registry \\ \rowseparator
+\code{gripper_config} & \file{mfja_robot_control_config/config/gripper_command_defaults.yaml} & Gripper config \\ \rowseparator
+\code{world_name} & \code{isolated_industrial_robot} & Minimal world \\ \rowseparator
+\code{gz_partition} & \code{isolated_industrial_robot_<PID>} & Transport partition \\ \rowseparator
+\code{use_sim_time} & \code{true} & Simulation clock \\ \rowseparator
+\code{gui} & \code{true} & Gazebo client \\ \rowseparator
+\code{gui_config} & \file{mfja_robot_control_config/config/mfja_light.gui.config} & Gazebo GUI configuration \\ \rowseparator
+\code{start_paused} & \code{false} & Initial pause \\
+\bottomrule
+\end{longtable}
+
+The stable wrapper explicitly declares and forwards the other eight values.
+The included lower launch declares \code{gui_config}; ROS launch therefore
+exposes it as the ninth effective argument in \code{--show-args}, and a
+top-level override is inherited by the included launch. Recheck this inherited
+surface whenever the include is refactored.
+
+\section{VLA Supervisor/Recorder Launch (20 Arguments)}
+
+\scriptsize
+\begin{longtable}{L{0.34\textwidth} L{0.30\textwidth} L{0.27\textwidth}}
+\caption{VLA supervisor and recorder arguments}
+\label{tab:vla-supervisor-launch-arguments}\\
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endhead
+\code{use_sim_time} & \code{true} & Simulation time \\ \rowseparator
+\code{enable_camera_bridge} & \code{true} & Paired RGB-D bridge \\ \rowseparator
+\code{enable_supervisor} & \code{true} & Deterministic primitive supervisor \\ \rowseparator
+\code{enable_dataset_recorder} & \code{false} & Episode recorder \\ \rowseparator
+\code{config_path} & empty & Optional supervisor YAML; empty uses code defaults \\ \rowseparator
+\code{command_topic} & \rosname{/room_315/vla/command} & Primitive JSON input \\ \rowseparator
+\code{status_topic} & \rosname{/room_315/vla/status} & Supervisor JSON status \\ \rowseparator
+\code{user_goal_topic} & \rosname{/room_315/vla/user_goal} & Recorder-only goal input \\ \rowseparator
+\code{episode_control_topic} & \rosname{/room_315/vla/episode_control} & Recorder lifecycle input \\ \rowseparator
+\code{dataset_status_topic} & \rosname{/room_315/vla/dataset_status} & Recorder status output \\ \rowseparator
+\code{dataset_dir} & \file{~/.ros/room315_visual_state_datasets/demo} & Recorder output \\ \rowseparator
+\code{dataset_sample_period_s} & \code{0.2} & Recorder period \\ \rowseparator
+\code{dataset_auto_start_on_goal} & \code{true} & Recorder policy \\ \rowseparator
+\code{emergency_stop_topic} & \rosname{/room_315/vla/emergency_stop} & Boolean emergency input \\ \rowseparator
+\code{image_topic} & empty & Optional legacy primary image \\ \rowseparator
+\code{right_image_topic} & \rosname{/room_315/vla/right_rail_rgbd/image} & Right RGB \\ \rowseparator
+\code{left_image_topic} & \rosname{/room_315/vla/left_rail_rgbd/image} & Left RGB \\ \rowseparator
+\code{camera_info_topic} & empty & Optional legacy camera info \\ \rowseparator
+\code{right_camera_info_topic} & \rosname{/room_315/vla/right_rail_rgbd/camera_info} & Right intrinsics \\ \rowseparator
+\code{left_camera_info_topic} & \rosname{/room_315/vla/left_rail_rgbd/camera_info} & Left intrinsics \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+The high-level floor passes six arguments total: five wrapper values
+(simulation time, camera bridge, recorder enablement, dataset directory, and
+sample period) plus \code{enable_supervisor=true}. The other values retain these
+defaults. \code{user_goal_topic} does not feed the supervisor.
+
+\section{V4 Visual Runtime Launch (11 Arguments)}
+
+\begin{longtable}{L{0.38\textwidth} L{0.27\textwidth} L{0.26\textwidth}}
+\caption{V4 visual runtime arguments}
+\label{tab:v4-visual-runtime-arguments}\\
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endhead
+\code{use_sim_time} & \code{true} & Simulation time \\ \rowseparator
+\code{enable_camera_bridge} & \code{true} & RGB-only bridge; disable if supervisor owns it \\ \rowseparator
+\code{runtime_config} & installed \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml} & Parameter YAML \\ \rowseparator
+\code{node_name} & \code{room_315_visual_state_inference_node} & ROS node name \\ \rowseparator
+\code{runtime_generation} & \code{v4} (only choice) & Active generation \\ \rowseparator
+\code{runtime_mode} & empty & Preserve YAML (currently active); or active/shadow \\ \rowseparator
+\code{v4_promotion_manifest} & empty & Optional immutable JSON promotion-manifest path override \\ \rowseparator
+\code{v4_promotion_manifest_sha256} & empty & Optional expected-manifest-hash override \\ \rowseparator
+\code{device} & \code{auto} & auto/cpu/cuda \\ \rowseparator
+\code{dry_run_state_fusion} & \code{true} & Gate external PlanSys2 predicate mutation; fusion/observation still run \\ \rowseparator
+\code{plansys2_update_enabled} & \code{false} & Prevent predicate-service calls \\
+\bottomrule
+\end{longtable}
+
+YAML loads first. The launch always overrides time, device, generation, dry-run,
+and PlanSys2-update values; the mode/manifest/hash override only when nonempty.
+
+\section{Task Execution Launch (6 Arguments)}
+
+\begin{longtable}{L{0.37\textwidth} L{0.27\textwidth} L{0.27\textwidth}}
+\caption{Task-execution arguments}
+\label{tab:task-execution-launch-arguments}\\
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endhead
+\code{use_sim_time} & \code{true} & Simulation time \\ \rowseparator
+\code{execution_enabled} & \code{false} & False needs no authorization artifact; true requests authorized supervised actuation \\ \rowseparator
+\code{enable_plansys2} & \code{true} & Start bundled lifecycle planner \\ \rowseparator
+\code{planner_service} & \rosname{/planner/get_plan} & GetPlan endpoint \\ \rowseparator
+\code{external_obstacles_disabled} & \code{true} & Only supported value; false fails because obstacle perception is not configured \\ \rowseparator
+\code{runtime_config} & installed \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} & Parameter/authorization YAML \\
+\bottomrule
+\end{longtable}
+
+Launch forces the installed runtime PDDL path. \code{enable_plansys2=false}
+only suppresses the bundled planner; an external compatible service must then
+exist. Enabling execution additionally requires the authorization, promotion
+manifest, manual decision, and bound evidence to be non-writable regular files
+whose final path components are not symbolic links.
+
+\section{Observation-Only Runtime Acceptance (11 Arguments)}
+
+\begin{longtable}{L{0.39\textwidth} L{0.18\textwidth} L{0.34\textwidth}}
+\caption{Observation-only runtime acceptance arguments}
+\label{tab:runtime-acceptance-launch-arguments}\\
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endhead
+\code{candidate_directory} & required & Immutable candidate with scenario/config/state/checkpoint files \\ \rowseparator
+\code{scenario_id} & required & Exact unique row in candidate scenario manifest \\ \rowseparator
+\code{output_root} & required & New output root; existing path is refused \\ \rowseparator
+\code{gui} & \code{true} & Gazebo GUI \\ \rowseparator
+\code{world_readiness_timeout_s} & \code{45.0} & World gate deadline \\ \rowseparator
+\code{scene_readiness_timeout_s} & \code{45.0} & Rail/scenario gate deadline \\ \rowseparator
+\code{camera_readiness_timeout_s} & \code{45.0} & Camera gate deadline \\ \rowseparator
+\code{runtime_readiness_timeout_s} & \code{120.0} & Verified V4 runtime gate deadline \\ \rowseparator
+\code{record_duration_s} & \code{60.0} & Observation recording duration \\ \rowseparator
+\code{enable_task_execution} & \code{false} & Compatibility guard; true is rejected \\ \rowseparator
+\code{execution_enabled} & \code{false} & Second compatibility guard; true is rejected \\
+\bottomrule
+\end{longtable}
+
+The launch verifies candidate schema/hash before starting Gazebo, then gates
+world $\rightarrow$ scene $\rightarrow$ camera $\rightarrow$ runtime
+$\rightarrow$ recorder $\rightarrow$ report. It forces no robots, stopped exact
+scenario shuttles, no external obstacles/markers/debug colours, dry-run fusion,
+no PlanSys2 mutation, and no task execution. It is not an actuation acceptance
+test.
+
+\section{Lower-Level-Only Arguments}
+
+All 13 \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}
+arguments are exposed by the two stable
+floor wrappers (\code{visual_debug_colors} is renamed to
+\code{room315_visual_debug_colors}). Of 34 dual-rail arguments, only these three
+are not exposed at the stable floor level:
+
+\begin{longtable}{L{0.34\textwidth} L{0.22\textwidth} L{0.35\textwidth}}
+\caption{Lower-level-only launch arguments}
+\label{tab:lower-level-launch-arguments}\\
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Argument & Default & Meaning \\
+\midrule
+\endhead
+\code{path_backend} & \code{cubic_hermite} & \code{cubic_hermite} or diagnostic \code{polyline} interpolation \\ \rowseparator
+\code{payload_type} & \code{box} & Structured payload visual type \\ \rowseparator
+\code{payload_pose_z_offset_m} & \code{0.0} & Additional payload vertical visual offset \\
+\bottomrule
+\end{longtable}
+
+Use lower-level launches only when their narrower lifecycle is intentional.
+Direct concurrent use bypasses the high-level singleton/startup policy and can
+collide on fixed ROS names or predictable temporary files.
+
+\section{Composition Consistency Rules}
+
+These rules apply to the public and optional launch surfaces in
+Table~\ref{tab:launch-source-map}. Use that registry to locate each owning
+include and argument declaration.
+
+\begin{itemize}
+  \item Floor bringup never includes visual inference or task execution.
+  \item Assign one RGB bridge: if the supervisor launch owns it, visual runtime
+        uses \code{enable_camera_bridge:=false}.
+  \item If supervisor command/status topics change, update gateway parameters to
+        the same names; high-level floor arguments do not expose that remap.
+  \item Task execution currently requires floor
+        \code{enable_room315_vla_obstacles=false} and gateway
+        \code{external_obstacles_disabled=true}; the obstacle-enabled path is
+        unsupported and fails closed.
+  \item Visual \code{plansys2_update_enabled=true} needs separately available
+        Problem Expert predicate services; task launch provides only planner.
+  \item Multiple publishers on \rosname{/diagnostics} are intentional and share
+        the same message type.
+\end{itemize}

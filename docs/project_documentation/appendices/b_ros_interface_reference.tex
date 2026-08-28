@@ -1,0 +1,267 @@
+\chapter{ROS Messages and Services Reference}
+\label{app:interfaces}
+
+This appendix documents every message and service defined by
+\file{mfja_rail_interfaces}. Table~\ref{tab:interface-source-map} connects each
+interface family to its definition and primary runtime implementation. Rebuild
+the interface package and all consumers after changing any definition.
+
+\section{Interface Ownership and Source Paths}
+
+The definition column in Table~\ref{tab:interface-source-map} governs the wire
+layout. The implementation column identifies the primary runtime source for
+the semantics described in the sections that follow. Interface registration
+and installation are maintained in
+\file{mfja_rail_interfaces/CMakeLists.txt}.
+
+\scriptsize
+\begin{longtable}{L{0.18\textwidth} L{0.40\textwidth} L{0.34\textwidth}}
+\caption{ROS interface ownership and implementation paths}
+\label{tab:interface-source-map}\\
+\toprule
+\tableheader Interface family & Definition path(s) & Runtime implementation path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Interface family & Definition path(s) & Runtime implementation path(s) \\
+\midrule
+\endhead
+Shared named state & \file{mfja_rail_interfaces/msg/NamedState.msg} & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Shuttle command and state & \file{mfja_rail_interfaces/msg/ShuttleCommand.msg}; \file{mfja_rail_interfaces/msg/ShuttleState.msg} & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Switch command and state & \file{mfja_rail_interfaces/msg/SwitchCommand.msg}; \file{mfja_rail_interfaces/msg/SwitchState.msg}; \file{mfja_rail_interfaces/msg/NamedState.msg} & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Stopper command and state & \file{mfja_rail_interfaces/msg/StopperCommand.msg}; \file{mfja_rail_interfaces/msg/StopperState.msg}; \file{mfja_rail_interfaces/msg/NamedState.msg} & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Sensor reading and feedback & \file{mfja_rail_interfaces/msg/SensorReading.msg}; \file{mfja_rail_interfaces/msg/SensorFeedback.msg} & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Visual shuttle state & \file{mfja_rail_interfaces/msg/VisualShuttleState.msg} & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Visual observation & \file{mfja_rail_interfaces/msg/VisualStateObservation.msg}; \file{mfja_rail_interfaces/msg/VisualShuttleState.msg} & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Add-shuttle service & \file{mfja_rail_interfaces/srv/AddShuttle.srv} & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Shared Named State}
+
+\subsection{NamedState.msg}
+
+\begin{lstlisting}
+string name
+string state
+\end{lstlisting}
+
+Switch command input accepts \code{E}/\code{EXTERIOR} or
+\code{I}/\code{INTERIOR}; canonical rail state is \code{E} or \code{I}.
+Stopper input accepts canonical \code{0} (open/pass) or \code{1}
+(closed/stop), with documented textual aliases normalized by the node. Published
+state is canonical. Selectors may name an individual configured device or the
+supported group \code{ALL}; switch groups also include the runtime's documented
+side/group selectors.
+
+\section{Shuttle Command and State}
+
+\subsection{ShuttleCommand.msg}
+
+\begin{lstlisting}
+std_msgs/Header header
+string name
+string command
+string start_slot
+float64 speed
+string target_slot
+\end{lstlisting}
+
+\begin{longtable}{L{0.22\textwidth} L{0.68\textwidth}}
+\caption{Shuttle command field contract}
+\label{tab:shuttle-command-fields}\\
+\toprule
+\tableheader Field & Contract \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Field & Contract \\
+\midrule
+\endhead
+\code{header} & Command stamp/frame metadata; the rail validates payload fields rather than using the header as completion evidence \\ \rowseparator
+\code{name} & Exact Gazebo entity name, empty only for the supported single-shuttle convenience, or \code{ALL} \\ \rowseparator
+\code{command} & Canonical operator values ON, OFF, RESET, REMOVE; aliases normalize internally but should not be used in durable clients \\ \rowseparator
+\code{start_slot} & Lifecycle/start metadata retained for compatibility; add uses the service request; reset uses configured origin \\ \rowseparator
+\code{speed} & Positive configured speed applied only to ON; zero means preserve current ON setting for applicable commands \\ \rowseparator
+\code{target_slot} & Optional slot 1--4, legal only with ON; empty means continuous motion \\
+\bottomrule
+\end{longtable}
+
+\subsection{ShuttleState.msg}
+
+\begin{lstlisting}
+std_msgs/Header header
+string name
+string mode
+string current_segment
+float64 s
+float64 x
+float64 y
+float64 z
+float64 yaw
+float64 speed
+string reached_target_slot
+\end{lstlisting}
+
+Legal modes are \code{MOVING}, \code{WAITING}, \code{DISABLED}, and
+\code{FALLING}. \code{s} is arc length in metres on
+\code{current_segment}; \code{x,y,z,yaw} are transformed Gazebo pose values.
+\code{speed} is retained configured travel speed, not instantaneous velocity.
+\code{reached_target_slot} is nonempty only after the controller clamps an
+explicit target and disables the shuttle. With no managed shuttle, the node
+publishes a blank-name heartbeat to mean known-empty.
+
+\section{Switch and Stopper Arrays}
+
+\subsection{SwitchCommand.msg and SwitchState.msg}
+
+\begin{lstlisting}
+std_msgs/Header header
+NamedState[] switches
+\end{lstlisting}
+
+Command and state share the same structure but not the same meaning: command is
+a requested target; state is delayed actual rail authority.
+
+\subsection{StopperCommand.msg and StopperState.msg}
+
+\begin{lstlisting}
+std_msgs/Header header
+NamedState[] stoppers
+\end{lstlisting}
+
+Canonical state \code{0} permits passage and \code{1} stops/blocks. Published
+state changes only when the scheduled delay expires in simulation time.
+
+\section{Sensor Feedback}
+
+\subsection{SensorReading.msg}
+
+\begin{lstlisting}
+string name
+string sensor_type
+uint8 active
+string shuttle_name
+string segment
+float64 s
+float64 s_ratio
+\end{lstlisting}
+
+\code{sensor_type} is currently always \code{sensor}; purpose is encoded by
+the configured name/documentation. \code{active} is 0 clear or 1 occupied.
+When active, \code{shuttle_name} identifies the occupant. Segment and position
+are privileged simulator metadata. The task gateway deliberately ignores those
+three position fields and uses only fresh active/name/identity for exact DZI
+slot grounding.
+
+\subsection{SensorFeedback.msg}
+
+\begin{lstlisting}
+std_msgs/Header header
+SensorReading[] readings
+\end{lstlisting}
+
+Each side publishes its complete configured/derived reading array at the
+configured sensor rate.
+
+\section{Visual Shuttle State}
+
+\subsection{VisualShuttleState.msg}
+
+\begin{lstlisting}
+string identity
+string presence_state
+bool visual_facts_valid
+string side
+string block
+float32[4] bbox_xywh
+float64 s_m
+float64 s_ratio
+float64 segment_length_m
+string loaded_state
+float64 segment_confidence
+float64 loaded_confidence
+\end{lstlisting}
+
+Canonical identities are \code{L1--L4,R1--R4}. Presence is
+\code{present}, \code{absent}, or \code{unknown}. Valid learned side is
+\code{left}/\code{right}; block is one of the 14 public segment classes;
+loaded state is \code{empty}/\code{loaded}. The bounding box order is
+$(x,y,w,h)$ according to the versioned visual contract. Consumers must honor
+\code{visual_facts_valid}; absent/unknown entries do not carry usable learned
+facts merely because numeric fields exist.
+
+\section{Visual Observation}
+
+\subsection{VisualStateObservation.msg}
+
+\begin{lstlisting}
+std_msgs/Header header
+builtin_interfaces/Time left_image_stamp
+builtin_interfaces/Time right_image_stamp
+string schema_version
+string checkpoint_sha256
+string stage
+bool accepted
+bool stabilized
+bool stale
+bool model_ready
+bool input_ready
+bool presence_ready
+bool state_fusion_ready
+string[] validation_reasons
+string[] clamped_fields
+float64 preprocessing_latency_ms
+float64 inference_latency_ms
+float64 validation_latency_ms
+float64 cycle_latency_ms
+uint64 accepted_frame_count
+uint64 rejected_frame_count
+uint64 stale_frame_count
+VisualShuttleState[] shuttles
+\end{lstlisting}
+
+\code{stage} distinguishes raw/validation/accepted runtime output. An execution
+consumer verifies timestamps, schema, checkpoint, readiness, acceptance,
+staleness, and task-required shuttle facts together. \code{stabilized} is a
+diagnostic that says the optional temporal filter was applied; it is normally
+false on valid accepted observations when that filter is disabled and is not a
+task-gateway required-true field. Counters are process-lifetime diagnostics and
+are not task sequence numbers.
+
+\section{Add Shuttle Service}
+
+\subsection{AddShuttle.srv}
+
+\begin{lstlisting}
+string name
+string start_slot
+float64 speed
+bool start_enabled
+---
+bool success
+string message
+string name
+\end{lstlisting}
+
+An empty name selects the next unused entity and an empty slot selects the next
+available configured slot. A speed that compares greater than zero is used;
+otherwise the configured default is substituted, with no separate finiteness
+validation. Duplicate entities, invalid slots, and---when configured---occupied
+start slots are rejected. A successful response means the logical runtime
+accepted the shuttle. Gazebo spawn remains asynchronous, so visual existence
+requires separate verification. Removal, reset, ON, and OFF are ShuttleCommand
+actions, not services.
+
+\section{Compatibility Rules}
+
+Adding a field is still a ROS interface change and requires dependent
+rebuilds. Renaming, removing, retyping, reordering fixed arrays, or changing
+units/legal strings is a contract migration. Record a schema/version strategy
+for persisted JSON/datasets separately; ROS message compatibility alone does
+not migrate recorded episodes or manifests.
+
+Interface registration and dependency declarations are maintained in
+\file{mfja_rail_interfaces/CMakeLists.txt}; field definitions are maintained at
+the paths in Table~\ref{tab:interface-source-map}.

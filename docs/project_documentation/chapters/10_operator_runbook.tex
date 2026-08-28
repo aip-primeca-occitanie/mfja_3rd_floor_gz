@@ -1,0 +1,603 @@
+\chapter{Gazebo Operator Runbook}
+\label{ch:operations}
+
+\chapteroverview
+  {Provides repeatable Gazebo-only procedures for starting, checking,
+   commanding, extending, and stopping the supported runtime profiles.}
+  {Proceed in dependency order: verify the overlay, prove the base floor,
+   operate robots or rails, add deterministic supervision, add visual state,
+   enable authorized task execution, and shut down cleanly. Stop at the first
+   unmet readiness condition.}
+
+\section{Scope and Safety Preconditions}
+
+This runbook applies only to the Gazebo simulation described by this repository.
+It does not authorize connection to physical rails, PLCs, robots, or grippers;
+the complete deployment boundary is defined in \cref{ch:handover}. Follow the
+sections in dependency order. Do not begin an optional layer until the preceding
+layer's clock, services, topics, and authoritative feedback are healthy.
+
+\begin{safetybox}[Completion requires feedback]
+A published command is a request, not proof of completion. Require a newer typed
+actual-state sample or a newer verified task effect before the next mutation.
+The direct rail commands in this chapter bypass the planner and deterministic
+supervisor and therefore require an explicitly controlled, empty-rail procedure.
+\end{safetybox}
+
+\section{Runbook Source Map}
+
+The following map identifies the implementation and interface sources behind
+each operational group.  Commands later in this chapter are operator recipes;
+the listed files remain authoritative when behavior or interfaces change.
+
+\begin{longtable}{L{0.27\textwidth} L{0.65\textwidth}}
+\caption{Operator-runbook groups and their authoritative source files}
+\label{tab:operator-runbook-source-map}\\
+\toprule
+\tableheader Runbook group & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Runbook group & Source file(s) \\
+\midrule
+\endhead
+Terminal setup and preflight &
+\file{mfja_3rd_floor_bringup/package.xml};
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}. \\ \rowseparator
+Base headless smoke and Room 315 profile &
+\file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py};
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
+\file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}. \\ \rowseparator
+Full-floor profiles &
+\file{mfja_3rd_floor_bringup/launch/full_floor.launch.py};
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
+\file{mfja_robot_control_config/launch/multi_robot_sim.launch.py};
+\file{mfja_robot_control_config/config/robots.yaml}. \\ \rowseparator
+Isolated industrial robot &
+\file{mfja_3rd_floor_bringup/launch/single_industrial_robot.launch.py};
+\file{mfja_robot_control_config/launch/isolated_industrial_robot.launch.py}. \\ \rowseparator
+Robot joint and gripper operation &
+\file{mfja_robot_control_config/scripts/robot_joint_command.py};
+\file{mfja_robot_control_config/scripts/robot_gripper_command.py};
+\file{mfja_robot_control_config/config/gripper_command_defaults.yaml}. \\ \rowseparator
+Shuttle creation and lifecycle &
+\file{mfja_rail_interfaces/srv/AddShuttle.srv};
+\file{mfja_rail_interfaces/msg/ShuttleCommand.msg};
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py};
+\file{mfja_robot_control_config/scripts/room_315_multi_shuttle.py}. \\ \rowseparator
+Switch operation &
+\file{mfja_rail_interfaces/msg/SwitchCommand.msg};
+\file{mfja_rail_interfaces/msg/SwitchState.msg};
+\file{mfja_robot_control_config/scripts/room_315_rail_devices.py}. \\ \rowseparator
+Stopper and sensor operation &
+\file{mfja_rail_interfaces/msg/StopperCommand.msg};
+\file{mfja_rail_interfaces/msg/StopperState.msg};
+\file{mfja_rail_interfaces/msg/SensorFeedback.msg};
+\file{mfja_robot_control_config/scripts/room_315_rail_devices.py}. \\ \rowseparator
+Camera bridge and deterministic supervisor &
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
+\file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py};
+\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}. \\ \rowseparator
+V4 visual runtime &
+\file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py};
+\file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py};
+\file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py};
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}. \\ \rowseparator
+Planning and closed-loop task execution &
+\file{mfja_robot_control_config/launch/room_315_task_execution.launch.py};
+\file{mfja_robot_control_config/scripts/room_315_task_execution_node.py};
+\file{mfja_robot_control_config/scripts/room_315_task_execution.py};
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}. \\ \rowseparator
+Controlled shutdown &
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
+\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py};
+\file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}. \\
+\bottomrule
+\end{longtable}
+
+\section{Terminal Setup and Preflight}
+
+Use the same workspace variables in every terminal. These commands do not build
+or change runtime state:
+
+\begin{lstlisting}[language=bash]
+export MFJA_WS="${MFJA_WS:-$HOME/mfja_ws}"
+export MFJA_REPO="${MFJA_REPO:-$MFJA_WS/src/mfja_3rd_floor_gz}"
+
+cd "$MFJA_WS"
+source /opt/ros/jazzy/setup.bash
+source "$MFJA_WS/install/setup.bash"
+
+git -C "$MFJA_REPO" status --short --branch
+ros2 pkg prefix mfja_3rd_floor_bringup
+ros2 pkg prefix mfja_robot_control_config
+\end{lstlisting}
+
+Before launching, stop any previous high-level floor with Ctrl-C, confirm the
+desired overlay, and decide whether startup may clear the configured obstacle
+cache. The high-level default is destructive for that one cache file; the
+runbook commands below explicitly preserve it with
+\code{room315_clear_vla_obstacle_pose_cache:=false}.
+
+\section{Base Headless Smoke}
+
+Terminal A:
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none \
+  gui:=false \
+  start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false
+\end{lstlisting}
+
+After five seconds, Terminal B:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo --once /clock
+ros2 service list | grep '^/world/room_315_only/'
+ros2 topic echo --once /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState
+ros2 topic echo --once /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+\end{lstlisting}
+
+Expect \code{create}, \code{remove}, and \code{set_pose} world services plus a
+stopped right-shuttle state. \code{gui:=false} omits the Gazebo client; camera
+rendering can still require working server-side EGL/graphics support.
+
+\section{Supported Simulation Profiles}
+
+\subsection{Room 315, empty rails}
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_right_shuttle_count:=0 \
+  room315_left_shuttle_count:=0
+\end{lstlisting}
+
+\subsection{Lightweight full floor}
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_right_shuttle_count:=0 \
+  room315_left_shuttle_count:=0
+\end{lstlisting}
+
+The unmodified full-floor default is paused. This example explicitly starts
+running so simulation-time controllers advance.
+
+\subsection{Full floor with selected robots}
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
+  robots:=kuka1,staubli1,yaskawa_hc10_1,yaskawa_hc10dt_1,tiago1 \
+  gui:=true start_paused:=false \
+  room315_clear_vla_obstacle_pose_cache:=false
+\end{lstlisting}
+
+\subsection{Isolated industrial robot}
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py \
+  robot:=kuka gui:=true start_paused:=false
+\end{lstlisting}
+
+Valid short selectors are \code{kuka}, \code{staubli}, \code{hc10}, and
+\code{hc10dt}. Use this profile for fast joint/gripper changes.
+
+\section{Robot Joint and Gripper Operation}
+
+Discover the current installed profiles before commanding:
+
+\begin{lstlisting}[language=bash]
+ros2 run mfja_robot_control_config robot_joint_command.py --list
+ros2 run mfja_robot_control_config robot_gripper_command.py --list
+\end{lstlisting}
+
+Preview first:
+
+\begin{lstlisting}[language=bash]
+ros2 run mfja_robot_control_config robot_joint_command.py \
+  kuka --unit rad \
+  --positions 0.6 -1.0 1.1 0.0 0.6 0.0 \
+  --dry-run
+
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  kuka open --dry-run
+\end{lstlisting}
+
+Publish the verified command:
+
+\begin{lstlisting}[language=bash]
+ros2 run mfja_robot_control_config robot_joint_command.py \
+  kuka --unit rad \
+  --positions 0.6 -1.0 1.1 0.0 0.6 0.0
+
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka close
+ros2 run mfja_robot_control_config robot_gripper_command.py kuka open 75
+ros2 run mfja_robot_control_config robot_gripper_command.py \
+  hc10 --position 0.012
+\end{lstlisting}
+
+The selected robot must already exist and expose the expected subscriber. Check
+\rosname{/<robot>/joint_states}, command topic type, and trajectory progress.
+Industrial grippers only animate jaws; they do not attach payloads.
+
+\section{Direct Rail Operation}
+
+The following expert examples target the right rail. For the left rail, replace
+\code{right} and the entity/identity consistently. Begin with an empty-rail
+profile. Direct typed publication bypasses the planner and supervisor.
+
+\subsection{Add and inspect a stopped shuttle}
+
+\begin{lstlisting}[language=bash]
+ros2 service call /room_315/rails/right/shuttles/add \
+  mfja_rail_interfaces/srv/AddShuttle \
+  "{name: 'room315_right_shuttle_1', start_slot: '2', \
+    speed: 0.2, start_enabled: false}"
+
+ros2 topic echo --once /room_315/rails/right/shuttles/state \
+  mfja_rail_interfaces/msg/ShuttleState
+\end{lstlisting}
+
+A successful add reply accepts the logical shuttle; visual spawn is
+asynchronous. Verify both state and Gazebo rendering when the visual matters.
+
+\subsection{Start, target, stop, reset, and remove}
+
+The mutation commands below are mutually exclusive examples, not one script to
+paste from top to bottom. Choose the applicable ON form, OFF scope, or lifecycle
+operation, then require a newer typed actual-state sample before issuing another
+mutation.
+
+To start on the retained/default route without an exact target, run only:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON', speed: 0.2}"
+\end{lstlisting}
+
+Alternatively, to start toward one exact reachable target, run only:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'ON', \
+    speed: 0.2, target_slot: '3'}"
+\end{lstlisting}
+
+After either ON form, require a newer MOVING or guarded WAITING typed state.
+To stop one identity, run:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'OFF'}"
+\end{lstlisting}
+
+Use the following as an alternative emergency scope, not immediately after the
+single-identity command:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'ALL', command: 'OFF'}"
+\end{lstlisting}
+
+Require a newer DISABLED state after either OFF scope. To reset a faulted or
+stopped identity to its allowed origin, first prove that origin unoccupied,
+then run:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'RESET'}"
+\end{lstlisting}
+
+Removal is a separate lifecycle operation. After confirming that removal is
+intended, run:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/shuttles/command \
+  mfja_rail_interfaces/msg/ShuttleCommand \
+  "{name: 'room315_right_shuttle_1', command: 'REMOVE'}"
+\end{lstlisting}
+
+Nonzero \code{speed} is retained configuration, not proof of motion. A RESET or
+OFF shuttle still occupies the rail; verify typed state after every command.
+
+\subsection{Switches}
+
+Only change a coordinated switch pair after proving the rail is empty. Then:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'A1', state: 'INTERIOR'}, \
+               {name: 'A2', state: 'INTERIOR'}]}"
+\end{lstlisting}
+
+Alternatively, and only after the same empty-rail proof, request EXTERIOR for
+every switch:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/switches/command \
+  mfja_rail_interfaces/msg/SwitchCommand \
+  "{switches: [{name: 'ALL', state: 'EXTERIOR'}]}"
+\end{lstlisting}
+
+After the selected request, inspect the typed actual state:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo --once /room_315/rails/right/switches/state \
+  mfja_rail_interfaces/msg/SwitchState
+\end{lstlisting}
+
+The pair request and \code{ALL} request are alternatives. A command contains
+requested state only: after either example, wait until a newer typed state
+reports every requested switch at its delayed actual value. Never issue the
+next mutation after a fixed sleep or from GUI animation alone.
+
+\subsection{Stoppers and sensors}
+
+To close stopper A1, run:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/stoppers/command \
+  mfja_rail_interfaces/msg/StopperCommand \
+  "{stoppers: [{name: 'A1', state: '1'}]}"
+
+ros2 topic echo --once /room_315/rails/right/stoppers/state \
+  mfja_rail_interfaces/msg/StopperState
+\end{lstlisting}
+
+Only after a newer typed state confirms the close, open the stopper when the
+procedure calls for clear passage:
+
+\begin{lstlisting}[language=bash]
+ros2 topic pub --once /room_315/rails/right/stoppers/command \
+  mfja_rail_interfaces/msg/StopperCommand \
+  "{stoppers: [{name: 'A1', state: '0'}]}"
+
+ros2 topic echo --once /room_315/rails/right/stoppers/state \
+  mfja_rail_interfaces/msg/StopperState
+\end{lstlisting}
+
+Inspect occupancy separately:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo --once /room_315/rails/right/sensors/feedback \
+  mfja_rail_interfaces/msg/SensorFeedback
+\end{lstlisting}
+
+Close and open are separate mutations. Confirm a newer typed stopper state of
+\state{1} before relying on the guard, and confirm \state{0} before relying on
+clear passage; sensor feedback does not replace the stopper actual-state check.
+
+\section{Camera Bridge and Deterministic Supervisor}
+
+Start the integrated branch with the floor:
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
+  robots:=none gui:=true start_paused:=false \
+  enable_room315_kinematic_shuttles:=true \
+  enable_room315_vla:=true \
+  enable_room315_vla_camera_bridge:=true \
+  enable_room315_vla_obstacles:=false \
+  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_right_shuttle_count:=1 \
+  room315_left_shuttle_count:=0 \
+  room315_shuttles_start_enabled:=false
+\end{lstlisting}
+
+Inspect status and issue the ordinary supervised stop:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo --once /room_315/vla/status std_msgs/msg/String
+ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+  "{data: '{\"action\":\"stop_all\"}'}"
+\end{lstlisting}
+
+This does not require a learned model and does not start visual inference or
+task execution. If attaching to a floor that was launched without VLA, start
+\file{room_315_vla_supervisor.launch.py} directly. Do not do that when the
+integrated branch is already active; it would duplicate the supervisor and
+camera bridge.
+
+\section{V4 Visual Runtime}
+
+\begin{warningbox}[External artifact prerequisite]
+Do not run the checked-in visual YAML blindly: it names a host-specific external
+bundle. Obtain a complete independently approved promotion bundle, its JSON
+promotion manifest, the independently recorded manifest SHA-256, and the
+intended visual virtual environment. Never compute a new ``approved'' hash from
+an untrusted file merely to pass the check or edit a promoted bundle in place.
+\end{warningbox}
+
+With the integrated VLA camera bridge already running, the safe shadow template
+is:
+
+\begin{lstlisting}[language=bash]
+export ROOM315_SHADOW_V4_BUNDLE="$HOME/room315_artifacts/visual_v4_shadow"
+ROOM315_SHADOW_V4_MANIFEST="$ROOM315_SHADOW_V4_BUNDLE"
+ROOM315_SHADOW_V4_MANIFEST+=/runtime_promotion_manifest.json
+export ROOM315_SHADOW_V4_MANIFEST
+export ROOM315_SHADOW_V4_MANIFEST_SHA256='<approved-manifest-sha256>'
+
+source "$HOME/.venvs/mfja-visual/bin/activate"
+test -f "$ROOM315_SHADOW_V4_MANIFEST"
+printf '%s  %s\n' "$ROOM315_SHADOW_V4_MANIFEST_SHA256" \
+  "$ROOM315_SHADOW_V4_MANIFEST" | sha256sum --check -
+
+ros2 launch mfja_robot_control_config \
+  room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_mode:=shadow \
+  v4_promotion_manifest:="$ROOM315_SHADOW_V4_MANIFEST" \
+  v4_promotion_manifest_sha256:="$ROOM315_SHADOW_V4_MANIFEST_SHA256" \
+  device:=auto dry_run_state_fusion:=true \
+  plansys2_update_enabled:=false
+\end{lstlisting}
+
+Inspect:
+
+\begin{lstlisting}[language=bash]
+ros2 topic list | sort | rg '/room_315/visual_state/shadow_v4'
+ros2 topic echo --once \
+  /room_315/visual_state/shadow_v4/validation \
+  mfja_rail_interfaces/msg/VisualStateObservation
+ros2 topic echo \
+  /room_315/visual_state/shadow_v4/diagnostics \
+  diagnostic_msgs/msg/DiagnosticArray
+\end{lstlisting}
+
+Stop the shadow node before starting the independently approved active bundle.
+With the integrated camera bridge still running, use this exact first-readiness
+template:
+
+\begin{lstlisting}[language=bash]
+export ROOM315_ACTIVE_V4_BUNDLE="$HOME/room315_artifacts/visual_v4_active"
+ROOM315_ACTIVE_V4_MANIFEST="$ROOM315_ACTIVE_V4_BUNDLE"
+ROOM315_ACTIVE_V4_MANIFEST+=/runtime_promotion_manifest.json
+export ROOM315_ACTIVE_V4_MANIFEST
+export ROOM315_ACTIVE_V4_MANIFEST_SHA256='<approved-manifest-sha256>'
+
+source "$HOME/.venvs/mfja-visual/bin/activate"
+test -f "$ROOM315_ACTIVE_V4_MANIFEST"
+printf '%s  %s\n' "$ROOM315_ACTIVE_V4_MANIFEST_SHA256" \
+  "$ROOM315_ACTIVE_V4_MANIFEST" | sha256sum --check -
+
+ros2 launch mfja_robot_control_config \
+  room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_V4_MANIFEST" \
+  v4_promotion_manifest_sha256:="$ROOM315_ACTIVE_V4_MANIFEST_SHA256" \
+  device:=auto dry_run_state_fusion:=true \
+  plansys2_update_enabled:=false
+\end{lstlisting}
+
+In another sourced terminal, require an accepted active observation and inspect
+the visual-runtime diagnostic:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo --once \
+  /room_315/visual_state/observed_state \
+  mfja_rail_interfaces/msg/VisualStateObservation
+ros2 topic echo --once /diagnostics \
+  diagnostic_msgs/msg/DiagnosticArray
+\end{lstlisting}
+
+The observation must have stage \code{fused_observed_state}, current source
+stamps, matching schema/checkpoint, \code{accepted}, \code{model_ready},
+\code{input_ready}, \code{presence_ready}, and \code{state_fusion_ready} true,
+and \code{stale} false. \code{stabilized=false} is valid while the optional
+temporal filter is disabled.
+
+Both supervisor and visual launches default to creating RGB bridges. When the
+integrated supervisor already owns them, visual runtime must use
+\code{enable_camera_bridge:=false}.
+
+\section{Planning and Closed-Loop Task Execution}
+
+Planning process/gateway startup with actuation disabled:
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_robot_control_config \
+  room_315_task_execution.launch.py \
+  use_sim_time:=true execution_enabled:=false \
+  enable_plansys2:=true external_obstacles_disabled:=true
+
+ros2 lifecycle get /planner
+\end{lstlisting}
+
+With \code{execution_enabled=false}, authorization verification is deliberately
+bypassed and no authorization or promotion artifact is required. The planner
+may be active while the disabled gateway still reports that live visual,
+supervisor, or sensor inputs are not ready; that is independent of artifact
+availability. For actuation, first create a host-local YAML and edit only its
+external paths/hashes:
+
+\begin{lstlisting}[language=bash]
+export ROOM315_TASK_EXEC_CONFIG="$HOME/.config/mfja/task_execution_runtime.yaml"
+mkdir -p "$(dirname "$ROOM315_TASK_EXEC_CONFIG")"
+cp "$MFJA_REPO/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml" \
+  "$ROOM315_TASK_EXEC_CONFIG"
+${EDITOR:-nano} "$ROOM315_TASK_EXEC_CONFIG"
+\end{lstlisting}
+
+Set literal absolute paths for \code{task_execution_authorization_path} and
+\code{task_execution_promotion_manifest_path}, plus the independently approved
+\code{task_execution_authorization_sha256}. Verify that the visual schema and
+checkpoint hash match the active observation. Before enabling execution, the
+authorization JSON, promotion manifest, manual decision, and every artifact
+bound from that manifest must be a regular file, not a symbolic link at its
+final path component, and have all user/group/other write bits cleared. The
+host-local runtime YAML remains configuration; do not make writable copies of
+the immutable artifacts merely to change its paths.
+
+Only after the floor, supervisor, active accepted vision, planner, and artifact
+checks are ready:
+
+\begin{lstlisting}[language=bash]
+ros2 launch mfja_robot_control_config \
+  room_315_task_execution.launch.py \
+  use_sim_time:=true \
+  runtime_config:="$ROOM315_TASK_EXEC_CONFIG" \
+  execution_enabled:=true enable_plansys2:=true \
+  external_obstacles_disabled:=true
+
+ros2 lifecycle get /planner
+ros2 topic echo /diagnostics diagnostic_msgs/msg/DiagnosticArray
+\end{lstlisting}
+
+\code{execution_enabled:=true} causes supervised Gazebo actuation. The current
+gateway has no external-obstacle perception provider and supports only the
+paired policy
+\code{enable_room315_vla_obstacles:=false} with
+\code{external_obstacles_disabled:=true}. Setting the gateway value false fails
+closed with \code{external_obstacle_perception_not_configured}; task execution
+is unavailable while the floor obstacles are enabled.
+
+TaskGoals should normally be published by the confirmatory English CLI. If a
+developer publishes JSON directly, first validate it with the same TaskGoal
+builder/validator; do not invent fields from memory.
+
+\section{Controlled Shutdown}
+
+\begin{procedurebox}[Shutdown order]
+\begin{enumerate}
+  \item Stop the active goal or publish supervisor \code{stop_all}.
+  \item Require newer DISABLED feedback for every managed shuttle.
+  \item Stop the English CLI and separately launched task/visual processes with
+        Ctrl-C.
+  \item Press Ctrl-C once in the high-level floor terminal and allow children to
+        exit; preserve logs if a service/entity error occurred.
+  \item Confirm the relevant ROS nodes/Gazebo processes are gone before starting
+        another floor. A leftover lock pathname alone is harmless.
+\end{enumerate}
+\end{procedurebox}
+
+Avoid \code{pkill} in normal operation. The payload batch/review utilities use
+broad \code{pkill -f} patterns and restart the ROS daemon; run them only on a
+dedicated simulation host after reviewing side effects. Their reset options can
+also delete a selected dataset directory. The intent-model setup downloads
+about 1.04 GiB and installs packages; keep it inside its isolated environment.
+
+\noindent\textbf{Source files:}
+\file{mfja_robot_control_config/scripts/room_315_payload_case_batch_runner.py},
+\file{mfja_robot_control_config/scripts/room_315_payload_case_review.py}, and
+\file{mfja_robot_control_config/scripts/setup_room315_intent_model.py}.

@@ -1,0 +1,319 @@
+\chapter{Configuration and Deployment Inputs}
+\label{ch:configuration}
+
+\chapteroverview
+  {Identifies which tracked file owns each configurable contract, which
+   configuration families are operational, and which override wins at runtime.}
+  {Locate the owner and operational class before editing, apply the precedence
+   rules to determine the effective value, then review artifact, installation,
+   and dependency constraints before deployment.}
+
+\section{Configuration Ownership Map}
+
+\begin{longtable}{L{0.31\textwidth} L{0.27\textwidth} L{0.34\textwidth}}
+\caption{Configuration files, primary consumers, and owned contracts}
+\label{tab:configuration-ownership-map}\\
+\toprule
+\tableheader Source & Primary consumer & Owns \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Source & Primary consumer & Owns \\
+\midrule
+\endhead
+\file{mfja_robot_control_config/config/robots.yaml} & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} & Full-floor instances, enable flags, model/variant selection, and spawn pose \\ \rowseparator
+\file{mfja_robot_control_config/config/robots_room_315_only.yaml} & Room-only and isolated launches & Focused-cell robot selection/defaults \\ \rowseparator
+\file{mfja_robot_control_config/config/gripper_command_defaults.yaml} & Launch patching and gripper CLI & Per-instance jaw endpoints and default open/close percentages; fixed joint/controller mapping remains in \file{mfja_robot_control_config/launch/gripper_range_config.py} \\ \rowseparator
+\file{mfja_robot_control_config/config/*.gui.config} & Gazebo GUI & Panel/layout profiles; runtime-safe and light are current profile defaults \\ \rowseparator
+\file{mfja_robot_control_config/config/gazebo_params.yaml} & No current runtime consumer & Installed legacy publish-rate parameter file; current launches do not select it \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_kinematics/rail_network_<side>.yaml} & Rail core/node & Directed nodes/segments, routing, switch guards, CSV references \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_kinematics/raw_segments/*.csv} & Rail path loader & Calibrated sample order and geometry \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_<side>.yaml} & Rail device loader & Slots, sensors, stoppers, radii/default states \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml} & Identity tracking, recording/evaluation, and TaskGoal fusion & Canonical eight identities and associated visuals \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml} & Supervisor when explicitly selected & Primitive validation and recovery defaults \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml} & Visual runtime launch/node & Active V4 manifest/hash, mode, topics, presence and fusion policy \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/visual_observed_state_calibration.yaml} & Deterministic provider/smoke/training helpers & Geometry, block/slot mapping, thresholds and consistency policy; not the learned V4 node's runtime YAML \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml} & English parser/semantic adapter & Allowed language contract and optional local model settings \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} & Task launch/gateway & Fail-closed authorization, topics, timeouts, limits, allowed V4 identity \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime_v4.yaml} & Frozen qualification workflow & Versioned V4 runtime snapshot; not automatically selected \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl} & Task launch/PlanSys2 & Live executable planning domain \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl} & Scenario/data tools & Broader expert/data-generation domain \\
+\bottomrule
+\end{longtable}
+
+Exact files and their short roles are also listed in the Repository Source
+Index in \cref{app:catalog}.
+
+\section{Active, Offline, and Frozen Families}
+
+The installed/current boundary is defined by
+\file{mfja_robot_control_config/CMakeLists.txt}, the active launch files under
+\file{mfja_robot_control_config/launch/}, and the versioned files under
+\file{mfja_robot_control_config/config/room_315_vla/}.
+
+The flat control package contains multiple research generations. Classify a
+file before editing or invoking it:
+
+\begin{longtable}{L{0.22\textwidth} L{0.35\textwidth} L{0.35\textwidth}}
+\caption{Operational classification of active, offline, frozen, and historical files}
+\label{tab:configuration-families}\\
+\toprule
+\tableheader Class & Examples & Rule \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Class & Examples & Rule \\
+\midrule
+\endhead
+Base active runtime & robot registries, rail network/devices/CSV, GUI profiles, supervisor & Maintained for ordinary simulation; changes need live smoke tests \\ \rowseparator
+Active learned runtime & \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}, V4 visual contract/node, runtime PDDL, and \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} & V4 only; requires exact external promoted/authorized artifacts \\ \rowseparator
+Offline current tooling & V4 scenario, dataset, training, evaluation, candidate, acceptance, fault tools & May create new artifacts; never mutates the current promoted bundle \\ \rowseparator
+Frozen evidence/config & V4 training/final-test JSON, versioned task YAML, sealed manifests/results & Immutable after decision; supersede with a new version \\ \rowseparator
+Historical research & V3, V3R1, Experiment-A, old final-test/compatibility adapters & Preserve for provenance; not the supported active runtime \\
+\bottomrule
+\end{longtable}
+
+File names alone are insufficient proof that an artifact is current. Follow
+the manifest chain and exact hashes. In particular, \code{final}, \code{v4},
+or \code{runtime} in a filename does not replace promotion and authorization.
+Local build, runtime, and user-output classes are defined separately in
+\cref{ch:maintenance}; they never become configuration authority.
+
+\section{Precedence Rules}
+
+Precedence and forwarding are implemented in
+\file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py},
+\file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py},
+\file{mfja_robot_control_config/launch/room_315_task_execution.launch.py}, and
+the parameter declarations in their launched nodes.
+
+Runtime values can come from several layers. For a given node, use this
+precedence from strongest to weakest:
+
+\begin{enumerate}
+  \item an explicit launch argument that is forwarded as a ROS parameter;
+  \item a parameter override in the including launch;
+  \item the selected YAML parameter file;
+  \item the node's declared code default; and
+  \item a historical document/example, which has no runtime authority.
+\end{enumerate}
+
+Not every launch argument becomes a node parameter. Some control launch
+conditions, select files, alter the environment, or cause a local cache action.
+Use \code{ros2 launch ... --show-args} for the public surface, then inspect the
+forwarding code and \code{ros2 param dump} for an effective running node.
+
+\section{Robot Registry Contract}
+
+Source files: \file{mfja_robot_control_config/config/robots.yaml},
+\file{mfja_robot_control_config/config/robots_room_315_only.yaml}, and
+\file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}.
+
+The full registry defines six instances:
+
+\begin{longtable}{L{0.20\textwidth} L{0.20\textwidth} L{0.35\textwidth} L{0.15\textwidth}}
+\caption{Full robot-registry instances and room-only enablement}
+\label{tab:robot-registry-contract}\\
+\toprule
+\tableheader Name & Model & Spawn $(x,y,z,yaw)$ & Room-only \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Name & Model & Spawn $(x,y,z,yaw)$ & Room-only \\
+\midrule
+\endhead
+\code{kuka1} & KUKA KR6 & $(-10.6366,-6.0,1.0,3.14)$ & enabled \\ \rowseparator
+\code{staubli1} & St\"aubli TX2 & $(-15.1622,-6.0,1.0,1.57)$ & enabled \\ \rowseparator
+\code{yaskawa_hc10_1} & HC10 & $(-15.1622,-3.0,0.62,1.57)$ & enabled \\ \rowseparator
+\code{yaskawa_hc10dt_1} & HC10DT & $(-10.4366,-3.0,0.62,1.57)$ & enabled \\ \rowseparator
+\code{tiago1} & TIAGo & $(-3.0,-3.0,0.0,1.57)$ & disabled \\ \rowseparator
+\code{tiago_base1} & TIAGo base & $(-6.2,-3.0,0.0,1.57)$ & absent (commented example) \\
+\bottomrule
+\end{longtable}
+
+When adding a robot, preserve uniqueness of instance name, Gazebo entity,
+namespace, and TF prefix. Confirm model and URDF joint names align; add bridge
+rules for only the capabilities actually implemented; and validate initial
+joints against plugin/model limits. A registry enable flag is used only when
+the launch selector is empty; \code{robots:=all} intentionally includes
+disabled entries.
+
+\section{Rail Network and Device Contract}
+
+Source files: \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml},
+\file{mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml},
+\file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml},
+\file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml},
+and \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py}.
+
+Network YAML schema 2 defines 12 nodes, 14 directed segments, four public
+switches, and explicit routing per side. A segment's \code{csv} path, direction,
+start/end node, and guarded successor are one atomic contract. Device YAML
+schema 1 defines four slots, 20 configured position sensors, and four stoppers
+per side; derived stopper sensors are created at runtime.
+The loader follows each explicit segment \code{csv} value; the current
+top-level \code{source_csv_dir} metadata is not used to resolve files.
+
+Use this rule for changes:
+
+\begin{longtable}{L{0.25\textwidth} L{0.32\textwidth} L{0.35\textwidth}}
+\caption{Rail configuration change types and mandatory validation}
+\label{tab:rail-configuration-change-impact}\\
+\toprule
+\tableheader Intended change & Edit & Mandatory checks \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Intended change & Edit & Mandatory checks \\
+\midrule
+\endhead
+Move rail visually as a whole & Calibration defaults/launch offsets & All device world poses, world clearance, both sides \\ \rowseparator
+Correct sampled path & Referenced CSV & Monotonic index, endpoints/tangents, length drift, topology and devices \\ \rowseparator
+Change connectivity & Network YAML routes/guards & All switch combinations, no-successor FALLING behavior, PDDL topology \\ \rowseparator
+Move/add sensor or slot & Device YAML ratios/points & Device loader, marker, occupancy crossing, identity DZI semantics \\ \rowseparator
+Rename public segment/switch & Network, defaults mapping, PDDL, configs, tests, datasets & Wire compatibility and historical adapter decision \\ \rowseparator
+Change speed/headway/delay & Launch/config parameters & Multi-shuttle, stopper/switch timing, task timeouts, acceptance \\
+\bottomrule
+\end{longtable}
+
+Never tune network connectivity to repair a visual coordinate offset. Use the
+device-position and calibration tools, then update the explicit numeric authority.
+
+\section{Visual and Task Parameter Precedence}
+
+Source files: \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py},
+\file{mfja_robot_control_config/launch/room_315_task_execution.launch.py},
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml},
+and \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}.
+
+For visual runtime, the selected YAML loads first. Launch always overrides
+\code{use_sim_time}, \code{device}, \code{runtime_generation},
+\code{dry_run_state_fusion}, and \code{plansys2_update_enabled}. Nonempty
+\code{runtime_mode}, promotion-manifest path, and manifest-hash arguments
+override their YAML keys; empty values preserve YAML.
+
+For task execution, YAML loads first. Launch always overrides simulation time,
+\code{execution_enabled}, the installed runtime PDDL path, planner service, and
+external-obstacle policy. \code{enable_plansys2} controls whether the planner
+process is launched; it is not a gateway parameter. The planner is configured
+after 1 s and automatically activated from the inactive lifecycle state.
+
+\begin{safetybox}[Two independent enable conditions]
+\code{execution_enabled:=true} is necessary but never sufficient. The gateway
+also requires exact immutable authorization/promotion files and matching
+schema/checkpoint hashes. Likewise, enabling the supervisor branch does not
+enable the task gateway. Preserve both separations.
+\end{safetybox}
+
+\section{Host-Specific Artifact Paths}
+
+The active tracked examples are
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml},
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml},
+and \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime_v4.yaml};
+frozen evidence paths are recorded for provenance rather than rewritten.
+
+A Git-tracked search of \file{mfja_robot_control_config} returns 301 lines that
+contain \file{/home/tiago}. They are concentrated in frozen experiment/dataset
+evidence and active V4 qualification configs. Do not blindly replace them:
+hashes and frozen evidence would change, and many paths intentionally record
+provenance. Other repository areas, especially report evidence, may preserve
+additional host paths for their own reproducibility records.
+
+For a new machine:
+
+\begin{enumerate}
+  \item inventory which referenced bundles exist and verify every recorded hash;
+  \item restore immutable bundles outside workspace \file{src/}, or create and
+        qualify a new candidate;
+  \item make a host-local runtime YAML or pass supported launch overrides;
+  \item keep frozen evidence unchanged; and
+  \item run copied-install, shadow, acceptance, fault, and authorization checks
+        before enabling execution.
+\end{enumerate}
+
+\section{Install Coverage and Portability Gaps}
+
+Source files: \file{mfja_robot_control_config/CMakeLists.txt},
+\file{mfja_robot_control_config/scripts/room_315_task_goal_semantic.py},
+\file{mfja_robot_control_config/scripts/room_315_task_goal_benchmark.py},
+\file{mfja_robot_control_config/scripts/room_315_task_execution_config.py}, and
+\file{mfja_robot_control_config/scripts/room_315_visual_observed_state_provider.py}.
+
+The CMake install surface is explicit and is not identical to Git:
+
+\begin{itemize}
+  \item four tracked scripts are not listed for installation;
+  \item \RepositoryExecutableSourceScriptCount{} of the
+        \RepositoryScriptCount{} tracked source scripts carry an executable
+        source bit, while CMake lists \RepositoryInstalledScriptCount{} files;
+        both dimensions matter in a symlink install;
+  \item \file{mfja_robot_control_config/config/room_315_kinematics/SEGMENT_CSV_MIGRATION.md}
+        and two V4 coverage JSON files are
+        tracked but omitted from config installation;
+  \item CMake installs the complete PDDL directory, so an ignored local
+        \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_guide_ar.html}
+        can leak into a local install even
+        though a clean clone cannot reproduce it; and
+  \item multiple Python utilities derive config paths using
+        \code{Path(__file__).resolve().parents[1]/config}. This succeeds in the
+        current symlink install but can fail in a normal copied install, where
+        config belongs under package share. Use \code{ament_index_python}.
+\end{itemize}
+
+The affected copied-install pattern appears in task-goal semantic/benchmark,
+task-execution config, visual observed-state provider, V4 training, and related
+utilities. Treat copied-install validation as a release gate until all paths
+are centralized.
+
+\section{Runtime and Tooling Dependencies Beyond Package Manifests}
+
+Source files: \file{mfja_robot_control_config/package.xml},
+\file{mfja_robot_control_config/CMakeLists.txt},
+\file{mfja_robot_control_config/scripts/setup_room315_intent_model.py},
+\file{mfja_robot_control_config/scripts/room_315_vla_to_lerobot.py}, and
+\file{mfja_robot_control_config/launch/room_315_runtime_acceptance.launch.py}.
+
+The manifests cover ROS, Gazebo, OpenCV, NumPy, Pillow, YAML, Torch, and
+TorchVision. Selected optional workflows additionally require undeclared
+\code{llama-cpp-python==0.3.16}, an alternative \code{transformers} backend,
+\code{lerobot}, \code{rosbag2_py}, \code{rosidl_runtime_py}, and Python/pip for
+the intent setup tool. External program assumptions include \code{ros2 bag}
+and a storage plugin, \code{gz}, \code{git}, \code{nvidia-smi}, \code{pkill},
+and the ROS daemon. These are environment-specific, not base simulation
+requirements, but each installed workflow must state and validate them.
+
+The runtime-acceptance launch also has the undeclared reverse dependency on
+\file{mfja_3rd_floor_bringup} described in \cref{ch:packages}. Do not add that
+dependency blindly: it would create a control--bringup package cycle. Refactor
+the launch ownership or shared composition instead.
+
+Conversely, Torch and TorchVision are unconditional manifest runtime
+dependencies even though base simulation does not import them and the base
+rosdep procedure skips their keys. This formal/operational mismatch should be
+resolved by packaging the advanced learned stack separately or defining a
+supported optional-dependency policy.
+
+\section{Configuration Review Checklist}
+
+The executable install/test surface used by this checklist is declared in
+\file{mfja_robot_control_config/CMakeLists.txt},
+\file{mfja_robot_control_config/package.xml}, and the registered tests under
+\file{mfja_robot_control_config/test/}.
+
+\begin{procedurebox}[Before merging a configuration change]
+\begin{enumerate}
+  \item Identify the owner and whether the file is active, offline, historical,
+        frozen, or local output.
+  \item Validate syntax and schema with the owning loader/test, not only a YAML
+        or JSON parser.
+  \item Search all consumers by filename, parameter key, topic, and semantic
+        value; check left/right mapping separately.
+  \item Confirm launch precedence and installed-file coverage in both symlink
+        and copied installs where relevant.
+  \item Run the smallest focused tests plus the affected end-to-end smoke path.
+  \item Update hashes/versioned manifests only by the approved candidate flow.
+  \item Update the launch reference, maintenance notes, and Repository Source
+        Index.
+\end{enumerate}
+\end{procedurebox}

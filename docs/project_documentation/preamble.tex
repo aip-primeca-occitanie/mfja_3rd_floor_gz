@@ -1,0 +1,161 @@
+\usepackage[a4paper,top=2.05cm,bottom=2.15cm,left=2.25cm,right=2.15cm,headheight=15pt]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{tgpagella}
+\usepackage{tgheros}
+\usepackage{tgcursor}
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.02}
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.38em}
+
+\usepackage[table]{xcolor}
+\definecolor{mfjablue}{HTML}{143D73}
+\definecolor{mfjagreen}{HTML}{167D6A}
+\definecolor{mfjaorange}{HTML}{D97706}
+\definecolor{mfjared}{HTML}{B42318}
+\definecolor{mfjalight}{HTML}{EEF4FA}
+\definecolor{codebg}{HTML}{F5F7FA}
+\definecolor{codecomment}{HTML}{5F6B7A}
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\usepackage{array}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{ragged2e}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{1.14}
+\BeforeBeginEnvironment{longtable}{\Needspace{8\baselineskip}}
+\newcommand{\rowseparator}{%
+  \arrayrulecolor{black!22}%
+  \specialrule{0.28pt}{0.30ex}{0.30ex}%
+  \arrayrulecolor{black}%
+}
+
+\usepackage{listings}
+\lstdefinestyle{manualcode}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{black!18},
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  showstringspaces=false,
+  commentstyle=\color{codecomment}\itshape,
+  keywordstyle=\color{mfjablue}\bfseries,
+  stringstyle=\color{mfjagreen},
+  xleftmargin=0.8em,
+  framexleftmargin=0.6em,
+  aboveskip=0.7em,
+  belowskip=0.7em
+}
+\lstset{style=manualcode}
+
+\usepackage{enumitem}
+\setlist[itemize,enumerate]{leftmargin=*,itemsep=0.18em,topsep=0.28em}
+\usepackage{caption}
+\captionsetup{font=small,labelfont={bf,color=mfjablue},justification=justified,singlelinecheck=false}
+\captionsetup[table]{position=above,skip=0.45em}
+\usepackage{pdflscape}
+\usepackage{xurl}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks,pdfencoding=auto]{hyperref}
+\usepackage{bookmark}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{black!65}{\nouppercase{\leftmark}}}
+\fancyhead[R]{\small\textcolor{black!65}{Engineering handover manual}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+\usepackage[explicit]{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\sffamily}
+  {\color{mfjablue}\Large\bfseries \chaptertitlename\ \thechapter}
+  {0.55ex}
+  {\color{mfjablue}\huge\bfseries\raggedright #1}
+  [\vspace{0.45ex}\color{mfjablue}\titlerule]
+\titlespacing*{\chapter}{0pt}{-10pt}{22pt}
+\titleformat{\part}[display]
+  {\centering\normalfont\sffamily}
+  {\color{mfjagreen}\Large\bfseries Part \thepart}
+  {1.2ex}
+  {\color{mfjablue}\Huge\bfseries #1}
+  [\vspace{0.8ex}\color{mfjablue}\titlerule]
+\titleformat{\section}{\Large\sffamily\bfseries\color{mfjablue}}{\thesection}{0.7em}{#1}
+\titleformat{\subsection}{\large\sffamily\bfseries\color{mfjagreen}}{\thesubsection}{0.7em}{#1}
+\titleformat{\subsubsection}{\normalsize\sffamily\bfseries}{\thesubsubsection}{0.7em}{#1}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{1}
+\makeatletter
+\renewcommand*\l@section{\@dottedtocline{1}{1.5em}{3.8em}}
+\renewcommand*\l@table{\@dottedtocline{1}{1.5em}{3.8em}}
+\makeatother
+
+\usepackage[most]{tcolorbox}
+\newtcolorbox{keybox}[1][]{
+  enhanced,breakable,colback=mfjalight,colframe=mfjablue,boxrule=0.65pt,
+  arc=1.5mm,title=#1,fonttitle=\bfseries\sffamily
+}
+\newtcolorbox{warningbox}[1][]{
+  enhanced,breakable,colback=mfjaorange!7,colframe=mfjaorange,boxrule=0.65pt,
+  arc=1.5mm,title=#1,fonttitle=\bfseries\sffamily
+}
+\newtcolorbox{safetybox}[1][]{
+  enhanced,breakable,colback=mfjared!5,colframe=mfjared,boxrule=0.7pt,
+  arc=1.5mm,title=#1,fonttitle=\bfseries\sffamily
+}
+\newtcolorbox{procedurebox}[1][]{
+  enhanced,breakable,colback=mfjagreen!5,colframe=mfjagreen,boxrule=0.65pt,
+  arc=1.5mm,title=#1,fonttitle=\bfseries\sffamily
+}
+
+\newcommand{\chapteroverview}[2]{%
+  \begin{keybox}[Chapter guide]
+    \textbf{Purpose.} #1\par
+    \textbf{Recommended use.} #2
+  \end{keybox}%
+}
+
+% xurl makes long identifiers breakable at path/identifier punctuation.
+\newcommand{\code}[1]{\nolinkurl{#1}}
+\newcommand{\file}[1]{\path{#1}}
+\newcommand{\rosname}[1]{\path{#1}}
+\newcommand{\state}[1]{\texttt{#1}}
+\newcommand{\sourceoftruth}{\textcolor{mfjablue}{\textbf{Source of truth}}}
+\newcommand{\risk}[1]{\textcolor{mfjared}{\textbf{#1}}}
+\newcommand{\yes}{\textcolor{mfjagreen}{\textbf{Yes}}}
+\newcommand{\no}{\textcolor{mfjared}{\textbf{No}}}
+\newcommand{\tableheader}{\rowcolor{mfjablue!10}}
+\newcommand{\commandblock}[1]{\lstinline[basicstyle=\ttfamily\small]!#1!}
+
+\hypersetup{
+  pdftitle={MFJA Third-Floor ROS 2 and Gazebo Project Handover Manual},
+  pdfauthor={MFJA project maintainers},
+  pdfsubject={Architecture, operation, maintenance, and continuation of the MFJA ROS 2/Gazebo project},
+  pdfkeywords={ROS 2, Gazebo Harmonic, MFJA, Room 315, rail shuttle, VLA, PlanSys2, maintenance, handover}
+}
+
+\widowpenalty=10000
+\clubpenalty=10000
+\displaywidowpenalty=10000
+\emergencystretch=2em
+\raggedbottom

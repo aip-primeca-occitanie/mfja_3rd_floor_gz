@@ -1,0 +1,232 @@
+\chapter{Safety Boundary, Risk Register, and Handover}
+\label{ch:handover}
+
+\chapteroverview
+  {Consolidates the non-negotiable deployment boundary, prioritized unresolved
+   risks, redistribution constraints, and evidence required for handover.}
+  {Review the safety boundary before any deployment decision, assign owners to
+   the risk register, then use the acceptance checklist and completion record
+   for a traceable sender--receiver handover.}
+
+\section{Authoritative Source Registry}
+
+The source keys used below keep safety and maintenance claims traceable without
+repeating long paths throughout the prose. Each key identifies the primary
+tracked evidence for the associated claim; the Repository Source Index in
+Appendix~\ref{app:catalog} provides the package-oriented source index.
+
+\scriptsize
+\begin{longtable}{L{0.08\textwidth} L{0.25\textwidth} L{0.58\textwidth}}
+\caption{Authoritative source registry for safety boundaries and known gaps}
+\label{tab:handover-source-registry}\\
+\toprule
+\tableheader Key & Subject & Authoritative tracked source files \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Key & Subject & Authoritative tracked source files \\
+\midrule
+\endhead
+S1 & Deployment boundary & \file{README.md}; \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} \\ \rowseparator
+S2 & Rail motion, topology, devices, and headway & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml} \\ \rowseparator
+S3 & Robot collision geometry boundary & \file{mfja_3rd_floor_description/test/test_industrial_robot_collision_free.py}; \file{mfja_3rd_floor_description/models/kuka_kr6r900sixx/model.sdf}; \file{mfja_3rd_floor_description/models/staubli_tx2_60l/model.sdf}; \file{mfja_3rd_floor_description/models/yaskawa_hc10/model.sdf}; \file{mfja_3rd_floor_description/models/yaskawa_hc10dt/model.sdf} \\ \rowseparator
+S4 & Payload, device, and obstacle presentation & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_3rd_floor_description/models/room315_vla_removable_obstacle_marker/model.sdf}; \file{mfja_3rd_floor_description/models/room315_vla_payload_medium_box/model.sdf}; \file{mfja_3rd_floor_description/models/room315_vla_overhead_devices/model.sdf} \\ \rowseparator
+S5 & Learned-state validation and supervised execution & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}; \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} \\ \rowseparator
+S6 & Build, installation, and test registration & \file{mfja_3rd_floor_bringup/CMakeLists.txt}; \file{mfja_3rd_floor_description/CMakeLists.txt}; \file{mfja_rail_interfaces/CMakeLists.txt}; \file{mfja_robot_control_config/CMakeLists.txt}; \file{mfja_robot_control_config/config/room_315_vla/pddl/} \\ \rowseparator
+S7 & Asset provenance and declared package licences & \file{mfja_3rd_floor_description/THIRD_PARTY.md}; \file{mfja_3rd_floor_description/package.xml}; \file{mfja_3rd_floor_bringup/package.xml}; \file{mfja_rail_interfaces/package.xml}; \file{mfja_robot_control_config/package.xml} \\ \rowseparator
+S8 & Batch/review process and temporary-file behavior & \file{mfja_robot_control_config/scripts/room_315_payload_case_batch_runner.py}; \file{mfja_robot_control_config/scripts/room_315_payload_case_review.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}; \file{mfja_robot_control_config/scripts/room_315_v4_closed_loop_fault_campaign.py} \\ \rowseparator
+S9 & Host-bound active artifact locations & \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}; \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_training_v4.json}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4.json} \\ \rowseparator
+S10 & Copied-install path handling & \file{mfja_robot_control_config/scripts/room_315_task_goal_semantic.py}; \file{mfja_robot_control_config/scripts/room_315_task_goal_benchmark.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_config.py}; \file{mfja_robot_control_config/scripts/room_315_visual_observed_state_provider.py}; \file{mfja_robot_control_config/scripts/room_315_vla_train_v4.py} \\ \rowseparator
+S11 & Active and historical visual-runtime families & \file{mfja_robot_control_config/CMakeLists.txt}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_experiment_a_dataset_v3.yaml}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_experiment_a_dataset_v3r1.yaml}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Non-Negotiable Deployment Boundary}
+
+\begin{safetybox}[Simulation and research only]
+This repository is not a safety-certified controller and is not authorized for
+physical machinery. Its current task authorization is Gazebo-only. Do not
+connect its command outputs to a real rail, PLC, robot, or gripper without a new
+approved hardware architecture, independent risk assessment, trusted sensors,
+hard real-time/safety functions, physical commissioning, and organizational
+authorization.
+\end{safetybox}
+
+The limitation is architectural, not a disclaimer that can be removed after a
+successful demo:
+
+\begin{itemize}
+  \item shuttle propulsion uses pose resets, not motor/contact dynamics;
+  \item headway is a software center-distance check, not certified block protection;
+  \item KUKA, St\"aubli, HC10, and HC10DT models intentionally lack collision geometry;
+  \item industrial grippers articulate visually and do not grasp/attach physics payloads;
+  \item removable obstacle markers and several payload/device assets are visual-only;
+  \item asynchronous Gazebo service failure can leave logical/visual divergence;
+  \item learned position/load facts are probabilistic and are accepted only through
+        a specific guarded V4 contract; and
+  \item direct typed ROS topics can bypass high-level planning/supervision.
+\end{itemize}
+
+\noindent\textit{Source keys: S1--S5 in Table~\ref{tab:handover-source-registry}.}
+
+\section{Known-Gap Register}
+
+\scriptsize
+\begin{longtable}{L{0.07\textwidth} L{0.24\textwidth} L{0.32\textwidth} L{0.18\textwidth} L{0.08\textwidth}}
+\caption{Prioritized known-gap register and current containment}
+\label{tab:known-gap-register}\\
+\toprule
+\tableheader Priority & Gap & Required direction & Current containment & Source \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Priority & Gap & Required direction & Current containment & Source \\
+\midrule
+\endhead
+P0 & Active visual/task YAML uses external \file{/home/tiago/...} artifacts & Host-local deployment config or portable bundle locator; preserve immutable hashes & Fails closed when files/hashes are absent & S9 \\ \rowseparator
+P0 & Physical use is not validated/certified & Separate hardware/safety project and authorization & Gazebo-only policy and documentation & S1 \\ \rowseparator
+P1 & Copied-install path assumptions in several Python tools & Centralize package-share lookup with \code{ament_index_python}; add copied-install CI & Symlink development install masks issue & S10 \\ \rowseparator
+P1 & No checked-in CI; nine source tests unregistered; five Torch-gated & Add clean base/optional pipelines and explicit complete-source job & Documented commands and Repository Source Index & S6 \\ \rowseparator
+P1 & Mixed third-party asset licenses while manifests say Apache-2.0 & Vendor exact upstream license texts in \code{LICENSES/}; review redistribution & \file{mfja_3rd_floor_description/THIRD_PARTY.md} records provenance & S7 \\ \rowseparator
+P1 & PDDL directory install can include ignored local HTML & Install an explicit tracked-file set & Clean clone omits the local file & S6 \\ \rowseparator
+P2 & Only 49 source scripts executable versus 108 CMake-listed & Separate support libraries/public programs and normalize modes/install tests & Repository Source Index records both dimensions & S6 \\ \rowseparator
+P2 & V3/V3R1/V4 and compatibility tools share a flat package & Archive/name/version active versus historical surfaces more strongly & V4-only active validation and this classification & S11 \\ \rowseparator
+P2 & Large multi-responsibility maintenance hot spots & Refactor behind existing contracts with characterization tests & Broad regression matrix & Table~\ref{tab:maintenance-hot-spots} \\ \rowseparator
+P2 & Temporary files use predictable \file{/tmp} names and often remain & Unique scoped temp directories and cleanup handlers & High-level singleton prevents common collision & S8 \\ \rowseparator
+P2 & Wire semantics use unrestricted strings for many modes/states & Central constants or versioned typed constants/enums & Runtime validators/tests reject illegal values & S2, S5 \\ \rowseparator
+P2 & Broad \code{pkill}/ROS-daemon behavior in batch/review tools & Replace with process-group/session ownership and explicit confirmation & Dedicated-host-only warning & S8 \\ \rowseparator
+P3 & Maintained Markdown test counts are stale & Reconcile counts with CMake registration and the tracked test tree during documentation review & This manual records audited counts & S6 \\ \rowseparator
+P3 & Large local build/log/cache trees obscure clean source & Adopt retention/cleanup policy after evidence review & Ignored and explicitly non-authoritative & S6 \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{High-Risk Maintenance Hot Spots}
+
+The following current files combine enough policy and behavior that a local
+edit can have system-wide effects:
+
+\begin{longtable}{L{0.50\textwidth} r L{0.31\textwidth}}
+\caption{High-risk maintenance hot spots}
+\label{tab:maintenance-hot-spots}\\
+\toprule
+\tableheader File & Approx. lines & Principal risk \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader File & Approx. lines & Principal risk \\
+\midrule
+\endhead
+\file{mfja_robot_control_config/scripts/room_315_pddl_scenario_generator.py} & 11,150 & Problem construction, planner client, scenario/evidence coupling \\ \rowseparator
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} & 5,053 & ROS, Gazebo, fleet, device, and lifecycle integration \\ \rowseparator
+\file{mfja_robot_control_config/scripts/room_315_vla_train_v4.py} & 4,891 & Dataset, model, training, and evaluation contract \\ \rowseparator
+\file{mfja_robot_control_config/scripts/room_315_closed_loop_executive.py} & 4,595 & Planning, action, effect, and recovery policy \\ \rowseparator
+\file{mfja_robot_control_config/scripts/room_315_task_execution.py} & 3,537 & Grounding, authorization and task orchestration \\ \rowseparator
+\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} & 3,408 & Primitive validation and safety recovery \\
+\bottomrule
+\end{longtable}
+
+Before refactoring, create characterization tests at public/pure-core boundaries.
+Extract one responsibility at a time and preserve message, manifest, PDDL, and
+failure semantics. A lower line count is not success if it duplicates policy or
+weakens fail-closed behavior.
+
+\section{Third-Party and Redistribution Boundary}
+
+The description install includes imported KUKA, St\"aubli, Motoman, TIAGo,
+SCHUNK, Zimmer, and other model/CAD material under Apache-2.0, BSD, and CC
+BY-ND terms. \file{mfja_3rd_floor_description/THIRD_PARTY.md} is the current
+provenance record. Before external redistribution, add exact upstream license
+texts under a maintained \file{LICENSES/} directory and have the intended
+distribution reviewed. Preserve attribution when converting or optimizing an
+asset; do not overwrite the upstream original silently.
+
+\section{What Must Accompany a Handover}
+
+The receiving maintainer needs more than this PDF:
+
+\begin{itemize}
+  \item repository URL, branch, exact commit, intentional unmerged changes, and
+        release/tag policy;
+  \item supported host/ROS/Gazebo versions and a reproducible four-package build;
+  \item current test evidence with commands, exclusions, environment, and logs;
+  \item inventory/location/owner/backup policy for datasets, GGUF files,
+        checkpoints, promoted bundles, authorizations, and sealed evidence;
+  \item independent expected hashes and the prior complete rollback bundle;
+  \item known hardware/GPU/display constraints and any host-local configuration;
+  \item third-party attribution/license material and redistribution decision;
+  \item operational ownership/contact escalation and data-retention policy; and
+  \item open issues mapped to the known-gap register above.
+\end{itemize}
+
+Secrets, credentials, or private artifact URLs must be transferred through an
+approved secure channel, not embedded into YAML, this PDF, shell history, or
+Git.
+
+\section{Release/Handover Acceptance Checklist}
+
+\begin{procedurebox}[Technical acceptance]
+\begin{itemize}
+  \item[$\square$] The checked-out commit and intentional worktree changes are recorded.
+  \item[$\square$] A clean dependency check and four-package build succeed on the supported host.
+  \item[$\square$] Interfaces, package prefixes, executable/config install surface, and launch arguments match this manual.
+  \item[$\square$] Focused tests, registered tests, nine source-only cases, and relevant optional tests have results or explicit exclusions.
+  \item[$\square$] Headless Room 315 smoke passes; full-floor/isolated/GUI checks pass where affected.
+  \item[$\square$] Rail add, ON/OFF, delayed devices, sensors, headway, target arrival, and fault behavior are verified for the changed surface.
+  \item[$\square$] External artifact locations, exact hashes, provenance, and backups are verified independently.
+  \item[$\square$] V4 shadow/readiness/acceptance/fault evidence corresponds to the exact candidate; execution has separate authorization.
+  \item[$\square$] Rollback to the previous complete bundle has been rehearsed.
+  \item[$\square$] No build output, cache, local dataset, virtual environment, model, credential, or unintended ignored file is staged/installed.
+  \item[$\square$] Third-party provenance and exact license obligations are complete for the intended distribution.
+  \item[$\square$] The Repository Source Index and PDF validation succeed, and the final PDF was visually inspected.
+  \item[$\square$] Known limitations, unverified claims, owners, and next actions are signed off by sender and receiver.
+\end{itemize}
+\end{procedurebox}
+
+\section{Recommended First Maintenance Milestone}
+
+Before adding another research feature, the highest-value stabilization work is:
+
+\begin{enumerate}
+  \item make active artifact paths host-portable without weakening hash identity;
+  \item fix package-share lookup and prove a copied install;
+  \item register or explicitly schedule all source tests and add clean CI;
+  \item restrict directory install rules to tracked intended files;
+  \item complete third-party license texts for the planned distribution; and
+  \item split public executables from import-only modules and begin tested
+        extraction of the largest integration hot spots.
+\end{enumerate}
+
+These actions reduce handover risk while preserving the existing runtime
+contract. Feature work can then proceed against a reproducible baseline.
+
+\section{Handover Completion Record}
+
+Use the following fields in the project issue/release record; do not fill them
+only inside a printed copy:
+
+\begin{longtable}{L{0.30\textwidth} L{0.62\textwidth}}
+\caption{Handover completion record}
+\label{tab:handover-completion-record}\\
+\toprule
+\tableheader Field & Recorded value \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Field & Recorded value \\
+\midrule
+\endhead
+Repository/commit & \RepositoryCommit{} on \RepositoryBranch \\ \rowseparator
+Manual revision/date & \ManualVersion{} / \ManualDate \\ \rowseparator
+Build/test evidence & Location, command, counts, environment, exclusions \\ \rowseparator
+External artifact register & Owner-controlled location plus independent hashes \\ \rowseparator
+Rollback bundle & Exact prior manifest/authorization identity and verification date \\ \rowseparator
+Open risks/owners & Issue identifiers mapped to priorities in this chapter \\ \rowseparator
+Sender/receiver approval & Names, roles, date, and explicit scope accepted \\
+\bottomrule
+\end{longtable}
+
+The project is maintainable when a new engineer can reproduce the base system,
+locate every authority, explain each data boundary, make a bounded change, prove
+its effect, and roll it back without relying on undocumented personal state.

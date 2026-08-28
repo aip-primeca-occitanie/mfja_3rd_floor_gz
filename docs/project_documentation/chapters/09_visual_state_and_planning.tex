@@ -1,0 +1,375 @@
+\chapter{Visual State, Planning, and Closed-Loop Execution}
+\label{ch:vla-planning}
+
+\chapteroverview
+  {Explains the optional learned-visual and task-execution stack, including its
+   deterministic safety boundary and immutable deployment lifecycle.}
+  {Follow the live path first---visual observation, confirmed goal, planning,
+   supervised primitive, and verified effect---then use the offline sections
+   for dataset, promotion, authorization, and controlled change work. Base
+   simulation and direct rail control do not require this optional stack.}
+
+\section{Layering and Safety Intent}
+
+The optional research stack deliberately separates perception, language,
+planning, supervision, and actuation. No learned component publishes a typed
+rail command. The deterministic supervisor is the only component in this stack
+that does so.
+
+\begin{longtable}{L{0.16\textwidth} L{0.29\textwidth} L{0.19\textwidth} L{0.27\textwidth}}
+\caption{Closed-loop runtime stages and authority boundaries}
+\label{tab:closed-loop-stack}\\
+\toprule
+\tableheader Stage & Exchange & Authority/gate & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Stage & Exchange & Authority/gate & Source file(s) \\
+\midrule
+\endhead
+Observation readiness & Gazebo effect $\rightarrow$ paired images/presence $\rightarrow$ accepted V4 state & Promoted model, validator, presence/fusion readiness & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py} \\ \rowseparator
+Goal intake & Constrained English $\rightarrow$ confirmed \code{TaskGoal} & Parser, validation, explicit operator confirmation & \file{mfja_robot_control_config/scripts/room_315_task_goal_cli.py}; \file{mfja_robot_control_config/scripts/room_315_task_goal_builder.py} \\ \rowseparator
+Grounding & Fresh accepted observation $\rightarrow$ concrete task facts & Task gateway schema/checkpoint/freshness gates & \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
+Planning & Fresh PDDL problem $\leftrightarrow$ PlanSys2 plan & Runtime domain plus whole-plan validation & \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl}; \file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py} \\ \rowseparator
+Primitive execution & First translated primitive $\leftrightarrow$ supervisor status & Gateway authorization and deterministic supervisor & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+Typed actuation & Shuttle/switch/stopper command $\leftrightarrow$ actual state & Rail controller and typed interfaces & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/CMakeLists.txt} \\ \rowseparator
+Effect verification & Newer visual/controller evidence $\rightarrow$ success or replan & Gateway effect predicates and bounded retries; the loop returns to observation readiness & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\
+\bottomrule
+\end{longtable}
+
+\section{V4 Visual-State Runtime}
+
+Source files: \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py},
+\file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py},
+\file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}, and
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}.
+
+\file{room_315_visual_state_runtime.launch.py} starts the separate learned
+runtime. Only generation V4 is admitted to the active path. A promoted runtime
+must supply the exact manifest and checkpoint identities expected by config;
+missing files, wrong hashes, wrong schema, stale inputs, rejected predictions,
+or unsafe supervisor status fail closed.
+
+The inference node consumes:
+
+\begin{itemize}
+  \item synchronized left/right RGB images;
+  \item each rail's \code{ShuttleState} only for identity presence, timestamp,
+        receive time, and known-empty heartbeat; and
+  \item deterministic supervisor safety status.
+\end{itemize}
+
+It must not use controller segment, arc length, world pose, slot, payload state,
+or privileged identity-tracker geometry as learned inputs. This separation
+prevents evaluation leakage. Presence requires both rail heartbeats, a 0.5 s
+warm-up, and freshness no older than 1.0 s under current defaults. A blank-name
+heartbeat is known-empty; no heartbeat is unknown/stale.
+
+The node publishes typed raw prediction, validation, and accepted observation
+streams plus diagnostic JSON/model output. The default runtime mode is
+\code{active}, but \code{dry_run_state_fusion=true} and
+\code{plansys2_update_enabled=false}; therefore merely starting visual runtime
+does not mutate PlanSys2 knowledge. The dry-run flag gates external predicate
+writes; it does not suppress internal fusion or accepted-observation
+publication. \code{shadow} mode writes under
+\rosname{/room_315/visual_state/shadow_v4/...} and is observation-only.
+
+\section{Visual Observation Contract}
+
+Source files: \file{mfja_rail_interfaces/msg/VisualStateObservation.msg},
+\file{mfja_rail_interfaces/msg/VisualShuttleState.msg},
+\file{mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py},
+and \file{mfja_robot_control_config/scripts/room_315_task_execution.py}.
+
+For every canonical identity \code{L1--L4,R1--R4}, the model/validator may
+report presence, side/block, bounding box, normalized/metric segment position,
+loaded state, and confidence. The enclosing observation records source image
+stamps, schema/checkpoint, acceptance/stabilization/readiness flags, rejection
+reasons, clamps, latency, and counters.
+
+Consumers must apply all of the following rather than checking only
+\code{accepted}:
+
+\begin{enumerate}
+  \item message and both source images are fresh;
+  \item schema and checkpoint hash exactly match the authorized values;
+  \item model/input/presence/fusion readiness is true;
+  \item the observation is accepted and not stale;
+  \item facts required by the requested task are valid and sufficiently
+        confident; and
+  \item a newer observation follows any commanded action before effect success.
+\end{enumerate}
+
+\code{stabilized} reports that the optional temporal filter was applied. It is
+normally false when \code{temporal_filter_enabled=false}, including on valid
+accepted observations, and the task gateway does not require it. If a promoted
+runtime enables temporal filtering, validate that filter's authorized contract
+rather than imposing \code{stabilized=true} on every deployment.
+
+\section{English TaskGoal Understanding}
+
+Source files: \file{mfja_robot_control_config/scripts/room_315_task_goal_cli.py},
+\file{mfja_robot_control_config/scripts/room_315_task_goal_dialogue.py},
+\file{mfja_robot_control_config/scripts/room_315_task_goal_parsers.py}, and
+\file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml}.
+
+The language layer combines a deterministic parser with an optional local
+semantic model. The deterministic path remains available without the large
+model. It produces a draft, asks targeted clarification for ambiguity, and
+requires an explicit yes/confirm step before publishing JSON to
+\rosname{/room_315/task_goal}.
+
+Supported intent is deliberately narrow: one transport or inspection request,
+explicit/any/nearest identity where valid, loaded/empty/any payload
+qualification, and an exact slot or supported station target. Compound plans,
+swaps, ``move all'', load/unload operations, arbitrary coordinates, deadlines,
+and speed-optimization objectives are rejected rather than guessed.
+
+The optional model requires the separately managed
+\code{llama-cpp-python==0.3.16} environment and a roughly 1.04 GiB GGUF file.
+\file{mfja_robot_control_config/scripts/setup_room315_intent_model.py} can
+download/install dependencies and may
+use user-site or \code{--break-system-packages}; prefer the documented isolated
+virtual environment and inspect its planned actions before running it.
+
+\section{PDDL Authorities and Translation}
+
+Source files: \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl},
+\file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl},
+\file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py}, and
+\file{mfja_robot_control_config/scripts/room_315_pddl_validation_gate.py}.
+
+\file{domain_room315_runtime.pddl} is the live execution domain.
+\file{domain_room315.pddl} is the broader expert/data-generation domain. Do not
+replace the runtime file with the research domain merely because it contains
+more actions.
+
+The current runtime domain defines these 21 actions:
+
+\begin{lstlisting}
+prepare_switches                 open_stoppers
+restore_normal_route             move_shuttle_to_slot
+prepare_topology_route           move_shuttle_from_segment_to_slot
+prepare_slot_topology_route      move_shuttle_via_topology_to_slot
+begin_route_clearance            relocate_blocker_to_interior
+stage_selected_to_interior       finish_route_clearance
+begin_segment_route_clearance    relocate_segment_blocker_to_interior
+stage_selected_segment_to_interior
+finish_segment_route_clearance   pause_route_clearance
+stop_shuttle                     finish_task
+finish_candidate_task            inspect_state
+\end{lstlisting}
+
+The expert and runtime domains currently expose the same action names, while
+their predicates/preconditions remain separate versioned contracts. The
+checked runtime file is always the machine authority. The translator reduces
+the supported plan surface to
+deterministic primitives: \code{SET_SWITCHES}, \code{SET_STOPPERS},
+\code{SHUTTLE_ON}, \code{STOP_NOW}, and \code{DONE}. The entire returned plan
+is parsed and validated before its first primitive is sent.
+
+\section{Closed-Loop Task Gateway}
+
+Source files: \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py},
+\file{mfja_robot_control_config/scripts/room_315_task_execution.py},
+\file{mfja_robot_control_config/scripts/room_315_task_execution_config.py}, and
+\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}.
+
+\file{room_315_task_execution_node.py} owns the host singleton lock and combines
+the accepted visual observation, supervisor status, and both typed sensor
+feeds. It ignores privileged \code{segment}, \code{s}, and \code{s_ratio}
+fields in sensor readings; only active state, sensor name, and shuttle identity
+may anchor exact DZI occupancy.
+
+For each confirmed goal the gateway:
+
+\begin{enumerate}
+  \item verifies execution enablement, Gazebo-only policy, immutable task
+        authorization, promotion manifest, schema, and checkpoint hash;
+  \item waits for fresh visual/supervisor/sensor inputs;
+  \item grounds identity and payload constraints; payload requests require five
+        agreeing accepted frames within at most 15 observations;
+  \item generates a new problem and calls \rosname{/planner/get_plan};
+  \item validates/translates the complete response;
+  \item executes only the first primitive through the supervisor;
+  \item waits for a newer visual/controller effect, then replans; and
+  \item succeeds only when the exact goal holds, or publishes \code{stop_all}
+        and aborts on bounded failure.
+\end{enumerate}
+
+An exact final slot requires both identity-bearing DZI occupancy and explicit
+controller \state{DISABLED}. Current defaults include 20 s planner timeout,
+1.5 s visual/supervisor freshness, 1.0 s sensor freshness, 2.0 s observation
+wait, two confirming sensor frames, 0.2 m/s motion, 32 maximum steps, eight
+replans, three unknown-effect retries, 5 s supervisor timeout, 30 s ordinary
+effect timeout, and 60 s clearance timeout. Long-route arrival uses
+$1.25\times$ estimated travel time plus 5 s margin.
+
+\section{Primitive Supervisor}
+
+Source files: \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py},
+\file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}, and
+\file{mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml}.
+
+\file{room_315_vla_supervisor.py} is deterministic. It consumes JSON primitives
+on \rosname{/room_315/vla/command}, reads typed rail/device state and camera
+availability, and publishes typed shuttle, switch, and stopper commands. It
+reports structured status on \rosname{/room_315/vla/status}.
+
+Important invariants are:
+
+\begin{itemize}
+  \item arbitrary learned action vectors are rejected;
+  \item identities, sides, slots, switch/stopper states, speeds, readiness, and
+        incompatible simultaneous actions are validated before publication;
+  \item \code{stop_all} is the normal fail-safe primitive;
+  \item an emergency stop closes stoppers and prevents continued actuation;
+        clearing the Boolean emergency-stop input does not automatically
+        restart previously moving shuttles; and
+  \item bounded recovery is attempted at most twice by default, after which the
+        supervisor enters emergency-stop/manual-recovery behavior.
+\end{itemize}
+
+The supervisor's legacy position-feedback subscriptions are not current state
+authority. Typed shuttle, switch, stopper, and \code{sensors/feedback} topics
+are the live feedback surface.
+
+\section{Dataset Lifecycle and Leakage Control}
+
+Source files: \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py},
+\file{mfja_robot_control_config/scripts/room_315_visual_state_dataset.py},
+\file{mfja_robot_control_config/scripts/room_315_grouped_visual_splits.py}, and
+\file{mfja_robot_control_config/scripts/room_315_visual_dataset_audit.py}.
+
+A recorded episode contains \file{images/<camera>/}, \file{data.jsonl},
+\file{events.jsonl}, \file{episode.json}, and, after validation,
+\file{validation.json}. The supported lifecycle is summarized below.
+
+\begin{longtable}{L{0.20\textwidth} L{0.36\textwidth} L{0.35\textwidth}}
+\caption{Dataset-to-candidate lifecycle and owning tools}
+\label{tab:visual-dataset-lifecycle}\\
+\toprule
+\tableheader Stage & Required transition/output & Source file(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Stage & Required transition/output & Source file(s) \\
+\midrule
+\endhead
+Capture & Scenario manifest $\rightarrow$ guarded episode images/events/data & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_capture.py} \\ \rowseparator
+Validate/label & Episode $\rightarrow$ validation record and permitted labels/export & \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset.py}; \file{mfja_robot_control_config/scripts/room_315_visual_label_exporter.py} \\ \rowseparator
+Split/audit & Related captures remain grouped; leakage and role constraints are audited & \file{mfja_robot_control_config/scripts/room_315_grouped_visual_splits.py}; \file{mfja_robot_control_config/scripts/room_315_visual_dataset_audit.py} \\ \rowseparator
+Train/evaluate & Frozen training selection $\rightarrow$ sealed evaluation evidence & \file{mfja_robot_control_config/scripts/room_315_visual_training_v4.py}; \file{mfja_robot_control_config/scripts/room_315_visual_v4_final_test.py} \\ \rowseparator
+Package & Verified model/config/evidence $\rightarrow$ immutable candidate & \file{mfja_robot_control_config/scripts/room_315_build_runtime_candidate_v4.py} \\
+\bottomrule
+\end{longtable}
+
+Privileged identity tracks and controller coordinates may be used as label or
+evaluation oracle data only when the applicable contract permits them. They
+must remain separate from model inputs. Split tools group related captures so
+variants of the same scene do not cross train/validation/test boundaries.
+
+The frozen V4 training contract uses a 50/50 legacy/hard-data mixture, a
+split-rail ResNet-18 model at $320\times240$, 12 epochs, and seed
+31520260811. The associated evidence records these frozen roles.
+
+The tracked role/count authorities are
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_training_v4.json},
+\file{mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4.json},
+and \file{mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4_coverage_extension.json}.
+
+\begin{longtable}{L{0.32\textwidth} L{0.18\textwidth} L{0.40\textwidth}}
+\caption{Frozen V4 dataset roles, counts, and permitted use}
+\label{tab:v4-dataset-roles}\\
+\toprule
+\tableheader Dataset role & Count & Use \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Dataset role & Count & Use \\
+\midrule
+\endhead
+Legacy training & 1,528 & Historical training component \\ \rowseparator
+Historical predecessor validation & 256 & Provenance/comparison; not reusable as a new final test \\ \rowseparator
+Consumed historical test & 256 & Already consumed; never tune against it again \\ \rowseparator
+Hard training & 4,000 & V4 hard-case training component \\ \rowseparator
+V4 validation & 512 & Model/epoch selection under frozen rules \\ \rowseparator
+Canary & 256 & Guarded pre-deployment check \\ \rowseparator
+Sealed final-test coverage & 1,040 & Frozen extension of the 1,024-scene base final-test contract \\
+\bottomrule
+\end{longtable}
+
+Treat those values as the current contract, not a target to reproduce by
+silently adding files. Any changed dataset requires a new version, immutable
+manifest, provenance, split audit, and qualification decision.
+
+\section{Promotion and Authorization}
+
+Source files: \file{mfja_robot_control_config/scripts/room_315_build_runtime_candidate_v4.py},
+\file{mfja_robot_control_config/scripts/room_315_promote_runtime_v4.py},
+\file{mfja_robot_control_config/scripts/room_315_authorize_runtime_v4_closed_loop.py},
+\file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}, and
+\file{mfja_robot_control_config/scripts/room_315_task_execution_config.py}.
+
+The intended chain is:
+
+\begin{enumerate}
+  \item build an immutable candidate with dataset, config, code, and checkpoint
+        hashes;
+  \item run validation and CPU/runtime compatibility checks;
+  \item deploy in shadow mode and record acceptance/fault evidence;
+  \item manually promote the exact candidate, producing a signed/hashed
+        promotion manifest;
+  \item separately authorize closed-loop task execution for that exact
+        manifest/checkpoint/code contract; and
+  \item point runtime config at those immutable files without editing the
+        candidate in place.
+\end{enumerate}
+
+Promotion permits inference; task authorization permits a specific Gazebo
+closed-loop configuration. They are intentionally separate. Rollback selects a
+previous complete authorized bundle and restores all matching hashes/config;
+never copy only an older checkpoint into a newer manifest.
+
+Task authorization is verified only when \code{execution_enabled=true}; a
+disabled gateway requires no authorization artifact. For enabled execution,
+the authorization JSON, promotion manifest, manual decision, and every bound
+artifact must be regular files whose final path component is not a symbolic
+link and whose Unix mode has no write bits. Hash agreement does not replace
+these immutability checks.
+
+\begin{warningbox}[Clean-clone limitation]
+The active checked-in V4 visual and task-execution YAML files reference
+absolute \file{/home/tiago/...} promotion and authorization artifacts that are
+not stored in Git. A clean clone can run simulation, rails, cameras, recording,
+and deterministic supervision, but active learned inference and authorized
+execution require the complete external bundle to be restored or a new bundle
+to be qualified. Do not weaken hash checks to make startup succeed.
+\end{warningbox}
+
+\section{Changing the Learned/Planning Stack}
+
+The coupled change surface is implemented and tested across
+\file{mfja_robot_control_config/scripts/room_315_visual_model_v4.py},
+\file{mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py},
+\file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py},
+\file{mfja_robot_control_config/scripts/room_315_task_execution.py}, and
+\file{mfja_robot_control_config/test/test_room315_task_execution.py}.
+
+\begin{procedurebox}[Safe change sequence]
+\begin{enumerate}
+  \item Version the contract; never edit a sealed dataset, checkpoint, manifest,
+        authorization, or final-test result in place.
+  \item Keep controller/oracle data out of learned inputs and record the exact
+        feature boundary in tests.
+  \item Update model, validator, typed observation schema, state builder, PDDL
+        generator/domain, translator, executive, config, and fault tests as one
+        reviewed dependency set.
+  \item Train/select only on allowed splits; preserve the final test until the
+        decision rule is frozen.
+  \item Build a new immutable candidate, run shadow/acceptance/fault campaigns,
+        promote manually, and issue a separate execution authorization.
+  \item Retain a complete prior bundle and rehearse rollback before enabling
+        execution.
+\end{enumerate}
+\end{procedurebox}

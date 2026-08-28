@@ -1,0 +1,343 @@
+\chapter{Room 315 Rail Transport}
+\label{ch:rail}
+\chapteroverview{Explain the rail model from its configuration inputs and
+coordinate transforms through routing, devices, shuttle lifecycle, motion
+guards, and simulation-only presentation.}{Changing rail geometry or devices,
+diagnosing route or pose disagreement, extending shuttle behavior, or verifying
+which state is authoritative.}
+
+\section{Chapter Source Map}
+
+\scriptsize
+\begin{longtable}{L{0.23\textwidth} L{0.69\textwidth}}
+\caption{Authoritative sources for the Room 315 rail transport system}
+\label{tab:rail-source-map}\\
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endhead
+Rail launch and runtime integration & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py} \\ \rowseparator
+Directed network and sampled geometry & \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/raw_segments/}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py} \\ \rowseparator
+Calibration and public-name mapping & \file{mfja_robot_control_config/scripts/room_315_rail_defaults.py}; \file{mfja_robot_control_config/scripts/room_315_device_position_tool.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
+Slots, switches, stoppers, and sensors & \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml}; \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_left.yaml}; \file{mfja_robot_control_config/scripts/room_315_rail_devices.py}; \file{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py} \\ \rowseparator
+Identity and lifecycle & \file{mfja_robot_control_config/scripts/room_315_multi_shuttle.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/srv/AddShuttle.srv}; \file{mfja_rail_interfaces/msg/ShuttleState.msg} \\ \rowseparator
+Commands, states, and headway & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/msg/ShuttleCommand.msg}; \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
+Markers and payload visuals & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_rail_defaults.py}; \file{mfja_3rd_floor_description/models/room315_vla_overhead_devices/model.sdf}; \file{mfja_3rd_floor_description/models/room315_vla_payload_medium_box/model.sdf}; \file{mfja_3rd_floor_description/models/room315_vla_removable_obstacle_marker/model.sdf} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{System Model and Authorities}
+
+\subsection{Modelling decision}
+
+Shuttle propulsion is kinematic. Each rail node loads directed topology and
+calibrated CSV samples, advances a logical shuttle by arc length, transforms the
+logical pose into the Gazebo frame, and calls the world \code{SetEntityPose}
+service. No wheel torque or rail-contact dynamics propel a shuttle.
+
+This design makes routing, devices, datasets, and effect checks deterministic,
+but it has a crucial consequence: logical rail state may continue advancing if
+a pose service is missing or times out. Monitor diagnostics and Gazebo together
+with ROS state when visual/logical agreement matters.
+
+\subsection{Authoritative input files}
+
+Each rail side loads five source layers in the following order:
+
+\begin{enumerate}
+  \item \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_<side>.yaml}:
+        nodes, 14 forward-only segments, switches, fixed transitions, and the
+        routing table;
+  \item \file{mfja_robot_control_config/config/room_315_kinematics/raw_segments/*.csv}:
+        \code{index,x,y,z} samples for each public segment filename;
+  \item \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_<side>.yaml}:
+        slots, binary sensors, stoppers, radii, and default states;
+  \item \file{mfja_robot_control_config/scripts/room_315_rail_defaults.py}:
+        public topics, identity/entity defaults, left-name mapping, Gazebo
+        calibration, and marker styles; and
+  \item identity and model conventions from
+        \file{mfja_robot_control_config/scripts/room_315_multi_shuttle.py} and
+        the identity-bearing shuttle models in
+        \file{mfja_3rd_floor_description/models/}.
+\end{enumerate}
+
+The explicit \code{csv: raw_segments/<segment>.csv} field is authoritative.
+Do not derive filenames from keys even though normalized live files currently
+match. A narrow compatibility table exists only for immutable legacy snapshots.
+The loaders are
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py},
+\file{mfja_robot_control_config/scripts/room_315_rail_devices.py}, and
+\file{mfja_robot_control_config/scripts/room_315_rail_defaults.py}.
+
+\section{Static Rail Definition}
+
+\subsection{Geometry and path sampling}
+
+\file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py} provides
+two backends:
+
+\begin{itemize}
+  \item \code{cubic_hermite} (default): continuous interpolation from sampled
+        positions and tangents, reparameterized by numerically sampled arc
+        length; and
+  \item \code{polyline}: direct piecewise-linear interpolation for comparison
+        and calibration debugging.
+\end{itemize}
+
+Each segment stores length $L$; devices use normalized
+$s_{ratio}\in[0,1]$ and resolve $s=s_{ratio}L$. Motion advances
+$\Delta s=v\Delta t$, consuming residual distance across valid successor
+segments. Every segment follows CSV index 0 to the final row. Reverse traversal
+is not supported.
+
+\subsection{Calibration into Gazebo coordinates}
+
+Logical CSV coordinates are first transformed by a side-specific affine map,
+then scaled around a configured origin, rotated around a configured origin, and
+offset. In compact form:
+
+\[
+\begin{bmatrix}x_b\\y_b\end{bmatrix}=
+\begin{bmatrix}a&b\\c&d\end{bmatrix}
+\begin{bmatrix}x\\y\end{bmatrix}+
+\begin{bmatrix}t_x\\t_y\end{bmatrix},
+\qquad
+\mathbf{p}_{gz}=R(\theta)\,S(\mathbf{p}_b-\mathbf{o}_s)
++\mathbf{o}_r+\mathbf{t}.
+\]
+
+Exact coefficients live in
+\file{mfja_robot_control_config/scripts/room_315_rail_defaults.py}. Runtime
+scale, rotation, and offsets are node parameters. Use
+\file{mfja_robot_control_config/scripts/room_315_device_position_tool.py} to
+convert a Gazebo point into a candidate \code{segment+s_ratio}; never tune
+topology to compensate for a calibration error.
+
+\subsection{Directed topology and switch guards}
+
+The right public cycle has two guarded routing stages:
+
+\begin{longtable}{L{0.16\textwidth} L{0.47\textwidth} L{0.29\textwidth}}
+\caption{Right-rail directed routing stages and matching convergence guards}
+\label{tab:right-rail-routing-stages}\\
+\toprule
+\tableheader Stage & Diverging path & Required convergence \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Stage & Diverging path & Required convergence \\
+\midrule
+\endhead
+A3/A4 half & A23 $\rightarrow$ A3E/A3I $\rightarrow$ A34E/A34I & Matching A4 exterior/interior guard $\rightarrow$ A4E/A4I $\rightarrow$ A14 \\ \rowseparator
+A1/A2 half & A14 $\rightarrow$ A1E/A1I $\rightarrow$ A12E/A12I & Matching A2 exterior/interior guard $\rightarrow$ A2E/A2I $\rightarrow$ A23 \\
+\bottomrule
+\end{longtable}
+
+A diverging switch selects an outgoing branch. A converging gate must match the
+branch on which the shuttle arrives. An unknown state, missing successor, or
+mismatched guard has no valid successor and sets \state{FALLING}; the runtime
+does not teleport or silently select another path.
+
+\subsubsection{Left internal versus public names}
+
+The left rail reuses the raw geometry but rotates its public station/switch
+vocabulary. Keep conversion direction explicit:
+
+\begin{longtable}{L{0.26\textwidth} L{0.26\textwidth} L{0.38\textwidth}}
+\caption{Mapping between raw/internal and public left-rail names}
+\label{tab:left-rail-name-mapping}\\
+\toprule
+\tableheader Internal/raw group & Public left group & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Internal/raw group & Public left group & Meaning \\
+\midrule
+\endhead
+A3E/A3I, switch at raw A3 & A1E/A1I, public A1 & First public left diverger \\ \rowseparator
+A4E/A4I, raw A4 & A2E/A2I, public A2 & First public left converger \\ \rowseparator
+A1E/A1I, raw A1 & A3E/A3I, public A3 & Second public left diverger \\ \rowseparator
+A2E/A2I, raw A2 & A4E/A4I, public A4 & Second public left converger \\ \rowseparator
+A34E/A34I & A12E/A12I & Upper/lower exterior/interior long branch mapping \\ \rowseparator
+A12E/A12I & A34E/A34I & Opposite long branch mapping \\ \rowseparator
+A14 & A23 & Trunk mapping \\ \rowseparator
+A23 & A14 & Opposite trunk mapping \\
+\bottomrule
+\end{longtable}
+
+Use \code{internal_rail_segment_name_to_public} when publishing internal state
+and \code{public_rail_segment_name_to_internal} when resolving public input.
+The current map happens to be an involution in several pairs; that does not make
+the two functions interchangeable. The mapping authorities are
+\file{mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml}
+and \file{mfja_robot_control_config/scripts/room_315_rail_defaults.py}.
+
+\section{Devices and Occupancy}
+
+\subsection{Slots and identity-bearing DZI sensors}
+
+\begin{longtable}{L{0.12\textwidth} L{0.23\textwidth} L{0.20\textwidth} L{0.23\textwidth} L{0.14\textwidth}}
+\caption{Configured slot and identity-bearing DZI sensor locations}
+\label{tab:dzi-slot-locations}\\
+\toprule
+\tableheader Side & Slot/sensor & Raw segment & $s_{ratio}$ & Radius \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Side & Slot/sensor & Raw segment & $s_{ratio}$ & Radius \\
+\midrule
+\endhead
+Right & slot 1 / DZI1R & A12E & 0.411866742 & 0.09 m \\ \rowseparator
+Right & slot 2 / DZI2R & A12E & 0.653073633 & 0.09 m \\ \rowseparator
+Right & slot 3 / DZI3R & A34E & 0.447469343 & 0.09 m \\ \rowseparator
+Right & slot 4 / DZI4R & A34E & 0.683726992 & 0.09 m \\ \rowseparator
+Left & slot 1 / DZI1L & raw A34E & 0.428330934 & 0.09 m \\ \rowseparator
+Left & slot 2 / DZI2L & raw A34E & 0.674370792 & 0.09 m \\ \rowseparator
+Left & slot 3 / DZI3L & raw A12E & 0.427586575 & 0.09 m \\ \rowseparator
+Left & slot 4 / DZI4L & raw A12E & 0.668424664 & 0.09 m \\
+\bottomrule
+\end{longtable}
+
+The device YAML also defines DA approach/branch sensors around every switch.
+Single-point devices store \code{segment} and \code{s_ratio}; multi-point
+devices store a \code{points} list. Each stopper has a derived
+\code{A<n>_STOPPER_SENSOR} located 0.10 m upstream along each stopper point.
+Only segment, ratio/points, and radius determine occupancy. Descriptive
+\code{switch} or \code{branch} labels do not move a detector.
+
+\subsection{Switches, stoppers, and delayed state}
+
+Typed switch and stopper commands schedule actual-state changes at current
+simulation time plus configured delay (0.3 s switch, 0.1 s stopper by high-level
+default). State topics report the delayed actual value. Routing uses actual
+switch state, not the requested command.
+
+Stopper state \state{0} means open/pass; \state{1} means closed/stop. A closed
+stopper clamps an enabled shuttle at its trigger and places it in
+\state{WAITING}; it resumes when the guard clears. Sensor output is binary
+occupancy, including swept crossing between ticks. The additional
+\code{segment}, \code{s}, and \code{s_ratio} fields are privileged simulator
+metadata for debugging/evaluation, not extra physical measurements.
+
+Accepted delayed switch actual state is mirrored as a comma-separated
+\code{selector=EXTERIOR/INTERIOR} string on
+\rosname{/mfja/conveyor/switch_cmd}. The visual switch controller updates blade
+models and publishes a latched summary on
+\rosname{/mfja/conveyor/switch_states}. While a typed target is outstanding,
+matching feedback is only an acknowledgement and conflicting feedback is
+ignored as stale. With \code{sync_from_visual_switch_states=true}, however, an
+unmatched visual summary can schedule a delayed update of the logical switch
+registry and therefore affect routing. Treat this subscription as configured
+state synchronization, not presentation-only telemetry; Chapter
+\ref{ch:interfaces} documents the cross-boundary authority in detail.
+
+\section{Shuttle Runtime}
+
+\subsection{Identity and lifecycle}
+
+Canonical identities are \code{R1--R4} and \code{L1--L4}, with Gazebo entities
+\code{room315_right_shuttle_1--4} and
+\code{room315_left_shuttle_1--4}. Startup selection modes are:
+
+\begin{itemize}
+  \item \code{count_prefix}: count $n$ selects the first $n$ identities; and
+  \item \code{explicit}: exact comma-separated identities select an arbitrary
+        subset and must agree with the declared count.
+\end{itemize}
+
+Initial start slots/positions must match the selected count and be unique when
+occupancy rejection is enabled. Zero is a valid count and produces a heartbeat
+with an empty name so the presence provider can distinguish a known-empty rail
+from a missing or stale rail.
+
+The \code{AddShuttle} service resolves an empty name to the next unused entity
+and an empty slot to the next available configured slot. A requested speed that
+compares greater than zero is used; otherwise the configured default is
+substituted, with no separate finiteness validation. Duplicate entities,
+invalid slots, and---when enabled---occupied start slots are rejected. A
+non-preloaded model is spawned asynchronously; a successful service reply means
+the logical shuttle was accepted, not that Gazebo has already rendered it.
+\state{REMOVE} removes logical management immediately and requests asynchronous
+Gazebo deletion; a failed delete may leave a visual orphan.
+
+\subsection{State machine and commands}
+
+The command-driven transitions are separated from autonomous guard and target
+transitions to make command verification unambiguous.
+
+\begin{longtable}{L{0.16\textwidth} L{0.24\textwidth} L{0.18\textwidth} L{0.34\textwidth}}
+\caption{Command-driven shuttle transitions and required verification}
+\label{tab:shuttle-command-transitions}\\
+\toprule
+\tableheader Command & Applicable state & Result & Verification and semantic \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Command & Applicable state & Result & Verification and semantic \\
+\midrule
+\endhead
+\state{ON} & \state{DISABLED}, \state{WAITING}, or \state{FALLING} & \state{MOVING} with positive retained or supplied speed & Require a newer state; the current code can clear \state{FALLING} without homing \\ \rowseparator
+\state{OFF} & Any managed mode & \state{DISABLED} & Clear the exact target, retain configured speed, and require newer explicit feedback \\ \rowseparator
+\state{RESET} & Any managed mode with a free start slot & \state{MOVING}, \state{WAITING}, or \state{DISABLED} & Verify the start pose and resulting mode; enabled state and retained speed are preserved \\ \rowseparator
+\state{REMOVE} & Any managed mode & Removed from registry & Check both logical registry/state and Gazebo entity deletion \\
+\bottomrule
+\end{longtable}
+
+\begin{longtable}{L{0.20\textwidth} L{0.28\textwidth} L{0.18\textwidth} L{0.26\textwidth}}
+\caption{Autonomous shuttle transitions caused by guards and targets}
+\label{tab:shuttle-automatic-transitions}\\
+\toprule
+\tableheader Current state & Condition & Result & Semantic \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Current state & Condition & Result & Semantic \\
+\midrule
+\endhead
+\state{MOVING} & Stopper or headway guard & \state{WAITING} & Hold position until the active guard clears \\ \rowseparator
+\state{WAITING} & Guard clear with positive speed & \state{MOVING} & Resume the retained command \\ \rowseparator
+\state{MOVING} & Exact target reached & \state{DISABLED} & Clamp to target and populate \code{reached_target_slot} \\ \rowseparator
+\state{MOVING} & No valid guarded successor & \state{FALLING} & Stop core stepping; do not choose another successor \\
+\bottomrule
+\end{longtable}
+
+\code{ShuttleState.speed} is the retained commanded travel setting, not
+instantaneous velocity. It may remain non-zero in \state{DISABLED} or
+\state{WAITING}. \code{reached_target_slot} is populated only when the
+low-level controller clamps to an explicit target and disables the shuttle.
+
+\subsection{Headway control and failure behavior}
+
+Before accepting a motion step, the node predicts center separation among
+managed shuttles and uses bounded search to clamp progress before the configured
+minimum (0.33 m by default). A held shuttle reports \state{WAITING} and resumes
+when clear. This is a software center-distance rule, not certified block
+protection or complete rigid-body collision avoidance.
+
+\begin{safetybox}[Fail-closed rail conditions]
+Unknown or mismatched route state enters \state{FALLING} and stops core
+stepping, but the current positive-speed \state{ON} path can clear that mode
+without a reset. Treat that behavior as a safety defect and recover only
+through a verified supervisor procedure. An occupied start can reject
+add/reset; stale typed feedback must not be replaced with a fixed delay.
+Low-level typed topics can bypass planning, so manual publishers remain an
+expert interface.
+\end{safetybox}
+
+\section{Simulation-only Markers and Payloads}
+
+When enabled, the rail node spawns collision-free visual markers gradually via
+the world create service. Sensors are blue/inactive and green/active; stoppers
+are amber/open and red/closed; switches use green/interior and orange/exterior
+in debug mode; a shuttle is red in \state{FALLING}. Dynamic remove/recreate
+refresh is disabled by default to avoid races with pending entity creation.
+
+Payload command/state topics use JSON because payload visuals are privileged
+simulation/dataset controls, not the public physical rail contract. A payload
+box follows its shuttle with configured offsets. Spawn/delete failure does not
+change logical payload state, and no payload physics or grasp is simulated.

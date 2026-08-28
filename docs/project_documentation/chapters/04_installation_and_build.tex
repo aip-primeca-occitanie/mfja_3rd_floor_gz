@@ -1,0 +1,282 @@
+\chapter{Installation and Build}
+\label{ch:installation}
+\chapteroverview{Define the supported host, dependency layers, reproducible
+workspace setup, build lifecycle, and optional environment boundaries.}{Setting
+up a new machine, rebuilding after a change, diagnosing a stale overlay, or
+preparing external learned-runtime artifacts.}
+
+\section{Chapter Source Map}
+
+\small
+\begin{longtable}{L{0.23\textwidth} L{0.69\textwidth}}
+\caption{Authoritative sources for installation and build procedures}
+\label{tab:installation-source-map}\\
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Topic & Authoritative repository path(s) \\
+\midrule
+\endhead
+Supported host and base setup & \file{docs/INSTALLATION.md}; \file{README.md}; \file{mfja_rail_interfaces/package.xml}; \file{mfja_3rd_floor_description/package.xml}; \file{mfja_robot_control_config/package.xml}; \file{mfja_3rd_floor_bringup/package.xml} \\ \rowseparator
+Build and installed surface & \file{mfja_rail_interfaces/CMakeLists.txt}; \file{mfja_3rd_floor_description/CMakeLists.txt}; \file{mfja_robot_control_config/CMakeLists.txt}; \file{mfja_3rd_floor_bringup/CMakeLists.txt} \\ \rowseparator
+Optional language environment & \file{mfja_robot_control_config/scripts/setup_room315_intent_model.py}; \file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml} \\ \rowseparator
+Hybrid Nix shell & \file{flake.nix}; \file{flake.lock} \\ \rowseparator
+External V4 artifacts & \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}; \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}; \file{mfja_robot_control_config/scripts/room_315_runtime_contracts.py} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Supported Environment}
+
+The maintained combination is \SupportedOS, \SupportedROS, Python 3.12, CMake
+3.28 or newer, and \SupportedGazebo{} through \code{ros_gz}. Native Ubuntu is
+the supported end-to-end route. A VM may work when it provides adequate RAM,
+CPU, and 3D acceleration, but is not a validated target. Ubuntu 22.04, ROS 2
+Humble, Gazebo Classic, Windows, macOS, NixOS, and pure-Nix ROS are not current
+supported configurations.
+
+\section{Dependency Layers}
+
+\begin{longtable}{L{0.22\textwidth} L{0.42\textwidth} L{0.28\textwidth}}
+\caption{Dependency layers and their supported resolution mechanisms}
+\label{tab:dependency-layers}\\
+\toprule
+\tableheader Layer & Required components & Resolution \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Layer & Required components & Resolution \\
+\midrule
+\endhead
+Host & Compiler toolchain, CMake, Git, OpenGL, Python 3, pip/venv/pytest/YAML, colcon, rosdep & Ubuntu packages \\ \rowseparator
+ROS/Gazebo & Jazzy Desktop, Gazebo Harmonic, \code{ros_gz}, state publisher & Official ROS/Ubuntu packages \\ \rowseparator
+Interface/build & ament CMake, ROSIDL generator/runtime, Gazebo vendor libraries & Package manifests via rosdep \\ \rowseparator
+Runtime & rclpy, launch, standard messages, cv\_bridge, message\_filters, PlanSys2, lifecycle, ROS--Gazebo bridges & Package manifests via rosdep \\ \rowseparator
+Base Python & OpenCV, NumPy, Pillow, PyYAML & rosdep/Ubuntu \\ \rowseparator
+Optional learned runtime & Torch, TorchVision, CUDA where desired & Dedicated visual virtual environment \\ \rowseparator
+Optional language runtime & \code{llama-cpp-python==0.3.16} and GGUF & Dedicated intent virtual environment \\ \rowseparator
+Optional export & LeRobot & Separate environment; not required for operation \\
+\bottomrule
+\end{longtable}
+
+The four package manifests are the source of truth for the dependencies that
+the ROS packages declare and that \code{rosdep} can resolve. That authority is
+not a completeness guarantee: host graphics drivers, documentation tools,
+optional virtual environments, and external learned artifacts are outside the
+manifest contract. Whenever code gains an import, launch dependency, or linked
+library, update the owning manifest and verify it on a clean host; do not make a
+hand-written installation list the only record of that dependency.
+
+\section{Fresh Workspace Setup}
+
+\subsection{Host preparation}
+
+The following assumes the official ROS 2 Jazzy apt repository is configured
+on Ubuntu 24.04. If it is not, configure it using the ROS Jazzy Ubuntu package
+installation procedure before continuing.
+
+\begin{lstlisting}[language=bash]
+sudo apt update
+sudo apt install -y \
+  build-essential cmake git mesa-utils ninja-build pkg-config \
+  poppler-utils ripgrep \
+  python3-dev python3-colcon-common-extensions python3-pip \
+  python3-pytest python3-rosdep python3-venv python3-yaml \
+  ros-jazzy-desktop ros-jazzy-robot-state-publisher ros-jazzy-ros-gz
+
+if [ ! -e /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+  sudo rosdep init
+fi
+rosdep update
+\end{lstlisting}
+
+After a kernel or graphics-driver update, reboot deliberately before debugging
+Gazebo. Then verify the local graphical shell:
+
+\begin{lstlisting}[language=bash]
+source /opt/ros/jazzy/setup.bash
+echo "$ROS_DISTRO"
+gz sim --versions
+cmake --version
+python3 --version
+glxinfo -B
+\end{lstlisting}
+
+\subsection{Repository checkout}
+
+Create the workspace and reproduce the exact branch and commit documented by
+this manual release. The explicit destination and pre-existence check prevent
+Git from cloning over an operator's checkout.
+
+\begin{lstlisting}[language=bash]
+export MFJA_WS="$HOME/mfja_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+export MFJA_RELEASE_BRANCH='INTERNSHIP-ALI-2026'
+export MFJA_RELEASE_COMMIT='aadf967b1188e680256580408336e7703ff1cb5d'
+
+(
+  set -euo pipefail
+  mkdir -p "$MFJA_WS/src"
+  test ! -e "$MFJA_REPO"
+  git clone --branch "$MFJA_RELEASE_BRANCH" --single-branch \
+    https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+    "$MFJA_REPO"
+  git -C "$MFJA_REPO" cat-file -e "$MFJA_RELEASE_COMMIT^{commit}"
+  git -C "$MFJA_REPO" checkout --detach "$MFJA_RELEASE_COMMIT"
+  test "$(git -C "$MFJA_REPO" rev-parse HEAD)" = \
+    "$MFJA_RELEASE_COMMIT"
+  test -f "$MFJA_REPO/docs/INSTALLATION.md"
+  test -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py"
+  git -C "$MFJA_REPO" status --short --branch
+)
+\end{lstlisting}
+
+The detached checkout makes the reproduced snapshot unambiguous. Create a
+named maintenance branch from it before making source changes, and record the
+new commit in the next manual release.
+
+\subsection{Declared ROS dependencies}
+
+Install declared dependencies. Torch keys are skipped for the base path because
+the supported apt/rosdep environment may not provide suitable candidates and
+base simulation does not need them:
+
+\begin{lstlisting}[language=bash]
+(
+  set -euo pipefail
+  source /opt/ros/jazzy/setup.bash
+  rosdep install --from-paths \
+    "$MFJA_REPO/mfja_rail_interfaces" \
+    "$MFJA_REPO/mfja_3rd_floor_description" \
+    "$MFJA_REPO/mfja_robot_control_config" \
+    "$MFJA_REPO/mfja_3rd_floor_bringup" \
+    --ignore-src --rosdistro jazzy -y \
+    --skip-keys "python3-torch python3-torchvision"
+)
+\end{lstlisting}
+
+The canonical dependency installation deliberately omits rosdep's
+\code{-r} continuation option: an unresolved declared dependency must stop the
+setup rather than leave a partially prepared host that appears successful.
+
+\section{Build and Verification}
+
+\subsection{Canonical development build}
+
+Build from the workspace root and use explicit package paths. This prevents
+colcon from discovering a frozen package copy inside an extracted dataset or
+other evidence directory.
+
+\begin{lstlisting}[language=bash]
+(
+  set -euo pipefail
+  cd "$MFJA_WS"
+  source /opt/ros/jazzy/setup.bash
+  colcon build --symlink-install --paths \
+    "$MFJA_REPO/mfja_rail_interfaces" \
+    "$MFJA_REPO/mfja_3rd_floor_description" \
+    "$MFJA_REPO/mfja_robot_control_config" \
+    "$MFJA_REPO/mfja_3rd_floor_bringup"
+  test -f "$MFJA_WS/install/setup.bash"
+  source "$MFJA_WS/install/setup.bash"
+  ros2 pkg prefix mfja_robot_control_config
+)
+\end{lstlisting}
+
+This fail-fast subshell never sources the install overlay after a failed build,
+which avoids accidentally validating stale output. Its environment is local to
+the block; source both layers again in every terminal used for operation.
+
+Every new terminal must source both layers, in order:
+
+\begin{lstlisting}[language=bash]
+source /opt/ros/jazzy/setup.bash
+source "$HOME/mfja_ws/install/setup.bash"
+\end{lstlisting}
+
+Verify that the intended overlay is active:
+
+\begin{lstlisting}[language=bash]
+ros2 pkg prefix mfja_robot_control_config
+ros2 pkg executables mfja_robot_control_config | sort
+ros2 interface show mfja_rail_interfaces/msg/ShuttleCommand
+ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py --show-args
+\end{lstlisting}
+
+\subsection{Build scope by change type}
+
+\begin{longtable}{L{0.27\textwidth} L{0.34\textwidth} L{0.31\textwidth}}
+\caption{Minimum rebuild and installed-surface check by source-change category}
+\label{tab:build-scope}\\
+\toprule
+\tableheader Change & Minimum build & Installed-surface check \\
+\midrule
+\endfirsthead
+\toprule
+\tableheader Change & Minimum build & Installed-surface check \\
+\midrule
+\endhead
+Control Python/config & Control package; bringup too if wrapper contract changes & Installed executable and configuration paths \\ \rowseparator
+Launch file & Owning package & Installed launch file and \code{--show-args} surface \\ \rowseparator
+World/model/URDF/C++ plugin & Description package; consumers when path/library contract changes & Installed assets/libraries and Gazebo loadability \\ \rowseparator
+Message/service & Interface package and every consumer (normally \code{--packages-up-to mfja_3rd_floor_bringup}) & \code{ros2 interface show} and installed bindings \\ \rowseparator
+CMake/manifest & Affected packages with \code{--cmake-clean-cache} & \code{rosdep check}, package prefix, and install tree \\ \rowseparator
+Documentation only & No colcon build & Named PDF, links, language, and diff checks \\
+\bottomrule
+\end{longtable}
+
+This table selects only the rebuild and installed-surface scope.
+Table~\ref{tab:change-test-matrix} in Chapter~\ref{ch:testing} is the canonical
+mapping from changed behavior to focused and broader tests.
+
+Example control-only rebuild:
+
+\begin{lstlisting}[language=bash]
+(
+  set -euo pipefail
+  cd "$MFJA_WS"
+  source /opt/ros/jazzy/setup.bash
+  colcon build --symlink-install \
+    --paths "$MFJA_REPO/mfja_robot_control_config" \
+    --packages-select mfja_robot_control_config
+  test -f "$MFJA_WS/install/setup.bash"
+  source "$MFJA_WS/install/setup.bash"
+  ros2 pkg prefix mfja_robot_control_config
+)
+\end{lstlisting}
+
+\subsection{Install semantics and common stale-code traps}
+
+\begin{itemize}
+  \item Control-package scripts and many configs are installed through explicit
+        CMake lists. A new file may exist in source yet be absent from
+        \code{ros2 run} or package share.
+  \item Launch, model, world, and URDF directories are installed as directories,
+        excluding Python caches where configured.
+  \item ROS interfaces and C++ plugins always require regeneration/recompilation.
+  \item Most YAML is read only at node startup; restart the affected launch.
+  \item A terminal sourced before a rebuild can still resolve an older overlay.
+  \item CMake decides whether Torch-gated tests are registered at configure
+        time; changing environments can require a clean CMake configure.
+\end{itemize}
+
+\section{Optional and External Environment Boundaries}
+
+\subsection{Hybrid Nix boundary}
+
+\file{flake.nix} and \file{flake.lock} provide a hybrid auxiliary shell with
+pinned Bash, Ninja, Make, and Git. They do not provide ROS 2, Gazebo, CMake,
+the compiler, Python, colcon, rosdep, or ROS package dependencies. Install the
+complete Ubuntu ROS/toolchain first; use \code{nix develop} only around that
+host stack. Do not describe this repository as a pure-Nix ROS distribution.
+
+\subsection{External V4 and language artifacts}
+
+A clean build is not a complete learned runtime. Keep checkpoints, datasets,
+promotion bundles, task authorizations, GGUF files, and virtual environments
+outside the repository and the colcon source tree. The checked-in V4 YAML
+contains qualification-host paths as evidence/templates; create a host-local
+copy or pass explicit launch overrides. Never replace an approved expected
+hash with a hash calculated from an untrusted file merely to satisfy a check.

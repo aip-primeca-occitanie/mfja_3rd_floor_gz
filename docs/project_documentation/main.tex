@@ -1,0 +1,44 @@
+\documentclass[11pt,a4paper,oneside,openany]{book}
+
+\input{preamble}
+\input{metadata}
+\input{generated/repository_baseline}
+
+\begin{document}
+\frontmatter
+\input{chapters/00_frontmatter}
+
+\tableofcontents
+\clearpage
+\listoftables
+
+\mainmatter
+\part{System Orientation and Architecture}
+\input{chapters/01_project_overview}
+\input{chapters/02_repository_and_package_ownership}
+\input{chapters/03_system_architecture_and_data_flow}
+
+\part{Environment and Runtime Foundation}
+\input{chapters/04_installation_and_build}
+\input{chapters/05_configuration_and_deployment}
+\input{chapters/06_launch_and_runtime}
+
+\part{Subsystem Design and Closed-Loop Execution}
+\input{chapters/07_simulation_and_robot_control}
+\input{chapters/08_rail_transport}
+\input{chapters/09_visual_state_and_planning}
+
+\part{Operations and Project Lifecycle}
+\input{chapters/10_operator_runbook}
+\input{chapters/11_verification_and_evidence}
+\input{chapters/12_maintenance_and_troubleshooting}
+\input{chapters/13_safety_risks_and_handover}
+
+\appendix
+\part{Reference Appendices}
+\input{appendices/a_glossary_and_naming}
+\input{appendices/b_ros_interface_reference}
+\input{appendices/c_launch_argument_reference}
+\input{appendices/d_repository_source_index}
+
+\end{document}
