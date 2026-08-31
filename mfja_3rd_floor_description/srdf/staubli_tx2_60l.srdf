@@ -1,0 +1,18 @@
+<robot>
+  <gripper name="tool0_gripper" clearance="0.04">
+    <position xyz="0 0 0" xyzw="0 0 0 1"/>
+    <link name="gripper_tcp"/>
+  </gripper>
+  <disable_collisions link1="base_link" link2="link_1" reason="neighbors"/>
+  <disable_collisions link1="link_1" link2="link_2" reason="neighbors"/>
+  <disable_collisions link1="link_2" link2="link_3" reason="neighbors"/>
+  <disable_collisions link1="link_3" link2="link_4" reason="neighbors"/>
+  <disable_collisions link1="link_3" link2="link_5" reason="neighbors"/>
+  <disable_collisions link1="link_4" link2="link_5" reason="neighbors"/>
+  <disable_collisions link1="link_5" link2="link_6" reason="neighbors"/>
+  <disable_collisions link1="link_4" link2="gripper_mount" reason="neighbors"/>
+  <disable_collisions link1="link_5" link2="gripper_mount" reason="neighbors"/>
+  <disable_collisions link1="link_6" link2="gripper_mount" reason="neighbors"/>
+  <disable_collisions link1="link_6" link2="gripper" reason="neighbors"/>
+  <disable_collisions link1="link_6" link2="tool" reason="neighbors"/>
+</robot>
