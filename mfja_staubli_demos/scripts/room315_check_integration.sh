@@ -162,9 +162,12 @@ import sys
 
 import coal
 sys.modules.setdefault("hppfcl", coal)
+import pyhpp_toppra
 import pyhpp_viser
 import trimesh
 import viser
+
+from pyhpp_toppra import Toppra
 
 print(f"Viser planner view: {viser.__version__}")
 PY

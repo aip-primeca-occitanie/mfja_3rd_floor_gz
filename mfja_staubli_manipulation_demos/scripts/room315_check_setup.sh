@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd -P)
 # shellcheck source-path=SCRIPTDIR
 # shellcheck source=room315_env.sh
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/room315_env.sh"
 
 failures=0
@@ -64,17 +65,57 @@ for executable in \
   fi
 done
 
-if python3 -c 'import coal, sys; sys.modules.setdefault("hppfcl", coal); import hpp_exec, pyhpp, pyhpp_viser, rclpy, trimesh, viser; from pyhpp.manipulation import Device' >/dev/null; then
-  pass "HPP manipulation and ROS Python imports"
-else
-  fail "HPP manipulation and ROS Python imports"
-fi
+if MODULE_REPORT=$(python3 - \
+  "${INSTALL_HPP_DIR:-}" \
+  "${ROBOTPKG:-}" \
+  "${ROS_SETUP:-}" <<'PY'
+import sys
+from pathlib import Path
 
-HPP_EXEC_PATH=$(python3 -c 'import hpp_exec; print(hpp_exec.__file__)' 2>/dev/null || true)
-if [[ -n "$HPP_EXEC_PATH" && -f "$HPP_EXEC_PATH" ]]; then
-  pass "installed hpp-exec: $HPP_EXEC_PATH"
+import coal
+
+sys.modules.setdefault("hppfcl", coal)
+
+import hpp_exec
+import pyhpp
+import pyhpp_toppra
+import pyhpp_viser
+import rclpy
+import trimesh
+import viser
+from pyhpp.manipulation import Device
+from pyhpp_toppra import Toppra
+
+
+def require_prefix(module, prefix):
+    path = Path(module.__file__).resolve()
+    if prefix and not path.is_relative_to(prefix):
+        raise SystemExit(f"{module.__name__} is outside {prefix}: {path}")
+    return path
+
+
+local_prefix = Path(sys.argv[1]).resolve() if sys.argv[1] else None
+robotpkg_prefix = Path(sys.argv[2] or "/opt/openrobots").resolve()
+ros_setup = Path(sys.argv[3] or "/opt/ros/jazzy/setup.bash").resolve()
+ros_prefix = ros_setup.parent
+
+paths = {
+    "hpp-exec": require_prefix(hpp_exec, local_prefix),
+    "hpp-toppra": require_prefix(pyhpp_toppra, local_prefix),
+    "pyhpp": require_prefix(pyhpp, robotpkg_prefix),
+    "pyhpp-viser": require_prefix(pyhpp_viser, robotpkg_prefix),
+    "rclpy": require_prefix(rclpy, ros_prefix),
+}
+for name, path in paths.items():
+    print(f"{name}: {path}")
+PY
+); then
+  pass "HPP manipulation, TOPPRA, viewer, and ROS Python imports"
+  while IFS= read -r module_path; do
+    pass "$module_path"
+  done <<<"$MODULE_REPORT"
 else
-  fail "hpp-exec is unavailable from the active HPP underlay"
+  fail "Python modules are missing or resolve from unexpected prefixes"
 fi
 
 if ((failures)); then

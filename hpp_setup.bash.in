@@ -1,0 +1,53 @@
+# shellcheck shell=bash disable=SC2317
+# Source this file before building or using the MFJA workspace.
+_HPP_SETUP_PREFIX=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+_HPP_ROS_SETUP=${ROS_SETUP:-/opt/ros/jazzy/setup.bash}
+
+if [[ ! -f "$_HPP_ROS_SETUP" ]]; then
+  echo "ROS setup not found at $_HPP_ROS_SETUP; set ROS_SETUP." >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+_HPP_NOUNSET_WAS_SET=0
+if [[ $- == *u* ]]; then
+  _HPP_NOUNSET_WAS_SET=1
+  set +u
+fi
+# shellcheck disable=SC1090,SC1091
+source "$_HPP_ROS_SETUP"
+if ((_HPP_NOUNSET_WAS_SET)); then
+  set -u
+fi
+
+DEVEL_HPP_DIR=$(dirname "$_HPP_SETUP_PREFIX")
+export DEVEL_HPP_DIR
+export INSTALL_HPP_DIR="$_HPP_SETUP_PREFIX"
+export ROBOTPKG=${ROBOTPKG:-/opt/openrobots}
+export PYTHONNOUSERSITE=1
+
+_HPP_PIP_BIN=
+_HPP_PIP_LIB=
+_HPP_PIP_PYTHON=
+if [[ -n "${INSTALL_PIP_DIR:-}" ]]; then
+  _HPP_PIP_BIN=":$INSTALL_PIP_DIR/bin"
+  _HPP_PIP_LIB=":$INSTALL_PIP_DIR/lib"
+  _HPP_PIP_PYTHON=":$INSTALL_PIP_DIR/lib/python3.12/site-packages"
+fi
+
+export PATH="$INSTALL_HPP_DIR/bin$_HPP_PIP_BIN:$ROBOTPKG/bin:/usr/bin${PATH:+:$PATH}"
+export PKG_CONFIG_PATH="$INSTALL_HPP_DIR/lib/pkgconfig:$ROBOTPKG/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export PYTHONPATH="$INSTALL_HPP_DIR/lib/python3.12/site-packages$_HPP_PIP_PYTHON:$ROBOTPKG/lib/python3.12/site-packages${PYTHONPATH:+:$PYTHONPATH}"
+export LD_LIBRARY_PATH="$INSTALL_HPP_DIR/lib$_HPP_PIP_LIB:$ROBOTPKG/lib:$INSTALL_HPP_DIR/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export AMENT_PREFIX_PATH="$INSTALL_HPP_DIR:$ROBOTPKG${AMENT_PREFIX_PATH:+:$AMENT_PREFIX_PATH}"
+export CMAKE_PREFIX_PATH="$INSTALL_HPP_DIR:$ROBOTPKG:/usr${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
+
+for _HPP_TOOLS_PREFIX in "$INSTALL_HPP_DIR" "$ROBOTPKG"; do
+  if [[ -f "$_HPP_TOOLS_PREFIX/etc/hpp-tools/bashrc" ]]; then
+    # shellcheck disable=SC1090,SC1091
+    source "$_HPP_TOOLS_PREFIX/etc/hpp-tools/bashrc"
+    break
+  fi
+done
+
+unset _HPP_PIP_BIN _HPP_PIP_LIB _HPP_PIP_PYTHON
+unset _HPP_NOUNSET_WAS_SET _HPP_ROS_SETUP _HPP_SETUP_PREFIX _HPP_TOOLS_PREFIX

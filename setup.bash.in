@@ -1,9 +1,26 @@
+# shellcheck shell=bash disable=SC2317
 # Source this file in every terminal used for the Room 315 pick-and-place.
 _MFJA_SETUP_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 export MFJA_WORK_DIR="$_MFJA_SETUP_ROOT"
+export INSTALL_PIP_DIR="$_MFJA_SETUP_ROOT/.venv"
+export VIRTUAL_ENV="$INSTALL_PIP_DIR"
 export PYTHONNOUSERSITE=1
-# shellcheck disable=SC1091
-source "$_MFJA_SETUP_ROOT/.venv/bin/activate"
-# shellcheck disable=SC1091
-source "$_MFJA_SETUP_ROOT/mfja_ws/install/setup.bash"
-unset _MFJA_SETUP_ROOT
+
+_MFJA_HPP_SETUP=${HPP_SETUP:-$_MFJA_SETUP_ROOT/hpp/install/setup.bash}
+if [[ ! -f "$_MFJA_HPP_SETUP" ]]; then
+  echo "HPP setup not found at $_MFJA_HPP_SETUP; set HPP_SETUP." >&2
+  return 1 2>/dev/null || exit 1
+fi
+# shellcheck disable=SC1090,SC1091
+if ! source "$_MFJA_HPP_SETUP"; then
+  return 1 2>/dev/null || exit 1
+fi
+if [[ ! -f "$_MFJA_SETUP_ROOT/mfja_ws/install/local_setup.bash" ]]; then
+  echo "MFJA workspace is not installed below $_MFJA_SETUP_ROOT/mfja_ws." >&2
+  return 1 2>/dev/null || exit 1
+fi
+# shellcheck disable=SC1090,SC1091
+if ! source "$_MFJA_SETUP_ROOT/mfja_ws/install/local_setup.bash"; then
+  return 1 2>/dev/null || exit 1
+fi
+unset _MFJA_HPP_SETUP _MFJA_SETUP_ROOT

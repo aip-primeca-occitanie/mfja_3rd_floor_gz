@@ -4,24 +4,42 @@ This repository contains the ROS 2 and Gazebo models for the MFJA third floor.
 Its simplest Staubli example plans one table pick-and-place with HPP and uses
 the same plan in Viser, Gazebo, or through the direct VAL3 robot driver.
 
-## Install the Staubli pick-and-place
+## Installation
 
-The installer supports Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic.
+These instructions install the Staubli pick-and-place on Ubuntu 24.04 with
+ROS 2 Jazzy and Gazebo Harmonic.
 
-First install ROS 2 Jazzy from the
-[official Ubuntu instructions](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
-Then install the remaining packages:
+### Install ROS 2 and Robotpkg HPP
+
+Configure the ROS 2 Jazzy apt repository using the
+[official Ubuntu instructions](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html),
+then add the Robotpkg Noble repository:
+
+```bash
+sudo apt update
+sudo apt install -y curl
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc \
+  | sudo tee /etc/apt/keyrings/robotpkg.asc >/dev/null
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub noble robotpkg" \
+  | sudo tee /etc/apt/sources.list.d/robotpkg.list >/dev/null
+```
+
+Install ROS 2, the build tools, HPP 9.0.2, and the HPP viewer:
 
 ```bash
 sudo apt update
 sudo apt install -y \
-  build-essential doxygen git python3-venv ros-dev-tools \
+  build-essential cmake doxygen git python3-venv ros-dev-tools \
   ros-jazzy-desktop ros-jazzy-ros-gz \
-  ros-jazzy-coal ros-jazzy-jrl-cmakemodules \
-  ros-jazzy-pinocchio ros-jazzy-proxsuite
+  ros-jazzy-control-msgs \
+  robotpkg-py312-hpp-python=9.0.2 \
+  robotpkg-py312-qt5-hpp-gepetto-viewer=9.0.2
 ```
 
-Create one folder, clone the repository, and run the installer:
+### Clone the repository
+
+Choose a work directory. The commands below use `$HOME/mfja`:
 
 ```bash
 export MFJA_WORK_DIR="$HOME/mfja"
@@ -29,30 +47,48 @@ mkdir -p "$MFJA_WORK_DIR"
 git clone --recurse-submodules \
   https://github.com/psardin001/mfja_3rd_floor_gz.git \
   "$MFJA_WORK_DIR/mfja_3rd_floor_gz"
-"$MFJA_WORK_DIR/mfja_3rd_floor_gz/install.sh" "$MFJA_WORK_DIR"
-source "$MFJA_WORK_DIR/setup.bash"
 ```
 
-The installer imports the exact HPP revisions from `hpp_jazzy.repos` and
-creates this single-folder layout:
+### Build the HPP additions and MFJA
+
+Run the installer from the cloned repository:
+
+```bash
+CMAKE_BUILD_PARALLEL_LEVEL=2 \
+  "$MFJA_WORK_DIR/mfja_3rd_floor_gz/install.sh" "$MFJA_WORK_DIR"
+```
+
+Robotpkg supplies the HPP Python and viewer stack. The installer imports and
+builds the pinned TOPPRA, `hpp-toppra`, and `hpp-exec` sources from
+`hpp_jazzy.repos`, builds the MFJA overlay, installs the Viser environment, and
+creates `$MFJA_WORK_DIR/setup.bash`.
+
+The generated files use this layout:
 
 ```text
 mfja/
 ├── .venv/
-├── hpp_sources/
-├── hpp_ws/
+├── hpp/
+│   ├── build/
+│   ├── install/
+│   └── src/
 ├── mfja_3rd_floor_gz/
 ├── mfja_ws/
 └── setup.bash
 ```
 
-Source `$HOME/mfja/setup.bash` in every new terminal. It sets `MFJA_WORK_DIR`
-to its own folder, so the commands below also work in a fresh shell. The source
-checkout may be placed elsewhere by passing that work folder to `install.sh`.
-The first HPP build is lengthy. On a machine with enough memory, prefix the
-install command with `CMAKE_BUILD_PARALLEL_LEVEL=2` to use two compiler jobs.
+### Load the environment
 
-## Test the pick-and-place
+Source the generated setup file in each terminal:
+
+```bash
+source "$MFJA_WORK_DIR/setup.bash"
+ros2 run mfja_staubli_manipulation_demos room315_check_setup.sh
+```
+
+## Running the pick-and-place
+
+### Planning
 
 Planning computes and validates the trajectory locally:
 
@@ -60,13 +96,19 @@ Planning computes and validates the trajectory locally:
 ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh
 ```
 
-Viser opens the same planned paths at `http://localhost:8000`:
+### Viser
+
+Plan and open the paths in Viser:
 
 ```bash
 ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --viser
 ```
 
-For Gazebo, use the same isolated ROS domain in both terminals:
+Open `http://localhost:8000` in a browser.
+
+### Gazebo
+
+Use the same ROS domain in both terminals.
 
 ```bash
 # Terminal 1
@@ -85,8 +127,10 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh --execute
 ```
 
-For an authorized physical robot, use the cell's ROS domain in both terminals
-and enter the controller address when launching the driver:
+### Robot
+
+An authorized operator uses the cell's ROS domain in both terminals and enters
+the controller address when launching the driver.
 
 ```bash
 # Terminal 1
@@ -108,8 +152,7 @@ ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh \
 ```
 
 After commissioning, path review, and operator approval, add `--execute` to the
-terminal 2 command. Automated checks cover planning and simulation; the
-operator validates physical execution in the commissioned cell.
+terminal 2 command.
 
 ## Other simulations
 
@@ -171,7 +214,7 @@ ros2 topic pub --once /room_315/rails/right/switches/command \
 *   `mfja_3rd_floor_bringup/`: Centralized launch entry points for the full floor, Room 315, and single robot setups.
 *   `mfja_staubli_demos/`: Stage 1 Staubli HPP arm-planning exercise.
 *   `mfja_staubli_manipulation_demos/`: Staubli HPP table pick-and-place.
-*   `hpp_jazzy.repos`: exact HPP source manifest for a reproducible host underlay.
+*   `hpp_jazzy.repos`: exact TOPPRA, `hpp-toppra`, and `hpp-exec` source revisions.
 
 ---
 

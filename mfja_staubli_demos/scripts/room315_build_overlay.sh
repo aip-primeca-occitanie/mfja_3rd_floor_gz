@@ -7,7 +7,10 @@ script_dir=$(cd -- "$(dirname -- "$script_path")" && pwd -P)
 mfja_root=$(cd -- "$script_dir/../.." && pwd -P)
 devel_root=$(dirname "$mfja_root")
 workspace=${MFJA_WS:-$devel_root/mfja_ws}
-hpp_setup=${HPP_SETUP:-$devel_root/hpp_ws/install/setup.bash}
+hpp_setup=${HPP_SETUP:-$devel_root/hpp/install/setup.bash}
+install_pip_dir=${INSTALL_PIP_DIR:-}
+robotpkg=${ROBOTPKG:-/opt/openrobots}
+ros_setup=${ROS_SETUP:-/opt/ros/jazzy/setup.bash}
 staubli_source=${STAUBLI_ROS2_SOURCE:-$mfja_root/Staubli_ROS2}
 build_base=${MFJA_BUILD_BASE:-$workspace/build}
 install_base=${MFJA_INSTALL_BASE:-$workspace/install}
@@ -20,10 +23,13 @@ if [[ "${ROOM315_OVERLAY_BUILD_ENV:-}" != "1" ]]; then
     LOGNAME="${LOGNAME:-${USER:-$(id -un)}}" \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     HPP_SETUP="$hpp_setup" \
+    INSTALL_PIP_DIR="$install_pip_dir" \
     MFJA_BUILD_BASE="$build_base" \
     MFJA_INSTALL_BASE="$install_base" \
     MFJA_LOG_BASE="$log_base" \
     MFJA_WS="$workspace" \
+    ROBOTPKG="$robotpkg" \
+    ROS_SETUP="$ros_setup" \
     STAUBLI_ROS2_SOURCE="$staubli_source" \
     CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-1}" \
     ROOM315_OVERLAY_BUILD_ENV=1 \
@@ -31,12 +37,12 @@ if [[ "${ROOM315_OVERLAY_BUILD_ENV:-}" != "1" ]]; then
 fi
 
 if [[ ! -f "$hpp_setup" ]]; then
-  echo "HPP underlay setup not found at $hpp_setup." >&2
+  echo "HPP environment setup not found at $hpp_setup." >&2
   echo "Set HPP_SETUP to any compatible HPP/ROS setup.bash." >&2
   exit 1
 fi
-# shellcheck disable=SC1090
 set +u
+# shellcheck disable=SC1090,SC1091
 source "$hpp_setup"
 set -u
 export PYTHONNOUSERSITE=1
@@ -46,11 +52,13 @@ import sys
 
 import hpp_exec
 import pyhpp
+import pyhpp_toppra
 import rclpy
 from pyhpp.manipulation import Device
 
 print(f"Overlay ABI: Python {sys.version.split()[0]}")
 print(f"pyhpp: {pyhpp.__file__}")
+print(f"pyhpp_toppra: {pyhpp_toppra.__file__}")
 print(f"hpp-exec: {hpp_exec.__file__}")
 print(f"rclpy: {rclpy.__file__}")
 PY
@@ -213,8 +221,8 @@ colcon --log-base "$log_base" build \
     -DPYTHON_EXECUTABLE="$python_executable" \
     -DPython3_EXECUTABLE="$python_executable"
 
-# shellcheck disable=SC1090
 set +u
+# shellcheck disable=SC1090,SC1091
 source "$install_base/setup.bash"
 set -u
 for package in \
@@ -229,6 +237,7 @@ from pathlib import Path
 
 import hpp_exec
 import pyhpp
+import pyhpp_toppra
 import rclpy
 from ament_index_python.packages import get_package_share_path
 from pyhpp.manipulation import Device

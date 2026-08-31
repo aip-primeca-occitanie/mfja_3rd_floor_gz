@@ -36,57 +36,10 @@ runbook.html
 
 ## Installation
 
-Use Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic. The short installation
-procedure is maintained in the [top-level README](README.md).
-
-### 1. Install ROS 2 And Build Tools
-
-Install ROS 2 Jazzy from the
-[official Ubuntu instructions](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html),
-then:
-
-```bash
-sudo apt update
-sudo apt install -y \
-  build-essential \
-  doxygen \
-  git \
-  python3-venv \
-  ros-dev-tools \
-  ros-jazzy-desktop \
-  ros-jazzy-coal \
-  ros-jazzy-jrl-cmakemodules \
-  ros-jazzy-pinocchio \
-  ros-jazzy-proxsuite \
-  ros-jazzy-ros-gz
-```
-
-### 2. Clone The Repository
-
-```bash
-export MFJA_WORK_DIR="$HOME/mfja"
-mkdir -p "$MFJA_WORK_DIR"
-git clone --recurse-submodules \
-  https://github.com/psardin001/mfja_3rd_floor_gz.git \
-  "$MFJA_WORK_DIR/mfja_3rd_floor_gz"
-```
-
-### 3. Install
-
-```bash
-"$MFJA_WORK_DIR/mfja_3rd_floor_gz/install.sh" "$MFJA_WORK_DIR"
-```
-
-The installer imports the pinned HPP sources, builds the HPP and MFJA
-workspaces, creates the Viser Python environment, and checks the result.
-
-### 4. Source The Workspace
-
-```bash
-source "$MFJA_WORK_DIR/setup.bash"
-```
-
-Use the same command in every new terminal.
+Use Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic. Follow the
+[top-level installation procedure](README.md) to configure Robotpkg, install
+the pinned HPP packages, build the source additions and MFJA overlay, and load
+the generated environment.
 
 ## Tested Launch Commands
 

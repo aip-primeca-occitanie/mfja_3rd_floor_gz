@@ -155,7 +155,8 @@ current configuration and a commissioned path.
 ## Alternative HPP installations
 
 The MFJA overlay can use any setup file that exposes compatible `pyhpp`,
-`hpp_exec`, Pinocchio, and `rclpy` modules to one Python interpreter:
+`pyhpp_toppra`, `hpp_exec`, Pinocchio, and `rclpy` modules to one Python
+interpreter:
 
 ```bash
 HPP_SETUP=/path/to/hpp/environment.sh \

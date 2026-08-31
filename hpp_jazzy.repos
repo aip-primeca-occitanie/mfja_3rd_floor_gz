@@ -1,48 +1,12 @@
 repositories:
-  example-robot-data:
+  toppra:
     type: git
-    url: https://github.com/Gepetto/example-robot-data.git
-    version: 7296cb72d9604b55cb59aab60c263a74ac9f90fb
-  hpp-environments:
+    url: https://github.com/hungpham2511/toppra.git
+    version: 2dfb9729d2ba2bbc962d512cc3a73b264a5ab466
+  hpp-toppra:
     type: git
-    url: https://github.com/humanoid-path-planner/hpp-environments.git
-    version: 05981f1db575fa3998e6a8936fd1ad1365d1a811
-  hpp-util:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-util.git
-    version: c5fbad7724f6b03d30e8355536e4019430cfba69
-  hpp-pinocchio:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-pinocchio.git
-    version: 8d14ed56ed4fce2afe8d0fc3d37c5a6f4fdcd7e7
-  hpp-statistics:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-statistics.git
-    version: e4b2bcdeb95d1fe9aa2e301ec658d3cde397a77c
-  hpp-constraints:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-constraints.git
-    version: 8671ab4800d1394c9f872b142b31a1710e834aaf
-  hpp-core:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-core.git
-    version: 9babaf9d7abcfef621023acfa774b0b050d562f3
-  hpp-manipulation:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-manipulation.git
-    version: 3a07d03a643698402273e0a87b3bc008097ebb63
-  hpp-manipulation-urdf:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-manipulation-urdf.git
-    version: 114c7c4426c011855e8b578a82114b0755ea979a
-  hpp-python:
-    type: git
-    url: https://github.com/psardin001/hpp-python.git
-    version: fd899d404466c229969da726e922a9e35b94b193
-  hpp-gepetto-viewer:
-    type: git
-    url: https://github.com/humanoid-path-planner/hpp-gepetto-viewer.git
-    version: c56fcaf61065cd717767e61fcd34b196bbac09fa
+    url: https://github.com/humanoid-path-planner/hpp-toppra.git
+    version: 83efa3beb861132484364c46d28b4ee642830c10
   hpp-exec:
     type: git
     url: https://github.com/psardin001/hpp-exec.git
