@@ -1,4 +1,3 @@
-import ast
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -14,19 +13,6 @@ LAUNCH = (
     / "launch"
     / "multi_robot_sim.launch.py"
 )
-
-
-def assigned_literal(path, name):
-    tree = ast.parse(path.read_text())
-    for node in tree.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        if any(
-            isinstance(target, ast.Name) and target.id == name
-            for target in node.targets
-        ):
-            return ast.literal_eval(node.value)
-    raise AssertionError(f"{name} is not assigned in {path}")
 
 
 def robot_pose(path, name):
@@ -83,13 +69,14 @@ def test_room315_staubli_pose_matches_gazebo_and_hpp_models():
         assert robot_pose(path, "staubli1") == expected_gazebo_pose
 
     expected_hpp_pose = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
-    hpp_paths = [
-        REPOSITORY
-        / "mfja_staubli_demos"
-        / "hpp"
-        / "room315_cartesian_line.py",
-        DEMO / "hpp" / "room315_problem.py",
-    ]
-
-    for path in hpp_paths:
-        assert assigned_literal(path, "ROOM315_ROBOT_POSE") == expected_hpp_pose
+    cartesian = yaml.safe_load(
+        (
+            REPOSITORY
+            / "mfja_staubli_demos/config/room315_cartesian_line.yaml"
+        ).read_text()
+    )
+    pick_place = yaml.safe_load(
+        (DEMO / "config/room315_pick_place.yaml").read_text()
+    )
+    assert tuple(cartesian["robot"]["world_pose"]) == expected_hpp_pose
+    assert tuple(pick_place["scene"]["robot_world_pose"]) == expected_hpp_pose

@@ -6,18 +6,7 @@ import numpy as np
 from hpp_exec import Segment
 from pyhpp.manipulation import TransitionPlanner
 
-from room315_problem import (
-    GRASP_TRANSITION,
-    PICK_TRANSITIONS,
-    RELEASE_TRANSITION,
-    RELEASE_TRANSITIONS,
-    TRANSFER_TRANSITION,
-    box_rank,
-    normalize_box_quaternion,
-)
-
-MAX_FIRST_APPROACH_PATH_LENGTH = 3.0
-MAX_MANIPULATION_PATH_LENGTH = 8.0
+from room315_problem import box_rank, config, normalize_box_quaternion
 
 
 @dataclass
@@ -65,6 +54,7 @@ def score_pick_chain(q_free, chain, preferred=None):
 
 
 def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferred=None):
+    pick_transitions = config["graph"]["transitions"]["pick"]
     shooter = problem.configurationShooter()
     rank = box_rank(robot)
     candidates = []
@@ -74,7 +64,7 @@ def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferr
         source = q_free
         chain = []
 
-        for index, transition_name in enumerate(PICK_TRANSITIONS):
+        for index, transition_name in enumerate(pick_transitions):
             transition = graph.getTransition(transition_name)
             initializer = seed if index == 0 else source
             ok, q_next, error = graph.generateTargetConfig(
@@ -94,7 +84,7 @@ def generate_pick_chains(robot, problem, graph, q_free, attempts, label, preferr
             chain.append(q_next)
             source = q_next
 
-        if len(chain) != len(PICK_TRANSITIONS):
+        if len(chain) != len(pick_transitions):
             continue
 
         score = score_pick_chain(q_free, chain, preferred)
@@ -139,17 +129,18 @@ def plan_transition(robot, planner, graph, transition_name, q_start, q_goal):
 
 
 def validate_simple_plan(segments):
+    planning_config = config["planning"]
     first_length = float(segments[0].path.length())
     total_length = sum(float(segment.path.length()) for segment in segments)
-    if first_length > MAX_FIRST_APPROACH_PATH_LENGTH:
+    if first_length > planning_config["max_first_approach_path_length"]:
         raise RuntimeError(
             f"first approach path length {first_length:.3f} exceeds the simple-demo "
-            f"limit {MAX_FIRST_APPROACH_PATH_LENGTH:.3f}"
+            f"limit {planning_config['max_first_approach_path_length']:.3f}"
         )
-    if total_length > MAX_MANIPULATION_PATH_LENGTH:
+    if total_length > planning_config["max_manipulation_path_length"]:
         raise RuntimeError(
             f"manipulation path length {total_length:.3f} exceeds the simple-demo "
-            f"limit {MAX_MANIPULATION_PATH_LENGTH:.3f}"
+            f"limit {planning_config['max_manipulation_path_length']:.3f}"
         )
     return first_length, total_length
 
@@ -168,6 +159,7 @@ def plan_manipulation(
     transition_iterations,
     transition_timeout,
 ):
+    transitions = config["graph"]["transitions"]
     problem.constraintGraph(graph)
     planner = TransitionPlanner(problem)
     planner.maxIterations(transition_iterations)
@@ -202,7 +194,7 @@ def plan_manipulation(
         try:
             segments = []
             current = q_source
-            for transition_name, target in zip(PICK_TRANSITIONS, source_pick):
+            for transition_name, target in zip(transitions["pick"], source_pick):
                 segments.append(
                     plan_transition(
                         robot, planner, graph, transition_name, current, target
@@ -215,7 +207,7 @@ def plan_manipulation(
                     robot,
                     planner,
                     graph,
-                    TRANSFER_TRANSITION,
+                    transitions["transfer"],
                     current,
                     destination_pick[-1],
                 )
@@ -224,7 +216,7 @@ def plan_manipulation(
 
             release_targets = list(reversed(destination_pick[:-1])) + [q_destination]
             for transition_name, target in zip(
-                RELEASE_TRANSITIONS, release_targets
+                transitions["release"], release_targets
             ):
                 segments.append(
                     plan_transition(
@@ -396,15 +388,16 @@ def build_execution_plan(
     destination_label,
     args,
 ):
+    transitions = config["graph"]["transitions"]
     grasp_index = next(
         index
         for index, segment in enumerate(segments)
-        if segment.transition_name == GRASP_TRANSITION
+        if segment.transition_name == transitions["grasp"]
     )
     release_index = next(
         index
         for index, segment in enumerate(segments)
-        if segment.transition_name == RELEASE_TRANSITION
+        if segment.transition_name == transitions["detach"]
     )
 
     segment_specs = [
@@ -420,14 +413,14 @@ def build_execution_plan(
             segments[grasp_index:release_index],
             "follow",
             q_source,
-            GRASP_TRANSITION,
+            transitions["grasp"],
         ),
         (
             f"release-{destination_label}-retreat",
             segments[release_index:],
             f"{destination_label}-fixed",
             q_destination,
-            RELEASE_TRANSITION,
+            transitions["detach"],
         ),
     ]
 

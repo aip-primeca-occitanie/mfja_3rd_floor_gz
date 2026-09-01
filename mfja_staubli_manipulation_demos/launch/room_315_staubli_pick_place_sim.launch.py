@@ -1,7 +1,10 @@
 """Staubli table pick-and-place scene without rail or shuttle nodes."""
 
 import os
+from pathlib import Path
 
+import yaml
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -10,11 +13,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
-PAYLOAD_POSE = (-14.75, -5.84, 1.033, 0.0, 0.0, 0.0)
-WORLD_NAME = "room_315_only"
-
-
-def spawn_model(name, model_file, pose):
+def spawn_model(name, model_file, pose, world_name):
     x, y, z, roll, pitch, yaw = pose
     return Node(
         package="ros_gz_sim",
@@ -23,7 +22,7 @@ def spawn_model(name, model_file, pose):
         output="screen",
         parameters=[
             {
-                "world": WORLD_NAME,
+                "world": world_name,
                 "file": model_file,
                 "name": name,
                 "allow_renaming": False,
@@ -39,6 +38,15 @@ def spawn_model(name, model_file, pose):
 
 
 def generate_launch_description():
+    config_path = (
+        Path(get_package_share_directory("mfja_staubli_manipulation_demos"))
+        / "config/room315_pick_place.yaml"
+    )
+    with config_path.open(encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+
+    scene = config["scene"]
+    world_name = scene["world_name"]
     package_share = FindPackageShare("mfja_staubli_manipulation_demos")
     simulator_launch = PathJoinSubstitution(
         [
@@ -71,7 +79,7 @@ def generate_launch_description():
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(simulator_launch),
                 launch_arguments={
-                    "world_name": WORLD_NAME,
+                    "world_name": world_name,
                     "robot_config": robot_config,
                     "robots": "staubli1",
                     "gz_partition": gz_partition,
@@ -94,7 +102,14 @@ def generate_launch_description():
             ),
             TimerAction(
                 period=4.0,
-                actions=[spawn_model("room315_payload_box", payload, PAYLOAD_POSE)],
+                actions=[
+                    spawn_model(
+                        scene["payload_entity_name"],
+                        payload,
+                        scene["payload_spawn_pose"],
+                        world_name,
+                    )
+                ],
             ),
         ]
     )

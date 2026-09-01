@@ -15,23 +15,17 @@ from rclpy.node import Node
 from trajectory_msgs.msg import JointTrajectory
 
 from room315_cartesian_line import (
-    DEFAULT_LINE,
-    DEFAULT_Q_START,
-    JOINT_NAMES,
-    START_HOLD,
     build_problem,
+    config,
     plan_cartesian_line,
     sample_path,
 )
 from staubli_trajectory_export import render_joint_trajectory
 
-JOINT_STATE_TIMEOUT = 10.0
-SUBSCRIBER_TIMEOUT = 5.0
-
 
 def publish_trajectory(node, topic, trajectory):
     publisher = node.create_publisher(JointTrajectory, topic, 10)
-    deadline = time.monotonic() + SUBSCRIBER_TIMEOUT
+    deadline = time.monotonic() + config["trajectory"]["subscriber_timeout_s"]
     while time.monotonic() < deadline and publisher.get_subscription_count() == 0:
         rclpy.spin_once(node, timeout_sec=0.1)
     if publisher.get_subscription_count() == 0:
@@ -43,6 +37,10 @@ def publish_trajectory(node, topic, trajectory):
 
 
 def main():
+    robot_config = config["robot"]
+    planning = config["planning"]
+    trajectory = config["trajectory"]
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--robot-name", default="staubli1")
     parser.add_argument("--duration", type=float, default=5.0)
@@ -51,14 +49,14 @@ def main():
         "--line",
         nargs=3,
         metavar=("DX", "DY", "DZ"),
-        default=DEFAULT_LINE,
+        default=planning["default_line"],
         type=float,
         help="Cartesian line in the Staubli base frame, meters.",
     )
     parser.add_argument(
         "--q-start",
         nargs=6,
-        metavar=tuple(JOINT_NAMES),
+        metavar=tuple(robot_config["joint_names"]),
         default=None,
         type=float,
         help="Start configuration for --plan-only or offline Staubli export "
@@ -109,7 +107,9 @@ def main():
             "--q-start and --joint-states-topic cannot be used together"
         )
     if args.q_start is None:
-        args.q_start = DEFAULT_Q_START.copy()
+        args.q_start = np.asarray(
+            robot_config["default_configuration"], dtype=float
+        )
     if args.goto_start and (args.plan_only or args.print_joint_trajectory):
         parser.error("--goto-start needs the live Gazebo robot")
     if args.samples < 2:
@@ -136,9 +136,9 @@ def main():
         try:
             q_start = read_current_configuration(
                 reader,
-                JOINT_NAMES,
+                robot_config["joint_names"],
                 topic=args.joint_states_topic,
-                timeout_sec=JOINT_STATE_TIMEOUT,
+                timeout_sec=trajectory["joint_state_timeout_s"],
                 require_single_publisher=True,
             )
         finally:
@@ -155,9 +155,9 @@ def main():
         node = Node("room315_hpp_line")
         q_start = read_current_configuration(
             node,
-            JOINT_NAMES,
+            robot_config["joint_names"],
             f"/{args.robot_name}/joint_states",
-            timeout_sec=JOINT_STATE_TIMEOUT,
+            timeout_sec=trajectory["joint_state_timeout_s"],
             strip_prefix=True,
             require_single_publisher=True,
         )
@@ -206,7 +206,9 @@ def main():
         return 0
 
     times = [0.0] + np.linspace(
-        START_HOLD, START_HOLD + duration, len(configs)
+        trajectory["start_hold_s"],
+        trajectory["start_hold_s"] + duration,
+        len(configs),
     ).tolist()
     trajectory_configs = [configs[0]] + configs
     if args.print_joint_trajectory:
@@ -221,7 +223,7 @@ def main():
             )
         else:
             print(
-                "# Start configuration is the demo DEFAULT_Q_START.",
+                "# Start configuration is the configured demo default.",
                 file=sys.stderr,
             )
         print("# Joint positions are radians.", file=sys.stderr)
@@ -242,14 +244,24 @@ def main():
             "# The current VAL3 driver treats --duration as trajectory metadata.",
             file=sys.stderr,
         )
-        print(render_joint_trajectory(trajectory_configs, times, JOINT_NAMES))
+        print(
+            render_joint_trajectory(
+                trajectory_configs,
+                times,
+                robot_config["joint_names"],
+            )
+        )
         return 0
 
     topic = f"/{args.robot_name}/joint_trajectory"
     publish_trajectory(
         node,
         topic,
-        configs_to_joint_trajectory(trajectory_configs, times, JOINT_NAMES),
+        configs_to_joint_trajectory(
+            trajectory_configs,
+            times,
+            robot_config["joint_names"],
+        ),
     )
     print(f"published {len(configs) + 1} points to {topic}")
 

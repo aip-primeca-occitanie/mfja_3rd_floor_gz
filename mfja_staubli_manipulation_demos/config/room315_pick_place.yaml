@@ -1,0 +1,70 @@
+scene:
+  world_name: room_315_only
+  robot_world_pose: [-15.03, -6.0, 1.0, 0.0, 0.0, 0.0]
+  table_drop_zone_pose: [-14.65, -5.84, 1.003, 0.0, 0.0, 0.0]
+  payload_entity_name: room315_payload_box
+  payload_size: [0.07, 0.05, 0.06]
+  payload_spawn_pose: [-14.75, -5.84, 1.033, 0.0, 0.0, 0.0]
+
+models:
+  robot:
+    urdf: package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf
+    srdf: package://mfja_staubli_manipulation_demos/hpp/staubli_tx2_60l_manipulation.srdf
+  cell:
+    urdf: package://mfja_3rd_floor_description/urdf/room315_cell.urdf
+    srdf: package://mfja_3rd_floor_description/urdf/room315_cell.srdf
+  payload:
+    urdf: package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.urdf
+    srdf: package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.srdf
+  table:
+    urdf: package://mfja_staubli_manipulation_demos/hpp/room315_staubli_table_drop_zone.urdf
+    srdf: package://mfja_staubli_manipulation_demos/hpp/room315_staubli_table_drop_zone.srdf
+
+graph:
+  name: room315_staubli_pick_place
+  gripper: staubli/tool0_gripper
+  payload_handle: box/top_handle
+  payload_contact: box/bottom_surface
+  payload_to_room_margin: 0.03
+  robot_to_room_margin: 0.02
+  transitions:
+    pick:
+      - staubli/tool0_gripper > box/top_handle | f_01
+      - staubli/tool0_gripper > box/top_handle | f_12
+      - staubli/tool0_gripper > box/top_handle | f_23
+      - staubli/tool0_gripper > box/top_handle | f_34
+    transfer: Loop | 0-0
+    release:
+      - staubli/tool0_gripper < box/top_handle | 0-0_43
+      - staubli/tool0_gripper < box/top_handle | 0-0_32
+      - staubli/tool0_gripper < box/top_handle | 0-0_21
+      - staubli/tool0_gripper < box/top_handle | 0-0_10
+    grasp: staubli/tool0_gripper > box/top_handle | f_23
+    detach: staubli/tool0_gripper < box/top_handle | 0-0_21
+
+planning:
+  joint_names: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]
+  default_configuration: [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
+  pick_offset: [-0.10, 0.0]
+  place_offset: [0.10, 0.0]
+  max_first_approach_path_length: 3.0
+  max_manipulation_path_length: 8.0
+
+execution:
+  profiles:
+    simulation:
+      trajectory_topic: /{robot_name}/joint_trajectory
+      trajectory_action: null
+      joint_state_topic: /{robot_name}/joint_states
+      payload_output: gazebo
+      gripper_output: joint-trajectory
+    hardware:
+      trajectory_topic: null
+      trajectory_action: /manipulator_controller/joint_trajectory_action
+      joint_state_topic: /joint_states
+      payload_output: none
+      gripper_output: staubli-io
+  gripper:
+    joints: [gripper_left_finger_joint, gripper_right_finger_joint]
+    open_positions: [0.0025, 0.0025]
+    close_positions: [0.0, 0.0]

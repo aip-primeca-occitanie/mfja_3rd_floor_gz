@@ -11,13 +11,18 @@ SCRIPT = Path(__file__).parents[1] / "hpp" / "room315_pick_place.py"
 
 
 def load_pick_place(monkeypatch):
+    config_path = SCRIPT.with_name("room315_config.py")
+    config_spec = importlib.util.spec_from_file_location("room315_config", config_path)
+    config_module = importlib.util.module_from_spec(config_spec)
+    monkeypatch.setitem(sys.modules, "room315_config", config_module)
+    config_spec.loader.exec_module(config_module)
+
     execution = ModuleType("room315_execution")
     execution.calls = []
     execution.execute_plan = lambda *args: execution.calls.append(args)
     monkeypatch.setitem(sys.modules, "room315_execution", execution)
 
     profiles = ModuleType("room315_execution_profiles")
-    profiles.EXECUTION_PROFILES = {"simulation": object(), "hardware": object()}
 
     def apply_execution_profile(args):
         if args.execution_profile == "simulation":
@@ -55,13 +60,7 @@ def load_pick_place(monkeypatch):
     monkeypatch.setitem(sys.modules, "room315_planning", planning)
 
     problem = ModuleType("room315_problem")
-    problem.BOX_ENTITY_NAME = "room315_payload_box"
-    problem.DEFAULT_Q_START = np.arange(6, dtype=float)
-    problem.GAZEBO_GRIPPER_CLOSE_POSITIONS = [0.0, 0.0]
-    problem.GAZEBO_GRIPPER_JOINTS = ["left", "right"]
-    problem.GAZEBO_GRIPPER_OPEN_POSITIONS = [0.0025, 0.0025]
-    problem.JOINT_NAMES = [f"joint_{index}" for index in range(1, 7)]
-    problem.WORLD_NAME = "room_315_only"
+    problem.config = config_module.load_config()
     problem.build_calls = []
     problem.table_offsets = []
 
@@ -93,7 +92,19 @@ def test_default_command_plans_in_simulation(monkeypatch):
     args = pick_place.parse_args([])
 
     assert args.execution_profile == "simulation"
-    assert np.array_equal(args.q_start, np.arange(6, dtype=float))
+    assert np.array_equal(
+        args.q_start,
+        np.array(
+            [
+                0.0,
+                0.8726646259971648,
+                1.2217304763960306,
+                0.0,
+                0.9599310885968813,
+                0.0,
+            ]
+        ),
+    )
     assert not args.build_only
     assert not args.execute
 

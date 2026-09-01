@@ -14,6 +14,7 @@ room315_launch_files = [
 ]
 room315_docs = ["docs/room315_pick_place_walkthrough.md"]
 room315_hpp_files = [
+    "hpp/room315_config.py",
     "hpp/room315_execution.py",
     "hpp/room315_execution_profiles.py",
     "hpp/room315_payload_box.srdf",

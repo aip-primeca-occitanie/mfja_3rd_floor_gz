@@ -21,6 +21,7 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
         (f"share/{package_name}", ["package.xml", "README.md"]),
+        (f"share/{package_name}/config", glob("config/*.yaml")),
         (
             f"share/{package_name}/launch",
             ["launch/room_315_staubli_cartesian_demo.launch.py"],

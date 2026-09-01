@@ -10,7 +10,6 @@ import numpy as np
 from room315_execution import execute_plan
 from room315_execution_profiles import (
     apply_execution_profile,
-    EXECUTION_PROFILES,
     requires_explicit_measured_start,
 )
 from room315_planning import (
@@ -19,35 +18,29 @@ from room315_planning import (
     plan_manipulation,
 )
 from room315_problem import (
-    BOX_ENTITY_NAME,
-    DEFAULT_Q_START,
-    GAZEBO_GRIPPER_CLOSE_POSITIONS,
-    GAZEBO_GRIPPER_JOINTS,
-    GAZEBO_GRIPPER_OPEN_POSITIONS,
-    JOINT_NAMES,
-    WORLD_NAME,
     box_configuration_from_world_pose,
     build_problem,
+    config,
     project_free_configuration,
     table_box_world_pose,
 )
 
 
-PICK_OFFSET_X = -0.10
-PLACE_OFFSET_X = 0.10
-
-
 def parse_args(argv=None):
+    scene = config["scene"]
+    planning = config["planning"]
+    execution = config["execution"]
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--execution-profile",
-        choices=sorted(EXECUTION_PROFILES),
+        choices=sorted(execution["profiles"]),
         default="simulation",
     )
     parser.add_argument(
         "--q-start",
         nargs=6,
-        metavar=tuple(JOINT_NAMES),
+        metavar=tuple(planning["joint_names"]),
         type=float,
         help="Measured Staubli joint configuration in radians.",
     )
@@ -59,19 +52,20 @@ def parse_args(argv=None):
         action="store_true",
         help="open the planned paths in a browser at http://localhost:8000",
     )
+    gripper = execution["gripper"]
     parser.set_defaults(
         robot_name="staubli1",
-        world_name=WORLD_NAME,
-        box_entity_name=BOX_ENTITY_NAME,
+        world_name=scene["world_name"],
+        box_entity_name=scene["payload_entity_name"],
         trajectory_topic=None,
         trajectory_action=None,
         joint_state_topic=None,
         payload_output=None,
         gripper_output=None,
         gripper_trajectory_topic=None,
-        gripper_joints=GAZEBO_GRIPPER_JOINTS,
-        gripper_open_positions=GAZEBO_GRIPPER_OPEN_POSITIONS,
-        gripper_close_positions=GAZEBO_GRIPPER_CLOSE_POSITIONS,
+        gripper_joints=gripper["joints"],
+        gripper_open_positions=gripper["open_positions"],
+        gripper_close_positions=gripper["close_positions"],
         gripper_motion_duration=0.15,
         gripper_settle_s=0.5,
         staubli_io_service="/io_interface/write_single_io",
@@ -101,7 +95,7 @@ def parse_args(argv=None):
 
     q_start_was_explicit = args.q_start is not None
     if args.q_start is None:
-        args.q_start = DEFAULT_Q_START
+        args.q_start = np.asarray(planning["default_configuration"], dtype=float)
     apply_execution_profile(args)
     if requires_explicit_measured_start(args, q_start_was_explicit):
         parser.error("hardware execution requires an explicit measured --q-start")
@@ -135,6 +129,7 @@ def show_in_viser(robot, problem, segments, q_source):
 
 
 def run(args):
+    planning = config["planning"]
     robot, problem, graph = build_problem()
     print("HPP table pick-and-place scene initialized")
     if args.build_only:
@@ -145,7 +140,11 @@ def run(args):
         problem,
         graph,
         box_configuration_from_world_pose(
-            q_arm, table_box_world_pose(x_offset=PICK_OFFSET_X)
+            q_arm,
+            table_box_world_pose(
+                x_offset=planning["pick_offset"][0],
+                y_offset=planning["pick_offset"][1],
+            ),
         ),
         "pick",
     )
@@ -153,7 +152,11 @@ def run(args):
         problem,
         graph,
         box_configuration_from_world_pose(
-            q_arm, table_box_world_pose(x_offset=PLACE_OFFSET_X)
+            q_arm,
+            table_box_world_pose(
+                x_offset=planning["place_offset"][0],
+                y_offset=planning["place_offset"][1],
+            ),
         ),
         "place",
     )

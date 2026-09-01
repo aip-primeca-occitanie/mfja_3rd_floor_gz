@@ -1,0 +1,22 @@
+robot:
+  joint_names: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]
+  tool_frame: staubli/tool0
+  default_configuration: [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
+  world_pose: [-15.03, -6.0, 1.0, 0.0, 0.0, 0.0]
+  urdf: package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf
+  srdf: package://mfja_staubli_demos/hpp/staubli_tx2_60l.srdf
+
+cell:
+  urdf: package://mfja_3rd_floor_description/urdf/room315_cell.urdf
+  srdf: package://mfja_3rd_floor_description/urdf/room315_cell.srdf
+
+planning:
+  default_line: [0.0, 0.0, 0.4]
+
+trajectory:
+  start_hold_s: 1.0
+  joint_state_timeout_s: 10.0
+  subscriber_timeout_s: 5.0
+
+self_test:
+  joint_state_topic: /mfja_hpp_joint_state_self_test

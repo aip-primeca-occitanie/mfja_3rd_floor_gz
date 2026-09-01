@@ -6,10 +6,14 @@ from types import ModuleType, SimpleNamespace
 
 import numpy as np
 import pytest
+import yaml
 
 
 EXECUTION = (
     Path(__file__).parents[1] / "hpp" / "room315_execution.py"
+)
+CONFIG = yaml.safe_load(
+    (Path(__file__).parents[1] / "config/room315_pick_place.yaml").read_text()
 )
 
 
@@ -34,9 +38,7 @@ def load_execution_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "hpp_exec", hpp_exec)
 
     room315_problem = ModuleType("room315_problem")
-    room315_problem.GRASP_TRANSITION = "grasp"
-    room315_problem.JOINT_NAMES = [f"joint_{index}" for index in range(1, 7)]
-    room315_problem.RELEASE_TRANSITION = "release"
+    room315_problem.config = CONFIG
     room315_problem.box_rank = lambda *_args: 0
     room315_problem.box_world_pose_msg = lambda *_args: None
     room315_problem.normalize_box_quaternion = lambda *_args: None
@@ -153,7 +155,7 @@ def test_action_segments_use_hpp_exec_executor(monkeypatch):
 
     assert calls == [
         (
-            (segments, configs, times, execution.JOINT_NAMES),
+            (segments, configs, times, execution.config["planning"]["joint_names"]),
             {
                 "controller_topic": (
                     "/manipulator_controller/joint_trajectory_action"
@@ -184,10 +186,11 @@ def test_action_segment_failure_raises(monkeypatch):
 def test_configured_segments_assign_gripper_preactions(monkeypatch):
     execution = load_execution_module(monkeypatch)
     Segment = sys.modules["hpp_exec"].Segment
+    transitions = execution.config["graph"]["transitions"]
     planned_segments = [
         Segment(0, 2, transition_name="approach"),
-        Segment(2, 4, transition_name="grasp"),
-        Segment(4, 6, transition_name="release"),
+        Segment(2, 4, transition_name=transitions["grasp"]),
+        Segment(4, 6, transition_name=transitions["detach"]),
     ]
     plan = SimpleNamespace(
         segments=planned_segments,

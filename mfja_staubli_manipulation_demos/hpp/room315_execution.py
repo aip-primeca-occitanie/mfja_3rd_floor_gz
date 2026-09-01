@@ -19,11 +19,9 @@ from trajectory_msgs.msg import JointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 from room315_problem import (
-    GRASP_TRANSITION,
-    JOINT_NAMES,
-    RELEASE_TRANSITION,
     box_rank,
     box_world_pose_msg,
+    config,
     normalize_box_quaternion,
 )
 
@@ -44,7 +42,9 @@ class JointStateTracker:
             for name, value in zip(message.name, message.position)
         }
         try:
-            self.configuration = np.array([positions[joint] for joint in JOINT_NAMES])
+            self.configuration = np.array(
+                [positions[joint] for joint in config["planning"]["joint_names"]]
+            )
             self.last_update = time.monotonic()
         except KeyError:
             return
@@ -479,7 +479,7 @@ def execute_topic_segments(
         run_segment_actions(segment.pre_actions, index, "pre")
         configs, payload_configs, times = segment_samples(plan, segment)
         trajectory = configs_to_joint_trajectory(
-            configs, times, JOINT_NAMES
+            configs, times, config["planning"]["joint_names"]
         )
         publish_trajectory(node, publisher, topic, trajectory)
 
@@ -499,6 +499,7 @@ def execute_topic_segments(
 
 
 def configured_segments(node, tracker, pose_client, robot, plan, gripper, args):
+    transitions = config["graph"]["transitions"]
     segments = []
     for segment in plan.segments:
         configured = copy(segment)
@@ -507,8 +508,8 @@ def configured_segments(node, tracker, pose_client, robot, plan, gripper, args):
         segments.append(configured)
 
     by_transition = segments_by_transition(segments)
-    grasp_segment = by_transition[GRASP_TRANSITION][0]
-    release_segment = by_transition[RELEASE_TRANSITION][0]
+    grasp_segment = by_transition[transitions["grasp"]][0]
+    release_segment = by_transition[transitions["detach"]][0]
 
     if args.gripper_output == "joint-trajectory":
         segments[0].pre_actions.append(gripper.open)
@@ -552,7 +553,7 @@ def execute_action_segments(plan, segments, controller_topic):
         segments,
         plan.configs,
         plan.times,
-        JOINT_NAMES,
+        config["planning"]["joint_names"],
         controller_topic=controller_topic,
     ):
         raise RuntimeError(

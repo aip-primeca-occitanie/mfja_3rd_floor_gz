@@ -1,8 +1,8 @@
-import ast
 from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
+import yaml
 
 
 REPOSITORY = Path(__file__).parents[2]
@@ -14,29 +14,13 @@ ROOM315_WORLD = DESCRIPTION / "worlds" / "room_315_only.world"
 ROBOT_SDF = DESCRIPTION / "models" / "staubli_tx2_60l" / "model.sdf"
 DEMO_SDF = DEMO / "models" / "staubli_tx2_60l_gripper" / "model.sdf"
 TABLE_URDF = DEMO / "hpp" / "room315_staubli_table_drop_zone.urdf"
-PROBLEM = DEMO / "hpp" / "room315_problem.py"
+CONFIG = yaml.safe_load(
+    (DEMO / "config" / "room315_pick_place.yaml").read_text()
+)
 
 
 def floats(text):
     return tuple(float(value) for value in text.split())
-
-
-def assigned_literal(path, name):
-    tree = ast.parse(path.read_text())
-    for node in tree.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        if any(
-            isinstance(target, ast.Name) and target.id == name
-            for target in node.targets
-        ):
-            value = (
-                node.value.args[0]
-                if isinstance(node.value, ast.Call)
-                else node.value
-            )
-            return ast.literal_eval(value)
-    raise AssertionError(f"{name} is not assigned in {path}")
 
 
 def controller_initial_positions(plugin):
@@ -162,11 +146,10 @@ def test_provisional_tcp_frame_is_consistent_across_models():
 
 def test_simulated_jaw_commands_match_sdf_limits():
     sdf = ElementTree.parse(DEMO_SDF).getroot()
-    joint_names = assigned_literal(PROBLEM, "GAZEBO_GRIPPER_JOINTS")
-    open_positions = assigned_literal(PROBLEM, "GAZEBO_GRIPPER_OPEN_POSITIONS")
-    close_positions = assigned_literal(
-        PROBLEM, "GAZEBO_GRIPPER_CLOSE_POSITIONS"
-    )
+    gripper = CONFIG["execution"]["gripper"]
+    joint_names = gripper["joints"]
+    open_positions = gripper["open_positions"]
+    close_positions = gripper["close_positions"]
 
     for name, open_position, close_position in zip(
         joint_names, open_positions, close_positions
@@ -193,15 +176,15 @@ def test_simulated_arm_controller_target_matches_hpp_default_configuration():
     joint_names = [f"joint_{index}" for index in range(1, 7)]
 
     assert tuple(initial_positions[name] for name in joint_names) == pytest.approx(
-        assigned_literal(PROBLEM, "DEFAULT_Q_START")
+        CONFIG["planning"]["default_configuration"]
     )
 
 
 def test_hpp_uses_canonical_robot_and_shared_cell_descriptions():
-    assert assigned_literal(PROBLEM, "ROBOT_URDF") == (
+    assert CONFIG["models"]["robot"]["urdf"] == (
         "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
     )
-    assert assigned_literal(PROBLEM, "CELL_URDF") == (
+    assert CONFIG["models"]["cell"]["urdf"] == (
         "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
     )
 
@@ -250,7 +233,7 @@ def test_hpp_table_visual_and_collision_match_the_room_table_pose():
     )
     assert table_visual.find("origin").attrib == collision.find("origin").attrib
 
-    drop_zone_pose = assigned_literal(PROBLEM, "TABLE_DROP_ZONE_POSE")
+    drop_zone_pose = CONFIG["scene"]["table_drop_zone_pose"]
     mesh_pose = add_vectors(
         drop_zone_pose[:3], floats(collision.find("origin").attrib["xyz"])
     )

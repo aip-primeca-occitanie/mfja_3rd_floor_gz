@@ -7,6 +7,11 @@ from types import SimpleNamespace
 MODULE_PATH = (
     Path(__file__).parents[1] / "hpp" / "room315_execution_profiles.py"
 )
+CONFIG_PATH = Path(__file__).parents[1] / "hpp" / "room315_config.py"
+CONFIG_SPEC = importlib.util.spec_from_file_location("room315_config", CONFIG_PATH)
+CONFIG_MODULE = importlib.util.module_from_spec(CONFIG_SPEC)
+sys.modules[CONFIG_SPEC.name] = CONFIG_MODULE
+CONFIG_SPEC.loader.exec_module(CONFIG_MODULE)
 SPEC = importlib.util.spec_from_file_location("room315_execution_profiles", MODULE_PATH)
 PROFILES = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = PROFILES

@@ -27,6 +27,9 @@ The Room 315 Staubli world pose is `x=-15.03`, `y=-6`, `z=1`, `yaw=0`
 uses that pose, and HPP applies its inverse to express the fixed cell in the
 robot base frame.
 
+The default scene, planning, and trajectory values live in
+`config/room315_cartesian_line.yaml`.
+
 ## Exercise
 
 First check that HPP can construct and solve the default line:
@@ -129,6 +132,7 @@ geometry, and the robot mode before an authorized operator publishes it on
 - `hpp/room315_cartesian_line.py` builds the HPP problem, projects the
   Cartesian target, installs line and orientation constraints, and samples the
   checked path.
+- `hpp/room315_cartesian_config.py` loads the YAML configuration.
 - `hpp/room315_hpp_line.py` provides the Gazebo and real-feedback command-line
   entry points.
 - `hpp/staubli_trajectory_export.py` renders the driver's

@@ -5,20 +5,31 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 import numpy as np
 import rclpy
+import yaml
+from ament_index_python.packages import get_package_share_directory
 from hpp_exec import read_current_configuration
 from rclpy.node import Node
 
-JOINT_NAMES = [f"joint_{index}" for index in range(1, 7)]
-
 
 def main() -> int:
+    config_path = (
+        Path(get_package_share_directory("mfja_staubli_demos"))
+        / "config"
+        / "room315_cartesian_line.yaml"
+    )
+    with config_path.open(encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--topic", default="/joint_states")
     parser.add_argument("--timeout", type=float, default=10.0)
     args = parser.parse_args()
+
+    joint_names = config["robot"]["joint_names"]
 
     if not np.isfinite(args.timeout) or args.timeout <= 0.0:
         parser.error("--timeout must be finite and positive")
@@ -28,7 +39,7 @@ def main() -> int:
     try:
         configuration = read_current_configuration(
             node,
-            JOINT_NAMES,
+            joint_names,
             topic=args.topic,
             timeout_sec=args.timeout,
             require_single_publisher=True,
@@ -49,7 +60,7 @@ def main() -> int:
         json.dumps(
             {
                 "topic": args.topic,
-                "joint_names": JOINT_NAMES,
+                "joint_names": joint_names,
                 "positions": configuration.tolist(),
             },
             indent=2,

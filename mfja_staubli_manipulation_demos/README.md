@@ -21,6 +21,12 @@ ros2 run mfja_staubli_manipulation_demos room315_pick_place.sh
 
 Use `--build-only` to construct and inspect the HPP scene.
 
+## Configuration
+
+The workcell, planning, and execution values live in
+`config/room315_pick_place.yaml`. The planner and simulation launch both load
+this file.
+
 ## Viser
 
 Plan and open the HPP scene in a browser:

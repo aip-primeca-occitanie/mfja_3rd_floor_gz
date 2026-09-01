@@ -16,24 +16,10 @@ from pyhpp.constraints import (
 from pyhpp.core import ConfigProjector, ConstraintSet, Dichotomy, Problem, Straight
 from pyhpp.pinocchio import Device, urdf
 
+from room315_cartesian_config import load_config
 from staubli_trajectory_export import joint_trajectory_payload
 
-
-JOINT_NAMES = [f"joint_{index}" for index in range(1, 7)]
-FRAME = "staubli/tool0"
-# Room 315 staging configuration supplied in degrees as [0, 50, 70, 0, 55, 0].
-DEFAULT_Q_START = np.array(
-    [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
-)
-DEFAULT_LINE = np.array([0.0, 0.0, 0.4])
-ROOM315_ROBOT_POSE = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
-
-ROBOT_URDF = "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
-ROBOT_SRDF = "package://mfja_staubli_demos/hpp/staubli_tx2_60l.srdf"
-CELL_URDF = "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
-CELL_SRDF = "package://mfja_3rd_floor_description/urdf/room315_cell.srdf"
-
-START_HOLD = 1.0
+config = load_config()
 
 
 @dataclass
@@ -45,19 +31,33 @@ class CartesianLinePlan:
 
 
 def build_problem():
+    robot_config = config["robot"]
+    cell = config["cell"]
     robot = Device("staubli")
     urdf.loadModel(
-        robot, 0, "staubli", "anchor", ROBOT_URDF, ROBOT_SRDF, pin.SE3.Identity()
+        robot,
+        0,
+        "staubli",
+        "anchor",
+        robot_config["urdf"],
+        robot_config["srdf"],
+        pin.SE3.Identity(),
     )
 
-    x, y, z, roll, pitch, yaw = ROOM315_ROBOT_POSE
+    x, y, z, roll, pitch, yaw = robot_config["world_pose"]
     robot_world = pin.SE3(
         pin.rpy.rpyToMatrix(roll, pitch, yaw), np.array([x, y, z])
     )
     # Cell link origins are world poses; placing the cell at the inverse of
     # the robot world pose expresses everything in the robot base frame.
     urdf.loadModel(
-        robot, 0, "room315", "anchor", CELL_URDF, CELL_SRDF, robot_world.inverse()
+        robot,
+        0,
+        "room315",
+        "anchor",
+        cell["urdf"],
+        cell["srdf"],
+        robot_world.inverse(),
     )
 
     problem = Problem(robot)
@@ -80,17 +80,21 @@ def sample_path(path, samples):
 
 
 def _inputs(q_start, line, samples):
+    robot = config["robot"]
+    planning = config["planning"]
     if q_start is None:
-        q_start = DEFAULT_Q_START.copy()
+        q_start = np.asarray(robot["default_configuration"], dtype=float)
     else:
         q_start = np.asarray(q_start, dtype=float)
-    if q_start.shape != (len(JOINT_NAMES),):
-        raise ValueError(f"q_start must contain {len(JOINT_NAMES)} joint values")
+    if q_start.shape != (len(robot["joint_names"]),):
+        raise ValueError(
+            f"q_start must contain {len(robot['joint_names'])} joint values"
+        )
     if not np.all(np.isfinite(q_start)):
         raise ValueError("q_start values must be finite")
 
     if line is None:
-        line = DEFAULT_LINE.copy()
+        line = np.asarray(planning["default_line"], dtype=float)
     else:
         line = np.asarray(line, dtype=float)
     if line.shape != (3,):
@@ -108,6 +112,7 @@ def _inputs(q_start, line, samples):
 
 def plan_cartesian_line(*, q_start=None, line=None, samples=80):
     """Compute a collision-checked Cartesian line."""
+    robot_config = config["robot"]
     q_start, line, samples = _inputs(q_start, line, samples)
     robot, problem = build_problem()
     valid, report = problem.isConfigValid(q_start)
@@ -115,7 +120,7 @@ def plan_cartesian_line(*, q_start=None, line=None, samples=80):
         raise RuntimeError(f"start configuration is invalid: {report}")
 
     model = robot.model()
-    frame_id = model.getFrameId(FRAME)
+    frame_id = model.getFrameId(robot_config["tool_frame"])
     frame = model.frames[frame_id]
     joint_id = frame.parentJoint
     tool_in_joint = frame.placement
@@ -254,12 +259,19 @@ def compute_cartesian_line_trajectory(
     *, q_start=None, line=None, duration=5.0, samples=80
 ):
     """Return a plain JointTrajectory dictionary for a computed HPP line."""
+    trajectory = config["trajectory"]
     duration = float(duration)
     if not np.isfinite(duration) or duration <= 0.0:
         raise ValueError("duration must be finite and positive")
     plan = plan_cartesian_line(q_start=q_start, line=line, samples=samples)
     times = [0.0] + np.linspace(
-        START_HOLD, START_HOLD + duration, len(plan.configurations)
+        trajectory["start_hold_s"],
+        trajectory["start_hold_s"] + duration,
+        len(plan.configurations),
     ).tolist()
     configurations = [plan.configurations[0], *plan.configurations]
-    return joint_trajectory_payload(configurations, times, JOINT_NAMES)
+    return joint_trajectory_payload(
+        configurations,
+        times,
+        config["robot"]["joint_names"],
+    )

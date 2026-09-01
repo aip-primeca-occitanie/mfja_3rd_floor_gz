@@ -1,52 +1,27 @@
 """Named ROS execution routes for the Room 315 manipulation planner."""
 
-from dataclasses import dataclass
+from room315_config import load_config
 
-
-@dataclass(frozen=True)
-class ExecutionProfile:
-    trajectory_topic: str | None
-    trajectory_action: str | None
-    joint_state_topic: str
-    payload_output: str
-    gripper_output: str
-
-
-EXECUTION_PROFILES = {
-    "simulation": ExecutionProfile(
-        trajectory_topic="/{robot_name}/joint_trajectory",
-        trajectory_action=None,
-        joint_state_topic="/{robot_name}/joint_states",
-        payload_output="gazebo",
-        gripper_output="joint-trajectory",
-    ),
-    "hardware": ExecutionProfile(
-        trajectory_topic=None,
-        trajectory_action="/manipulator_controller/joint_trajectory_action",
-        joint_state_topic="/joint_states",
-        payload_output="none",
-        gripper_output="staubli-io",
-    ),
-}
+profiles = load_config()["execution"]["profiles"]
 
 
 def apply_execution_profile(args):
     """Apply the ROS routes for the selected execution profile."""
-    profile = EXECUTION_PROFILES[args.execution_profile]
+    profile = profiles[args.execution_profile]
     substitutions = {"robot_name": args.robot_name}
     args.trajectory_topic = (
-        profile.trajectory_topic.format(**substitutions)
-        if profile.trajectory_topic is not None
+        profile["trajectory_topic"].format(**substitutions)
+        if profile["trajectory_topic"] is not None
         else None
     )
     args.trajectory_action = (
-        profile.trajectory_action.format(**substitutions)
-        if profile.trajectory_action is not None
+        profile["trajectory_action"].format(**substitutions)
+        if profile["trajectory_action"] is not None
         else None
     )
-    args.joint_state_topic = profile.joint_state_topic.format(**substitutions)
-    args.payload_output = profile.payload_output
-    args.gripper_output = profile.gripper_output
+    args.joint_state_topic = profile["joint_state_topic"].format(**substitutions)
+    args.payload_output = profile["payload_output"]
+    args.gripper_output = profile["gripper_output"]
     return args
 
 

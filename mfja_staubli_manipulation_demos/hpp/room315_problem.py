@@ -1,4 +1,4 @@
-"""HPP model constants and problem construction for the Room 315 demo."""
+"""HPP model and problem construction for the Room 315 demo."""
 
 import numpy as np
 import pinocchio as pin
@@ -7,57 +7,9 @@ from pyhpp.manipulation import Device, Graph, Problem, urdf
 from pyhpp.manipulation.constraint_graph_factory import ConstraintGraphFactory
 from pyhpp.manipulation.security_margins import SecurityMargins
 
-ROOM315_ROBOT_POSE = (-15.03, -6.0, 1.0, 0.0, 0.0, 0.0)
-TABLE_DROP_ZONE_POSE = (-14.65, -5.84, 1.003, 0.0, 0.0, 0.0)
-GRAPH_NAME = "room315_staubli_pick_place"
+from room315_config import load_config
 
-JOINT_NAMES = [f"joint_{i}" for i in range(1, 7)]
-DEFAULT_Q_START = np.array(
-    [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
-)
-BOX_SIZE = (0.07, 0.05, 0.06)
-BOX_HEIGHT = BOX_SIZE[2]
-BOX_ENTITY_NAME = "room315_payload_box"
-WORLD_NAME = "room_315_only"
-BOX_ROOM315_MARGIN = 0.03
-STAUBLI_ROOM315_MARGIN = 0.02
-
-ROBOT_URDF = "package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf"
-ROBOT_SRDF = (
-    "package://mfja_staubli_manipulation_demos/hpp/"
-    "staubli_tx2_60l_manipulation.srdf"
-)
-CELL_URDF = "package://mfja_3rd_floor_description/urdf/room315_cell.urdf"
-CELL_SRDF = "package://mfja_3rd_floor_description/urdf/room315_cell.srdf"
-BOX_URDF = "package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.urdf"
-BOX_SRDF = "package://mfja_staubli_manipulation_demos/hpp/room315_payload_box.srdf"
-TABLE_URDF = (
-    "package://mfja_staubli_manipulation_demos/hpp/"
-    "room315_staubli_table_drop_zone.urdf"
-)
-TABLE_SRDF = (
-    "package://mfja_staubli_manipulation_demos/hpp/"
-    "room315_staubli_table_drop_zone.srdf"
-)
-
-GRIPPER_NAME = "staubli/tool0_gripper"
-BOX_HANDLE = "box/top_handle"
-BOX_CONTACT = "box/bottom_surface"
-GAZEBO_GRIPPER_JOINTS = [
-    "gripper_left_finger_joint",
-    "gripper_right_finger_joint",
-]
-GAZEBO_GRIPPER_OPEN_POSITIONS = [0.0025, 0.0025]
-GAZEBO_GRIPPER_CLOSE_POSITIONS = [0.0, 0.0]
-GRASP_NAME = f"{GRIPPER_NAME} > {BOX_HANDLE}"
-RELEASE_NAME = f"{GRIPPER_NAME} < {BOX_HANDLE}"
-PICK_TRANSITIONS = [f"{GRASP_NAME} | f_{step}" for step in ("01", "12", "23", "34")]
-TRANSFER_TRANSITION = "Loop | 0-0"
-RELEASE_TRANSITIONS = [
-    f"{RELEASE_NAME} | 0-0_{step}" for step in ("43", "32", "21", "10")
-]
-GRASP_TRANSITION = PICK_TRANSITIONS[-2]
-RELEASE_TRANSITION = RELEASE_TRANSITIONS[-2]
+config = load_config()
 
 
 def se3_from_pose(pose):
@@ -66,7 +18,8 @@ def se3_from_pose(pose):
 
 
 def world_pose_in_robot_frame(world_pose):
-    return se3_from_pose(ROOM315_ROBOT_POSE).inverse() * se3_from_pose(world_pose)
+    robot_world_pose = config["scene"]["robot_world_pose"]
+    return se3_from_pose(robot_world_pose).inverse() * se3_from_pose(world_pose)
 
 
 def pose_msg_from_se3(placement):
@@ -83,31 +36,46 @@ def pose_msg_from_se3(placement):
 
 
 def build_problem():
+    scene = config["scene"]
+    models = config["models"]
+    graph_config = config["graph"]
     robot = Device("room315_staubli_manipulation")
 
     urdf.loadModel(
-        robot, 0, "staubli", "anchor", ROBOT_URDF, ROBOT_SRDF, pin.SE3.Identity()
+        robot,
+        0,
+        "staubli",
+        "anchor",
+        models["robot"]["urdf"],
+        models["robot"]["srdf"],
+        pin.SE3.Identity(),
     )
     urdf.loadModel(
         robot,
         0,
         "room315",
         "anchor",
-        CELL_URDF,
-        CELL_SRDF,
-        se3_from_pose(ROOM315_ROBOT_POSE).inverse(),
+        models["cell"]["urdf"],
+        models["cell"]["srdf"],
+        se3_from_pose(scene["robot_world_pose"]).inverse(),
     )
     urdf.loadModel(
         robot,
         0,
         "staubli_table",
         "anchor",
-        TABLE_URDF,
-        TABLE_SRDF,
-        world_pose_in_robot_frame(TABLE_DROP_ZONE_POSE),
+        models["table"]["urdf"],
+        models["table"]["srdf"],
+        world_pose_in_robot_frame(scene["table_drop_zone_pose"]),
     )
     urdf.loadModel(
-        robot, 0, "box", "freeflyer", BOX_URDF, BOX_SRDF, pin.SE3.Identity()
+        robot,
+        0,
+        "box",
+        "freeflyer",
+        models["payload"]["urdf"],
+        models["payload"]["srdf"],
+        pin.SE3.Identity(),
     )
     robot.setJointBounds(
         "box/root_joint",
@@ -133,16 +101,16 @@ def build_problem():
     problem.addConfigValidation("CollisionValidation")
     problem.addConfigValidation("JointBoundValidation")
 
-    graph = Graph(GRAPH_NAME, robot, problem)
+    graph = Graph(graph_config["name"], robot, problem)
     graph.maxIterations(40)
     graph.errorThreshold(1e-5)
 
     factory = ConstraintGraphFactory(graph)
-    factory.setGrippers([GRIPPER_NAME])
+    factory.setGrippers([graph_config["gripper"]])
     factory.setObjects(
         ["box"],
-        [[BOX_HANDLE]],
-        [[BOX_CONTACT]],
+        [[graph_config["payload_handle"]]],
+        [[graph_config["payload_contact"]]],
     )
     factory.environmentContacts(["staubli_table/drop_zone"])
     factory.generate()
@@ -153,9 +121,15 @@ def build_problem():
         ["staubli", "box", "room315", "staubli_table"],
         robot,
     )
-    margins.setSecurityMarginBetween("box", "room315", BOX_ROOM315_MARGIN)
     margins.setSecurityMarginBetween(
-        "staubli", "room315", STAUBLI_ROOM315_MARGIN
+        "box",
+        "room315",
+        graph_config["payload_to_room_margin"],
+    )
+    margins.setSecurityMarginBetween(
+        "staubli",
+        "room315",
+        graph_config["robot_to_room_margin"],
     )
     margins.apply()
 
@@ -171,7 +145,7 @@ def box_world_pose(robot, q):
     rank = box_rank(robot)
     quat = pin.Quaternion(np.asarray(q[rank + 3 : rank + 7]))
     box_in_robot = pin.SE3(quat.matrix(), np.asarray(q[rank : rank + 3]))
-    return se3_from_pose(ROOM315_ROBOT_POSE) * box_in_robot
+    return se3_from_pose(config["scene"]["robot_world_pose"]) * box_in_robot
 
 
 def box_world_pose_msg(robot, q):
@@ -184,11 +158,12 @@ def box_configuration_from_world_pose(q_arm, world_pose):
 
 
 def table_box_world_pose(x_offset=0.0, y_offset=0.0):
-    x, y, z, roll, pitch, yaw = TABLE_DROP_ZONE_POSE
+    scene = config["scene"]
+    x, y, z, roll, pitch, yaw = scene["table_drop_zone_pose"]
     return (
         x + x_offset,
         y + y_offset,
-        z + 0.5 * BOX_HEIGHT,
+        z + 0.5 * scene["payload_size"][2],
         roll,
         pitch,
         yaw,
