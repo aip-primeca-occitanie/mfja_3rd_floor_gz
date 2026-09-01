@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<robot name="gear_plate">
+  <gripper name="placement_1" clearance="0.03">
+    <position xyz="0.1 -0.0475 0.01" xyzw="0 0 0 1"/>
+    <link name="base_link"/>
+  </gripper>
+  <gripper name="placement_2" clearance="0.03">
+    <position xyz="0.1 0.0475 0.01" xyzw="0 0 0 1"/>
+    <link name="base_link"/>
+  </gripper>
+  <contact name="top">
+    <point> .12 .06 0.01  -.12 .06 0.01  -.12 -.06 0.01  .12 -.06 0.01 </point>
+    <shape> 4  0 1 2 3 </shape>
+    <link name="base_link"/>
+  </contact>
+</robot>

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<robot name="gear_support">
+  <gripper name="gear_42" clearance="0.0">
+    <position xyz="0 0 .06"/>
+    <link name="base_link"/>
+  </gripper>
+</robot>

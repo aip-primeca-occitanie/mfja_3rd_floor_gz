@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot name="gear_42">
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.004"/>
+      <geometry>
+        <cylinder radius="0.021" length="0.008"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0205"/>
+      <geometry>
+        <cylinder radius="0.0075" length="0.025"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

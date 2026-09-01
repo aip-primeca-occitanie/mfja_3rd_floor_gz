@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot name="gear_plate">
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.0075"/>
+      <geometry>
+        <box size=".3 .2 0.0075"/>
+      </geometry>
+    </visual>
+    <!--collision>
+      <geometry>
+        <origin xyz="0 0 0.0075"/>
+        <box size=".3 .2 0.015"/>
+      </geometry>
+    </collision-->
+  </link>
+</robot>
