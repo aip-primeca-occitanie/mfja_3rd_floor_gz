@@ -9,7 +9,7 @@ scene:
 models:
   robot:
     urdf: package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf
-    srdf: package://mfja_staubli_manipulation_demos/hpp/staubli_tx2_60l_manipulation.srdf
+    srdf: package://mfja_3rd_floor_description/srdf/staubli_tx2_60l.srdf
   cell:
     urdf: package://mfja_3rd_floor_description/urdf/room315_cell.urdf
     srdf: package://mfja_3rd_floor_description/urdf/room315_cell.srdf

@@ -1,4 +1,4 @@
-<robot>
+<robot name="staubli_tx2_60l">
   <gripper name="tool0_gripper" clearance="0.04">
     <position xyz="0 0 0" xyzw="0 0 0 1"/>
     <link name="gripper_tcp"/>
@@ -14,5 +14,5 @@
   <disable_collisions link1="link_5" link2="gripper_mount" reason="neighbors"/>
   <disable_collisions link1="link_6" link2="gripper_mount" reason="neighbors"/>
   <disable_collisions link1="link_6" link2="gripper" reason="neighbors"/>
-  <disable_collisions link1="link_6" link2="tool" reason="neighbors"/>
+  <disable_collisions link1="link_6" link2="tool0" reason="neighbors"/>
 </robot>

@@ -137,7 +137,8 @@ geometry, and the robot mode before an authorized operator publishes it on
   entry points.
 - `hpp/staubli_trajectory_export.py` renders the driver's
   `JointTrajectory` payload.
-- `hpp/staubli_tx2_60l.srdf` contains the arm self-collision exclusions.
+- `mfja_3rd_floor_description/srdf/staubli_tx2_60l.srdf` contains the shared
+  gripper and arm self-collision semantics.
 - `mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf` is the shared robot
   model.
 - `mfja_3rd_floor_description/urdf/room315_cell.urdf` is the shared fixed-cell

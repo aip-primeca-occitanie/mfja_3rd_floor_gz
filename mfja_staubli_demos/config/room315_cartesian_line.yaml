@@ -4,7 +4,7 @@ robot:
   default_configuration: [0.0, 0.8726646259971648, 1.2217304763960306, 0.0, 0.9599310885968813, 0.0]
   world_pose: [-15.03, -6.0, 1.0, 0.0, 0.0, 0.0]
   urdf: package://mfja_3rd_floor_description/urdf/staubli_tx2_60l.urdf
-  srdf: package://mfja_staubli_demos/hpp/staubli_tx2_60l.srdf
+  srdf: package://mfja_3rd_floor_description/srdf/staubli_tx2_60l.srdf
 
 cell:
   urdf: package://mfja_3rd_floor_description/urdf/room315_cell.urdf

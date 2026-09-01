@@ -24,7 +24,6 @@ room315_hpp_files = [
     "hpp/room315_problem.py",
     "hpp/room315_staubli_table_drop_zone.srdf",
     "hpp/room315_staubli_table_drop_zone.urdf",
-    "hpp/staubli_tx2_60l_manipulation.srdf",
 ]
 
 setup(
