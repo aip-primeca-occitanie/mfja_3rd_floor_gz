@@ -31,7 +31,7 @@ rail contact dynamics are not used to propel them.
 ## Installation Choices
 
 Both supported setup paths target Ubuntu 24.04 and produce the same four-package
-colcon workspace at `$HOME/mfja_ws`. Choose one path and follow all of its
+colcon workspace at `$HOME/mfja_3rd_floor_ros2_ws`. Choose one path and follow all of its
 numbered steps:
 
 | Path | What provides the build tools? | What provides ROS and Gazebo? | Best for |
@@ -57,6 +57,7 @@ needed for the first simulation run.
 | Layer | Required components | Installed by |
 | --- | --- | --- |
 | Host platform | Ubuntu 24.04 Noble, Bash, a working OpenGL display for the GUI | Laptop/VM installation |
+| Free storage | At least 1 GB for the base clone/build; at least 5 GB when installing the optional AI environments and model artifacts | Local disk or a user-configured mounted disk |
 | ROS and simulator | ROS 2 Jazzy Desktop, Gazebo Harmonic, `ros_gz`, `robot_state_publisher` | Method A/B host `apt` step |
 | Workspace tools | Git, GCC/build-essential, CMake 3.28+, Ninja, pkg-config, `mesa-utils` / `glxinfo`, colcon, rosdep, Python 3.12, pip, venv, pytest, PyYAML | Host `apt`; Method B pins only Bash, Ninja, Make, and Git with Nix |
 | Package build interfaces | `ament_cmake`, ROSIDL generators/runtime, Gazebo vendor libraries (`gz-common5`, `gz-msgs10`, `gz-plugin2`, `gz-sim8`, `gz-transport13`) | `rosdep` |
@@ -87,7 +88,7 @@ before installing any of these extras.
 
 This is the supported end-to-end path from a new machine to a running Room 315
 simulation. The commands use Bash and a dedicated workspace at
-`$HOME/mfja_ws`. Run each numbered step in order. Commands marked as one-time
+`$HOME/mfja_3rd_floor_ros2_ws`. Run each numbered step in order. Commands marked as one-time
 setup do not need to be repeated after the machine is configured.
 
 ### 1. Confirm the Supported Environment
@@ -143,7 +144,8 @@ is authoritative if its repository setup changes.
     ca-certificates \
     curl \
     locales \
-    software-properties-common
+    software-properties-common \
+    zstd
 
   if ! locale | grep -qi 'utf-8'; then
     sudo locale-gen en_US en_US.UTF-8
@@ -289,28 +291,37 @@ cameras still require server-side rendering.
 
 ### 5. Create the Workspace and Clone the Repository
 
-The normal clone follows GitHub's default branch. During the current integration
-window, the documented runtime may still be on
-`INTERNSHIP-ALI-2026`; the marker check below switches to that branch
-only when the default branch does not contain the current launch stack. After
-the merge, the same block remains on `main` without requiring an edit.
+The commands below use one canonical workspace location and clone the currently
+documented integration branch directly. Keep this layout unchanged when copying
+commands from the HTML tutorial index:
+
+```text
+$HOME/mfja_3rd_floor_ros2_ws/
+├── src/mfja_3rd_floor_gz/
+├── build/
+├── install/
+└── log/
+```
 
 ```bash
 (
   set -euo pipefail
 
-  MFJA_WS="$HOME/mfja_ws"
+  MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
   MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 
   mkdir -p "$MFJA_WS/src"
-  git clone \
-    https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
-    "$MFJA_REPO"
 
-  if [ ! -f "$MFJA_REPO/docs/INSTALLATION.md" ] ||
-     [ ! -f "$MFJA_REPO/mfja_3rd_floor_bringup/launch/room_315_floor_common.py" ]; then
-    git -C "$MFJA_REPO" switch --track \
-      origin/INTERNSHIP-ALI-2026
+  if [ -e "$MFJA_REPO" ]; then
+    test -d "$MFJA_REPO/.git" || {
+      printf 'ERROR: %s exists but is not a Git clone.\n' "$MFJA_REPO" >&2
+      exit 1
+    }
+    printf 'Repository already exists: %s\n' "$MFJA_REPO"
+  else
+    git clone --branch INTERNSHIP-ALI-2026 --single-branch \
+      https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+      "$MFJA_REPO"
   fi
 
   test -f "$MFJA_REPO/docs/INSTALLATION.md"
@@ -319,9 +330,9 @@ the merge, the same block remains on `main` without requiring an edit.
 )
 ```
 
-The last command prints `INTERNSHIP-ALI-2026` before the integration
-merge and `main` after it. If the repository already exists at
-`$HOME/mfja_ws/src/mfja_3rd_floor_gz`, do not clone over it; use the
+The last command must print `INTERNSHIP-ALI-2026`. If the repository already
+exists at `$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz`, the block leaves
+it unchanged; use the
 [update procedure](docs/INSTALLATION.md#updating-an-existing-checkout).
 
 ### 6. Install Repository Dependencies
@@ -333,7 +344,7 @@ meta-repository:
 (
   set -eo pipefail
 
-  MFJA_WS="$HOME/mfja_ws"
+  MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
   MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
   source /opt/ros/jazzy/setup.bash
 
@@ -368,7 +379,7 @@ Build from the workspace root, not from the repository directory:
 (
   set -eo pipefail
 
-  MFJA_WS="$HOME/mfja_ws"
+  MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
   MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
   cd "$MFJA_WS"
   source /opt/ros/jazzy/setup.bash
@@ -392,7 +403,7 @@ Build from the workspace root, not from the repository directory:
 
 The build is successful only when the final colcon summary reports no failed
 packages and every verification command completes. All package prefixes should
-point inside `$HOME/mfja_ws/install`. Explicit package
+point inside `$HOME/mfja_3rd_floor_ros2_ws/install`. Explicit package
 paths are used during dependency resolution and building so datasets or frozen
 source snapshots elsewhere on the machine are not discovered as duplicate
 colcon packages.
@@ -403,7 +414,7 @@ This lightweight profile disables the heavier robot models, starts Gazebo
 unpaused, and creates one visible right-rail shuttle in the stopped state:
 
 ```bash
-export MFJA_WS="$HOME/mfja_ws"
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
 source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
 
@@ -426,7 +437,7 @@ Terminal 2; slower machines may need longer.
 Open a second terminal and source the same environments again:
 
 ```bash
-export MFJA_WS="$HOME/mfja_ws"
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
 source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
 
@@ -475,7 +486,7 @@ Opening a new terminal does not preserve the ROS environment. Run these lines
 before every `ros2` command:
 
 ```bash
-export MFJA_WS="$HOME/mfja_ws"
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
 export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
@@ -631,7 +642,7 @@ this step before installing the ROS package dependencies or entering the Nix
 shell:
 
 ```bash
-export MFJA_WS="$HOME/mfja_ws"
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
 export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 
 (
@@ -813,7 +824,7 @@ In Terminal 1, enter the Nix shell, source the built overlay, and launch the
 same lightweight Room 315 profile used by Method A:
 
 ```bash
-export MFJA_WS="$HOME/mfja_ws"
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
 export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 cd "$MFJA_REPO"
 nix develop
@@ -837,7 +848,7 @@ Leave Terminal 1 running. In Terminal 2, enter a second Nix shell and source the
 same overlay:
 
 ```bash
-export MFJA_WS="$HOME/mfja_ws"
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
 export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
 cd "$MFJA_REPO"
 nix develop
@@ -1057,12 +1068,48 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   enable_room315_rgbd_camera_bridge:=true
 ```
 
-Active visual inference and motion execution are not turnkey on a fresh clone.
-They require an external V4 promotion manifest, the artifacts referenced by
-that manifest, exact checksums, and a host-local task-execution authorization
-file. The checked-in runtime YAML records a qualified project environment and
-contains site-specific absolute paths; do not enable execution by merely
-changing `execution_enabled`.
+Active visual inference and motion execution require separately downloaded,
+checksum-verified model artifacts. After completing Method A through Step 7,
+install them once with the repository helper:
+
+```bash
+(
+  set -euo pipefail
+
+  MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
+  MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+  test -d "$MFJA_REPO/.git"
+  bash "$MFJA_REPO/setup_room315_ai.sh"
+  test -f "$HOME/.config/mfja/room315_ai.env"
+)
+```
+
+The helper creates isolated CPU environments under `$HOME/.venvs`, downloads
+the intent and visual models under `$HOME/mfja_models`, verifies their exact
+checksums, creates a host-local task-execution authorization configuration, and
+writes the stable environment entry point
+`$HOME/.config/mfja/room315_ai.env`. Do not enable execution by merely changing
+the checked-in `execution_enabled` value. Use the generated local configuration
+and follow the terminal order in
+[the closed-loop HTML runbook](room315_closed_loop_runbook.html).
+
+Allow at least 5 GB of free space before running the helper. To keep the large
+model artifacts on another mounted disk, set `ROOM315_MODEL_ROOT` for the setup
+command; later HTML commands remain unchanged because they source the stable
+environment file:
+
+```bash
+(
+  set -euo pipefail
+  read -er -p "Absolute model directory on the mounted disk: " ROOM315_MODEL_ROOT
+  case "$ROOM315_MODEL_ROOT" in
+    /*) ;;
+    *) echo "ERROR: enter an absolute path beginning with /" >&2; exit 1 ;;
+  esac
+  export ROOM315_MODEL_ROOT
+  bash "$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/setup_room315_ai.sh"
+)
+```
 
 Read these in order for the advanced runtime:
 

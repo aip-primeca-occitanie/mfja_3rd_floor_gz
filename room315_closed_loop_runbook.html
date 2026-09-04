@@ -699,6 +699,24 @@
       <section id="prerequisites">
         <h2>Prerequisites</h2>
 
+        <div class="callout warning">
+          <strong>Complete the root README installation first.</strong> Clone and build the
+          repository at <code>$HOME/mfja_3rd_floor_ros2_ws</code> before using any terminal
+          recipe on this page. Run the following AI setup block once after the build; it
+          downloads and checksum-verifies the required CPU model artifacts.
+        </div>
+
+        <h3>Run once after the README build</h3>
+        <div class="command">
+          <div class="command-bar"><span class="terminal-label">One-time AI setup</span><button type="button" class="copy-btn" data-copy="cmd-ai-setup">Copy</button></div>
+          <pre><code id="cmd-ai-setup">set -e
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+test -d "$MFJA_REPO/.git" || { echo "ERROR: complete the root README clone and build first"; exit 1; }
+bash "$MFJA_REPO/setup_room315_ai.sh"
+test -f "$HOME/.config/mfja/room315_ai.env"</code></pre>
+        </div>
+
         <h3>Run this at the start of every new terminal</h3>
         <div class="command">
           <div class="command-bar"><span class="terminal-label">Every terminal</span><button type="button" class="copy-btn" data-copy="cmd-terminal-setup">Copy</button></div>
@@ -740,34 +758,33 @@ source install/setup.bash</code></pre>
         <h3>Check the authorized V4 visual runtime, Torch environment and intent model</h3>
         <div class="command">
           <div class="command-bar"><span class="terminal-label">Preflight terminal</span><button type="button" class="copy-btn" data-copy="cmd-model-preflight">Copy</button></div>
-          <pre><code id="cmd-model-preflight">export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+          <pre><code id="cmd-model-preflight">set -e
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-test -f "$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" &amp;&amp; echo "V4 runtime configuration: OK"
-test -f "$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" &amp;&amp; echo "V4 promotion manifest: OK"
-test -f "$ROOM315_V4_RUNTIME/checkpoint_epoch_011.pt" &amp;&amp; echo "V4 checkpoint: OK"
-test -f "$HOME/models/room315_intent/task_goal_understanding.local.yaml" &amp;&amp; echo "Intent configuration: OK"
-test -f "$HOME/models/room315_intent/qwen2.5-1.5b-instruct-q4_k_m.gguf" &amp;&amp; echo "Intent checkpoint: OK"
-test -f "$HOME/models/room315_intent/room315_intent.env" &amp;&amp; echo "Intent offline environment: OK"
+test -f "$ROOM315_ACTIVE_BUNDLE/runtime_ros_parameters.yaml" &amp;&amp; echo "V4 runtime configuration: OK"
+test -f "$ROOM315_ACTIVE_MANIFEST" &amp;&amp; echo "V4 promotion manifest: OK"
+test -f "$ROOM315_ACTIVE_BUNDLE/checkpoint_epoch_011.pt" &amp;&amp; echo "V4 checkpoint: OK"
+test -f "$ROOM315_TASK_GOAL_LOCAL_CONFIG" &amp;&amp; echo "Intent configuration: OK"
+test -f "$ROOM315_INTENT_MODEL_PATH" &amp;&amp; echo "Intent checkpoint: OK"
+test -f "$HOME/.venvs/room315-intent/bin/python" &amp;&amp; echo "Intent environment: OK"
+test -f "$ROOM315_TASK_RUNTIME" &amp;&amp; echo "Task execution configuration: OK"
 
 printf '%s  %s\n' \
   506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
-  "$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" | sha256sum --check
+  "$ROOM315_ACTIVE_MANIFEST" | sha256sum --check
 printf '%s  %s\n' \
   869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d \
-  "$ROOM315_V4_RUNTIME/checkpoint_epoch_011.pt" | sha256sum --check
+  "$ROOM315_ACTIVE_BUNDLE/checkpoint_epoch_011.pt" | sha256sum --check
 
-/usr/bin/python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())"</code></pre>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())"</code></pre>
         </div>
         <p class="note">
-          The final line must print <code>2.10.0+cu128 0.25.0+cu128 True</code> on this
-          workstation. The authorized V4 checkpoint hash begins with
-          <code>869d64049b0092…</code>. Do not launch the obsolete
-          <code>experiment_a...4cb9...</code> configuration and do not install Torch into
-          ROS system Python. If the intent files are missing, run
-          <code>python3 mfja_robot_control_config/scripts/setup_room315_intent_model.py</code>
-          once from the repository root.
+          The final line must print Torch <code>2.10.0+cpu</code> and TorchVision
+          <code>0.25.0+cpu</code>; CUDA may print <code>False</code>. The authorized V4
+          checkpoint hash begins with <code>869d64049b0092…</code>. If any required file is
+          missing, run <code>bash "$MFJA_WS/src/mfja_3rd_floor_gz/setup_room315_ai.sh"</code>
+          once, then repeat this preflight.
         </p>
       </section>
 
@@ -868,36 +885,34 @@ printf '%s  %s\n' \
         <div class="command">
           <div class="command-bar"><span class="terminal-label">Terminal 2: start inference</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy</button></div>
           <pre><code id="cmd-visual-runtime">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre>
         </div>
         <div class="expected">
-          Required output: <code>2.10.0+cu128 0.25.0+cu128 True</code>, followed by
-          <code>V4 visual checkpoint loaded strictly on cuda</code>. Keep this terminal open.
+          Required output: <code>2.10.0+cpu 0.25.0+cpu</code>, followed by
+          <code>V4 visual checkpoint loaded strictly on cpu</code>. Keep this terminal open.
         </div>
         <p class="note">
-          The <code>PYTHONPATH</code> line is mandatory: ROS uses
-          <code>/usr/bin/python3</code>, while the approved Torch packages live in the local
-          training environment. Prepending <code>/usr/lib/python3/dist-packages</code> keeps
-          the ROS-compatible NumPy first. Do not activate the training virtual environment
-          and do not replace this with <code>pip install</code>; paste the block exactly.
+          The visual environment is created by <code>setup_room315_ai.sh</code> and keeps
+          Torch separate from ROS system Python. Paste the complete block at a normal shell
+          prompt and keep it running while the other terminals are used.
         </p>
 
         <h3>Terminal 3 — wait for one accepted frame, then start PlanSys2 and execution</h3>
         <div class="command">
           <div class="command-bar"><span class="terminal-label">Terminal 3: planner and gateway</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy</button></div>
           <pre><code id="cmd-task-execution">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre>
         </div>
@@ -937,12 +952,12 @@ ros2 lifecycle get /planner</code></pre>
           <div class="command-bar"><span class="terminal-label">Terminal 4: command interface</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy</button></div>
           <pre><code id="cmd-task-cli">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre>
         </div>
         <div class="expected">
           Required output before any phrase: model health with
@@ -1079,16 +1094,19 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <div class="command">
               <div class="command-bar"><span class="terminal-label">Scenario 1 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div>
               <pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre>
             </div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
@@ -1097,11 +1115,8 @@ export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONP
             <div class="command">
               <div class="command-bar"><span class="terminal-label">Scenario 1 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div>
               <pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre>
             </div>
@@ -1129,12 +1144,12 @@ ros2 lifecycle get /planner</code></pre>
               <div class="command-bar"><span class="terminal-label">Scenario 1 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div>
               <pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre>
             </div>
             <div class="expected">Wait for <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code>, then copy exactly this English line:</div>
             <p class="copy-exact-label">Terminal 4 input · Scenario 1 goal</p>
@@ -1211,16 +1226,19 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <div class="command">
               <div class="command-bar"><span class="terminal-label">Scenario 2 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div>
               <pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre>
             </div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
@@ -1229,11 +1247,8 @@ export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONP
             <div class="command">
               <div class="command-bar"><span class="terminal-label">Scenario 2 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div>
               <pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre>
             </div>
@@ -1261,12 +1276,12 @@ ros2 lifecycle get /planner</code></pre>
               <div class="command-bar"><span class="terminal-label">Scenario 2 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div>
               <pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre>
             </div>
             <div class="expected">After <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code>, use the left-rail phrase below to prove the second rail.</div>
             <p class="copy-exact-label">Terminal 4 input · Scenario 2 primary goal</p>
@@ -1340,26 +1355,26 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <h3><span class="step-badge">2</span>Terminal 2 — authorized V4 visual runtime</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 3 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
             <h3><span class="step-badge">3</span>Terminal 3 — accepted-state gate, PlanSys2 and execution</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 3 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre></div>
             <div class="expected">Require an accepted V4 observation, then authorization SHA <code>14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1</code> and promotion SHA <code>506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code>.</div>
@@ -1381,12 +1396,12 @@ ros2 lifecycle get /planner</code></pre></div>
             <h3><span class="step-badge">4B</span>Terminal 4 — CLI, exact blocker phrase and confirmation</h3>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 3 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
             <div class="expected">Wait for <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code> before sending the goal.</div>
             <p class="copy-exact-label">Terminal 4 input · Scenario 3 campaign goal</p>
             <div class="utterance"><code id="phrase-two-blocker">Move R1 to slot 3 on the right rail.</code><button type="button" class="copy-btn" data-copy="phrase-two-blocker">Copy scenario phrase</button></div>
@@ -1448,26 +1463,26 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <h3><span class="step-badge">2</span>Terminal 2 — authorized V4 visual runtime</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 4 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
             <h3><span class="step-badge">3</span>Terminal 3 — accepted-state gate, PlanSys2 and execution</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 4 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre></div>
             <div class="expected">Require an accepted V4 observation, then authorization SHA <code>14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1</code> and promotion SHA <code>506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code>.</div>
@@ -1489,12 +1504,12 @@ ros2 lifecycle get /planner</code></pre></div>
             <h3><span class="step-badge">4B</span>Terminal 4 — CLI, exact loaded phrase and confirmation</h3>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 4 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
             <div class="expected">Wait for <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code> before sending the goal.</div>
             <p class="copy-exact-label">Terminal 4 input · Scenario 4 primary goal</p>
             <div class="utterance"><code id="phrase-loaded-green4">Move the loaded green shuttle to slot 4.</code><button type="button" class="copy-btn" data-copy="phrase-loaded-green4">Copy scenario phrase</button></div>
@@ -1565,26 +1580,26 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <h3><span class="step-badge">2</span>Terminal 2 — authorized V4 visual runtime</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 5 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
             <h3><span class="step-badge">3</span>Terminal 3 — accepted-state gate, PlanSys2 and execution</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 5 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre></div>
             <div class="expected">Require an accepted V4 observation, then authorization SHA <code>14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1</code> and promotion SHA <code>506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code>.</div>
@@ -1606,12 +1621,12 @@ ros2 lifecycle get /planner</code></pre></div>
             <h3><span class="step-badge">4B</span>Terminal 4 — CLI, exact P01 phrase and confirmation</h3>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 5 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
             <div class="expected">Wait for <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code> before sending the goal.</div>
             <p class="copy-exact-label">Terminal 4 input · Scenario 5 campaign goal</p>
             <div class="utterance"><code id="phrase-nearest3">Please move the nearest loaded right shuttle to slot 3.</code><button type="button" class="copy-btn" data-copy="phrase-nearest3">Copy scenario phrase</button></div>
@@ -1680,26 +1695,26 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <h3><span class="step-badge">2</span>Terminal 2 — authorized V4 visual runtime</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 6 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
             <h3><span class="step-badge">3</span>Terminal 3 — accepted-state gate, PlanSys2 and execution</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 6 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre></div>
             <div class="expected">Require an accepted V4 observation, then authorization SHA <code>14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1</code> and promotion SHA <code>506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code>.</div>
@@ -1721,12 +1736,12 @@ ros2 lifecycle get /planner</code></pre></div>
             <h3><span class="step-badge">4B</span>Terminal 4 — CLI, exact station phrase and confirmation</h3>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 6 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
             <div class="expected">Wait for <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code> before sending the goal.</div>
             <p class="copy-exact-label">Terminal 4 input · Scenario 6 primary goal</p>
             <div class="utterance"><code id="phrase-yellow-staubli">Move the loaded yellow shuttle to the Staubli station.</code><button type="button" class="copy-btn" data-copy="phrase-yellow-staubli">Copy scenario phrase</button></div>
@@ -1805,26 +1820,26 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
             <h3><span class="step-badge">2</span>Terminal 2 — authorized V4 visual runtime</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 7 · Terminal 2</span><button type="button" class="copy-btn" data-copy="cmd-visual-runtime">Copy full Terminal 2 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_V4_RUNTIME="$HOME/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1"
-export ROOM315_VISUAL_SITE="$HOME/room315_local_training/venv/lib/python3.12/site-packages"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:$ROOM315_VISUAL_SITE:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/mfja-visual/bin/activate"
 
-/usr/bin/python3 -c "import torch, torchvision; assert torch.cuda.is_available(), 'CUDA is not available'; print(torch.__version__, torchvision.__version__, torch.cuda.is_available())" &amp;&amp; ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py runtime_config:="$ROOM315_V4_RUNTIME/runtime_ros_parameters.yaml" use_sim_time:=true enable_camera_bridge:=false runtime_generation:=v4 runtime_mode:=active v4_promotion_manifest:="$ROOM315_V4_RUNTIME/runtime_promotion_manifest.json" v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da device:=cuda dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
-            <div class="expected">Require <code>2.10.0+cu128 0.25.0+cu128 True</code> and <code>V4 visual checkpoint loaded strictly on cuda</code>.</div>
+python3 -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)" &amp;&amp; \
+ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
+  use_sim_time:=true enable_camera_bridge:=false \
+  runtime_generation:=v4 runtime_mode:=active \
+  v4_promotion_manifest:="$ROOM315_ACTIVE_MANIFEST" \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da \
+  device:=cpu dry_run_state_fusion:=true plansys2_update_enabled:=false</code></pre></div>
+            <div class="expected">Require <code>2.10.0+cpu 0.25.0+cpu</code> and <code>V4 visual checkpoint loaded strictly on cpu</code>.</div>
           </div>
 
           <div class="procedure-step">
             <h3><span class="step-badge">3</span>Terminal 3 — accepted-state gate, PlanSys2 and execution</h3>
             <p>Open a new terminal, paste the whole block once, and keep it open.</p>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 7 · Terminal 3</span><button type="button" class="copy-btn" data-copy="cmd-task-execution">Copy full Terminal 3 block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
-export ROOM315_TASK_RUNTIME="$MFJA_WS/install/mfja_robot_control_config/share/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml"
-cd "$MFJA_WS"
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+source "$MFJA_WS/install/setup.bash"
+source "$HOME/.config/mfja/room315_ai.env"
 
 timeout 120 ros2 topic echo /room_315/visual_state/observed_state mfja_rail_interfaces/msg/VisualStateObservation --once &amp;&amp; ros2 launch mfja_robot_control_config room_315_task_execution.launch.py use_sim_time:=true runtime_config:="$ROOM315_TASK_RUNTIME" execution_enabled:=true enable_plansys2:=true external_obstacles_disabled:=true</code></pre></div>
             <div class="expected">Require an accepted V4 observation containing all eight identities, then authorization SHA <code>14cedafe28c999786a66934a523db5757e1ccdd7ae34705d5a2df58488fc8df1</code> and promotion SHA <code>506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code>.</div>
@@ -1846,12 +1861,12 @@ ros2 lifecycle get /planner</code></pre></div>
             <h3><span class="step-badge">4B</span>Terminal 4 — CLI and ordered scenario tour</h3>
             <div class="command"><div class="command-bar"><span class="terminal-label">Scenario 7 · Terminal 4 CLI</span><button type="button" class="copy-btn" data-copy="cmd-task-cli">Copy CLI block</button></div><pre><code>export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source /opt/ros/jazzy/setup.bash
 source "$MFJA_WS/install/setup.bash"
-source "$HOME/models/room315_intent/room315_intent.env"
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
+export PYTHONPATH="$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
-python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$HOME/models/room315_intent/task_goal_understanding.local.yaml" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
+python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py --config "$ROOM315_TASK_GOAL_LOCAL_CONFIG" --publish-topic /room_315/task_goal --result-topic /room_315/task_goal/status --wait-for-result --publish-timeout-s 10 --result-timeout-s 600</code></pre></div>
             <div class="expected">Wait for <code>"backend": "llama_cpp"</code>, model fingerprint <code>sha256:6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e</code> and <code>"ready": true</code> before starting the ordered tour.</div>
             <div class="callout warning">
               <strong>Run in the exact order below without restarting.</strong> For every line:
@@ -2030,7 +2045,8 @@ ros2 topic echo /room_315/task_goal/status std_msgs/msg/String</code></pre></div
           <div class="command-bar"><span class="terminal-label">Parser smoke test</span><button type="button" class="copy-btn" data-copy="cmd-semantic-smoke">Copy</button></div>
           <pre><code id="cmd-semantic-smoke">export MFJA_WS="${MFJA_WS:-$HOME/mfja_3rd_floor_ros2_ws}"
 cd "$MFJA_WS/src/mfja_3rd_floor_gz"
-source "$HOME/models/room315_intent/room315_intent.env"
+source "$HOME/.config/mfja/room315_ai.env"
+source "$HOME/.venvs/room315-intent/bin/activate"
 export PYTHONPATH="mfja_robot_control_config/scripts:${PYTHONPATH:-}"
 
 python3 mfja_robot_control_config/scripts/room_315_task_goal_semantic_smoke.py \
@@ -2081,7 +2097,7 @@ room315_visual_dataset_dir:="$HOME/room315_runs/choose_a_new_run_name"</code></p
           <table>
             <thead><tr><th>Symptom</th><th>Likely cause</th><th>Action</th></tr></thead>
             <tbody>
-              <tr><td><code>V4 visual runtime not ready; ... Torch and TorchVision are required</code></td><td>Terminal 2 used ROS system Python without the approved Torch packages on <code>PYTHONPATH</code>.</td><td>Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in Terminal 2 and paste that scenario's complete Terminal 2 block again. Its first output must be <code>2.10.0+cu128 0.25.0+cu128 True</code>. Do not run <code>pip</code> or <code>sudo apt</code>.</td></tr>
+              <tr><td><code>V4 visual runtime not ready; ... Torch and TorchVision are required</code></td><td>Terminal 2 did not activate the generated visual environment.</td><td>Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in Terminal 2 and paste that scenario's complete Terminal 2 block again. Its first output must include <code>2.10.0+cpu 0.25.0+cpu</code>. If the environment is missing, rerun the one-time AI setup.</td></tr>
               <tr><td><code>v4_promotion_manifest_path parameter is empty</code></td><td>An obsolete V3 <code>runtime_config</code> such as the old <code>experiment_a...4cb9...</code> bundle was launched against the V4-only node.</td><td>Stop Terminal 2 and use the complete Terminal 2 block printed in the selected scenario. It supplies the V4 runtime YAML, manifest, manifest SHA and <code>runtime_generation:=v4</code>.</td></tr>
               <tr><td><code>execution_state_not_ready:accepted_visual_observation_unavailable</code></td><td>The execution gateway has not stored even one accepted visual observation since it started. This is not merely a stale frame.</td><td>Do not resend the goal. Stop Terminal 3, fix Terminal 2, run the Terminal 4A accepted-state command until it returns a valid accepted V4 message, then paste the complete Terminal 3 block again and reopen the CLI.</td></tr>
               <tr><td><code>accepted_visual_observation_stale</code></td><td>An accepted observation existed but its age exceeded the configured limit, often after a Gazebo restart or simulation-clock rewind.</td><td>Perform the full clean shutdown. Restart Terminals 1–4 in order and do not retain Terminal 2 or Terminal 3 across the new Gazebo session.</td></tr>

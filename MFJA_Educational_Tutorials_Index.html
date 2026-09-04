@@ -18,6 +18,21 @@
     .stat { padding:18px 20px; border:1px solid var(--line); border-radius:16px; background:rgba(17,35,49,.75); }
     .stat strong { display:block; color:var(--green); font-size:1.42rem; }
     .stat span { color:var(--muted); font-size:.86rem; }
+    .onboarding { margin:0 0 30px; padding:clamp(22px,4vw,38px); border:1px solid rgba(50,215,255,.42); border-radius:24px; background:linear-gradient(145deg,rgba(17,42,57,.98),rgba(9,25,35,.98)); box-shadow:var(--shadow); }
+    .onboarding-head { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding-bottom:22px; border-bottom:1px solid var(--line); }
+    .onboarding-head h2 { margin:6px 0 8px; font-size:clamp(1.55rem,3vw,2.25rem); }
+    .onboarding-head p { max-width:850px; margin:0; }
+    .guide-link { flex:none; display:inline-flex; align-items:center; border:1px solid var(--cyan); border-radius:10px; padding:10px 14px; color:var(--ink); font-weight:750; }
+    .guide-link:hover { background:#123144; }
+    .setup-steps { display:grid; gap:18px; margin:24px 0 0; padding:0; list-style:none; counter-reset:setup-step; }
+    .setup-step { display:grid; grid-template-columns:minmax(180px,.27fr) minmax(0,1fr); gap:24px; padding:20px; border:1px solid var(--line); border-radius:18px; background:rgba(5,12,18,.42); counter-increment:setup-step; }
+    .setup-step-copy { padding-top:2px; }
+    .setup-step-number { display:inline-grid; place-items:center; width:42px; height:42px; margin-bottom:13px; border:1px solid var(--cyan); border-radius:12px; color:var(--green); font-weight:850; }
+    .setup-step-number::before { content:"0" counter(setup-step); }
+    .setup-step h3 { margin-bottom:7px; }
+    .setup-step p { margin:0; font-size:.9rem; }
+    .setup-step .terminal-group { margin:0; min-width:0; }
+    .setup-complete { margin-top:18px; padding:13px 16px; border-left:3px solid var(--green); border-radius:8px; background:rgba(85,230,165,.08); color:var(--ink); }
     .toolbar { position:sticky; top:0; z-index:4; display:flex; gap:10px; flex-wrap:wrap; padding:14px 0; background:rgba(7,16,24,.93); backdrop-filter:blur(14px); }
     button { border:1px solid var(--line); border-radius:999px; padding:9px 15px; background:var(--panel); color:var(--muted); cursor:pointer; font:inherit; font-size:.88rem; }
     button:hover,button.active { border-color:var(--cyan); color:var(--ink); background:#123144; }
@@ -46,7 +61,7 @@
     pre { max-height:26rem; margin:0; padding:15px; overflow:auto; border:1px solid var(--line); border-radius:12px; background:#050c12; color:#e8f3f8; font:13px/1.55 "Cascadia Code","SFMono-Regular",Consolas,monospace; white-space:pre; tab-size:2; }
     .copy-status { display:block; min-height:1.3em; padding-top:4px; color:var(--green); font-size:.78rem; }
     footer { border-top:1px solid var(--line); padding:28px 0 45px; color:var(--muted); } footer a { color:var(--cyan); }
-    @media (max-width:850px) { .summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:1fr; } header { padding-top:38px; } }
+    @media (max-width:850px) { .summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:1fr; } .onboarding-head { display:block; } .guide-link { margin-top:14px; } .setup-step { grid-template-columns:1fr; gap:14px; } header { padding-top:38px; } }
   </style>
 </head>
 <body>
@@ -62,6 +77,110 @@
     </div>
   </header>
   <main>
+    <section class="onboarding" aria-labelledby="first-time-title">
+      <div class="onboarding-head">
+        <div>
+          <div class="eyebrow">Start here · run once</div>
+          <h2 id="first-time-title">First-time installation</h2>
+          <p>Complete the supported Ubuntu 24.04 and ROS 2 Jazzy host setup in the README, then run these three blocks in order at a normal Bash prompt. They are installation steps, not commands for Demo 01.</p>
+        </div>
+        <a class="guide-link" href="README.md">Open full README</a>
+      </div>
+
+      <ol class="setup-steps">
+        <li class="setup-step">
+          <div class="setup-step-copy">
+            <span class="setup-step-number" aria-hidden="true"></span>
+            <h3>Clone the repository</h3>
+            <p>Creates the canonical workspace and downloads the documented integration branch.</p>
+          </div>
+          <section class="terminal-group" aria-labelledby="first-install-clone-label">
+            <div class="terminal-heading">
+              <h3 id="first-install-clone-label">First time only · clone</h3>
+              <button class="copy-button" type="button" data-copy-target="first-install-clone" aria-describedby="first-install-clone-status">Copy</button>
+            </div>
+            <pre tabindex="0"><code id="first-install-clone">set -e
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+mkdir -p "$MFJA_WS/src"
+
+if [ -e "$MFJA_REPO" ]; then
+  test -d "$MFJA_REPO/.git" || { echo "ERROR: $MFJA_REPO exists but is not a Git clone"; exit 1; }
+  echo "Repository already exists: $MFJA_REPO"
+else
+  git clone --branch INTERNSHIP-ALI-2026 --single-branch \
+    https://github.com/aip-primeca-occitanie/mfja_3rd_floor_gz.git \
+    "$MFJA_REPO"
+fi
+
+git -C "$MFJA_REPO" status --short --branch</code></pre>
+            <span class="copy-status" id="first-install-clone-status" role="status" aria-live="polite"></span>
+          </section>
+        </li>
+
+        <li class="setup-step">
+          <div class="setup-step-copy">
+            <span class="setup-step-number" aria-hidden="true"></span>
+            <h3>Install dependencies and build</h3>
+            <p>Resolves the four ROS packages, builds the workspace, and verifies the installed overlay.</p>
+          </div>
+          <section class="terminal-group" aria-labelledby="first-install-build-label">
+            <div class="terminal-heading">
+              <h3 id="first-install-build-label">First time only · dependencies and build</h3>
+              <button class="copy-button" type="button" data-copy-target="first-install-build" aria-describedby="first-install-build-status">Copy</button>
+            </div>
+            <pre tabindex="0"><code id="first-install-build">set -e
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+test -d "$MFJA_REPO/.git" || { echo "ERROR: run Step 01 first"; exit 1; }
+test -f /opt/ros/jazzy/setup.bash || { echo "ERROR: complete the README host setup first"; exit 1; }
+source /opt/ros/jazzy/setup.bash
+
+rosdep install --from-paths \
+  "$MFJA_REPO/mfja_3rd_floor_bringup" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  --ignore-src --rosdistro jazzy -y \
+  --skip-keys "python3-torch python3-torchvision"
+
+cd "$MFJA_WS"
+colcon build --symlink-install --paths \
+  "$MFJA_REPO/mfja_rail_interfaces" \
+  "$MFJA_REPO/mfja_3rd_floor_description" \
+  "$MFJA_REPO/mfja_robot_control_config" \
+  "$MFJA_REPO/mfja_3rd_floor_bringup"
+source "$MFJA_WS/install/setup.bash"
+ros2 pkg prefix mfja_3rd_floor_bringup</code></pre>
+            <span class="copy-status" id="first-install-build-status" role="status" aria-live="polite"></span>
+          </section>
+        </li>
+
+        <li class="setup-step">
+          <div class="setup-step-copy">
+            <span class="setup-step-number" aria-hidden="true"></span>
+            <h3>Install optional AI models</h3>
+            <p>Creates isolated CPU environments, verifies the model artifacts, and writes the stable local environment file.</p>
+          </div>
+          <section class="terminal-group" aria-labelledby="first-ai-setup-label">
+            <div class="terminal-heading">
+              <h3 id="first-ai-setup-label">First time only · AI models</h3>
+              <button class="copy-button" type="button" data-copy-target="first-ai-setup" aria-describedby="first-ai-setup-status">Copy</button>
+            </div>
+            <pre tabindex="0"><code id="first-ai-setup">set -e
+export MFJA_WS="$HOME/mfja_3rd_floor_ros2_ws"
+export MFJA_REPO="$MFJA_WS/src/mfja_3rd_floor_gz"
+test -f "$MFJA_WS/install/setup.bash" || { echo "ERROR: run Step 02 first"; exit 1; }
+bash "$MFJA_REPO/setup_room315_ai.sh"
+test -f "$HOME/.config/mfja/room315_ai.env"</code></pre>
+            <span class="copy-status" id="first-ai-setup-status" role="status" aria-live="polite"></span>
+          </section>
+        </li>
+      </ol>
+
+      <div class="setup-complete">After Steps 01–03 succeed, use the filters below and copy only the terminal blocks inside the demo you want to run.</div>
+    </section>
+
     <nav class="toolbar" aria-label="Demo filters">
       <button class="active" data-filter="all">All demos</button><button data-filter="setup">Setup</button><button data-filter="robots">Robots</button><button data-filter="rail">Rail devices</button><button data-filter="intelligence">Language &amp; planning</button><button data-filter="safety">Safety</button>
     </nav>
@@ -964,16 +1083,12 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
                   <button class="copy-button" type="button" data-copy-target="demo-14-commands-2" aria-describedby="demo-14-commands-2-status">Copy</button>
                 </div>
                 <pre tabindex="0"><code id="demo-14-commands-2">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
-export V4_RUNTIME=&quot;$HOME/room315_visual_runtime_candidate_v4_\
-seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1&quot;
-export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:$HOME/\
-room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
+source &quot;$HOME/.venvs/mfja-visual/bin/activate&quot;
 ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
-  runtime_config:=&quot;$V4_RUNTIME/runtime_ros_parameters.yaml&quot; \
-  runtime_mode:=active device:=cuda enable_camera_bridge:=false \
-  v4_promotion_manifest:=&quot;$V4_RUNTIME/runtime_promotion_manifest.json&quot; \
-  v4_promotion_manifest_sha256:=\
-506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
+  runtime_mode:=active device:=cpu enable_camera_bridge:=false \
+  v4_promotion_manifest:=&quot;$ROOM315_ACTIVE_MANIFEST&quot; \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
                 <span class="copy-status" id="demo-14-commands-2-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-14-commands-3-label">
@@ -982,11 +1097,9 @@ ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
                   <button class="copy-button" type="button" data-copy-target="demo-14-commands-3" aria-describedby="demo-14-commands-3-status">Copy</button>
                 </div>
                 <pre tabindex="0"><code id="demo-14-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
-export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
-mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml&quot;
-export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
-  runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
+  runtime_config:=&quot;$ROOM315_TASK_RUNTIME&quot; execution_enabled:=true</code></pre>
                 <span class="copy-status" id="demo-14-commands-3-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-14-commands-4-label">
@@ -996,10 +1109,11 @@ ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
                 </div>
                 <pre tabindex="0"><code id="demo-14-commands-4">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
 cd &quot;$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz&quot;
-source &quot;$HOME/models/room315_intent/room315_intent.env&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
+source &quot;$HOME/.venvs/room315-intent/bin/activate&quot;
 export PYTHONPATH=&quot;$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}&quot;
 python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
-  --config &quot;$HOME/models/room315_intent/task_goal_understanding.local.yaml&quot; \
+  --config &quot;$ROOM315_TASK_GOAL_LOCAL_CONFIG&quot; \
   --publish-topic /room_315/task_goal \
   --publish-timeout-s 10 --wait-for-result --result-timeout-s 600</code></pre>
                 <span class="copy-status" id="demo-14-commands-4-status" role="status" aria-live="polite"></span>
@@ -1067,16 +1181,12 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
                   <button class="copy-button" type="button" data-copy-target="demo-15-commands-2" aria-describedby="demo-15-commands-2-status">Copy</button>
                 </div>
                 <pre tabindex="0"><code id="demo-15-commands-2">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
-export V4_RUNTIME=&quot;$HOME/room315_visual_runtime_candidate_v4_\
-seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1&quot;
-export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:$HOME/\
-room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
+source &quot;$HOME/.venvs/mfja-visual/bin/activate&quot;
 ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
-  runtime_config:=&quot;$V4_RUNTIME/runtime_ros_parameters.yaml&quot; \
-  runtime_mode:=active device:=cuda enable_camera_bridge:=false \
-  v4_promotion_manifest:=&quot;$V4_RUNTIME/runtime_promotion_manifest.json&quot; \
-  v4_promotion_manifest_sha256:=\
-506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
+  runtime_mode:=active device:=cpu enable_camera_bridge:=false \
+  v4_promotion_manifest:=&quot;$ROOM315_ACTIVE_MANIFEST&quot; \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
                 <span class="copy-status" id="demo-15-commands-2-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-15-commands-3-label">
@@ -1085,11 +1195,9 @@ ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
                   <button class="copy-button" type="button" data-copy-target="demo-15-commands-3" aria-describedby="demo-15-commands-3-status">Copy</button>
                 </div>
                 <pre tabindex="0"><code id="demo-15-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
-export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
-mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml&quot;
-export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
-  runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
+  runtime_config:=&quot;$ROOM315_TASK_RUNTIME&quot; execution_enabled:=true</code></pre>
                 <span class="copy-status" id="demo-15-commands-3-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-15-commands-4-label">
@@ -1099,10 +1207,11 @@ ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
                 </div>
                 <pre tabindex="0"><code id="demo-15-commands-4">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
 cd &quot;$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz&quot;
-source &quot;$HOME/models/room315_intent/room315_intent.env&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
+source &quot;$HOME/.venvs/room315-intent/bin/activate&quot;
 export PYTHONPATH=&quot;$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}&quot;
 python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
-  --config &quot;$HOME/models/room315_intent/task_goal_understanding.local.yaml&quot; \
+  --config &quot;$ROOM315_TASK_GOAL_LOCAL_CONFIG&quot; \
   --publish-topic /room_315/task_goal \
   --publish-timeout-s 10 --wait-for-result --result-timeout-s 600</code></pre>
                 <span class="copy-status" id="demo-15-commands-4-status" role="status" aria-live="polite"></span>
@@ -1162,16 +1271,12 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
                   <button class="copy-button" type="button" data-copy-target="demo-16-commands-2" aria-describedby="demo-16-commands-2-status">Copy</button>
                 </div>
                 <pre tabindex="0"><code id="demo-16-commands-2">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
-export V4_RUNTIME=&quot;$HOME/room315_visual_runtime_candidate_v4_\
-seed31520260811_epoch11_869d6404_closed_loop_runtime_attempt1&quot;
-export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:$HOME/\
-room315_local_training/venv/lib/python3.12/site-packages:${PYTHONPATH:-}&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
+source &quot;$HOME/.venvs/mfja-visual/bin/activate&quot;
 ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
-  runtime_config:=&quot;$V4_RUNTIME/runtime_ros_parameters.yaml&quot; \
-  runtime_mode:=active device:=cuda enable_camera_bridge:=false \
-  v4_promotion_manifest:=&quot;$V4_RUNTIME/runtime_promotion_manifest.json&quot; \
-  v4_promotion_manifest_sha256:=\
-506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
+  runtime_mode:=active device:=cpu enable_camera_bridge:=false \
+  v4_promotion_manifest:=&quot;$ROOM315_ACTIVE_MANIFEST&quot; \
+  v4_promotion_manifest_sha256:=506cae0511cf1675fdd666103ce7fc0b5980eb5e68d4cbadf0af99d9ee9560da</code></pre>
                 <span class="copy-status" id="demo-16-commands-2-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-16-commands-3-label">
@@ -1180,11 +1285,9 @@ ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
                   <button class="copy-button" type="button" data-copy-target="demo-16-commands-3" aria-describedby="demo-16-commands-3-status">Copy</button>
                 </div>
                 <pre tabindex="0"><code id="demo-16-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
-export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
-mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml&quot;
-export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
-  runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
+  runtime_config:=&quot;$ROOM315_TASK_RUNTIME&quot; execution_enabled:=true</code></pre>
                 <span class="copy-status" id="demo-16-commands-3-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-16-commands-4-label">
@@ -1207,10 +1310,11 @@ ros2 topic pub --once /room_315/rail_safety/emergency_stop \
                 </div>
                 <pre tabindex="0"><code id="demo-16-commands-5">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
 cd &quot;$HOME/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz&quot;
-source &quot;$HOME/models/room315_intent/room315_intent.env&quot;
+source &quot;$HOME/.config/mfja/room315_ai.env&quot;
+source &quot;$HOME/.venvs/room315-intent/bin/activate&quot;
 export PYTHONPATH=&quot;$PWD/mfja_robot_control_config/scripts:${PYTHONPATH:-}&quot;
 python3 mfja_robot_control_config/scripts/room_315_task_goal_cli.py \
-  --config &quot;$HOME/models/room315_intent/task_goal_understanding.local.yaml&quot; \
+  --config &quot;$ROOM315_TASK_GOAL_LOCAL_CONFIG&quot; \
   --publish-topic /room_315/task_goal \
   --publish-timeout-s 10 --wait-for-result --result-timeout-s 600</code></pre>
                 <span class="copy-status" id="demo-16-commands-5-status" role="status" aria-live="polite"></span>
