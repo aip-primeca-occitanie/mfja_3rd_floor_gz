@@ -61,7 +61,7 @@
     <include>
       <uri>model://staubli_table</uri>
       <name>staubli_table_1</name>
-      <pose>-14.8000 -6.0 0.5 -1.57 0 1.57</pose>
+      <pose>-14.734 -6.0179 0.5 -1.57 0 1.57</pose>
     </include>
 
     <include>
@@ -97,7 +97,7 @@
     <include>
       <uri>model://cell_static_droit_final</uri>
       <name>room315_cell_static_droit_final_1</name>
-      <pose>-15.9170 -5.81 0.317 0.0 0.0 0.0</pose>
+      <pose>-15.9718 -5.8001 0.32 0.0 0.0 0.0</pose>
     </include>
 
     <!-- Cell path rails. Adjust the pose values here: x y z roll pitch yaw. -->
@@ -110,7 +110,7 @@
     <include>
       <uri>model://cell_path_right</uri>
       <name>room315_cell_path_right_1</name>
-      <pose>-13.705 -3.843 1.05 0 0 3.14</pose>
+      <pose>-13.7598 -3.833 1.053 0 0 3.14</pose>
     </include>
 
     <!-- Room 315 shuttle. Adjust the pose values here: x y z roll pitch yaw. -->
@@ -151,13 +151,13 @@
     <include>
       <uri>model://rail_switch_3pos_droit_static_black</uri>
       <name>static_droit_switch_1</name>
-      <pose>-13.715 -4.515 1.05 0 0 1.02</pose>
+      <pose>-13.770 -4.505 1.053 0 0 1.02</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit_static_black</uri>
       <name>static_droit_switch_2</name>
-      <pose>-13.72 -4.89 1.05 0 0 -0.02</pose>
+      <pose>-13.775 -4.88 1.053 0 0 -0.02</pose>
     </include>
 
     <include>
@@ -176,25 +176,25 @@
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
       <name>A3_droit_switch</name>
-      <pose>-15.747 -4.98 1.05 0 0 0.50666</pose>
+      <pose>-15.802 -4.97 1.053 0 0 0.50666</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
       <name>A4_droit_switch</name>
-      <pose>-14.285 -5.075 1.05 0 0 3.13</pose>
+      <pose>-14.34 -5.065 1.053 0 0 3.13</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
       <name>A1_droit_switch</name>
-      <pose>-14.282 -4.329 1.05 0 0 -2.1</pose>
+      <pose>-14.3368 -4.32 1.053 0 0 -2.1</pose>
     </include>
 
     <include>
       <uri>model://rail_switch_3pos_droit</uri>
       <name>A2_droit_switch</name>
-      <pose>-15.747 -4.42 1.05 0 0 0.50666</pose>
+      <pose>-15.802 -4.41 1.053 0 0 0.50666</pose>
     </include>
 
     <include>

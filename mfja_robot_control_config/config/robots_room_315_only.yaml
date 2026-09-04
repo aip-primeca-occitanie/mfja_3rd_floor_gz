@@ -9,8 +9,8 @@ robots:
 
   - name: staubli1
     model: staubli_tx2_60l
-    x_pose: -15.03
-    y_pose: -6.0
+    x_pose: -15.082
+    y_pose: -6.033
     z_pose: 1.0
     yaw: 0.0
     enabled: true
