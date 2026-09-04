@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 RUNTIME_PDDL_DOMAIN_PATH = (
     SCRIPT_DIR.parent
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_planning'
     / 'pddl'
     / 'domain_room315_runtime.pddl'
 )
@@ -111,8 +111,8 @@ TASK_EXECUTION_ACTIVE_PARAMETER_DEFAULTS = {
     'allowed_visual_checkpoint_sha256': (
         DEFAULT_ALLOWED_VISUAL_CHECKPOINT_SHA256
     ),
-    'supervisor_command_topic': '/room_315/vla/command',
-    'supervisor_status_topic': '/room_315/vla/status',
+    'supervisor_command_topic': '/room_315/rail_safety/primitive_command',
+    'supervisor_status_topic': '/room_315/rail_safety/status',
     'left_sensor_feedback_topic': '/room_315/rails/left/sensors/feedback',
     'right_sensor_feedback_topic': '/room_315/rails/right/sensors/feedback',
     'diagnostics_topic': '/diagnostics',

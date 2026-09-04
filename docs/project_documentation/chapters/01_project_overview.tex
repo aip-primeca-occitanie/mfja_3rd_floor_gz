@@ -38,16 +38,16 @@ Visual, language, and execution boundaries &
   \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py};
   \file{mfja_robot_control_config/scripts/room_315_task_goal_builder.py};
   \file{mfja_robot_control_config/scripts/room_315_task_execution.py};
-  \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+  \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py} \\ \rowseparator
 Supported and optional dependency surfaces &
   \file{mfja_rail_interfaces/package.xml};
   \file{mfja_3rd_floor_description/package.xml};
   \file{mfja_robot_control_config/package.xml};
   \file{mfja_3rd_floor_bringup/package.xml};
-  \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml};
-  \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml};
-  \file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml};
-  \file{mfja_robot_control_config/scripts/room_315_vla_to_lerobot.py} \\ \rowseparator
+  \file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml};
+  \file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml};
+  \file{mfja_robot_control_config/config/room_315_task_goal/task_goal_understanding.yaml};
+  \file{mfja_robot_control_config/scripts/room_315_visual_state_to_lerobot.py} \\ \rowseparator
 Onboarding procedure &
   \file{docs/INSTALLATION.md};
   \file{docs/QUICK_START_AND_FEATURE_GUIDE.md};
@@ -75,12 +75,13 @@ calibrated directed rail geometry, command switches and stoppers, publish
 binary occupancy sensors, attach simulation-only payload visuals, and expose
 the maintained control surface through typed ROS 2 interfaces.
 
-An optional vision-language-action (VLA) research stack adds paired-camera
-visual-state estimation, constrained English task understanding, PDDL/PlanSys2
-planning, one-step closed-loop execution, deterministic supervision, effect
+An optional neuro-symbolic workflow adds paired-camera visual-state estimation,
+constrained English task understanding, PDDL/PlanSys2 planning, one-step
+closed-loop execution, deterministic rail-safety supervision, effect
 verification, dataset generation, model training, artifact promotion, and
-fault/acceptance campaigns. These are separate capabilities: enabling the VLA
-camera/supervisor branch does not implicitly start learned inference or task
+fault/acceptance campaigns. The language model and visual-state model are
+separate and neither selects nor publishes actions. Enabling the
+perception-and-safety branch does not implicitly start learned inference or task
 execution.
 
 \section{Supported and Optional Surfaces}
@@ -98,7 +99,7 @@ execution.
 \endhead
 Worlds and robots & Available & Working OpenGL display only for GUI \\ \rowseparator
 Kinematic rails and typed devices & Available & None beyond ROS/Gazebo dependencies \\ \rowseparator
-Camera and primitive supervisor topics & Available, disabled by default & Enable the VLA launch branch \\ \rowseparator
+Camera and primitive supervisor topics & Available, disabled by default & Enable the perception-and-safety launch branch \\ \rowseparator
 Dataset generation tools & Code/config available & Disk space; some workflows need long Gazebo runs \\ \rowseparator
 Learned visual inference & Code available, model absent & Isolated Torch environment and complete promoted V4 bundle \\ \rowseparator
 English semantic model & Deterministic parser remains available & \code{llama-cpp-python} and separately downloaded GGUF checkpoint \\ \rowseparator

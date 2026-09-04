@@ -27,9 +27,9 @@ DEFAULT_RESULTS_DIR = Path('/tmp/room315_payload_case_batch')
 ROOM315_PROCESS_PATTERNS = (
     'room_315_only.launch.py',
     'room_315_kinematic_shuttle_node.py',
-    'room_315_vla_supervisor.py',
-    'room_315_vla_dataset_recorder.py',
-    'room315_vla_camera_bridge',
+    'room_315_rail_safety_supervisor.py',
+    'room_315_visual_state_dataset_recorder.py',
+    'room315_perception_camera_bridge',
     'room315_world_service_bridge',
     'conveyor_loop_mode_controller.py.*room_315_only',
     'parameter_bridge /clock@rosgraph_msgs/msg/Clock',
@@ -107,8 +107,8 @@ def _case_launch_args(case: dict[str, Any], *, dataset_dir: Path, gui: bool) -> 
         'start_paused:=false',
         f'gui:={str(bool(gui)).lower()}',
         'enable_room315_kinematic_shuttles:=true',
-        'enable_room315_vla:=true',
-        'enable_room315_vla_dataset_recorder:=true',
+        'enable_room315_rail_safety_supervisor:=true',
+        'enable_room315_visual_state_dataset_recorder:=true',
         'room315_enable_payload_visuals:=true',
         f'enable_room315_right_rail:={str(bool(enable_right)).lower()}',
         f'enable_room315_left_rail:={str(bool(enable_left)).lower()}',
@@ -121,7 +121,7 @@ def _case_launch_args(case: dict[str, Any], *, dataset_dir: Path, gui: bool) -> 
         'room315_shuttles_start_enabled:=false',
         'room315_visual_debug_colors:=false',
         'room315_show_device_markers:=false',
-        f'room315_vla_dataset_dir:={dataset_dir.expanduser()}',
+        f'room315_visual_dataset_dir:={dataset_dir.expanduser()}',
     ]
 
 
@@ -568,7 +568,7 @@ def _finalize_summary(summary: dict[str, Any], args: argparse.Namespace) -> dict
                 'ros2',
                 'run',
                 'mfja_robot_control_config',
-                'room_315_vla_event_extractor.py',
+                'room_315_visual_training_event_extractor.py',
                 str(Path(summary['dataset_dir'])),
                 '--output',
                 'meta/training_events.jsonl',

@@ -44,7 +44,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-import room_315_vla_train_v4 as trainer  # noqa: E402
+import room_315_visual_state_train_v4 as trainer  # noqa: E402
 from room_315_rail_defaults import default_rail_network_path  # noqa: E402
 from room_315_visual_contract_v4 import (  # noqa: E402
     FIXED_IDENTITIES,
@@ -1160,7 +1160,7 @@ def _implementation_artifact_paths() -> dict[str, Path]:
         ),
         'rail_defaults': SCRIPT_DIR / 'room_315_rail_defaults.py',
         'topology_contract': SCRIPT_DIR / 'room_315_visual_contract_v4.py',
-        'trainer_evaluation_api': SCRIPT_DIR / 'room_315_vla_train_v4.py',
+        'trainer_evaluation_api': SCRIPT_DIR / 'room_315_visual_state_train_v4.py',
         'training_runtime': SCRIPT_DIR / 'room_315_visual_training_v4.py',
         'v3_common_dependency': SCRIPT_DIR / 'room_315_visual_v3_common.py',
         'visual_fleet': SCRIPT_DIR / 'room_315_visual_fleet.py',
@@ -1201,7 +1201,10 @@ def _implementation_config_artifact_paths() -> dict[str, Path]:
         'rail_network_left': left_network,
         'rail_network_right': right_network,
         'shuttle_identity': (
-            package_root / 'config' / 'room_315_vla' / 'shuttle_identity.yaml'
+            package_root
+            / 'config'
+            / 'room_315_shuttle_identity'
+            / 'shuttle_identity.yaml'
         ),
         'simulation_world': (
             repository_root / 'mfja_3rd_floor_description' / 'worlds'

@@ -10,7 +10,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / 'mfja_robot_control_config' / 'scripts' / 'room_315_multi_shuttle.py'
 IDENTITY_CONFIG_PATH = (
-    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'shuttle_identity.yaml'
+    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_shuttle_identity' / 'shuttle_identity.yaml'
 )
 
 

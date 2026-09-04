@@ -88,7 +88,9 @@ remain identified by their source manifests and hashes.
   implemented result is a neuro-symbolic language-and-vision interface, not an
   end-to-end VLA policy. Misleading shorthand such as “VLA cameras,” “VLA
   operation” and “VLA supervisor” was removed from descriptive prose; the
-  historical executable filename remains explicitly identified as such.
+  historical executable filename remained explicitly identified at that
+  revision; the later naming migration replaced it with the canonical
+  rail-safety-supervisor name.
 - Replaced the matrix-led engineering-qualities discussion with two concise
   first-person case studies covering initiative, autonomy, weekly supervisory
   review, resource constraints, controlled migration and professional learning;

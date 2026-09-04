@@ -47,7 +47,7 @@ from room_315_visual_v3_common import side_for_identity
 
 def default_experiment_config_path(filename: str) -> Path:
     """Resolve an experiment config from the source tree or package share."""
-    source_path = SCRIPT_DIR.parent / 'config' / 'room_315_vla' / filename
+    source_path = SCRIPT_DIR.parent / 'config' / 'room_315_visual_state' / filename
     if source_path.is_file():
         return source_path
     try:
@@ -56,7 +56,7 @@ def default_experiment_config_path(filename: str) -> Path:
         return (
             Path(get_package_share_directory('mfja_robot_control_config'))
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_visual_state'
             / filename
         )
     except Exception:
@@ -641,7 +641,7 @@ def _write_reproducibility_manifests(
             repository_root
             / 'mfja_robot_control_config'
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_shuttle_identity'
             / 'shuttle_identity.yaml'
         ),
         'gazebo_world': (
@@ -654,7 +654,7 @@ def _write_reproducibility_manifests(
             repository_root
             / 'mfja_3rd_floor_description'
             / 'models'
-            / 'room315_vla_overhead_devices'
+            / 'room315_visual_observation_rig'
             / 'model.sdf'
         ),
     }
@@ -683,8 +683,8 @@ def _write_reproducibility_manifests(
         'scenario_counts': audit['scenario_counts'],
         'image_count': audit['image_count'],
         'camera_topics': {
-            'left_rail_rgb': '/room_315/vla/left_rail_rgbd/image',
-            'right_rail_rgb': '/room_315/vla/right_rail_rgbd/image',
+            'left_rail_rgb': '/room_315/perception/left_rail_rgbd/image',
+            'right_rail_rgb': '/room_315/perception/right_rail_rgbd/image',
         },
         'image_dimensions': [640, 480],
         'gazebo_world': 'room_315_only.world',

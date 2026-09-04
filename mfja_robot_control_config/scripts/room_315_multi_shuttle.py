@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Room 315 multi-shuttle research utilities.
 
-This module contains deterministic helpers shared by the VLA supervisor,
+This module contains deterministic helpers shared by the rail-safety supervisor,
 dataset tooling, PlanSys scenario generation, and tests. It is intentionally
 free of ROS imports so it can be used in CI without a running simulator.
 """
@@ -1521,7 +1521,7 @@ def default_identity_config_path() -> Path:
     source_path = (
         Path(__file__).resolve().parents[1]
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_shuttle_identity'
         / 'shuttle_identity.yaml'
     )
     if source_path.is_file():
@@ -1532,7 +1532,7 @@ def default_identity_config_path() -> Path:
         return (
             Path(get_package_share_directory('mfja_robot_control_config'))
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_shuttle_identity'
             / 'shuttle_identity.yaml'
         )
     except Exception:

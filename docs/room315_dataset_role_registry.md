@@ -71,7 +71,7 @@ The legacy capture used seed `31520260729`. The grouped splitter used seed
   `~/room315_arbitrary_subset_visual_splits_v1_seed31520260730` by default;
   the audit command accepts a relocated root.
 - Predecessor loading/selection:
-  [`train_visual_state()`](../mfja_robot_control_config/scripts/room_315_vla_train_local.py)
+  [`train_visual_state()`](../mfja_robot_control_config/scripts/room_315_visual_state_train_local.py)
   loads training and validation, evaluates validation each epoch, saves the
   lowest-validation-loss checkpoint, and advances patience.
 - Explicit historical Test unlock:
@@ -98,9 +98,9 @@ the same generator namespace or exact generated samples.
   imports legacy **Training** only. It does not import either legacy 256-row
   partition.
 - Current V4 source/role configuration:
-  [`visual_state_training_v4.json`](../mfja_robot_control_config/config/room_315_vla/visual_state_training_v4.json).
+  [`visual_state_training_v4.json`](../mfja_robot_control_config/config/room_315_visual_state/visual_state_training_v4.json).
 - Checkpoint selection and post-selection Canary flow:
-  [`room_315_vla_train_v4.py`](../mfja_robot_control_config/scripts/room_315_vla_train_v4.py).
+  [`room_315_visual_state_train_v4.py`](../mfja_robot_control_config/scripts/room_315_visual_state_train_v4.py).
 - Validation-only calibration:
   [`room_315_visual_calibration_v4.py`](../mfja_robot_control_config/scripts/room_315_visual_calibration_v4.py).
 - Legacy-Test denylist:

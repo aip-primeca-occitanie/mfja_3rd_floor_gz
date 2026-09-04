@@ -7,7 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
-SUPERVISOR_PATH = SCRIPT_DIR / 'room_315_vla_supervisor.py'
+SUPERVISOR_PATH = SCRIPT_DIR / 'room_315_rail_safety_supervisor.py'
 
 
 def _load_module(name, path):
@@ -42,7 +42,7 @@ def _rails():
 
 
 def _decode(module, command):
-    return module._decode_room315_vla_action(
+    return module._decode_room315_primitive_command(
         command,
         rails=_rails(),
         emergency_stop=False,
@@ -56,7 +56,7 @@ def _decode(module, command):
 
 
 def test_supervisor_rejects_ambiguous_multi_shuttle_motion():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
     decision = _decode(supervisor, {'action': 'shuttle', 'side': 'right', 'command': 'ON'})
 
@@ -65,7 +65,7 @@ def test_supervisor_rejects_ambiguous_multi_shuttle_motion():
 
 
 def test_supervisor_accepts_explicit_short_shuttle_id():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
     decision = _decode(
         supervisor,
@@ -78,7 +78,7 @@ def test_supervisor_accepts_explicit_short_shuttle_id():
 
 
 def test_supervisor_allows_global_emergency_stop_even_with_multiple_shuttles():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
     decision = _decode(supervisor, {'action': 'emergency_stop'})
 
@@ -87,7 +87,7 @@ def test_supervisor_allows_global_emergency_stop_even_with_multiple_shuttles():
 
 
 def test_supervisor_structured_command_targets_specific_shuttle():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
     decision = _decode(
         supervisor,
@@ -105,9 +105,9 @@ def test_supervisor_structured_command_targets_specific_shuttle():
 
 
 def test_supervisor_rejects_removed_numeric_action_vector_payload():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
-    decision = supervisor._decode_room315_vla_action(
+    decision = supervisor._decode_room315_primitive_command(
         [0.0] * 24,
         rails=_rails(),
         emergency_stop=False,
@@ -124,7 +124,7 @@ def test_supervisor_rejects_removed_numeric_action_vector_payload():
 
 
 def test_supervisor_rejects_removed_embedded_action_vector_payload():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
     decision = _decode(
         supervisor,

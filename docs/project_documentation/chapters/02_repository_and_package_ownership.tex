@@ -207,8 +207,8 @@ several distinct systems in one ament package.
 \tableheader Directory & Owns & Key warning \\
 \midrule
 \endhead
-\file{mfja_robot_control_config/launch/} & Gazebo/robot composition, dual rails, VLA supervisor, visual runtime, task execution, acceptance campaigns & Distinguish stable bringup wrappers from lower-level research launches \\ \rowseparator
-\file{mfja_robot_control_config/config/} & Robot registries, GUI profiles, rail topology/devices/CSV, visual and VLA contracts, PDDL & Many install rules are explicit; adding a source config does not guarantee installation \\ \rowseparator
+\file{mfja_robot_control_config/launch/} & Gazebo/robot composition, dual rails, rail-safety supervisor, visual runtime, task execution, acceptance campaigns & Distinguish stable bringup wrappers from lower-level research launches \\ \rowseparator
+\file{mfja_robot_control_config/config/} & Robot registries, GUI profiles, rail topology/devices/CSV, language and visual-state contracts, safety policy, PDDL & Many install rules are explicit; adding a source config does not guarantee installation \\ \rowseparator
 \file{mfja_robot_control_config/scripts/} & 112 command tools, ROS nodes, pure cores, dataset/model/evaluation workflows & 108 are CMake-listed, 49 have a tracked executable bit, and four are source-only \\ \rowseparator
 \file{mfja_robot_control_config/test/} & 98 source test modules & Direct pytest and CMake/ament registration cover different sets \\ \rowseparator
 \file{mfja_robot_control_config/experiment_a_v3r1/} & Eight isolated experiment helpers & Not installed as ROS executables; invoke only from the documented experiment workflow \\
@@ -256,7 +256,7 @@ implementation evolves:
         forwards a bounded selector to the isolated lower-level launch; and
   \item \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} owns
         shared arguments, the singleton lock, obstacle-cache clearing, and
-        delayed rail/VLA includes.
+        delayed rail and perception-and-safety includes.
 \end{itemize}
 
 The package installs its launch directory as a whole. A new launch file is

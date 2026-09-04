@@ -27,13 +27,13 @@ safe to consume.
 \tableheader Flow & Runtime contract & Source file(s) \\
 \midrule
 \endhead
-Configuration $\rightarrow$ launch & YAML/CSV/SDF/URDF and launch arguments select the world, robots, rails, and optional VLA branch. & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+Configuration $\rightarrow$ launch & YAML/CSV/SDF/URDF and launch arguments select the world, robots, rails, and optional perception-and-safety branch. & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 Launch $\rightarrow$ Gazebo/robots & Gazebo, world bridges, robot spawners, state publishers, and per-robot bridges are composed before delayed rail startup. & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 Rail $\rightarrow$ Gazebo & Logical rail state is transformed into pose/create/remove service requests; Gazebo is visual/physical presentation, not topology authority. & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py} \\ \rowseparator
-Gazebo $\rightarrow$ cameras $\rightarrow$ vision & Paired RGB images are bridged and synchronized before V4 inference; presence heartbeats accompany image input. & \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\ \rowseparator
+Gazebo $\rightarrow$ cameras $\rightarrow$ vision & Paired RGB images are bridged and synchronized before V4 inference; presence heartbeats accompany image input. & \file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\ \rowseparator
 Vision $\rightarrow$ gateway & Only accepted typed observations enter task grounding; raw JSON remains diagnostic. & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py} \\ \rowseparator
-Gateway $\leftrightarrow$ supervisor & The gateway emits one JSON primitive and consumes structured safety/status feedback before replanning. & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
-Supervisor $\leftrightarrow$ rails & The supervisor publishes typed shuttle/switch/stopper commands and consumes newer typed actual state and sensors. & \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/CMakeLists.txt} \\
+Gateway $\leftrightarrow$ supervisor & The gateway emits one JSON primitive and consumes structured safety/status feedback before replanning. & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py} \\ \rowseparator
+Supervisor $\leftrightarrow$ rails & The supervisor publishes typed shuttle/switch/stopper commands and consumes newer typed actual state and sensors. & \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/CMakeLists.txt} \\
 \bottomrule
 \end{longtable}
 
@@ -56,7 +56,7 @@ Rail route/position & Rail node, network YAML, CSV geometry & Visual switch mode
 Actual switch/stopper state & Delayed typed state registry & Requested command or animation & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
 Exact slot occupancy & Fresh identity-bearing DZI state & Learned position or privileged coordinates & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
 Learned position/load facts & Accepted authorized V4 observation & Raw JSON, controller geometry, simulator payload state & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py} \\ \rowseparator
-Primitive safety/recovery & Deterministic supervisor & Learned action vector or planner assumption & \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+Primitive safety/recovery & Deterministic supervisor & Learned action vector or planner assumption & \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py} \\ \rowseparator
 Symbolic plan & Completely validated PlanSys2 response & One unvalidated PDDL action name & \file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
 Task completion & Fresh effect plus explicit controller stop & Publication, elapsed time, or planner success alone & \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
 Deployment identity & Immutable manifest/authorization hashes & Directory name, latest symlink, recollection & \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_config.py} \\
@@ -156,7 +156,7 @@ QoS. When debugging a missing sample, compare endpoint QoS before changing code.
 The command path is defined by
 \file{mfja_rail_interfaces/msg/ShuttleCommand.msg},
 \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}, and
-\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}:
+\file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py}:
 
 \begin{enumerate}
   \item An operator or supervisor publishes a typed command.
@@ -189,17 +189,17 @@ delayed update of the typed actual-state registry. Because routing reads that
 registry, this synchronization path can affect topology; it is not merely a GUI
 presentation update.
 
-\section{Optional VLA and Task Topics}
+\section{Optional Perception, Safety, and Task Topics}
 
 Topic creation and consumption are defined in
-\file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py},
-\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py},
+\file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py},
+\file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py},
 \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py},
 and \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}.
 
 \begin{longtable}{L{0.39\textwidth} L{0.22\textwidth} L{0.30\textwidth}}
-\caption{Optional VLA, visual-state, diagnostics, and task endpoints}
-\label{tab:optional-vla-task-topics}\\
+\caption{Optional perception, safety, visual-state, diagnostics, and task endpoints}
+\label{tab:optional-perception-task-topics}\\
 \toprule
 \tableheader Endpoint & Type & Owner/consumer \\
 \midrule
@@ -208,11 +208,11 @@ and \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}.
 \tableheader Endpoint & Type & Owner/consumer \\
 \midrule
 \endhead
-\rosname{/room_315/vla/right_rail_rgbd/image} & \code{sensor_msgs/Image} & Gazebo camera bridge $\rightarrow$ supervisor/vision/recorder \\ \rowseparator
-\rosname{/room_315/vla/left_rail_rgbd/image} & \code{sensor_msgs/Image} & Gazebo camera bridge $\rightarrow$ supervisor/vision/recorder \\ \rowseparator
-\rosname{/room_315/vla/command} & \code{std_msgs/String} JSON & Operator/task gateway $\rightarrow$ supervisor \\ \rowseparator
-\rosname{/room_315/vla/status} & \code{std_msgs/String} JSON & Supervisor $\rightarrow$ gateway/operator/recorder \\ \rowseparator
-\rosname{/room_315/vla/emergency_stop} & \code{std_msgs/Bool} & Operator/safety source $\rightarrow$ supervisor \\ \rowseparator
+\rosname{/room_315/perception/right_rail_rgbd/image} & \code{sensor_msgs/Image} & Gazebo camera bridge $\rightarrow$ supervisor/vision/recorder \\ \rowseparator
+\rosname{/room_315/perception/left_rail_rgbd/image} & \code{sensor_msgs/Image} & Gazebo camera bridge $\rightarrow$ supervisor/vision/recorder \\ \rowseparator
+\rosname{/room_315/rail_safety/primitive_command} & \code{std_msgs/String} JSON & Operator/task gateway $\rightarrow$ supervisor \\ \rowseparator
+\rosname{/room_315/rail_safety/status} & \code{std_msgs/String} JSON & Supervisor $\rightarrow$ gateway/operator/recorder \\ \rowseparator
+\rosname{/room_315/rail_safety/emergency_stop} & \code{std_msgs/Bool} & Operator/safety source $\rightarrow$ supervisor \\ \rowseparator
 \rosname{/room_315/visual_state/raw} & \code{VisualStateObservation} & V4 inference, before acceptance \\ \rowseparator
 \rosname{/room_315/visual_state/raw_model_prediction} & \code{String} JSON & Diagnostic model output only \\ \rowseparator
 \rosname{/room_315/visual_state/validation} & \code{VisualStateObservation} & Validator decision/causes \\ \rowseparator
@@ -234,14 +234,14 @@ before an accepted observation may enter task grounding. For the optional task
 path, a confirmed \code{TaskGoal} is grounded, planned, fully translated, and
 executed one deterministic primitive at a time; every primitive requires newer
 effect evidence before replanning. The complete gates and their authoritative
-source paths are organized in \cref{ch:vla-planning}.
+source paths are organized in \cref{ch:visual-state-planning}.
 
 \section{Adding or Changing an Interface}
 
 The interface build/install authority is \file{mfja_rail_interfaces/CMakeLists.txt};
 runtime consumers are centered in
 \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py},
-\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}, and
+\file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py}, and
 \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}.
 
 \begin{procedurebox}[Contract-change checklist]

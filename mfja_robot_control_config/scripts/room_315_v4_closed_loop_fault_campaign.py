@@ -51,7 +51,7 @@ V4_MANUAL_DECISION = V4_BUNDLE / 'manual_decision_record.json'
 V4_RUNTIME_CONFIG = V4_BUNDLE / 'runtime_ros_parameters.yaml'
 V4_AUTHORIZATION = V4_BUNDLE / 'candidate_state.json'
 TASK_RUNTIME_CONFIG = (
-    PACKAGE / 'config/room_315_vla/task_execution_runtime_v4.yaml'
+    PACKAGE / 'config/room_315_task_execution/task_execution_runtime_v4.yaml'
 )
 V4_SCHEMA = 'room315.visual_state.v4'
 V4_CHECKPOINT_SHA256 = (
@@ -139,7 +139,7 @@ CRITICAL_SOURCE_PATHS = (
     'mfja_robot_control_config/scripts/room_315_v4_closed_loop_fault_campaign.py',
     'mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py',
     'mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py',
-    'mfja_robot_control_config/scripts/room_315_vla_supervisor.py',
+    'mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py',
 )
 
 
@@ -541,10 +541,10 @@ def floor_command(speed_mps: float = 0.05) -> list[str]:
         'enable_room315_kinematic_shuttles:=true',
         'enable_room315_right_rail:=true',
         'enable_room315_left_rail:=true',
-        'enable_room315_vla:=true',
-        'enable_room315_vla_camera_bridge:=true',
-        'enable_room315_vla_dataset_recorder:=false',
-        'enable_room315_vla_obstacles:=false',
+        'enable_room315_rail_safety_supervisor:=true',
+        'enable_room315_rgbd_camera_bridge:=true',
+        'enable_room315_visual_state_dataset_recorder:=false',
+        'enable_room315_visual_obstacles:=false',
         'room315_show_device_markers:=false',
         'room315_visual_debug_colors:=false',
         'room315_enable_payload_visuals:=true',
@@ -1218,8 +1218,8 @@ def publish_estop_once_wait_ack(
     if string_type is None:
         from std_msgs.msg import String as string_type  # type: ignore[no-redef]
 
-    estop_topic = '/room_315/vla/emergency_stop'
-    status_topic = '/room_315/vla/status'
+    estop_topic = '/room_315/rail_safety/emergency_stop'
+    status_topic = '/room_315/rail_safety/status'
     node = None
     acknowledgement: dict[str, Any] | None = None
     published_count = 0
@@ -1248,7 +1248,7 @@ def publish_estop_once_wait_ack(
             status_endpoints = node.get_publishers_info_by_topic(status_topic)
             supervisor_estop_endpoints = [
                 endpoint for endpoint in estop_endpoints
-                if str(endpoint.node_name) == 'room_315_vla_supervisor'
+                if str(endpoint.node_name) == 'room_315_rail_safety_supervisor'
             ]
             recorder_estop_endpoints = [
                 endpoint for endpoint in estop_endpoints
@@ -1256,7 +1256,7 @@ def publish_estop_once_wait_ack(
             ]
             supervisor_status_endpoints = [
                 endpoint for endpoint in status_endpoints
-                if str(endpoint.node_name) == 'room_315_vla_supervisor'
+                if str(endpoint.node_name) == 'room_315_rail_safety_supervisor'
             ]
             compatible_estop_subscriptions = int(
                 publisher.get_subscription_count()
@@ -1611,9 +1611,9 @@ RECORDED_TOPICS = (
     '/room_315/task_goal',
     '/room_315/task_goal/status',
     '/room_315/visual_state/observed_state',
-    '/room_315/vla/command',
-    '/room_315/vla/status',
-    '/room_315/vla/emergency_stop',
+    '/room_315/rail_safety/primitive_command',
+    '/room_315/rail_safety/status',
+    '/room_315/rail_safety/emergency_stop',
     '/room_315/rails/right/shuttles/state',
     '/room_315/rails/right/shuttles/command',
     '/room_315/rails/right/sensors/feedback',
@@ -1720,7 +1720,7 @@ def audit_rosbag(bag_dir: Path) -> dict[str, Any]:
                 payload = dict(payload)
                 payload['bag_timestamp_ns'] = int(timestamp_ns)
                 task_statuses.append(payload)
-        elif topic == '/room_315/vla/emergency_stop':
+        elif topic == '/room_315/rail_safety/emergency_stop':
             estop_values.append(bool(message.data))
 
     if visual_count < 1:
@@ -2061,7 +2061,7 @@ def gateway_refusal_reason(
 
 def publish_stop_all(env: dict[str, str], reason: str) -> dict[str, Any]:
     return publish_string(
-        '/room_315/vla/command',
+        '/room_315/rail_safety/primitive_command',
         {
             'action': 'stop_all',
             'reason': reason,

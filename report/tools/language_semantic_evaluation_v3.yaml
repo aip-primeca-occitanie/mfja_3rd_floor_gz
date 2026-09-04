@@ -16,7 +16,7 @@ method: >-
   TaskGoalDialogueManager and a backend-call counter must remain unchanged.
 
 corpus:
-  path: mfja_robot_control_config/config/room_315_vla/task_goal_english_benchmark.yaml
+  path: mfja_robot_control_config/config/room_315_task_goal/task_goal_english_benchmark.yaml
   sha256: 1a945519f6b5b58e9c44ca8c7de823832f4898fb442276572048cf3d5903a9cc
   case_count: 10
 

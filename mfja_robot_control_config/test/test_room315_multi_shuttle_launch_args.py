@@ -150,26 +150,26 @@ def test_payload_x_offset_defaults_center_the_payload():
     assert "'room315_payload_pose_x_offset_m',\n            default_value='-0.08'" in full_floor
 
 
-def test_room315_vla_obstacle_launch_argument_defaults_disabled_and_is_forwarded():
+def test_room315_visual_obstacle_launch_argument_defaults_disabled_and_is_forwarded():
     multi_sim = MULTI_SIM_LAUNCH.read_text(encoding='utf-8')
     room_only = _bringup_launch_text(ROOM_ONLY_LAUNCH)
     full_floor = _bringup_launch_text(FULL_FLOOR_LAUNCH)
 
     for text in (multi_sim, room_only, full_floor):
-        block = _launch_argument_block(text, 'enable_room315_vla_obstacles')
+        block = _launch_argument_block(text, 'enable_room315_visual_obstacles')
         assert "default_value='false'" in block
         assert "choices=['true', 'false']" in block
         assert 'without obstacles unless explicitly requested' in block
 
-    assert "'enable_room315_vla_obstacles': LaunchConfiguration" in room_only
-    assert "'enable_room315_vla_obstacles': LaunchConfiguration" in full_floor
-    assert 'LaunchConfiguration(\'enable_room315_vla_obstacles\').perform(context)' in multi_sim
+    assert "'enable_room315_visual_obstacles': LaunchConfiguration" in room_only
+    assert "'enable_room315_visual_obstacles': LaunchConfiguration" in full_floor
+    assert 'LaunchConfiguration(\'enable_room315_visual_obstacles\').perform(context)' in multi_sim
 
 
-def test_room315_vla_obstacle_world_materializer_removes_only_obstacle_markers():
+def test_room315_visual_obstacle_world_materializer_removes_only_obstacle_markers():
     launch_module = _load_module('multi_robot_sim_launch', MULTI_SIM_LAUNCH)
     materialized_world = Path(
-        launch_module._materialize_world_without_room315_vla_obstacles(str(ROOM315_WORLD))
+        launch_module._materialize_world_without_room315_visual_obstacles(str(ROOM315_WORLD))
     )
 
     assert materialized_world != ROOM315_WORLD
@@ -179,9 +179,9 @@ def test_room315_vla_obstacle_world_materializer_removes_only_obstacle_markers()
         for include in root.findall('.//include')
     }
 
-    assert 'room315_vla_right_obstacle_marker' not in includes
-    assert 'room315_vla_left_obstacle_marker' not in includes
-    assert includes['room315_vla_overhead_devices_1'] == 'model://room315_vla_overhead_devices'
+    assert 'room315_visual_right_obstacle_marker' not in includes
+    assert 'room315_visual_left_obstacle_marker' not in includes
+    assert includes['room315_visual_observation_rig_1'] == 'model://room315_visual_observation_rig'
 
 
 def test_room315_only_starts_unpaused_by_default_for_visible_shuttles():

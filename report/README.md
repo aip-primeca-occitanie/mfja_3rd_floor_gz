@@ -7,7 +7,8 @@ This directory contains the English LaTeX report:
 
 The report covers the complete internship work from the third-floor digital
 twin and heterogeneous robot integration through the Room 315 rail system,
-typed interfaces, safety, PDDL/PlanSys2, VLA design, visual training,
+typed interfaces, deterministic safety, PDDL/PlanSys2, separate language and
+visual-state models, visual training,
 experiments, limitations and handover.
 
 ## Build

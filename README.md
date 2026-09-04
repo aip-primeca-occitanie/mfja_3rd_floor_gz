@@ -2,8 +2,10 @@
 
 This repository provides the ROS 2 Jazzy and Gazebo Harmonic simulation of the
 MFJA third floor, with a detailed Room 315 rail cell, industrial and mobile
-robots, typed rail-control interfaces, and an optional neuro-symbolic
-Vision-Language-Action (VLA) research stack.
+robots, typed rail-control interfaces, and an optional neuro-symbolic research
+stack. The stack uses a separate language model and visual-state model;
+PlanSys2 plans each step, and a deterministic rail-safety supervisor alone
+authorizes typed rail commands.
 
 ![Gazebo view of the Room 315 digital twin](report/figures/f01b_room315_focus.png)
 
@@ -14,7 +16,7 @@ directed rail geometry and are moved through Gazebo pose services; wheel and
 rail contact dynamics are not used to propel them.
 
 > **Important scope:** this is a simulation and research repository. It is not
-> a safety-certified controller for physical equipment. VLA task execution is
+> a safety-certified controller for physical equipment. Neuro-symbolic task execution is
 > fail-closed, disabled by default, and requires separately supplied,
 > checksum-verified runtime artifacts.
 
@@ -23,7 +25,7 @@ rail contact dynamics are not used to propel them.
 · [native Ubuntu setup](#method-a-native-ubuntu-setup)
 · [Nix setup](#method-b-hybrid-nix-setup)
 · [launch profiles](#launch-profiles) · [rail controls](#rail-control-essentials)
-· [robots](#robots) · [VLA workflows](#vla-and-language-to-motion-workflows)
+· [robots](#robots) · [AI workflows](#ai-and-language-to-motion-workflows)
 · [troubleshooting](#fast-troubleshooting)
 
 ## Installation Choices
@@ -113,7 +115,8 @@ Gazebo GUI needs a working OpenGL display.
 
 The base smoke test does **not** require a GPU, Torch, a dataset, or a trained
 model. A clean clone provides the Gazebo worlds, robots, rail runtime, typed ROS
-interfaces, and basic VLA camera/supervisor processes. Active learned V4
+interfaces, and basic RGB-D camera-bridge and deterministic rail-safety
+supervisor processes. Active learned V4
 inference and language-to-motion execution require external verified artifacts
 and are intentionally not enabled by this quick start.
 
@@ -866,7 +869,7 @@ from N2 rather than trying to add those packages to the current shell.
 | --- | --- |
 | Try rail switches, stoppers, sensors, payloads, and robots | [Quick Start and Feature Guide](docs/QUICK_START_AND_FEATURE_GUIDE.md) |
 | Understand packages, runtime processes, and data flow | [System Architecture](docs/SYSTEM_ARCHITECTURE.md) |
-| Change robots, worlds, rail geometry, sensors, or VLA settings | [Configuration and Customization](docs/CONFIGURATION.md) |
+| Change robots, worlds, rail geometry, sensors, or visual-state, planning, and rail-safety settings | [Configuration and Customization](docs/CONFIGURATION.md) |
 | Find the full rail topic, message, and service API | [Room 315 Rail Reference](docs/ROOM315_RAIL_REFERENCE.md) |
 | Maintain, test, and extend the repository | [Maintenance Guide](docs/MAINTENANCE.md) |
 | Diagnose a build or runtime problem | [Troubleshooting](docs/TROUBLESHOOTING.md) |
@@ -901,7 +904,7 @@ The principal limitations are documented in
 | Complete third floor | `ros2 launch mfja_3rd_floor_bringup full_floor.launch.py` | GUI on, simulation paused, rails enabled, zero initial shuttles, robots selected from the full-floor YAML |
 | One industrial robot | `ros2 launch mfja_3rd_floor_bringup single_industrial_robot.launch.py robot:=kuka` | Minimal world with one robot and its table; selectors are `kuka`, `staubli`, `hc10`, and `hc10dt` |
 | Server-only Room 315 | Add `gui:=false start_paused:=false robots:=none` | Gazebo client disabled; camera sensors can still require a working headless-rendering backend |
-| Room 315 with VLA bridge/supervisor | Add `enable_room315_vla:=true` | Camera bridge and primitive supervisor enabled; learned visual inference and task execution remain separate processes |
+| Room 315 with perception and rail safety | Add `enable_room315_rail_safety_supervisor:=true enable_room315_rgbd_camera_bridge:=true` | Camera bridge and deterministic primitive supervisor enabled; learned visual inference and task execution remain separate processes |
 
 Inspect the authoritative arguments and current defaults from the installed
 launch file:
@@ -916,9 +919,9 @@ Gazebo world services are process-global. Stop the first launch with `Ctrl-C`
 before starting another.
 
 Every high-level Room 315/full-floor launch clears the disposable obstacle-pose
-cache at `~/.ros/room315_vla_obstacles.json` by default. Preserve it with
-`room315_clear_vla_obstacle_pose_cache:=false`. If you override
-`room315_vla_obstacle_pose_file`, point it only at the intended cache file: the
+cache at `~/.ros/room315_visual_obstacles.json` by default. Preserve it with
+`room315_clear_visual_obstacle_pose_cache:=false`. If you override
+`room315_visual_obstacle_pose_file`, point it only at the intended cache file: the
 default startup action unlinks that configured path.
 
 ## Rail Control Essentials
@@ -958,8 +961,9 @@ Switch state `E`/`EXTERIOR` selects the exterior branch;
 `1` is closed/stop.
 
 Switches form coordinated pairs: `A1`/`A2` and `A3`/`A4`. The typed command
-topic is a low-level simulation interface and bypasses the VLA route-planning
-boundary. Use it to move a route only on an empty rail. Normal numbered start
+topic is a low-level simulation interface and bypasses the PlanSys2 and
+rail-safety-supervisor command boundary.
+Use it to move a route only on an empty rail. Normal numbered start
 slots lie on exterior guard segments, so resetting a shuttle there is not safe
 preparation for an interior route. For this switch-only example, stop the prior
 launch and restart it with both shuttle counts set to `0`. Never reroute a
@@ -1024,7 +1028,7 @@ Grippers are animated symmetric mechanisms; they do not currently attach or
 physically grasp payloads. See
 [Full Floor and Robot Reference](docs/FULL_FLOOR_AND_ROBOTS.md).
 
-## VLA and Language-to-Motion Workflows
+## AI and Language-to-Motion Workflows
 
 The current control boundary is intentionally neuro-symbolic:
 
@@ -1042,14 +1046,15 @@ do not publish rail commands directly. Exact simulator pose, true segment, and
 binary rail signals remain outside learned visual-model input and are used only
 in declared safety, presence, or evaluation boundaries.
 
-Basic VLA camera/supervisor launch:
+Basic perception-and-safety launch:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   gui:=true \
   start_paused:=false \
-  enable_room315_vla:=true
+  enable_room315_rail_safety_supervisor:=true \
+  enable_room315_rgbd_camera_bridge:=true
 ```
 
 Active visual inference and motion execution are not turnkey on a fresh clone.
@@ -1061,7 +1066,7 @@ changing `execution_enabled`.
 
 Read these in order for the advanced runtime:
 
-1. [VLA Operations](docs/ROOM315_VLA_OPERATIONS.md)
+1. [Neuro-Symbolic Closed-Loop Operations](docs/ROOM315_NEURO_SYMBOLIC_CLOSED_LOOP_OPERATIONS.md)
 2. [Visual Runtime Integration](docs/room315_visual_runtime_integration.md)
 3. [Task-Goal Understanding](docs/ROOM315_TASK_GOAL_UNDERSTANDING.md)
 4. [PDDL Planning](docs/ROOM315_PDDL_PLANNING.md)
@@ -1081,7 +1086,7 @@ This repository is a colcon meta-repository, not a ROS package itself.
 | `mfja_3rd_floor_bringup/` | Stable high-level launch entry points |
 | `mfja_3rd_floor_description/` | Gazebo worlds, SDF models, meshes, URDF, and the symmetric-gripper C++ plugin |
 | `mfja_rail_interfaces/` | Typed Room 315 messages and the runtime shuttle-add service |
-| `mfja_robot_control_config/` | Robot spawning, rail runtime, VLA/planning nodes, tools, configuration, launch files, and most tests |
+| `mfja_robot_control_config/` | Robot spawning, rail runtime, visual-state, task-goal, planning, and rail-safety nodes, tools, configuration, launch files, and most tests |
 | `docs/` | User, operator, architecture, maintenance, research, and audit documentation |
 | `report/` | English report sources, figures, and checksum-bound evidence records |
 | `flake.nix` | Optional hybrid Nix development shell |
@@ -1100,9 +1105,9 @@ launch sequencing, ROS interfaces, data ownership, and runtime files.
 | Change measured rail geometry | `mfja_robot_control_config/config/room_315_kinematics/raw_segments/*.csv` |
 | Change a world or model | `mfja_3rd_floor_description/worlds/` or `models/` |
 | Change launch defaults and feature wiring | `mfja_3rd_floor_bringup/launch/room_315_floor_common.py` |
-| Change shuttle identity/color mapping | `mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml` |
-| Change supervisor defaults | `mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml` |
-| Change visual-runtime or execution policy | `mfja_robot_control_config/config/room_315_vla/*.yaml`, preserving the artifact and authorization contracts |
+| Change shuttle identity/color mapping | `mfja_robot_control_config/config/room_315_shuttle_identity/shuttle_identity.yaml` |
+| Change supervisor defaults | `mfja_robot_control_config/config/room_315_task_execution/rail_safety_supervisor.yaml` |
+| Change visual-runtime or execution policy | `mfja_robot_control_config/config/room_315_visual_state/` and `mfja_robot_control_config/config/room_315_task_execution/`, preserving the artifact and authorization contracts |
 
 Before editing any of these files, use
 [Configuration and Customization](docs/CONFIGURATION.md), which explains the
@@ -1188,7 +1193,7 @@ sets, so use the matrix in [Maintenance Guide](docs/MAINTENANCE.md).
 - `Ctrl-C` prints `KeyboardInterrupt` or child exit code `-2`: child processes
   may emit these while receiving SIGINT. Treat them as shutdown messages only
   when the launch returns to the shell and no simulator processes remain.
-- VLA inference cannot start on another computer: replace the site-specific
+- visual-state inference cannot start on another computer: replace the site-specific
   runtime paths with a valid local, checksum-matching promotion bundle.
 
 For diagnosis commands and a symptom-to-fix table, see

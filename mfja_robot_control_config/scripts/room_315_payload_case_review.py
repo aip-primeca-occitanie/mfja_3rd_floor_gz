@@ -284,9 +284,9 @@ source install/setup.bash
 
 pkill -f "room_315_only.launch.py" || true
 pkill -f "room_315_kinematic_shuttle_node.py" || true
-pkill -f "room_315_vla_supervisor.py" || true
-pkill -f "room_315_vla_dataset_recorder.py" || true
-pkill -f "room315_vla_camera_bridge" || true
+pkill -f "room_315_rail_safety_supervisor.py" || true
+pkill -f "room_315_visual_state_dataset_recorder.py" || true
+pkill -f "room315_perception_camera_bridge" || true
 pkill -f "room315_world_service_bridge" || true
 pkill -f "conveyor_loop_mode_controller.py.*room_315_only" || true
 pkill -f "parameter_bridge /clock@rosgraph_msgs/msg/Clock" || true
@@ -300,8 +300,8 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \\
   start_paused:=false \\
   gui:=true \\
   enable_room315_kinematic_shuttles:=true \\
-  enable_room315_vla:=true \\
-  enable_room315_vla_dataset_recorder:=true \\
+  enable_room315_rail_safety_supervisor:=true \\
+  enable_room315_visual_state_dataset_recorder:=true \\
   room315_enable_payload_visuals:=true \\
   enable_room315_right_rail:={str(bool(enable_right)).lower()} \\
   enable_room315_left_rail:={str(bool(enable_left)).lower()} \\
@@ -314,7 +314,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \\
   room315_shuttles_start_enabled:=false \\
   room315_visual_debug_colors:=false \\
   room315_show_device_markers:=false \\
-  room315_vla_dataset_dir:=~/room315_payload_review"""
+  room315_visual_dataset_dir:=~/room315_payload_review"""
 
 
 def _execute_command_for_case(case_id: str, case_config_path: Path) -> str:

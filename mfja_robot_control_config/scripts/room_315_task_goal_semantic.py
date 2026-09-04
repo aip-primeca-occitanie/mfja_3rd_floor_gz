@@ -798,7 +798,7 @@ _DEFAULT_BACKEND_KEY: tuple[str, float | None] | None = None
 
 
 def default_config_path() -> Path:
-    return Path(__file__).resolve().parents[1] / 'config' / 'room_315_vla' / 'task_goal_understanding.yaml'
+    return Path(__file__).resolve().parents[1] / 'config' / 'room_315_task_goal' / 'task_goal_understanding.yaml'
 
 
 def build_backend_from_config(config: LocalSemanticModelConfig) -> LocalSemanticBackend:

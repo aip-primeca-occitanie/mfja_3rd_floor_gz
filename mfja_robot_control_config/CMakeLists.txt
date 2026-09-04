@@ -27,32 +27,48 @@ install(
     config/room_315_visual_state/README.md
     config/room_315_visual_state/blocker_training_scenarios.yaml
     config/room_315_visual_state/training_scenarios.yaml
+    config/room_315_visual_state/visual_observed_state_calibration.yaml
+    config/room_315_visual_state/visual_state_experiment_a_dataset_v3.yaml
+    config/room_315_visual_state/visual_state_experiment_a_dataset_v3r1.yaml
+    config/room_315_visual_state/visual_state_final_test_v4.json
+    config/room_315_visual_state/visual_state_final_test_v4_coverage_compat_v1.json
+    config/room_315_visual_state/visual_state_final_test_v4_coverage_extension.json
+    config/room_315_visual_state/visual_state_runtime.yaml
+    config/room_315_visual_state/visual_state_training_v4.json
   DESTINATION share/${PROJECT_NAME}/config/room_315_visual_state
 )
 
 install(
   FILES
-    config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
-    config/room_315_vla/payload_scenarios.yaml
-    config/room_315_vla/shuttle_identity.yaml
-    config/room_315_vla/task_execution_runtime.yaml
-    config/room_315_vla/task_execution_runtime_v4.yaml
-    config/room_315_vla/task_goal_english_benchmark.yaml
-    config/room_315_vla/task_goal_understanding.yaml
-    config/room_315_vla/visual_state_experiment_a_dataset_v3.yaml
-    config/room_315_vla/visual_state_experiment_a_dataset_v3r1.yaml
-    config/room_315_vla/visual_state_runtime.yaml
-    config/room_315_vla/visual_state_final_test_v4.json
-    config/room_315_vla/visual_state_training_v4.json
-    config/room_315_vla/visual_observed_state_calibration.yaml
-    config/room_315_vla/vla_supervisor.yaml
-  DESTINATION share/${PROJECT_NAME}/config/room_315_vla
+    config/room_315_payload_cases/payload_training_cases_expanded_160_speed_sweep.yaml
+    config/room_315_payload_cases/payload_scenarios.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_payload_cases
 )
 
 install(
-  DIRECTORY
-    config/room_315_vla/pddl
-  DESTINATION share/${PROJECT_NAME}/config/room_315_vla
+  FILES
+    config/room_315_shuttle_identity/shuttle_identity.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_shuttle_identity
+)
+
+install(
+  FILES
+    config/room_315_task_execution/rail_safety_supervisor.yaml
+    config/room_315_task_execution/task_execution_runtime.yaml
+    config/room_315_task_execution/task_execution_runtime_v4.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_task_execution
+)
+
+install(
+  FILES
+    config/room_315_task_goal/task_goal_english_benchmark.yaml
+    config/room_315_task_goal/task_goal_understanding.yaml
+  DESTINATION share/${PROJECT_NAME}/config/room_315_task_goal
+)
+
+install(
+  DIRECTORY config/room_315_planning/pddl
+  DESTINATION share/${PROJECT_NAME}/config/room_315_planning
 )
 
 install(
@@ -121,15 +137,15 @@ install(
     scripts/room_315_task_execution.py
     scripts/room_315_task_execution_config.py
     scripts/room_315_task_execution_node.py
-    scripts/room_315_vla_benchmark_suite.py
-    scripts/room_315_vla_dataset_recorder.py
-    scripts/room_315_vla_event_extractor.py
-    scripts/room_315_vla_obstacle_tool.py
-    scripts/room_315_vla_shuttle_identity_tracker.py
-    scripts/room_315_vla_split_dataset.py
-    scripts/room_315_vla_supervisor.py
-    scripts/room_315_vla_train_local.py
-    scripts/room_315_vla_to_lerobot.py
+    scripts/room_315_visual_planning_benchmark_suite.py
+    scripts/room_315_visual_state_dataset_recorder.py
+    scripts/room_315_visual_training_event_extractor.py
+    scripts/room_315_visual_obstacle_tool.py
+    scripts/room_315_privileged_shuttle_identity_tracker.py
+    scripts/room_315_visual_state_split_dataset.py
+    scripts/room_315_rail_safety_supervisor.py
+    scripts/room_315_visual_state_train_local.py
+    scripts/room_315_visual_state_to_lerobot.py
     scripts/room_315_arbitrary_subset_visual.py
     scripts/room_315_arbitrary_subset_visual_v2.py
     scripts/room_315_arbitrary_subset_capture_v2.py
@@ -180,7 +196,7 @@ install(
     scripts/room_315_visual_v3r1_quota_planner.py
     scripts/room_315_visual_v3r1_reuse.py
     scripts/room_315_visual_v3r1_splitter.py
-    scripts/room_315_vla_train_v4.py
+    scripts/room_315_visual_state_train_v4.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -396,32 +412,32 @@ if(BUILD_TESTING)
     test/test_room315_multi_shuttle_dataset_report.py
   )
   ament_add_pytest_test(
-    test_room315_vla_model_input_boundary
-    test/test_room315_vla_model_input_boundary.py
+    test_room315_visual_model_input_boundary
+    test/test_room315_visual_model_input_boundary.py
   )
   ament_add_pytest_test(
     test_room315_multi_shuttle_launch_args
     test/test_room315_multi_shuttle_launch_args.py
   )
   ament_add_pytest_test(
-    test_room315_vla_benchmark_suite
-    test/test_room315_vla_benchmark_suite.py
+    test_room315_visual_planning_benchmark_suite
+    test/test_room315_visual_planning_benchmark_suite.py
   )
   ament_add_pytest_test(
-    test_room315_vla_dataset_recorder
-    test/test_room315_vla_dataset_recorder.py
+    test_room315_visual_state_dataset_recorder
+    test/test_room315_visual_state_dataset_recorder.py
   )
   ament_add_pytest_test(
-    test_room315_vla_event_extractor
-    test/test_room315_vla_event_extractor.py
+    test_room315_visual_training_event_extractor
+    test/test_room315_visual_training_event_extractor.py
   )
   ament_add_pytest_test(
-    test_room315_vla_supervisor
-    test/test_room315_vla_supervisor.py
+    test_room315_rail_safety_supervisor
+    test/test_room315_rail_safety_supervisor.py
   )
   ament_add_pytest_test(
-    test_room315_vla_training_tools
-    test/test_room315_vla_training_tools.py
+    test_room315_visual_state_training_tools
+    test/test_room315_visual_state_training_tools.py
   )
   ament_add_pytest_test(
     test_room315_visual_observed_state_provider
@@ -550,8 +566,8 @@ if(BUILD_TESTING)
     test/test_room315_visual_acceptance_v4.py
   )
   ament_add_pytest_test(
-    test_room315_vla_train_v4
-    test/test_room315_vla_train_v4.py
+    test_room315_visual_state_train_v4
+    test/test_room315_visual_state_train_v4.py
     TIMEOUT 180
   )
   ament_add_pytest_test(

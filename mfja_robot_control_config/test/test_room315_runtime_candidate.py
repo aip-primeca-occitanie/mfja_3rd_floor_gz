@@ -157,16 +157,16 @@ def test_acceptance_scenarios_cover_required_cases_and_report_never_approves():
 
 def test_v4_is_the_only_packaged_deployable_visual_runtime():
     visual_default = (
-        ROOT / 'config/room_315_vla/visual_state_runtime.yaml'
+        ROOT / 'config/room_315_visual_state/visual_state_runtime.yaml'
     ).read_text()
     task_default = (
-        ROOT / 'config/room_315_vla/task_execution_runtime.yaml'
+        ROOT / 'config/room_315_task_execution/task_execution_runtime.yaml'
     ).read_text()
     visual_v3_config = (
-        ROOT / 'config/room_315_vla/visual_state_runtime_v3_rollback.yaml'
+        ROOT / 'config/room_315_visual_state/visual_state_runtime_v3_rollback.yaml'
     )
     task_v3_config = (
-        ROOT / 'config/room_315_vla/task_execution_runtime_v3_rollback.yaml'
+        ROOT / 'config/room_315_task_execution/task_execution_runtime_v3_rollback.yaml'
     )
 
     assert 'runtime_generation: v4' in visual_default

@@ -137,7 +137,7 @@ def test_default_carried_payload_model_exists_and_is_collisionless():
     sdf = payload_path.read_text(encoding='utf-8')
 
     assert payload_path.name == 'model.sdf'
-    assert payload_path.parent.name == 'room315_vla_payload_small_box'
+    assert payload_path.parent.name == 'room315_payload_small_box'
     assert '<collide_bitmask>0x0000</collide_bitmask>' in sdf
 
 

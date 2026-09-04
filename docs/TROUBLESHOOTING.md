@@ -1,7 +1,8 @@
 # Troubleshooting
 
-Use this guide to diagnose installation, build, Gazebo, rail, robot, VLA, data,
-and test failures. Work from the first relevant section and verify each boundary
+Use this guide to diagnose installation, build, Gazebo, rail, robot, visual
+state, language, planning, safety, data, and test failures. Work from the first
+relevant section and verify each boundary
 before changing configuration.
 
 ## Collect a Baseline
@@ -194,19 +195,19 @@ Return to the original launch terminal and stop it with `Ctrl-C`. Do not delete
 the lock file or bypass the lock while a process owns it. A leftover pathname
 after the owner exits is harmless because the operating-system lock is gone.
 
-### A saved VLA obstacle pose disappears at launch
+### A saved visual-obstacle pose disappears at launch
 
 High-level Room 315/full-floor launches clear the disposable obstacle-pose
 cache by default. The normal path is
-`~/.ros/room315_vla_obstacles.json`. Preserve an existing cache with:
+`~/.ros/room315_visual_obstacles.json`. Preserve an existing cache with:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
-  room315_clear_vla_obstacle_pose_cache:=false
+  room315_clear_visual_obstacle_pose_cache:=false
 ```
 
-If `room315_vla_obstacle_pose_file` is overridden, verify its exact value before
+If `room315_visual_obstacle_pose_file` is overridden, verify its exact value before
 launch: the default clearing action unlinks the configured path and does not
 validate whether it is the intended cache.
 
@@ -241,7 +242,8 @@ selected shuttles start disabled unless overridden.
 ### Topics/services are missing immediately after launch
 
 Robot actions start at approximately 3 seconds, rail nodes at 4 seconds, and
-optional VLA processes at 5 seconds. Wait at least five seconds, then check:
+optional perception-and-safety processes at 5 seconds. Wait at least five
+seconds, then check:
 
 ```bash
 ros2 node list
@@ -413,7 +415,7 @@ ros2 topic echo /room_315/rails/right/switches/state \
 Routing uses actual state after the configured delay.
 
 The typed switch topic is a low-level simulation interface that bypasses the
-VLA route-planning boundary. Change `A1`/`A2` or `A3`/`A4` as coordinated pairs
+supervised route-planning boundary. Change `A1`/`A2` or `A3`/`A4` as coordinated pairs
 only on an empty rail. Normal numbered start slots are exterior guard segments,
 so resetting there is not safe preparation for selecting an interior route. A
 fixed wall-time delay is not evidence that a moving shuttle has cleared the
@@ -532,24 +534,24 @@ ranges while generating the process-specific robot description. Verify that a
 renamed industrial robot has a matching config entry. Remember that movement is
 visual articulation, not physical grasp/attachment.
 
-## VLA, Visual Runtime, and Planning Problems
+## Visual Runtime, Planning, and Safety Problems
 
-### VLA camera/supervisor topics are absent
+### RGB-D camera bridge/rail-safety supervisor topics are absent
 
 The high-level default is disabled. Launch with:
 
 ```bash
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none start_paused:=false \
-  enable_room315_vla:=true \
-  enable_room315_vla_camera_bridge:=true
+  enable_room315_rail_safety_supervisor:=true \
+  enable_room315_rgbd_camera_bridge:=true
 ```
 
 After five seconds:
 
 ```bash
-ros2 topic list | grep '^/room_315/vla/'
-ros2 topic echo --once /room_315/vla/right_rail_rgbd/image \
+ros2 topic list | grep -E '^/room_315/(perception|rail_safety)/'
+ros2 topic echo --once /room_315/perception/right_rail_rgbd/image \
   sensor_msgs/msg/Image
 ```
 
@@ -653,12 +655,12 @@ Check that the recorder is enabled, camera images arrive, and the episode
 control/goal behavior matches the launch:
 
 ```bash
-ros2 topic echo /room_315/vla/dataset_status std_msgs/msg/String
-ros2 topic hz /room_315/vla/right_rail_rgbd/image
+ros2 topic echo /room_315/visual_dataset/status std_msgs/msg/String
+ros2 topic hz /room_315/perception/right_rail_rgbd/image
 ```
 
 Verify write permission and free space for the configured
-`room315_vla_dataset_dir`. Keep the directory outside Git.
+`room315_visual_dataset_dir`. Keep the directory outside Git.
 
 ### Event extractor produces fewer events than raw frames
 

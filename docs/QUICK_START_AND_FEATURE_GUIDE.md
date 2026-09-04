@@ -7,13 +7,13 @@ failures, use [Troubleshooting](TROUBLESHOOTING.md).
 
 Only one high-level Room 315 or full-floor launch may run on a host at a time.
 Robot actions start after about three seconds, rail nodes after four seconds,
-and optional VLA processes after five seconds. Stop the launch with `Ctrl-C`
+and optional perception-and-safety processes after five seconds. Stop the launch with `Ctrl-C`
 before starting another profile.
 
 Each high-level launch clears the disposable
-`~/.ros/room315_vla_obstacles.json` pose cache by default. Add
-`room315_clear_vla_obstacle_pose_cache:=false` to preserve it. If you override
-`room315_vla_obstacle_pose_file`, point it only at the intended cache because
+`~/.ros/room315_visual_obstacles.json` pose cache by default. Add
+`room315_clear_visual_obstacle_pose_cache:=false` to preserve it. If you override
+`room315_visual_obstacle_pose_file`, point it only at the intended cache because
 the default startup action unlinks the configured path.
 
 ## Tested Launch Commands
@@ -363,7 +363,7 @@ Stopper states accept `0`/`PASS`/`OPEN` and
 `1`/`STOP`/`CLOSED`.
 
 `A1`/`A2` and `A3`/`A4` are coordinated route pairs. The typed command topic is
-a low-level simulation interface and bypasses the VLA route-planning boundary.
+a low-level simulation interface and bypasses the supervised route-planning boundary.
 Use it to move a route only on an empty rail. The clearest manual procedure is
 to stop the current high-level launch and restart the zero-initial-shuttle
 profile from section 5 before changing a pair.

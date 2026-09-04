@@ -18,10 +18,10 @@ def _script_text() -> str:
     return SCRIPT_PATH.read_text(encoding='utf-8')
 
 
-def test_presentation_script_uses_direct_rail_and_kuka_topics_without_vla():
+def test_presentation_script_uses_direct_topics_without_perception_and_safety_stack():
     text = _script_text()
 
-    assert '/room_315/vla' not in text
+    assert '/room_315/rail_safety' not in text
     assert "LEFT_RAIL_PREFIX = '/room_315/rails/left'" in text
     assert "'2': 'DZI2L'" in text
     assert "'3': 'DZI3L'" in text
@@ -81,11 +81,11 @@ def test_presentation_uses_live_start_and_shared_smooth_trajectory_builder():
     assert 'message.points = [point]' not in text
 
 
-def test_video_scenario_08_uses_presentation_script_not_vla():
+def test_video_scenario_08_uses_direct_presentation_script():
     text = VIDEO_PAGE_PATH.read_text(encoding='utf-8')
 
     assert 'presentation_left_slot3_kuka_slot2.py' in text
-    assert 'enable_room315_vla:=false' in text
+    assert 'enable_room315_rail_safety_supervisor:=false' in text
     assert 'room315_left_start_slot:=2' in text
     assert 'room315_sensor_publish_rate_hz:=30.0' in text
     assert 'room315_sync_sensor_feedback_to_motion_tick:=true' in text
@@ -95,4 +95,4 @@ def test_video_scenario_08_uses_presentation_script_not_vla():
         line for line in text.splitlines() if '0 -90 110 0 -2 0' in line
     )
     assert 'KUKA' in initial_pose_row
-    assert 'vla_teleop_generator.py' not in text
+    assert 'room_315_rail_safety_supervisor.py' not in text

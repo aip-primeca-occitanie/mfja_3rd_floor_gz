@@ -1,7 +1,7 @@
 # Glossary
 
 This glossary defines the terms used across the MFJA user, operator,
-maintenance, and VLA documentation.
+maintenance, perception, planning, and safety documentation.
 
 ## Platform and Build Terms
 
@@ -198,14 +198,15 @@ gripper jaws using one bounded per-jaw target.
 A robot-instance prefix applied to ROS transforms so multiple fixed-base robots
 do not publish duplicate frame names.
 
-## VLA and Planning Terms
+## AI, Perception, and Planning Terms
 
-**VLA**
+**vision-language-action (VLA)**
 
-Vision-Language-Action. In this project, learned components are limited to a
-validated semantic task-goal draft and visual-state prediction; planning,
-confirmation, supervision, and command safety remain explicit
-symbolic/deterministic layers.
+An external architecture family in which vision and language condition action
+selection. Room 315 does not implement an end-to-end learned VLA policy: its
+language model and visual-state model are separate, PlanSys2 selects symbolic
+actions, and the deterministic rail-safety supervisor alone authorizes typed
+rail commands.
 
 **model input**
 

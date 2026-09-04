@@ -84,7 +84,7 @@ The active planning workflow is case based. The checked-in source of truth for
 regression is the curated 160 payload speed-sweep cases:
 
 ```text
-mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
+mfja_robot_control_config/config/room_315_payload_cases/payload_training_cases_expanded_160_speed_sweep.yaml
 ```
 
 Each case declares the side, target slot, loaded shuttle candidates, starting
@@ -130,7 +130,7 @@ ros2 run mfja_robot_control_config room_315_pddl_scenario_generator.py \
 
 ```bash
 ros2 run mfja_robot_control_config room_315_payload_case_batch_runner.py \
-  --case-config mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml \
+  --case-config mfja_robot_control_config/config/room_315_payload_cases/payload_training_cases_expanded_160_speed_sweep.yaml \
   --dataset-dir ~/room315_payload_expanded_160_speed_sweep \
   --results-dir /tmp/room315_payload_expanded_160_speed_sweep
 ```
@@ -145,7 +145,7 @@ Use the benchmark suite to create a deterministic extension manifest without
 committing generated artifacts:
 
 ```bash
-ros2 run mfja_robot_control_config room_315_vla_benchmark_suite.py generate-cases \
+ros2 run mfja_robot_control_config room_315_visual_planning_benchmark_suite.py generate-cases \
   --extension-case-count 320 \
   --seed 315 \
   --output /tmp/room315_seeded_balanced_cases.yaml

@@ -46,7 +46,7 @@ runtime_artifact_contract:
       size_bytes: 821
       sha256: 22f12a9f96b3d54e0ab3d0bc05c202024ac6912cb50dd6e29ceb4a0a564d24f8
     - role: task_execution_runtime_configuration
-      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml
       size_bytes: 3848
       sha256: 08eaedd7d6feed3dd1268ef18bfa2545348f203f1ff0dad3c2e9fb1a9f25b6ca
     - role: task_execution_authorization
@@ -62,11 +62,11 @@ runtime_artifact_contract:
       size_bytes: 617
       sha256: 6d8c8658aa03273c45d738f8fd7437bf516713ebca47cb508fc1b999d07d35ea
     - role: plansys2_runtime_domain
-      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_planning/pddl/domain_room315_runtime.pddl
       size_bytes: 24629
       sha256: 705fd5070503d08e8ec41696959e137afac4a610655317c412df1e4d9875414d
     - role: shuttle_identity_configuration
-      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml
+      path: /home/tiago/mfja_3rd_floor_ros2_ws/src/mfja_3rd_floor_gz/mfja_robot_control_config/config/room_315_shuttle_identity/shuttle_identity.yaml
       size_bytes: 5328
       sha256: 721de97f0aed54efae6a23ae923cdb141da9871ddfc28c9cd33373ee000af141
     - role: right_rail_network_configuration

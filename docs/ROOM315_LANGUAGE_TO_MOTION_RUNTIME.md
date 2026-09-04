@@ -138,7 +138,7 @@ presence, supervisor state, identity mapping, topology, or target occupancy is
 unknown or stale. It sends `stop_all` on an execution exception or shutdown
 during an active goal.
 
-The current Gazebo operator recipe disables removable VLA obstacles and hides
+The current Gazebo operator recipe disables removable visual obstacles and hides
 device markers. Hiding markers does not disable the real switch/stopper
 controller state used by the supervisor.
 
@@ -222,7 +222,7 @@ Create a host-local task-execution configuration:
 
 ```bash
 mkdir -p "$(dirname "$ROOM315_TASK_EXEC_CONFIG")"
-cp "$MFJA_REPO/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml" \
+cp "$MFJA_REPO/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml" \
   "$ROOM315_TASK_EXEC_CONFIG"
 ${EDITOR:-nano} "$ROOM315_TASK_EXEC_CONFIG"
 ```
@@ -246,9 +246,9 @@ needed by each foreground process; replace every placeholder consistently.
 ## Terminal 1: Gazebo, Cameras, Supervisor, and Presence
 
 This high-level launch clears the disposable
-`~/.ros/room315_vla_obstacles.json` cache by default. That matches the disabled
+`~/.ros/room315_visual_obstacles.json` cache by default. That matches the disabled
 external-obstacle assumption used below. Add
-`room315_clear_vla_obstacle_pose_cache:=false` only when a reviewed workflow
+`room315_clear_visual_obstacle_pose_cache:=false` only when a reviewed workflow
 must preserve the cache, and never point the configurable cache path at an
 unrelated file.
 
@@ -264,9 +264,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui:=true \
   start_paused:=false \
   enable_room315_kinematic_shuttles:=true \
-  enable_room315_vla:=true \
-  enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=true \
+  enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_obstacles:=false \
   room315_show_device_markers:=false \
   room315_visual_debug_colors:=false \
   room315_identity_selection_mode:=explicit \
@@ -282,7 +282,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 ```
 
 Wait at least five seconds. Confirm `/clock`, both camera image topics, both
-rail shuttle-state topics, and `/room_315/vla/status` before continuing.
+rail shuttle-state topics, and `/room_315/rail_safety/status` before continuing.
 
 ## Terminal 2: Active V4 Visual-State Inference
 
@@ -349,7 +349,7 @@ ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
 ```
 
 The flags are intentionally inverse: Terminal 1 uses
-`enable_room315_vla_obstacles:=false`, so the gateway must use
+`enable_room315_visual_obstacles:=false`, so the gateway must use
 `external_obstacles_disabled:=true`. The gateway revalidates its immutable
 execution authorization for every goal and rejects the goal if any path,
 digest, schema, candidate, or runtime guard differs.

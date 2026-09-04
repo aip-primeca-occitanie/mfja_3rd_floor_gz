@@ -46,8 +46,8 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(LaunchConfiguration('enable_camera_bridge')),
         arguments=[
-            '/room_315/vla/right_rail_rgbd/image@sensor_msgs/msg/Image@gz.msgs.Image',
-            '/room_315/vla/left_rail_rgbd/image@sensor_msgs/msg/Image@gz.msgs.Image',
+            '/room_315/perception/right_rail_rgbd/image@sensor_msgs/msg/Image@gz.msgs.Image',
+            '/room_315/perception/left_rail_rgbd/image@sensor_msgs/msg/Image@gz.msgs.Image',
         ],
     )
 
@@ -67,7 +67,7 @@ def generate_launch_description():
             default_value=PathJoinSubstitution([
                 FindPackageShare('mfja_robot_control_config'),
                 'config',
-                'room_315_vla',
+                'room_315_visual_state',
                 'visual_state_runtime.yaml',
             ]),
             description='Installed or source-tree visual runtime YAML path.',

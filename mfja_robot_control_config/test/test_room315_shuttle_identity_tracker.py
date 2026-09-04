@@ -10,16 +10,16 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
-TRACKER_PATH = SCRIPT_DIR / 'room_315_vla_shuttle_identity_tracker.py'
+TRACKER_PATH = SCRIPT_DIR / 'room_315_privileged_shuttle_identity_tracker.py'
 IDENTITY_CONFIG_PATH = (
-    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'shuttle_identity.yaml'
+    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_shuttle_identity' / 'shuttle_identity.yaml'
 )
 
 
 def _load_tracker():
     if str(SCRIPT_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPT_DIR))
-    spec = importlib.util.spec_from_file_location('room_315_vla_shuttle_identity_tracker', TRACKER_PATH)
+    spec = importlib.util.spec_from_file_location('room_315_privileged_shuttle_identity_tracker', TRACKER_PATH)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     assert spec.loader is not None

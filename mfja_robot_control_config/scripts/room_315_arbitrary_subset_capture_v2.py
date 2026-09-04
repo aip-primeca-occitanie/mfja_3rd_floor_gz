@@ -109,8 +109,8 @@ CAMERAS = ('left_rail_rgb', 'right_rail_rgb')
 if CAMERAS != IMAGE_KEYS:
     raise RuntimeError('capture cameras and visual-state cameras disagree')
 CAMERA_TOPICS = {
-    'left_rail_rgb': '/room_315/vla/left_rail_rgbd/image',
-    'right_rail_rgb': '/room_315/vla/right_rail_rgbd/image',
+    'left_rail_rgb': '/room_315/perception/left_rail_rgbd/image',
+    'right_rail_rgb': '/room_315/perception/right_rail_rgbd/image',
 }
 APPROVAL_FIELDS = (
     'approved_for_canary_capture',

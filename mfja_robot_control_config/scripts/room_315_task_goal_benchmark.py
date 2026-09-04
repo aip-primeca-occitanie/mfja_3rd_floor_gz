@@ -20,7 +20,7 @@ from room_315_task_goal_builder import build_task_goal
 from room_315_task_goal_semantic import default_config_path
 
 
-DEFAULT_CORPUS = SCRIPT_DIR.parents[0] / 'config' / 'room_315_vla' / 'task_goal_english_benchmark.yaml'
+DEFAULT_CORPUS = SCRIPT_DIR.parents[0] / 'config' / 'room_315_task_goal' / 'task_goal_english_benchmark.yaml'
 
 
 def main() -> int:

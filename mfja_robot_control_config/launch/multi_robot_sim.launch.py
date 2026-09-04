@@ -44,10 +44,10 @@ INDUSTRIAL_MODELS = {
 }
 DESCRIPTION_PACKAGE = 'mfja_3rd_floor_description'
 CONTROL_CONFIG_PACKAGE = 'mfja_robot_control_config'
-ROOM315_VLA_OBSTACLE_MODEL_URI = 'model://room315_vla_removable_obstacle_marker'
-ROOM315_VLA_OBSTACLE_ENTITY_NAMES = {
-    'room315_vla_right_obstacle_marker',
-    'room315_vla_left_obstacle_marker',
+ROOM315_VISUAL_OBSTACLE_MODEL_URI = 'model://room315_visual_obstacle_marker'
+ROOM315_VISUAL_OBSTACLE_ENTITY_NAMES = {
+    'room315_visual_right_obstacle_marker',
+    'room315_visual_left_obstacle_marker',
 }
 
 
@@ -354,16 +354,16 @@ def _materialize_mobile_model_sdf(model_sdf_path, robot_name):
     return output_path
 
 
-def _include_is_room315_vla_obstacle(include_element):
+def _include_is_room315_visual_obstacle(include_element):
     uri = include_element.findtext('uri', default='').strip()
     name = include_element.findtext('name', default='').strip()
     return (
-        uri == ROOM315_VLA_OBSTACLE_MODEL_URI
-        or name in ROOM315_VLA_OBSTACLE_ENTITY_NAMES
+        uri == ROOM315_VISUAL_OBSTACLE_MODEL_URI
+        or name in ROOM315_VISUAL_OBSTACLE_ENTITY_NAMES
     )
 
 
-def _materialize_world_without_room315_vla_obstacles(world_path):
+def _materialize_world_without_room315_visual_obstacles(world_path):
     tree = ET.parse(world_path)
     root = tree.getroot()
     world_element = root.find('world')
@@ -372,7 +372,7 @@ def _materialize_world_without_room315_vla_obstacles(world_path):
 
     removed_count = 0
     for include_element in list(world_element.findall('include')):
-        if _include_is_room315_vla_obstacle(include_element):
+        if _include_is_room315_visual_obstacle(include_element):
             world_element.remove(include_element)
             removed_count += 1
 
@@ -382,7 +382,7 @@ def _materialize_world_without_room315_vla_obstacles(world_path):
     world_base = os.path.splitext(os.path.basename(world_path))[0]
     output_path = os.path.join(
         tempfile.gettempdir(),
-        f'{world_base}_without_room315_vla_obstacles_{os.getpid()}.world',
+        f'{world_base}_without_room315_visual_obstacles_{os.getpid()}.world',
     )
     ET.indent(tree, space='  ')
     tree.write(output_path, encoding='utf-8', xml_declaration=True)
@@ -412,11 +412,11 @@ def _launch_setup(context, *args, **kwargs):
     control_pkg_path = get_package_share_directory(CONTROL_CONFIG_PACKAGE)
     world_file_name = LaunchConfiguration('world_name').perform(context)
     world = os.path.join(description_pkg_path, 'worlds', world_file_name + '.world')
-    enable_room315_vla_obstacles = _as_launch_bool(
-        LaunchConfiguration('enable_room315_vla_obstacles').perform(context)
+    enable_room315_visual_obstacles = _as_launch_bool(
+        LaunchConfiguration('enable_room315_visual_obstacles').perform(context)
     )
-    if not enable_room315_vla_obstacles:
-        world = _materialize_world_without_room315_vla_obstacles(world)
+    if not enable_room315_visual_obstacles:
+        world = _materialize_world_without_room315_visual_obstacles(world)
     world_entity_name = _get_world_entity_name(world)
     gui_config_file = LaunchConfiguration('gui_config').perform(context).strip()
     if not os.path.isabs(gui_config_file):
@@ -482,8 +482,8 @@ def _launch_setup(context, *args, **kwargs):
     actions = [
         LogInfo(
             msg=(
-                'Room 315 VLA obstacle markers: '
-                f'{"enabled" if enable_room315_vla_obstacles else "disabled"}'
+                'Room 315 visual obstacle markers: '
+                f'{"enabled" if enable_room315_visual_obstacles else "disabled"}'
             )
         ),
         SetEnvironmentVariable('GZ_PARTITION', gz_partition),
@@ -701,11 +701,11 @@ def generate_launch_description():
             description='Use debug colors for switch states; false keeps switches rail-colored.',
         ),
         DeclareLaunchArgument(
-            'enable_room315_vla_obstacles',
+            'enable_room315_visual_obstacles',
             default_value='false',
             choices=['true', 'false'],
             description=(
-                'Load Room 315 VLA removable obstacle markers. Defaults to false '
+                'Load Room 315 removable visual obstacle markers. Defaults to false '
                 'so Gazebo starts without obstacles unless explicitly requested.'
             ),
         ),

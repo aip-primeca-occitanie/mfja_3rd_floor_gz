@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coverage report for manual and PDDL-generated Room 315 VLA datasets."""
+"""Coverage report for manual and PDDL-generated Room 315 visual-state datasets."""
 
 import argparse
 import json
@@ -846,7 +846,7 @@ def _safe_int_or_none(value: Any) -> int | None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description='Report coverage metrics for Room 315 VLA events.jsonl datasets.'
+        description='Report coverage metrics for Room 315 visual-state events.jsonl datasets.'
     )
     parser.add_argument('dataset', type=Path, help='Dataset directory or events JSONL file.')
     parser.add_argument('--output', type=Path, default=None, help='Optional JSON report path.')

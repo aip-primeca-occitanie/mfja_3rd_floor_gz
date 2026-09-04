@@ -91,8 +91,8 @@ Installed configuration & \file{mfja_robot_control_config/config/}; \file{mfja_r
 ROS interface & \file{mfja_rail_interfaces/msg/}; \file{mfja_rail_interfaces/srv/}; \file{mfja_rail_interfaces/CMakeLists.txt}; consumer code under \file{mfja_robot_control_config/} \\ \rowseparator
 Gazebo model/world/robot & \file{mfja_3rd_floor_description/models/}; \file{mfja_3rd_floor_description/worlds/}; \file{mfja_3rd_floor_description/urdf/}; \file{mfja_3rd_floor_description/src/}; \file{mfja_3rd_floor_description/THIRD_PARTY.md} \\ \rowseparator
 Rail geometry/routing/devices & \file{mfja_robot_control_config/config/room_315_kinematics/}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
-TaskGoal, PDDL, and execution & \file{mfja_robot_control_config/config/room_315_vla/pddl/}; \file{mfja_robot_control_config/scripts/room_315_task_goal_*.py}; \file{mfja_robot_control_config/scripts/room_315_pddl_*.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution*.py} \\ \rowseparator
-Dataset, model, and deployment & \file{mfja_robot_control_config/config/room_315_visual_state/}; \file{mfja_robot_control_config/config/room_315_vla/}; relevant \file{mfja_robot_control_config/scripts/room_315_vla_*.py}; \file{mfja_robot_control_config/scripts/room_315_build_runtime_candidate_v4.py}; \file{mfja_robot_control_config/scripts/room_315_promote_runtime_v4.py}; \file{mfja_robot_control_config/scripts/room_315_authorize_runtime_v4_closed_loop.py} \\
+TaskGoal, PDDL, and execution & \file{mfja_robot_control_config/config/room_315_planning/pddl/}; \file{mfja_robot_control_config/scripts/room_315_task_goal_*.py}; \file{mfja_robot_control_config/scripts/room_315_pddl_*.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution*.py} \\ \rowseparator
+Dataset, model, and deployment & \file{mfja_robot_control_config/config/room_315_visual_state/}; \file{mfja_robot_control_config/config/room_315_task_execution/}; visual-state training/recording scripts under \file{mfja_robot_control_config/scripts/}; \file{mfja_robot_control_config/scripts/room_315_build_runtime_candidate_v4.py}; \file{mfja_robot_control_config/scripts/room_315_promote_runtime_v4.py}; \file{mfja_robot_control_config/scripts/room_315_authorize_runtime_v4_closed_loop.py} \\
 \bottomrule
 \end{longtable}
 
@@ -124,8 +124,8 @@ parameter type. Use \code{--show-args} after rebuild. If the argument deletes a
 file, downloads data, starts actuation, or alters an authorization boundary,
 state that before the operator command.
 
-When both the VLA supervisor and visual runtime are composed, assign exactly one
-camera bridge. When overriding VLA command/status topics, change gateway topics
+When both the rail-safety supervisor and visual runtime are composed, assign exactly one
+camera bridge. When overriding rail-safety command/status topics, change gateway topics
 to match. Keep obstacle flags semantically consistent across floor and gateway.
 
 \subsection{Add an installed config}
@@ -208,9 +208,9 @@ installation and retained data.
 D1 & Floor launch/world services & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_robot_control_config/launch/room_315_launch_utils.py} \\ \rowseparator
 D2 & Robots and plugins & \file{mfja_robot_control_config/config/robots.yaml}; \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_3rd_floor_description/src/} \\ \rowseparator
 D3 & Rail runtime & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_robot_control_config/config/room_315_kinematics/} \\ \rowseparator
-D4 & Camera and visual state & \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}; \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml} \\ \rowseparator
-D5 & Planning and task gateway & \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}; \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} \\ \rowseparator
-D6 & Install, tests, and retained data & \file{mfja_3rd_floor_bringup/CMakeLists.txt}; \file{mfja_3rd_floor_description/CMakeLists.txt}; \file{mfja_rail_interfaces/CMakeLists.txt}; \file{mfja_robot_control_config/CMakeLists.txt}; \file{mfja_robot_control_config/test/}; \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py}; \file{docs/project_documentation/Makefile} \\
+D4 & Camera and visual state & \file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}; \file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml} \\ \rowseparator
+D5 & Planning and task gateway & \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py}; \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}; \file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml} \\ \rowseparator
+D6 & Install, tests, and retained data & \file{mfja_3rd_floor_bringup/CMakeLists.txt}; \file{mfja_3rd_floor_description/CMakeLists.txt}; \file{mfja_rail_interfaces/CMakeLists.txt}; \file{mfja_robot_control_config/CMakeLists.txt}; \file{mfja_robot_control_config/test/}; \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py}; \file{docs/project_documentation/Makefile} \\
 \bottomrule
 \end{longtable}
 
@@ -289,7 +289,7 @@ Third-party asset & CAD/meshes/model derivatives & Preserve exact terms, attribu
 Table~\ref{tab:executive-package-map}, temporary-path generation in
 \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}, dataset
 output handling in
-\file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py}, and
+\file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py}, and
 third-party provenance in
 \file{mfja_3rd_floor_description/THIRD_PARTY.md}.
 

@@ -921,7 +921,7 @@ def main() -> None:
     import sys
 
     parser = argparse.ArgumentParser(
-        description='Translate Room 315 PDDL plan steps to VLA primitive event commands.'
+        description='Translate Room 315 PDDL plan steps to rail-safety primitive commands.'
     )
     parser.add_argument(
         'plan_file',

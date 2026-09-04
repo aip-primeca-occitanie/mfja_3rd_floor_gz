@@ -10,7 +10,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MODELS_DIR = REPO_ROOT / 'mfja_3rd_floor_description' / 'models'
 IDENTITY_CONFIG = (
-    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'shuttle_identity.yaml'
+    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_shuttle_identity' / 'shuttle_identity.yaml'
 )
 ROOM_ONLY_WORLD = REPO_ROOT / 'mfja_3rd_floor_description' / 'worlds' / 'room_315_only.world'
 FULL_WORLD = REPO_ROOT / 'mfja_3rd_floor_description' / 'worlds' / 'mfja_3rd_floor.world'

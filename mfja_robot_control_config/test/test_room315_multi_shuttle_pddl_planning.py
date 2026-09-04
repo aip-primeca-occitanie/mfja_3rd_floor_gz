@@ -10,7 +10,7 @@ PDDL_DOMAIN = (
     REPO_ROOT
     / 'mfja_robot_control_config'
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_planning'
     / 'pddl'
     / 'domain_room315.pddl'
 )

@@ -29,15 +29,15 @@
 \file{mfja_robot_control_config/config/room_315_kinematics/rail_network_<side>.yaml} & Rail core/node & Directed nodes/segments, routing, switch guards, CSV references \\ \rowseparator
 \file{mfja_robot_control_config/config/room_315_kinematics/raw_segments/*.csv} & Rail path loader & Calibrated sample order and geometry \\ \rowseparator
 \file{mfja_robot_control_config/config/room_315_kinematics/rail_devices_<side>.yaml} & Rail device loader & Slots, sensors, stoppers, radii/default states \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml} & Identity tracking, recording/evaluation, and TaskGoal fusion & Canonical eight identities and associated visuals \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml} & Supervisor when explicitly selected & Primitive validation and recovery defaults \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml} & Visual runtime launch/node & Active V4 manifest/hash, mode, topics, presence and fusion policy \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/visual_observed_state_calibration.yaml} & Deterministic provider/smoke/training helpers & Geometry, block/slot mapping, thresholds and consistency policy; not the learned V4 node's runtime YAML \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml} & English parser/semantic adapter & Allowed language contract and optional local model settings \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} & Task launch/gateway & Fail-closed authorization, topics, timeouts, limits, allowed V4 identity \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime_v4.yaml} & Frozen qualification workflow & Versioned V4 runtime snapshot; not automatically selected \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl} & Task launch/PlanSys2 & Live executable planning domain \\ \rowseparator
-\file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl} & Scenario/data tools & Broader expert/data-generation domain \\
+\file{mfja_robot_control_config/config/room_315_shuttle_identity/shuttle_identity.yaml} & Identity tracking, recording/evaluation, and TaskGoal fusion & Canonical eight identities and associated visuals \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_task_execution/rail_safety_supervisor.yaml} & Supervisor when explicitly selected & Primitive validation and recovery defaults \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml} & Visual runtime launch/node & Active V4 manifest/hash, mode, topics, presence and fusion policy \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_observed_state_calibration.yaml} & Deterministic provider/smoke/training helpers & Geometry, block/slot mapping, thresholds and consistency policy; not the learned V4 node's runtime YAML \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_task_goal/task_goal_understanding.yaml} & English parser/semantic adapter & Allowed language contract and optional local model settings \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml} & Task launch/gateway & Fail-closed authorization, topics, timeouts, limits, allowed V4 identity \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime_v4.yaml} & Frozen qualification workflow & Versioned V4 runtime snapshot; not automatically selected \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_planning/pddl/domain_room315_runtime.pddl} & Task launch/PlanSys2 & Live executable planning domain \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_planning/pddl/domain_room315.pddl} & Scenario/data tools & Broader expert/data-generation domain \\
 \bottomrule
 \end{longtable}
 
@@ -49,7 +49,9 @@ Index in \cref{app:catalog}.
 The installed/current boundary is defined by
 \file{mfja_robot_control_config/CMakeLists.txt}, the active launch files under
 \file{mfja_robot_control_config/launch/}, and the versioned files under
-\file{mfja_robot_control_config/config/room_315_vla/}.
+\file{mfja_robot_control_config/config/room_315_visual_state/},
+\file{mfja_robot_control_config/config/room_315_task_execution/}, and the other
+responsibility-specific Room~315 configuration directories.
 
 The flat control package contains multiple research generations. Classify a
 file before editing or invoking it:
@@ -66,7 +68,7 @@ file before editing or invoking it:
 \midrule
 \endhead
 Base active runtime & robot registries, rail network/devices/CSV, GUI profiles, supervisor & Maintained for ordinary simulation; changes need live smoke tests \\ \rowseparator
-Active learned runtime & \file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}, V4 visual contract/node, runtime PDDL, and \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml} & V4 only; requires exact external promoted/authorized artifacts \\ \rowseparator
+Active learned runtime & \file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml}, V4 visual contract/node, runtime PDDL, and \file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml} & V4 only; requires exact external promoted/authorized artifacts \\ \rowseparator
 Offline current tooling & V4 scenario, dataset, training, evaluation, candidate, acceptance, fault tools & May create new artifacts; never mutates the current promoted bundle \\ \rowseparator
 Frozen evidence/config & V4 training/final-test JSON, versioned task YAML, sealed manifests/results & Immutable after decision; supersede with a new version \\ \rowseparator
 Historical research & V3, V3R1, Experiment-A, old final-test/compatibility adapters & Preserve for provenance; not the supported active runtime \\
@@ -183,8 +185,8 @@ device-position and calibration tools, then update the explicit numeric authorit
 
 Source files: \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py},
 \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py},
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml},
-and \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}.
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml},
+and \file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml}.
 
 For visual runtime, the selected YAML loads first. Launch always overrides
 \code{use_sim_time}, \code{device}, \code{runtime_generation},
@@ -208,9 +210,9 @@ enable the task gateway. Preserve both separations.
 \section{Host-Specific Artifact Paths}
 
 The active tracked examples are
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml},
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml},
-and \file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime_v4.yaml};
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml},
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml},
+and \file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime_v4.yaml};
 frozen evidence paths are recorded for provenance rather than rewritten.
 
 A Git-tracked search of \file{mfja_robot_control_config} returns 301 lines that
@@ -252,7 +254,7 @@ The CMake install surface is explicit and is not identical to Git:
         and two V4 coverage JSON files are
         tracked but omitted from config installation;
   \item CMake installs the complete PDDL directory, so an ignored local
-        \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_guide_ar.html}
+        \file{mfja_robot_control_config/config/room_315_planning/pddl/domain_room315_guide_ar.html}
         can leak into a local install even
         though a clean clone cannot reproduce it; and
   \item multiple Python utilities derive config paths using
@@ -271,7 +273,7 @@ are centralized.
 Source files: \file{mfja_robot_control_config/package.xml},
 \file{mfja_robot_control_config/CMakeLists.txt},
 \file{mfja_robot_control_config/scripts/setup_room315_intent_model.py},
-\file{mfja_robot_control_config/scripts/room_315_vla_to_lerobot.py}, and
+\file{mfja_robot_control_config/scripts/room_315_visual_state_to_lerobot.py}, and
 \file{mfja_robot_control_config/launch/room_315_runtime_acceptance.launch.py}.
 
 The manifests cover ROS, Gazebo, OpenCV, NumPy, Pillow, YAML, Torch, and

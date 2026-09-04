@@ -1,0 +1,96 @@
+version: 1
+description: Room 315 visual payload and identity-occlusion scenarios.
+model_input_boundary:
+  model_input_fields: [language, overhead_images, last_command, observable_state]
+  payload_and_identity_metadata_exposure: outside_model_input
+payload_zone:
+  center_zone_m:
+    x_half_width: 0.08
+    y_half_width: 0.055
+  identity_safe_regions: [front_left, front_right, rear_left, rear_right]
+variants:
+  none:
+    model_uri: ''
+    payload_present: false
+    payload_type: none
+    payload_height_class: none
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
+  small_box:
+    model_uri: model://room315_payload_small_box
+    payload_present: true
+    payload_type: small_box
+    payload_height_class: low
+    size_m: {x: 0.09, y: 0.06, z: 0.06}
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
+  carried_box:
+    model_uri: model://room315_payload_small_box
+    payload_present: true
+    payload_type: box
+    payload_state: loaded
+    loaded: true
+    payload_height_class: low
+    size_m: {x: 0.09, y: 0.06, z: 0.06}
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
+  medium_box:
+    model_uri: model://room315_payload_medium_box
+    payload_present: true
+    payload_type: medium_box
+    payload_height_class: medium
+    size_m: {x: 0.14, y: 0.09, z: 0.09}
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
+  tall_box:
+    model_uri: model://room315_payload_tall_box
+    payload_present: true
+    payload_type: tall_box
+    payload_height_class: tall
+    size_m: {x: 0.12, y: 0.08, z: 0.18}
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
+  wide_box_within_keepout:
+    model_uri: model://room315_payload_wide_box_within_keepout
+    payload_present: true
+    payload_type: wide_box_within_keepout
+    payload_height_class: low
+    size_m: {x: 0.155, y: 0.105, z: 0.06}
+    identity_occlusion_level: none
+    visible_marker_count: 4
+    expected_visible_regions: [front_left, front_right, rear_left, rear_right]
+    normal_payload: true
+  partial_marker_occluder:
+    model_uri: model://room315_payload_partial_marker_occluder
+    payload_present: true
+    payload_type: partial_marker_occluder
+    payload_height_class: medium
+    size_m: {x: 0.13, y: 0.08, z: 0.08}
+    identity_occlusion_level: partial
+    occluded_regions: [front_left]
+    visible_marker_count: 3
+    expected_visible_regions: [front_right, rear_left, rear_right]
+    normal_payload: false
+metadata_fields_outside_model_input:
+  - shuttle_id
+  - side
+  - loaded
+  - payload_state
+  - payload_condition
+  - payload_present
+  - payload_type
+  - payload_height_class
+  - identity_occlusion_level
+  - visible_marker_count
+  - expected_visible_ids
+  - target_shuttle_id

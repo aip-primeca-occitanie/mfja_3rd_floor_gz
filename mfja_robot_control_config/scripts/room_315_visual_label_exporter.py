@@ -108,7 +108,7 @@ def _default_camera_model_path() -> Path:
         Path(__file__).resolve().parents[2]
         / 'mfja_3rd_floor_description'
         / 'models'
-        / 'room315_vla_overhead_devices'
+        / 'room315_visual_observation_rig'
         / 'model.sdf'
     )
 

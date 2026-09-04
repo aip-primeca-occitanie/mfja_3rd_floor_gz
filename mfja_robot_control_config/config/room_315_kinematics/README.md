@@ -395,7 +395,7 @@ Loaded shuttles publish privileged payload state on
 `/room_315/rails/<side>/shuttles/payload_state`; change it at runtime with
 `/room_315/rails/<side>/shuttles/payload_command`, for example
 `{"shuttle":"R2","loaded":false}`. Payload state is for supervisor/debug and
-dataset metadata only; VLA `model_input` still contains only language, overhead
+dataset metadata only; visual-state `model_input` still contains only language, overhead
 images, and last command.
 
 In a command terminal, sweep the switches through exterior and interior routes:

@@ -413,7 +413,7 @@ def load_training_runtime(package_root: Path):
     scripts = package_root.resolve() / 'scripts'
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
-    trainer = importlib.import_module('room_315_vla_train_local')
+    trainer = importlib.import_module('room_315_visual_state_train_local')
     dataset_module = importlib.import_module('room_315_visual_state_dataset')
     return trainer, dataset_module
 

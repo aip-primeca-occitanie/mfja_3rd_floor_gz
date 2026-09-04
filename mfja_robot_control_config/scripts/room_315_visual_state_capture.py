@@ -46,8 +46,8 @@ from room_315_visual_state_dataset import pretty_json
 
 
 CAMERA_TOPICS = {
-    'left_rail_rgb': '/room_315/vla/left_rail_rgbd/image',
-    'right_rail_rgb': '/room_315/vla/right_rail_rgbd/image',
+    'left_rail_rgb': '/room_315/perception/left_rail_rgbd/image',
+    'right_rail_rgb': '/room_315/perception/right_rail_rgbd/image',
 }
 SHUTTLE_TOPICS = {
     'left': '/room_315/rails/left/shuttles/state',

@@ -48,8 +48,9 @@ task with accepted visual, device and identity-bearing sensor reports while
 keeping learned estimates separate from exact simulator state and test-only
 providers.
 
-The rule-based \code{room\_315\_vla\_supervisor.py}---not a learned VLA
-policy---gives final software authorisation. It validates sparse JSON commands
+The deterministic \code{room\_315\_rail\_safety\_supervisor.py} gives final
+software authorisation; neither learned model can publish rail commands. It
+validates sparse JSON commands
 against rail state, then publishes typed commands consumed by the kinematic
 controller.
 

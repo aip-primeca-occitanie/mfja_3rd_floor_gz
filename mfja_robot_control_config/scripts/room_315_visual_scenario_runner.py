@@ -28,8 +28,8 @@ from room_315_visual_state_dataset import normalize_visual_state_labels
 
 REQUIRED_TOPICS = {
     '/mfja/conveyor/switch_cmd',
-    '/room_315/vla/left_rail_rgbd/image',
-    '/room_315/vla/right_rail_rgbd/image',
+    '/room_315/perception/left_rail_rgbd/image',
+    '/room_315/perception/right_rail_rgbd/image',
     '/room_315/rails/left/shuttles/state',
     '/room_315/rails/right/shuttles/state',
     '/room_315/rails/left/shuttles/payload_state',

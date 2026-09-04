@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">Room 315 modular neuro-symbolic closed-loop architecture</title>
+  <desc id="desc">A separate language model and visual-state model feed validated records to PlanSys2. A deterministic rail-safety supervisor alone publishes typed rail commands. Fresh rail and camera feedback closes the loop.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+    <marker id="feedbackArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#0f766e"/>
+    </marker>
+    <style>
+      .title { font: 700 30px system-ui, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px system-ui, sans-serif; fill: #475569; }
+      .section { font: 700 14px system-ui, sans-serif; letter-spacing: 1.5px; fill: #475569; }
+      .box-title { font: 700 18px system-ui, sans-serif; fill: #0f172a; }
+      .box-copy { font: 400 14px system-ui, sans-serif; fill: #334155; }
+      .small { font: 600 13px system-ui, sans-serif; fill: #475569; }
+      .learned { fill: #ede9fe; stroke: #7c3aed; stroke-width: 2; }
+      .validated { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }
+      .symbolic { fill: #fef3c7; stroke: #d97706; stroke-width: 2; }
+      .safety { fill: #dcfce7; stroke: #15803d; stroke-width: 3; }
+      .plant { fill: #f1f5f9; stroke: #475569; stroke-width: 2; }
+      .input { fill: #ffffff; stroke: #94a3b8; stroke-width: 2; }
+      .arrow { fill: none; stroke: #334155; stroke-width: 2.5; marker-end: url(#arrow); }
+      .feedback { fill: none; stroke: #0f766e; stroke-width: 2.5; stroke-dasharray: 8 6; marker-end: url(#feedbackArrow); }
+      .boundary { fill: #fff1f2; stroke: #be123c; stroke-width: 2; stroke-dasharray: 8 6; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="760" rx="24" fill="url(#background)"/>
+  <text x="60" y="58" class="title">Room 315 modular neuro-symbolic closed loop</text>
+  <text x="60" y="88" class="subtitle">Two independent learned inputs; symbolic planning; deterministic command authority</text>
+
+  <text x="60" y="132" class="section">SEPARATE LEARNED INPUT PATHS</text>
+
+  <rect x="60" y="155" width="190" height="92" rx="14" class="input"/>
+  <text x="155" y="190" text-anchor="middle" class="box-title">English request</text>
+  <text x="155" y="217" text-anchor="middle" class="box-copy">operator text</text>
+
+  <rect x="310" y="145" width="245" height="112" rx="14" class="learned"/>
+  <text x="432" y="181" text-anchor="middle" class="box-title">Language model</text>
+  <text x="432" y="208" text-anchor="middle" class="box-copy">Qwen intent proposal</text>
+  <text x="432" y="231" text-anchor="middle" class="small">no plan or command authority</text>
+
+  <rect x="615" y="145" width="245" height="112" rx="14" class="validated"/>
+  <text x="737" y="181" text-anchor="middle" class="box-title">Task-goal gateway</text>
+  <text x="737" y="208" text-anchor="middle" class="box-copy">extract · fuse · clarify</text>
+  <text x="737" y="231" text-anchor="middle" class="small">validate · confirm TaskGoal</text>
+
+  <path d="M250 201 H310" class="arrow"/>
+  <path d="M555 201 H615" class="arrow"/>
+
+  <rect x="60" y="315" width="190" height="92" rx="14" class="input"/>
+  <text x="155" y="350" text-anchor="middle" class="box-title">Paired RGB cameras</text>
+  <text x="155" y="377" text-anchor="middle" class="box-copy">left and right rail views</text>
+
+  <rect x="310" y="305" width="245" height="112" rx="14" class="learned"/>
+  <text x="432" y="341" text-anchor="middle" class="box-title">Visual-state model</text>
+  <text x="432" y="368" text-anchor="middle" class="box-copy">rail-isolated ResNet estimator</text>
+  <text x="432" y="391" text-anchor="middle" class="small">structured visual facts only</text>
+
+  <rect x="615" y="305" width="245" height="112" rx="14" class="validated"/>
+  <text x="737" y="341" text-anchor="middle" class="box-title">Observation gate</text>
+  <text x="737" y="368" text-anchor="middle" class="box-copy">validate · fuse presence</text>
+  <text x="737" y="391" text-anchor="middle" class="small">accepted observed state</text>
+
+  <path d="M250 361 H310" class="arrow"/>
+  <path d="M555 361 H615" class="arrow"/>
+
+  <rect x="925" y="205" width="205" height="152" rx="16" class="symbolic"/>
+  <text x="1027" y="247" text-anchor="middle" class="box-title">PlanSys2</text>
+  <text x="1027" y="276" text-anchor="middle" class="box-copy">fresh PDDL problem</text>
+  <text x="1027" y="300" text-anchor="middle" class="box-copy">symbolic plan</text>
+  <text x="1027" y="326" text-anchor="middle" class="small">one step per loop</text>
+
+  <path d="M860 201 C900 201 895 245 925 245" class="arrow"/>
+  <path d="M860 361 C900 361 895 317 925 317" class="arrow"/>
+
+  <rect x="1185" y="205" width="165" height="152" rx="16" class="validated"/>
+  <text x="1267" y="247" text-anchor="middle" class="box-title">Translator</text>
+  <text x="1267" y="276" text-anchor="middle" class="box-copy">one primitive</text>
+  <text x="1267" y="300" text-anchor="middle" class="box-copy">schema + plan</text>
+  <text x="1267" y="324" text-anchor="middle" class="box-copy">validation</text>
+
+  <path d="M1130 281 H1185" class="arrow"/>
+
+  <rect x="52" y="462" width="1296" height="72" rx="14" class="boundary"/>
+  <text x="700" y="492" text-anchor="middle" class="box-title">Command-authority boundary</text>
+  <text x="700" y="518" text-anchor="middle" class="box-copy">Neither learned model can publish a rail command; only a validated planner primitive may cross this boundary.</text>
+
+  <rect x="925" y="575" width="230" height="112" rx="16" class="safety"/>
+  <text x="1040" y="611" text-anchor="middle" class="box-title">Rail-safety supervisor</text>
+  <text x="1040" y="638" text-anchor="middle" class="box-copy">deterministic safety checks</text>
+  <text x="1040" y="662" text-anchor="middle" class="small">sole typed-command publisher</text>
+
+  <rect x="1210" y="575" width="140" height="112" rx="16" class="plant"/>
+  <text x="1280" y="611" text-anchor="middle" class="box-title">Rail cell</text>
+  <text x="1280" y="638" text-anchor="middle" class="box-copy">controllers</text>
+  <text x="1280" y="662" text-anchor="middle" class="box-copy">and sensors</text>
+
+  <path d="M1267 357 V446 C1267 500 1040 515 1040 575" class="arrow"/>
+  <path d="M1155 631 H1210" class="arrow"/>
+
+  <path d="M1280 687 V719 H737 V417" class="feedback"/>
+  <text x="965" y="739" text-anchor="middle" class="small">fresh effects and observations close the loop; then validate and replan</text>
+
+  <rect x="70" y="585" width="690" height="88" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <circle cx="100" cy="613" r="8" fill="#7c3aed"/>
+  <text x="120" y="619" class="box-copy">Learned: language proposal and visual facts</text>
+  <circle cx="100" cy="643" r="8" fill="#d97706"/>
+  <text x="120" y="649" class="box-copy">Symbolic: PlanSys2 chooses the next plan step</text>
+  <circle cx="465" cy="613" r="8" fill="#15803d"/>
+  <text x="485" y="619" class="box-copy">Deterministic: safety, command, and effect checks</text>
+  <circle cx="465" cy="643" r="8" fill="#0284c7"/>
+  <text x="485" y="649" class="box-copy">Validated records cross component boundaries</text>
+</svg>

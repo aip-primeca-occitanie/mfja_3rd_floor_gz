@@ -22,7 +22,7 @@ import room_315_visual_v4_final_test as final_test
 CONFIG = (
     Path(__file__).resolve().parents[1]
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_visual_state'
     / 'visual_state_final_test_v4.json'
 )
 

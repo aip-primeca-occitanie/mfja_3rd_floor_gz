@@ -1003,7 +1003,7 @@ def _identity_config() -> dict[str, dict[str, Any]]:
         REPO_ROOT
         / 'mfja_robot_control_config'
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_shuttle_identity'
         / 'shuttle_identity.yaml'
     )
     loaded = yaml.safe_load(path.read_text(encoding='utf-8'))

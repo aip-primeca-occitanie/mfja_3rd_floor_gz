@@ -22,9 +22,9 @@ artifact.}
 \endhead
 Stable profiles and common floor policy & \file{mfja_3rd_floor_bringup/launch/room_315_only.launch.py}; \file{mfja_3rd_floor_bringup/launch/full_floor.launch.py}; \file{mfja_3rd_floor_bringup/launch/single_industrial_robot.launch.py}; \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
 Base Gazebo and robot composition & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py}; \file{mfja_robot_control_config/launch/room_315_launch_utils.py}; \file{mfja_robot_control_config/launch/gripper_range_config.py}; \file{mfja_robot_control_config/scripts/conveyor_loop_mode_controller.py} \\ \rowseparator
-Rail and optional VLA composition & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
+Rail, perception, safety, and planning composition & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py}; \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
 Task-gateway singleton and shutdown & \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}; \file{mfja_robot_control_config/scripts/room_315_closed_loop_executive.py} \\ \rowseparator
-Persistent dataset output & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py} \\
+Persistent dataset output & \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py} \\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -45,7 +45,7 @@ Operators should normally start one of the bringup-package wrappers:
 \tableheader Entry point & World & Initial state & Intended use \\
 \midrule
 \endhead
-\file{room_315_only.launch.py} & \code{room_315_only} & Running & Rail, robot, camera, VLA, and maintenance work in the focused cell \\ \rowseparator
+\file{room_315_only.launch.py} & \code{room_315_only} & Running & Rail, robot, camera, visual-state, planning, safety, and maintenance work in the focused cell \\ \rowseparator
 \file{full_floor.launch.py} & \code{mfja_3rd_floor} & Paused & Complete-floor demonstration and integration \\ \rowseparator
 \file{single_industrial_robot.launch.py} & \code{isolated_industrial_robot} & Running & Fast arm/gripper work with one selected industrial robot \\
 \bottomrule
@@ -78,8 +78,8 @@ Start paused & false & true \\ \rowseparator
 Rails & both enabled & both enabled \\ \rowseparator
 Initial shuttle count & zero per side & zero per side \\ \rowseparator
 Initial shuttle drive & disabled & disabled \\ \rowseparator
-VLA camera/supervisor & disabled & disabled \\ \rowseparator
-Removable VLA obstacles & disabled & disabled \\ \rowseparator
+RGB-D camera bridge/rail-safety supervisor & disabled & disabled \\ \rowseparator
+Removable visual obstacles & disabled & disabled \\ \rowseparator
 Obstacle cache cleanup & enabled & enabled \\ \rowseparator
 Device/payload markers & enabled & enabled \\
 \bottomrule
@@ -140,8 +140,8 @@ Per-robot create node & Delayed base actions & Spawn one configured entity & \fi
 Per-robot state publisher & Delayed base actions & Namespaced, instance-prefixed URDF TF tree & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 Per-robot parameter bridge & Delayed base actions & Joint/gripper/base commands and state feedback & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 Two rail nodes & Dual rail launch & Authoritative logical rail motion, lifecycle, devices, sensors, markers, pose calls & \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py}; \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py} \\ \rowseparator
-VLA supervisor & Optional VLA launch & Primitive validation, safety gates, typed rail command publication & \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
-VLA recorder & Optional VLA launch & Episode/camera/action recording & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py} \\ \rowseparator
+rail-safety supervisor & Optional perception-and-safety launch & Primitive validation, safety gates, typed rail command publication & \file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py}; \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py} \\ \rowseparator
+visual-state dataset recorder & Optional perception-and-safety launch & Episode/camera/action recording & \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py} \\ \rowseparator
 Visual inference node & Separate visual launch & Verified V4 inference and accepted visual observations & \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\ \rowseparator
 PlanSys2 planner & Separate task launch & Lifecycle-managed PDDL planner service & \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py} \\ \rowseparator
 Task gateway & Separate task launch & Authorization, grounding, one-step planning/execution/effect verification & \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py} \\ \rowseparator
@@ -167,15 +167,15 @@ English CLI & Separate operator terminal & Parse, clarify, confirm, publish \cod
 0 s & Base simulation & Start Gazebo and the visual switch controller & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 3 s & ROS integration & Start clock/world bridges, robot spawners, per-robot bridges, and TF publishers & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 4 s & Rail runtime & Start the right and left authoritative rail nodes & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_dual_kinematic_shuttles.launch.py} \\ \rowseparator
-5 s, optional & VLA branch & Start camera bridges, deterministic supervisor, and optional recorder & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py} \\
+5 s, optional & perception-and-safety branch & Start camera bridges, deterministic supervisor, and optional recorder & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py}; \file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py} \\
 \bottomrule
 \end{longtable}
 
 Treat topics and services that appear during this five-second sequence as
 delayed startup unless the relevant stage has exceeded its configured gate.
 
-\begin{warningbox}[What the high-level VLA switch does not start]
-\code{enable_room315_vla:=true} starts camera bridges and the deterministic
+\begin{warningbox}[What the high-level rail-safety switch does not start]
+\code{enable_room315_rail_safety_supervisor:=true} starts camera bridges and the deterministic
 primitive supervisor; it can also start the recorder. It does not start the
 learned V4 inference node, PlanSys2 planner, English CLI, or task-execution
 gateway. Those remain separate, artifact-dependent launches listed in
@@ -215,10 +215,10 @@ gateways. The owning sources are
 \file{/tmp/<robot>_bridge.yaml} & Generated per-robot bridge map & Inspect for diagnosis; never edit as source & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 \file{/tmp/<robot>_mobile_model.sdf} & Instance-specific mobile topic/frame substitutions & Temporary & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 \file{/tmp/mfja_*_gripper_range_*.sdf} & Launch-patched gripper limits & Temporary & \file{mfja_robot_control_config/launch/gripper_range_config.py} \\ \rowseparator
-\file{/tmp/*_without_room315_vla_obstacles_*.world} & Filtered world copy & Temporary & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
+\file{/tmp/*_without_room315_visual_obstacles_*.world} & Filtered world copy & Temporary & \file{mfja_robot_control_config/launch/multi_robot_sim.launch.py} \\ \rowseparator
 \file{~/.ros/log/} & ROS logs & Preserve when diagnosing; otherwise disposable & ROS 2 runtime \\ \rowseparator
-\file{~/.ros/room315_vla_obstacles.json} & Optional obstacle pose cache & Cleared by default; override only to an intended file & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
-\file{~/.ros/room315_visual_state_datasets/<run>/} & Recorded episodes and frames & User data outside Git; back up deliberately & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py} \\ \rowseparator
+\file{~/.ros/room315_visual_obstacles.json} & Optional obstacle pose cache & Cleared by default; override only to an intended file & \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py} \\ \rowseparator
+\file{~/.ros/room315_visual_state_datasets/<run>/} & Recorded episodes and frames & User data outside Git; back up deliberately & \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py} \\ \rowseparator
 External selected directories & Datasets, checkpoints, manifests, authorization, reports & Preserve hashes/provenance; never edit promoted artifacts in place & Runtime paths in the V4 configuration files \\
 \bottomrule
 \end{longtable}

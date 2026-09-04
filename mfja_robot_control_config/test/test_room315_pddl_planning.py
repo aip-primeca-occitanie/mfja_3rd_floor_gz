@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'pddl'
+PDDL_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_planning' / 'pddl'
 DOC_PATH = REPO_ROOT / 'docs' / 'ROOM315_PDDL_PLANNING.md'
 
 EXPECTED_PDDL_FILES = {

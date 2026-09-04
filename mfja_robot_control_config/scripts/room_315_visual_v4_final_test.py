@@ -94,7 +94,7 @@ RELATIONS = (
 NO_RELATION = RELATIONS[0]
 MICRO_OFFSETS = (-0.0037, 0.0037)
 DEFAULT_CONFIG = (
-    SCRIPT_DIR.parent / 'config' / 'room_315_vla' / 'visual_state_final_test_v4.json'
+    SCRIPT_DIR.parent / 'config' / 'room_315_visual_state' / 'visual_state_final_test_v4.json'
 )
 DEFAULT_ROOT = Path(
     '/home/tiago/room315_visual_v4_final_test_seed3152026081101'

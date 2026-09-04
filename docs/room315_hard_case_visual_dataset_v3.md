@@ -156,7 +156,7 @@ git diff --check
   `/home/tiago/room315_hard_case_visual_v3_guard_seed31520260730`
 
 The Experiment-A source-balanced policy is in
-`mfja_robot_control_config/config/room_315_vla/visual_state_experiment_a_dataset_v3.yaml`. It samples
+`mfja_robot_control_config/config/room_315_visual_state/visual_state_experiment_a_dataset_v3.yaml`. It samples
 approximately 50% old replay training and 50% new hard-case training per
 epoch without duplicating JSONL rows. Its `PENDING_CAPTURE_AND_FINAL_AUDIT`
 hashes deliberately fail closed until the captured files exist and the final

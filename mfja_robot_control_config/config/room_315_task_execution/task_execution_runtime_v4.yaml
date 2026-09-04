@@ -1,0 +1,48 @@
+room_315_task_execution_node:
+  ros__parameters:
+    use_sim_time: true
+
+    # Execution remains an explicit launch opt-in.  When enabled, the gateway
+    # re-hashes both immutable files below before accepting every TaskGoal.
+    execution_enabled: false
+    task_execution_authorization_path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_qualification_attempt1/candidate_state.json
+    task_execution_authorization_sha256: 3181aab44b0b70f1394537f778f9ac361e3fc3627cfe9c16b99e6d33529cf94b
+    task_execution_promotion_manifest_path: /home/tiago/room315_visual_runtime_candidate_v4_seed31520260811_epoch11_869d6404_closed_loop_qualification_attempt1/runtime_promotion_manifest.json
+
+    task_goal_topic: /room_315/task_goal
+    task_status_topic: /room_315/task_goal/status
+    accepted_observed_state_topic: /room_315/visual_state/observed_state
+    allowed_visual_schema_version: room315.visual_state.v4
+    allowed_visual_checkpoint_sha256: 869d64049b0092c37d21a4c8b910dc6b91954527e0e49c5694fa82dce570f40d
+
+    supervisor_command_topic: /room_315/rail_safety/primitive_command
+    supervisor_status_topic: /room_315/rail_safety/status
+    left_sensor_feedback_topic: /room_315/rails/left/sensors/feedback
+    right_sensor_feedback_topic: /room_315/rails/right/sensors/feedback
+    diagnostics_topic: /diagnostics
+
+    planner_service: /planner/get_plan
+    planner_timeout_s: 20.0
+    observation_timeout_s: 1.5
+    supervisor_status_timeout_s: 1.5
+    slot_sensor_state_timeout_s: 1.0
+    observation_wait_s: 2.0
+    planning_slot_tolerance_ratio: 0.12
+    target_arrival_tolerance_ratio: 0.05
+    position_consistency_tolerance_m: 0.08
+    slot_sensor_confirmation_frames: 2
+    payload_grounding_confirmation_frames: 5
+    payload_grounding_max_observations: 15
+    controller_stop_timeout_s: 3.0
+
+    speed_mps: 0.2
+    max_steps: 32
+    max_replans: 8
+    max_unknown_retries: 3
+    supervisor_timeout_s: 5.0
+    effect_timeout_s: 30.0
+    clearance_effect_timeout_s: 60.0
+    route_arrival_timeout_scale: 1.25
+    route_arrival_timeout_margin_s: 5.0
+    external_obstacles_disabled: true
+    diagnostic_period_s: 1.0

@@ -317,8 +317,8 @@ class Room315VisualStateInferenceNode(Node):
         parameters = {
             'runtime_generation': 'v4',
             'runtime_mode': 'active',
-            'left_image_topic': '/room_315/vla/left_rail_rgbd/image',
-            'right_image_topic': '/room_315/vla/right_rail_rgbd/image',
+            'left_image_topic': '/room_315/perception/left_rail_rgbd/image',
+            'right_image_topic': '/room_315/perception/right_rail_rgbd/image',
             'left_presence_topic': '/room_315/rails/left/shuttles/state',
             'right_presence_topic': '/room_315/rails/right/shuttles/state',
             'v4_promotion_manifest_path': '',
@@ -343,7 +343,7 @@ class Room315VisualStateInferenceNode(Node):
             'plansys2_update_enabled': False,
             'plansys2_add_predicate_service': '/problem_expert/add_predicate',
             'plansys2_remove_predicate_service': '/problem_expert/remove_predicate',
-            'safety_status_topic': '/room_315/vla/status',
+            'safety_status_topic': '/room_315/rail_safety/status',
             'safety_status_timeout_s': 1.5,
             'raw_observation_topic': '/room_315/visual_state/raw',
             'raw_model_prediction_topic':

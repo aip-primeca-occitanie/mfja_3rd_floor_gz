@@ -29,10 +29,10 @@ path for your role, then use the categorized index when you need detail.
 5. [Troubleshooting](TROUBLESHOOTING.md)
 6. [Third-Party Asset Attribution](../mfja_3rd_floor_description/THIRD_PARTY.md)
 
-### VLA or Planning Researcher
+### Visual-State or Planning Researcher
 
-1. [Room 315 VLA Research](ROOM315_VLA_RESEARCH.md)
-2. [Room 315 VLA Operations](ROOM315_VLA_OPERATIONS.md)
+1. [Room 315 Visual-State Research](ROOM315_VISUAL_STATE_RESEARCH.md)
+2. [Room 315 Neuro-Symbolic Closed-Loop Operations](ROOM315_NEURO_SYMBOLIC_CLOSED_LOOP_OPERATIONS.md)
 3. [Visual-State Runtime Integration](room315_visual_runtime_integration.md)
 4. [Task-Goal Understanding](ROOM315_TASK_GOAL_UNDERSTANDING.md)
 5. [PDDL Planning](ROOM315_PDDL_PLANNING.md)
@@ -64,7 +64,7 @@ document, use the operational document and verify launch arguments with
 | Reference | [Room 315 Rail Devices and Tests](ROOM315_RAIL_DEVICES_AND_TESTS.md) | Device YAML, markers, collision checks, message types, and launch names |
 | Operational | [Full Floor and Robot Reference](FULL_FLOOR_AND_ROBOTS.md) | World services, robot selection, joint commands, grippers, and TIAGo motion |
 | Operational | [Troubleshooting](TROUBLESHOOTING.md) | Symptom-to-diagnosis-to-remedy procedures for installation and runtime faults |
-| Reference | [Glossary](GLOSSARY.md) | Definitions of ROS, Gazebo, rail, VLA, planning, and artifact terms |
+| Reference | [Glossary](GLOSSARY.md) | Definitions of ROS, Gazebo, rail, learned-model, planning, and artifact terms |
 
 ## Architecture, Configuration, and Maintenance
 
@@ -79,12 +79,13 @@ document, use the operational document and verify launch arguments with
 | Reference | [Visual-State Scenario Configuration](../mfja_robot_control_config/config/room_315_visual_state/README.md) | Scenario generation and visual-state dataset configuration |
 | Reference | [Third-Party Asset Attribution](../mfja_3rd_floor_description/THIRD_PARTY.md) | Imported robot/CAD provenance and license constraints |
 
-## Current VLA, Planning, and Dataset Documentation
+## Current AI, Planning, and Dataset Documentation
 
 | Status | Document | Purpose |
 | --- | --- | --- |
-| Research | [Room 315 VLA Research](ROOM315_VLA_RESEARCH.md) | Model-input boundary, visual facts, case matrix, and evaluation intent |
-| Operational | [Room 315 VLA Operations](ROOM315_VLA_OPERATIONS.md) | Supervisor, task-goal, dataset, benchmark, and primitive-command workflows |
+| Research | [Room 315 Visual-State Research](ROOM315_VISUAL_STATE_RESEARCH.md) | Model-input boundary, visual facts, case matrix, and evaluation intent |
+| Operational | [Room 315 Neuro-Symbolic Closed-Loop Operations](ROOM315_NEURO_SYMBOLIC_CLOSED_LOOP_OPERATIONS.md) | Separate language and visual-state models, PlanSys2, dataset, benchmark, and deterministic primitive-supervision workflows |
+| Reference | [Naming Migration](ROOM315_NAMING_MIGRATION.md) | Canonical component names, old-to-new compatibility map, and historical-evidence policy |
 | Operational | [Visual-State Runtime Integration](room315_visual_runtime_integration.md) | Current V4 runtime contract, artifact validation, launch, diagnostics, and failure behavior |
 | Operational | [Task-Goal Understanding](ROOM315_TASK_GOAL_UNDERSTANDING.md) | English parsing, confirmation, local model, validation, and public API |
 | Reference | [Room 315 PDDL Planning](ROOM315_PDDL_PLANNING.md) | Atomic goal contract, topology planning, case generation, and batch runs |
@@ -105,8 +106,8 @@ current command line.
 | Historical | [Hard-Case Visual Dataset V3 Audit](room315_hard_case_visual_dataset_v3_audit.md) | Initial V3 repository/data audit |
 | Historical | [Hard-Case Visual Dataset V3](room315_hard_case_visual_dataset_v3.md) | Earlier V3 generation and split procedure |
 | Historical | [Hard-Case Visual Dataset V3R1](room315_hard_case_visual_dataset_v3r1.md) | Earlier V3R1 procedure and immutable roots |
-| Historical | [VLA Progress Report, Week 1](vla_progress_report_week_1.md) | Short dated progress summary |
-| Historical | [VLA Progress Report, Week 2](vla_progress_report_week_2.md) | Short dated progress summary |
+| Historical | [Neuro-Symbolic Progress Report, Week 1](neuro_symbolic_progress_report_week_1.md) | Short dated progress summary |
+| Historical | [Neuro-Symbolic Progress Report, Week 2](neuro_symbolic_progress_report_week_2.md) | Short dated progress summary |
 
 The tracked legacy page
 [`ROOM315_TASK_GOAL_AR.html`](ROOM315_TASK_GOAL_AR.html) is now an English
@@ -140,7 +141,7 @@ source snapshots with `COLCON_IGNORE`.
 ## Standalone Runbooks
 
 - [Rail runbook](../runbook.html)
-- [VLA runbook](../runbookvla.html)
+- [Room 315 closed-loop runbook](../room315_closed_loop_runbook.html)
 
 The Markdown operational documents above are easier to review alongside code.
 If a standalone HTML runbook differs from current launch arguments, prefer the

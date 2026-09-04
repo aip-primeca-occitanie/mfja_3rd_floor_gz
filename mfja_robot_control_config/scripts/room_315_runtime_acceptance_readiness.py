@@ -397,8 +397,8 @@ class Room315AcceptanceReadiness(Node):
             'right_state_topic': '/room_315/rails/right/shuttles/state',
             'left_payload_topic': '/room_315/rails/left/shuttles/payload_state',
             'right_payload_topic': '/room_315/rails/right/shuttles/payload_state',
-            'left_image_topic': '/room_315/vla/left_rail_rgbd/image',
-            'right_image_topic': '/room_315/vla/right_rail_rgbd/image',
+            'left_image_topic': '/room_315/perception/left_rail_rgbd/image',
+            'right_image_topic': '/room_315/perception/right_rail_rgbd/image',
             'raw_prediction_topic': '/room_315/visual_state/raw_model_prediction',
         }.items():
             self.declare_parameter(name, default)

@@ -391,14 +391,14 @@ class _FakeEstopNode:
     def get_subscriptions_info_by_topic(self, _topic):
         endpoints = []
         if self.runtime.supervisor_discovered:
-            endpoints.append(_FakeEndpoint('room_315_vla_supervisor'))
+            endpoints.append(_FakeEndpoint('room_315_rail_safety_supervisor'))
         if self.runtime.recorder_discovered:
             endpoints.append(_FakeEndpoint('rosbag2_recorder'))
         return endpoints
 
     def get_publishers_info_by_topic(self, _topic):
         if self.runtime.supervisor_discovered:
-            return [_FakeEndpoint('room_315_vla_supervisor')]
+            return [_FakeEndpoint('room_315_rail_safety_supervisor')]
         return []
 
     def count_publishers(self, _topic):

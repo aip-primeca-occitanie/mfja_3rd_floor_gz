@@ -193,9 +193,9 @@ def _acceptance_actions(context):
             'start_paused': 'false',
             'robots': 'none',
             'enable_room315_kinematic_shuttles': 'false',
-            'enable_room315_vla': 'false',
-            'enable_room315_vla_dataset_recorder': 'false',
-            'enable_room315_vla_obstacles': 'false',
+            'enable_room315_rail_safety_supervisor': 'false',
+            'enable_room315_visual_state_dataset_recorder': 'false',
+            'enable_room315_visual_obstacles': 'false',
             'room315_visual_debug_colors': 'false',
             'room315_show_device_markers': 'false',
         }.items(),
@@ -230,7 +230,7 @@ def _acceptance_actions(context):
     cameras = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             FindPackageShare('mfja_robot_control_config'),
-            '/launch/room_315_vla_supervisor.launch.py',
+            '/launch/room_315_perception_and_safety.launch.py',
         ]),
         launch_arguments={
             'use_sim_time': 'true',

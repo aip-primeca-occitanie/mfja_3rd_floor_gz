@@ -95,10 +95,10 @@ source install/setup.bash</code></pre>
                 </div>
                 <pre tabindex="0"><code id="demo-01-commands-2">ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=all gui:=true gui_config:=config/mfja_light.gui.config \
-  start_paused:=false enable_room315_vla:=false \
+  start_paused:=false enable_room315_rail_safety_supervisor:=false \
   enable_room315_kinematic_shuttles:=false \
   room315_show_device_markers:=false \
-  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+  room315_clear_visual_obstacle_pose_cache:=false</code></pre>
                 <span class="copy-status" id="demo-01-commands-2-status" role="status" aria-live="polite"></span>
               </section>
           </details>
@@ -126,7 +126,7 @@ export GZ_PARTITION=mfja_tutorial_v2_robot_02_20260827
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=kuka1 gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=false \
-  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=false enable_room315_visual_obstacles:=false \
   gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
                 <span class="copy-status" id="demo-02-commands-1-status" role="status" aria-live="polite"></span>
               </section>
@@ -202,7 +202,7 @@ export GZ_PARTITION=mfja_tutorial_v2_robot_03_20260827
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=staubli1 gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=false \
-  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=false enable_room315_visual_obstacles:=false \
   gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
                 <span class="copy-status" id="demo-03-commands-1-status" role="status" aria-live="polite"></span>
               </section>
@@ -278,7 +278,7 @@ export GZ_PARTITION=mfja_tutorial_v2_robot_04_20260827
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=yaskawa_hc10_1 gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=false \
-  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=false enable_room315_visual_obstacles:=false \
   gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
                 <span class="copy-status" id="demo-04-commands-1-status" role="status" aria-live="polite"></span>
               </section>
@@ -354,7 +354,7 @@ export GZ_PARTITION=mfja_tutorial_v2_robot_05_20260827
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=yaskawa_hc10dt_1 gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=false \
-  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=false enable_room315_visual_obstacles:=false \
   gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
                 <span class="copy-status" id="demo-05-commands-1-status" role="status" aria-live="polite"></span>
               </section>
@@ -430,7 +430,7 @@ export GZ_PARTITION=mfja_tutorial_v2_robot_06_20260827
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=tiago1 gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=false \
-  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=false enable_room315_visual_obstacles:=false \
   gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
                 <span class="copy-status" id="demo-06-commands-1-status" role="status" aria-live="polite"></span>
               </section>
@@ -516,7 +516,7 @@ export GZ_PARTITION=mfja_tutorial_v2_robot_07_20260827
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=tiago_base1 gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=false \
-  enable_room315_vla:=false enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=false enable_room315_visual_obstacles:=false \
   gz_partition:=&quot;$GZ_PARTITION&quot;</code></pre>
                 <span class="copy-status" id="demo-07-commands-1-status" role="status" aria-live="polite"></span>
               </section>
@@ -881,9 +881,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui_config:=config/room315_runtime_safe.gui.config \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_right_rail:=true enable_room315_left_rail:=true \
-  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_dataset_recorder:=false \
-  enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=true enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_state_dataset_recorder:=false \
+  enable_room315_visual_obstacles:=false \
   room315_show_device_markers:=false room315_visual_debug_colors:=false \
   room315_enable_payload_visuals:=true \
   room315_identity_selection_mode:=explicit \
@@ -895,7 +895,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_left_active_identities:=L1,L2,L3,L4 \
   room315_left_start_slots:=1,2,3,4 \
   room315_shuttles_start_enabled:=false \
-  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+  room315_clear_visual_obstacle_pose_cache:=false</code></pre>
                 <span class="copy-status" id="demo-13-commands-1-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-13-commands-2-label">
@@ -905,7 +905,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
                 </div>
                 <pre tabindex="0"><code id="demo-13-commands-2">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
 ros2 run rqt_image_view rqt_image_view \
-  /room_315/vla/right_rail_rgbd/image</code></pre>
+  /room_315/perception/right_rail_rgbd/image</code></pre>
                 <span class="copy-status" id="demo-13-commands-2-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-13-commands-3-label">
@@ -915,7 +915,7 @@ ros2 run rqt_image_view rqt_image_view \
                 </div>
                 <pre tabindex="0"><code id="demo-13-commands-3">source ~/mfja_3rd_floor_ros2_ws/install/setup.bash
 ros2 run rqt_image_view rqt_image_view \
-  /room_315/vla/left_rail_rgbd/image</code></pre>
+  /room_315/perception/left_rail_rgbd/image</code></pre>
                 <span class="copy-status" id="demo-13-commands-3-status" role="status" aria-live="polite"></span>
               </section>
           </details>
@@ -944,9 +944,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui_config:=config/room315_runtime_safe.gui.config \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_right_rail:=true enable_room315_left_rail:=true \
-  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_dataset_recorder:=false \
-  enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=true enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_state_dataset_recorder:=false \
+  enable_room315_visual_obstacles:=false \
   room315_show_device_markers:=false room315_visual_debug_colors:=false \
   room315_enable_payload_visuals:=true \
   room315_identity_selection_mode:=explicit \
@@ -955,7 +955,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_right_start_slots:=3 \
   room315_left_shuttle_count:=0 room315_shuttles_start_enabled:=false \
   room315_shuttle_speed:=0.2 \
-  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+  room315_clear_visual_obstacle_pose_cache:=false</code></pre>
                 <span class="copy-status" id="demo-14-commands-1-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-14-commands-2-label">
@@ -983,7 +983,7 @@ ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
                 </div>
                 <pre tabindex="0"><code id="demo-14-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
 export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
-mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml&quot;
+mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml&quot;
 export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
   runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
@@ -1046,9 +1046,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui_config:=config/room315_runtime_safe.gui.config \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_right_rail:=true enable_room315_left_rail:=true \
-  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_dataset_recorder:=false \
-  enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=true enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_state_dataset_recorder:=false \
+  enable_room315_visual_obstacles:=false \
   room315_show_device_markers:=false room315_visual_debug_colors:=false \
   room315_enable_payload_visuals:=true \
   room315_identity_selection_mode:=explicit \
@@ -1058,7 +1058,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_right_loaded_shuttles:=R1 \
   room315_left_shuttle_count:=0 room315_shuttles_start_enabled:=false \
   room315_shuttle_speed:=0.2 \
-  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+  room315_clear_visual_obstacle_pose_cache:=false</code></pre>
                 <span class="copy-status" id="demo-15-commands-1-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-15-commands-2-label">
@@ -1086,7 +1086,7 @@ ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
                 </div>
                 <pre tabindex="0"><code id="demo-15-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
 export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
-mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml&quot;
+mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml&quot;
 export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
   runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
@@ -1142,9 +1142,9 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui_config:=config/room315_runtime_safe.gui.config \
   enable_room315_kinematic_shuttles:=true \
   enable_room315_right_rail:=true enable_room315_left_rail:=true \
-  enable_room315_vla:=true enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_dataset_recorder:=false \
-  enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=true enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_state_dataset_recorder:=false \
+  enable_room315_visual_obstacles:=false \
   room315_show_device_markers:=false room315_visual_debug_colors:=false \
   room315_enable_payload_visuals:=true \
   room315_identity_selection_mode:=explicit \
@@ -1153,7 +1153,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   room315_right_start_slots:=1 \
   room315_left_shuttle_count:=0 room315_shuttles_start_enabled:=false \
   room315_shuttle_speed:=0.2 \
-  room315_clear_vla_obstacle_pose_cache:=false</code></pre>
+  room315_clear_visual_obstacle_pose_cache:=false</code></pre>
                 <span class="copy-status" id="demo-16-commands-1-status" role="status" aria-live="polite"></span>
               </section>
               <section class="terminal-group" aria-labelledby="demo-16-commands-2-label">
@@ -1181,7 +1181,7 @@ ros2 launch mfja_robot_control_config room_315_visual_state_runtime.launch.py \
                 </div>
                 <pre tabindex="0"><code id="demo-16-commands-3">source &quot;$HOME/mfja_3rd_floor_ros2_ws/install/setup.bash&quot;
 export TASK_CONFIG=&quot;$(ros2 pkg prefix mfja_robot_control_config)/share/\
-mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml&quot;
+mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml&quot;
 export PYTHONPATH=&quot;/usr/lib/python3/dist-packages:${PYTHONPATH:-}&quot;
 ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
   runtime_config:=&quot;$TASK_CONFIG&quot; execution_enabled:=true</code></pre>
@@ -1196,7 +1196,7 @@ ros2 launch mfja_robot_control_config room_315_task_execution.launch.py \
 timeout 120 ros2 topic echo /room_315/rails/right/shuttles/command \
   mfja_rail_interfaces/msg/ShuttleCommand --once \
   --filter &quot;m.name == &#x27;room315_right_shuttle_4&#x27; and m.command == &#x27;ON&#x27;&quot; &amp;&amp; \
-ros2 topic pub --once /room_315/vla/emergency_stop \
+ros2 topic pub --once /room_315/rail_safety/emergency_stop \
   std_msgs/msg/Bool &quot;{data: true}&quot;</code></pre>
                 <span class="copy-status" id="demo-16-commands-4-status" role="status" aria-live="polite"></span>
               </section>

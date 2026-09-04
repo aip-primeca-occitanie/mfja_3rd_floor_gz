@@ -320,7 +320,7 @@ nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
   --require-gh200 \
   --output "$ROOM315_OUTPUT_DIR/preflight.json"
 
-"$ROOM315_PYTHON" "$ROOM315_PACKAGE_ROOT/scripts/room_315_vla_train_local.py" \
+"$ROOM315_PYTHON" "$ROOM315_PACKAGE_ROOT/scripts/room_315_visual_state_train_local.py" \
   --splits-dir "$ROOM315_PACKAGE_ROOT/dataset/splits" \
   --dataset-root "$ROOM315_PACKAGE_ROOT/dataset" \
   --output-dir "$ROOM315_OUTPUT_DIR/run" \
@@ -396,7 +396,7 @@ apptainer exec --nv \
   "$ROOM315_CONTAINER" bash -lc '
     export PYTHONPATH="$1/scripts${{PYTHONPATH:+:$PYTHONPATH}}"
     python3 "$1/scripts/kairos_package_checks.py" --package-root "$1" --require-gh200 --output "$3/preflight.json"
-    python3 "$1/scripts/room_315_vla_train_local.py" \
+    python3 "$1/scripts/room_315_visual_state_train_local.py" \
       --splits-dir "$1/dataset/splits" --dataset-root "$1/dataset" \
       --output-dir "$3/run" --train-file train.jsonl --val-file validation.jsonl \
       --epochs 15 --batch-size 32 --early-stopping-patience 3 \
@@ -450,7 +450,7 @@ def main() -> None:
         json.dumps(access, indent=2, sort_keys=True) + "\\n"
     )
     command = [
-        sys.executable, str(package / "scripts" / "room_315_vla_train_local.py"),
+        sys.executable, str(package / "scripts" / "room_315_visual_state_train_local.py"),
         "--splits-dir", str(package / "dataset" / "splits"),
         "--dataset-root", str(package / "dataset"),
         "--eval-checkpoint", str(checkpoint),
@@ -555,7 +555,7 @@ def _schema_sources(repo_root: Path, staging: Path) -> dict[str, Any]:
         ),
         'shuttle_identity': (
             repo_root / 'mfja_robot_control_config/config/'
-            'room_315_vla/shuttle_identity.yaml'
+            'room_315_shuttle_identity/shuttle_identity.yaml'
         ),
         'gazebo_world': (
             repo_root
@@ -752,7 +752,7 @@ def create_package(
         for name in (
             'room_315_json_io.py',
             'room_315_visual_state_dataset.py',
-            'room_315_vla_train_local.py',
+            'room_315_visual_state_train_local.py',
             'room_315_kairos_visual_training_package.py',
         ):
             _copy_file(script_root / name, staging / 'scripts' / name)
@@ -812,7 +812,7 @@ print(json.dumps(verify_package(Path(__file__).resolve().parent), indent=2, sort
             staging / 'scripts' / 'kairos_package_checks.py',
             staging / 'scripts' / 'run_inside_container_smoke.sh',
             staging / 'scripts' / 'run_inside_container_full.sh',
-            staging / 'scripts' / 'room_315_vla_train_local.py',
+            staging / 'scripts' / 'room_315_visual_state_train_local.py',
         ):
             _make_executable(path)
 

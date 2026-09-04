@@ -8,13 +8,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
-RECORDER_PATH = SCRIPT_DIR / 'room_315_vla_dataset_recorder.py'
+RECORDER_PATH = SCRIPT_DIR / 'room_315_visual_state_dataset_recorder.py'
 
 
 def _load_recorder():
     if str(SCRIPT_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPT_DIR))
-    spec = importlib.util.spec_from_file_location('room_315_vla_dataset_recorder', RECORDER_PATH)
+    spec = importlib.util.spec_from_file_location('room_315_visual_state_dataset_recorder', RECORDER_PATH)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     assert spec.loader is not None

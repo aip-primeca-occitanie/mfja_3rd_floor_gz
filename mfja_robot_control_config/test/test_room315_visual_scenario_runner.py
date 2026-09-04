@@ -47,7 +47,7 @@ def test_builds_clean_launch_switch_and_capture_commands(tmp_path):
         'room_315_only.launch.py',
         'gui:=false',
     ]
-    assert 'enable_room315_vla_dataset_recorder:=false' in launch
+    assert 'enable_room315_visual_state_dataset_recorder:=false' in launch
     assert 'robots:=none' in launch
     assert not any("'none'" in argument for argument in launch)
     assert not any(argument.endswith(':=') for argument in launch)

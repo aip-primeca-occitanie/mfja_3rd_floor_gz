@@ -76,21 +76,21 @@ Stopper and sensor operation &
 \file{mfja_robot_control_config/scripts/room_315_rail_devices.py}. \\ \rowseparator
 Camera bridge and deterministic supervisor &
 \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
-\file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py};
-\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py}. \\ \rowseparator
+\file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py};
+\file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py}. \\ \rowseparator
 V4 visual runtime &
 \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py};
 \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py};
 \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py};
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}. \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml}. \\ \rowseparator
 Planning and closed-loop task execution &
 \file{mfja_robot_control_config/launch/room_315_task_execution.launch.py};
 \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py};
 \file{mfja_robot_control_config/scripts/room_315_task_execution.py};
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}. \\ \rowseparator
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml}. \\ \rowseparator
 Controlled shutdown &
 \file{mfja_3rd_floor_bringup/launch/room_315_floor_common.py};
-\file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py};
+\file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py};
 \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py}. \\
 \bottomrule
 \end{longtable}
@@ -117,7 +117,7 @@ Before launching, stop any previous high-level floor with Ctrl-C, confirm the
 desired overlay, and decide whether startup may clear the configured obstacle
 cache. The high-level default is destructive for that one cache file; the
 runbook commands below explicitly preserve it with
-\code{room315_clear_vla_obstacle_pose_cache:=false}.
+\code{room315_clear_visual_obstacle_pose_cache:=false}.
 
 \section{Base Headless Smoke}
 
@@ -129,7 +129,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui:=false \
   start_paused:=false \
   enable_room315_kinematic_shuttles:=true \
-  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_clear_visual_obstacle_pose_cache:=false \
   room315_right_shuttle_count:=1 \
   room315_left_shuttle_count:=0 \
   room315_shuttles_start_enabled:=false
@@ -157,7 +157,7 @@ rendering can still require working server-side EGL/graphics support.
 \begin{lstlisting}[language=bash]
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none gui:=true start_paused:=false \
-  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_clear_visual_obstacle_pose_cache:=false \
   room315_right_shuttle_count:=0 \
   room315_left_shuttle_count:=0
 \end{lstlisting}
@@ -167,7 +167,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 \begin{lstlisting}[language=bash]
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=none gui:=true start_paused:=false \
-  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_clear_visual_obstacle_pose_cache:=false \
   room315_right_shuttle_count:=0 \
   room315_left_shuttle_count:=0
 \end{lstlisting}
@@ -181,7 +181,7 @@ running so simulation-time controllers advance.
 ros2 launch mfja_3rd_floor_bringup full_floor.launch.py \
   robots:=kuka1,staubli1,yaskawa_hc10_1,yaskawa_hc10dt_1,tiago1 \
   gui:=true start_paused:=false \
-  room315_clear_vla_obstacle_pose_cache:=false
+  room315_clear_visual_obstacle_pose_cache:=false
 \end{lstlisting}
 
 \subsection{Isolated industrial robot}
@@ -394,10 +394,10 @@ Start the integrated branch with the floor:
 ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none gui:=true start_paused:=false \
   enable_room315_kinematic_shuttles:=true \
-  enable_room315_vla:=true \
-  enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_obstacles:=false \
-  room315_clear_vla_obstacle_pose_cache:=false \
+  enable_room315_rail_safety_supervisor:=true \
+  enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_obstacles:=false \
+  room315_clear_visual_obstacle_pose_cache:=false \
   room315_right_shuttle_count:=1 \
   room315_left_shuttle_count:=0 \
   room315_shuttles_start_enabled:=false
@@ -406,14 +406,15 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
 Inspect status and issue the ordinary supervised stop:
 
 \begin{lstlisting}[language=bash]
-ros2 topic echo --once /room_315/vla/status std_msgs/msg/String
-ros2 topic pub --once /room_315/vla/command std_msgs/msg/String \
+ros2 topic echo --once /room_315/rail_safety/status std_msgs/msg/String
+ros2 topic pub --once /room_315/rail_safety/primitive_command std_msgs/msg/String \
   "{data: '{\"action\":\"stop_all\"}'}"
 \end{lstlisting}
 
 This does not require a learned model and does not start visual inference or
-task execution. If attaching to a floor that was launched without VLA, start
-\file{room_315_vla_supervisor.launch.py} directly. Do not do that when the
+task execution. If attaching to a floor that was launched without the
+perception-and-safety branch, start
+\file{room_315_perception_and_safety.launch.py} directly. Do not do that when the
 integrated branch is already active; it would duplicate the supervisor and
 camera bridge.
 
@@ -427,7 +428,7 @@ intended visual virtual environment. Never compute a new ``approved'' hash from
 an untrusted file merely to pass the check or edit a promoted bundle in place.
 \end{warningbox}
 
-With the integrated VLA camera bridge already running, the safe shadow template
+With the integrated RGB-D camera bridge already running, the safe shadow template
 is:
 
 \begin{lstlisting}[language=bash]
@@ -534,7 +535,7 @@ external paths/hashes:
 \begin{lstlisting}[language=bash]
 export ROOM315_TASK_EXEC_CONFIG="$HOME/.config/mfja/task_execution_runtime.yaml"
 mkdir -p "$(dirname "$ROOM315_TASK_EXEC_CONFIG")"
-cp "$MFJA_REPO/mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml" \
+cp "$MFJA_REPO/mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml" \
   "$ROOM315_TASK_EXEC_CONFIG"
 ${EDITOR:-nano} "$ROOM315_TASK_EXEC_CONFIG"
 \end{lstlisting}
@@ -567,7 +568,7 @@ ros2 topic echo /diagnostics diagnostic_msgs/msg/DiagnosticArray
 \code{execution_enabled:=true} causes supervised Gazebo actuation. The current
 gateway has no external-obstacle perception provider and supports only the
 paired policy
-\code{enable_room315_vla_obstacles:=false} with
+\code{enable_room315_visual_obstacles:=false} with
 \code{external_obstacles_disabled:=true}. Setting the gateway value false fails
 closed with \code{external_obstacle_perception_not_configured}; task execution
 is unavailable while the floor obstacles are enabled.

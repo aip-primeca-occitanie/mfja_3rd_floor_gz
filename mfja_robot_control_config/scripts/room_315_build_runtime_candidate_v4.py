@@ -440,7 +440,7 @@ def validate_sources() -> ValidatedSources:
     if str(script_directory) not in sys.path:
         sys.path.insert(0, str(script_directory))
     try:
-        from room_315_vla_train_v4 import verify_completed_canary_handoff
+        from room_315_visual_state_train_v4 import verify_completed_canary_handoff
 
         handoff = verify_completed_canary_handoff(CANARY_FINAL_REPORT)
     except Exception as exc:

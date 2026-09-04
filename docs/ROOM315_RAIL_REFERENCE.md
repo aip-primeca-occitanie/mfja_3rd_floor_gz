@@ -1,8 +1,8 @@
 # Room 315 Rail Reference
 
 > **Launch side effect:** high-level Room 315/full-floor launches clear
-> `~/.ros/room315_vla_obstacles.json` by default. Add
-> `room315_clear_vla_obstacle_pose_cache:=false` to preserve that cache. If its
+> `~/.ros/room315_visual_obstacles.json` by default. Add
+> `room315_clear_visual_obstacle_pose_cache:=false` to preserve that cache. If its
 > path is overridden, make sure it names only the intended disposable cache.
 
 ## Room 315 Continuous Path Backend

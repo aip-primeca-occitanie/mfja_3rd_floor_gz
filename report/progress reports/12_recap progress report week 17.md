@@ -1,11 +1,11 @@
-# VLA Progress Report - Week 2
+# Neuro-Symbolic Progress Report - Week 2
 
 Period: June 26, 2026 - July 2, 2026
 
 ## Main Progress
 
 - Updated the PDDL payload training flow and kept the model input boundary clear: task language, camera images, previous command, and observable state only.
-- Removed legacy VLA goals and unused benchmark/teleop tools so the project stays focused on the current workflow.
+- Removed legacy direct-action goals and unused benchmark/teleop tools so the project stays focused on the modular visual-state, planning, and supervised-execution workflow.
 - Added route-topology blocker metadata to describe blockage locations and clearance routes in the scenarios.
 - Adopted `payload_training_cases_expanded_160_speed_sweep.yaml` as the main source of truth for training cases.
 - Stabilized 160 successful speed-sweep cases covering both rails, loaded shuttles, no-blocker cases, and blocker clearance to a stopper or the interior loop.

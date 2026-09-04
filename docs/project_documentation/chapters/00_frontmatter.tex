@@ -145,9 +145,9 @@ The base simulation needs no dataset or learned checkpoint. Learned V4
 inference and closed-loop execution require separate, immutable,
 checksum-verified artifacts and remain disabled by default. The relevant
 defaults and guards are defined in
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml}
 and
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}.
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml}.
 
 \begin{safetybox}[Non-negotiable scope boundary]
 This is simulation and research software. It is not a safety-certified
@@ -161,7 +161,7 @@ and an approved safety architecture.
 \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py},
 \file{mfja_3rd_floor_description/src/SmoothJointTrajectoryController.cc},
 \file{mfja_3rd_floor_description/src/SymmetricGripperController.cc}, and
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime_v4.yaml}.
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime_v4.yaml}.
 \end{safetybox}
 
 The appendices proceed from shared terminology to exact ROS interfaces, launch
@@ -186,7 +186,7 @@ to action and then verification.
 \endhead
 New maintainer & Chapters~\ref{ch:orientation}--\ref{ch:interfaces} &
   Chapters~\ref{ch:installation}--\ref{ch:launch}, then the relevant
-  subsystem in Chapters~\ref{ch:robots}--\ref{ch:vla-planning} &
+  subsystem in Chapters~\ref{ch:robots}--\ref{ch:visual-state-planning} &
   Chapters~\ref{ch:operations}--\ref{ch:handover} \\ \rowseparator
 Host setup or rebuild & Chapter~\ref{ch:installation} &
   Chapters~\ref{ch:configuration}--\ref{ch:launch}, then the operator preflight in
@@ -203,7 +203,7 @@ Rail maintainer & Chapter~\ref{ch:interfaces} &
   Chapters~\ref{ch:testing}--\ref{ch:maintenance} \\ \rowseparator
 Visual/planning maintainer & Chapter~\ref{ch:interfaces} &
   Chapters~\ref{ch:configuration}--\ref{ch:launch}, then
-  Chapter~\ref{ch:vla-planning} &
+  Chapter~\ref{ch:visual-state-planning} &
   Chapters~\ref{ch:operations}--\ref{ch:handover} \\ \rowseparator
 Release or handover & Chapter~\ref{ch:testing} &
   Chapter~\ref{ch:maintenance} and the exact interface, launch, and source

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Strict validation gate for Room 315 PDDL/PlanSys2 VLA scenarios."""
+"""Strict validation gate for Room 315 PDDL/PlanSys2 visual-state scenarios."""
 
 from __future__ import annotations
 

@@ -588,10 +588,10 @@ source install/setup.bash</code></pre>
         </div>
 
         <div class="callout">
-          Room 315 now starts without VLA removable obstacle markers by default.
+          Room 315 now starts without removable visual obstacle markers by default.
           Keep the default for normal shuttle and robot scenarios. Add
-          <code>enable_room315_vla_obstacles:=true</code> only when you want to
-          run obstacle-marker workflows such as VLA obstacle-stop scenarios.
+          <code>enable_room315_visual_obstacles:=true</code> only when you want to
+          run visual obstacle-marker workflows such as obstacle-stop scenarios.
         </div>
 
         <div class="command">
@@ -601,9 +601,9 @@ gui_config:=config/mfja_light.gui.config \</code></pre>
         </div>
 
         <div class="command">
-          <div class="command-bar"><span>Enable optional VLA obstacles</span><button class="copy-btn" data-copy="cmd-enable-vla-obstacles">Copy</button></div>
-          <pre><code id="cmd-enable-vla-obstacles"># Optional. The default is false, so Room 315 launches without obstacles:
-enable_room315_vla_obstacles:=true \</code></pre>
+          <div class="command-bar"><span>Enable optional visual obstacles</span><button class="copy-btn" data-copy="cmd-enable-visual-obstacles">Copy</button></div>
+          <pre><code id="cmd-enable-visual-obstacles"># Optional. The default is false, so Room 315 launches without obstacles:
+enable_room315_visual_obstacles:=true \</code></pre>
         </div>
 
         <div class="command">

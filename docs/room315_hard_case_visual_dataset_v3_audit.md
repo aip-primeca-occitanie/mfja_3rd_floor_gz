@@ -36,7 +36,7 @@ coverage auditing.
 fail-closed inventory boundary. It reconciles:
 
 - `MAX_SHUTTLES_PER_SIDE`;
-- `config/room_315_vla/shuttle_identity.yaml`;
+- `config/room_315_shuttle_identity/shuttle_identity.yaml`;
 - `mfja_3rd_floor_description/worlds/room_315_only.world`;
 - `LEFT_ENTITY_DEFAULTS` and `RIGHT_ENTITY_DEFAULTS`.
 
@@ -51,8 +51,8 @@ left and right rail-network YAML files. The public vocabulary is:
 
 Relevant topology sources and helpers are:
 
-- `mfja_robot_control_config/config/room_315_rails/left_rail_network.yaml`;
-- `mfja_robot_control_config/config/room_315_rails/right_rail_network.yaml`;
+- `mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml`;
+- `mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml`;
 - `mfja_robot_control_config/scripts/room_315_rail_defaults.py`;
 - `public_rail_segment_lengths()`;
 - `default_rail_network_path()`;
@@ -131,8 +131,8 @@ or output constants.
 `mfja_robot_control_config/scripts/room_315_visual_state_capture.py` is the
 authoritative two-camera/oracle capture implementation. It subscribes to:
 
-- `/room_315/vla/left_rail_rgbd/image`;
-- `/room_315/vla/right_rail_rgbd/image`;
+- `/room_315/perception/left_rail_rgbd/image`;
+- `/room_315/perception/right_rail_rgbd/image`;
 - `/room_315/rails/left/shuttles/state`;
 - `/room_315/rails/right/shuttles/state`;
 - the corresponding payload-state and switch-state topics.

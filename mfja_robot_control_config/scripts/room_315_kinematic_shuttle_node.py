@@ -152,7 +152,7 @@ def _default_payload_model_sdf_path() -> Path:
         return (
             Path(get_package_share_directory('mfja_3rd_floor_description'))
             / 'models'
-            / 'room315_vla_payload_small_box'
+            / 'room315_payload_small_box'
             / 'model.sdf'
         )
     except Exception:
@@ -160,7 +160,7 @@ def _default_payload_model_sdf_path() -> Path:
             Path(__file__).resolve().parents[2]
             / 'mfja_3rd_floor_description'
             / 'models'
-            / 'room315_vla_payload_small_box'
+            / 'room315_payload_small_box'
             / 'model.sdf'
         )
 
@@ -2051,7 +2051,7 @@ class Room315KinematicShuttleNode(Node):
     def _shuttle_model_sdf_for_entity(self, entity_name: str) -> Path:
         """Return the per-identity shuttle model when available.
 
-        The deployable VLA policy should learn shuttle identity from physical
+        The deployable visual-state model should learn shuttle identity from physical
         RGB-visible perimeter labels. Dynamic Gazebo spawns therefore use the
         R1..R4/L1..L4 shuttle models when the entity name follows the Room 315
         convention, falling back to the configured generic model for custom

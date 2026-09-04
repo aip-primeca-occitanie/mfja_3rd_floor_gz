@@ -66,8 +66,8 @@ install(
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(
-    test_room315_vla_camera_model
-    test/test_room315_vla_camera_model.py
+    test_room315_visual_observation_assets
+    test/test_room315_visual_observation_assets.py
   )
   ament_add_pytest_test(
     test_industrial_robot_collision_free

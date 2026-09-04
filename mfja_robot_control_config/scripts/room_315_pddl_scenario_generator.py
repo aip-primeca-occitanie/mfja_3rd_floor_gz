@@ -2,7 +2,7 @@
 """Room 315 PlanSys2-backed PDDL scenario generator.
 
 Dry-run mode produces planned episode JSON only. Execute mode publishes only to
-the existing VLA supervisor and dataset-control topics; it does not bypass the
+the existing rail-safety supervisor and dataset-control topics; it does not bypass the
 supervisor, execute Gazebo directly, or modify model_input.
 """
 
@@ -80,18 +80,18 @@ def _package_root_for_script(script_dir: Path) -> Path:
 
 
 PACKAGE_ROOT = _package_root_for_script(SCRIPT_DIR)
-PDDL_DIR = PACKAGE_ROOT / 'config' / 'room_315_vla' / 'pddl'
+PDDL_DIR = PACKAGE_ROOT / 'config' / 'room_315_planning' / 'pddl'
 PDDL_DOMAIN_PATH = PDDL_DIR / 'domain_room315.pddl'
 KINEMATICS_DIR = PACKAGE_ROOT / 'config' / 'room_315_kinematics'
 DEFAULT_PAYLOAD_TRAINING_CASES_PATH = (
     PACKAGE_ROOT
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_payload_cases'
     / 'payload_training_cases_expanded_160_speed_sweep.yaml'
 )
 DEFAULT_PLANSYS_GET_PLAN_SERVICE = '/planner/get_plan'
 DEFAULT_PLANSYS_TIMEOUT_S = 10.0
-DEFAULT_SUPERVISOR_NODE_NAME = 'room_315_vla_supervisor'
+DEFAULT_SUPERVISOR_NODE_NAME = 'room_315_rail_safety_supervisor'
 DEFAULT_SHUTTLE_SPEED_MPS = 0.3
 RAIL_NETWORK_PATH_BY_SIDE = {
     'right': KINEMATICS_DIR / 'rail_network_right.yaml',
@@ -690,7 +690,7 @@ class RosScenarioTransport(ScenarioTransport):
         return {
             'ready': False,
             'reason': (
-                'Room 315 VLA supervisor is not ready: '
+                'Room 315 rail-safety supervisor is not ready: '
                 + '; '.join(missing or ['readiness check timed out'])
             ),
         }
@@ -895,7 +895,7 @@ class RosScenarioTransport(ScenarioTransport):
             recorder_count = 0
             for info in infos:
                 node_name = str(getattr(info, 'node_name', '') or '').strip().lstrip('/')
-                if node_name == 'room_315_vla_dataset_recorder':
+                if node_name == 'room_315_visual_state_dataset_recorder':
                     recorder_count += 1
             if recorder_count:
                 return recorder_count
@@ -10196,13 +10196,13 @@ def _resolve_payload_training_case_config_path(path: Path | str | None = None) -
         REPO_ROOT
         / 'mfja_robot_control_config'
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_payload_cases'
         / raw_path.name,
         SCRIPT_DIR.parents[1]
         / 'share'
         / 'mfja_robot_control_config'
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_payload_cases'
         / raw_path.name,
     ])
 
@@ -11043,7 +11043,11 @@ def main(argv: list[str] | None = None) -> int:
         action='store_true',
         help='Check supervisor readiness and required initial shuttle/payload state without execution.',
     )
-    mode_group.add_argument('--execute', action='store_true', help='Publish generated commands through the VLA supervisor.')
+    mode_group.add_argument(
+        '--execute',
+        action='store_true',
+        help='Publish generated commands through the rail-safety supervisor.',
+    )
     parser.add_argument(
         '--ready-line',
         action='store_true',
@@ -11055,10 +11059,10 @@ def main(argv: list[str] | None = None) -> int:
         help='Suppress full scenario JSON on stdout; failures still return nonzero.',
     )
     parser.add_argument('--output', type=Path, default=None, help='Optional JSON output path.')
-    parser.add_argument('--command-topic', default='/room_315/vla/command')
-    parser.add_argument('--episode-control-topic', default='/room_315/vla/episode_control')
-    parser.add_argument('--status-topic', default='/room_315/vla/status')
-    parser.add_argument('--dataset-status-topic', default='/room_315/vla/dataset_status')
+    parser.add_argument('--command-topic', default='/room_315/rail_safety/primitive_command')
+    parser.add_argument('--episode-control-topic', default='/room_315/visual_dataset/episode_control')
+    parser.add_argument('--status-topic', default='/room_315/rail_safety/status')
+    parser.add_argument('--dataset-status-topic', default='/room_315/visual_dataset/status')
     parser.add_argument(
         '--require-dataset-recorder',
         action='store_true',

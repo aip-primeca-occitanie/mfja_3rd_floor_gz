@@ -266,7 +266,7 @@ def test_removed_shuttle_times_out_and_readded_shuttle_becomes_present():
 
 
 def test_runtime_preprocessing_matches_training_and_preserves_channel_order():
-    training_path = SCRIPTS / 'room_315_vla_train_local.py'
+    training_path = SCRIPTS / 'room_315_visual_state_train_local.py'
     spec = importlib.util.spec_from_file_location('room315_training_preprocess', training_path)
     training = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

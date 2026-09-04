@@ -16,10 +16,10 @@ That is why the shuttle node must use:
 ```
 
 > **Obstacle-cache warning:** Both high-level floor launches default to
-> `room315_clear_vla_obstacle_pose_cache:=true`. At startup, that setting
-> deletes `~/.ros/room315_vla_obstacles.json`. Add
-> `room315_clear_vla_obstacle_pose_cache:=false` to preserve the cache. If you
-> override `room315_vla_obstacle_pose_file`, point it only at a file that is
+> `room315_clear_visual_obstacle_pose_cache:=true`. At startup, that setting
+> deletes `~/.ros/room315_visual_obstacles.json`. Add
+> `room315_clear_visual_obstacle_pose_cache:=false` to preserve the cache. If you
+> override `room315_visual_obstacle_pose_file`, point it only at a file that is
 > intentionally disposable; the same startup cleanup applies to the override.
 
 Terminal 1 - start the full floor with the Room 315 rail stack:

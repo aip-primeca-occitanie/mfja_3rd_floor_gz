@@ -1,5 +1,5 @@
 \chapter{Visual State, Planning, and Closed-Loop Execution}
-\label{ch:vla-planning}
+\label{ch:visual-state-planning}
 
 \chapteroverview
   {Explains the optional learned-visual and task-execution stack, including its
@@ -30,8 +30,8 @@ that does so.
 Observation readiness & Gazebo effect $\rightarrow$ paired images/presence $\rightarrow$ accepted V4 state & Promoted model, validator, presence/fusion readiness & \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py}; \file{mfja_robot_control_config/scripts/room_315_visual_runtime_validation.py} \\ \rowseparator
 Goal intake & Constrained English $\rightarrow$ confirmed \code{TaskGoal} & Parser, validation, explicit operator confirmation & \file{mfja_robot_control_config/scripts/room_315_task_goal_cli.py}; \file{mfja_robot_control_config/scripts/room_315_task_goal_builder.py} \\ \rowseparator
 Grounding & Fresh accepted observation $\rightarrow$ concrete task facts & Task gateway schema/checkpoint/freshness gates & \file{mfja_robot_control_config/scripts/room_315_task_execution.py} \\ \rowseparator
-Planning & Fresh PDDL problem $\leftrightarrow$ PlanSys2 plan & Runtime domain plus whole-plan validation & \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl}; \file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py} \\ \rowseparator
-Primitive execution & First translated primitive $\leftrightarrow$ supervisor status & Gateway authorization and deterministic supervisor & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py} \\ \rowseparator
+Planning & Fresh PDDL problem $\leftrightarrow$ PlanSys2 plan & Runtime domain plus whole-plan validation & \file{mfja_robot_control_config/config/room_315_planning/pddl/domain_room315_runtime.pddl}; \file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py} \\ \rowseparator
+Primitive execution & First translated primitive $\leftrightarrow$ supervisor status & Gateway authorization and deterministic supervisor & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py} \\ \rowseparator
 Typed actuation & Shuttle/switch/stopper command $\leftrightarrow$ actual state & Rail controller and typed interfaces & \file{mfja_robot_control_config/scripts/room_315_kinematic_shuttle_node.py}; \file{mfja_rail_interfaces/CMakeLists.txt} \\ \rowseparator
 Effect verification & Newer visual/controller evidence $\rightarrow$ success or replan & Gateway effect predicates and bounded retries; the loop returns to observation readiness & \file{mfja_robot_control_config/scripts/room_315_task_execution.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py} \\
 \bottomrule
@@ -42,7 +42,7 @@ Effect verification & Newer visual/controller evidence $\rightarrow$ success or 
 Source files: \file{mfja_robot_control_config/launch/room_315_visual_state_runtime.launch.py},
 \file{mfja_robot_control_config/scripts/room_315_visual_state_inference_node.py},
 \file{mfja_robot_control_config/scripts/room_315_visual_runtime_v4.py}, and
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml}.
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml}.
 
 \file{room_315_visual_state_runtime.launch.py} starts the separate learned
 runtime. Only generation V4 is admitted to the active path. A promoted runtime
@@ -111,7 +111,7 @@ rather than imposing \code{stabilized=true} on every deployment.
 Source files: \file{mfja_robot_control_config/scripts/room_315_task_goal_cli.py},
 \file{mfja_robot_control_config/scripts/room_315_task_goal_dialogue.py},
 \file{mfja_robot_control_config/scripts/room_315_task_goal_parsers.py}, and
-\file{mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml}.
+\file{mfja_robot_control_config/config/room_315_task_goal/task_goal_understanding.yaml}.
 
 The language layer combines a deterministic parser with an optional local
 semantic model. The deterministic path remains available without the large
@@ -134,8 +134,8 @@ virtual environment and inspect its planned actions before running it.
 
 \section{PDDL Authorities and Translation}
 
-Source files: \file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl},
-\file{mfja_robot_control_config/config/room_315_vla/pddl/domain_room315.pddl},
+Source files: \file{mfja_robot_control_config/config/room_315_planning/pddl/domain_room315_runtime.pddl},
+\file{mfja_robot_control_config/config/room_315_planning/pddl/domain_room315.pddl},
 \file{mfja_robot_control_config/scripts/room_315_pddl_plan_translator.py}, and
 \file{mfja_robot_control_config/scripts/room_315_pddl_validation_gate.py}.
 
@@ -173,7 +173,7 @@ is parsed and validated before its first primitive is sent.
 Source files: \file{mfja_robot_control_config/scripts/room_315_task_execution_node.py},
 \file{mfja_robot_control_config/scripts/room_315_task_execution.py},
 \file{mfja_robot_control_config/scripts/room_315_task_execution_config.py}, and
-\file{mfja_robot_control_config/config/room_315_vla/task_execution_runtime.yaml}.
+\file{mfja_robot_control_config/config/room_315_task_execution/task_execution_runtime.yaml}.
 
 \file{room_315_task_execution_node.py} owns the host singleton lock and combines
 the accepted visual observation, supervisor status, and both typed sensor
@@ -207,14 +207,14 @@ $1.25\times$ estimated travel time plus 5 s margin.
 
 \section{Primitive Supervisor}
 
-Source files: \file{mfja_robot_control_config/scripts/room_315_vla_supervisor.py},
-\file{mfja_robot_control_config/launch/room_315_vla_supervisor.launch.py}, and
-\file{mfja_robot_control_config/config/room_315_vla/vla_supervisor.yaml}.
+Source files: \file{mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py},
+\file{mfja_robot_control_config/launch/room_315_perception_and_safety.launch.py}, and
+\file{mfja_robot_control_config/config/room_315_task_execution/rail_safety_supervisor.yaml}.
 
-\file{room_315_vla_supervisor.py} is deterministic. It consumes JSON primitives
-on \rosname{/room_315/vla/command}, reads typed rail/device state and camera
+\file{room_315_rail_safety_supervisor.py} is deterministic. It consumes JSON primitives
+on \rosname{/room_315/rail_safety/primitive_command}, reads typed rail/device state and camera
 availability, and publishes typed shuttle, switch, and stopper commands. It
-reports structured status on \rosname{/room_315/vla/status}.
+reports structured status on \rosname{/room_315/rail_safety/status}.
 
 Important invariants are:
 
@@ -236,7 +236,7 @@ are the live feedback surface.
 
 \section{Dataset Lifecycle and Leakage Control}
 
-Source files: \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py},
+Source files: \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py},
 \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset.py},
 \file{mfja_robot_control_config/scripts/room_315_grouped_visual_splits.py}, and
 \file{mfja_robot_control_config/scripts/room_315_visual_dataset_audit.py}.
@@ -256,7 +256,7 @@ A recorded episode contains \file{images/<camera>/}, \file{data.jsonl},
 \tableheader Stage & Required transition/output & Source file(s) \\
 \midrule
 \endhead
-Capture & Scenario manifest $\rightarrow$ guarded episode images/events/data & \file{mfja_robot_control_config/scripts/room_315_vla_dataset_recorder.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_capture.py} \\ \rowseparator
+Capture & Scenario manifest $\rightarrow$ guarded episode images/events/data & \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset_recorder.py}; \file{mfja_robot_control_config/scripts/room_315_visual_state_capture.py} \\ \rowseparator
 Validate/label & Episode $\rightarrow$ validation record and permitted labels/export & \file{mfja_robot_control_config/scripts/room_315_visual_state_dataset.py}; \file{mfja_robot_control_config/scripts/room_315_visual_label_exporter.py} \\ \rowseparator
 Split/audit & Related captures remain grouped; leakage and role constraints are audited & \file{mfja_robot_control_config/scripts/room_315_grouped_visual_splits.py}; \file{mfja_robot_control_config/scripts/room_315_visual_dataset_audit.py} \\ \rowseparator
 Train/evaluate & Frozen training selection $\rightarrow$ sealed evaluation evidence & \file{mfja_robot_control_config/scripts/room_315_visual_training_v4.py}; \file{mfja_robot_control_config/scripts/room_315_visual_v4_final_test.py} \\ \rowseparator
@@ -274,9 +274,9 @@ split-rail ResNet-18 model at $320\times240$, 12 epochs, and seed
 31520260811. The associated evidence records these frozen roles.
 
 The tracked role/count authorities are
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_training_v4.json},
-\file{mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4.json},
-and \file{mfja_robot_control_config/config/room_315_vla/visual_state_final_test_v4_coverage_extension.json}.
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_training_v4.json},
+\file{mfja_robot_control_config/config/room_315_visual_state/visual_state_final_test_v4.json},
+and \file{mfja_robot_control_config/config/room_315_visual_state/visual_state_final_test_v4_coverage_extension.json}.
 
 \begin{longtable}{L{0.32\textwidth} L{0.18\textwidth} L{0.40\textwidth}}
 \caption{Frozen V4 dataset roles, counts, and permitted use}

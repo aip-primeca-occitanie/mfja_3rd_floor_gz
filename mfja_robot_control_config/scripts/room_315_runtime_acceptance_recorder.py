@@ -234,7 +234,7 @@ class Room315RuntimeAcceptanceRecorder(Node):
             'accepted_observed_state_topic',
             '/room_315/visual_state/observed_state',
         )
-        self.declare_parameter('safety_status_topic', '/room_315/vla/status')
+        self.declare_parameter('safety_status_topic', '/room_315/rail_safety/status')
         self.declare_parameter(
             'task_execution_status_topic',
             '/room_315/task_goal/status',

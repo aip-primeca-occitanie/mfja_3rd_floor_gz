@@ -12,7 +12,7 @@ The base installation supports:
 - right/left rail shuttle control;
 - switches, stoppers, sensors, markers, and payload visuals;
 - industrial robot and TIAGo spawning/control;
-- VLA camera bridge and primitive supervisor;
+- RGB-D camera bridge and primitive supervisor;
 - most source and package tests.
 
 Active learned V4 inference and language-to-motion execution additionally need
@@ -252,10 +252,10 @@ names.
 
 ## 7. First Smoke Run
 
-The high-level launch clears `~/.ros/room315_vla_obstacles.json` by default.
+The high-level launch clears `~/.ros/room315_visual_obstacles.json` by default.
 This file is a disposable pose cache. Add
-`room315_clear_vla_obstacle_pose_cache:=false` to preserve it. If you override
-`room315_vla_obstacle_pose_file`, ensure that it names only the intended cache
+`room315_clear_visual_obstacle_pose_cache:=false` to preserve it. If you override
+`room315_visual_obstacle_pose_file`, ensure that it names only the intended cache
 file because the default startup action unlinks the configured path.
 
 Start a lightweight server-only Room 315 runtime. This disables the Gazebo GUI

@@ -117,8 +117,8 @@ Every terminal that starts visual inference must activate that environment.
 The high-level launch below starts Gazebo, the paired RGB-D camera bridge, the
 deterministic rail nodes, and the supervisor. It intentionally does not start
 the visual inference process. It also clears the disposable
-`~/.ros/room315_vla_obstacles.json` cache by default. Add
-`room315_clear_vla_obstacle_pose_cache:=false` only if the cache must be
+`~/.ros/room315_visual_obstacles.json` cache by default. Add
+`room315_clear_visual_obstacle_pose_cache:=false` only if the cache must be
 preserved, and keep any configured cache path limited to that intended file.
 
 ```bash
@@ -133,16 +133,16 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   gui:=true \
   start_paused:=false \
   enable_room315_kinematic_shuttles:=true \
-  enable_room315_vla:=true \
-  enable_room315_vla_camera_bridge:=true \
-  enable_room315_vla_obstacles:=false \
+  enable_room315_rail_safety_supervisor:=true \
+  enable_room315_rgbd_camera_bridge:=true \
+  enable_room315_visual_obstacles:=false \
   room315_left_shuttle_count:=2 \
   room315_right_shuttle_count:=2 \
   room315_shuttles_start_enabled:=false
 ```
 
 Wait at least five seconds, then verify that `/clock`, both camera image topics,
-both shuttle-state topics, and `/room_315/vla/status` are active.
+both shuttle-state topics, and `/room_315/rail_safety/status` are active.
 
 ## Start a Shadow Runtime
 
@@ -293,7 +293,7 @@ blocked; use supervisor and task-gateway diagnostics for the actuation state.
 ## Configuration and Environment Overrides
 
 The source configuration is
-`mfja_robot_control_config/config/room_315_vla/visual_state_runtime.yaml`.
+`mfja_robot_control_config/config/room_315_visual_state/visual_state_runtime.yaml`.
 Its checked-in artifact path is host-specific evidence, not a portable
 default. Prefer launch overrides or a host-local copy rather than committing a
 personal path.

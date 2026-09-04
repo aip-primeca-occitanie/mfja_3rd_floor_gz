@@ -301,7 +301,7 @@ def test_multi_shuttle_movement_without_identity_is_not_approved():
 
 
 def test_extractor_skips_failed_and_unvalidated_episodes_by_default(tmp_path):
-    extractor = _load_script('room_315_vla_event_extractor')
+    extractor = _load_script('room_315_visual_training_event_extractor')
     dataset = tmp_path / 'dataset'
     _write_episode(dataset, 'episode_approved', approved=True)
     _write_episode(dataset, 'episode_failed', approved=False)
@@ -318,7 +318,7 @@ def test_extractor_skips_failed_and_unvalidated_episodes_by_default(tmp_path):
 
 
 def test_extractor_includes_failed_only_with_debug_flag(tmp_path):
-    extractor = _load_script('room_315_vla_event_extractor')
+    extractor = _load_script('room_315_visual_training_event_extractor')
     dataset = tmp_path / 'dataset'
     _write_episode(dataset, 'episode_approved', approved=True)
     _write_episode(dataset, 'episode_failed', approved=False)

@@ -239,23 +239,23 @@
       <pose>-9.822 -4.42 0.726 0 0 -2.63653</pose>
     </include>
 
-    <!-- VLA experiment devices: rail-focused RGB-D cameras and visual slot markers. -->
+    <!-- Visual observation rig: rail-focused RGB-D cameras and visual slot markers. -->
     <include>
-      <uri>model://room315_vla_overhead_devices</uri>
-      <name>room315_vla_overhead_devices_1</name>
+      <uri>model://room315_visual_observation_rig</uri>
+      <name>room315_visual_observation_rig_1</name>
       <pose>0 0 0 0 0 0</pose>
     </include>
 
 
     <include>
-      <uri>model://room315_vla_removable_obstacle_marker</uri>
-      <name>room315_vla_right_obstacle_marker</name>
+      <uri>model://room315_visual_obstacle_marker</uri>
+      <name>room315_visual_right_obstacle_marker</name>
       <pose>-14.18 -4.68 0.856 0 0 0</pose>
     </include>
 
     <include>
-      <uri>model://room315_vla_removable_obstacle_marker</uri>
-      <name>room315_vla_left_obstacle_marker</name>
+      <uri>model://room315_visual_obstacle_marker</uri>
+      <name>room315_visual_left_obstacle_marker</name>
       <pose>-9.86 -4.68 0.856 0 0 0</pose>
     </include>
 

@@ -40,7 +40,7 @@ from room_315_observed_state_provider import timestamp_or_zero as _timestamp_or_
 DEFAULT_CALIBRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_visual_state'
     / 'visual_observed_state_calibration.yaml'
 )
 VISUAL_SCHEMA_VERSION = 1

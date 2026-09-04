@@ -63,7 +63,7 @@ V1_MANIFEST_SHA256 = (
 DEFAULT_CONFIG = (
     SCRIPT_DIR.parent
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_visual_state'
     / 'visual_state_final_test_v4_coverage_extension.json'
 )
 DEFAULT_ROOT = Path(

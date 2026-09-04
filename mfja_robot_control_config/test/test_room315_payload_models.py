@@ -8,7 +8,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MODELS_DIR = REPO_ROOT / 'mfja_3rd_floor_description' / 'models'
 PAYLOAD_CONFIG = (
-    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'payload_scenarios.yaml'
+    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_payload_cases' / 'payload_scenarios.yaml'
 )
 
 
@@ -25,7 +25,7 @@ def test_payload_models_exist_for_configured_variants():
         'partial_marker_occluder',
     ):
         model_uri = variants[name]['model_uri']
-        assert model_uri.startswith('model://room315_vla_payload_')
+        assert model_uri.startswith('model://room315_payload_')
         model_dir = MODELS_DIR / model_uri.removeprefix('model://')
         assert (model_dir / 'model.config').exists()
         assert (model_dir / 'model.sdf').exists()
@@ -68,7 +68,7 @@ def test_carried_box_is_the_default_loaded_shuttle_payload():
     config = yaml.safe_load(PAYLOAD_CONFIG.read_text(encoding='utf-8'))
     variant = config['variants']['carried_box']
 
-    assert variant['model_uri'] == 'model://room315_vla_payload_small_box'
+    assert variant['model_uri'] == 'model://room315_payload_small_box'
     assert variant['loaded'] is True
     assert variant['payload_state'] == 'loaded'
     assert variant['payload_type'] == 'box'

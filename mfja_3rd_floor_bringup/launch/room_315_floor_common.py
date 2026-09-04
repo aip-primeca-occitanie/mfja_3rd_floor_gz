@@ -87,23 +87,23 @@ def _as_launch_bool(value):
     return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
-def _clear_vla_obstacle_pose_cache(context, *args, **kwargs):
+def _clear_visual_obstacle_pose_cache(context, *args, **kwargs):
     clear_cache = LaunchConfiguration(
-        'room315_clear_vla_obstacle_pose_cache'
+        'room315_clear_visual_obstacle_pose_cache'
     ).perform(context)
     if not _as_launch_bool(clear_cache):
         return []
 
     pose_file = Path(
-        LaunchConfiguration('room315_vla_obstacle_pose_file').perform(context)
+        LaunchConfiguration('room315_visual_obstacle_pose_file').perform(context)
     ).expanduser()
     try:
         pose_file.unlink(missing_ok=True)
     except OSError as exc:
         return [
-            LogInfo(msg=f'Could not clear VLA obstacle pose cache {pose_file}: {exc}')
+            LogInfo(msg=f'Could not clear visual obstacle pose cache {pose_file}: {exc}')
         ]
-    return [LogInfo(msg=f'Cleared VLA obstacle pose cache: {pose_file}')]
+    return [LogInfo(msg=f'Cleared visual obstacle pose cache: {pose_file}')]
 
 
 FLOOR_PROFILES = {
@@ -144,10 +144,10 @@ def generate_floor_launch_description(profile_name):
         'launch',
         'room_315_dual_kinematic_shuttles.launch.py',
     )
-    vla_launch = os.path.join(
+    perception_safety_launch = os.path.join(
         control_pkg_path,
         'launch',
-        'room_315_vla_supervisor.launch.py',
+        'room_315_perception_and_safety.launch.py',
     )
 
     launch_arguments = [
@@ -215,14 +215,17 @@ def generate_floor_launch_description(profile_name):
             'room315_visual_debug_colors',
             default_value='true',
             choices=['true', 'false'],
-            description='Use switch/shuttle debug colors; false keeps rail-like colors for VLA data.',
+            description=(
+                'Use switch/shuttle debug colors; false keeps rail-like colors '
+                'for visual-state data.'
+            ),
         ),
         DeclareLaunchArgument(
-            'enable_room315_vla_obstacles',
+            'enable_room315_visual_obstacles',
             default_value='false',
             choices=['true', 'false'],
             description=(
-                'Load Room 315 VLA removable obstacle markers. Defaults to false '
+                'Load Room 315 visual obstacle markers. Defaults to false '
                 'so Gazebo starts without obstacles unless explicitly requested.'
             ),
         ),
@@ -395,46 +398,50 @@ def generate_floor_launch_description(profile_name):
             description='Minimum seconds a crossed Room 315 sensor marker stays green.',
         ),
         DeclareLaunchArgument(
-            'enable_room315_vla',
+            'enable_room315_rail_safety_supervisor',
             default_value='false',
             choices=['true', 'false'],
-            description='Start the Room 315 VLA camera bridge and action supervisor.',
+            description=(
+                'Start the Room 315 perception support and rail safety supervisor.'
+            ),
         ),
         DeclareLaunchArgument(
-            'room315_clear_vla_obstacle_pose_cache',
+            'room315_clear_visual_obstacle_pose_cache',
             default_value='true',
             choices=['true', 'false'],
             description=(
-                'Clear the VLA obstacle pose cache at simulation startup so '
+                'Clear the visual obstacle pose cache at simulation startup so '
                 'stale obstacle moves from a previous Gazebo run are not reused.'
             ),
         ),
         DeclareLaunchArgument(
-            'room315_vla_obstacle_pose_file',
-            default_value='~/.ros/room315_vla_obstacles.json',
-            description='Pose cache written by room_315_vla_obstacle_tool.py.',
+            'room315_visual_obstacle_pose_file',
+            default_value='~/.ros/room315_visual_obstacles.json',
+            description='Pose cache written by room_315_visual_obstacle_tool.py.',
         ),
         DeclareLaunchArgument(
-            'enable_room315_vla_camera_bridge',
+            'enable_room315_rgbd_camera_bridge',
             default_value='true',
             choices=['true', 'false'],
-            description='Bridge the Room 315 VLA rail-focused RGB-D cameras to ROS.',
+            description='Bridge the Room 315 rail-focused RGB-D cameras to ROS.',
         ),
         DeclareLaunchArgument(
-            'enable_room315_vla_dataset_recorder',
+            'enable_room315_visual_state_dataset_recorder',
             default_value='false',
             choices=['true', 'false'],
             description='Record Room 315 visual-state episodes for LeRobot conversion.',
         ),
         DeclareLaunchArgument(
-            'room315_vla_dataset_dir',
+            'room315_visual_dataset_dir',
             default_value='~/.ros/room315_visual_state_datasets/demo',
             description='Output directory for Room 315 visual-state demonstrations.',
         ),
         DeclareLaunchArgument(
-            'room315_vla_dataset_sample_period_s',
+            'room315_visual_dataset_sample_period_s',
             default_value='0.2',
-            description='Sample period in seconds for Room 315 VLA demonstrations.',
+            description=(
+                'Sample period in seconds for Room 315 visual-state demonstrations.'
+            ),
         ),
     ]
     base_launch_arguments = {
@@ -449,8 +456,8 @@ def generate_floor_launch_description(profile_name):
         'initial_loop_mode': LaunchConfiguration('initial_loop_mode'),
         'pause_during_switch_update': LaunchConfiguration('pause_during_switch_update'),
         'visual_debug_colors': LaunchConfiguration('room315_visual_debug_colors'),
-        'enable_room315_vla_obstacles': LaunchConfiguration(
-            'enable_room315_vla_obstacles'
+        'enable_room315_visual_obstacles': LaunchConfiguration(
+            'enable_room315_visual_obstacles'
         ),
     }
     if profile['gui_config']:
@@ -477,7 +484,7 @@ def generate_floor_launch_description(profile_name):
                 ],
             )
         ),
-        OpaqueFunction(function=_clear_vla_obstacle_pose_cache),
+        OpaqueFunction(function=_clear_visual_obstacle_pose_cache),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(base_launch),
             launch_arguments=base_launch_arguments.items(),
@@ -582,22 +589,24 @@ def generate_floor_launch_description(profile_name):
             period=5.0,
             actions=[
                 IncludeLaunchDescription(
-                    PythonLaunchDescriptionSource(vla_launch),
-                    condition=IfCondition(LaunchConfiguration('enable_room315_vla')),
+                    PythonLaunchDescriptionSource(perception_safety_launch),
+                    condition=IfCondition(
+                        LaunchConfiguration('enable_room315_rail_safety_supervisor')
+                    ),
                     launch_arguments={
                         'use_sim_time': LaunchConfiguration('use_sim_time'),
                         'enable_camera_bridge': LaunchConfiguration(
-                            'enable_room315_vla_camera_bridge'
+                            'enable_room315_rgbd_camera_bridge'
                         ),
                         'enable_supervisor': 'true',
                         'enable_dataset_recorder': LaunchConfiguration(
-                            'enable_room315_vla_dataset_recorder'
+                            'enable_room315_visual_state_dataset_recorder'
                         ),
                         'dataset_dir': LaunchConfiguration(
-                            'room315_vla_dataset_dir'
+                            'room315_visual_dataset_dir'
                         ),
                         'dataset_sample_period_s': LaunchConfiguration(
-                            'room315_vla_dataset_sample_period_s'
+                            'room315_visual_dataset_sample_period_s'
                         ),
                     }.items(),
                 ),

@@ -7,10 +7,18 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 IDENTITY_CONFIG = (
-    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'shuttle_identity.yaml'
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'config'
+    / 'room_315_shuttle_identity'
+    / 'shuttle_identity.yaml'
 )
 PAYLOAD_CONFIG = (
-    REPO_ROOT / 'mfja_robot_control_config' / 'config' / 'room_315_vla' / 'payload_scenarios.yaml'
+    REPO_ROOT
+    / 'mfja_robot_control_config'
+    / 'config'
+    / 'room_315_payload_cases'
+    / 'payload_scenarios.yaml'
 )
 
 

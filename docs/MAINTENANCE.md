@@ -13,7 +13,7 @@ A complete change normally preserves all of the following:
 - valid Gazebo resource paths and world/entity names;
 - directed rail geometry, device, calibration, and public-name consistency;
 - explicit learned-input versus privileged/safety-data boundaries;
-- fail-closed VLA artifact and execution authorization checks;
+- fail-closed visual-model artifact and task-execution authorization checks;
 - dataset split and evidence immutability;
 - third-party asset provenance and redistribution terms;
 - English operational documentation that matches the installed code.
@@ -240,7 +240,7 @@ registered in CMake:
 
 ```bash
 python3 -m pytest -q \
-  mfja_3rd_floor_description/test/test_room315_vla_camera_model.py
+  mfja_3rd_floor_description/test/test_room315_visual_observation_assets.py
 
 python3 -m pytest -q \
   mfja_robot_control_config/test/test_room315_kinematic_shuttle_core.py
@@ -294,7 +294,7 @@ ros2 launch mfja_3rd_floor_bringup room_315_only.launch.py \
   robots:=none \
   gui:=false \
   start_paused:=false \
-  room315_clear_vla_obstacle_pose_cache:=false \
+  room315_clear_visual_obstacle_pose_cache:=false \
   room315_right_shuttle_count:=1 \
   room315_left_shuttle_count:=0 \
   room315_shuttles_start_enabled:=false
@@ -324,7 +324,7 @@ The listed tests are starting points; use `rg` to find additional consumers.
 | Robot model/URDF | Description collision tests, `test_industrial_gripper_articulation.py`, `test_kuka_initial_joint_positions.py`, robot topic smoke |
 | Gripper config/plugin/helper | `test_gripper_range_launch.py`, `test_robot_gripper_bridge.py`, `test_robot_gripper_command.py`, description articulation test |
 | World or physics | `test_lightweight_world_physics.py`, camera/model/collision tests, room-only and full-floor launch |
-| Camera model/topic/calibration | `test_room315_vla_camera_model.py`, camera bbox/calibration/visual runtime tests, live image and camera-info topics |
+| Camera model/topic/calibration | `test_room315_visual_observation_assets.py`, camera bbox/calibration/visual runtime tests, live image and camera-info topics |
 | Raw rail CSV | segment normalization/names, route topology, kinematic core, rail devices, collision tests |
 | Network/routing | route topology, PDDL planning, multi-shuttle planning, kinematic core, switch feedback authority |
 | Device YAML | `test_room315_rail_devices.py`, marker lifecycle, kinematic core, live sensor/stopper checks |
@@ -332,7 +332,7 @@ The listed tests are starting points; use `rg` to find additional consumers.
 | Shuttle identity/payload | identity config/assets/tracker, keepout zones, payload models/visuals/occlusion, eight-shuttle visual pipeline |
 | Message/service | dependent package build, `ros2 interface show`, contracts tests, live topic/service type checks |
 | Public launch argument | launch-argument/static/singleton tests, `--show-args`, headless launch |
-| VLA supervisor/safety | VLA supervisor, fleet safety, block reservation, headway, model-input boundary tests |
+| rail-safety supervisor/safety | rail-safety supervisor, fleet safety, block reservation, headway, model-input boundary tests |
 | Task goal/PDDL/executive | task-goal builder/semantic/validation, PDDL generator/translator/planner, task execution/authorization, closed-loop tests |
 | V4 visual runtime/artifact | contract/model/calibration/acceptance/runtime/shadow/fault/promotion tests, CPU smoke, hash verification |
 | Dataset pipeline | recorder/extractor/split/audit/leakage/role-specific tests plus output manifest verification |

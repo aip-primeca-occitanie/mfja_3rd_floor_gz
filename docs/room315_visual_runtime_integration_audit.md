@@ -80,10 +80,10 @@ metadata. No training or Test-split evaluation was run.
 
 ### Model and vectorizer
 
-- `mfja_robot_control_config/scripts/room_315_vla_train_local.py:157-226`
+- `mfja_robot_control_config/scripts/room_315_visual_state_train_local.py:157-226`
   contains the authoritative direct bilinear RGB resize, `[0,1]` conversion,
   left/right channel concatenation, and ImageNet normalization behavior.
-- `mfja_robot_control_config/scripts/room_315_vla_train_local.py:369-421`
+- `mfja_robot_control_config/scripts/room_315_visual_state_train_local.py:369-421`
   constructs the paired-view ResNet-18 architecture.
 - `mfja_robot_control_config/scripts/room_315_visual_state_dataset.py:1195-1415`
   defines `VisualStateLabelVectorizer`, the authoritative fixed identity
@@ -106,23 +106,23 @@ loading cannot drift from the training architecture.
   translates one symbolic step, and submits it to the supervisor. This is the
   correct downstream boundary; the inference node must never call its planner,
   translator, transport, or executor directly.
-- `mfja_robot_control_config/scripts/room_315_vla_supervisor.py` owns the
+- `mfja_robot_control_config/scripts/room_315_rail_safety_supervisor.py` owns the
   emergency stop, deterministic safety decoder, workspace/fleet checks,
   actuator feedback, and rail command publishers. The new visual runtime must
-  expose readiness only and must not publish to `/room_315/vla/command` or any
+  expose readiness only and must not publish to `/room_315/rail_safety/primitive_command` or any
   rail device command topic.
 
 ### ROS topics and launch conventions
 
 The overhead camera SDF publishes 10 Hz RGB-D sensor bases:
 
-- `/room_315/vla/left_rail_rgbd`
-- `/room_315/vla/right_rail_rgbd`
+- `/room_315/perception/left_rail_rgbd`
+- `/room_315/perception/right_rail_rgbd`
 
-`room_315_vla_supervisor.launch.py` already bridges and uses these RGB topics:
+`room_315_perception_and_safety.launch.py` already bridges and uses these RGB topics:
 
-- `/room_315/vla/left_rail_rgbd/image`
-- `/room_315/vla/right_rail_rgbd/image`
+- `/room_315/perception/left_rail_rgbd/image`
+- `/room_315/perception/right_rail_rgbd/image`
 
 The project uses `ament_cmake`, executable Python scripts installed into
 `lib/${PROJECT_NAME}`, package-share YAML configuration, `launch_ros.actions.Node`,

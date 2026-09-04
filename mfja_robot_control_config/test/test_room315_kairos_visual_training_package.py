@@ -27,7 +27,7 @@ def _load_packaged_trainer():
     scripts = PACKAGE_ROOT / 'scripts'
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
-    path = scripts / 'room_315_vla_train_local.py'
+    path = scripts / 'room_315_visual_state_train_local.py'
     spec = importlib.util.spec_from_file_location(
         'room315_packaged_trainer_test',
         path,

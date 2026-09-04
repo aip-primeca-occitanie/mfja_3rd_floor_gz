@@ -655,7 +655,7 @@ def _identity_visual_contract() -> dict[str, dict[str, Any]]:
         REPO_ROOT
         / 'mfja_robot_control_config'
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_shuttle_identity'
         / 'shuttle_identity.yaml'
     )
     loaded = yaml.safe_load(config_path.read_text(encoding='utf-8'))

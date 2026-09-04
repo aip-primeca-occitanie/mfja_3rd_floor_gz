@@ -57,7 +57,7 @@ mfja_rail_interfaces         (ROS interface definitions)
 | `mfja_3rd_floor_bringup` | Stable user-facing launch entry points | Room-only, full-floor, isolated-robot wrappers and shared floor launch policy |
 | `mfja_3rd_floor_description` | Simulation description | Worlds, SDF models, meshes, URDF files, third-party attribution, collision/model tests, symmetric gripper plugin |
 | `mfja_rail_interfaces` | Public typed rail/visual contracts | Eleven messages plus `AddShuttle.srv`; generated language bindings are build output |
-| `mfja_robot_control_config` | Runtime and research logic | Robot spawning, Gazebo bridges, rail nodes, VLA/planning nodes, Python tools, YAML/JSON/PDDL configuration, and the main test suite |
+| `mfja_robot_control_config` | Runtime and research logic | Robot spawning, Gazebo bridges, rail nodes, separate language/visual-state nodes, PlanSys2 integration, deterministic supervision, Python tools, YAML/JSON/PDDL configuration, and the main test suite |
 
 The higher-level packages should depend on lower-level contracts and assets;
 lower-level packages should not import bringup behavior.
@@ -87,7 +87,7 @@ time 4 s
     -> left rail node, if enabled
 
 time 5 s
-  optionally include room_315_vla_supervisor.launch.py
+  optionally include room_315_perception_and_safety.launch.py
     -> overhead-camera bridge
     -> primitive supervisor
     -> optional dataset recorder
@@ -106,7 +106,7 @@ topic as a fault.
 | Default GUI config | `room315_runtime_safe.gui.config` | `mfja_light.gui.config` |
 | Initial shuttle count | Zero on each rail | Zero on each rail |
 | Rails | Enabled | Enabled |
-| VLA supervisor | Disabled | Disabled |
+| rail-safety supervisor | Disabled | Disabled |
 
 If the `robots` argument is empty, every YAML entry whose `enabled` field is
 true is spawned. Pass `robots:=none` for a lightweight rail-only run.
@@ -137,8 +137,8 @@ the high-level shuttle launch is configured from the requested world filename.
 A mismatch produces different service names and prevents shuttle pose/spawn
 operations.
 
-Both main world sources include removable VLA obstacle entities. Unless
-`enable_room315_vla_obstacles:=true` is passed, the launcher writes an
+Both main world sources include removable visual obstacle entities. Unless
+`enable_room315_visual_obstacles:=true` is passed, the launcher writes an
 obstacle-free temporary world under `/tmp` and runs that copy. The source world
 is not modified.
 
@@ -291,7 +291,7 @@ The active robot list is configuration, not world composition: robot entities
 are spawned after Gazebo starts. Static room, rail, furniture, camera, and
 preloaded shuttle entities remain in the world SDF.
 
-## VLA and Planning Architecture
+## Neuro-Symbolic Perception and Planning Architecture
 
 The advanced runtime separates perception, planning, supervision, and
 actuation:
@@ -308,7 +308,7 @@ English input
   -> grounded PDDL problem using accepted facts
   -> PlanSys2/POPF plan
   -> translate and validate one primitive
-  -> VLA supervisor safety gate
+  -> deterministic rail-safety supervisor
   -> typed rail command
   -> deterministic effect check + fresh visual observation
   -> replan or finish
@@ -318,25 +318,27 @@ English input
 
 | Topic | Type | Role |
 | --- | --- | --- |
-| `/room_315/vla/right_rail_rgbd/image` | `sensor_msgs/msg/Image` | Right visual input |
-| `/room_315/vla/left_rail_rgbd/image` | `sensor_msgs/msg/Image` | Left visual input |
-| `/room_315/vla/{right,left}_rail_rgbd/camera_info` | `sensor_msgs/msg/CameraInfo` | Per-side camera calibration |
-| `/room_315/vla/{right,left}_rail_rgbd/depth_image` | `sensor_msgs/msg/Image` | Per-side depth image |
-| `/room_315/vla/{right,left}_rail_rgbd/points` | `sensor_msgs/msg/PointCloud2` | Per-side RGB-D point cloud |
+| `/room_315/perception/right_rail_rgbd/image` | `sensor_msgs/msg/Image` | Right visual input |
+| `/room_315/perception/left_rail_rgbd/image` | `sensor_msgs/msg/Image` | Left visual input |
+| `/room_315/perception/{right,left}_rail_rgbd/camera_info` | `sensor_msgs/msg/CameraInfo` | Per-side camera calibration |
+| `/room_315/perception/{right,left}_rail_rgbd/depth_image` | `sensor_msgs/msg/Image` | Per-side depth image |
+| `/room_315/perception/{right,left}_rail_rgbd/points` | `sensor_msgs/msg/PointCloud2` | Per-side RGB-D point cloud |
 | `/room_315/visual_state/raw` | `mfja_rail_interfaces/msg/VisualStateObservation` | Unaccepted constructed observation |
 | `/room_315/visual_state/raw_model_prediction` | `std_msgs/msg/String` | Auditable raw learned output |
 | `/room_315/visual_state/validation` | `mfja_rail_interfaces/msg/VisualStateObservation` | Validation result |
 | `/room_315/visual_state/observed_state` | `mfja_rail_interfaces/msg/VisualStateObservation` | Accepted state for planning |
 | `/room_315/task_goal` | `std_msgs/msg/String` JSON | Confirmed task request |
 | `/room_315/task_goal/status` | `std_msgs/msg/String` JSON | Task lifecycle/result |
-| `/room_315/vla/command` | `std_msgs/msg/String` JSON | Validated primitive input to supervisor |
-| `/room_315/vla/status` | `std_msgs/msg/String` JSON | Supervisor state and result |
-| `/room_315/vla/emergency_stop` | `std_msgs/msg/Bool` | Virtual emergency-stop input |
+| `/room_315/rail_safety/primitive_command` | `std_msgs/msg/String` JSON | Validated primitive input to supervisor |
+| `/room_315/rail_safety/status` | `std_msgs/msg/String` JSON | Supervisor state and result |
+| `/room_315/rail_safety/emergency_stop` | `std_msgs/msg/Bool` | Virtual emergency-stop input |
 | `/diagnostics` | `diagnostic_msgs/msg/DiagnosticArray` | Readiness, validation, and runtime health |
 
 The visual inference node has no direct rail-command publisher. The task
 execution gateway publishes only to the supervisor after authorization,
 planning, translation, and validation.
+
+![Room 315 modular neuro-symbolic architecture](neuro_symbolic_overview/room_315_neuro_symbolic_architecture.svg)
 
 ### Information Ownership
 
@@ -360,11 +362,11 @@ planning, translation, and validation.
 | --- | --- | --- |
 | `~/.ros/log/` | ROS process logs | Local, disposable after diagnosis |
 | `~/.ros/room315_visual_state_datasets/<run>/` | Recorded events, frames, images, episode metadata | User data; keep outside Git |
-| `~/.ros/room315_vla_obstacles.json` | Optional obstacle pose cache | Cleared by high-level launch by default |
+| `~/.ros/room315_visual_obstacles.json` | Optional obstacle pose cache | Cleared by high-level launch by default |
 | `/tmp/*_bridge.yaml` | Generated robot bridge mappings | Temporary; never edit |
 | `/tmp/*_mobile_model.sdf` | Instance-specific mobile model | Temporary; never edit |
 | `/tmp/mfja_*_gripper_range_*.sdf` | Configured gripper SDF | Temporary; never edit |
-| `/tmp/*_without_room315_vla_obstacles_*.world` | Obstacle-filtered world | Temporary; never edit |
+| `/tmp/*_without_room315_visual_obstacles_*.world` | Obstacle-filtered world | Temporary; never edit |
 | User-selected external directories | Datasets, checkpoints, promotion/authorization bundles, benchmark results | Preserve according to experiment policy |
 
 Repository-local `build/`, `install/`, and `log/` directories are also derived

@@ -234,7 +234,7 @@ def test_visual_pipeline_has_no_literal_three_slot_iteration():
             'room_315_visual_state_dataset.py',
             'room_315_visual_dataset_audit.py',
             'room_315_visual_error_analysis.py',
-            'room_315_vla_train_local.py',
+            'room_315_visual_state_train_local.py',
             'room_315_kairos_package_checks.py',
         )
     ]

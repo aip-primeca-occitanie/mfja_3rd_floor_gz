@@ -847,7 +847,7 @@ def _inspect_visual_node_shadow_contract() -> dict[str, Any]:
         'plan_client_created_only_outside_shadow': guarded_client_creation,
         'shadow_plansys_update_returns_before_client': shadow_update_return,
         'no_actuation_publisher_message_type': not actuation_types,
-        'no_supervisor_command_topic_literal': '/room_315/vla/command' not in source,
+        'no_supervisor_command_topic_literal': '/room_315/rail_safety/primitive_command' not in source,
     }
     return {
         'passed': all(checks.values()),

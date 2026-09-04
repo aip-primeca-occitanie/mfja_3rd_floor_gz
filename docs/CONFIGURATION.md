@@ -54,9 +54,9 @@ Important scope differences:
 ### Launch-Time Obstacle Cache
 
 The high-level Room 315/full-floor launch defaults
-`room315_clear_vla_obstacle_pose_cache:=true`, which unlinks the configured
-`room315_vla_obstacle_pose_file` before startup. The normal path is the
-disposable cache `~/.ros/room315_vla_obstacles.json`. Set the clear argument to
+`room315_clear_visual_obstacle_pose_cache:=true`, which unlinks the configured
+`room315_visual_obstacle_pose_file` before startup. The normal path is the
+disposable cache `~/.ros/room315_visual_obstacles.json`. Set the clear argument to
 `false` when the cache must survive a restart. If you override the path, verify
 that it identifies only the intended cache file; the clearing function does not
 validate its purpose.
@@ -82,12 +82,12 @@ ros2 param dump /room_315/rails/right/room_315_kinematic_shuttle
 | Slot/sensor/stopper position | `rail_devices_{right,left}.yaml` | Marker/sensor tests and scenario assumptions |
 | Persistent rail-to-Gazebo calibration | `scripts/room_315_rail_defaults.py` | Both side-specific tests and device coordinates |
 | Startup shuttle identities/payloads | Launch arguments | `shuttle_identity.yaml` and identity models for structural changes |
-| Shuttle identity colors/tags | `config/room_315_vla/shuttle_identity.yaml` | Identity models, world includes, multi-shuttle conventions |
-| Camera pose/spec/topic | `models/room315_vla_overhead_devices/model.sdf` | Both camera bridge launches, runtime config/calibration, tests |
+| Shuttle identity colors/tags | `config/room_315_shuttle_identity/shuttle_identity.yaml` | Identity models, world includes, multi-shuttle conventions |
+| Camera pose/spec/topic | `models/room315_visual_observation_rig/model.sdf` | Both camera bridge launches, runtime config/calibration, tests |
 | GUI layout | `config/room315_runtime_safe.gui.config` or `mfja_light.gui.config` | Launch profile when adding a new config |
-| Primitive-supervisor defaults | `config/room_315_vla/vla_supervisor.yaml` | Supervisor tests and operations docs |
-| Live planning domain | `config/room_315_vla/pddl/domain_room315_runtime.pddl` | Translator, validation gate, executive, tests |
-| Visual runtime | `config/room_315_vla/visual_state_runtime.yaml` | External promotion bundle and exact SHA-256 |
+| Primitive-supervisor defaults | `config/room_315_task_execution/rail_safety_supervisor.yaml` | Supervisor tests and operations docs |
+| Live planning domain | `config/room_315_planning/pddl/domain_room315_runtime.pddl` | Translator, validation gate, executive, tests |
+| Visual runtime | `config/room_315_visual_state/visual_state_runtime.yaml` | External promotion bundle and exact SHA-256 |
 | Task execution policy | `task_execution_runtime*.yaml` | External authorization and promotion manifests |
 | English intent runtime | `task_goal_understanding.yaml` or generated local config | External GGUF path and pinned hash |
 
@@ -392,7 +392,7 @@ contracts in the same change.
 
 The structural identity contract spans:
 
-- `config/room_315_vla/shuttle_identity.yaml`;
+- `config/room_315_shuttle_identity/shuttle_identity.yaml`;
 - `scripts/room_315_multi_shuttle.py` conventions;
 - identity-specific model directories `room315_shuttle_R1` through `R4` and
   `room315_shuttle_L1` through `L4`;
@@ -425,14 +425,14 @@ not become a learned input merely because it is published by the controller.
 The Room 315 overhead camera model is:
 
 ```text
-mfja_3rd_floor_description/models/room315_vla_overhead_devices/model.sdf
+mfja_3rd_floor_description/models/room315_visual_observation_rig/model.sdf
 ```
 
 It owns camera pose, resolution, update rate, field of view, clipping planes,
 Gazebo topic roots, and optical frame names. A topic or frame change must be
 coordinated with:
 
-- `room_315_vla_supervisor.launch.py`;
+- `room_315_perception_and_safety.launch.py`;
 - `room_315_visual_state_runtime.launch.py`;
 - dataset recorder and visual inference parameters;
 - visual calibration/config files;
@@ -487,11 +487,11 @@ ros2 interface show mfja_rail_interfaces/msg/VisualStateObservation
 Generated Python/C++ interface bindings under `build/` and `install/` must
 never be edited.
 
-## VLA, Planning, and Language Configuration
+## Visual State, Planning, Safety, and Language Configuration
 
 ### Supervisor and Cases
 
-- `vla_supervisor.yaml`: default shuttle names, speed, and supervisor history.
+- `rail_safety_supervisor.yaml`: default shuttle names, speed, and supervisor history.
 - `payload_training_cases_expanded_160_speed_sweep.yaml`: curated 160-case
   regression matrix.
 - `payload_scenarios.yaml`: payload scenario definitions.

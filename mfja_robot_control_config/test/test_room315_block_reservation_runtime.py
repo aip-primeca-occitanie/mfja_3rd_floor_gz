@@ -8,7 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = REPO_ROOT / 'mfja_robot_control_config' / 'scripts'
 MULTI_PATH = SCRIPT_DIR / 'room_315_multi_shuttle.py'
-SUPERVISOR_PATH = SCRIPT_DIR / 'room_315_vla_supervisor.py'
+SUPERVISOR_PATH = SCRIPT_DIR / 'room_315_rail_safety_supervisor.py'
 
 
 def _load_module(name, path):
@@ -48,9 +48,9 @@ def test_fleet_state_from_rails_marks_occupied_blocks_by_shuttle_id():
 
 
 def test_supervisor_rejects_motion_into_occupied_block_from_runtime_rails():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
-    decision = supervisor._decode_room315_vla_action(
+    decision = supervisor._decode_room315_primitive_command(
         {
             'action': 'shuttle',
             'side': 'right',
@@ -73,9 +73,9 @@ def test_supervisor_rejects_motion_into_occupied_block_from_runtime_rails():
 
 
 def test_supervisor_rejects_motion_into_reserved_block():
-    supervisor = _load_module('room_315_vla_supervisor', SUPERVISOR_PATH)
+    supervisor = _load_module('room_315_rail_safety_supervisor', SUPERVISOR_PATH)
 
-    decision = supervisor._decode_room315_vla_action(
+    decision = supervisor._decode_room315_primitive_command(
         {
             'action': 'shuttle',
             'side': 'right',

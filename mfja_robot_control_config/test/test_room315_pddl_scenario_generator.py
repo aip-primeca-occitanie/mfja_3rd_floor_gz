@@ -31,7 +31,7 @@ PAYLOAD_CASE_CONFIG_PATH = (
     REPO_ROOT
     / 'mfja_robot_control_config'
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_payload_cases'
     / 'payload_training_cases_expanded_160_speed_sweep.yaml'
 )
 RIGHT_CASE = 'right_loaded_r1_s1_to_slot3_no_blocker_speed008'
@@ -71,7 +71,7 @@ class FakeTransport:
 
 class NotReadyTransport(FakeTransport):
     def wait_until_ready(self, *, timeout_s):
-        return {'ready': False, 'reason': 'no supervisor subscriber on /room_315/vla/command'}
+        return {'ready': False, 'reason': 'no supervisor subscriber on /room_315/rail_safety/primitive_command'}
 
 
 class InitialStateTransport(FakeTransport):
@@ -346,9 +346,9 @@ def _ros_transport_shell(
     publisher_endpoints=None,
 ):
     transport = generator.RosScenarioTransport.__new__(generator.RosScenarioTransport)
-    transport.command_topic = '/room_315/vla/command'
-    transport.dataset_status_topic = '/room_315/vla/dataset_status'
-    transport.status_topic = '/room_315/vla/status'
+    transport.command_topic = '/room_315/rail_safety/primitive_command'
+    transport.dataset_status_topic = '/room_315/visual_dataset/status'
+    transport.status_topic = '/room_315/rail_safety/status'
     transport.require_dataset_recorder = False
     transport.command_pub = _FakePublisher(subscription_count)
     transport.rclpy = _FakeRclpy()
@@ -1589,14 +1589,14 @@ def test_ros_ready_requires_the_supervisor_command_subscriber():
     generator = _load_module()
     transport = _ros_transport_shell(
         generator,
-        endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+        endpoints=[_Endpoint('room_315_visual_state_dataset_recorder')],
         subscription_count=1,
     )
 
     result = generator.RosScenarioTransport.wait_until_ready(transport, timeout_s=0.01)
 
     assert result['ready'] is False
-    assert 'no room_315_vla_supervisor subscriber' in result['reason']
+    assert 'no room_315_rail_safety_supervisor subscriber' in result['reason']
     assert '1 total subscriber' in result['reason']
 
 
@@ -1605,8 +1605,8 @@ def test_ros_ready_accepts_the_supervisor_command_subscriber():
     transport = _ros_transport_shell(
         generator,
         endpoints=[
-            _Endpoint('room_315_vla_dataset_recorder'),
-            _Endpoint('room_315_vla_supervisor'),
+            _Endpoint('room_315_visual_state_dataset_recorder'),
+            _Endpoint('room_315_rail_safety_supervisor'),
         ],
         subscription_count=2,
     )
@@ -1620,8 +1620,8 @@ def test_ros_episode_start_republishes_until_dataset_ack():
     generator = _load_module()
     transport = _ros_transport_shell(
         generator,
-        endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
-        publisher_endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+        endpoints=[_Endpoint('room_315_visual_state_dataset_recorder')],
+        publisher_endpoints=[_Endpoint('room_315_visual_state_dataset_recorder')],
     )
     transport.String = _FakeString
 
@@ -1675,8 +1675,8 @@ def test_ros_episode_start_requires_fresh_episode_after_start_publish():
     fresh_episode_id = 'episode_000003_move_the_loaded_left_shuttle_to_slot_2'
     transport = _ros_transport_shell(
         generator,
-        endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
-        publisher_endpoints=[_Endpoint('room_315_vla_dataset_recorder')],
+        endpoints=[_Endpoint('room_315_visual_state_dataset_recorder')],
+        publisher_endpoints=[_Endpoint('room_315_visual_state_dataset_recorder')],
     )
     transport.require_dataset_recorder = True
     transport.String = _FakeString
@@ -1717,7 +1717,7 @@ def test_ros_initial_state_wait_accepts_loaded_target_shuttle():
     )
     transport = _ros_transport_shell(
         generator,
-        endpoints=[_Endpoint('room_315_vla_supervisor')],
+        endpoints=[_Endpoint('room_315_rail_safety_supervisor')],
         latest_status={
             'rails': {
                 'right': {
@@ -1771,7 +1771,7 @@ def test_blocker_clear_preflight_checks_selected_loaded_shuttle_not_blocker():
     )
     transport = _ros_transport_shell(
         generator,
-        endpoints=[_Endpoint('room_315_vla_supervisor')],
+        endpoints=[_Endpoint('room_315_rail_safety_supervisor')],
         latest_status={
             'rails': {
                 'right': {
@@ -1962,7 +1962,7 @@ def test_payload_case_review_accepts_workspace_root_relative_case_config(tmp_pat
             sys.executable,
             str(REVIEW_SCRIPT_PATH),
             '--case-config',
-            'mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml',
+            'mfja_robot_control_config/config/room_315_payload_cases/payload_training_cases_expanded_160_speed_sweep.yaml',
             '--review-dir',
             str(tmp_path),
         ],
@@ -1977,7 +1977,7 @@ def test_payload_case_review_accepts_workspace_root_relative_case_config(tmp_pat
     assert 'Wrote ' in result.stdout
     assert summary['case_count'] >= 6
     assert summary['case_config_path'].endswith(
-        'mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml'
+        'mfja_robot_control_config/config/room_315_payload_cases/payload_training_cases_expanded_160_speed_sweep.yaml'
     )
 
 
@@ -2040,7 +2040,7 @@ def test_payload_case_batch_runner_dry_run_lists_all_cases(tmp_path):
     assert 'room315_right_start_slots:=1' not in summary['results'][0]['launch_args']
     assert "room315_right_loaded_shuttles:='R1'" in summary['results'][0]['launch_args']
     assert any(
-        arg == 'room315_vla_dataset_dir:=' + str(tmp_path / 'dataset')
+        arg == 'room315_visual_dataset_dir:=' + str(tmp_path / 'dataset')
         for arg in summary['results'][0]['launch_args']
     )
 
@@ -2149,7 +2149,7 @@ def test_ros_initial_state_wait_reports_missing_target_shuttle_before_execute():
     )
     transport = _ros_transport_shell(
         generator,
-        endpoints=[_Endpoint('room_315_vla_supervisor')],
+        endpoints=[_Endpoint('room_315_rail_safety_supervisor')],
         latest_status={
             'rails': {
                 'right': {

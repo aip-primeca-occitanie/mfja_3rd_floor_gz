@@ -10,13 +10,13 @@ checkpoints.
 The retained regression subset is always the existing 160-case file:
 
 ```text
-mfja_robot_control_config/config/room_315_vla/payload_training_cases_expanded_160_speed_sweep.yaml
+mfja_robot_control_config/config/room_315_payload_cases/payload_training_cases_expanded_160_speed_sweep.yaml
 ```
 
 Generate 100 to 1000 additional balanced cases:
 
 ```bash
-ros2 run mfja_robot_control_config room_315_vla_benchmark_suite.py generate-cases \
+ros2 run mfja_robot_control_config room_315_visual_planning_benchmark_suite.py generate-cases \
   --extension-case-count 320 \
   --seed 315 \
   --output /tmp/room315_seeded_balanced_cases.yaml
@@ -38,7 +38,7 @@ is not divisible by the number of benchmark families.
 Collect one result JSON per method, then normalize them into one comparison:
 
 ```bash
-ros2 run mfja_robot_control_config room_315_vla_benchmark_suite.py compare-results \
+ros2 run mfja_robot_control_config room_315_visual_planning_benchmark_suite.py compare-results \
   --result-json /tmp/room315_oracle_plansys2.json \
   --result-json /tmp/room315_frozen_visual_plansys2.json \
   --result-json /tmp/room315_lora_visual_plansys2.json \

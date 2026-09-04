@@ -21,7 +21,7 @@ def generate_launch_description():
     domain_path = PathJoinSubstitution([
         FindPackageShare('mfja_robot_control_config'),
         'config',
-        'room_315_vla',
+        'room_315_planning',
         'pddl',
         'domain_room315_runtime.pddl',
     ])
@@ -124,7 +124,7 @@ def generate_launch_description():
             default_value=PathJoinSubstitution([
                 FindPackageShare('mfja_robot_control_config'),
                 'config',
-                'room_315_vla',
+                'room_315_task_execution',
                 'task_execution_runtime.yaml',
             ]),
         ),

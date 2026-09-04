@@ -35,19 +35,19 @@ FALLBACK_DESCRIPTIONS = {
     "room_315_kinematic_shuttle_node.py": (
         "ROS 2/Gazebo adapter for multi-shuttle lifecycle, rail devices, markers, payloads, and pose updates."
     ),
-    "room_315_vla_dataset_recorder.py": (
+    "room_315_visual_state_dataset_recorder.py": (
         "Records synchronized camera, task, action, and privileged evaluation data into guarded episodes."
     ),
-    "room_315_vla_event_extractor.py": (
-        "Extracts event-level VLA examples from recorded Room 315 episodes."
+    "room_315_visual_training_event_extractor.py": (
+        "Extracts event-level training records from recorded Room 315 episodes."
     ),
-    "room_315_vla_split_dataset.py": (
+    "room_315_visual_state_split_dataset.py": (
         "Creates deterministic, leakage-aware train/validation dataset partitions."
     ),
-    "room_315_vla_supervisor.py": (
+    "room_315_rail_safety_supervisor.py": (
         "Deterministic safety supervisor that validates primitives and alone publishes typed rail commands."
     ),
-    "room_315_vla_to_lerobot.py": (
+    "room_315_visual_state_to_lerobot.py": (
         "Exports the repository episode representation to the optional LeRobot format."
     ),
 }
@@ -56,9 +56,9 @@ FALLBACK_DESCRIPTIONS = {
 MODEL_ROLES = {
     "mfja_3rd_floor": "Complete third-floor environment asset",
     "room_315": "Detailed Room 315 room and rail-cell asset",
-    "room315_vla_overhead_devices": "Paired rail-focused RGB-D camera assembly",
+    "room315_visual_observation_rig": "Paired rail-focused RGB-D camera assembly",
     "room315_shuttle": "Generic shuttle template",
-    "room315_vla_removable_obstacle_marker": "Removable VLA obstacle marker",
+    "room315_visual_obstacle_marker": "Removable visual obstacle marker",
     "kuka_kr6r900sixx": "KUKA KR6 R900 Sixx visual robot model",
     "staubli_tx2_60l": "Stäubli TX2-60L visual robot model",
     "yaskawa_hc10": "Yaskawa HC10 visual robot model",
@@ -90,7 +90,7 @@ CONFIG_ROLES = {
     "visual_state_training_v4.json": "V4 training, split, loss, and evaluation contract",
     "visual_state_final_test_v4.json": "Sealed V4 final-test preparation contract",
     "visual_observed_state_calibration.yaml": "Visual observation calibration and validation policy",
-    "vla_supervisor.yaml": "Primitive supervisor defaults",
+    "rail_safety_supervisor.yaml": "Primitive supervisor defaults",
 }
 
 SCRIPT_CATEGORY_ORDER = {
@@ -99,7 +99,7 @@ SCRIPT_CATEGORY_ORDER = {
     "Visual datasets, models, training, and evaluation": 2,
     "Language and TaskGoal understanding": 3,
     "Contracts, planning, and execution": 4,
-    "VLA supervision, recording, and operations": 5,
+    "Perception, supervision, recording, and operations": 5,
     "Qualification and immutable runtime packaging": 6,
 }
 
@@ -262,10 +262,11 @@ def script_category(name: str) -> str:
     )):
         return "Qualification and immutable runtime packaging"
     if any(token in name for token in (
-        "vla_supervisor", "vla_dataset", "vla_event", "vla_split", "vla_to_lerobot",
-        "vla_benchmark", "vla_obstacle", "vla_shuttle_identity", "payload_case",
+        "rail_safety_supervisor", "visual_state_dataset", "visual_training_event",
+        "visual_state_split", "visual_state_to_lerobot", "visual_planning_benchmark",
+        "visual_obstacle", "privileged_shuttle_identity", "payload_case",
     )):
-        return "VLA supervision, recording, and operations"
+        return "Perception, supervision, recording, and operations"
     return "Visual datasets, models, training, and evaluation"
 
 
@@ -276,7 +277,7 @@ def test_family(name: str) -> str:
         (("task_goal", "task_execution", "closed_loop"), "Task understanding and execution"),
         (("pddl", "route_topology"), "PDDL and topology planning"),
         (("dataset", "capture", "split", "label", "scenario"), "Dataset generation and integrity"),
-        (("visual", "vla"), "Visual/VLA model and runtime"),
+        (("visual",), "Visual-state model and runtime"),
         (("contract", "runtime_candidate", "acceptance", "authorization", "promote"), "Contracts and deployment gates"),
         (("launch", "singleton", "full_package"), "Launch and package integration"),
     )
@@ -319,8 +320,8 @@ def model_role(name: str) -> str:
         return MODEL_ROLES[name]
     if name.startswith("room315_shuttle_"):
         return "Identity-specific preloaded shuttle visual asset"
-    if name.startswith("room315_vla_payload_"):
-        return "VLA payload/occlusion visual asset"
+    if name.startswith("room315_payload_"):
+        return "Payload/occlusion visual asset"
     if name.startswith("room"):
         return "Reusable room furniture or environment asset"
     if name.endswith("table") or "table" in name:
@@ -625,7 +626,7 @@ def write_catalog(
         "multi_robot_sim.launch.py": "Gazebo startup, robot selection/spawn, per-instance bridges, and state publishers",
         "isolated_industrial_robot.launch.py": "Lower-level one-industrial-robot Gazebo composition",
         "room_315_dual_kinematic_shuttles.launch.py": "Right/left rail node instantiation and type-safe parameter forwarding",
-        "room_315_vla_supervisor.launch.py": "Camera bridge, primitive supervisor, and optional recorder",
+        "room_315_perception_and_safety.launch.py": "Camera bridge, primitive supervisor, and optional recorder",
         "room_315_visual_state_runtime.launch.py": "V4 visual inference and optional RGB bridge",
         "room_315_task_execution.launch.py": "PlanSys2 lifecycle and fail-closed task gateway",
         "room_315_runtime_acceptance.launch.py": "Guarded runtime-acceptance campaign composition",

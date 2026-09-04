@@ -1,0 +1,13 @@
+schema_version: 4
+description: >
+  Room 315 rail-safety supervisor runtime defaults for the curated 160 payload
+  speed-sweep cases. Production execution uses generated primitive commands from
+  the closed-loop planner/executive path; learned components do not publish rail
+  commands directly.
+
+defaults:
+  speed: 0.2
+  completed_task_limit: 20
+  shuttle_name_by_side:
+    right: room315_right_shuttle_1
+    left: room315_left_shuttle_1

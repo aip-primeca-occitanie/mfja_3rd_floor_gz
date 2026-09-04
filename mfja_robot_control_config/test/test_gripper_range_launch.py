@@ -212,7 +212,7 @@ def _package_share_resolver(control_share):
             MULTI_LAUNCH,
             {
                 'robots': 'staubli',
-                'enable_room315_vla_obstacles': 'true',
+                'enable_room315_visual_obstacles': 'true',
                 'pause_during_switch_update': 'false',
                 'visual_debug_colors': 'true',
                 'initial_loop_mode': 'auto',

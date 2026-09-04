@@ -147,7 +147,7 @@ explicit local Hugging Face directories, but the active YAML selects
 Configuration is versioned here:
 
 ```text
-mfja_robot_control_config/config/room_315_vla/task_goal_understanding.yaml
+mfja_robot_control_config/config/room_315_task_goal/task_goal_understanding.yaml
 ```
 
 Configurable fields include backend, model path, SHA-256 checksum, device,
@@ -466,7 +466,7 @@ Benchmark report:
 
 ```bash
 ros2 run mfja_robot_control_config room_315_task_goal_benchmark.py \
-  --corpus mfja_robot_control_config/config/room_315_vla/task_goal_english_benchmark.yaml \
+  --corpus mfja_robot_control_config/config/room_315_task_goal/task_goal_english_benchmark.yaml \
   --output /tmp/room315_task_goal_benchmark_report.json
 ```
 

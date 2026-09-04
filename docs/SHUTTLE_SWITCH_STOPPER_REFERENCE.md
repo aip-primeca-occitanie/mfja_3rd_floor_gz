@@ -338,7 +338,7 @@ The rail-specific topic determines whether the command applies to the right or
 left rail, so prefer the public labels `A1`, `A2`, `A3`, and `A4`.
 
 The typed command topic is a low-level simulation interface and bypasses the
-VLA route-planning boundary. Treat `A1`/`A2` and `A3`/`A4` as coordinated
+supervised route-planning boundary. Treat `A1`/`A2` and `A3`/`A4` as coordinated
 pairs. Apply the empty-rail procedure above before any of the following manual
 commands; do not reroute moving shuttles on the basis of a fixed timer.
 

@@ -60,7 +60,7 @@ VISUAL_RUNTIME_CONFIG_SHA256 = (
     '22f12a9f96b3d54e0ab3d0bc05c202024ac6912cb50dd6e29ceb4a0a564d24f8'
 )
 TASK_RUNTIME_CONFIG = (
-    REPO / 'mfja_robot_control_config/config/room_315_vla/'
+    REPO / 'mfja_robot_control_config/config/room_315_task_execution/'
     'task_execution_runtime.yaml'
 )
 TASK_RUNTIME_CONFIG_SHA256 = (
@@ -123,13 +123,13 @@ RECORDED_TOPICS = (
     '/room_315/visual_state/raw',
     '/room_315/visual_state/validation',
     '/room_315/visual_state/observed_state',
-    '/room_315/vla/command',
-    '/room_315/vla/status',
-    '/room_315/vla/emergency_stop',
-    '/room_315/vla/right_rail_rgbd/image',
-    '/room_315/vla/right_rail_rgbd/camera_info',
-    '/room_315/vla/left_rail_rgbd/image',
-    '/room_315/vla/left_rail_rgbd/camera_info',
+    '/room_315/rail_safety/primitive_command',
+    '/room_315/rail_safety/status',
+    '/room_315/rail_safety/emergency_stop',
+    '/room_315/perception/right_rail_rgbd/image',
+    '/room_315/perception/right_rail_rgbd/camera_info',
+    '/room_315/perception/left_rail_rgbd/image',
+    '/room_315/perception/left_rail_rgbd/camera_info',
     '/room_315/rails/right/shuttles/state',
     '/room_315/rails/right/shuttles/command',
     '/room_315/rails/right/shuttles/payload_state',
@@ -856,10 +856,10 @@ def floor_command(case: dict[str, Any], speed: float) -> list[str]:
         'enable_room315_kinematic_shuttles:=true',
         'enable_room315_right_rail:=true',
         'enable_room315_left_rail:=true',
-        'enable_room315_vla:=true',
-        'enable_room315_vla_camera_bridge:=true',
-        'enable_room315_vla_dataset_recorder:=false',
-        'enable_room315_vla_obstacles:=false',
+        'enable_room315_rail_safety_supervisor:=true',
+        'enable_room315_rgbd_camera_bridge:=true',
+        'enable_room315_visual_state_dataset_recorder:=false',
+        'enable_room315_visual_obstacles:=false',
         'room315_show_device_markers:=false',
         'room315_visual_debug_colors:=false',
         'room315_enable_payload_visuals:=true',
@@ -1351,7 +1351,7 @@ def capture_supervisor_snapshot(
     env: dict[str, str], timeout_s: float, label: str,
 ) -> dict[str, Any]:
     echo = topic_echo(
-        '/room_315/vla/status', 'std_msgs/msg/String',
+        '/room_315/rail_safety/status', 'std_msgs/msg/String',
         env=env, timeout_s=timeout_s,
     )
     return {'echo': echo, 'payload': parse_string_json_topic(echo, label)}
@@ -2018,10 +2018,10 @@ def validate_rosbag(
         '/room_315/visual_state/raw_model_prediction',
         '/room_315/visual_state/validation',
         '/room_315/visual_state/observed_state',
-        '/room_315/vla/command',
-        '/room_315/vla/status',
-        '/room_315/vla/right_rail_rgbd/image',
-        '/room_315/vla/left_rail_rgbd/image',
+        '/room_315/rail_safety/primitive_command',
+        '/room_315/rail_safety/status',
+        '/room_315/perception/right_rail_rgbd/image',
+        '/room_315/perception/left_rail_rgbd/image',
         f'/room_315/rails/{side}/shuttles/state',
         f'/room_315/rails/{side}/shuttles/command',
         f'/room_315/rails/{side}/sensors/feedback',
@@ -2166,7 +2166,7 @@ def send_stop_all(env: dict[str, str], reason: str) -> dict[str, Any]:
     return run_capture(
         [
             'ros2', 'topic', 'pub', '--once',
-            '/room_315/vla/command', 'std_msgs/msg/String',
+            '/room_315/rail_safety/primitive_command', 'std_msgs/msg/String',
             f'{{data: {json.dumps(message)}}}',
         ],
         env=env,
@@ -2227,7 +2227,7 @@ def run_case(
             raise CampaignError(f'{case["id"]} world clock did not become ready')
 
         supervisor = topic_echo(
-            '/room_315/vla/status', 'std_msgs/msg/String',
+            '/room_315/rail_safety/status', 'std_msgs/msg/String',
             env=base_env, timeout_s=float(protocol['readiness_timeout_s']),
         )
         write_json(case_dir / 'readiness' / 'supervisor.json', supervisor)
@@ -2552,8 +2552,8 @@ def source_install_parity_pairs() -> list[tuple[str, Path, Path]]:
         ),
         (
             'task_execution_runtime_yaml',
-            control_source / 'config/room_315_vla/task_execution_runtime.yaml',
-            share_install / 'config/room_315_vla/task_execution_runtime.yaml',
+            control_source / 'config/room_315_task_execution/task_execution_runtime.yaml',
+            share_install / 'config/room_315_task_execution/task_execution_runtime.yaml',
         ),
         (
             'visual_shuttle_state_msg',
@@ -2707,8 +2707,8 @@ def required_artifacts() -> list[Path]:
         TASK_EXECUTION_AUTHORIZATION,
         INTENT_MODEL,
         INTENT_CONFIG,
-        REPO / 'mfja_robot_control_config/config/room_315_vla/pddl/domain_room315_runtime.pddl',
-        REPO / 'mfja_robot_control_config/config/room_315_vla/shuttle_identity.yaml',
+        REPO / 'mfja_robot_control_config/config/room_315_planning/pddl/domain_room315_runtime.pddl',
+        REPO / 'mfja_robot_control_config/config/room_315_shuttle_identity/shuttle_identity.yaml',
         REPO / 'mfja_robot_control_config/config/room_315_kinematics/rail_network_right.yaml',
         REPO / 'mfja_robot_control_config/config/room_315_kinematics/rail_network_left.yaml',
         REPO / 'mfja_robot_control_config/config/room_315_kinematics/rail_devices_right.yaml',

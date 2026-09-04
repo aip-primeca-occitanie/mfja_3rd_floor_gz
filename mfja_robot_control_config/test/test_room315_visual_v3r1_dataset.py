@@ -403,7 +403,7 @@ def test_experiment_config_excludes_canary_and_legacy_test():
         REPO_ROOT
         / 'mfja_robot_control_config'
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_visual_state'
         / 'visual_state_experiment_a_dataset_v3r1.yaml'
     )
     assert audit.default_experiment_config_path(config_path.name) == config_path

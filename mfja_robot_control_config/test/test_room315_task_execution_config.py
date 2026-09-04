@@ -26,7 +26,7 @@ from room_315_closed_loop_executive import ClosedLoopExecutiveConfig
 CONFIG_PATH = (
     Path(__file__).resolve().parents[1]
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_task_execution'
     / 'task_execution_runtime.yaml'
 )
 ACTIVE_RUNTIME_BUNDLE = Path(

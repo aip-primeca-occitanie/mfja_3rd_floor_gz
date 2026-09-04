@@ -2859,7 +2859,7 @@ def test_full_rail_moves_clearance_dependency_before_goal_slot_blocker(
         domain = (
             SCRIPT_DIR.parent
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_planning'
             / 'pddl'
             / 'domain_room315_runtime.pddl'
         )
@@ -2966,7 +2966,7 @@ def test_dense_mirrored_clearance_ignores_recoverable_opposite_rail(
     domain = (
         SCRIPT_DIR.parent
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_planning'
         / 'pddl'
         / domain_name
     )
@@ -4883,7 +4883,7 @@ def test_live_r1_a34i_to_slot4_dependency_move_is_solvable_by_popf(
     domain = (
         SCRIPT_DIR.parent
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_planning'
         / 'pddl'
         / domain_name
     )
@@ -5139,7 +5139,7 @@ def test_live_r1_slot4_retains_a1_release_after_r3_dependency_move(
             domain = (
                 SCRIPT_DIR.parent
                 / 'config'
-                / 'room_315_vla'
+                / 'room_315_planning'
                 / 'pddl'
                 / 'domain_room315_runtime.pddl'
             )
@@ -5255,7 +5255,7 @@ def test_live_r1_slot4_retains_a1_release_after_r3_dependency_move(
         domain = (
             SCRIPT_DIR.parent
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_planning'
             / 'pddl'
             / 'domain_room315_runtime.pddl'
         )
@@ -6042,7 +6042,7 @@ def test_loaded_any_slot_goal_recovers_mixed_topology_before_blocker_move():
     domain = (
         Path(__file__).resolve().parents[1]
         / 'config'
-        / 'room_315_vla'
+        / 'room_315_planning'
         / 'pddl'
         / 'domain_room315_runtime.pddl'
     ).read_text(encoding='utf-8')
@@ -6485,7 +6485,7 @@ def test_interior_goal_cross_branch_blocker_transfer_replays_red_slot4_failure(
         domain = (
             SCRIPT_DIR.parent
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_planning'
             / 'pddl'
             / 'domain_room315_runtime.pddl'
         )
@@ -6818,7 +6818,7 @@ def test_loaded_a34i_goal_rotates_exterior_vacancy_before_target_detour(
         domain = (
             SCRIPT_DIR.parent
             / 'config'
-            / 'room_315_vla'
+            / 'room_315_planning'
             / 'pddl'
             / 'domain_room315_runtime.pddl'
         )

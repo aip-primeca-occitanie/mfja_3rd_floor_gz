@@ -17,7 +17,7 @@ CALIBRATION_PATH = (
     REPO_ROOT
     / 'mfja_robot_control_config'
     / 'config'
-    / 'room_315_vla'
+    / 'room_315_visual_state'
     / 'visual_observed_state_calibration.yaml'
 )
 
